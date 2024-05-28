@@ -1,0 +1,35 @@
+import django_tables2 as tables
+
+from nautobot.core.tables import (
+    BaseTable,
+    TagColumn,
+    ToggleColumn,
+)
+
+from .models import CloudAccount
+
+
+class CloudAccountTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    provider = tables.Column(linkify=True)
+    secrets_group = tables.Column(linkify=True)
+    tags = TagColumn(url_name="cloud:cloudaccount_list")
+
+    class Meta(BaseTable.Meta):
+        model = CloudAccount
+        fields = (
+            "pk",
+            "name",
+            "account_number",
+            "description",
+            "provider",
+            "secrets_group",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "account_number",
+            "provider",
+        )

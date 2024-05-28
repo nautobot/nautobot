@@ -43,6 +43,7 @@ class CloudAccountTest(APIViewTestCases.APIViewTestCase):
         ]
         cls.bulk_update_data = {
             "provider": manufacturers[2].pk,
+            "secrets_group": secrets_groups[1].pk,
         }
 
 

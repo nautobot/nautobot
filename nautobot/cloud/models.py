@@ -34,10 +34,10 @@ class CloudAccount(PrimaryModel):
     )
 
     class Meta:
-        ordering = ["provider", "name", "account_number"]
+        ordering = ["name"]
 
     def __str__(self):
-        return f"{self.provider}: {self.name} - {self.account_number}"
+        return f"{self.name}"
 
     @property
     def display(self):

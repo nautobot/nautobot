@@ -123,9 +123,9 @@ class Command(BaseCommand):
         # ...and some tags that apply to a random subset of content-types
         TagFactory.create_batch(15, using=db_name)
         self.stdout.write("Creating Users...")
-        UserFactory.create_batch(3, using=db_name)
+        UserFactory.create_batch(5, using=db_name)
         self.stdout.write("Creating SavedViews...")
-        SavedViewFactory.create_batch(10, using=db_name)
+        SavedViewFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Contacts...")
         ContactFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Teams...")
