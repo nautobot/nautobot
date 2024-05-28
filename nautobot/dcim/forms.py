@@ -925,36 +925,33 @@ class ModuleTypeForm(NautobotModelForm):
         ]
 
 
-# TODO
-# class ModuleTypeImportForm(BootstrapMixin, forms.ModelForm):
-#     """
-#     Form for JSON/YAML import of ModuleType objects.
+class ModuleTypeImportForm(BootstrapMixin, forms.ModelForm):
+    """
+    Form for JSON/YAML import of ModuleType objects.
 
-#     TODO: at some point we'll want to add general-purpose YAML serialization/deserialization,
-#     similar to what we've done for CSV in 2.0, but for the moment we're leaving this as-is so that we can remain
-#     at least nominally compatible with the netbox-community/devicetype-library repo.
-#     """
+    TODO: at some point we'll want to add general-purpose YAML serialization/deserialization,
+    similar to what we've done for CSV in 2.0, but for the moment we're leaving this as-is so that we can remain
+    at least nominally compatible with the netbox-community/devicetype-library repo.
+    """
 
-#     manufacturer = forms.ModelChoiceField(queryset=Manufacturer.objects.all(), to_field_name="name")
-#     device_family = forms.ModelChoiceField(queryset=DeviceFamily.objects.all(), to_field_name="name", required=False)
+    manufacturer = forms.ModelChoiceField(queryset=Manufacturer.objects.all(), to_field_name="name")
 
-#     class Meta:
-#         model = ModuleType
-#         fields = [
-#             "manufacturer",
-#             "device_family",
-#             "model",
-#             "part_number",
-#             "u_height",
-#             "is_full_depth",
-#             "subdevice_role",
-#             "comments",
-#         ]
+    class Meta:
+        model = ModuleType
+        fields = [
+            "manufacturer",
+            "model",
+            "part_number",
+        ]
 
 
 class ModuleTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ModuleType.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
+    part_number = forms.CharField(required=False)
+
+    class Meta:
+        nullable_fields = []
 
 
 class ModuleTypeFilterForm(NautobotFilterForm):
@@ -1589,14 +1586,7 @@ class ComponentTemplateImportForm(BootstrapMixin, CustomFieldModelCSVForm):
     netbox-community/devicetype-library repository.
     """
 
-    def __init__(self, device_type, data=None, *args, **kwargs):
-        # Must pass the parent DeviceType on form initialization
-        data.update(
-            {
-                "device_type": device_type.pk,
-            }
-        )
-
+    def __init__(self, data=None, *args, **kwargs):
         super().__init__(data, *args, **kwargs)
 
         if "type" in self.fields:
@@ -1608,9 +1598,21 @@ class ComponentTemplateImportForm(BootstrapMixin, CustomFieldModelCSVForm):
         data = self.cleaned_data["device_type"]
 
         # Limit fields referencing other components to the parent DeviceType
-        for field_name, field in self.fields.items():
-            if isinstance(field, forms.ModelChoiceField) and field_name != "device_type":
-                field.queryset = field.queryset.filter(device_type=data)
+        if data:
+            for field_name, field in self.fields.items():
+                if isinstance(field, forms.ModelChoiceField) and field_name not in ["device_type", "module_type"]:
+                    field.queryset = field.queryset.filter(device_type=data)
+
+        return data
+
+    def clean_module_type(self):
+        data = self.cleaned_data["module_type"]
+
+        # Limit fields referencing other components to the parent ModuleType
+        if data:
+            for field_name, field in self.fields.items():
+                if isinstance(field, forms.ModelChoiceField) and field_name not in ["device_type", "module_type"]:
+                    field.queryset = field.queryset.filter(module_type=data)
 
         return data
 
@@ -1643,6 +1645,7 @@ class ConsolePortTemplateImportForm(ComponentTemplateImportForm):
         model = ConsolePortTemplate
         fields = [
             "device_type",
+            "module_type",
             "name",
             "label",
             "type",
@@ -1654,6 +1657,7 @@ class ConsoleServerPortTemplateImportForm(ComponentTemplateImportForm):
         model = ConsoleServerPortTemplate
         fields = [
             "device_type",
+            "module_type",
             "name",
             "label",
             "type",
@@ -1665,6 +1669,7 @@ class PowerPortTemplateImportForm(ComponentTemplateImportForm):
         model = PowerPortTemplate
         fields = [
             "device_type",
+            "module_type",
             "name",
             "label",
             "type",
@@ -1684,6 +1689,7 @@ class PowerOutletTemplateImportForm(ComponentTemplateImportForm):
         model = PowerOutletTemplate
         fields = [
             "device_type",
+            "module_type",
             "name",
             "label",
             "type",
@@ -1706,6 +1712,7 @@ class InterfaceTemplateImportForm(ComponentTemplateImportForm):
         model = InterfaceTemplate
         fields = [
             "device_type",
+            "module_type",
             "name",
             "label",
             "type",
@@ -1724,6 +1731,7 @@ class FrontPortTemplateImportForm(ComponentTemplateImportForm):
         model = FrontPortTemplate
         fields = [
             "device_type",
+            "module_type",
             "name",
             "type",
             "rear_port_template",
@@ -1745,6 +1753,7 @@ class RearPortTemplateImportForm(ComponentTemplateImportForm):
         model = RearPortTemplate
         fields = [
             "device_type",
+            "module_type",
             "name",
             "type",
             "positions",
@@ -1757,6 +1766,16 @@ class DeviceBayTemplateImportForm(ComponentTemplateImportForm):
         fields = [
             "device_type",
             "name",
+        ]
+
+
+class ModuleBayTemplateImportForm(ComponentTemplateImportForm):
+    class Meta:
+        model = ModuleBayTemplate
+        fields = [
+            "device_type",
+            "module_type",
+            "position",
         ]
 
 

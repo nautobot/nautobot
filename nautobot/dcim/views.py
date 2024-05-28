@@ -27,7 +27,8 @@ from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
 
 from nautobot.circuits.models import Circuit
-from nautobot.core.forms import BulkRenameForm, ConfirmationForm, restrict_form_fields
+from nautobot.core.exceptions import AbortTransaction
+from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import has_perms
 from nautobot.core.utils.lookup import get_form_for_model
@@ -38,8 +39,12 @@ from nautobot.core.views.mixins import (
     GetReturnURLMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
+    ObjectChangeLogViewMixin,
     ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
     ObjectEditViewMixin,
+    ObjectListViewMixin,
+    ObjectNotesViewMixin,
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
@@ -889,6 +894,7 @@ class DeviceTypeImportView(generic.ObjectImportView):
         "dcim.add_frontporttemplate",
         "dcim.add_rearporttemplate",
         "dcim.add_devicebaytemplate",
+        "dcim.add_modulebaytemplate",
     ]
     queryset = DeviceType.objects.all()
     model_form = forms.DeviceTypeImportForm
@@ -902,6 +908,7 @@ class DeviceTypeImportView(generic.ObjectImportView):
             ("rear-ports", forms.RearPortTemplateImportForm),
             ("front-ports", forms.FrontPortTemplateImportForm),
             ("device-bays", forms.DeviceBayTemplateImportForm),
+            ("module-bays", forms.ModuleBayTemplateImportForm),
         )
     )
 
@@ -924,14 +931,52 @@ class DeviceTypeBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class ModuleTypeUIViewSet(NautobotUIViewSet):
+class ModuleTypeUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
+):
     queryset = ModuleType.objects.all()
     filterset_class = filters.ModuleTypeFilterSet
     filterset_form_class = forms.ModuleTypeFilterForm
     form_class = forms.ModuleTypeForm
+    import_model_form = forms.ModuleTypeImportForm
     bulk_update_form_class = forms.ModuleTypeBulkEditForm
     serializer_class = serializers.ModuleTypeSerializer
     table_class = tables.ModuleTypeTable
+    related_object_forms = {
+        "console-ports": forms.ConsolePortTemplateImportForm,
+        "console-server-ports": forms.ConsoleServerPortTemplateImportForm,
+        "power-ports": forms.PowerPortTemplateImportForm,
+        "power-outlets": forms.PowerOutletTemplateImportForm,
+        "interfaces": forms.InterfaceTemplateImportForm,
+        "rear-ports": forms.RearPortTemplateImportForm,
+        "front-ports": forms.FrontPortTemplateImportForm,
+        "module-bays": forms.ModuleBayTemplateImportForm,
+    }
+
+    def get_required_permission(self):
+        action = self.get_action()
+        if action == "import_view":
+            return [
+                *self.get_permissions_for_model(ModuleType, "add"),
+                "dcim.add_moduletype",
+                "dcim.add_consoleporttemplate",
+                "dcim.add_consoleserverporttemplate",
+                "dcim.add_powerporttemplate",
+                "dcim.add_poweroutlettemplate",
+                "dcim.add_interfacetemplate",
+                "dcim.add_frontporttemplate",
+                "dcim.add_rearporttemplate",
+                "dcim.add_modulebaytemplate",
+            ]
+
+        return super().get_required_permission()
 
     def get_extra_context(self, request, instance):
         if not instance:
@@ -993,6 +1038,124 @@ class ModuleTypeUIViewSet(NautobotUIViewSet):
             "rear_port_table": rear_port_table,
             "modulebay_table": modulebay_table,
         }
+
+    @action(
+        detail=False,
+        methods=["GET", "POST"],
+        url_name="import",
+        url_path="import",
+    )
+    def import_view(self, request, *args, **kwargs):
+        if request.method == "POST":
+            form = ImportForm(request.POST)
+
+            if form.is_valid():
+                self.logger.debug("Import form validation was successful")
+
+                # Initialize model form
+                data = form.cleaned_data["data"]
+                model_form = self.import_model_form(data)
+                restrict_form_fields(model_form, request.user)
+
+                # Assign default values for any fields which were not specified. We have to do this manually because passing
+                # 'initial=' to the form on initialization merely sets default values for the widgets. Since widgets are not
+                # used for YAML/JSON import, we first bind the imported data normally, then update the form's data with the
+                # applicable field defaults as needed prior to form validation.
+                for field_name, field in model_form.fields.items():
+                    if field_name not in data and hasattr(field, "initial"):
+                        model_form.data[field_name] = field.initial
+
+                if model_form.is_valid():
+                    try:
+                        with transaction.atomic():
+                            # Save the primary object
+                            obj = model_form.save()
+
+                            # Enforce object-level permissions
+                            self.queryset.get(pk=obj.pk)
+
+                            self.logger.debug(f"Created {obj} (PK: {obj.pk})")
+
+                            # Iterate through the related object forms (if any), validating and saving each instance.
+                            for (
+                                field_name,
+                                related_object_form,
+                            ) in self.related_object_forms.items():
+                                self.logger.debug(f"Processing form for related objects: {related_object_form}")
+
+                                related_obj_pks = []
+                                for i, rel_obj_data in enumerate(data.get(field_name, [])):
+                                    # add parent object key to related object data
+                                    rel_obj_data[obj._meta.verbose_name.replace(" ", "_")] = str(obj.pk)
+                                    f = related_object_form(rel_obj_data)
+
+                                    for subfield_name, field in f.fields.items():
+                                        if subfield_name not in rel_obj_data and hasattr(field, "initial"):
+                                            f.data[subfield_name] = field.initial
+
+                                    if f.is_valid():
+                                        related_obj = f.save()
+                                        related_obj_pks.append(related_obj.pk)
+                                    else:
+                                        # Replicate errors on the related object form to the primary form for display
+                                        for subfield_name, errors in f.errors.items():
+                                            for err in errors:
+                                                err_msg = f"{field_name}[{i}] {subfield_name}: {err}"
+                                                model_form.add_error(None, err_msg)
+                                        raise AbortTransaction()
+
+                                # Enforce object-level permissions on related objects
+                                model = related_object_form.Meta.model
+                                if model.objects.filter(pk__in=related_obj_pks).count() != len(related_obj_pks):
+                                    raise ObjectDoesNotExist
+
+                    except AbortTransaction:
+                        pass
+
+                    except ObjectDoesNotExist:
+                        msg = "Object creation failed due to object-level permissions violation"
+                        self.logger.debug(msg)
+                        model_form.add_error(None, msg)
+
+                if not model_form.errors:
+                    self.logger.info(f"Import object {obj} (PK: {obj.pk})")
+                    messages.success(
+                        request,
+                        format_html('Imported object: <a href="{}">{}</a>', obj.get_absolute_url(), obj),
+                    )
+
+                    if "_addanother" in request.POST:
+                        return redirect(request.get_full_path())
+
+                    return_url = form.cleaned_data.get("return_url")
+                    if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                        return redirect(iri_to_uri(return_url))
+                    else:
+                        return redirect(self.get_return_url(request, obj))
+
+                else:
+                    self.logger.debug("Model form validation failed")
+
+                    # Replicate model form errors for display
+                    for field, errors in model_form.errors.items():
+                        for err in errors:
+                            if field == "__all__":
+                                form.add_error(None, err)
+                            else:
+                                form.add_error(None, f"{field}: {err}")
+
+            else:
+                self.logger.debug("Import form validation failed")
+
+        else:
+            form = ImportForm()
+
+        return Response(
+            {
+                "template": "generic/object_import.html",
+                "form": form,
+            }
+        )
 
 
 #

@@ -759,7 +759,9 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                             related_obj_pks = []
                             for i, rel_obj_data in enumerate(data.get(field_name, [])):
-                                f = related_object_form(obj, rel_obj_data)
+                                # add parent object key to related object data
+                                rel_obj_data[obj._meta.verbose_name.replace(" ", "_")] = str(obj.pk)
+                                f = related_object_form(rel_obj_data)
 
                                 for subfield_name, field in f.fields.items():
                                     if subfield_name not in rel_obj_data and hasattr(field, "initial"):

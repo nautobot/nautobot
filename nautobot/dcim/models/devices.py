@@ -1443,7 +1443,6 @@ class ModuleType(PrimaryModel):
                 ("manufacturer", self.manufacturer.name),
                 ("model", self.model),
                 ("part_number", self.part_number),
-                ("comments", self.comments),
             )
         )
 
