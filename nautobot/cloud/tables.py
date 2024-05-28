@@ -28,10 +28,12 @@ class CloudAccountTable(BaseTable):
             "provider",
             "secrets_group",
             "tags",
+            "actions",
         )
         default_columns = (
             "pk",
             "name",
             "account_number",
             "provider",
+            "actions",
         )
