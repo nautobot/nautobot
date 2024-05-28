@@ -17,6 +17,7 @@ from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.core.testing.utils import disable_warnings
 from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
     Controller,
     Device,
@@ -3542,6 +3543,7 @@ class StaticGroupTest(APIViewTestCases.APIViewTestCase):
         """Test that the `/members/` API endpoint returns what is expected."""
         self.add_permissions("extras.view_staticgroup")
         instance = StaticGroup.objects.filter(static_group_associations__isnull=False).distinct().first()
+        self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"))
         self.assertIsNotNone(instance)
         member_count = instance.members.count()
         url = reverse("extras-api:staticgroup-members", kwargs={"pk": instance.pk})
@@ -3549,6 +3551,26 @@ class StaticGroupTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(member_count, response.json()["count"])
         # TODO: assert that members are serialized correctly?
+
+    def test_get_members_with_constrained_permission(self):
+        """Test that the `/members/` API endpoint enforces permissions on the member model."""
+        self.add_permissions("extras.view_staticgroup")
+        instance = StaticGroup.objects.filter(static_group_associations__isnull=False).distinct().first()
+        obj1 = instance.members.first()
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk__in": [obj1.pk]},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(instance.content_type)
+
+        url = reverse("extras-api:staticgroup-members", kwargs={"pk": instance.pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.json()["count"], 1)
+        self.assertEqual(response.json()["results"][0]["id"], str(obj1.pk))
 
     def test_list_omits_hidden_by_default(self):
         """Test that the list view defaults to omitting hidden groups."""
