@@ -3499,10 +3499,11 @@ class StaticGroupTest(APIViewTestCases.APIViewTestCase):
             description="Static group of IPAddresses",
             content_type=ContentType.objects.get_for_model(IPAddress),
         )
-        cls.sg3 = StaticGroup.objects.create(
+        cls.sg3 = StaticGroup.all_objects.create(
             name="VirtualMachines",
             description="Static group of VirtualMachines",
             content_type=ContentType.objects.get_for_model(VirtualMachine),
+            hidden=True,
         )
         cls.create_data = [
             {
@@ -3677,6 +3678,11 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
         cls.sg1 = StaticGroup.objects.create(name="Locations", content_type=ContentType.objects.get_for_model(Location))
         cls.sg2 = StaticGroup.objects.create(name="Devices", content_type=ContentType.objects.get_for_model(Device))
         cls.sg3 = StaticGroup.objects.create(name="VLANs", content_type=ContentType.objects.get_for_model(VLAN))
+        cls.sg4 = StaticGroup.all_objects.create(
+            name="Hidden Devices",
+            content_type=ContentType.objects.get_for_model(Device),
+            hidden=True,
+        )
         location_pks = list(Location.objects.values_list("pk", flat=True)[:4])
         device_pks = list(Device.objects.values_list("pk", flat=True)[:4])
         StaticGroupAssociation.objects.create(
@@ -3695,7 +3701,7 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
             associated_object_id=device_pks[0],
         )
         StaticGroupAssociation.objects.create(
-            static_group=cls.sg2,
+            static_group=cls.sg4,
             associated_object_type=ContentType.objects.get_for_model(Device),
             associated_object_id=device_pks[1],
         )

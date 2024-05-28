@@ -12,6 +12,10 @@ This document describes all new features and changes in Nautobot 2.3.
 
 Added an optional `role` field to Interface and VMInterface models to track common interface configurations. Now the users can create [Role](../user-guide/platform-functionality/role.md) instances that can be assigned to [interfaces](../user-guide/core-data-model/dcim/interface.md) and [vminterfaces](../user-guide/core-data-model/virtualization/vminterface.md).
 
+#### Cloud Accounts ([#5719](https://github.com/nautobot/nautobot/issues/5719))
+
+Added the new model `CloudAccount` to track public and private cloud provider account details in Nautobot.
+
 #### Saved Views
 
 Added the ability for users to save multiple configurations of list views (table columns, filtering, pagination and sorting) for ease of later use and reuse. Refer to the [Saved View](../user-guide/platform-functionality/savedview.md) documentation for more details and the [user guide](../user-guide/feature-guides/saved-views.md) on how to use saved views.

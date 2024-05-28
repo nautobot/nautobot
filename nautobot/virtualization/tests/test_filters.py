@@ -346,6 +346,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 memory=3,
                 disk=3,
                 comments="This is VM 4",
+                software_version=None,
             ),
             VirtualMachine.objects.create(
                 name="Virtual Machine 5",
@@ -358,6 +359,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 memory=3,
                 disk=3,
                 comments="This is VM 5",
+                software_version=None,
             ),
             VirtualMachine.objects.create(
                 name="Virtual Machine 6",
@@ -370,6 +372,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 memory=3,
                 disk=3,
                 comments="This is VM 6",
+                software_version=cls.software_versions[1],
             ),
         )
         vms[0].software_image_files.set(cls.software_versions[1].software_image_files.all())
@@ -437,6 +440,15 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
         vms[0].tags.set(Tag.objects.get_for_model(VirtualMachine))
         vms[1].tags.set(Tag.objects.get_for_model(VirtualMachine)[:3])
+
+    def test_filters_generic(self):
+        # Assign more than 2 different software versions to VirtualMachine before we test generic filters
+        software_versions = list(SoftwareVersion.objects.all())
+        virtual_machines = list(VirtualMachine.objects.all())
+        for i in range(4):
+            virtual_machines[i].software_version = software_versions[i]
+            virtual_machines[i].save()
+        return super().test_filters_generic()
 
     def test_name(self):
         params = {"name": ["Virtual Machine 1", "Virtual Machine 2"]}
