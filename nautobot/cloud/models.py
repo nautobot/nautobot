@@ -61,7 +61,10 @@ class CloudType(PrimaryModel):
     )
     config_schema = models.JSONField(null=True, blank=True)
     content_types = models.ManyToManyField(
-        to=ContentType, help_text="The content type(s) to which this model applies.", related_name="cloud_types"
+        to=ContentType,
+        help_text="The content type(s) to which this model applies.",
+        related_name="cloud_types",
+        limit_choices_to=models.Q(app_label="cloud", model="cloudaccount"),
     )
 
     class Meta:

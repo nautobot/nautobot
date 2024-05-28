@@ -45,4 +45,4 @@ class CloudTypeFactory(PrimaryModelFactory):
             if extracted:
                 self.content_types.set(extracted)
             else:
-                self.content_types.set(get_random_instances(ContentType.objects.all(), minimum=1))
+                self.content_types.add(ContentType.objects.get_for_model(CloudAccount))

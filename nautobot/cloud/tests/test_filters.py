@@ -3,8 +3,6 @@ from django.contrib.contenttypes.models import ContentType
 from nautobot.cloud.filters import CloudAccountFilterSet, CloudTypeFilterSet
 from nautobot.cloud.models import CloudAccount, CloudType
 from nautobot.core.testing import FilterTestCases
-from nautobot.dcim.models.devices import Device
-from nautobot.dcim.models.racks import RackGroup
 from nautobot.extras.models import SecretsGroup
 
 
@@ -45,15 +43,9 @@ class CloudTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
     ]
 
     def test_content_types(self):
-        cts = [
-            ContentType.objects.get_for_model(Device),
-            ContentType.objects.get_for_model(RackGroup),
-        ]
-        for idx, cloud_type in enumerate(CloudType.objects.all()[:5]):
-            cloud_type.content_types.add(cts[idx % 2])
-
-        params = {"content_types": ["dcim.device", "dcim.rackgroup"]}
+        ca_ct = ContentType.objects.get_for_model(CloudAccount)
+        params = {"content_types": ["cloud.cloudaccount"]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            CloudType.objects.filter(content_types=cts[0]).filter(content_types=cts[1]),
+            CloudType.objects.filter(content_types=ca_ct),
         )

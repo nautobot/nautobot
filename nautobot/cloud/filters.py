@@ -1,4 +1,3 @@
-from django.contrib.contenttypes.models import ContentType
 
 from nautobot.core.filters import (
     ContentTypeMultipleChoiceFilter,
@@ -58,9 +57,7 @@ class CloudTypeFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Provider (name or ID)",
     )
-    content_types = ContentTypeMultipleChoiceFilter(
-        choices=ContentType.objects.all(),
-    )
+    content_types = ContentTypeMultipleChoiceFilter(choices=(("cloud", "cloudaccount"),))
 
     class Meta:
         model = CloudType
