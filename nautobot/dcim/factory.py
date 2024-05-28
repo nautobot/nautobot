@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 import factory
 from faker import Faker
-import pytz
+from timezone_field import TimeZoneFormField
 
 from nautobot.circuits.models import CircuitTermination
 from nautobot.core.factory import (
@@ -93,7 +93,7 @@ NETWORK_DRIVERS = {
     "Palo Alto": ["paloalto_panos"],
 }
 
-TIME_ZONES = pytz.common_timezones
+TIME_ZONES = {timezone for timezone, _ in TimeZoneFormField().choices}
 
 
 # Retrieve correct rack reservation units
