@@ -1,2 +1,0 @@
-Added "Add VRFs" and "Remove VRFs" fields to `PrefixBulkEditForm`.
-Added "Add Prefixes" and "Remove Prefixes" fields to `VRFBulkEditForm`.

@@ -1,1 +1,0 @@
-Fixed `ContactAssociationFilterSet.associated_object_type` not using the right filter field.
