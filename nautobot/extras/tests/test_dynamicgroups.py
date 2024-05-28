@@ -1002,7 +1002,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):
             group.members_cached
             self.assertEqual(mock_get_queryset.call_count, 1)
 
-            time.sleep(2)  # Let the cache expire
+            time.sleep(3)  # Let the cache expire
 
             group.members_cached
             self.assertEqual(mock_get_queryset.call_count, 2)
