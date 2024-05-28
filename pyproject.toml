@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.2.4"
+version = "2.2.5"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -170,7 +170,7 @@ watchdog = "~4.0.0"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
-mkdocs = "~1.5.3"
+mkdocs = "~1.6.0"
 # Embedding YAML files into Markdown documents as tables
 markdown-data-tables = "~1.0.0"
 # Render custom markdown for version added/changed/remove notes
@@ -183,7 +183,7 @@ mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see optional-settings.md and required-settings.md
 mkdocs-macros-plugin = "~1.0.5"
 # Material for mkdocs theme
-mkdocs-material = "~9.5.16"
+mkdocs-material = "~9.5.23"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.1"
 # Automatically handle index pages for docs sections
@@ -195,7 +195,7 @@ mkdocstrings-python = "~1.9.0"
 
 [tool.poetry.group.linting.dependencies]
 # Code static analysis
-pylint = "~3.1.0"
+pylint = "~3.1.1"
 # Pylint extensions for Django
 pylint-django = "~2.5.3"
 # Combination linter and code formatter
@@ -209,7 +209,7 @@ coverage = "6.4.0"
 # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
 django-slowtests = "^1.1.1"
 # Integration Tests
-requests = ">=2.28.0,<2.32.0"
+requests = "~2.32.1"
 # Selenium web drivers for live integration testing
 selenium = "~4.19.0"
 # Abstraction layer for working with Selenium

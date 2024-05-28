@@ -62,6 +62,12 @@ class ClusterTypeForm(NautobotModelForm):
         ]
 
 
+class ClusterTypeFilterForm(NautobotFilterForm):
+    model = ClusterType
+    q = forms.CharField(required=False, label="Search")
+    clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), to_field_name="name", required=False)
+
+
 #
 # Cluster groups
 #
@@ -74,6 +80,12 @@ class ClusterGroupForm(NautobotModelForm):
             "name",
             "description",
         ]
+
+
+class ClusterGroupFilterForm(NautobotFilterForm):
+    model = ClusterGroup
+    q = forms.CharField(required=False, label="Search")
+    clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), to_field_name="name", required=False)
 
 
 #
@@ -485,8 +497,8 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         # Add current location to VLANs query params
         location = virtual_machine.location
         if location:
-            self.fields["untagged_vlan"].widget.add_query_param("location", location.pk)
-            self.fields["tagged_vlans"].widget.add_query_param("location", location.pk)
+            self.fields["untagged_vlan"].widget.add_query_param("locations", location.pk)
+            self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
 
 
 class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
@@ -558,8 +570,8 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         # Add current location to VLANs query params
         location = virtual_machine.location
         if location:
-            self.fields["untagged_vlan"].widget.add_query_param("location", location.pk)
-            self.fields["tagged_vlans"].widget.add_query_param("location", location.pk)
+            self.fields["untagged_vlan"].widget.add_query_param("locations", location.pk)
+            self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
 
 
 class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
@@ -628,8 +640,8 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
             location = getattr(parent_obj.cluster, "location", None)
             if location is not None:
                 # Add current location to VLANs query params
-                self.fields["untagged_vlan"].widget.add_query_param("location", location.pk)
-                self.fields["tagged_vlans"].widget.add_query_param("location", location.pk)
+                self.fields["untagged_vlan"].widget.add_query_param("locations", location.pk)
+                self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
 
         self.fields["parent_interface"].choices = ()
         self.fields["parent_interface"].widget.attrs["disabled"] = True

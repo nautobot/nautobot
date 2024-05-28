@@ -213,6 +213,8 @@ class ViewTestCases:
                             escape(str(instance.cf.get(custom_field.key) or "")), response_body, msg=response_body
                         )
 
+            return response  # for consumption by child test cases if desired
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_get_object_with_constrained_permission(self):
             instance1, instance2 = self._get_queryset().all()[:2]
@@ -230,10 +232,13 @@ class ViewTestCases:
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
             # Try GET to permitted object
-            self.assertHttpStatus(self.client.get(instance1.get_absolute_url()), 200)
+            response = self.client.get(instance1.get_absolute_url())
+            self.assertHttpStatus(response, 200)
 
             # Try GET to non-permitted object
             self.assertHttpStatus(self.client.get(instance2.get_absolute_url()), 404)
+
+            return response  # for consumption by child test cases if desired
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_has_advanced_tab(self):
@@ -739,6 +744,13 @@ class ViewTestCases:
 
         def get_list_view(self):
             return lookup.get_view_for_model(self.model, view_type="List")
+
+        def test_list_view_has_filter_form(self):
+            view = self.get_list_view()
+            if hasattr(view, "filterset_form"):  # ObjectListView
+                self.assertIsNotNone(view.filterset_form, "List view lacks a FilterForm")
+            if hasattr(view, "filterset_form_class"):  # ObjectListViewMixin
+                self.assertIsNotNone(view.filterset_form_class, "List viewset lacks a FilterForm")
 
         def test_table_with_indentation_is_removed_on_filter_or_sort(self):
             self.user.is_superuser = True

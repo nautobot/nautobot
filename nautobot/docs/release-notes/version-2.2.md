@@ -66,6 +66,48 @@ The CSV import functionality for all models has been changed from a synchronous 
 Model CharFields' `max_length` attributes have been standardized globally to have at least 255 characters except where a shorter `max_length` is explicitly justified.
 
 <!-- towncrier release notes start -->
+## v2.2.5 (2024-05-28)
+
+### Security
+
+- [#5740](https://github.com/nautobot/nautobot/issues/5740) - Updated `requests` to `2.32.1` to address [GHSA-9wx4-h78v-vm56](https://github.com/psf/requests/security/advisories/GHSA-9wx4-h78v-vm56). This is not a direct dependency so it will not auto-update when upgrading Nautobot. Please be sure to update your local environment.
+- [#5757](https://github.com/nautobot/nautobot/issues/5757) - Fixed missing member object permission enforcement (e.g., enforce Device permissions for a Dynamic Group containing Devices) when viewing Dynamic Group member objects in the UI or REST API ([GHSA-qmjf-wc2h-6x3q](https://github.com/nautobot/nautobot/security/advisories/GHSA-qmjf-wc2h-6x3q)).
+
+### Added
+
+- [#5588](https://github.com/nautobot/nautobot/issues/5588) - Added "Add VRFs" and "Remove VRFs" fields to `PrefixBulkEditForm`.
+- [#5588](https://github.com/nautobot/nautobot/issues/5588) - Added "Add Prefixes" and "Remove Prefixes" fields to `VRFBulkEditForm`.
+- [#5655](https://github.com/nautobot/nautobot/issues/5655) - Added "Device Family" as a configurable column in the Device Types table view.
+- [#5690](https://github.com/nautobot/nautobot/issues/5690) - Added a generic test case that asserts that all list views provide an appropriate FilterForm class.
+- [#5747](https://github.com/nautobot/nautobot/issues/5747) - Added "Circuit Terminations" navigation menu item.
+
+### Removed
+
+- [#5690](https://github.com/nautobot/nautobot/issues/5690) - Removed deprecated `CustomFieldFilterForm` alias of `CustomFieldModelFilterFormMixin` as this would have caused confusion with the newly added `CustomFieldFilterForm` class providing filtering support for the Custom Fields list view.
+
+### Fixed
+
+- [#5564](https://github.com/nautobot/nautobot/issues/5564) - Fixed `ContactAssociationFilterSet.associated_object_type` not using the right filter field.
+- [#5669](https://github.com/nautobot/nautobot/issues/5669) - Fixed `AttributeError` thrown when deleting software versions or images from list views.
+- [#5690](https://github.com/nautobot/nautobot/issues/5690) - Fixed a Javascript error when attempting to filter certain list views.
+- [#5690](https://github.com/nautobot/nautobot/issues/5690) - Added missing "default" filter forms for a number of list views.
+- [#5703](https://github.com/nautobot/nautobot/issues/5703) - Fixed unintended creation of `_custom_field_data` filter on various FilterSets.
+- [#5703](https://github.com/nautobot/nautobot/issues/5703) - Fixed `Filter "_custom_field_data" on ... is not GraphQL safe, and will be omitted` warning logs when generating the GraphQL schema.
+- [#5707](https://github.com/nautobot/nautobot/issues/5707) - Fixed incorrect installation of `xmlsec` library in the Nautobot Docker images.
+- [#5708](https://github.com/nautobot/nautobot/issues/5708) - Fixed integrity error when doing bulk edits that resulted from a delete operation on a related model.
+- [#5738](https://github.com/nautobot/nautobot/issues/5738) - Fixed incorrect API query parameters when selecting VLANs to apply to a VM Interface.
+- [#5738](https://github.com/nautobot/nautobot/issues/5738) - Fixed incorrect query parameters when accessing or creating Clusters from a Cluster Type detail view.
+
+### Documentation
+
+- [#5699](https://github.com/nautobot/nautobot/issues/5699) - Updated to `mkdocs~1.6.0` and `mkdocs-material~9.5.23`.
+- [#5699](https://github.com/nautobot/nautobot/issues/5699) - Fixed a number of broken links within the documentation.
+
+### Housekeeping
+
+- [#5699](https://github.com/nautobot/nautobot/issues/5699) - Updated `pylint` to `~3.1.1`.
+- [#5740](https://github.com/nautobot/nautobot/issues/5740) - Updated test dependency `requests` to `~2.32.1`.
+
 ## v2.2.4 (2024-05-13)
 
 ### Security
@@ -92,7 +134,7 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 ### Housekeeping
 
 - [#5263](https://github.com/nautobot/nautobot/issues/5263) - Updated `nh3` to `0.2.17` in `poetry.lock`.
-- [#5637](https://github.com/nautobot/nautobot/issues/5637) - Removed "version" from development `docker-compose.yml` files as newer versions of Docker complain about it being obsolete.
+- [#5637](https://github.com/nautobot/nautobot/issues/5637) - Removed `"version"` from development `docker-compose.yml` files as newer versions of Docker complain about it being obsolete.
 - [#5637](https://github.com/nautobot/nautobot/issues/5637) - Fixed behavior of `invoke stop` so that it also stops the optional `mkdocs` container if present.
 
 ## v2.2.3 (2024-04-30)

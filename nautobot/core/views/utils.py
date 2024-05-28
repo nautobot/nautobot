@@ -215,11 +215,28 @@ def handle_protectederror(obj_list, request, e):
         protected_count,
     )
 
+    # Format objects based on whether they have a detail view/absolute url
+    objects_with_absolute_url = []
+    objects_without_absolute_url = []
     # Append dependent objects to error message
+    for dependent in protected_objects[:50]:
+        try:
+            dependent.get_absolute_url()
+            objects_with_absolute_url.append(dependent)
+        except AttributeError:
+            objects_without_absolute_url.append(dependent)
+
     err_message += format_html_join(
         ", ",
         '<a href="{}">{}</a>',
-        ((dependent.get_absolute_url(), dependent) for dependent in protected_objects[:50]),
+        ((dependent.get_absolute_url(), dependent) for dependent in objects_with_absolute_url),
+    )
+    if objects_with_absolute_url and objects_without_absolute_url:
+        err_message += format_html(", ")
+    err_message += format_html_join(
+        ", ",
+        "<span>{}</span>",
+        ((dependent,) for dependent in objects_without_absolute_url),
     )
 
     messages.error(request, err_message)

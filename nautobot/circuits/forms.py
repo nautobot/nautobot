@@ -145,6 +145,12 @@ class CircuitTypeForm(NautobotModelForm):
         ]
 
 
+class CircuitTypeFilterForm(NautobotFilterForm):
+    model = CircuitType
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False)
+
+
 #
 # Circuits
 #
@@ -262,3 +268,12 @@ class CircuitTerminationForm(LocatableModelFormMixin, NautobotModelForm):
         widgets = {
             "term_side": forms.HiddenInput(),
         }
+
+
+class CircuitTerminationFilterForm(LocatableModelFilterFormMixin, NautobotFilterForm):
+    model = CircuitTermination
+    q = forms.CharField(required=False, label="Search")
+    circuit = DynamicModelMultipleChoiceField(queryset=Circuit.objects.all(), to_field_name="cid", required=False)
+    provider_network = DynamicModelMultipleChoiceField(
+        queryset=ProviderNetwork.objects.all(), to_field_name="name", required=False
+    )

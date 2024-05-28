@@ -19,6 +19,7 @@ from .models import Tenant, TenantGroup
 class TenantGroupListView(generic.ObjectListView):
     queryset = TenantGroup.objects.annotate(tenant_count=count_related(Tenant, "tenant_group"))
     filterset = filters.TenantGroupFilterSet
+    filterset_form = forms.TenantGroupFilterForm
     table = tables.TenantGroupTable
 
 
