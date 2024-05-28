@@ -2308,6 +2308,309 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(self._get_queryset().filter(name="Device X").count(), 0)
 
 
+class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = Module
+
+    @classmethod
+    def setUpTestData(cls):
+        Module.objects.all().delete()
+        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
+        manufacturer = Manufacturer.objects.first()
+
+        moduletypes = (
+            ModuleType.objects.create(model="Module Type 1", manufacturer=manufacturer),
+            ModuleType.objects.create(model="Module Type 2", manufacturer=manufacturer),
+        )
+
+        moduleroles = Role.objects.get_for_model(Module)[:2]
+
+        statuses = Status.objects.get_for_model(Module)
+        status_active = statuses[0]
+
+        cls.custom_fields = (
+            CustomField.objects.create(
+                type=CustomFieldTypeChoices.TYPE_INTEGER,
+                label="Crash Counter",
+                default=0,
+            ),
+        )
+        cls.custom_fields[0].content_types.set([ContentType.objects.get_for_model(Module)])
+
+        modules = (
+            Module.objects.create(
+                location=locations[0],
+                module_type=moduletypes[0],
+                role=moduleroles[0],
+                status=status_active,
+                _custom_field_data={"crash_counter": 5},
+            ),
+            Module.objects.create(
+                location=locations[0],
+                module_type=moduletypes[0],
+                role=moduleroles[0],
+                status=status_active,
+                _custom_field_data={"crash_counter": 10},
+            ),
+            Module.objects.create(
+                location=locations[0],
+                module_type=moduletypes[0],
+                role=moduleroles[0],
+                status=status_active,
+                _custom_field_data={"crash_counter": 15},
+            ),
+        )
+
+        cls.relationships = (
+            Relationship(
+                label="BGP Router-ID",
+                key="router_id",
+                type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
+                source_type=ContentType.objects.get_for_model(Module),
+                source_label="BGP Router ID",
+                destination_type=ContentType.objects.get_for_model(IPAddress),
+                destination_label="Module using this as BGP router-ID",
+            ),
+        )
+        for relationship in cls.relationships:
+            relationship.validated_save()
+
+        cls.ipaddr_status = Status.objects.get_for_model(IPAddress).first()
+        cls.prefix_status = Status.objects.get_for_model(Prefix).first()
+        namespace = Namespace.objects.first()
+        Prefix.objects.create(prefix="1.1.1.1/24", namespace=namespace, status=cls.prefix_status)
+        Prefix.objects.create(prefix="2.2.2.2/24", namespace=namespace, status=cls.prefix_status)
+        Prefix.objects.create(prefix="3.3.3.3/24", namespace=namespace, status=cls.prefix_status)
+        ipaddresses = (
+            IPAddress.objects.create(address="1.1.1.1/32", namespace=namespace, status=cls.ipaddr_status),
+            IPAddress.objects.create(address="2.2.2.2/32", namespace=namespace, status=cls.ipaddr_status),
+            IPAddress.objects.create(address="3.3.3.3/32", namespace=namespace, status=cls.ipaddr_status),
+        )
+
+        intf_status = Status.objects.get_for_model(Interface).first()
+        intf_role = Role.objects.get_for_model(Interface).first()
+        cls.interfaces = (
+            Interface.objects.create(module=modules[0], name="Interface 1", status=intf_status, role=intf_role),
+            Interface.objects.create(module=modules[0], name="Interface 2", status=intf_status),
+            Interface.objects.create(module=modules[0], name="Interface 3", status=intf_status, role=intf_role),
+        )
+
+        for module, ipaddress in zip(modules, ipaddresses):
+            RelationshipAssociation(
+                relationship=cls.relationships[0], source=module, destination=ipaddress
+            ).validated_save()
+
+        cls.form_data = {
+            "module_type": moduletypes[1].pk,
+            "role": moduleroles[1].pk,
+            "tenant": None,
+            "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX",
+            "asset_tag": generate_random_device_asset_tag_of_specified_size(100),
+            "location": locations[1].pk,
+            "status": statuses[1].pk,
+            "tags": [t.pk for t in Tag.objects.get_for_model(Module)],
+            "cf_crash_counter": -1,
+            "cr_router-id": None,
+        }
+
+        cls.bulk_edit_data = {
+            "role": moduleroles[1].pk,
+            "tenant": None,
+            "status": statuses[2].pk,
+        }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_module_consoleports(self):
+        module = Module.objects.first()
+
+        ConsolePort.objects.create(module=module, name="Console Port 1")
+        ConsolePort.objects.create(module=module, name="Console Port 2")
+        ConsolePort.objects.create(module=module, name="Console Port 3")
+
+        url = reverse("dcim:module_consoleports", kwargs={"pk": module.pk})
+        self.assertHttpStatus(self.client.get(url), 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_module_consoleserverports(self):
+        module = Module.objects.first()
+
+        ConsoleServerPort.objects.create(module=module, name="Console Server Port 1")
+        ConsoleServerPort.objects.create(module=module, name="Console Server Port 2")
+        ConsoleServerPort.objects.create(module=module, name="Console Server Port 3")
+
+        url = reverse("dcim:module_consoleserverports", kwargs={"pk": module.pk})
+        self.assertHttpStatus(self.client.get(url), 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_module_powerports(self):
+        module = Module.objects.first()
+
+        PowerPort.objects.create(module=module, name="Power Port 1")
+        PowerPort.objects.create(module=module, name="Power Port 2")
+        PowerPort.objects.create(module=module, name="Power Port 3")
+
+        url = reverse("dcim:module_powerports", kwargs={"pk": module.pk})
+        self.assertHttpStatus(self.client.get(url), 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_module_poweroutlets(self):
+        module = Module.objects.first()
+
+        PowerOutlet.objects.create(module=module, name="Power Outlet 1")
+        PowerOutlet.objects.create(module=module, name="Power Outlet 2")
+        PowerOutlet.objects.create(module=module, name="Power Outlet 3")
+
+        url = reverse("dcim:module_poweroutlets", kwargs={"pk": module.pk})
+        self.assertHttpStatus(self.client.get(url), 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_module_interfaces(self):
+        module = Module.objects.filter(interfaces__isnull=False).first()
+        self.add_permissions("ipam.add_ipaddress", "dcim.change_interface")
+
+        url = reverse("dcim:module_interfaces", kwargs={"pk": module.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = response.content.decode(response.charset)
+        # Count the number of occurrences of "Add IP address" in the response_body
+        count = response_body.count("Add IP address")
+        # Assert that "Add IP address" appears for each of the three interfaces
+        self.assertEqual(count, 3)
+
+    def test_module_interface_assign_ipaddress(self):
+        module = Module.objects.first()
+        self.add_permissions(
+            "ipam.add_ipaddress",
+            "extras.view_status",
+            "ipam.view_namespace",
+            "dcim.view_module",
+            "dcim.view_interface",
+        )
+        module_list_url = reverse("dcim:module_interfaces", args=(module.pk,))
+        namespace = Namespace.objects.first()
+        ipaddresses = [str(ipadress) for ipadress in IPAddress.objects.values_list("pk", flat=True)[:3]]
+        add_new_ip_form_data = {
+            "namespace": namespace.pk,
+            "address": "1.1.1.7/24",
+            "tenant": None,
+            "status": Status.objects.get_for_model(IPAddress).first().pk,
+            "type": IPAddressTypeChoices.TYPE_DHCP,
+            "role": None,
+            "nat_inside": None,
+            "dns_name": None,
+            "description": None,
+            "tags": [],
+            "interface": self.interfaces[0].id,
+        }
+        add_new_ip_request = {
+            "path": reverse("ipam:ipaddress_add") + f"?interface={self.interfaces[0].id}&return_url={module_list_url}",
+            "data": post_data(add_new_ip_form_data),
+        }
+        assign_ip_form_data = {"pk": ipaddresses}
+        assign_ip_request = {
+            "path": reverse("ipam:ipaddress_assign")
+            + f"?interface={self.interfaces[1].id}&return_url={module_list_url}",
+            "data": post_data(assign_ip_form_data),
+        }
+
+        with self.subTest("Assert Cannnot assign IPAddress('Add New') without permission"):
+            # Assert Add new IPAddress
+            response = self.client.post(**add_new_ip_request, follow=True)
+            response_body = response.content.decode(response.charset)
+            self.assertHttpStatus(response, 200)
+            self.interfaces[0].refresh_from_db()
+            self.assertEqual(self.interfaces[0].ip_addresses.all().count(), 0)
+            self.assertIn(
+                f"Interface with id &quot;{self.interfaces[0].pk}&quot; not found",
+                response_body,
+            )
+
+        with self.subTest("Assert Cannnot assign IPAddress(Exsisting IP) without permission"):
+            # Assert Assign Exsisting IPAddress
+            response = self.client.post(**assign_ip_request, follow=True)
+            response_body = response.content.decode(response.charset)
+            self.assertHttpStatus(response, 200)
+            self.interfaces[1].refresh_from_db()
+            self.assertEqual(self.interfaces[1].ip_addresses.all().count(), 0)
+            self.assertIn(
+                f"Interface with id &quot;{self.interfaces[1].pk}&quot; not found",
+                response_body,
+            )
+
+        self.add_permissions("dcim.change_interface", "ipam.view_ipaddress")
+
+        with self.subTest("Assert Create and Assign IPAddress"):
+            self.assertHttpStatus(self.client.post(**add_new_ip_request), 302)
+            self.interfaces[0].refresh_from_db()
+            self.assertEqual(
+                str(self.interfaces[0].ip_addresses.all().first().address),
+                add_new_ip_form_data["address"],
+            )
+
+        with self.subTest("Assert Assign IPAddress"):
+            response = self.client.post(**assign_ip_request)
+            self.assertHttpStatus(response, 302)
+            self.interfaces[1].refresh_from_db()
+            self.assertEqual(self.interfaces[1].ip_addresses.count(), 3)
+            interface_ips = [str(ip) for ip in self.interfaces[1].ip_addresses.values_list("pk", flat=True)]
+            self.assertEqual(
+                sorted(ipaddresses),
+                sorted(interface_ips),
+            )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_module_rearports(self):
+        module = Module.objects.first()
+
+        RearPort.objects.create(module=module, name="Rear Port 1")
+        RearPort.objects.create(module=module, name="Rear Port 2")
+        RearPort.objects.create(module=module, name="Rear Port 3")
+
+        url = reverse("dcim:module_rearports", kwargs={"pk": module.pk})
+        self.assertHttpStatus(self.client.get(url), 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_module_frontports(self):
+        module = Module.objects.first()
+        rear_ports = (
+            RearPort.objects.create(module=module, name="Rear Port 1"),
+            RearPort.objects.create(module=module, name="Rear Port 2"),
+            RearPort.objects.create(module=module, name="Rear Port 3"),
+        )
+
+        FrontPort.objects.create(
+            module=module,
+            name="Front Port 1",
+            rear_port=rear_ports[0],
+            rear_port_position=1,
+        )
+        FrontPort.objects.create(
+            module=module,
+            name="Front Port 2",
+            rear_port=rear_ports[1],
+            rear_port_position=1,
+        )
+        FrontPort.objects.create(
+            module=module,
+            name="Front Port 3",
+            rear_port=rear_ports[2],
+            rear_port_position=1,
+        )
+
+        url = reverse("dcim:module_frontports", kwargs={"pk": module.pk})
+        self.assertHttpStatus(self.client.get(url), 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_module_modulebays(self):
+        module = Module.objects.first()
+
+        ModuleBay.objects.create(parent_module=module, position="Module Bay 1")
+        ModuleBay.objects.create(parent_module=module, position="Module Bay 2")
+        ModuleBay.objects.create(parent_module=module, position="Module Bay 3")
+
+        url = reverse("dcim:module_modulebays", kwargs={"pk": module.pk})
+        self.assertHttpStatus(self.client.get(url), 200)
+
+
 class ConsolePortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
     model = ConsolePort
 
