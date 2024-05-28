@@ -1,4 +1,3 @@
-
 from nautobot.core.filters import (
     ContentTypeMultipleChoiceFilter,
     NaturalKeyOrPKMultipleChoiceFilter,

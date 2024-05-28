@@ -3,7 +3,6 @@ import factory
 
 from nautobot.cloud.models import CloudAccount, CloudType
 from nautobot.core.factory import (
-    get_random_instances,
     NautobotBoolIterator,
     PrimaryModelFactory,
     random_instance,
