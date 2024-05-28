@@ -234,8 +234,8 @@ class NautobotTestCaseMixin:
 
         return self.assertQuerysetEqual(qs, values, *args, **kwargs)
 
-    class _AssertApproximateQueriesContext(CaptureQueriesContext):
-        """Implementation class underlying the assertApproximateQueries decorator/context manager."""
+    class _AssertApproximateNumQueriesContext(CaptureQueriesContext):
+        """Implementation class underlying the assertApproximateNumQueries decorator/context manager."""
 
         def __init__(self, test_case, minimum, maximum, connection):
             self.test_case = test_case
@@ -264,11 +264,11 @@ class NautobotTestCaseMixin:
                 f"Captured queries were:\n{captured_queries_string}",
             )
 
-    def assertApproximateQueries(self, minimum, maximum, func=None, *args, using=DEFAULT_DB_ALIAS, **kwargs):
+    def assertApproximateNumQueries(self, minimum, maximum, func=None, *args, using=DEFAULT_DB_ALIAS, **kwargs):
         """Like assertNumQueries, but fuzzier. Assert that the number of queries falls within an acceptable range."""
         conn = connections[using]
 
-        context = self._AssertApproximateQueriesContext(self, minimum, maximum, conn)
+        context = self._AssertApproximateNumQueriesContext(self, minimum, maximum, conn)
         if func is None:
             return context
 

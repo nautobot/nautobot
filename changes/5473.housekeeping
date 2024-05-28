@@ -1,1 +1,1 @@
-Added `assertApproximateQueries` test-case helper method.
+Added `assertApproximateNumQueries` test-case helper method.
