@@ -22,9 +22,9 @@ class RefreshDynamicGroupCaches(Job):
 
     def run(self, single_group=None):
         if single_group is not None:
-            groups = [single_group]
+            groups = DynamicGroup.objects.restrict(self.user, "view").filter(pk=single_group.pk)
         else:
-            groups = DynamicGroup.objects.all()
+            groups = DynamicGroup.objects.restrict(self.user, "view")
 
         for group in groups:
             self.logger.info("Refreshing membership cache", extra={"object": group})
