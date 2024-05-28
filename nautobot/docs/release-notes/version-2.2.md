@@ -79,6 +79,7 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5588](https://github.com/nautobot/nautobot/issues/5588) - Added "Add Prefixes" and "Remove Prefixes" fields to `VRFBulkEditForm`.
 - [#5655](https://github.com/nautobot/nautobot/issues/5655) - Added "Device Family" as a configurable column in the Device Types table view.
 - [#5690](https://github.com/nautobot/nautobot/issues/5690) - Added a generic test case that asserts that all list views provide an appropriate FilterForm class.
+- [#5747](https://github.com/nautobot/nautobot/issues/5747) - Added "Circuit Terminations" menu item.
 
 ### Removed
 
@@ -94,6 +95,8 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5703](https://github.com/nautobot/nautobot/issues/5703) - Fixed `Filter "_custom_field_data" on ... is not GraphQL safe, and will be omitted` warning logs when generating the GraphQL schema.
 - [#5707](https://github.com/nautobot/nautobot/issues/5707) - Fixed incorrect installation of `xmlsec` library in the Nautobot Docker images.
 - [#5708](https://github.com/nautobot/nautobot/issues/5708) - Fixed integrity error when doing bulk edits that resulted from a delete operation on a related model.
+- [#5738](https://github.com/nautobot/nautobot/issues/5738) - Fixed incorrect API query parameters when selecting VLANs to apply to a VM Interface.
+- [#5738](https://github.com/nautobot/nautobot/issues/5738) - Fixed incorrect query parameters when accessing or creating Clusters from a Cluster Type detail view.
 
 ### Documentation
 
