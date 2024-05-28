@@ -72,6 +72,17 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.23 (2024-05-28)
+
+### Security
+
+- [#5740](https://github.com/nautobot/nautobot/issues/5740) - Updated `requests` to `2.32.1` to address [GHSA-9wx4-h78v-vm56](https://github.com/psf/requests/security/advisories/GHSA-9wx4-h78v-vm56). This is not a direct dependency so it will not auto-update when upgrading Nautobot. Please be sure to update your local environment.
+- [#5762](https://github.com/nautobot/nautobot/issues/5762) - Fixed missing member object permission enforcement (e.g., enforce Device permissions for a Dynamic Group containing Devices) when viewing Dynamic Group member objects in the UI or REST API ([GHSA-qmjf-wc2h-6x3q](https://github.com/nautobot/nautobot/security/advisories/GHSA-qmjf-wc2h-6x3q)).
+
+### Housekeeping
+
+- [#5740](https://github.com/nautobot/nautobot/issues/5740) - Updated test dependency `requests` to `~2.32.1`.
+
 ## v1.6.22 (2024-05-13)
 
 ### Security
