@@ -742,6 +742,13 @@ class ViewTestCases:
         def get_list_view(self):
             return lookup.get_view_for_model(self.model, view_type="List")
 
+        def test_list_view_has_filter_form(self):
+            view = self.get_list_view()
+            if hasattr(view, "filterset_form"):  # ObjectListView
+                self.assertIsNotNone(view.filterset_form, "List view lacks a FilterForm")
+            if hasattr(view, "filterset_form_class"):  # ObjectListViewMixin
+                self.assertIsNotNone(view.filterset_form_class, "List viewset lacks a FilterForm")
+
         def test_table_with_indentation_is_removed_on_filter_or_sort(self):
             self.user.is_superuser = True
             self.user.save()

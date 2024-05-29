@@ -706,6 +706,7 @@ class RackReservationBulkDeleteView(generic.BulkDeleteView):
 class ManufacturerListView(generic.ObjectListView):
     queryset = Manufacturer.objects.all()
     filterset = filters.ManufacturerFilterSet
+    filterset_form = forms.ManufacturerFilterForm
     table = tables.ManufacturerTable
 
 
@@ -1197,6 +1198,7 @@ class DeviceBayTemplateBulkDeleteView(generic.BulkDeleteView):
 class PlatformListView(generic.ObjectListView):
     queryset = Platform.objects.all()
     filterset = filters.PlatformFilterSet
+    filterset_form = forms.PlatformFilterForm
     table = tables.PlatformTable
 
 
@@ -3078,6 +3080,7 @@ class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDe
 
 class DeviceFamilyUIViewSet(NautobotUIViewSet):
     filterset_class = filters.DeviceFamilyFilterSet
+    filterset_form_class = forms.DeviceFamilyFilterForm
     form_class = forms.DeviceFamilyForm
     bulk_update_form_class = forms.DeviceFamilyBulkEditForm
     queryset = DeviceFamily.objects.all()

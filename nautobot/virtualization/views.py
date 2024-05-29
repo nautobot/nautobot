@@ -26,6 +26,7 @@ from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterf
 class ClusterTypeListView(generic.ObjectListView):
     queryset = ClusterType.objects.all()
     filterset = filters.ClusterTypeFilterSet
+    filterset_form = forms.ClusterTypeFilterForm
     table = tables.ClusterTypeTable
 
 
@@ -76,6 +77,7 @@ class ClusterTypeBulkDeleteView(generic.BulkDeleteView):
 class ClusterGroupListView(generic.ObjectListView):
     queryset = ClusterGroup.objects.all()
     filterset = filters.ClusterGroupFilterSet
+    filterset_form = forms.ClusterGroupFilterForm
     table = tables.ClusterGroupTable
 
 

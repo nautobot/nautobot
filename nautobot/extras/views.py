@@ -63,8 +63,6 @@ from .datasources import (
     enqueue_pull_git_repository_and_refresh_data,
     get_datasource_contents,
 )
-from .filters import RoleFilterSet
-from .forms import RoleBulkEditForm, RoleForm
 from .jobs import get_job
 from .models import (
     ComputedField,
@@ -103,7 +101,6 @@ from .models import (
     Webhook,
 )
 from .registry import registry
-from .tables import AssociatedContactsTable, RoleTable
 
 logger = logging.getLogger(__name__)
 
@@ -407,7 +404,7 @@ class ContactAssociationUIViewSet(
     filterset_class = filters.ContactAssociationFilterSet
     queryset = ContactAssociation.objects.all()
     serializer_class = serializers.ContactAssociationSerializer
-    table_class = AssociatedContactsTable
+    table_class = tables.AssociatedContactsTable
     non_filter_params = ("export", "page", "per_page", "sort")
 
 
@@ -515,6 +512,7 @@ class CustomFieldListView(generic.ObjectListView):
     queryset = CustomField.objects.all()
     table = tables.CustomFieldTable
     filterset = filters.CustomFieldFilterSet
+    filterset_form = forms.CustomFieldFilterForm
     action_buttons = ("add",)
 
 
@@ -715,7 +713,7 @@ class DynamicGroupView(generic.ObjectView):
 
         if table_class is not None:
             # Members table (for display on Members nav tab)
-            members_table = table_class(instance.members, orderable=False)
+            members_table = table_class(instance.members.restrict(request.user, "view"), orderable=False)
             paginate = {
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request),
@@ -895,7 +893,9 @@ class ObjectDynamicGroupsView(generic.GenericView):
             obj = get_object_or_404(model, **kwargs)
 
         # Gather all dynamic groups for this object (and its related objects)
-        dynamicsgroups_table = tables.DynamicGroupTable(data=obj.dynamic_groups_cached, orderable=False)
+        dynamicsgroups_table = tables.DynamicGroupTable(
+            data=obj.dynamic_groups_cached.restrict(request.user, "view"), orderable=False
+        )
 
         # Apply the request context
         paginate = {
@@ -959,6 +959,7 @@ class ExportTemplateBulkDeleteView(generic.BulkDeleteView):
 class ExternalIntegrationUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.ExternalIntegrationBulkEditForm
     filterset_class = filters.ExternalIntegrationFilterSet
+    filterset_form_class = forms.ExternalIntegrationFilterForm
     form_class = forms.ExternalIntegrationForm
     queryset = ExternalIntegration.objects.select_related("secrets_group")
     serializer_class = serializers.ExternalIntegrationSerializer
@@ -2057,11 +2058,12 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
     """`Roles` UIViewSet."""
 
     queryset = Role.objects.all()
-    bulk_update_form_class = RoleBulkEditForm
-    filterset_class = RoleFilterSet
-    form_class = RoleForm
+    bulk_update_form_class = forms.RoleBulkEditForm
+    filterset_class = filters.RoleFilterSet
+    filterset_form_class = forms.RoleFilterForm
+    form_class = forms.RoleForm
     serializer_class = serializers.RoleSerializer
-    table_class = RoleTable
+    table_class = tables.RoleTable
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
