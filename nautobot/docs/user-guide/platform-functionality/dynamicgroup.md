@@ -606,39 +606,30 @@ Creating, updating, or deleting a Dynamic Group will automatically refresh the c
 
 ### Working with a given Dynamic Group's Members
 
-A Dynamic Group object in the ORM exposes two (2) properties for retrieving the full set of members of that group:
+Any Dynamic Group object in the ORM has a simple property, `.members`, for retrieving the QuerySet of (cached) members of that group. Because this data is cached in a Static Group, no expensive database queries are required to construct it; evaluating the QuerySet will perform a single efficient database query. You can of course perform further `.filter()` and other QuerySet operations, but (as always with QuerySets) this will incur additional database queries to re-evaluate the modified QuerySet.
 
-- `members` - QuerySet of member objects, as defined by the Dynamic Group's filter or the combination of its child groups (if any). Constructing this QuerySet requires performing multiple database queries, which may be relatively expensive depending on the complexity of the group definition(s). Evaluating the constructed queryset may also be expensive if the group definition is complex.
-- `members_cached` - QuerySet of member objects (members of the hidden Static Group serving as a cache for this Dynamic Group). Because this data is cached, no expensive database queries are required to construct it; evaluating the QuerySet will perform a single efficient database query.
+Additionally, a Dynamic Group has the method `.has_member(obj)` for checking whether a single given database object is a (cached) member of this group. This too is a very efficient query.
 
-After retrieving either `members` or `members_cached`, you can of course perform `.filter()` and other QuerySet operations but (as always with QuerySets) this will incur additional database queries to re-evaluate the modified QuerySet.
+Neither of the above attributes provide a way to directly bypass the cached Static Group used by this Dynamic Group; if it's important to your use case to guarantee up-to-the-minute accurate membership information, you can call a Dynamic Group's `.update_cached_members()` method, which will refresh its cache and return the resulting member QuerySet. Because refreshing the cache involves evaluating the Dynamic Group's defined filter(s), this is necessarily a more expensive database query(s) than either of the above access patterns, so it should only be done if required.
 
-Additionally, a Dynamic Group has the following methods for working with group membership and caching:
++/- 2.3.0
+    In prior versions of Nautobot, `.members` did not use a cache (and so would always re-evaluate the Dynamic Group), and a separate `.members_cached` property used a configurable Redis cache to temporarily store the evaluated QuerySet. For performance reasons, the behavior of `.members` has been changed to behave as described above. `.members_cached` should be considered deprecated and will likely be removed in a future major release.
 
-- `update_cached_members` - A way of forcing an update to the cached members of a Dynamic Group. This will always perform database queries. It will also return the updated `members_cached` property.
-- `has_member` - A way of checking if an object is a member of a Dynamic Group. The arguments are:
-    - `obj` - An instance of an object to check if it is a member of the given group.
-    - `use_cache` - A boolean value to choose whether to use the `members_cached` (`use_cache=True`) or force reevaluation of the Dynamic Group's `members` (`use_cache=False`, the default). This is a handy way to have Nautobot perform the ideal membership check.
+    Similarly, `.has_member(obj)` was previously non-cached by default, but the Redis cache could be used by invoking it as `.has_member(obj, use_cache=True)`; this too has been changed in this release, and the `use_cache` flag should be considered deprecated as well.
 
 ### Working with a given Object's containing Dynamic Groups
 
-A model instance that supports Dynamic Groups will expose the following properties:
+Conversely, any model instance that supports Dynamic Groups will expose the property `.dynamic_groups`, which returns the QuerySet of (cached) Dynamic Groups that contain the model instance. As above, there's no direct way to bypass caching; if it's critically important to your use case to have up-to-the-minute accuracy, your only recourse is to call `DynamicGroup.update_cached_members()` for _each and every potentially relevant DynamicGroup record_, which obviously has the potential to be a very expensive operation if many Dynamic Groups are defined.
 
-- `instance.dynamic_groups` - A QuerySet of `DynamicGroup` objects that contain the model instance; potentially quite expensive to derive.
-    - Retrieves all _N_ DynamicGroup records from the database that apply to the instance's content type, and evaluates each one, performing at least _N_ distinct database queries against the model in question to determine which Dynamic Groups apply to the model instance.
-    - As described earlier, constructing the `members` query for each relevant DynamicGroup will often incur additional database queries, depending on the complexity of the group's filter definition.
-- `instance.dynamic_groups_cached` - A QuerySet of `DynamicGroup` objects that contained the model instance as of their last members cache calculation; uses cached member lists.
-    - Uses cached member lists for each Dynamic Group that is applicable to the instance's content type.
-    - Ideal for many use cases, performing only _1_ query to identify the relevant groups.
-- `instance.dynamic_groups_list` - List (rather than QuerySet) of `DynamicGroup` objects that contain the model instance.
-    - Performs more or less identically to `instance.dynamic_groups`.
-- `instance.dynamic_groups_list_cached` - List of `DynamicGroup` objects that contained the model instance as of their last members cache calculation; uses cached member lists.
-    - Performs more or less identically to `dynamic_groups_cached`.
++/- 2.3.0
+    In prior versions of Nautobot, `.dynamic_groups` did not use a cache (and so had the potential to be a very expensive lookup every time it was accessed), and a separate `.dynamic_groups_cached` property used a configurable Redis cache to temporarily store the evaluated QuerySet. For performance reasons, the behavior of `.dynamic_groups` has been changed to behave as described above. `.dynamic_groups_cached` should be considered deprecated and will likely be removed in a future major release.
+
+    Additionally, prior versions of Nautobot exposed two additional model properties, `.dynamic_groups_list` and `.dynamic_groups_cached`, which provided a (very slight) performance improvement over the previous two properties. With the introduction of the Static Group cache implementation, these properties no longer provide any relevant performance improvement, and should be considered deprecated as well.
 
 ### Invalidating/Refreshing the Cache
 
 If you need to invalidate the membership cache for all Dynamic Groups, you can do so by running the management command `nautobot-server refresh_dynamic_group_member_caches`. This will invalidate the cache for all Dynamic Groups.
 
-You can also refresh the cache for one or all Dynamic Groups by running the `Refresh Dynamic Group Caches` system [Job](jobs/index.md). You may find it useful to define a schedule for this job such that it automatically refreshes all caches periodically, such as every 15 minutes or every hour.
+You can also refresh the cache for one or all Dynamic Groups by running the `Refresh Dynamic Group Caches` system [Job](jobs/index.md). You may find it useful to define a schedule for this job such that it automatically refreshes these caches periodically, such as every 15 minutes or every day, depending on your needs.
 
-From an App or Job, you can directly call `group.update_cached_members()` as described above.
+From an App or Job, you can also directly call `group.update_cached_members()` as described above.

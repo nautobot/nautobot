@@ -19,6 +19,7 @@ from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.utils.deprecation import method_deprecated, method_deprecated_in_favor_of
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.querysets import DynamicGroupMembershipQuerySet, DynamicGroupQuerySet
@@ -554,42 +555,39 @@ class DynamicGroup(OrganizationalModel):
 
     @property
     def members(self):
-        """Return the member objects for this group, never cached."""
-        # If there are child groups, return the generated group queryset, otherwise use this group's
-        # `filter` directly.
-        if self.children.exists():
-            members = self.get_group_queryset()
-        else:
-            members = self.get_queryset()
-        # TODO: it "makes sense" to update the cache after we've gone to the trouble of looking up the members,
-        #       but bear in mind that this just creates the queryset, it doesn't actually evaluate it here.
-        #       Updating the cache would require actually evaluating the queryset, which could be relatively expensive,
-        #       and might actually be unnecessary (e.g. if we are doing `group.members.filter(...)` we don't need
-        #       to evaluate `group.members` itself).
-        #       Is there a way we could have the cache auto-update only when the queryset is evaluated?
-        # return self.update_cached_members(members=members)
-        return members
+        """
+        Return the (cached) member objects for this group.
 
-    @property
-    def members_cache_key(self):
-        """Obsolete cache key for this group's members."""
-        return f"nautobot.extras.dynamicgroup.{self.id}.members_cached"
-
-    @property
-    def members_cached(self):
-        """Return the member objects for this group, cached if available."""
-
+        If up-to-the-minute accuracy is needed, call `update_cached_members()` instead.
+        """
         try:
             return self._backing_group.members
         except ObjectDoesNotExist:
             return self.update_cached_members()
 
+    @property
+    @method_deprecated("Members are now cached in the database as a Static Group rather than in Redis.")
+    def members_cache_key(self):
+        """Obsolete cache key for this group's members."""
+        return f"nautobot.extras.dynamicgroup.{self.id}.members_cached"
+
+    @property
+    @method_deprecated_in_favor_of(members.fget)
+    def members_cached(self):
+        """Deprecated  - use `members()` instead."""
+        return self.members
+
     def update_cached_members(self, members=None):
         """
-        Update the cached members of the groups. Also returns the updated cached members.
+        Update the cached members of this group and return the resulting members.
         """
         if members is None:
-            members = self.members
+            # If there are child groups, return the generated group queryset, otherwise use this group's
+            # `filter` directly.
+            if self.children.exists():
+                members = self.get_group_queryset()
+            else:
+                members = self.get_queryset()
 
         try:
             self._backing_group.members = members
@@ -604,7 +602,7 @@ class DynamicGroup(OrganizationalModel):
             self._backing_group.members = members
         logger.debug("Refreshed cache for %s, now with %d members", self, self._backing_group.count)
 
-        return members
+        return self._backing_group.members
 
     def has_member(self, obj, use_cache=False):
         """
@@ -614,7 +612,7 @@ class DynamicGroup(OrganizationalModel):
 
         Args:
             obj (django.db.models.Model): The object to check for membership.
-            use_cache (bool, optional): Whether to use the cache and run the query directly. Defaults to False.
+            use_cache (bool, optional): Obsolete; cache is now always used.
 
         Returns:
             bool: True if the object is a member of this group, otherwise False.
@@ -622,29 +620,19 @@ class DynamicGroup(OrganizationalModel):
 
         # Object's class may have content type cached, so check that first.
         try:
-            if use_cache and type(obj)._content_type.id != self.content_type_id:
+            if type(obj)._content_type.id != self.content_type_id:
                 return False
         except AttributeError:
             # Object did not have `_content_type` even though we wanted to use it.
-            pass
+            if ContentType.objects.get_for_model(obj).id != self.content_type_id:
+                return False
 
-        if not use_cache and ContentType.objects.get_for_model(obj).id != self.content_type_id:
-            return False
-
-        if not use_cache:
-            return self.members.filter(pk=obj.pk).exists()
-        else:
-            return obj in list(self.members_cached)
+        return self.members.filter(pk=obj.pk).exists()
 
     @property
     def count(self):
-        """Return the number of member objects in this group."""
+        """Return the (cached) number of member objects in this group."""
         return self.members.count()
-
-    @property
-    def count_cached(self):
-        """Return the cached number of member objects in this group."""
-        return self.members_cached.count()
 
     def get_group_members_url(self):
         """Get URL to group members."""

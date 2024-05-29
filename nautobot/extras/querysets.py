@@ -162,48 +162,34 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
 
     def get_list_for_object(self, obj, use_cache=False):
         """
-        Return a list of `DynamicGroup` objects assigned to the given object.
+        Return a (cached) list of `DynamicGroup` objects assigned to the given object.
 
         Args:
             obj: The object to seek dynamic groups membership by.
-            use_cache: If True, use cached group membership rather than dynamically evaluating each group's members
+            use_cache: Obsolete; cache is always used. If truly necessary to get up-to-the-minute accuracy, you should
+                call `[dg.update_cached_members() for dg in DynamicGroup.objects.filter(content_type=...)]` beforehand,
+                but be aware that that's potentially quite expensive computationally.
+        """
+        return list(self.get_for_object(obj))
+
+    def get_for_object(self, obj, use_cache=False):
+        """
+        Return a (cached) queryset of `DynamicGroup` objects that are assigned to the given object.
+
+        Args:
+            obj: The object to seek dynamic groups membership by.
+            use_cache: Obsolete; cache is always used. If truly necessary to get up-to-the-minute accuracy, you should
+                call `[dg.update_cached_members() for dg in DynamicGroup.objects.filter(content_type=...)]` beforehand,
+                but be aware that's potentially quite expensive computationally.
         """
         if not isinstance(obj, Model):
             raise TypeError(f"{obj} is not an instance of Django Model class")
 
-        if use_cache:
-            return list(
-                self.filter(
-                    content_type=ContentType.objects.get_for_model(type(obj)),
-                    _backing_group__static_group_associations__associated_object_id=obj.id,
-                )
-            )
-
-        # Get dynamic groups for this content_type using the discrete content_type fields to
-        # optimize the query.
-        eligible_groups = self.filter(
-            content_type__app_label=obj._meta.app_label, content_type__model=obj._meta.model_name
+        return self.filter(
+            content_type__app_label=obj._meta.app_label,
+            content_type__model=obj._meta.model_name,
+            _backing_group__static_group_associations__associated_object_id=obj.id,
         )
-
-        # Filter down to matching groups.
-        my_groups = [group for group in eligible_groups if group.has_member(obj)]
-
-        return my_groups
-
-    def get_for_object(self, obj, use_cache=False):
-        """
-        Return a queryset of `DynamicGroup` objects that are assigned to the given object.
-
-        Args:
-            obj: The object to seek dynamic groups membership by.
-            use_cache: If True, use cached group membership rather than dynamically evaluating each group's members.
-        """
-        if use_cache:
-            return self.filter(
-                content_type=ContentType.objects.get_for_model(type(obj)),
-                _backing_group__static_group_associations__associated_object_id=obj.id,
-            )
-        return self.filter(pk__in=[dg.pk for dg in self.get_list_for_object(obj)])
 
     def get_by_natural_key(self, slug):
         return self.get(slug=slug)

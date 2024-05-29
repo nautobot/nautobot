@@ -339,7 +339,7 @@ class DynamicGroupTable(BaseTable):
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    members = tables.Column(accessor="count_cached", verbose_name="Group Members", orderable=False)
+    members = tables.Column(accessor="count", verbose_name="Group Members", orderable=False)
     actions = ButtonsColumn(DynamicGroup)
 
     class Meta(BaseTable.Meta):  # pylint: disable=too-few-public-methods
@@ -365,7 +365,7 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
     """Hybrid table for displaying info for both group and membership."""
 
     description = tables.Column(accessor="group.description")
-    members = tables.Column(accessor="group.count_cached", verbose_name="Group Members", orderable=False)
+    members = tables.Column(accessor="group.count", verbose_name="Group Members", orderable=False)
 
     class Meta(BaseTable.Meta):
         model = DynamicGroupMembership
