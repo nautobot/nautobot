@@ -652,6 +652,48 @@ def common_test_data(cls):
 
     module_types = ModuleType.objects.all()[:3]
     module_status = Status.objects.get_for_model(Module).first()
+    # Create 3 of each component template on each module type
+    for i in range(10):
+        ConsolePortTemplate.objects.create(
+            name=f"Test Filters Module Console Port {i+1}",
+            module_type=module_types[i % 3],
+        )
+        ConsoleServerPortTemplate.objects.create(
+            name=f"Test Filters Module Console Server Port {i+1}",
+            module_type=module_types[i % 3],
+        )
+        ppt = PowerPortTemplate.objects.create(
+            name=f"Test Filters Module Power Port {i+1}",
+            module_type=module_types[i % 3],
+        )
+        PowerOutletTemplate.objects.create(
+            name=f"Test Filters Module Power Outlet {i+1}",
+            power_port_template=ppt,
+            module_type=module_types[i % 3],
+        )
+        InterfaceTemplate.objects.create(
+            name=f"Test Filters Module Interface {i+1}",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            module_type=module_types[i % 3],
+        )
+        rpt = RearPortTemplate.objects.create(
+            name=f"Test Filters Module Rear Port {i+1}",
+            module_type=module_types[i % 3],
+            type=PortTypeChoices.TYPE_8P8C,
+            positions=10,
+        )
+        FrontPortTemplate.objects.create(
+            name=f"Test Filters Module Front Port {i+1}",
+            module_type=module_types[i % 3],
+            rear_port_template=rpt,
+            rear_port_position=i + 1,
+            type=PortTypeChoices.TYPE_8P8C,
+        )
+        ModuleBayTemplate.objects.create(
+            position=f"Test Filters Module Module Bay {i+1}",
+            module_type=module_types[i % 3],
+        )
+
     Module.objects.create(
         module_type=module_types[0],
         status=module_status,
