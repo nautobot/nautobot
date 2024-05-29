@@ -1,9 +1,9 @@
 #
-<!-- markdownlint-disable MD033 -->
+<!-- markdownlint-disable no-inline-html -->
 <figure markdown="span">
   ![Nautobot Logo](../assets/nautobot_logo.svg "Welcome"){ width="400" }
 </figure>
-<!-- markdownlint-enable MD033 -->
+<!-- markdownlint-enable no-inline-html -->
 ---
 
 ## What is Nautobot?
@@ -24,7 +24,7 @@ Nautobot enables three (3) key use cases.
 
 ## Getting Started
 
-<!-- markdownlint-disable MD033 -->
+<!-- markdownlint-disable no-inline-html -->
 <div class="grid cards" markdown>
 
 - :material-cloud-download:{ .lg .middle } **Installing Nautobot**
@@ -56,13 +56,13 @@ Nautobot enables three (3) key use cases.
     Nautobot has a [Python SDK](https://pynautobot.readthedocs.io/) and [Ansible modules](https://galaxy.ansible.com/ui/repo/published/networktocode/nautobot/docs/) to interact with Nautobot in a programmatic way.
 
 </div>
-<!-- markdownlint-enable MD033 -->
+<!-- markdownlint-enable no-inline-html -->
 
 ## Nautobot Apps
 
 Nautobot has a thriving ecosystem of **Apps**, developed as separate projects, for which you can find links to documentation under the [Nautobot Apps](../apps/index.md) section.
 
-<!-- markdownlint-disable MD033 -->
+<!-- markdownlint-disable no-inline-html -->
 <div class="grid cards" markdown>
 
 - ![Golden Config](../assets/app-icons/icon-GoldenConfiguration.png){style="height: 35px; margin-bottom: 0em" .middle } **Golden Configuration**
@@ -106,11 +106,11 @@ Nautobot has a thriving ecosystem of **Apps**, developed as separate projects, f
     [Device Onboarding](https://github.com/nautobot/nautobot-app-device-onboarding) brings network data into Nautobot, helping to build out the intended state from the current state of the network.
 
 </div>
-<!-- markdownlint-enable MD033 -->
+<!-- markdownlint-enable no-inline-html -->
 
 ## Nautobot Screenshots
 
-<!-- markdownlint-disable MD033 -->
+<!-- markdownlint-disable no-inline-html -->
 <div class="grid cards" markdown>
 
 - ![Main Page](../media/ss_main_page.png){ .on-glb }
@@ -122,11 +122,11 @@ Nautobot has a thriving ecosystem of **Apps**, developed as separate projects, f
 - ![GraphQL API](../media/ss_graphiql.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable MD033 -->
+<!-- markdownlint-enable no-inline-html -->
 
 ### App Screenshots
 
-<!-- markdownlint-disable MD033 -->
+<!-- markdownlint-disable no-inline-html -->
 <div class="grid cards" markdown>
 
 - ![Golden Config App](../media/ss_app_golden_config.png){ .on-glb }
@@ -134,11 +134,11 @@ Nautobot has a thriving ecosystem of **Apps**, developed as separate projects, f
 - ![ChatOps App](../media/ss_app_chatops.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable MD033 -->
+<!-- markdownlint-enable no-inline-html -->
 
 ## Contributing to Nautobot
 
-<!-- markdownlint-disable MD033 -->
+<!-- markdownlint-disable no-inline-html -->
 <div class="grid cards" markdown>
 
 - :material-code-block-braces:{ .lg .middle } **Develop and Contribute to Nautobot**
@@ -157,4 +157,4 @@ Nautobot has a thriving ecosystem of **Apps**, developed as separate projects, f
     Jump started your [development of Nautobot Jobs](../development/jobs/index.md).
 
 </div>
-<!-- markdownlint-enable MD033 -->
+<!-- markdownlint-enable no-inline-html -->

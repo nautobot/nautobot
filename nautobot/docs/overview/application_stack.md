@@ -4,7 +4,7 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 
 ## Components
 
-<!-- markdownlint-disable MD033 MD003 MD022-->
+<!-- markdownlint-disable no-inline-html heading-style blanks-around-headings-->
 <div class="grid cards" markdown>
 
 - :material-language-python:{ .lg .middle } **Python**
@@ -67,17 +67,17 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
    [NAPALM](https://napalm.readthedocs.io/en/latest/) and [NAPALM Community Drivers](https://github.com/napalm-automation-community).
 
 </div>
-<!-- markdownlint-enable MD033 MD003 MD022 -->
+<!-- markdownlint-enable no-inline-html heading-style blanks-around-headings -->
 
 ## Application Diagram
 
 The following diagram displays how data travels through Nautobot's application stack.
 
-<!-- markdownlint-disable MD033 -->
+<!-- markdownlint-disable no-inline-html -->
 <figure markdown="span">
 ![Application stack diagram](../media/nautobot_application_stack_low_level.png "Application stack diagram")
 </figure>
-<!-- markdownlint-enable MD033 -->
+<!-- markdownlint-enable no-inline-html -->
 
 ## Getting Started
 
