@@ -8,7 +8,7 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 <div class="grid cards" markdown>
 
 - :material-language-python:{ .lg .middle } **Python**
-    
+
     ---
     :material-language-python: Python 3.8 - 3.11 support
 
