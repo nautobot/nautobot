@@ -66,31 +66,27 @@ The following diagram displays how data travels through Nautobot's application s
 
 See the [installation guide](../user-guide/administration/installation/index.md) for help getting Nautobot up and running quickly.
 
-## Notices
 
-### Python
+## Dependency History
 
-+++ 1.3.0
-    Python 3.10 support was added.
-
---- 1.3.0
-    Python 3.6 support was removed.
-
-+/- 1.6.0
-    Python 3.11 support was added and Python 3.7 support was removed.
-
-### Databases
-
---- 2.1.0
-    Support for versions of PostgreSQL older than 12.0 was removed.
-
-+++ 1.1.0
++++ 1.1.0 "MySQL support"
     MySQL support was added.
 
-### Task Queeuing
-
---- 2.0.0
++/- 1.3.0 "Python 3.6, Python 3.10"
+    - Python 3.6 support was removed.
+    - Python 3.10 support was added.
+    
++/- 1.6.0 "Python 3.7, Python 3.11"
+    - Python 3.7 support was removed.
+    - Python 3.11 support was added.
+    
+--- 2.0.0 "django-rq and django-cacheops"
     - `django-rq` support was removed.
     - `django-cacheops` usage was removed and replaced with Django's native caching features.
+
+--- 2.1.0 "PostgreSQL <12.0"
+    Support for versions of PostgreSQL older than 12.0 was removed.
+
+## Notices
 
 > Nautobot was initially developed as a fork of NetBox (v2.10.4), which was originally created by Jeremy Stretch at DigitalOcean and by the NetBox open source community.
