@@ -53,7 +53,7 @@ Nautobot enables three (3) key use cases.
 - :material-language-python:{ .lg .middle } **Nautobot SDKs**
 
     ---
-    Nautobot has a [Python SDK](https://pynautobot.readthedocs.io/) and [Ansible modules](https://galaxy.ansible.com/ui/repo/published/networktocode/nautobot/docs/) to interact with Nautobot in a programmatic way.
+    Nautobot has a [Python SDK](https://docs.nautobot.com/projects/pynautobot/en/latest/index.html) and [Ansible modules](https://galaxy.ansible.com/ui/repo/published/networktocode/nautobot/docs/) to interact with Nautobot in a programmatic way.
 
 </div>
 <!-- markdownlint-enable no-inline-html -->
