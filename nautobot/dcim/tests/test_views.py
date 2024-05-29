@@ -1627,6 +1627,20 @@ class PowerOutletTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestC
             "feed_leg": PowerOutletFeedLegChoices.FEED_LEG_B,
         }
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        # power_port_template must match the parent device/module type
+        self.form_data["power_port_template"] = instance.power_port_template.pk
+        super().test_edit_object_with_permission()
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        # power_port_template must match the parent device/module type
+        self.form_data["power_port_template"] = instance.power_port_template.pk
+        super().test_edit_object_with_constrained_permission()
+
 
 class InterfaceTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
     model = InterfaceTemplate
