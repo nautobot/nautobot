@@ -1720,6 +1720,22 @@ class FrontPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "type": PortTypeChoices.TYPE_8P8C,
         }
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        # rear_port_template must match the parent device/module type
+        self.form_data["rear_port_template"] = instance.rear_port_template.pk
+        self.form_data["rear_port_position"] = instance.rear_port_position
+        super().test_edit_object_with_permission()
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        # rear_port_template must match the parent device/module type
+        self.form_data["rear_port_template"] = instance.rear_port_template.pk
+        self.form_data["rear_port_position"] = instance.rear_port_position
+        super().test_edit_object_with_constrained_permission()
+
 
 class RearPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
     model = RearPortTemplate
@@ -3038,6 +3054,20 @@ class FrontPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
     @unittest.skip("No DeviceBulkAddFrontPortView exists at present")
     def test_bulk_add_component(self):
         pass
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        self.form_data["rear_port"] = instance.rear_port.pk  # rear_port must match the parent device/module
+        self.form_data["rear_port_position"] = instance.rear_port_position
+        super().test_edit_object_with_permission()
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        self.form_data["rear_port"] = instance.rear_port.pk  # rear_port must match the parent device/module
+        self.form_data["rear_port_position"] = instance.rear_port_position
+        super().test_edit_object_with_constrained_permission()
 
 
 class RearPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):

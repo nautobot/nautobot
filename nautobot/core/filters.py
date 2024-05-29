@@ -131,10 +131,30 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
 
     Example:
 
-        has_interfaces = RelatedMembershipBooleanFilter(
-            field_name="interfaces",
-            label="Has interfaces",
+        has_modules = RelatedMembershipBooleanFilter(
+            field_name="module_bays__installed_module",
+            label="Has modules",
         )
+
+        This would generate a filter that returns instances that have at least one module
+        bay with an installed module. The `has_modules=False` filter would exclude instances
+        with at least one module bay with an installed module.
+
+        Set `exclude=True` to reverse the behavior of the filter. This __may__ be useful
+        for filtering on null directly related fields but this filter is not smart enough
+        to differentiate between `fieldA__fieldB__isnull` and `fieldA__isnull` so it's not
+        suitable for cases like the `has_empty_module_bays` filter where an instance may
+        not have any module bays.
+
+        See the below truth table for more information:
+
+        | value       | exclude          | Result
+        |-------------|------------------|-------
+        | True        | False (default)  | Return instances with at least one non-null match -- qs.filter(field_name__isnull=False)
+        | False       | False (default)  | Exclude instances with at least one non-null match -- qs.exclude(field_name__isnull=False)
+        | True        | True             | Return instances with at least one null match -- qs.filter(field_name__isnull=True)
+        | False       | True             | Exclude instances with at least one null match -- qs.exclude(field_name__isnull=True)
+
     """
 
     def __init__(self, field_name=None, lookup_expr="isnull", *, label=None, method=None, distinct=True, **kwargs):
@@ -158,10 +178,10 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
             qs = qs.distinct()
         lookup = f"{self.field_name}__{self.lookup_expr}"
         if bool(value):
-            # return instances with field populated
+            # if self.exclude=False, return instances with field populated
             return qs.filter(**{lookup: self.exclude})
         else:
-            # exclude instances with field populated
+            # if self.exclude=False, exclude instances with field populated
             return qs.exclude(**{lookup: self.exclude})
 
 
