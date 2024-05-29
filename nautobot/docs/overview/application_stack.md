@@ -8,29 +8,15 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 <div class="grid cards" markdown>
 
 - :material-language-python:{ .lg .middle } **Python**
+    
     ---
     :material-language-python: Python 3.8 - 3.11 support
-
-    +++ 1.3.0
-        Python 3.10 support was added.
-
-    --- 1.3.0
-        Python 3.6 support was removed.
-
-    +/- 1.6.0
-        Python 3.11 support was added and Python 3.7 support was removed.
 
 - :material-database:{ .lg .middle } **Database**
 
     ---
-    :simple-postgresql: PostgreSQL 12+
+    :simple-postgresql: PostgreSQL 12+  
     :simple-mysql: MySQL 8.0+
-
-    --- 2.1.0
-        Support for versions of PostgreSQL older than 12.0 was removed.
-
-    +++ 1.1.0
-        MySQL support was added.
 
 - :simple-django:{ .lg .middle } **Application**
 
@@ -40,7 +26,7 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 - :material-gate:{ .lg .middle } **WSGI Service**
 
     ---
-    Learn about the many [configuration options](../user-guide/administration/configuration/index.md) that Nautobot offers for fine-tuning your installation.
+    Handles communication between the Nautobot Python web framework and the HTTP web server.
 
 - :material-web:{ .lg .middle } **HTTP Service**
 
@@ -50,16 +36,13 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 - :material-cached:{ .lg .middle } **Cache**
 
     ---
-    Django/Redis :simple-redis:
+    :simple-redis: Django/Redis
 
 - :material-human-queue:{ .lg .middle } **Task Queuing**
 
     ---
-   Redis :simple-redis:
-
-    --- 2.0.0
-        - `django-rq` support was removed.
-        - `django-cacheops` usage was removed and replaced with Django's native caching features.
+   :simple-celery: Celary  
+   :simple-redis: Redis
 
 - :material-truck-delivery-outline:{ .lg .middle } **Live Device Access**
 
@@ -84,5 +67,30 @@ The following diagram displays how data travels through Nautobot's application s
 See the [installation guide](../user-guide/administration/installation/index.md) for help getting Nautobot up and running quickly.
 
 ## Notices
+
+### Python
+
++++ 1.3.0
+    Python 3.10 support was added.
+
+--- 1.3.0
+    Python 3.6 support was removed.
+
++/- 1.6.0
+    Python 3.11 support was added and Python 3.7 support was removed.
+
+### Databases
+
+--- 2.1.0
+    Support for versions of PostgreSQL older than 12.0 was removed.
+
++++ 1.1.0
+    MySQL support was added.
+
+### Task Queeuing
+
+--- 2.0.0
+    - `django-rq` support was removed.
+    - `django-cacheops` usage was removed and replaced with Django's native caching features.
 
 > Nautobot was initially developed as a fork of NetBox (v2.10.4), which was originally created by Jeremy Stretch at DigitalOcean and by the NetBox open source community.
