@@ -1631,14 +1631,14 @@ class PowerOutletTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestC
     def test_edit_object_with_permission(self):
         instance = self._get_queryset().first()
         # power_port_template must match the parent device/module type
-        self.form_data["power_port_template"] = instance.power_port_template.pk
+        self.form_data["power_port_template"] = getattr(instance.power_port_template, "pk", None)
         super().test_edit_object_with_permission()
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_edit_object_with_constrained_permission(self):
         instance = self._get_queryset().first()
         # power_port_template must match the parent device/module type
-        self.form_data["power_port_template"] = instance.power_port_template.pk
+        self.form_data["power_port_template"] = getattr(instance.power_port_template, "pk", None)
         super().test_edit_object_with_constrained_permission()
 
 
@@ -2827,13 +2827,17 @@ class PowerOutletTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_edit_object_with_permission(self):
         instance = self._get_queryset().first()
-        self.form_data["power_port"] = instance.power_port.pk  # power_port is not editable
+        self.form_data["power_port"] = getattr(
+            instance.power_port, "pk", None
+        )  # power_port must match parent device/module
         super().test_edit_object_with_permission()
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_edit_object_with_constrained_permission(self):
         instance = self._get_queryset().first()
-        self.form_data["power_port"] = instance.power_port.pk  # power_port is not editable
+        self.form_data["power_port"] = getattr(
+            instance.power_port, "pk", None
+        )  # power_port must match parent device/module
         super().test_edit_object_with_constrained_permission()
 
 
