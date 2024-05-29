@@ -1,0 +1,3 @@
+Updated `django-constance` dependency to `~3.1.0`
+Updated `emoji` dependency to `~2.12.1`.
+Widened `napalm` dependency to permit version 5.x.

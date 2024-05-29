@@ -1,0 +1,3 @@
+Updated `django-auth-ldap` dependency to `~4.8`.
+Updated `django-tree-queries` dependency to `~0.19`.
+Updated `Markdown` dependency to `~3.6`.

@@ -283,8 +283,8 @@ This workflow uses Python and Poetry to work with your development environment l
 There are a few things you'll need:
 
 * A Linux system or environment
-* A MySQL or PostgreSQL server, which can be installed locally [per the documentation](../../user-guide/administration/installation/index.md#installing-nautobot-dependencies)
-* A Redis server, which can also be [installed locally](../../user-guide/administration/installation/index.md#installing-nautobot-dependencies)
+* A MySQL or PostgreSQL server, which can be installed locally [per the documentation](../../user-guide/administration/installation/install_system.md)
+* A Redis server, which can also be [installed locally](../../user-guide/administration/installation/install_system.md)
 * A supported version of Python
 * A recent version of [Poetry](https://python-poetry.org/docs/#installation)
 
