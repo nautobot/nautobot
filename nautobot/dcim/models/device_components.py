@@ -122,12 +122,6 @@ class ModularComponentModel(ComponentModel):
         abstract = True
         ordering = ("device", "module", "_name")
         constraints = [
-            # Database constraint to make the device and module fields mutually exclusive
-            models.CheckConstraint(
-                check=models.Q(device__isnull=False, module__isnull=True)
-                | models.Q(device__isnull=True, module__isnull=False),
-                name="%(app_label)s_%(class)s_device_xor_module",
-            ),
             models.UniqueConstraint(
                 fields=("device", "name"),
                 name="%(app_label)s_%(class)s_device_name_unique",
@@ -1171,6 +1165,10 @@ class ModuleBay(PrimaryModel):
 
     clone_fields = ["parent_device", "parent_module"]
 
+    # The recursive nature of this model combined with the fact that it can be a child of a
+    # device or location makes our natural key implementation unusable, so just use the pk
+    natural_key_field_names = ["pk"]
+
     class Meta:
         # TODO: Ordering by parent_module.id is not correct but prevents an infinite loop
         ordering = (
@@ -1179,12 +1177,6 @@ class ModuleBay(PrimaryModel):
             "_position",
         )
         constraints = [
-            # Database constraint to make the parent_device and parent_module fields mutually exclusive
-            models.CheckConstraint(
-                check=models.Q(parent_device__isnull=False, parent_module__isnull=True)
-                | models.Q(parent_device__isnull=True, parent_module__isnull=False),
-                name="dcim_modulebay_parent_device_xor_parent_module",
-            ),
             models.UniqueConstraint(
                 fields=["parent_device", "position"],
                 name="dcim_modulebay_parent_device_position_unique",

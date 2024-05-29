@@ -180,7 +180,7 @@ class GraphQLTestCase(GraphQLTestCaseBase):
         for app_label, models in registry["model_features"]["graphql"].items():
             for model_name in models:
                 model = apps.get_model(app_label=app_label, model_name=model_name)
-                self.assertIsNotNone(graphene_django_registry.get_type_for_model(model))
+                self.assertIsNotNone(graphene_django_registry.get_type_for_model(model), model)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_graphql_url_field(self):

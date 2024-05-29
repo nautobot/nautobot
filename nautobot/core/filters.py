@@ -146,7 +146,7 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
         suitable for cases like the `has_empty_module_bays` filter where an instance may
         not have any module bays.
 
-        See the below truth table for more information:
+        See the below table for more information:
 
         | value       | exclude          | Result
         |-------------|------------------|-------

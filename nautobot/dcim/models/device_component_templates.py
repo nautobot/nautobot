@@ -145,12 +145,6 @@ class ModularComponentTemplateModel(ComponentTemplateModel):
         abstract = True
         ordering = ("device_type", "module_type", "_name")
         constraints = [
-            # Database constraint to make the device_type and module_type fields mutually exclusive
-            models.CheckConstraint(
-                check=models.Q(device_type__isnull=False, module_type__isnull=True)
-                | models.Q(device_type__isnull=True, module_type__isnull=False),
-                name="%(app_label)s_%(class)s_device_type_xor_module_type",
-            ),
             models.UniqueConstraint(
                 fields=("device_type", "name"),
                 name="%(app_label)s_%(class)s_device_type_name_unique",
@@ -505,12 +499,6 @@ class ModuleBayTemplate(BaseModel, ChangeLoggedModel, CustomFieldModel, Relation
     class Meta:
         ordering = ("device_type", "module_type", "_position")
         constraints = [
-            # Database constraint to make the device_type and module_type fields mutually exclusive
-            models.CheckConstraint(
-                check=models.Q(device_type__isnull=False, module_type__isnull=True)
-                | models.Q(device_type__isnull=True, module_type__isnull=False),
-                name="dcim_modulebaytemplate_device_type_xor_module_type",
-            ),
             models.UniqueConstraint(
                 fields=["device_type", "position"],
                 name="dcim_modulebaytemplate_device_type_position_unique",

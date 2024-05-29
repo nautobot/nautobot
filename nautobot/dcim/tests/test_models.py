@@ -96,9 +96,6 @@ class ModularDeviceComponentTestCaseMixin:
         with self.assertRaises(ValidationError):
             instance.full_clean()
 
-        with self.assertRaises(IntegrityError):
-            instance.save()
-
     def test_parent_validation_no_device_or_module(self):
         """Assert that a modular component must have a parent device or parent module but not both."""
         instance = self.model(
@@ -108,9 +105,6 @@ class ModularDeviceComponentTestCaseMixin:
 
         with self.assertRaises(ValidationError):
             instance.full_clean()
-
-        with self.assertRaises(IntegrityError):
-            instance.save()
 
     def test_parent_validation_succeeds(self):
         """Assert that a modular component must have a parent device or parent module but not both."""
@@ -259,9 +253,6 @@ class FrontPortTestCase(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError):
             instance.full_clean()
 
-        with self.assertRaises(IntegrityError):
-            instance.save()
-
     def test_parent_validation_no_device_or_module(self):
         """Assert that a modular component must have a parent device or parent module but not both."""
         instance = self.model(
@@ -273,9 +264,6 @@ class FrontPortTestCase(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError):
             instance.full_clean()
-
-        with self.assertRaises(IntegrityError):
-            instance.save()
 
     def test_parent_validation_succeeds(self):
         """Assert that a modular component must have a parent device or parent module but not both."""
@@ -458,9 +446,6 @@ class FrontPortTemplateTestCase(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError):
             instance.full_clean()
 
-        with self.assertRaises(IntegrityError):
-            instance.save()
-
     def test_parent_validation_no_device_or_module(self):
         """Assert that a modular component must have a parent device or parent module but not both."""
         instance = self.model(
@@ -472,9 +457,6 @@ class FrontPortTemplateTestCase(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError):
             instance.full_clean()
-
-        with self.assertRaises(IntegrityError):
-            instance.save()
 
     def test_parent_validation_succeeds(self):
         """Assert that a modular component must have a parent device or parent module but not both."""
@@ -2549,9 +2531,6 @@ class ModuleBayTestCase(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError):
             module_bay.full_clean()
 
-        with self.assertRaises(IntegrityError):
-            module_bay.save()
-
     def test_parent_validation_no_device_or_module(self):
         """Assert that a module bay must have a parent device or parent module but not both."""
         module_bay = ModuleBay(
@@ -2560,9 +2539,6 @@ class ModuleBayTestCase(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError):
             module_bay.full_clean()
-
-        with self.assertRaises(IntegrityError):
-            module_bay.save()
 
     def test_parent_validation_succeeds(self):
         """Assert that a module bay must have a parent device or parent module but not both."""
@@ -2723,9 +2699,6 @@ class ModuleBayTemplateTestCase(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError):
             module_bay_template.full_clean()
 
-        with self.assertRaises(IntegrityError):
-            module_bay_template.save()
-
     def test_parent_validation_no_device_type_or_module_type(self):
         """Assert that a module bay template must have a parent device_type or parent module_type but not both."""
         module_bay_template = ModuleBayTemplate(
@@ -2734,9 +2707,6 @@ class ModuleBayTemplateTestCase(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError):
             module_bay_template.full_clean()
-
-        with self.assertRaises(IntegrityError):
-            module_bay_template.save()
 
     def test_parent_validation_succeeds(self):
         """Assert that a module bay template must have a parent device_type or parent module_type but not both."""
@@ -2900,9 +2870,6 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError):
             module.full_clean()
 
-        with self.assertRaises(IntegrityError):
-            module.save()
-
     def test_parent_validation_no_module_bay_or_location(self):
         """Assert that a module must have a parent module bay or location but not both."""
         module = Module(
@@ -2912,9 +2879,6 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError):
             module.full_clean()
-
-        with self.assertRaises(IntegrityError):
-            module.save()
 
     def test_parent_validation_succeeds(self):
         """Assert that a module must have a parent module bay or location but not both."""

@@ -1598,17 +1598,13 @@ class Module(PrimaryModel):
         "status",
     ]
 
-    natural_key_field_names = ["location", "module_type", "parent_module_bay", "serial"]
+    # The recursive nature of this model combined with the fact that it can be a child of a
+    # device or location makes our natural key implementation unusable, so just use the pk
+    natural_key_field_names = ["pk"]
 
     class Meta:
         ordering = ("parent_module_bay", "location", "module_type", "asset_tag", "serial")
         constraints = [
-            # Database constraint to make the parent_model_bay and location fields mutually exclusive
-            models.CheckConstraint(
-                check=models.Q(parent_module_bay__isnull=False, location__isnull=True)
-                | models.Q(parent_module_bay__isnull=True, location__isnull=False),
-                name="dcim_module_parent_module_bay_xor_location",
-            ),
             models.UniqueConstraint(
                 fields=["module_type", "serial"],
                 name="dcim_module_module_type_serial_unique",
