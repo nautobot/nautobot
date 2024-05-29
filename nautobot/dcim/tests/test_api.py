@@ -975,6 +975,8 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
         Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         DeviceType.objects.all().delete()
+        ModuleType.objects.all().delete()
+        Module.objects.all().delete()
         Platform.objects.all().delete()
 
 
