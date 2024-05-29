@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 import factory
 from faker import Faker
-import pytz
+from timezone_field import TimeZoneFormField
 
 from nautobot.circuits.models import CircuitTermination
 from nautobot.core.factory import (
@@ -92,6 +92,8 @@ NETWORK_DRIVERS = {
     "Juniper": ["juniper_junos"],
     "Palo Alto": ["paloalto_panos"],
 }
+
+TIME_ZONES = {timezone for timezone, _ in TimeZoneFormField().choices}
 
 
 # Retrieve correct rack reservation units
@@ -478,7 +480,7 @@ class LocationFactory(PrimaryModelFactory):
     facility = factory.Maybe("has_facility", factory.Faker("building_number"), "")
 
     has_time_zone = NautobotBoolIterator()
-    time_zone = factory.Maybe("has_time_zone", factory.Faker("random_element", elements=pytz.common_timezones))
+    time_zone = factory.Maybe("has_time_zone", factory.Faker("random_element", elements=TIME_ZONES))
 
     has_physical_address = NautobotBoolIterator()
     physical_address = factory.Maybe("has_physical_address", factory.Faker("address"))
