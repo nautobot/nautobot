@@ -85,10 +85,10 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         """
         Attach the subquery annotation to the base queryset.
 
-        Order By clause in Subquery is not guaranteed to be respected within the aggregated JSON array, which is why
-        we include "weight" and "name" into the result so that we can sort it within Python to ensure correctness.
+        Note that the underlying function of our JSONBAgg in MySQL, `JSONARRAY_AGG`, does not support an `ordering`,
+        unlike PostgreSQL's implementation. This is why we include "weight" and "name" into the result so that we can
+        sort it within Python to ensure correctness.
 
-        TODO This method does not accurately reflect location inheritance because of the reasons stated in _get_config_context_filters()
         Do not use this method by itself, use get_config_context() method directly on ConfigContextModel instead.
         """
         from nautobot.extras.models import ConfigContext
@@ -96,7 +96,6 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         return self.annotate(
             config_context_data=Subquery(
                 ConfigContext.objects.filter(self._get_config_context_filters())
-                .order_by("weight", "name")
                 .annotate(
                     _data=EmptyGroupByJSONBAgg(
                         JSONObject(
@@ -107,15 +106,13 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
                     )
                 )
                 .values("_data")
+                .order_by()
             )
         ).distinct()
 
     def _get_config_context_filters(self):
         """
         This method is constructing the set of Q objects for the specific object types.
-        Note that locations filters are not included in the method because the filter needs the
-        ability to query the ancestors for a particular tree node for subquery and we lost it since
-        moving from mptt to django-tree-queries https://github.com/matthiask/django-tree-queries/issues/54.
         """
         tag_query_filters = {
             "object_id": OuterRef(OuterRef("pk")),

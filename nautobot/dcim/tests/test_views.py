@@ -8,8 +8,12 @@ from django.db.models import Q
 from django.test import override_settings
 from django.urls import reverse
 from netaddr import EUI
-import pytz
 import yaml
+
+try:
+    import zoneinfo
+except ImportError:  # python 3.8
+    from backports import zoneinfo
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
@@ -228,7 +232,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": tenant.pk,
             "facility": "Facility X",
             "asn": 65001,
-            "time_zone": pytz.UTC,
+            "time_zone": zoneinfo.ZoneInfo("UTC"),
             "physical_address": "742 Evergreen Terrace, Springfield, USA",
             "shipping_address": "742 Evergreen Terrace, Springfield, USA",
             "latitude": Decimal("35.780000"),
@@ -248,7 +252,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": tenant.pk,
             "status": Status.objects.get_for_model(Location).last().pk,
             "asn": 65009,
-            "time_zone": pytz.timezone("US/Eastern"),
+            "time_zone": zoneinfo.ZoneInfo("US/Eastern"),
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

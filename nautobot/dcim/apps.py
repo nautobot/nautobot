@@ -2,6 +2,7 @@ from nautobot.core.apps import NautobotConfig
 
 
 class DCIMConfig(NautobotConfig):
+    default = True
     name = "nautobot.dcim"
     verbose_name = "DCIM"
     searchable_models = [

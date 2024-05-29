@@ -480,9 +480,9 @@ class ErrorPagesTestCase(TestCase):
     def test_500_default_support_message(self, mock_get):
         """Nautobot's custom 500 page should be used and should include a default support message."""
         url = reverse("home")
-        with self.assertTemplateUsed("500.html"):
-            self.client.raise_request_exception = False
-            response = self.client.get(url)
+        self.client.raise_request_exception = False
+        response = self.client.get(url)
+        self.assertTemplateUsed(response, "500.html")
         self.assertContains(response, "Network to Code", status_code=500)
         response_content = response.content.decode(response.charset)
         self.assertInHTML(
@@ -497,9 +497,9 @@ class ErrorPagesTestCase(TestCase):
     def test_500_custom_support_message(self, mock_get):
         """Nautobot's custom 500 page should be used and should include a custom support message if defined."""
         url = reverse("home")
-        with self.assertTemplateUsed("500.html"):
-            self.client.raise_request_exception = False
-            response = self.client.get(url)
+        self.client.raise_request_exception = False
+        response = self.client.get(url)
+        self.assertTemplateUsed(response, "500.html")
         self.assertNotContains(response, "Network to Code", status_code=500)
         response_content = response.content.decode(response.charset)
         self.assertInHTML("Hello world!", response_content)
