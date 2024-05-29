@@ -7,6 +7,7 @@ from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.test import tag
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.filters import (
     ContentTypeChoiceFilter,
     ContentTypeFilter,
@@ -14,7 +15,6 @@ from nautobot.core.filters import (
     RelatedMembershipBooleanFilter,
     SearchFilter,
 )
-from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
 from nautobot.tenancy import models
