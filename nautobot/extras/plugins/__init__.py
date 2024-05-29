@@ -44,6 +44,7 @@ class NautobotAppConfig(NautobotConfig):
     """
     Subclass of Django's built-in AppConfig class, to be used for Nautobot plugins.
     """
+
     default = True
 
     # Plugin metadata
