@@ -93,15 +93,13 @@ User = get_user_model()
 
 
 class GraphQLTestCaseBase(TestCase):
-    @classmethod
-    def setUpTestData(cls):
-        # TODO: the below *shouldn't* be needed, but without it, when run with --parallel test flag,
-        # these tests consistently fail with schema construction errors
-        cls.SCHEMA = graphene_settings.SCHEMA  # not a no-op; this causes the schema to be built
+    def setUp(self):
+        self.SCHEMA = graphene_settings.SCHEMA  # not a no-op; this causes the schema to be built when first called
 
 
 class GraphQLTestCase(GraphQLTestCaseBase):
     def setUp(self):
+        super().setUp()
         self.user = create_test_user("graphql_testuser")
         GraphQLQuery.objects.create(name="GQL 1", query="{ query: locations {name} }")
         GraphQLQuery.objects.create(name="GQL 2", query="query ($name: [String!]) { locations(name:$name) {name} }")
@@ -238,6 +236,7 @@ class GraphQLGenerateSchemaTypeTestCase(GraphQLTestCaseBase):
 
 class GraphQLExtendSchemaType(GraphQLTestCaseBase):
     def setUp(self):
+        super().setUp()
         self.datas = (
             {"field_name": "my_text", "field_type": CustomFieldTypeChoices.TYPE_TEXT},
             {
@@ -329,6 +328,7 @@ class GraphQLExtendSchemaType(GraphQLTestCaseBase):
 
 class GraphQLExtendSchemaRelationship(GraphQLTestCaseBase):
     def setUp(self):
+        super().setUp()
         location_ct = ContentType.objects.get_for_model(Location)
         rack_ct = ContentType.objects.get_for_model(Rack)
         vlan_ct = ContentType.objects.get_for_model(VLAN)
@@ -455,6 +455,7 @@ class GraphQLExtendSchemaRelationship(GraphQLTestCaseBase):
 
 class GraphQLSearchParameters(GraphQLTestCaseBase):
     def setUp(self):
+        super().setUp()
         self.schema = generate_schema_type(app_name="dcim", model=Location)
 
     def test_search_parameters(self):
@@ -476,8 +477,6 @@ class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
     @classmethod
     def setUpTestData(cls):
         """Initialize the Database with some datas and multiple users associated with different permissions."""
-        super().setUpTestData()
-
         cls.groups = (
             Group.objects.create(name="Group 1"),
             Group.objects.create(name="Group 2"),
@@ -705,7 +704,6 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
     @classmethod
     def setUpTestData(cls):
         """Initialize the Database with some datas."""
-        super().setUpTestData()
         cls.user = User.objects.create(username="Super User", is_active=True, is_superuser=True)
 
         # Remove random IPAddress and Device fixtures for this custom test

@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class ExtrasConfig(NautobotConfig):
+    default = True
     name = "nautobot.extras"
     searchable_models = [
         "contact",
