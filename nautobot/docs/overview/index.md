@@ -8,7 +8,9 @@
 
 ## What is Nautobot?
 
-Nautobot is an open source Network Source of Truth and Network Automation Platform built as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database. Use the top navigation bar to dive directly into the documentation. Try out a live demo at [https://demo.nautobot.com](https://demo.nautobot.com)
+Nautobot is an open source Network Source of Truth and Network Automation Platform built as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database. 
+
+Try out a live demo at [https://demo.nautobot.com](https://demo.nautobot.com)
 
 ## Key Use Cases
 
@@ -30,16 +32,16 @@ Nautobot enables three (3) key use cases.
     ---
     Get up and running with a [Nautobot install](../user-guide/administration/installation/index.md) on your own Linux VM or in a Docker environment.
 
-- :material-account-settings:{ .lg .middle } **Configuring Nautobot**
+- :material-cog:{ .lg .middle } **Configuring Nautobot**
 
     ---
     Learn about the many [configuration options](../user-guide/administration/configuration/index.md) that Nautobot offers for fine-tuning your installation.
 
-- :material-web-check:{ .lg .middle } **Getting Started with Nautobot**
+- :material-play-network:{ .lg .middle } **Getting Started with Nautobot**
 
     ---
     Dive into [how to use Nautobot](../user-guide/feature-guides/getting-started/index.md) and the key components of the core web interface.
-    How [Nautobot Apps](../apps/index.md) can expand Nautobot's functionality.
+    Learn how [Nautobot Apps](../apps/index.md) can expand Nautobot's functionality.
 
     ---
 
@@ -147,7 +149,7 @@ Nautobot has a thriving ecosystem of **Apps**, developed as separate projects, f
 - :material-laptop:{ .lg .middle } **Set Up Your Developer Environment**
 
     ---
-    [Set up your Development Environment](development/core/getting-started.md)
+    [Set up your Development Environment](../development/core/getting-started.md)
 
 - :material-pier-crane:{ .lg .middle } **Jobs Development Guide**
 
