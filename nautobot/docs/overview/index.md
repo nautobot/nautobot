@@ -68,7 +68,7 @@ Nautobot has a thriving ecosystem of **Apps**, developed as separate projects, f
 - ![Golden Config](../assets/app-icons/icon-GoldenConfiguration.png){style="height: 35px; margin-bottom: 0em" .middle } **Golden Configuration**
 
     ---
-    [Golden Configuration](https://github.com/nautobot/nautobot-app-golden-config) backs up configurations, generates intended state configurations, compares them for compliance and remediates device configurations.
+    [Golden Configuration](https://docs.nautobot.com/projects/golden-config/en/latest/) backs up configurations, generates intended state configurations, compares them for compliance and remediates device configurations.
 
 - ![Device Lifecycle](../assets/app-icons/icon-DeviceLifecycle.png){style="height: 35px; margin-bottom: 0em" .middle } **Device Lifecycle**
 
@@ -78,32 +78,32 @@ Nautobot has a thriving ecosystem of **Apps**, developed as separate projects, f
 - ![Firewall Models](../assets/app-icons/icon-FirewallModels.png){style="height: 35px; margin-bottom: 0em" .middle } **Firewall Models**
 
     ---
-    [Firewall Models](https://github.com/nautobot/nautobot-app-firewall-models) helps to model out firewall rules and related objects, including extended ACLs.
+    [Firewall Models](https://docs.nautobot.com/projects/firewall-models/en/latest/) helps to model out firewall rules and related objects, including extended ACLs.
 
 - ![SSoT](../assets/app-icons/icon-SSoT.png){style="height: 35px; margin-bottom: 0em" .middle } **SSoT**
 
     ---
-    [Single Source of Truth](https://github.com/nautobot/nautobot-app-ssot) is the framework to synchronize data from other systems into and out of Nautobot.
+    [Single Source of Truth](https://docs.nautobot.com/projects/ssot/en/latest/) is the framework to synchronize data from other systems into and out of Nautobot.
 
 - ![ChatOps](../assets/app-icons/icon-ChatOps.png){style="height: 35px; margin-bottom: 0em" .middle } **ChatOps**
 
     ---
     [ChatOps](https://github.com/nautobot/nautobot-app-chatops) supports a variety of chat applications, allowing peer teams to conveniently interact with Nautobot and get information about the network.
 
-- ![Circuit Maintenance](../assets/app-icons/icon-nautobot-circuit-maintenance.png){style="height: 35px; margin-bottom: 0em" .middle } **Circuit Maintenance**
+- ![Circuit Maintenance](../assets/app-icons/icon-CircuitMaintenance.png){style="height: 35px; margin-bottom: 0em" .middle } **Circuit Maintenance**
 
     ---
-    [Circuit Maintenance](https://github.com/nautobot/nautobot-app-circuit-maintenance) brings your circuit maintenance notification emails (and API connected info) into objects within Nautobot to bring better notification and business actions to the maintenances.
+    [Circuit Maintenance](https://docs.nautobot.com/projects/circuit-maintenance/en/latest/) brings your circuit maintenance notification emails (and API connected info) into objects within Nautobot to bring better notification and business actions to the maintenances.
 
-- ![Capacity Metrics](../assets/app-icons/icon-nautobot-capacity-metrics.svg){style="height: 35px; margin-bottom: 0em" .middle } **Capacity Metrics**
+- ![Capacity Metrics](../assets/app-icons/icon-CapacityMetrics.svg){style="height: 35px; margin-bottom: 0em" .middle } **Capacity Metrics**
 
     ---
-    [Capacity Metrics](https://github.com/nautobot/nautobot-app-capacity-metrics) brings additional Nautobot data to Prometheus metrics, making it easy to derive time series information about your Nautobot data.
+    [Capacity Metrics](https://docs.nautobot.com/projects/capacity-metrics/en/latest/) brings additional Nautobot data to Prometheus metrics, making it easy to derive time series information about your Nautobot data.
 
 - ![Device Onboarding](../assets/app-icons/icon-DeviceOnboarding.png){style="height: 35px; margin-bottom: 0em" .middle } **Device Onboarding**
 
     ---
-    [Device Onboarding](https://github.com/nautobot/nautobot-app-device-onboarding) brings network data into Nautobot, helping to build out the intended state from the current state of the network.
+    [Device Onboarding](https://docs.nautobot.com/projects/device-onboarding/en/latest/) brings network data into Nautobot, helping to build out the intended state from the current state of the network.
 
 </div>
 <!-- markdownlint-enable no-inline-html -->
