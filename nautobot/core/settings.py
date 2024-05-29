@@ -517,6 +517,7 @@ INSTALLED_APPS = [
     "rest_framework",  # Must be after `nautobot.core` for template overrides
     "db_file_storage",
     "nautobot.circuits",
+    "nautobot.cloud",
     "nautobot.dcim",
     "nautobot.ipam",
     "nautobot.extras",
@@ -533,7 +534,6 @@ INSTALLED_APPS = [
     # "health_check.contrib.migrations",
     # "health_check.contrib.redis",
     "django_extensions",
-    "constance.backends.database",
     "django_ajax_tables",
     "silk",
 ]

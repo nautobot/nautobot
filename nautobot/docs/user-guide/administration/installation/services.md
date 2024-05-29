@@ -362,7 +362,7 @@ Once you've verified that the WSGI service and worker are up and running, move o
 
 When using MySQL as a database backend, if you encounter a server error along the lines of `Incorrect string value: '\\xF0\\x9F\\x92\\x80' for column`, it is because you are running afoul of the legacy implementation of Unicode (aka `utf8`) encoding in MySQL. This often occurs when using modern Unicode glyphs like the famous poop emoji.
 
-Please see the [configuration guide on MySQL Unicode settings](../configuration/required-settings.md#mysql-unicode-settings) for instructions on how to address this.
+Please see the [configuration guide on MySQL Unicode settings](../configuration/required-settings.md#databases) for instructions on how to address this.
 
 Please see [Computed fields with fallback value that is unicode results in OperationalError (#645)](https://github.com/nautobot/nautobot/issues/645) for more details.
 

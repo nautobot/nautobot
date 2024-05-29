@@ -92,7 +92,7 @@ Template rendering with Django and/or Jinja2 now supports by default all filters
 
 #### Organizational Branding ([#859](https://github.com/nautobot/nautobot/issues/859))
 
-Organizations may provide custom branding assets to change the logo, icons, and footer URLs to help Nautobot fit within their environments and user communities. Please see the [configuration documenation](../user-guide/administration/configuration/optional-settings.md#BRANDING_FILEPATHS) for details on how to specify the location and usage of custom branding assets.
+Organizations may provide custom branding assets to change the logo, icons, and footer URLs to help Nautobot fit within their environments and user communities. Please see the [configuration documenation](../user-guide/administration/configuration/optional-settings.md#branding_filepaths) for details on how to specify the location and usage of custom branding assets.
 
 #### Plugin Banners ([#534](https://github.com/nautobot/nautobot/issues/534))
 
@@ -130,7 +130,7 @@ The Admin sub-site within Nautobot (`/admin/` and its child pages) has been reva
 Job log messages are now stored in a separate database table as a separate `JobLogEntry` data model, instead of being stored as JSON on the `JobResult` model/table. This provides faster and more robust rendering of `JobResult`-related views and lays groundwork for future enhancements of the Jobs feature.
 
 !!! note
-    If you are executing Jobs inside your tests, there are some changes you will need to make for your tests to support this feature correctly. Refer to the [Jobs documentation](../user-guide/platform-functionality/jobs/index.md#testing-jobs) for details.
+    If you are executing Jobs inside your tests, there are some changes you will need to make for your tests to support this feature correctly. Refer to the [Jobs documentation](../development/jobs/index.md#testing-jobs) for details.
 
 !!! note
     Because `JobLogEntry` records reference their associated `JobResult`, the pattern `job.job_result = JobResult()` (creating only an in-memory `JobResult` object, rather than a database entry) will no longer work. Instead you will need to create a proper JobResult database object `job.job_result = JobResult.objects.create(...)`.

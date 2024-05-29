@@ -28,7 +28,9 @@ class ProviderTest(APIViewTestCases.APIViewTestCase):
         {
             "name": "Provider 6",
         },
-        {"name": "Provider 7"},
+        {
+            "name": "Provider 7",
+        },
     ]
     bulk_update_data = {
         "asn": 1234,
