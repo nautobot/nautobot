@@ -6,8 +6,10 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import FieldDoesNotExist
+from django.db import connections, DEFAULT_DB_ALIAS
 from django.db.models import JSONField, ManyToManyField, ManyToManyRel
 from django.forms.models import model_to_dict
+from django.test.utils import CaptureQueriesContext
 from netaddr import IPNetwork
 from rest_framework.test import APIClient, APIRequestFactory
 
@@ -231,6 +233,49 @@ class NautobotTestCaseMixin:
         self.assertNotEqual(len(values), 0, "Values cannot be empty")
 
         return self.assertQuerysetEqual(qs, values, *args, **kwargs)
+
+    class _AssertApproximateNumQueriesContext(CaptureQueriesContext):
+        """Implementation class underlying the assertApproximateNumQueries decorator/context manager."""
+
+        def __init__(self, test_case, minimum, maximum, connection):
+            self.test_case = test_case
+            self.minimum = minimum
+            self.maximum = maximum
+            super().__init__(connection)
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            super().__exit__(exc_type, exc_value, traceback)
+            if exc_type is not None:
+                return
+            num_queries = len(self)
+            captured_queries_string = "\n".join(
+                f"{i}. {query['sql']}" for i, query in enumerate(self.captured_queries, start=1)
+            )
+            self.test_case.assertGreaterEqual(
+                num_queries,
+                self.minimum,
+                f"{num_queries} queries executed, but expected at least {self.minimum}.\n"
+                f"Captured queries were:\n{captured_queries_string}",
+            )
+            self.test_case.assertLessEqual(
+                num_queries,
+                self.maximum,
+                f"{num_queries} queries executed, but expected no more than {self.maximum}.\n"
+                f"Captured queries were:\n{captured_queries_string}",
+            )
+
+    def assertApproximateNumQueries(self, minimum, maximum, func=None, *args, using=DEFAULT_DB_ALIAS, **kwargs):
+        """Like assertNumQueries, but fuzzier. Assert that the number of queries falls within an acceptable range."""
+        conn = connections[using]
+
+        context = self._AssertApproximateNumQueriesContext(self, minimum, maximum, conn)
+        if func is None:
+            return context
+
+        with context:
+            func(*args, **kwargs)
+
+        return None
 
     #
     # Convenience methods

@@ -724,19 +724,6 @@ properties:
     is_constance_config: true
     type: "boolean"
     version_added: "2.0.0"
-  DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT:
-    default: 0
-    description: >-
-      The number of seconds to cache the member list of dynamic groups. Set this to `0` to disable caching.
-    details: >-
-      With large datasets (those in scope of a Dynamic Group and number of Dynamic Groups themselves),
-      users will encounter a performance penalty using or accessing the membership lists.
-      This setting allows users to accept a cached list for common use cases (particularly in the UI)
-      that expires after the configured time."
-    environment_variable: "NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"
-    is_constance_config: true
-    type: "integer"
-    version_added: "1.6.0"
   EXEMPT_VIEW_PERMISSIONS:
     default: []
     description: "A list of Nautobot models to exempt from the enforcement of view permissions."

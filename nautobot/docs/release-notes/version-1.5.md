@@ -123,7 +123,7 @@ Added a dynamic filter form that allows users to filter object tables/lists by a
 
 +/- 1.5.2
 
-A number of mixin classes have been renamed and/or relocated for improved self-consistency and clarity of usage. The former names of these mixins are still available for now as aliases, but inheriting from these aliases will now raise a `DeprecationWarning`, and these aliases wil be removed in a future release.
+A number of mixin classes have been renamed and/or relocated for improved self-consistency and clarity of usage. The former names of these mixins are still available for now as aliases, but inheriting from these aliases will now raise a `DeprecationWarning`, and these aliases will be removed in a future release.
 
 | Former Name                    | New Name                                     |
 | ------------------------------ | -------------------------------------------- |

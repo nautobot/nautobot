@@ -6,6 +6,7 @@ from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.test import tag
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.filters import RelatedMembershipBooleanFilter, SearchFilter
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
@@ -220,10 +221,11 @@ class FilterTestCases:
             obj_field_value = getattr(obj, obj_field_name)
 
             if isinstance(obj_field_value, str):
-                updated_attr = obj_field_value + lookup
+                # TODO we should really use the actual max_length of the obj_field
+                updated_attr = obj_field_value[: CHARFIELD_MAX_LENGTH - 5] + lookup
                 setattr(obj, obj_field_name, updated_attr)
             else:
-                # Skip the test if the field is not a CharField, as we currently only support generic testing for CharField
+                # Skip the test if the field is not a CharField; we currently only support generic testing for CharField
                 self.skipTest("Not a CharField")
             obj.save()
             # if lookup_method is iexact use the full updated attr

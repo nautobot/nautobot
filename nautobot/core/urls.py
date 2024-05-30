@@ -1,6 +1,5 @@
 from django.conf import settings
-from django.conf.urls import include, url
-from django.urls import path
+from django.urls import include, path
 from django.views.generic import TemplateView
 from django.views.static import serve
 
@@ -60,7 +59,7 @@ urlpatterns = [
     # django-health-check
     path(r"health/", include("health_check.urls")),
     # FileProxy attachments download/get URLs used in admin views only
-    url(
+    path(
         "files/download/",
         get_file_with_authorization,
         {"add_attachment_headers": True},

@@ -1,1 +1,3 @@
 Added support for objects to "opt out" of change logging by returning `None` from their `to_objectchange()` method.
+Added `description` strings to all system Jobs.
+Added `Refresh Dynamic Group Caches` system Job.

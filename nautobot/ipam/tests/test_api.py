@@ -628,6 +628,12 @@ class PrefixLocationAssignmentTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         cls.prefixes = Prefix.objects.all()
         cls.locations = Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(Prefix))
+
+        # Guarantees that at-least 3 locations do not have this prefix
+        for location in cls.locations[:3]:
+            location.prefixes.remove(cls.prefixes[0])
+        for location in cls.locations[3:6]:
+            location.prefixes.remove(cls.prefixes[1])
         locations_without_prefix_0 = cls.locations.exclude(prefixes__in=[cls.prefixes[0]])
         locations_without_prefix_1 = cls.locations.exclude(prefixes__in=[cls.prefixes[1]])
 

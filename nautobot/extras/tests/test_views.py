@@ -2790,6 +2790,8 @@ class StaticGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": Tenant.objects.last().pk,
         }
 
+        StaticGroup.all_objects.create(name="Hidden Group", content_type=content_type, hidden=True)
+
     def _get_queryset(self):
         queryset = super()._get_queryset()
         # We want .first() to pick groups with members
@@ -2969,6 +2971,13 @@ class StaticGroupAssociationTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = StaticGroupAssociation
+
+    @classmethod
+    def setUpTestData(cls):
+        sg = StaticGroup.all_objects.create(
+            name="Hidden Group", content_type=ContentType.objects.get_for_model(Device), hidden=True
+        )
+        sg.add_members(Device.objects.all())
 
     def test_list_objects_omits_hidden_by_default(self):
         """The list view should not by default include associations for hidden groups."""

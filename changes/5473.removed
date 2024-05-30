@@ -1,0 +1,1 @@
+Removed `DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT` setting as it is no longer relevant after refactoring the Dynamic Group membership caching implementation.
