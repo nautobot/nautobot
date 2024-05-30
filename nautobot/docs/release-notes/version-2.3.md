@@ -26,6 +26,19 @@ Added the new models `StaticGroup` and `StaticGroupAssociation`, which can be us
 
 ### Changed
 
+#### Dynamic Group Cache Changes
+
+To improve performance of the Dynamic Groups feature, a number of changes have been made:
+
+- Dynamic Groups now always use a hidden Static Group as a database cache of their member objects, rather than optionally caching their members in Redis for a limited time period.
+- The `DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT` setting variable no longer influences Dynamic Group cache behavior.
+- The APIs `DynamicGroup.members`, `DynamicGroup.count`, `DynamicGroup.has_member()`, and `object.dynamic_groups` now always use the database cache rather than being recalculated on the fly.
+- The APIs `DynamicGroup.members_cached`, `DynamicGroup.members_cache_key`, `object.dynamic_groups_cached`, `object.dynamic_groups_list`, and `object.dynamic_groups_list_cached` are now deprecated.
+- Editing a Dynamic Group definition refreshes its cached members and those of any "parent" groups that use it.
+- Viewing a Dynamic Group detail view in the UI refreshes its cached members (only).
+- A new System Job, `Refresh Dynamic Group Caches`, can be run or scheduled as apprropriate to refresh Dynamic Group member caches on demand.
+- The existing API `DynamicGroup.update_cached_members()` can be called by Apps or Jobs needing to ensure that the cache is up-to-date for any given Dynamic Group.
+
 #### Updated to Django 4.2
 
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.

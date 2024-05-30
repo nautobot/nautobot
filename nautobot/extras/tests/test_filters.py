@@ -1819,6 +1819,12 @@ class StaticGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
         ["tenant", "tenant__name"],
     )
 
+    @classmethod
+    def setUpTestData(cls):
+        StaticGroup.all_objects.create(
+            name="Hidden group", content_type=ContentType.objects.get_for_model(Location), hidden=True
+        )
+
     def test_content_type(self):
         ct = StaticGroup.objects.first().content_type
         params = {"content_type": [ct.model_class()._meta.label_lower]}
@@ -1846,6 +1852,13 @@ class StaticGroupAssociationTestCase(FilterTestCases.FilterTestCase):
         ["static_group", "static_group__name"],
         ["associated_object_id"],
     )
+
+    @classmethod
+    def setUpTestData(cls):
+        sg = StaticGroup.all_objects.create(
+            name="Hidden group", content_type=ContentType.objects.get_for_model(Location), hidden=True
+        )
+        sg.add_members(Location.objects.all())
 
     def test_associated_object_type(self):
         ct = StaticGroup.objects.filter(static_group_associations__isnull=False).first().content_type

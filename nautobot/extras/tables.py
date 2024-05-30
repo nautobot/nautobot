@@ -365,7 +365,7 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
     """Hybrid table for displaying info for both group and membership."""
 
     description = tables.Column(accessor="group.description")
-    actions = ButtonsColumn(DynamicGroup, pk_field="pk", buttons=("edit",))
+    members = tables.Column(accessor="group.count", verbose_name="Group Members", orderable=False)
 
     class Meta(BaseTable.Meta):
         model = DynamicGroupMembership
@@ -376,9 +376,8 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
             "weight",
             "members",
             "description",
-            "actions",
         )
-        exclude = ("content_type",)
+        exclude = ("content_type", "actions")
 
 
 DESCENDANTS_LINK = """
@@ -448,7 +447,7 @@ class NestedDynamicGroupAncestorsTable(DynamicGroupTable):
 
     class Meta(DynamicGroupTable.Meta):
         fields = ["name", "members", "description", "actions"]
-        exclude = ["content_type"]
+        exclude = ["content_type", "static_group_count"]
 
 
 class ExportTemplateTable(BaseTable):
