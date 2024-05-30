@@ -17,10 +17,6 @@
                 {% endif %}
                 <li><a href="{{ object.get_absolute_url }}">{{ object.position }}</a></li>
 {% endblock breadcrumbs %}
-
-{% block title %}{% if object.parent_device %}{{ object.parent_device }}{% else %}{{ object.parent_module.display }}{% endif %} / {{ object.position }}{% endblock title %}
-
-
 {% block content_left_page %}
                     <div class="panel panel-default">
                         <div class="panel-heading">
