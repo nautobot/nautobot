@@ -1,4 +1,4 @@
-from nautobot.cloud.models import CloudAccount
+from nautobot.cloud.models import CloudAccount, CloudType
 from nautobot.core.testing import APIViewTestCases
 from nautobot.dcim.models import Manufacturer
 from nautobot.extras.models import SecretsGroup
@@ -45,3 +45,38 @@ class CloudAccountTest(APIViewTestCases.APIViewTestCase):
             "provider": manufacturers[2].pk,
             "secrets_group": secrets_groups[1].pk,
         }
+
+
+class CloudTypeTest(APIViewTestCases.APIViewTestCase):
+    model = CloudType
+    bulk_update_data = {
+        "description": "Some generic description of multiple types. Not very useful.",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        manufacturers = Manufacturer.objects.all()
+        cls.create_data = [
+            {
+                "name": "Account 1",
+                "provider": manufacturers[0].pk,
+                "content_types": ["ipam.prefix", "ipam.vlangroup", "ipam.vlan"],
+                "description": "An example description",
+            },
+            {
+                "name": "Account 2",
+                "provider": manufacturers[1].pk,
+                "content_types": ["ipam.prefix", "ipam.vlangroup"],
+            },
+            {
+                "name": "Account 3",
+                "provider": manufacturers[3].pk,
+                "content_types": ["ipam.prefix"],
+            },
+            {
+                "name": "Account 4",
+                "provider": manufacturers[4].pk,
+                "description": "An example description",
+                "content_types": ["ipam.vlan"],
+            },
+        ]
