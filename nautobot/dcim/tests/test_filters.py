@@ -694,20 +694,43 @@ def common_test_data(cls):
             module_type=module_types[i % 3],
         )
 
+    cls.modules = (
+        Module.objects.create(
+            module_type=module_types[0],
+            status=module_status,
+            tenant=tenants[0],
+            parent_module_bay=cls.devices[0].module_bays.first(),
+        ),
+        Module.objects.create(
+            module_type=module_types[1],
+            status=module_status,
+            tenant=tenants[1],
+            parent_module_bay=cls.devices[1].module_bays.first(),
+        ),
+        Module.objects.create(
+            module_type=module_types[2],
+            status=module_status,
+            tenant=tenants[2],
+            parent_module_bay=cls.devices[2].module_bays.first(),
+        ),
+    )
     Module.objects.create(
         module_type=module_types[0],
         status=module_status,
-        parent_module_bay=ModuleBay.objects.filter(installed_module__isnull=True, parent_device__isnull=False).first(),
+        tenant=tenants[0],
+        parent_module_bay=cls.modules[0].module_bays.first(),
     )
     Module.objects.create(
         module_type=module_types[1],
         status=module_status,
-        parent_module_bay=ModuleBay.objects.filter(installed_module__isnull=True, parent_device__isnull=False).first(),
+        tenant=tenants[1],
+        parent_module_bay=cls.modules[1].module_bays.first(),
     )
     Module.objects.create(
         module_type=module_types[2],
         status=module_status,
-        parent_module_bay=ModuleBay.objects.filter(installed_module__isnull=True, parent_device__isnull=False).first(),
+        tenant=tenants[2],
+        parent_module_bay=cls.modules[2].module_bays.first(),
     )
 
     cls.controllers = (
