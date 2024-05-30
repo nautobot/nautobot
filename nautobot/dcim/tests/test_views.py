@@ -807,7 +807,7 @@ class DeviceTypeTestCase(
         }
 
         cls.bulk_edit_data = {
-            "u_height": 4,
+            "u_height": 0,
             "is_full_depth": False,
         }
 
