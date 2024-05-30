@@ -1172,6 +1172,7 @@ class InterfaceTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.B
 
 class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
     model = FrontPortTemplate
+    update_data = {"label": "updated label", "description": "updated description"}
 
     @classmethod
     def setUpTestData(cls):
@@ -1352,6 +1353,7 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
 class ModuleBayTemplateTest(Mixins.BaseComponentTestMixin):
     model = ModuleBayTemplate
     choices_fields = []
+    update_data = {"label": "updated label", "description": "updated description"}
 
     @classmethod
     def setUpTestData(cls):
@@ -2307,6 +2309,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
 class FrontPortTest(Mixins.BasePortTestMixin):
     model = FrontPort
     peer_termination_type = Interface
+    update_data = {"label": "updated label", "description": "updated description"}
 
     def test_trace(self):
         """FrontPorts don't support trace."""
@@ -2586,6 +2589,7 @@ class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeMode
 class ModuleBayTest(Mixins.BaseComponentTestMixin):
     model = ModuleBay
     choices_fields = []
+    update_data = {"label": "updated label", "description": "updated description"}
 
     @classmethod
     def setUpTestData(cls):
