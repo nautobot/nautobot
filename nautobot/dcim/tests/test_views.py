@@ -766,6 +766,8 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         Device.objects.all().delete()
         DeviceType.objects.all().delete()
         Platform.objects.all().delete()
+        Module.objects.all().delete()
+        ModuleType.objects.all().delete()
 
         cls.form_data = {
             "name": "Manufacturer X",
