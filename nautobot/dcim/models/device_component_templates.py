@@ -23,7 +23,6 @@ from nautobot.extras.models import (
     CustomField,
     CustomFieldModel,
     RelationshipModel,
-    StaticGroupMixin,
     Status,
 )
 from nautobot.extras.utils import extras_features
@@ -59,7 +58,6 @@ class ComponentTemplateModel(
     ChangeLoggedModel,
     CustomFieldModel,
     RelationshipModel,
-    StaticGroupMixin,
     BaseModel,
 ):
     device_type = ForeignKeyWithAutoRelatedName(to="dcim.DeviceType", on_delete=models.CASCADE)
