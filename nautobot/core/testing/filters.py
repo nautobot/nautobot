@@ -2,6 +2,7 @@ import random
 import string
 
 from django.db.models import Count, Q
+from django.db.models.fields import CharField, TextField
 from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.test import tag
@@ -216,23 +217,23 @@ class FilterTestCases:
             """
             self._assert_valid_filter_predicates(obj, obj_field_name)
 
-            # Create random 5 char string to append to attribute, used for icontains partial lookup
-            lookup = "".join(random.choices(string.ascii_lowercase, k=5))  # noqa: S311 # pseudo-random generator
-            obj_field_value = getattr(obj, obj_field_name)
+            # Generic test only supports CharField or TextFields, skip all other types
+            obj_field = obj._meta.get_field(obj_field_name)
+            if not isinstance(obj_field, (CharField, TextField)):
+                self.skipTest("Not a CharField or TextField")
 
-            if isinstance(obj_field_value, str):
-                # TODO we should really use the actual max_length of the obj_field
-                updated_attr = obj_field_value[: CHARFIELD_MAX_LENGTH - 5] + lookup
-                setattr(obj, obj_field_name, updated_attr)
-            else:
-                # Skip the test if the field is not a CharField; we currently only support generic testing for CharField
-                self.skipTest("Not a CharField")
+            # Create random lowercase string to use for icontains lookup
+            max_length = obj_field.max_length or CHARFIELD_MAX_LENGTH
+            randomized_attr_value = "".join(random.choices(string.ascii_lowercase, k=max_length))  # noqa: S311 # pseudo-random generator
+            setattr(obj, obj_field_name, randomized_attr_value)
             obj.save()
+
             # if lookup_method is iexact use the full updated attr
             if lookup_method == "iexact":
-                lookup = updated_attr
+                lookup = randomized_attr_value.upper()
                 model_queryset = self.queryset.filter(**{f"{filter_field_name}": lookup})
             else:
+                lookup = randomized_attr_value[1:].upper()
                 model_queryset = self.queryset.filter(**{f"{filter_field_name}__icontains": lookup})
             params = {"q": lookup}
             filterset_result = self.filterset(params, self.queryset)
@@ -286,8 +287,7 @@ class FilterTestCases:
 
                     if is_nested_filter_name:
                         obj, obj_field_name = self._get_nested_related_obj_and_its_field_name(obj, obj_field_name)
-                    # TODO: Testing the q filter in this way is fragile and does not always work. Disabled until it can be fixed.
-                    # self._assert_q_filter_predicate_validity(obj, obj_field_name, filter_field_name, lookup_method)
+                    self._assert_q_filter_predicate_validity(obj, obj_field_name, filter_field_name, lookup_method)
 
     class NameOnlyFilterTestCase(FilterTestCase):
         """Add simple tests for filtering by name."""
