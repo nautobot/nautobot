@@ -178,6 +178,7 @@ class Mixins:
 
     class ModularDeviceComponentMixin:
         modular_component_create_data = {}
+        update_data = {"label": "updated label", "description": "updated description"}
 
         def test_module_device_validation(self):
             """Assert that a modular component can have a module or a device but not both."""
@@ -256,6 +257,7 @@ class Mixins:
 
     class ModularDeviceComponentTemplateMixin:
         modular_component_create_data = {}
+        update_data = {"label": "updated label", "description": "updated description"}
 
         def test_module_type_device_type_validation(self):
             """Assert that a modular component template can have a module_type or a device_type but not both."""
