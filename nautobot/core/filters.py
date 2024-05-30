@@ -175,6 +175,9 @@ class ContentTypeFilterMixin:
         if value in EMPTY_VALUES:
             return qs
 
+        if value.isdigit():
+            return qs.filter(**{f"{self.field_name}__pk": value})
+
         try:
             app_label, model = value.lower().split(".")
         except ValueError:
@@ -241,6 +244,9 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
             if self.conjoined:
                 qs = ContentTypeFilter.filter(self, qs, v)
             else:
+                if v.isdigit():
+                    q |= models.Q(**{f"{self.field_name}__pk": value})
+                    continue
                 # Similar to the ContentTypeFilter.filter() call above, but instead of narrowing the query each time
                 # (a AND b AND c ...) we broaden the query each time (a OR b OR c ...).
                 # Specifically, we're mapping a value like ['dcim.device', 'ipam.vlan'] to a query like
@@ -714,6 +720,11 @@ class BaseFilterSet(django_filters.FilterSet):
         Override filter generation to support dynamic lookup expressions for certain filter types.
         """
         filters = super().get_filters()
+
+        # Remove any filters that may have been auto-generated from private model attributes
+        for filter_name in list(filters.keys()):
+            if filter_name.startswith("_"):
+                del filters[filter_name]
 
         if "static_groups" not in filters and getattr(cls._meta.model, "is_static_group_associable_model", False):
             # Add "static_groups" field as the last key
