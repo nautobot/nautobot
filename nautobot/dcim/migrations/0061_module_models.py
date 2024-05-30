@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("extras", "0107_staticgroup_staticgroupassociation"),
         ("tenancy", "0009_update_all_charfields_max_length_to_255"),
-        ("dcim", "0059_add_role_field_to_interface_models"),
+        ("dcim", "0060_alter_cable_status_alter_consoleport__path_and_more"),
     ]
 
     operations = [

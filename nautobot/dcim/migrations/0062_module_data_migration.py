@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("contenttypes", "0001_initial"),
         ("extras", "0001_initial_part_1"),
-        ("dcim", "0060_module_models"),
+        ("dcim", "0061_module_models"),
     ]
 
     operations = [
