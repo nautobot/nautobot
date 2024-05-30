@@ -896,7 +896,9 @@ class ObjectDynamicGroupsView(generic.GenericView):
             obj = get_object_or_404(model, **kwargs)
 
         # Gather all dynamic groups for this object (and its related objects)
-        dynamicgroups_table = tables.DynamicGroupTable(data=obj.dynamic_groups, orderable=False)
+        dynamicgroups_table = tables.DynamicGroupTable(
+            data=obj.dynamic_groups.restrict(request.user, "view"), orderable=False
+        )
         dynamicgroups_table.columns.hide("content_type")
         dynamicgroups_table.columns.hide("members")
         dynamicgroups_table.columns.hide("static_group_count")
