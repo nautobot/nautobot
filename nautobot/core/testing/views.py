@@ -467,10 +467,12 @@ class ViewTestCases:
         """
         Edit a single existing instance.
 
-        :form_data: Data to be used when updating the first existing object.
+        :update_data: Data to be used when updating the first existing object, fall back to form_data if not provided.
+        :form_data: Fall back to this data if update_data is not provided, for backward compatibility.
         """
 
         form_data = {}
+        update_data = {}
 
         def test_edit_object_without_permission(self):
             instance = self._get_queryset().first()
@@ -480,9 +482,10 @@ class ViewTestCases:
                 self.assertHttpStatus(self.client.get(self._get_url("edit", instance)), [403, 404])
 
             # Try POST without permission
+            update_data = self.update_data or self.form_data
             request = {
                 "path": self._get_url("edit", instance),
-                "data": utils.post_data(self.form_data),
+                "data": utils.post_data(update_data),
             }
             with utils.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.post(**request), [403, 404])
@@ -501,12 +504,13 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.get(self._get_url("edit", instance)), 200)
 
             # Try POST with model-level permission
+            update_data = self.update_data or self.form_data
             request = {
                 "path": self._get_url("edit", instance),
-                "data": utils.post_data(self.form_data),
+                "data": utils.post_data(update_data),
             }
             self.assertHttpStatus(self.client.post(**request), 302)
-            self.assertInstanceEqual(self._get_queryset().get(pk=instance.pk), self.form_data)
+            self.assertInstanceEqual(self._get_queryset().get(pk=instance.pk), update_data)
 
             if hasattr(self.model, "to_objectchange"):
                 # Verify ObjectChange creation
@@ -548,17 +552,18 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.get(self._get_url("edit", instance2)), 404)
 
             # Try to edit a permitted object
+            update_data = self.update_data or self.form_data
             request = {
                 "path": self._get_url("edit", instance1),
-                "data": utils.post_data(self.form_data),
+                "data": utils.post_data(update_data),
             }
             self.assertHttpStatus(self.client.post(**request), 302)
-            self.assertInstanceEqual(self._get_queryset().get(pk=instance1.pk), self.form_data)
+            self.assertInstanceEqual(self._get_queryset().get(pk=instance1.pk), update_data)
 
             # Try to edit a non-permitted object
             request = {
                 "path": self._get_url("edit", instance2),
-                "data": utils.post_data(self.form_data),
+                "data": utils.post_data(update_data),
             }
             self.assertHttpStatus(self.client.post(**request), 404)
 
@@ -1499,24 +1504,35 @@ class ViewTestCases:
 
         def _edit_object_test_setup(self):
             test_instance = self._get_queryset().first()
-            if test_instance.device_type:
-                self.form_data["device_type"] = test_instance.device_type.pk
-                self.form_data["module_type"] = None
-            else:
-                self.form_data["device_type"] = None
-                self.form_data["module_type"] = test_instance.module_type.pk
+            self.update_data = {
+                "name": test_instance.name,
+                "device_type": test_instance.device_type.pk,
+                "label": "new test label",
+                "description": "new test description",
+            }
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_edit_object_with_constrained_permission(self):
-            # Overload this test to account for mutually exclusive device_type and module_type fields
+            # Overload this test so that only the label and description fields are changed
             self._edit_object_test_setup()
             super().test_edit_object_with_constrained_permission()
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_edit_object_with_permission(self):
-            # Overload this test to account for mutually exclusive device_type and module_type fields
+            # Overload this test so that only the label and description fields are changed
             self._edit_object_test_setup()
             super().test_edit_object_with_permission()
+
+    class ModularDeviceComponentTemplateViewTestCase(DeviceComponentTemplateViewTestCase):
+        def _edit_object_test_setup(self):
+            test_instance = self._get_queryset().first()
+            self.update_data = {
+                "name": test_instance.name,
+                "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
+                "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
+                "label": "new test label",
+                "description": "new test description",
+            }
 
     class DeviceComponentViewTestCase(
         GetObjectViewTestCase,
@@ -1623,21 +1639,32 @@ class ViewTestCases:
                     expected_message = f"No valid {verbose_name_plural} were selected."
                     self.assertIn(expected_message, response.content.decode(response.charset))
 
-    class ModularDeviceComponentViewTestCase(DeviceComponentViewTestCase):
+        def _edit_object_test_setup(self):
+            test_instance = self._get_queryset().first()
+            self.update_data = {
+                "name": test_instance.name,
+                "device": test_instance.device.pk,
+                "label": "new test label",
+                "description": "new test description",
+            }
+
         def test_edit_object_with_permission(self):
-            instance = self._get_queryset().first()
-            form_data = self.form_data.copy()
-            # device and module are not editable
-            form_data["device"] = getattr(getattr(instance, "device", None), "pk", None)
-            form_data["module"] = getattr(getattr(instance, "module", None), "pk", None)
-            self.form_data = form_data
+            # Overload this test so that only the label and description fields are changed
+            self._edit_object_test_setup()
             super().test_edit_object_with_permission()
 
         def test_edit_object_with_constrained_permission(self):
-            instance = self._get_queryset().first()
-            form_data = self.form_data.copy()
-            # device and module are not editable
-            form_data["device"] = getattr(getattr(instance, "device", None), "pk", None)
-            form_data["module"] = getattr(getattr(instance, "module", None), "pk", None)
-            self.form_data = form_data
+            # Overload this test so that only the label and description fields are changed
+            self._edit_object_test_setup()
             super().test_edit_object_with_constrained_permission()
+
+    class ModularDeviceComponentViewTestCase(DeviceComponentViewTestCase):
+        def _edit_object_test_setup(self):
+            test_instance = self._get_queryset().first()
+            self.update_data = {
+                "name": test_instance.name,
+                "device": getattr(getattr(test_instance, "device", None), "pk", None),
+                "module": getattr(getattr(test_instance, "module", None), "pk", None),
+                "label": "new test label",
+                "description": "new test description",
+            }

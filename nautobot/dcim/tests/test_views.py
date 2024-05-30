@@ -1496,7 +1496,7 @@ module-bays:
 #
 
 
-class ConsolePortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
+class ConsolePortTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateViewTestCase):
     model = ConsolePortTemplate
 
     @classmethod
@@ -1520,6 +1520,7 @@ class ConsolePortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestC
         cls.bulk_create_data = {
             "device_type": devicetypes[1].pk,
             "name_pattern": "Console Port Template [4-6]",
+            "description": "View Test Bulk Create Console Ports",
             "type": ConsolePortTypeChoices.TYPE_RJ45,
         }
 
@@ -1528,7 +1529,7 @@ class ConsolePortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestC
         }
 
 
-class ConsoleServerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
+class ConsoleServerPortTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateViewTestCase):
     model = ConsoleServerPortTemplate
 
     @classmethod
@@ -1552,6 +1553,7 @@ class ConsoleServerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateVie
         cls.bulk_create_data = {
             "device_type": devicetypes[1].pk,
             "name_pattern": "Console Server Port Template [4-6]",
+            "description": "View Test Bulk Create Console Server Ports",
             "type": ConsolePortTypeChoices.TYPE_RJ45,
         }
 
@@ -1560,7 +1562,7 @@ class ConsoleServerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateVie
         }
 
 
-class PowerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
+class PowerPortTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateViewTestCase):
     model = PowerPortTemplate
 
     @classmethod
@@ -1586,6 +1588,7 @@ class PowerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
         cls.bulk_create_data = {
             "device_type": devicetypes[1].pk,
             "name_pattern": "Power Port Template [4-6]",
+            "description": "View Test Bulk Create Power Ports",
             "type": PowerPortTypeChoices.TYPE_IEC_C14,
             "maximum_draw": 100,
             "allocated_draw": 50,
@@ -1598,7 +1601,7 @@ class PowerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
         }
 
 
-class PowerOutletTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
+class PowerOutletTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateViewTestCase):
     model = PowerOutletTemplate
 
     @classmethod
@@ -1623,6 +1626,7 @@ class PowerOutletTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestC
         cls.bulk_create_data = {
             "device_type": devicetype.pk,
             "name_pattern": "Power Outlet Template [4-6]",
+            "description": "View Test Bulk Create Power Outlets",
             "type": PowerOutletTypeChoices.TYPE_IEC_C13,
             "power_port_template": powerports[0].pk,
             "feed_leg": PowerOutletFeedLegChoices.FEED_LEG_B,
@@ -1633,22 +1637,20 @@ class PowerOutletTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestC
             "feed_leg": PowerOutletFeedLegChoices.FEED_LEG_B,
         }
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_edit_object_with_permission(self):
-        instance = self._get_queryset().first()
-        # power_port_template must match the parent device/module type
-        self.form_data["power_port_template"] = getattr(instance.power_port_template, "pk", None)
-        super().test_edit_object_with_permission()
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_edit_object_with_constrained_permission(self):
-        instance = self._get_queryset().first()
-        # power_port_template must match the parent device/module type
-        self.form_data["power_port_template"] = getattr(instance.power_port_template, "pk", None)
-        super().test_edit_object_with_constrained_permission()
+    def _edit_object_test_setup(self):
+        test_instance = self._get_queryset().first()
+        self.update_data = {
+            "name": test_instance.name,
+            "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
+            "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
+            # power_port_template must match the parent device/module type
+            "power_port_template": getattr(test_instance.power_port_template, "pk", None),
+            "label": "new test label",
+            "description": "new test description",
+        }
 
 
-class InterfaceTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
+class InterfaceTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateViewTestCase):
     model = InterfaceTemplate
 
     @classmethod
@@ -1659,9 +1661,21 @@ class InterfaceTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 2"),
         )
 
-        InterfaceTemplate.objects.create(device_type=devicetypes[0], name="Interface Template 1")
-        InterfaceTemplate.objects.create(device_type=devicetypes[0], name="Interface Template 2")
-        InterfaceTemplate.objects.create(device_type=devicetypes[0], name="Interface Template 3")
+        InterfaceTemplate.objects.create(
+            device_type=devicetypes[0],
+            type=InterfaceTypeChoices.TYPE_100GE_QSFP_DD,
+            name="Interface Template 1",
+        )
+        InterfaceTemplate.objects.create(
+            device_type=devicetypes[0],
+            type=InterfaceTypeChoices.TYPE_100GE_QSFP_DD,
+            name="Interface Template 2",
+        )
+        InterfaceTemplate.objects.create(
+            device_type=devicetypes[0],
+            type=InterfaceTypeChoices.TYPE_100GE_QSFP_DD,
+            name="Interface Template 3",
+        )
 
         cls.form_data = {
             "device_type": devicetypes[1].pk,
@@ -1675,6 +1689,7 @@ class InterfaceTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "name_pattern": "Interface Template [4-6]",
             # Test that a label can be applied to each generated interface templates
             "label_pattern": "Interface Template Label [3-5]",
+            "description": "View Test Bulk Create Interfaces",
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
             "mgmt_only": True,
         }
@@ -1684,8 +1699,19 @@ class InterfaceTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "mgmt_only": True,
         }
 
+    def _edit_object_test_setup(self):
+        test_instance = self._get_queryset().first()
+        self.update_data = {
+            "name": test_instance.name,
+            "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
+            "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
+            "type": test_instance.type,
+            "label": "new test label",
+            "description": "new test description",
+        }
 
-class FrontPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
+
+class FrontPortTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateViewTestCase):
     model = FrontPortTemplate
 
     @classmethod
@@ -1694,29 +1720,62 @@ class FrontPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
 
         rearports = (
-            RearPortTemplate.objects.create(device_type=devicetype, name="Rear Port Template 1"),
-            RearPortTemplate.objects.create(device_type=devicetype, name="Rear Port Template 2"),
-            RearPortTemplate.objects.create(device_type=devicetype, name="Rear Port Template 3"),
-            RearPortTemplate.objects.create(device_type=devicetype, name="Rear Port Template 4"),
-            RearPortTemplate.objects.create(device_type=devicetype, name="Rear Port Template 5"),
-            RearPortTemplate.objects.create(device_type=devicetype, name="Rear Port Template 6"),
+            RearPortTemplate.objects.create(
+                device_type=devicetype,
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=24,
+                name="Rear Port Template 1",
+            ),
+            RearPortTemplate.objects.create(
+                device_type=devicetype,
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=24,
+                name="Rear Port Template 2",
+            ),
+            RearPortTemplate.objects.create(
+                device_type=devicetype,
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=24,
+                name="Rear Port Template 3",
+            ),
+            RearPortTemplate.objects.create(
+                device_type=devicetype,
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=24,
+                name="Rear Port Template 4",
+            ),
+            RearPortTemplate.objects.create(
+                device_type=devicetype,
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=24,
+                name="Rear Port Template 5",
+            ),
+            RearPortTemplate.objects.create(
+                device_type=devicetype,
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=24,
+                name="Rear Port Template 6",
+            ),
         )
 
         FrontPortTemplate.objects.create(
             device_type=devicetype,
-            name="Front Port Template 1",
+            name="View Test Front Port Template 1",
+            type=PortTypeChoices.TYPE_8P8C,
             rear_port_template=rearports[0],
             rear_port_position=1,
         )
         FrontPortTemplate.objects.create(
             device_type=devicetype,
-            name="Front Port Template 2",
+            name="View Test Front Port Template 2",
+            type=PortTypeChoices.TYPE_8P8C,
             rear_port_template=rearports[1],
             rear_port_position=1,
         )
         FrontPortTemplate.objects.create(
             device_type=devicetype,
-            name="Front Port Template 3",
+            name="View Test Front Port Template 3",
+            type=PortTypeChoices.TYPE_8P8C,
             rear_port_template=rearports[2],
             rear_port_position=1,
         )
@@ -1731,33 +1790,31 @@ class FrontPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
 
         cls.bulk_create_data = {
             "device_type": devicetype.pk,
-            "name_pattern": "Front Port [4-6]",
+            "name_pattern": "View Test Front Port [4-6]",
+            "description": "View Test Bulk Create Front Ports",
             "type": PortTypeChoices.TYPE_8P8C,
             "rear_port_template_set": [f"{rp.pk}:1" for rp in rearports[3:6]],
         }
 
         cls.bulk_edit_data = {
-            "type": PortTypeChoices.TYPE_8P8C,
+            "type": PortTypeChoices.TYPE_4P4C,
         }
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_edit_object_with_permission(self):
-        instance = self._get_queryset().first()
-        # rear_port_template must match the parent device/module type
-        self.form_data["rear_port_template"] = instance.rear_port_template.pk
-        self.form_data["rear_port_position"] = instance.rear_port_position
-        super().test_edit_object_with_permission()
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_edit_object_with_constrained_permission(self):
-        instance = self._get_queryset().first()
-        # rear_port_template must match the parent device/module type
-        self.form_data["rear_port_template"] = instance.rear_port_template.pk
-        self.form_data["rear_port_position"] = instance.rear_port_position
-        super().test_edit_object_with_constrained_permission()
+    def _edit_object_test_setup(self):
+        test_instance = self._get_queryset().first()
+        self.update_data = {
+            "name": test_instance.name,
+            "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
+            "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
+            "rear_port_template": test_instance.rear_port_template.pk,
+            "rear_port_position": test_instance.rear_port_position,
+            "type": test_instance.type,
+            "label": "new test label",
+            "description": "new test description",
+        }
 
 
-class RearPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
+class RearPortTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateViewTestCase):
     model = RearPortTemplate
 
     @classmethod
@@ -1768,9 +1825,24 @@ class RearPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase
             DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 2"),
         )
 
-        RearPortTemplate.objects.create(device_type=devicetypes[0], name="Rear Port Template 1")
-        RearPortTemplate.objects.create(device_type=devicetypes[0], name="Rear Port Template 2")
-        RearPortTemplate.objects.create(device_type=devicetypes[0], name="Rear Port Template 3")
+        RearPortTemplate.objects.create(
+            device_type=devicetypes[0],
+            type=PortTypeChoices.TYPE_8P8C,
+            positions=24,
+            name="Rear Port Template 1",
+        )
+        RearPortTemplate.objects.create(
+            device_type=devicetypes[0],
+            type=PortTypeChoices.TYPE_8P8C,
+            positions=24,
+            name="Rear Port Template 2",
+        )
+        RearPortTemplate.objects.create(
+            device_type=devicetypes[0],
+            type=PortTypeChoices.TYPE_8P8C,
+            positions=24,
+            name="Rear Port Template 3",
+        )
 
         cls.form_data = {
             "device_type": devicetypes[1].pk,
@@ -1782,12 +1854,25 @@ class RearPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase
         cls.bulk_create_data = {
             "device_type": devicetypes[1].pk,
             "name_pattern": "Rear Port Template [4-6]",
+            "description": "View Test Bulk Create Rear Ports",
             "type": PortTypeChoices.TYPE_8P8C,
             "positions": 2,
         }
 
         cls.bulk_edit_data = {
             "type": PortTypeChoices.TYPE_8P8C,
+        }
+
+    def _edit_object_test_setup(self):
+        test_instance = self._get_queryset().first()
+        self.update_data = {
+            "name": test_instance.name,
+            "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
+            "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
+            "positions": test_instance.positions,
+            "type": test_instance.type,
+            "label": "new test label",
+            "description": "new test description",
         }
 
 
@@ -1822,6 +1907,7 @@ class DeviceBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
         cls.bulk_create_data = {
             "device_type": devicetypes[1].pk,
             "name_pattern": "Device Bay Template [4-6]",
+            "description": "View Test Bulk Create Device Bays",
         }
 
         cls.bulk_edit_data = {
@@ -1829,7 +1915,7 @@ class DeviceBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
         }
 
 
-class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
+class ModuleBayTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateViewTestCase):
     model = ModuleBayTemplate
     rename_field = "position"
 
@@ -1855,6 +1941,16 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
 
         cls.bulk_edit_data = {
             "description": "Description changed",
+        }
+
+    def _edit_object_test_setup(self):
+        test_instance = self._get_queryset().first()
+        self.update_data = {
+            "position": test_instance.position,
+            "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
+            "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
+            "label": "new test label",
+            "description": "new test description",
         }
 
 
@@ -2830,21 +2926,16 @@ class PowerOutletTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
             "description": "New description",
         }
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_edit_object_with_permission(self):
-        instance = self._get_queryset().first()
-        self.form_data["power_port"] = getattr(
-            instance.power_port, "pk", None
-        )  # power_port must match parent device/module
-        super().test_edit_object_with_permission()
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_edit_object_with_constrained_permission(self):
-        instance = self._get_queryset().first()
-        self.form_data["power_port"] = getattr(
-            instance.power_port, "pk", None
-        )  # power_port must match parent device/module
-        super().test_edit_object_with_constrained_permission()
+    def _edit_object_test_setup(self):
+        test_instance = self._get_queryset().first()
+        self.update_data = {
+            "name": test_instance.name,
+            "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
+            "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
+            "power_port": getattr(test_instance.power_port, "pk", None),  # power_port must match parent device/module
+            "label": "new test label",
+            "description": "new test description",
+        }
 
 
 class InterfaceTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
@@ -3024,6 +3115,18 @@ class InterfaceTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
         self.assertIn(valid_ipaddress_link, response_content)
         self.assertNotIn(invalid_ipaddress_link, response_content)
 
+    def _edit_object_test_setup(self):
+        test_instance = self._get_queryset().first()
+        self.update_data = {
+            "name": test_instance.name,
+            "device": getattr(getattr(test_instance, "device", None), "pk", None),
+            "module": getattr(getattr(test_instance, "module", None), "pk", None),
+            "status": test_instance.status.pk,
+            "type": test_instance.type,
+            "label": "new test label",
+            "description": "new test description",
+        }
+
 
 class FrontPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
     model = FrontPort
@@ -3034,18 +3137,66 @@ class FrontPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
         cls.device = device
 
         rearports = (
-            RearPort.objects.create(device=device, name="Rear Port 1"),
-            RearPort.objects.create(device=device, name="Rear Port 2"),
-            RearPort.objects.create(device=device, name="Rear Port 3"),
-            RearPort.objects.create(device=device, name="Rear Port 4"),
-            RearPort.objects.create(device=device, name="Rear Port 5"),
-            RearPort.objects.create(device=device, name="Rear Port 6"),
+            RearPort.objects.create(
+                device=device,
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=24,
+                name="Rear Port 1",
+            ),
+            RearPort.objects.create(
+                device=device,
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=24,
+                name="Rear Port 2",
+            ),
+            RearPort.objects.create(
+                device=device,
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=24,
+                name="Rear Port 3",
+            ),
+            RearPort.objects.create(
+                device=device,
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=24,
+                name="Rear Port 4",
+            ),
+            RearPort.objects.create(
+                device=device,
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=24,
+                name="Rear Port 5",
+            ),
+            RearPort.objects.create(
+                device=device,
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=24,
+                name="Rear Port 6",
+            ),
         )
 
         frontports = (
-            FrontPort.objects.create(device=device, name="Front Port 1", rear_port=rearports[0]),
-            FrontPort.objects.create(device=device, name="Front Port 2", rear_port=rearports[1]),
-            FrontPort.objects.create(device=device, name="Front Port 3", rear_port=rearports[2]),
+            FrontPort.objects.create(
+                device=device,
+                name="Front Port 1",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=rearports[0],
+                rear_port_position=12,
+            ),
+            FrontPort.objects.create(
+                device=device,
+                name="Front Port 2",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=rearports[1],
+                rear_port_position=12,
+            ),
+            FrontPort.objects.create(
+                device=device,
+                name="Front Port 3",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=rearports[2],
+                rear_port_position=12,
+            ),
         )
         # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
         cls.selected_objects = frontports
@@ -3079,19 +3230,18 @@ class FrontPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
     def test_bulk_add_component(self):
         pass
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_edit_object_with_permission(self):
-        instance = self._get_queryset().first()
-        self.form_data["rear_port"] = instance.rear_port.pk  # rear_port must match the parent device/module
-        self.form_data["rear_port_position"] = instance.rear_port_position
-        super().test_edit_object_with_permission()
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_edit_object_with_constrained_permission(self):
-        instance = self._get_queryset().first()
-        self.form_data["rear_port"] = instance.rear_port.pk  # rear_port must match the parent device/module
-        self.form_data["rear_port_position"] = instance.rear_port_position
-        super().test_edit_object_with_constrained_permission()
+    def _edit_object_test_setup(self):
+        test_instance = self._get_queryset().first()
+        self.update_data = {
+            "name": test_instance.name,
+            "device": getattr(getattr(test_instance, "device", None), "pk", None),
+            "module": getattr(getattr(test_instance, "module", None), "pk", None),
+            "rear_port": test_instance.rear_port.pk,  # rear_port must match the parent device/module
+            "rear_port_position": test_instance.rear_port_position,
+            "type": test_instance.type,
+            "label": "new test label",
+            "description": "new test description",
+        }
 
 
 class RearPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
@@ -3102,9 +3252,24 @@ class RearPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
         device = create_test_device("Device 1")
 
         rearports = (
-            RearPort.objects.create(device=device, name="Rear Port 1"),
-            RearPort.objects.create(device=device, name="Rear Port 2"),
-            RearPort.objects.create(device=device, name="Rear Port 3"),
+            RearPort.objects.create(
+                device=device,
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=24,
+                name="Rear Port 1",
+            ),
+            RearPort.objects.create(
+                device=device,
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=24,
+                name="Rear Port 2",
+            ),
+            RearPort.objects.create(
+                device=device,
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=24,
+                name="Rear Port 3",
+            ),
         )
         # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
         cls.selected_objects = rearports
@@ -3131,6 +3296,18 @@ class RearPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
         cls.bulk_edit_data = {
             "type": PortTypeChoices.TYPE_8P8C,
             "description": "New description",
+        }
+
+    def _edit_object_test_setup(self):
+        test_instance = self._get_queryset().first()
+        self.update_data = {
+            "name": test_instance.name,
+            "device": getattr(getattr(test_instance, "device", None), "pk", None),
+            "module": getattr(getattr(test_instance, "module", None), "pk", None),
+            "positions": test_instance.positions,
+            "type": test_instance.type,
+            "label": "new test label",
+            "description": "new test description",
         }
 
 
@@ -3218,18 +3395,24 @@ class ModuleBayTestCase(
         # Since Modules and ModuleBays are nestable, we need to delete ModuleBays that don't have any child ModuleBays
         return ModuleBay.objects.filter(installed_module__isnull=True).values_list("pk", flat=True)[:3]
 
+    def _edit_object_test_setup(self):
+        test_instance = self._get_queryset().first()
+        self.update_data = {
+            "position": test_instance.position,
+            "parent_device": getattr(getattr(test_instance, "parent_device", None), "pk", None),
+            "parent_module": getattr(getattr(test_instance, "parent_module", None), "pk", None),
+            "label": "new test label",
+            "description": "new test description",
+        }
+
     def test_edit_object_with_permission(self):
-        instance = self._get_queryset().first()
-        # parent_device and parent_module are not editable
-        self.form_data["parent_device"] = getattr(getattr(instance, "parent_device", None), "pk", None)
-        self.form_data["parent_module"] = getattr(getattr(instance, "parent_module", None), "pk", None)
+        # Overload this test to account for mutually exclusive device and module fields
+        self._edit_object_test_setup()
         super().test_edit_object_with_permission()
 
     def test_edit_object_with_constrained_permission(self):
-        instance = self._get_queryset().first()
-        # parent_device and parent_module are not editable
-        self.form_data["parent_device"] = getattr(getattr(instance, "parent_device", {}), "pk", None)
-        self.form_data["parent_module"] = getattr(getattr(instance, "parent_module", {}), "pk", None)
+        # Overload this test to account for mutually exclusive device and module fields
+        self._edit_object_test_setup()
         super().test_edit_object_with_constrained_permission()
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
