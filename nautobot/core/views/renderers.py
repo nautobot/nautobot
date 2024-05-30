@@ -171,8 +171,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             return self.resolve_template(template_names)
         except Exception:
             # Fall back to using eg '404 Not Found'
-            self.logger.info("Failed to find template for status code %d", response.status_code)
-            self.logger.info("Tried %s", ", ".join(template_names))
             body = f"{response.status_code} {response.status_text.title()}"
             template = engines["django"].from_string(body)
             return template
