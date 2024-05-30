@@ -320,17 +320,18 @@ class BulkEditDeleteChangeLogging(TestCase):
         )
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="test123")
         device_type.software_image_files.set([software_image_file])
+        oc_list_1 = list(get_changes_for_model(DeviceTypeToSoftwareImageFile))
         with web_request_context(self.user):
             with deferred_change_logging_for_bulk_operation():
                 device_type.software_image_files.set([])
                 device_type.save()
 
-        oc_list = get_changes_for_model(DeviceTypeToSoftwareImageFile)
-        self.assertEqual(len(oc_list), 1)
-        self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_DELETE)
-        self.assertIsNotNone(oc_list[0].changed_object_id)
-        self.assertEqual(oc_list[0].user, self.user)
-        self.assertEqual(oc_list[0].user_name, self.user.username)
+        oc_list_2 = list(get_changes_for_model(DeviceTypeToSoftwareImageFile))
+        self.assertEqual(len(oc_list_2) - len(oc_list_1), 1)
+        self.assertEqual(oc_list_2[0].action, ObjectChangeActionChoices.ACTION_DELETE)
+        self.assertIsNotNone(oc_list_2[0].changed_object_id)
+        self.assertEqual(oc_list_2[0].user, self.user)
+        self.assertEqual(oc_list_2[0].user_name, self.user.username)
 
     def test_change_log_context(self):
         location_type = LocationType.objects.get(name="Campus")

@@ -262,7 +262,8 @@ def _handle_deleted_object(sender, instance, **kwargs):
                     "action": ObjectChangeActionChoices.ACTION_DELETE,
                     "instance": instance,
                     "user": user,
-                    "changed_object_id": instance.pk,
+                    "changed_object_id": changed_object_id,
+                    "changed_object_type": changed_object_type,
                 }
             )
             if not change_context.defer_object_changes:
