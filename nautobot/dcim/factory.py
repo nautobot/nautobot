@@ -139,8 +139,6 @@ class DeviceFactory(PrimaryModelFactory):
             "has_device_redundancy_group",
             "has_platform",
             "has_serial",
-            "has_software_image_files",
-            "has_software_version",
             "has_tenant",
         )
 
@@ -189,12 +187,7 @@ class DeviceFactory(PrimaryModelFactory):
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("bs"))
 
-    has_software_version = NautobotBoolIterator()
-    software_version = factory.Maybe(
-        "has_software_version",
-        factory.LazyAttribute(lambda o: get_random_software_version_for_device_type(o.device_type)),
-        None,
-    )
+    software_version = factory.LazyAttribute(lambda o: get_random_software_version_for_device_type(o.device_type))
 
     @factory.post_generation
     def software_image_files(self, create, extracted, **kwargs):
@@ -279,7 +272,6 @@ class DeviceTypeFactory(PrimaryModelFactory):
             "has_comments",
             "has_device_family",
             "has_part_number",
-            "has_software_image_files",
             "is_subdevice_child",
         )
 
@@ -323,16 +315,14 @@ class DeviceTypeFactory(PrimaryModelFactory):
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
-    has_software_image_files = NautobotBoolIterator()
-
     @factory.post_generation
     def software_image_files(self, create, extracted, **kwargs):
-        if not create or not DeviceTypeFactory.has_software_image_files.evaluate(None, None, None):
+        if not create:
             return
         if extracted:
             self.software_image_files.set(extracted)
         else:
-            self.software_image_files.set(get_random_instances(SoftwareImageFile, minimum=1))
+            self.software_image_files.set(get_random_instances(SoftwareImageFile))
 
 
 class DeviceRedundancyGroupFactory(PrimaryModelFactory):

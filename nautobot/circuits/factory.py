@@ -84,7 +84,7 @@ class ProviderNetworkFactory(PrimaryModelFactory):
         exclude = ("has_description", "has_comments")
 
     name = factory.LazyAttribute(
-        lambda o: f"{o.provider.name} Network {faker.Faker().word(part_of_speech='noun')}"[:100]
+        lambda o: f"{o.provider.name} Network {UniqueFaker('word', part_of_speech='noun')}"[:100]
     )
     provider = random_instance(Provider, allow_null=False)
 
