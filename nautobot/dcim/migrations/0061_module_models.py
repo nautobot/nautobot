@@ -7,6 +7,8 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 import nautobot.core.models.fields
+import nautobot.core.models.ordering
+import nautobot.core.models.query_functions
 import nautobot.extras.models.mixins
 import nautobot.extras.models.roles
 import nautobot.extras.models.statuses
@@ -16,7 +18,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("extras", "0107_staticgroup_staticgroupassociation"),
         ("tenancy", "0009_update_all_charfields_max_length_to_255"),
-        ("dcim", "0059_add_role_field_to_interface_models"),
+        ("dcim", "0060_alter_cable_status_alter_consoleport__path_and_more"),
     ]
 
     operations = [
@@ -63,6 +65,16 @@ class Migration(migrations.Migration):
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
                 ("position", models.CharField(max_length=255)),
+                (
+                    "_position",
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "position",
+                        blank=True,
+                        db_index=True,
+                        max_length=255,
+                        naturalize_function=nautobot.core.models.ordering.naturalize,
+                    ),
+                ),
                 ("label", models.CharField(blank=True, max_length=255)),
                 ("description", models.CharField(blank=True, max_length=255)),
             ],
@@ -91,6 +103,15 @@ class Migration(migrations.Migration):
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
                 ("position", models.CharField(max_length=255)),
+                (
+                    "_position",
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "position",
+                        blank=True,
+                        max_length=255,
+                        naturalize_function=nautobot.core.models.ordering.naturalize,
+                    ),
+                ),
                 ("label", models.CharField(blank=True, max_length=255)),
                 ("description", models.CharField(blank=True, max_length=255)),
             ],
@@ -455,6 +476,10 @@ class Migration(migrations.Migration):
             name="rearport",
             options={"ordering": ("device", "module", "_name")},
         ),
+        migrations.AlterModelOptions(
+            name="interface",
+            options={"ordering": ("device", "module", nautobot.core.models.query_functions.CollateAsChar("_name"))},
+        ),
         migrations.AlterField(
             model_name="consoleport",
             name="device",
@@ -611,17 +636,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="consoleporttemplate",
-            constraint=models.CheckConstraint(
-                check=models.Q(
-                    models.Q(("device_type__isnull", False), ("module_type__isnull", True)),
-                    models.Q(("device_type__isnull", True), ("module_type__isnull", False)),
-                    _connector="OR",
-                ),
-                name="dcim_consoleporttemplate_device_type_xor_module_type",
-            ),
-        ),
-        migrations.AddConstraint(
-            model_name="consoleporttemplate",
             constraint=models.UniqueConstraint(
                 fields=("device_type", "name"), name="dcim_consoleporttemplate_device_type_name_unique"
             ),
@@ -634,17 +648,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="consoleserverporttemplate",
-            constraint=models.CheckConstraint(
-                check=models.Q(
-                    models.Q(("device_type__isnull", False), ("module_type__isnull", True)),
-                    models.Q(("device_type__isnull", True), ("module_type__isnull", False)),
-                    _connector="OR",
-                ),
-                name="dcim_consoleserverporttemplate_device_type_xor_module_type",
-            ),
-        ),
-        migrations.AddConstraint(
-            model_name="consoleserverporttemplate",
             constraint=models.UniqueConstraint(
                 fields=("device_type", "name"), name="dcim_consoleserverporttemplate_device_type_name_unique"
             ),
@@ -653,17 +656,6 @@ class Migration(migrations.Migration):
             model_name="consoleserverporttemplate",
             constraint=models.UniqueConstraint(
                 fields=("module_type", "name"), name="dcim_consoleserverporttemplate_module_type_name_unique"
-            ),
-        ),
-        migrations.AddConstraint(
-            model_name="frontporttemplate",
-            constraint=models.CheckConstraint(
-                check=models.Q(
-                    models.Q(("device_type__isnull", False), ("module_type__isnull", True)),
-                    models.Q(("device_type__isnull", True), ("module_type__isnull", False)),
-                    _connector="OR",
-                ),
-                name="dcim_frontporttemplate_device_type_xor_module_type",
             ),
         ),
         migrations.AddConstraint(
@@ -687,17 +679,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="interfacetemplate",
-            constraint=models.CheckConstraint(
-                check=models.Q(
-                    models.Q(("device_type__isnull", False), ("module_type__isnull", True)),
-                    models.Q(("device_type__isnull", True), ("module_type__isnull", False)),
-                    _connector="OR",
-                ),
-                name="dcim_interfacetemplate_device_type_xor_module_type",
-            ),
-        ),
-        migrations.AddConstraint(
-            model_name="interfacetemplate",
             constraint=models.UniqueConstraint(
                 fields=("device_type", "name"), name="dcim_interfacetemplate_device_type_name_unique"
             ),
@@ -706,17 +687,6 @@ class Migration(migrations.Migration):
             model_name="interfacetemplate",
             constraint=models.UniqueConstraint(
                 fields=("module_type", "name"), name="dcim_interfacetemplate_module_type_name_unique"
-            ),
-        ),
-        migrations.AddConstraint(
-            model_name="poweroutlettemplate",
-            constraint=models.CheckConstraint(
-                check=models.Q(
-                    models.Q(("device_type__isnull", False), ("module_type__isnull", True)),
-                    models.Q(("device_type__isnull", True), ("module_type__isnull", False)),
-                    _connector="OR",
-                ),
-                name="dcim_poweroutlettemplate_device_type_xor_module_type",
             ),
         ),
         migrations.AddConstraint(
@@ -733,17 +703,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="powerporttemplate",
-            constraint=models.CheckConstraint(
-                check=models.Q(
-                    models.Q(("device_type__isnull", False), ("module_type__isnull", True)),
-                    models.Q(("device_type__isnull", True), ("module_type__isnull", False)),
-                    _connector="OR",
-                ),
-                name="dcim_powerporttemplate_device_type_xor_module_type",
-            ),
-        ),
-        migrations.AddConstraint(
-            model_name="powerporttemplate",
             constraint=models.UniqueConstraint(
                 fields=("device_type", "name"), name="dcim_powerporttemplate_device_type_name_unique"
             ),
@@ -752,17 +711,6 @@ class Migration(migrations.Migration):
             model_name="powerporttemplate",
             constraint=models.UniqueConstraint(
                 fields=("module_type", "name"), name="dcim_powerporttemplate_module_type_name_unique"
-            ),
-        ),
-        migrations.AddConstraint(
-            model_name="rearporttemplate",
-            constraint=models.CheckConstraint(
-                check=models.Q(
-                    models.Q(("device_type__isnull", False), ("module_type__isnull", True)),
-                    models.Q(("device_type__isnull", True), ("module_type__isnull", False)),
-                    _connector="OR",
-                ),
-                name="dcim_rearporttemplate_device_type_xor_module_type",
             ),
         ),
         migrations.AddConstraint(
@@ -779,33 +727,11 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="consoleport",
-            constraint=models.CheckConstraint(
-                check=models.Q(
-                    models.Q(("device__isnull", False), ("module__isnull", True)),
-                    models.Q(("device__isnull", True), ("module__isnull", False)),
-                    _connector="OR",
-                ),
-                name="dcim_consoleport_device_xor_module",
-            ),
-        ),
-        migrations.AddConstraint(
-            model_name="consoleport",
             constraint=models.UniqueConstraint(fields=("device", "name"), name="dcim_consoleport_device_name_unique"),
         ),
         migrations.AddConstraint(
             model_name="consoleport",
             constraint=models.UniqueConstraint(fields=("module", "name"), name="dcim_consoleport_module_name_unique"),
-        ),
-        migrations.AddConstraint(
-            model_name="consoleserverport",
-            constraint=models.CheckConstraint(
-                check=models.Q(
-                    models.Q(("device__isnull", False), ("module__isnull", True)),
-                    models.Q(("device__isnull", True), ("module__isnull", False)),
-                    _connector="OR",
-                ),
-                name="dcim_consoleserverport_device_xor_module",
-            ),
         ),
         migrations.AddConstraint(
             model_name="consoleserverport",
@@ -817,17 +743,6 @@ class Migration(migrations.Migration):
             model_name="consoleserverport",
             constraint=models.UniqueConstraint(
                 fields=("module", "name"), name="dcim_consoleserverport_module_name_unique"
-            ),
-        ),
-        migrations.AddConstraint(
-            model_name="frontport",
-            constraint=models.CheckConstraint(
-                check=models.Q(
-                    models.Q(("device__isnull", False), ("module__isnull", True)),
-                    models.Q(("device__isnull", True), ("module__isnull", False)),
-                    _connector="OR",
-                ),
-                name="dcim_frontport_device_xor_module",
             ),
         ),
         migrations.AddConstraint(
@@ -846,33 +761,11 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="interface",
-            constraint=models.CheckConstraint(
-                check=models.Q(
-                    models.Q(("device__isnull", False), ("module__isnull", True)),
-                    models.Q(("device__isnull", True), ("module__isnull", False)),
-                    _connector="OR",
-                ),
-                name="dcim_interface_device_xor_module",
-            ),
-        ),
-        migrations.AddConstraint(
-            model_name="interface",
             constraint=models.UniqueConstraint(fields=("device", "name"), name="dcim_interface_device_name_unique"),
         ),
         migrations.AddConstraint(
             model_name="interface",
             constraint=models.UniqueConstraint(fields=("module", "name"), name="dcim_interface_module_name_unique"),
-        ),
-        migrations.AddConstraint(
-            model_name="poweroutlet",
-            constraint=models.CheckConstraint(
-                check=models.Q(
-                    models.Q(("device__isnull", False), ("module__isnull", True)),
-                    models.Q(("device__isnull", True), ("module__isnull", False)),
-                    _connector="OR",
-                ),
-                name="dcim_poweroutlet_device_xor_module",
-            ),
         ),
         migrations.AddConstraint(
             model_name="poweroutlet",
@@ -884,33 +777,11 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="powerport",
-            constraint=models.CheckConstraint(
-                check=models.Q(
-                    models.Q(("device__isnull", False), ("module__isnull", True)),
-                    models.Q(("device__isnull", True), ("module__isnull", False)),
-                    _connector="OR",
-                ),
-                name="dcim_powerport_device_xor_module",
-            ),
-        ),
-        migrations.AddConstraint(
-            model_name="powerport",
             constraint=models.UniqueConstraint(fields=("device", "name"), name="dcim_powerport_device_name_unique"),
         ),
         migrations.AddConstraint(
             model_name="powerport",
             constraint=models.UniqueConstraint(fields=("module", "name"), name="dcim_powerport_module_name_unique"),
-        ),
-        migrations.AddConstraint(
-            model_name="rearport",
-            constraint=models.CheckConstraint(
-                check=models.Q(
-                    models.Q(("device__isnull", False), ("module__isnull", True)),
-                    models.Q(("device__isnull", True), ("module__isnull", False)),
-                    _connector="OR",
-                ),
-                name="dcim_rearport_device_xor_module",
-            ),
         ),
         migrations.AddConstraint(
             model_name="rearport",
@@ -930,38 +801,16 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterModelOptions(
             name="modulebay",
-            options={"ordering": ("parent_device", "parent_module__id", "position")},
+            options={"ordering": ("parent_device", "parent_module__id", "_position")},
         ),
         migrations.AlterModelOptions(
             name="modulebaytemplate",
-            options={"ordering": ("device_type", "module_type", "position")},
-        ),
-        migrations.AddConstraint(
-            model_name="module",
-            constraint=models.CheckConstraint(
-                check=models.Q(
-                    models.Q(("location__isnull", True), ("parent_module_bay__isnull", False)),
-                    models.Q(("location__isnull", False), ("parent_module_bay__isnull", True)),
-                    _connector="OR",
-                ),
-                name="dcim_module_parent_module_bay_xor_location",
-            ),
+            options={"ordering": ("device_type", "module_type", "_position")},
         ),
         migrations.AddConstraint(
             model_name="module",
             constraint=models.UniqueConstraint(
                 fields=("module_type", "serial"), name="dcim_module_module_type_serial_unique"
-            ),
-        ),
-        migrations.AddConstraint(
-            model_name="modulebay",
-            constraint=models.CheckConstraint(
-                check=models.Q(
-                    models.Q(("parent_device__isnull", False), ("parent_module__isnull", True)),
-                    models.Q(("parent_device__isnull", True), ("parent_module__isnull", False)),
-                    _connector="OR",
-                ),
-                name="dcim_modulebay_parent_device_xor_parent_module",
             ),
         ),
         migrations.AddConstraint(
@@ -974,17 +823,6 @@ class Migration(migrations.Migration):
             model_name="modulebay",
             constraint=models.UniqueConstraint(
                 fields=("parent_module", "position"), name="dcim_modulebay_parent_module_position_unique"
-            ),
-        ),
-        migrations.AddConstraint(
-            model_name="modulebaytemplate",
-            constraint=models.CheckConstraint(
-                check=models.Q(
-                    models.Q(("device_type__isnull", False), ("module_type__isnull", True)),
-                    models.Q(("device_type__isnull", True), ("module_type__isnull", False)),
-                    _connector="OR",
-                ),
-                name="dcim_modulebaytemplate_device_type_xor_module_type",
             ),
         ),
         migrations.AddConstraint(
