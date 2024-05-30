@@ -589,6 +589,10 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         dynamic_group_context.dynamic_groups.add(self.dynamic_groups)
         dynamic_group_context_2.dynamic_groups.add(self.dynamic_group_2)
 
+        # Refresh caches
+        self.dynamic_groups.update_cached_members()
+        self.dynamic_group_2.update_cached_members()
+
         self.assertIn("dynamic context 1", self.device.get_config_context().values())
         self.assertNotIn("dynamic context 2", self.device.get_config_context().values())
         self.assertIn("dynamic context 2", device2.get_config_context().values())
@@ -1686,6 +1690,12 @@ class SecretsGroupTest(ModelTestCases.BaseModelTestCase):
 class StaticGroupTest(ModelTestCases.BaseModelTestCase):
     model = StaticGroup
 
+    @classmethod
+    def setUpTestData(cls):
+        StaticGroup.all_objects.create(
+            name="Hidden Group", content_type=ContentType.objects.get_for_model(Prefix), hidden=True
+        )
+
     def test_managers(self):
         self.assertQuerysetEqualAndNotEmpty(StaticGroup.objects.all(), StaticGroup.all_objects.filter(hidden=False))
         self.assertTrue(StaticGroup.all_objects.filter(hidden=True).exists())
@@ -1774,6 +1784,13 @@ class StaticGroupTest(ModelTestCases.BaseModelTestCase):
 
 class StaticGroupAssociationTest(ModelTestCases.BaseModelTestCase):
     model = StaticGroupAssociation
+
+    @classmethod
+    def setUpTestData(cls):
+        sg = StaticGroup.all_objects.create(
+            name="Hidden Group", content_type=ContentType.objects.get_for_model(Prefix), hidden=True
+        )
+        sg.add_members(Prefix.objects.all())
 
     def test_managers(self):
         self.assertQuerysetEqualAndNotEmpty(
