@@ -1,0 +1,1 @@
+Fixed an unhandled `ValueError` when filtering on `vlans` by their UUID rather than their VLAN ID.

@@ -38,7 +38,7 @@ python = ">=3.8,<3.13"
 # Background task processing
 celery = "~5.3.1"
 # Fundamental web framework for Nautobot
-Django = "~3.2.25"
+Django = "~4.2.13"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -52,7 +52,7 @@ django-constance = "~3.1.0"
 # Permit cross-domain API requests
 django-cors-headers = "~4.3.1"
 # Store files in the database for background tasks
-django-db-file-storage = "~0.5.5"
+django-db-file-storage = "~0.5.6.1"
 # AutoSlugField and shell_plus
 django-extensions = "~3.2.3"
 # Advanced query filters
@@ -76,7 +76,7 @@ django-tables2 = "~2.7.0"
 # Tags
 django-taggit = "~4.0.0"
 # Represent time zones in Django
-django-timezone-field = "~5.1"
+django-timezone-field = "~6.1.0"
 # Tree database structures based on Common Table Expressions
 django-tree-queries = "~0.19.0"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
