@@ -9,6 +9,7 @@ from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
+from nautobot.cloud.models import CloudAccount, CloudType
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
 from nautobot.dcim.choices import (
@@ -178,6 +179,7 @@ class Mixins:
 
     class ModularDeviceComponentMixin:
         modular_component_create_data = {}
+        update_data = {"label": "updated label", "description": "updated description"}
 
         def test_module_device_validation(self):
             """Assert that a modular component can have a module or a device but not both."""
@@ -256,6 +258,7 @@ class Mixins:
 
     class ModularDeviceComponentTemplateMixin:
         modular_component_create_data = {}
+        update_data = {"label": "updated label", "description": "updated description"}
 
         def test_module_type_device_type_validation(self):
             """Assert that a modular component template can have a module_type or a device_type but not both."""
@@ -975,7 +978,11 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
         Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         DeviceType.objects.all().delete()
+        Module.objects.all().delete()
+        ModuleType.objects.all().delete()
         Platform.objects.all().delete()
+        CloudAccount.objects.all().delete()
+        CloudType.objects.all().delete()
 
 
 class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases.APIViewTestCase):
@@ -1168,6 +1175,7 @@ class InterfaceTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.B
 
 class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
     model = FrontPortTemplate
+    update_data = {"label": "updated label", "description": "updated description"}
 
     @classmethod
     def setUpTestData(cls):
@@ -1348,6 +1356,7 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
 class ModuleBayTemplateTest(Mixins.BaseComponentTestMixin):
     model = ModuleBayTemplate
     choices_fields = []
+    update_data = {"label": "updated label", "description": "updated description"}
 
     @classmethod
     def setUpTestData(cls):
@@ -1813,11 +1822,8 @@ class ModuleTestCase(APIViewTestCases.APIViewTestCase):
         }
 
     def get_deletable_object_pks(self):
-        """Modules and ModuleBays are nestable, find Modules that don't have any child Modules."""
-        instances = self._get_queryset().filter(module_bays__isnull=True).values_list("pk", flat=True)[:3]
-        if len(instances) < 3:
-            self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
-        return instances
+        # Since Modules and ModuleBays are nestable, we need to delete Modules that don't have any child Modules
+        return Module.objects.exclude(module_bays__installed_module__isnull=False).values_list("pk", flat=True)[:3]
 
     def test_parent_module_bay_location_validation(self):
         """Assert that a module can have a parent_module_bay or a location but not both."""
@@ -2039,47 +2045,47 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
         cls.interfaces = (
             Interface.objects.create(
                 device=cls.devices[0],
-                name="Interface 1",
+                name="Test Interface 1",
                 type="1000base-t",
                 status=non_default_status,
                 role=intf_role,
             ),
             Interface.objects.create(
                 device=cls.devices[0],
-                name="Interface 2",
+                name="Test Interface 2",
                 type="1000base-t",
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.devices[0],
-                name="Interface 3",
+                name="Test Interface 3",
                 type=InterfaceTypeChoices.TYPE_BRIDGE,
                 status=non_default_status,
                 role=intf_role,
             ),
             Interface.objects.create(
                 device=cls.devices[1],
-                name="Interface 4",
+                name="Test Interface 4",
                 type=InterfaceTypeChoices.TYPE_1GE_GBIC,
                 status=non_default_status,
                 role=intf_role,
             ),
             Interface.objects.create(
                 device=cls.devices[1],
-                name="Interface 5",
+                name="Test Interface 5",
                 type=InterfaceTypeChoices.TYPE_LAG,
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.devices[2],
-                name="Interface 6",
+                name="Test Interface 6",
                 type=InterfaceTypeChoices.TYPE_LAG,
                 status=non_default_status,
                 role=intf_role,
             ),
             Interface.objects.create(
                 device=cls.devices[2],
-                name="Interface 7",
+                name="Test Interface 7",
                 type=InterfaceTypeChoices.TYPE_1GE_GBIC,
                 status=non_default_status,
                 role=intf_role,
@@ -2306,6 +2312,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
 class FrontPortTest(Mixins.BasePortTestMixin):
     model = FrontPort
     peer_termination_type = Interface
+    update_data = {"label": "updated label", "description": "updated description"}
 
     def test_trace(self):
         """FrontPorts don't support trace."""
@@ -2585,6 +2592,7 @@ class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeMode
 class ModuleBayTest(Mixins.BaseComponentTestMixin):
     model = ModuleBay
     choices_fields = []
+    update_data = {"label": "updated label", "description": "updated description"}
 
     @classmethod
     def setUpTestData(cls):
@@ -2606,11 +2614,8 @@ class ModuleBayTest(Mixins.BaseComponentTestMixin):
         ]
 
     def get_deletable_object_pks(self):
-        """Modules and ModuleBays are nestable, find ModuleBays that don't have any child ModuleBays."""
-        instances = self._get_queryset().filter(installed_module__isnull=True).values_list("pk", flat=True)[:3]
-        if len(instances) < 3:
-            self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
-        return instances
+        # Since Modules and ModuleBays are nestable, we need to delete ModuleBays that don't have any child ModuleBays
+        return ModuleBay.objects.filter(installed_module__isnull=True).values_list("pk", flat=True)[:3]
 
     def test_parent_module_parent_device_validation(self):
         """Assert that a module bay can have a parent_module or a parent_device but not both."""
@@ -3254,7 +3259,7 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
 
         interface_redundancy_groups = (
             InterfaceRedundancyGroup(
-                name="Interface Redundancy Group 1",
+                name="Test Interface Redundancy Group 1",
                 protocol="hsrp",
                 status=statuses[0],
                 virtual_ip=None,
@@ -3262,7 +3267,7 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
                 secrets_group=secrets_groups[0],
             ),
             InterfaceRedundancyGroup(
-                name="Interface Redundancy Group 2",
+                name="Test Interface Redundancy Group 2",
                 protocol="carp",
                 status=statuses[1],
                 virtual_ip=ips[1],
@@ -3270,7 +3275,7 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
                 secrets_group=secrets_groups[1],
             ),
             InterfaceRedundancyGroup(
-                name="Interface Redundancy Group 3",
+                name="Test Interface Redundancy Group 3",
                 protocol="vrrp",
                 status=statuses[2],
                 virtual_ip=ips[2],
@@ -3297,19 +3302,19 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
         cls.interfaces = (
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 1",
+                name="Test Interface 1",
                 type="1000base-t",
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 2",
+                name="Test Interface 2",
                 type="1000base-t",
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 3",
+                name="Test Interface 3",
                 type=InterfaceTypeChoices.TYPE_BRIDGE,
                 status=non_default_status,
             ),

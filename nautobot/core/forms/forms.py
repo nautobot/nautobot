@@ -121,7 +121,7 @@ class BulkRenameForm(forms.Form):
     """
 
     find = forms.CharField()
-    replace = forms.CharField()
+    replace = forms.CharField(required=False, strip=False)
     use_regex = forms.BooleanField(required=False, initial=True, label="Use regular expressions")
 
     def clean(self):

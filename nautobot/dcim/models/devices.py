@@ -1443,7 +1443,6 @@ class ModuleType(PrimaryModel):
                 ("manufacturer", self.manufacturer.name),
                 ("model", self.model),
                 ("part_number", self.part_number),
-                ("comments", self.comments),
             )
         )
 
@@ -1599,17 +1598,13 @@ class Module(PrimaryModel):
         "status",
     ]
 
-    natural_key_field_names = ["location", "module_type", "parent_module_bay", "serial"]
+    # The recursive nature of this model combined with the fact that it can be a child of a
+    # device or location makes our natural key implementation unusable, so just use the pk
+    natural_key_field_names = ["pk"]
 
     class Meta:
         ordering = ("parent_module_bay", "location", "module_type", "asset_tag", "serial")
         constraints = [
-            # Database constraint to make the parent_model_bay and location fields mutually exclusive
-            models.CheckConstraint(
-                check=models.Q(parent_module_bay__isnull=False, location__isnull=True)
-                | models.Q(parent_module_bay__isnull=True, location__isnull=False),
-                name="dcim_module_parent_module_bay_xor_location",
-            ),
             models.UniqueConstraint(
                 fields=["module_type", "serial"],
                 name="dcim_module_module_type_serial_unique",
@@ -1619,11 +1614,16 @@ class Module(PrimaryModel):
     def __str__(self):
         serial = f" (Serial: {self.serial})" if self.serial else ""
         asset_tag = f" (Asset Tag: {self.asset_tag})" if self.asset_tag else ""
-        display = str(self.module_type) + serial + asset_tag
+        return str(self.module_type) + serial + asset_tag
+
+    @property
+    def display(self):
         if self.location:
-            return f"{display} at location {self.location}"
+            return f"{self!s} at location {self.location}"
+        elif self.parent_module_bay.parent_device is not None:
+            return f"{self.module_type!s} installed in {self.parent_module_bay.parent_device.display}"
         else:
-            return f"{display} installed in {self.parent_module_bay}"
+            return f"{self.module_type!s} installed in {self.parent_module_bay.parent_module.display}"
 
     @property
     def device(self):
@@ -1656,6 +1656,13 @@ class Module(PrimaryModel):
             self.serial = None
         if self.asset_tag == "":
             self.asset_tag = None
+
+        # Prevent creating a Module that is its own ancestor, creating an infinite loop
+        parent_module = getattr(self.parent_module_bay, "parent_module", None)
+        while parent_module is not None:
+            if parent_module == self:
+                raise ValidationError("Creating this instance would cause an infinite loop.")
+            parent_module = getattr(parent_module.parent_module_bay, "parent_module", None)
 
         super().save(*args, **kwargs)
 

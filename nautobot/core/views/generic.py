@@ -441,7 +441,12 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         logger = logging.getLogger(__name__ + ".ObjectEditView")
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
-        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+        form = self.model_form(
+            data=request.POST,
+            files=request.FILES,
+            initial=normalize_querydict(request.GET, form_class=self.model_form),
+            instance=obj,
+        )
         restrict_form_fields(form, request.user)
 
         if form.is_valid():
@@ -754,7 +759,9 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                             related_obj_pks = []
                             for i, rel_obj_data in enumerate(data.get(field_name, [])):
-                                f = related_object_form(obj, rel_obj_data)
+                                # add parent object key to related object data
+                                rel_obj_data[obj._meta.verbose_name.replace(" ", "_")] = str(obj.pk)
+                                f = related_object_form(rel_obj_data)
 
                                 for subfield_name, field in f.fields.items():
                                     if subfield_name not in rel_obj_data and hasattr(field, "initial"):
@@ -1212,7 +1219,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     Delete objects in bulk.
 
     queryset: Custom queryset to use when retrieving objects (e.g. to select related objects)
-    filter: FilterSet to apply when deleting by QuerySet
+    filterset: FilterSet to apply when deleting by QuerySet
     table: The table used to display devices being deleted
     form: The form class used to delete objects in bulk
     template_name: The name of the template
@@ -1338,7 +1345,7 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
         return get_permission_for_model(self.queryset.model, "add")
 
     def get(self, request):
-        form = self.form(initial=request.GET)
+        form = self.form(initial=normalize_querydict(request.GET, form_class=self.form))
         model_form = self.model_form(request.GET)
 
         return render(
@@ -1354,8 +1361,8 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
 
     def post(self, request):
         logger = logging.getLogger(__name__ + ".ComponentCreateView")
-        form = self.form(request.POST, initial=request.GET)
-        model_form = self.model_form(request.POST)
+        form = self.form(request.POST, initial=normalize_querydict(request.GET, form_class=self.form))
+        model_form = self.model_form(request.POST, initial=normalize_querydict(request.GET, form_class=self.model_form))
 
         if form.is_valid():
             new_components = []
@@ -1370,7 +1377,9 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
                 data["label"] = label
                 if hasattr(form, "get_iterative_data"):
                     data.update(form.get_iterative_data(i))
-                component_form = self.model_form(data)
+                component_form = self.model_form(
+                    data, initial=normalize_querydict(request.GET, form_class=self.model_form)
+                )
 
                 if component_form.is_valid():
                     new_components.append(component_form)
@@ -1431,6 +1440,7 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
 
     parent_model = None
     parent_field = None
+    primary_pattern_field = "name"
     form = None
     queryset = None
     model_form = None
@@ -1474,14 +1484,14 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
                 try:
                     with transaction.atomic():
                         for obj in data["pk"]:
-                            names = data["name_pattern"]
+                            names = data[f"{self.primary_pattern_field}_pattern"]
                             labels = data["label_pattern"] if "label_pattern" in data else None
                             for i, name in enumerate(names):
                                 label = labels[i] if labels else None
 
                                 component_data = {
                                     self.parent_field: obj.pk,
-                                    "name": name,
+                                    self.primary_pattern_field: name,
                                     "label": label,
                                 }
                                 component_data.update(data)

@@ -191,4 +191,20 @@
         </div>
     {% include 'inc/paginator.html' with paginator=controller_table.paginator page=controller_table.page %}
     {% endif %}
+    {% if module_table %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Modules</strong>
+            </div>
+            {% include 'inc/table.html' with table=module_table %}
+            {% if perms.dcim.add_module %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'dcim:module_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Module
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    {% include 'inc/paginator.html' with paginator=module_table.paginator page=module_table.page %}
+    {% endif %}
  {% endblock content_full_width_page %}

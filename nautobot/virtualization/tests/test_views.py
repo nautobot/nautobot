@@ -350,3 +350,13 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "custom_field_1": "New Custom Field Data",
         }
+
+    def _edit_object_test_setup(self):
+        test_instance = self._get_queryset().first()
+        self.update_data = {
+            "name": test_instance.name,
+            "virtual_machine": test_instance.virtual_machine.pk,
+            "status": test_instance.status.pk,
+            "label": "new test label",
+            "description": "new test description",
+        }

@@ -201,7 +201,7 @@ class Command(BaseCommand):
         InterfaceTemplateFactory.create_batch(30, using=db_name)
         PowerPortTemplateFactory.create_batch(30, using=db_name)
         PowerOutletTemplateFactory.create_batch(30, using=db_name)
-        ModuleBayTemplateFactory.create_batch(30, using=db_name)
+        ModuleBayTemplateFactory.create_batch(90, using=db_name)
         self.stdout.write("Creating Manufacturers without DeviceTypes, ModuleTypes or Platforms...")
         ManufacturerFactory.create_batch(2, using=db_name)  # Last 2 hard-coded Manufacturers
         self.stdout.write("Creating DeviceRedundancyGroups...")

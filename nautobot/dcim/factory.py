@@ -141,8 +141,6 @@ class DeviceFactory(PrimaryModelFactory):
             "has_device_redundancy_group",
             "has_platform",
             "has_serial",
-            "has_software_image_files",
-            "has_software_version",
             "has_tenant",
         )
 
@@ -159,7 +157,7 @@ class DeviceFactory(PrimaryModelFactory):
         lambda: Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(Device)),
         allow_null=False,
     )
-    name = factory.LazyAttributeSequence(lambda o, n: f"{o.device_type.model} Device - {o.location} - {n + 1}")
+    name = factory.LazyAttributeSequence(lambda o, n: f"{o.device_type.model}-{n + 1}")
 
     has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
@@ -191,12 +189,7 @@ class DeviceFactory(PrimaryModelFactory):
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("bs"))
 
-    has_software_version = NautobotBoolIterator()
-    software_version = factory.Maybe(
-        "has_software_version",
-        factory.LazyAttribute(lambda o: get_random_software_version_for_device_type(o.device_type)),
-        None,
-    )
+    software_version = factory.LazyAttribute(lambda o: get_random_software_version_for_device_type(o.device_type))
 
     @factory.post_generation
     def software_image_files(self, create, extracted, **kwargs):
@@ -262,6 +255,18 @@ class DeviceFactory(PrimaryModelFactory):
     # )
 
 
+device_types = (
+    "Router",
+    "Switch",
+    "Firewall",
+    "Load Balancer",
+    "WLAN Controller",
+    "Access Point",
+    "SAN Fabric",
+    "Console Server",
+)
+
+
 class DeviceTypeFactory(PrimaryModelFactory):
     class Meta:
         model = DeviceType
@@ -269,7 +274,6 @@ class DeviceTypeFactory(PrimaryModelFactory):
             "has_comments",
             "has_device_family",
             "has_part_number",
-            "has_software_image_files",
             "is_subdevice_child",
         )
 
@@ -278,7 +282,21 @@ class DeviceTypeFactory(PrimaryModelFactory):
 
     manufacturer = random_instance(Manufacturer)
 
-    model = factory.LazyAttributeSequence(lambda o, n: f"{o.manufacturer.name} DeviceType {n + 1}")
+    @factory.lazy_attribute
+    def model(self):
+        """
+        Use a random unused-for-this-manufacturer element from `device_types` if any.
+
+        If all are already used, append " 2" to all device-type strings and try again, and so forth.
+        """
+        possible_device_types = set(device_types)
+        count = 2
+        current_models = set(DeviceType.objects.filter(manufacturer=self.manufacturer).values_list("model", flat=True))
+        unused_models = possible_device_types.difference(current_models)
+        while not unused_models:
+            unused_models = {f"{device_type} {count}" for device_type in device_types}.difference(current_models)
+            count += 1
+        return factory.random.randgen.choice(list(unused_models))
 
     has_part_number = NautobotBoolIterator()
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
@@ -299,16 +317,14 @@ class DeviceTypeFactory(PrimaryModelFactory):
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
-    has_software_image_files = NautobotBoolIterator()
-
     @factory.post_generation
     def software_image_files(self, create, extracted, **kwargs):
-        if not create or not DeviceTypeFactory.has_software_image_files.evaluate(None, None, None):
+        if not create:
             return
         if extracted:
             self.software_image_files.set(extracted)
         else:
-            self.software_image_files.set(get_random_instances(SoftwareImageFile, minimum=1))
+            self.software_image_files.set(get_random_instances(SoftwareImageFile))
 
 
 class DeviceRedundancyGroupFactory(PrimaryModelFactory):
@@ -733,6 +749,13 @@ class ControllerManagedDeviceGroupFactory(PrimaryModelFactory):
     weight = factory.Faker("pyint", min_value=1, max_value=1000)
 
 
+module_types = (
+    "Supervisor",
+    "Line Card",
+    "Fabric",
+)
+
+
 class ModuleTypeFactory(PrimaryModelFactory):
     class Meta:
         model = ModuleType
@@ -740,10 +763,24 @@ class ModuleTypeFactory(PrimaryModelFactory):
 
     manufacturer = random_instance(Manufacturer, allow_null=False)
 
-    model = factory.LazyAttributeSequence(lambda o, n: f"{o.manufacturer.name} ModuleType {n + 1}")
-
     has_part_number = NautobotBoolIterator()
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
+
+    @factory.lazy_attribute
+    def model(self):
+        """
+        Use a random unused-for-this-manufacturer element from `module_types` if any.
+
+        If all are already used, append " 2" to all module-type strings and try again, and so forth.
+        """
+        possible_module_types = set(module_types)
+        count = 2
+        current_models = set(ModuleType.objects.filter(manufacturer=self.manufacturer).values_list("model", flat=True))
+        unused_models = possible_module_types.difference(current_models)
+        while not unused_models:
+            unused_models = {f"{module_type} {count}" for module_type in module_types}.difference(current_models)
+            count += 1
+        return factory.random.randgen.choice(list(unused_models))
 
 
 class ModuleFactory(PrimaryModelFactory):
@@ -872,7 +909,6 @@ class FrontPortTemplateFactory(ModularDeviceComponentTemplateFactory):
     )
     type = factory.Faker("random_element", elements=PortTypeChoices.values())
     name = factory.Sequence(lambda n: f"FrontPort {n}")
-    rear_port_position = factory.Sequence(lambda n: n + 1)
 
     @factory.lazy_attribute
     def rear_port_template(self):
@@ -880,6 +916,10 @@ class FrontPortTemplateFactory(ModularDeviceComponentTemplateFactory):
             return factory.random.randgen.choice(self.module_type.rear_port_templates.all())
         else:
             return factory.random.randgen.choice(self.device_type.rear_port_templates.all())
+
+    @factory.lazy_attribute
+    def rear_port_position(self):
+        return self.rear_port_template.front_port_templates.count() + 1
 
 
 class RearPortTemplateFactory(ModularDeviceComponentTemplateFactory):

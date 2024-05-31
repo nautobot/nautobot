@@ -650,6 +650,111 @@ def common_test_data(cls):
     external_integrations = iter(ExternalIntegration.objects.all())
     device_redundancy_groups = iter(DeviceRedundancyGroup.objects.all())
 
+    module_types = (
+        ModuleType.objects.create(manufacturer=cls.manufacturers[0], model="Filter Test Module Type 1"),
+        ModuleType.objects.create(manufacturer=cls.manufacturers[1], model="Filter Test Module Type 2"),
+        ModuleType.objects.create(manufacturer=cls.manufacturers[2], model="Filter Test Module Type 3"),
+    )
+
+    # Create 3 of each component template on the first two module types
+    for i in range(6):
+        ConsolePortTemplate.objects.create(
+            name=f"Test Filters Module Console Port {i+1}",
+            module_type=module_types[i % 2],
+        )
+        ConsoleServerPortTemplate.objects.create(
+            name=f"Test Filters Module Console Server Port {i+1}",
+            module_type=module_types[i % 2],
+        )
+        ppt = PowerPortTemplate.objects.create(
+            name=f"Test Filters Module Power Port {i+1}",
+            module_type=module_types[i % 2],
+        )
+        PowerOutletTemplate.objects.create(
+            name=f"Test Filters Module Power Outlet {i+1}",
+            power_port_template=ppt,
+            module_type=module_types[i % 2],
+        )
+        InterfaceTemplate.objects.create(
+            name=f"Test Filters Module Interface {i+1}",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            module_type=module_types[i % 2],
+        )
+        rpt = RearPortTemplate.objects.create(
+            name=f"Test Filters Module Rear Port {i+1}",
+            module_type=module_types[i % 2],
+            type=PortTypeChoices.TYPE_8P8C,
+            positions=10,
+        )
+        FrontPortTemplate.objects.create(
+            name=f"Test Filters Module Front Port {i+1}",
+            module_type=module_types[i % 2],
+            rear_port_template=rpt,
+            rear_port_position=i + 1,
+            type=PortTypeChoices.TYPE_8P8C,
+        )
+        ModuleBayTemplate.objects.create(
+            position=f"Test Filters Module Module Bay {i+1}",
+            module_type=module_types[i % 2],
+        )
+
+    module_roles = Role.objects.get_for_model(Module)
+    module_statuses = Status.objects.get_for_model(Module)
+    cls.modules = (
+        Module.objects.create(
+            module_type=module_types[0],
+            status=module_statuses[0],
+            asset_tag="Test Filter Asset Tag Module1",
+            serial="Test Filter Serial Module1",
+            role=module_roles[0],
+            tenant=tenants[0],
+            parent_module_bay=cls.devices[0].module_bays.first(),
+        ),
+        Module.objects.create(
+            module_type=module_types[1],
+            status=module_statuses[0],
+            asset_tag="Test Filter Asset Tag Module2",
+            serial="Test Filter Serial Module2",
+            role=module_roles[0],
+            tenant=tenants[1],
+            parent_module_bay=cls.devices[1].module_bays.first(),
+        ),
+        Module.objects.create(
+            module_type=module_types[2],
+            status=module_statuses[0],
+            asset_tag="Test Filter Asset Tag Module3",
+            serial="Test Filter Serial Module3",
+            role=module_roles[1],
+            tenant=tenants[2],
+            parent_module_bay=cls.devices[2].module_bays.first(),
+        ),
+    )
+    Module.objects.create(
+        module_type=module_types[0],
+        status=module_statuses[1],
+        asset_tag="Test Filter Asset Tag Module4",
+        serial="Test Filter Serial Module4",
+        role=module_roles[1],
+        tenant=tenants[0],
+        parent_module_bay=cls.modules[0].module_bays.first(),
+    )
+    Module.objects.create(
+        module_type=module_types[1],
+        status=module_statuses[1],
+        asset_tag="Test Filter Asset Tag Module5",
+        serial="Test Filter Serial Module5",
+        tenant=tenants[1],
+        parent_module_bay=cls.modules[1].module_bays.first(),
+    )
+    Module.objects.create(
+        module_type=module_types[2],
+        status=module_statuses[1],
+        asset_tag="Test Filter Asset Tag Module6",
+        serial="Test Filter Serial Module6",
+        tenant=tenants[2],
+        parent_module_bay=cls.modules[1].module_bays.last(),
+    )
+
     cls.controllers = (
         Controller.objects.create(
             name="Controller 1",
@@ -765,6 +870,49 @@ class ModularDeviceComponentTestMixin(DeviceComponentTestMixin):
         ("module", "module__id"),
         ("module", "module__module_type__model"),
     ]
+
+
+class ModuleDeviceCommonTestsMixin:
+    def test_has_empty_module_bays(self):
+        test_instances = self.queryset.all()[:2]
+        ModuleBay.objects.create(
+            **{
+                f"parent_{self.queryset.model._meta.model_name}": test_instances[0],
+                "position": "test filters position 1",
+            }
+        )
+        ModuleBay.objects.create(
+            **{
+                f"parent_{self.queryset.model._meta.model_name}": test_instances[1],
+                "position": "test filters position 1",
+            }
+        )
+        with self.subTest():
+            params = {"has_empty_module_bays": True}
+            qs = self.filterset(params, self.queryset).qs
+            self.assertGreater(qs.count(), 0)
+            for instance in qs:
+                self.assertTrue(instance.module_bays.filter(installed_module__isnull=True).exists())
+        with self.subTest():
+            params = {"has_empty_module_bays": False}
+            qs = self.filterset(params, self.queryset).qs
+            self.assertGreater(qs.count(), 0)
+            for instance in qs:
+                self.assertFalse(instance.module_bays.filter(installed_module__isnull=True).exists())
+
+    def test_has_modules(self):
+        with self.subTest():
+            params = {"has_modules": True}
+            qs = self.filterset(params, self.queryset).qs
+            self.assertGreater(qs.count(), 0)
+            for instance in qs:
+                self.assertTrue(instance.module_bays.filter(installed_module__isnull=False).exists())
+        with self.subTest():
+            params = {"has_modules": False}
+            qs = self.filterset(params, self.queryset).qs
+            self.assertGreater(qs.count(), 0)
+            for instance in qs:
+                self.assertFalse(instance.module_bays.filter(installed_module__isnull=False).exists())
 
 
 class PathEndpointModelTestMixin:
@@ -1463,7 +1611,11 @@ class PlatformTestCase(FilterTestCases.NameOnlyFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(virtual_machines))
 
 
-class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
+class DeviceTestCase(
+    ModuleDeviceCommonTestsMixin,
+    FilterTestCases.FilterTestCase,
+    FilterTestCases.TenancyFilterTestCaseMixin,
+):
     queryset = Device.objects.all()
     filterset = DeviceFilterSet
     tenancy_related_name = "devices"
@@ -3470,7 +3622,11 @@ class ControllerManagedDeviceGroupFilterSetTestCase(FilterTestCases.FilterTestCa
         common_test_data(cls)
 
 
-class ModuleTestCase(FilterTestCases.TenancyFilterTestCaseMixin, FilterTestCases.FilterTestCase):
+class ModuleTestCase(
+    ModuleDeviceCommonTestsMixin,
+    FilterTestCases.TenancyFilterTestCaseMixin,
+    FilterTestCases.FilterTestCase,
+):
     queryset = Module.objects.all()
     filterset = ModuleFilterSet
     tenancy_related_name = "modules"

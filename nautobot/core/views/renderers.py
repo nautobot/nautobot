@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
+from django.template import engines, loader
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
@@ -28,7 +29,6 @@ from nautobot.core.views.utils import (
     view_changes_not_saved,
 )
 from nautobot.extras.models.change_logging import ObjectChange
-from nautobot.extras.utils import get_base_template
 from nautobot.users.models import SavedView
 
 
@@ -40,6 +40,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
     # Log error messages within NautobotHTMLRenderer
     logger = logging.getLogger(__name__)
     saved_view = None
+
+    exception_template_names = ["%(status_code)s.html"]
 
     def get_dynamic_filter_form(self, view, request, *args, filterset_class=None, **kwargs):
         """
@@ -153,6 +155,30 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             messages.error(request, f"Missing views for action(s) {', '.join(invalid_actions)}")
         return valid_actions
 
+    def get_template_context(self, data, renderer_context):
+        # borrowed from rest_framework's TemplateHTMLRenderer - should our html renderer be based on that class?
+        response = renderer_context["response"]
+        if response.exception:
+            data["status_code"] = response.status_code
+        return data
+
+    def get_exception_template(self, response):
+        # borrowed from rest_framework's TemplateHTMLRenderer - remove if switching base class
+        template_names = [name % {"status_code": response.status_code} for name in self.exception_template_names]
+
+        try:
+            # Try to find an appropriate error template
+            return self.resolve_template(template_names)
+        except Exception:
+            # Fall back to using eg '404 Not Found'
+            body = f"{response.status_code} {response.status_text.title()}"
+            template = engines["django"].from_string(body)
+            return template
+
+    def resolve_template(self, template_names):
+        # borrowed from rest_framework's TemplateHTMLRenderer - remove if switching base class
+        return loader.select_template(template_names)
+
     def get_context(self, data, accepted_media_type, renderer_context):
         """
         Override get_context() from BrowsableAPIRenderer to obtain the context data we need to render our templates.
@@ -181,7 +207,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         display_filter_params = []
         # Compile a dictionary indicating which permissions are available to the current user for this model
         permissions = self.construct_user_permissions(request, model)
-        if view.action in ["create", "retrieve", "update", "destroy", "changelog", "notes"]:
+        if view.detail or view.action == "create":
             instance = view.get_object()
             return_url = view.get_return_url(request, instance)
         else:
@@ -263,55 +289,49 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         }
         if view.action == "retrieve":
             context.update(common_detail_view_context(request, instance))
-            context.update(view.get_extra_context(request, instance))
-        else:
-            if view.action == "list":
-                # Construct valid actions for list view.
-                valid_actions = self.validate_action_buttons(view, request)
-                # Query SavedViews for dropdown button
-                list_url = validated_viewname(model, "list")
-                saved_views = None
-                if model.is_saved_view_model:
-                    saved_views = (
-                        SavedView.objects.filter(view=list_url)
-                        .restrict(request.user, "view")
-                        .order_by("name")
-                        .only("pk", "name")
-                    )
+        elif view.action == "list":
+            # Construct valid actions for list view.
+            valid_actions = self.validate_action_buttons(view, request)
+            # Query SavedViews for dropdown button
+            list_url = validated_viewname(model, "list")
+            saved_views = None
+            if model.is_saved_view_model:
+                saved_views = (
+                    SavedView.objects.filter(view=list_url)
+                    .restrict(request.user, "view")
+                    .order_by("name")
+                    .only("pk", "name")
+                )
 
-                new_changes_not_applied = view_changes_not_saved(request, view, self.saved_view)
-                context.update(
-                    {
-                        "model": model,
-                        "current_saved_view": self.saved_view,
-                        "new_changes_not_applied": new_changes_not_applied,
-                        "action_buttons": valid_actions,
-                        "list_url": list_url,
-                        "saved_views": saved_views,
-                        "title": bettertitle(model._meta.verbose_name_plural),
-                    }
-                )
-            elif view.action in ["create", "update"]:
-                context.update(
-                    {
-                        "editing": instance.present_in_database,
-                    }
-                )
-            elif view.action == "bulk_create":  # 3.0 TODO: remove, replaced by ImportObjects system Job
-                context.update(
-                    {
-                        "active_tab": view.bulk_create_active_tab if view.bulk_create_active_tab else "csv-data",
-                        "fields": get_csv_form_fields_from_serializer_class(view.serializer_class),
-                    }
-                )
-            elif view.action in ["changelog", "notes"]:
-                context.update(
-                    {
-                        "base_template": get_base_template(data.get("base_template"), model),
-                        "active_tab": view.action,
-                    }
-                )
-            context.update(view.get_extra_context(request, instance=None))
+            new_changes_not_applied = view_changes_not_saved(request, view, self.saved_view)
+            context.update(
+                {
+                    "model": model,
+                    "current_saved_view": self.saved_view,
+                    "new_changes_not_applied": new_changes_not_applied,
+                    "action_buttons": valid_actions,
+                    "list_url": list_url,
+                    "saved_views": saved_views,
+                    "title": bettertitle(model._meta.verbose_name_plural),
+                }
+            )
+        elif view.action in ["create", "update"]:
+            context.update(
+                {
+                    "editing": instance.present_in_database,
+                }
+            )
+        elif view.action == "bulk_create":  # 3.0 TODO: remove, replaced by ImportObjects system Job
+            context.update(
+                {
+                    "active_tab": view.bulk_create_active_tab if view.bulk_create_active_tab else "csv-data",
+                    "fields": get_csv_form_fields_from_serializer_class(view.serializer_class),
+                }
+            )
+
+        # Ensure the proper inheritance of context variables is applied: the view's returned data takes priority over the viewset's get_extra_context
+        context.update(view.get_extra_context(request, instance))
+        context.update(self.get_template_context(data, renderer_context))
         return context
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
@@ -319,6 +339,15 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         Overrode render() from BrowsableAPIRenderer to set self.template with NautobotViewSet's get_template_name() before it is rendered.
         """
         view = renderer_context["view"]
+        request = renderer_context["request"]
+        response = renderer_context["response"]
+
+        # TODO: borrowed from TemplateHTMLRenderer. Remove when switching base class
+        if response.exception:
+            template = self.get_exception_template(response)
+            context = self.get_context(data, accepted_media_type, renderer_context)
+            return template.render(context, request=request)
+
         # Get the corresponding template based on self.action in view.get_template_name() unless it is already specified in the Response() data.
         # See form_valid() for self.action == "bulk_create".
         self.template = data.get("template", view.get_template_name())

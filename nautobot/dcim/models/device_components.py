@@ -122,12 +122,6 @@ class ModularComponentModel(ComponentModel):
         abstract = True
         ordering = ("device", "module", "_name")
         constraints = [
-            # Database constraint to make the device and module fields mutually exclusive
-            models.CheckConstraint(
-                check=models.Q(device__isnull=False, module__isnull=True)
-                | models.Q(device__isnull=True, module__isnull=False),
-                name="%(app_label)s_%(class)s_device_xor_module",
-            ),
             models.UniqueConstraint(
                 fields=("device", "name"),
                 name="%(app_label)s_%(class)s_device_name_unique",
@@ -605,7 +599,7 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
     )
 
     class Meta(ModularComponentModel.Meta):
-        ordering = ("device", CollateAsChar("_name"))
+        ordering = ("device", "module", CollateAsChar("_name"))
 
     def clean(self):
         super().clean()
@@ -1157,6 +1151,9 @@ class ModuleBay(PrimaryModel):
         blank=True,
         null=True,
     )
+    _position = NaturalOrderingField(
+        target_field="position", max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True
+    )
     position = models.CharField(
         blank=False,
         null=False,
@@ -1168,20 +1165,18 @@ class ModuleBay(PrimaryModel):
 
     clone_fields = ["parent_device", "parent_module"]
 
+    # The recursive nature of this model combined with the fact that it can be a child of a
+    # device or location makes our natural key implementation unusable, so just use the pk
+    natural_key_field_names = ["pk"]
+
     class Meta:
         # TODO: Ordering by parent_module.id is not correct but prevents an infinite loop
         ordering = (
             "parent_device",
             "parent_module__id",
-            "position",
+            "_position",
         )
         constraints = [
-            # Database constraint to make the parent_device and parent_module fields mutually exclusive
-            models.CheckConstraint(
-                check=models.Q(parent_device__isnull=False, parent_module__isnull=True)
-                | models.Q(parent_device__isnull=True, parent_module__isnull=False),
-                name="dcim_modulebay_parent_device_xor_parent_module",
-            ),
             models.UniqueConstraint(
                 fields=["parent_device", "position"],
                 name="dcim_modulebay_parent_device_position_unique",
@@ -1198,7 +1193,17 @@ class ModuleBay(PrimaryModel):
         return self.parent_module.device if self.parent_module else self.parent_device
 
     def __str__(self):
-        return f"{self.parent} ({self.position})"
+        if self.parent_device is not None:
+            return f"{self.parent_device} ({self.position})"
+        else:
+            return f"{self.parent_module} ({self.position})"
+
+    @property
+    def display(self):
+        if self.parent_device is not None:
+            return f"{self.parent_device.display} ({self.position})"
+        else:
+            return f"{self.parent_module.display} ({self.position})"
 
     def to_objectchange(self, action, **kwargs):
         """

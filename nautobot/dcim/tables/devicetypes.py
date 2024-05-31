@@ -17,6 +17,8 @@ from nautobot.dcim.models import (
     FrontPortTemplate,
     InterfaceTemplate,
     Manufacturer,
+    ModuleBayTemplate,
+    ModuleType,
     PowerOutletTemplate,
     PowerPortTemplate,
     RearPortTemplate,
@@ -31,6 +33,8 @@ __all__ = (
     "FrontPortTemplateTable",
     "InterfaceTemplateTable",
     "ManufacturerTable",
+    "ModuleBayTemplateTable",
+    "ModuleTypeTable",
     "PowerOutletTemplateTable",
     "PowerPortTemplateTable",
     "RearPortTemplateTable",
@@ -110,6 +114,7 @@ class DeviceFamilyTable(BaseTable):
 
 class DeviceTypeTable(BaseTable):
     pk = ToggleColumn()
+    manufacturer = tables.Column(linkify=True)
     model = tables.Column(linkify=True, verbose_name="Device Type")
     is_full_depth = BooleanColumn(verbose_name="Full Depth")
     device_count = LinkedCountColumn(
@@ -144,6 +149,41 @@ class DeviceTypeTable(BaseTable):
 
 
 #
+# Module types
+#
+
+
+class ModuleTypeTable(BaseTable):
+    pk = ToggleColumn()
+    manufacturer = tables.Column(linkify=True)
+    model = tables.Column(linkify=True, verbose_name="Module Type")
+    module_count = LinkedCountColumn(
+        viewname="dcim:module_list",
+        url_params={"module_type": "pk"},
+        verbose_name="Modules",
+    )
+    tags = TagColumn(url_name="dcim:devicetype_list")
+
+    class Meta(BaseTable.Meta):
+        model = ModuleType
+        fields = (
+            "pk",
+            "model",
+            "manufacturer",
+            "part_number",
+            "module_count",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "model",
+            "manufacturer",
+            "part_number",
+            "module_count",
+        )
+
+
+#
 # Device type components
 #
 
@@ -157,7 +197,7 @@ class ConsolePortTemplateTable(ComponentTemplateTable):
     actions = ButtonsColumn(
         model=ConsolePortTemplate,
         buttons=("edit", "delete"),
-        return_url_extra="%23tab_consoleports",
+        return_url_extra=r"%3Ftab=consoleports",
     )
 
     class Meta(BaseTable.Meta):
@@ -170,7 +210,7 @@ class ConsoleServerPortTemplateTable(ComponentTemplateTable):
     actions = ButtonsColumn(
         model=ConsoleServerPortTemplate,
         buttons=("edit", "delete"),
-        return_url_extra="%23tab_consoleserverports",
+        return_url_extra=r"%3Ftab=consoleserverports",
     )
 
     class Meta(BaseTable.Meta):
@@ -183,7 +223,7 @@ class PowerPortTemplateTable(ComponentTemplateTable):
     actions = ButtonsColumn(
         model=PowerPortTemplate,
         buttons=("edit", "delete"),
-        return_url_extra="%23tab_powerports",
+        return_url_extra=r"%3Ftab=powerports",
     )
 
     class Meta(BaseTable.Meta):
@@ -205,7 +245,7 @@ class PowerOutletTemplateTable(ComponentTemplateTable):
     actions = ButtonsColumn(
         model=PowerOutletTemplate,
         buttons=("edit", "delete"),
-        return_url_extra="%23tab_poweroutlets",
+        return_url_extra=r"%3Ftab=poweroutlets",
     )
 
     class Meta(BaseTable.Meta):
@@ -228,7 +268,7 @@ class InterfaceTemplateTable(ComponentTemplateTable):
     actions = ButtonsColumn(
         model=InterfaceTemplate,
         buttons=("edit", "delete"),
-        return_url_extra="%23tab_interfaces",
+        return_url_extra=r"%3Ftab=interfaces",
     )
 
     class Meta(BaseTable.Meta):
@@ -242,7 +282,7 @@ class FrontPortTemplateTable(ComponentTemplateTable):
     actions = ButtonsColumn(
         model=FrontPortTemplate,
         buttons=("edit", "delete"),
-        return_url_extra="%23tab_frontports",
+        return_url_extra=r"%3Ftab=frontports",
     )
 
     class Meta(BaseTable.Meta):
@@ -264,7 +304,7 @@ class RearPortTemplateTable(ComponentTemplateTable):
     actions = ButtonsColumn(
         model=RearPortTemplate,
         buttons=("edit", "delete"),
-        return_url_extra="%23tab_rearports",
+        return_url_extra=r"%3Ftab=rearports",
     )
 
     class Meta(BaseTable.Meta):
@@ -277,10 +317,25 @@ class DeviceBayTemplateTable(ComponentTemplateTable):
     actions = ButtonsColumn(
         model=DeviceBayTemplate,
         buttons=("edit", "delete"),
-        return_url_extra="%23tab_devicebays",
+        return_url_extra=r"%3Ftab=devicebays",
     )
 
     class Meta(BaseTable.Meta):
         model = DeviceBayTemplate
         fields = ("pk", "name", "label", "description", "actions")
+        empty_text = "None"
+
+
+class ModuleBayTemplateTable(BaseTable):
+    pk = ToggleColumn()
+    position = tables.Column()
+    actions = ButtonsColumn(
+        model=ModuleBayTemplate,
+        buttons=("edit", "delete"),
+        return_url_extra=r"%3Ftab=modulebays",
+    )
+
+    class Meta(BaseTable.Meta):
+        model = ModuleBayTemplate
+        fields = ("pk", "position", "label", "description", "actions")
         empty_text = "None"

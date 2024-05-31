@@ -23,7 +23,6 @@ from nautobot.extras.models import (
     CustomField,
     CustomFieldModel,
     RelationshipModel,
-    StaticGroupMixin,
     Status,
 )
 from nautobot.extras.utils import extras_features
@@ -59,7 +58,6 @@ class ComponentTemplateModel(
     ChangeLoggedModel,
     CustomFieldModel,
     RelationshipModel,
-    StaticGroupMixin,
     BaseModel,
 ):
     device_type = ForeignKeyWithAutoRelatedName(to="dcim.DeviceType", on_delete=models.CASCADE)
@@ -145,12 +143,6 @@ class ModularComponentTemplateModel(ComponentTemplateModel):
         abstract = True
         ordering = ("device_type", "module_type", "_name")
         constraints = [
-            # Database constraint to make the device_type and module_type fields mutually exclusive
-            models.CheckConstraint(
-                check=models.Q(device_type__isnull=False, module_type__isnull=True)
-                | models.Q(device_type__isnull=True, module_type__isnull=False),
-                name="%(app_label)s_%(class)s_device_type_xor_module_type",
-            ),
             models.UniqueConstraint(
                 fields=("device_type", "name"),
                 name="%(app_label)s_%(class)s_device_type_name_unique",
@@ -490,11 +482,12 @@ class ModuleBayTemplate(BaseModel, ChangeLoggedModel, CustomFieldModel, Relation
         blank=True,
         null=True,
     )
+    _position = NaturalOrderingField(target_field="position", max_length=CHARFIELD_MAX_LENGTH, blank=True)
     position = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         blank=False,
         null=False,
-        help_text="The position of the module bay within the device",
+        help_text="The position of the module bay within the device or module",
     )
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
@@ -502,14 +495,8 @@ class ModuleBayTemplate(BaseModel, ChangeLoggedModel, CustomFieldModel, Relation
     natural_key_field_names = ["device_type", "module_type", "position"]
 
     class Meta:
-        ordering = ("device_type", "module_type", "position")
+        ordering = ("device_type", "module_type", "_position")
         constraints = [
-            # Database constraint to make the device_type and module_type fields mutually exclusive
-            models.CheckConstraint(
-                check=models.Q(device_type__isnull=False, module_type__isnull=True)
-                | models.Q(device_type__isnull=True, module_type__isnull=False),
-                name="dcim_modulebaytemplate_device_type_xor_module_type",
-            ),
             models.UniqueConstraint(
                 fields=["device_type", "position"],
                 name="dcim_modulebaytemplate_device_type_position_unique",
