@@ -1502,38 +1502,6 @@ class ViewTestCases:
 
         maxDiff = None
 
-        def _edit_object_test_setup(self):
-            test_instance = self._get_queryset().first()
-            self.update_data = {
-                "name": test_instance.name,
-                "device_type": test_instance.device_type.pk,
-                "label": "new test label",
-                "description": "new test description",
-            }
-
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-        def test_edit_object_with_constrained_permission(self):
-            # Overload this test so that only the label and description fields are changed
-            self._edit_object_test_setup()
-            super().test_edit_object_with_constrained_permission()
-
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-        def test_edit_object_with_permission(self):
-            # Overload this test so that only the label and description fields are changed
-            self._edit_object_test_setup()
-            super().test_edit_object_with_permission()
-
-    class ModularDeviceComponentTemplateViewTestCase(DeviceComponentTemplateViewTestCase):
-        def _edit_object_test_setup(self):
-            test_instance = self._get_queryset().first()
-            self.update_data = {
-                "name": test_instance.name,
-                "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
-                "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
-                "label": "new test label",
-                "description": "new test description",
-            }
-
     class DeviceComponentViewTestCase(
         GetObjectViewTestCase,
         GetObjectChangelogViewTestCase,
@@ -1638,33 +1606,3 @@ class ViewTestCases:
                     response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
                     expected_message = f"No valid {verbose_name_plural} were selected."
                     self.assertIn(expected_message, response.content.decode(response.charset))
-
-        def _edit_object_test_setup(self):
-            test_instance = self._get_queryset().first()
-            self.update_data = {
-                "name": test_instance.name,
-                "device": test_instance.device.pk,
-                "label": "new test label",
-                "description": "new test description",
-            }
-
-        def test_edit_object_with_permission(self):
-            # Overload this test so that only the label and description fields are changed
-            self._edit_object_test_setup()
-            super().test_edit_object_with_permission()
-
-        def test_edit_object_with_constrained_permission(self):
-            # Overload this test so that only the label and description fields are changed
-            self._edit_object_test_setup()
-            super().test_edit_object_with_constrained_permission()
-
-    class ModularDeviceComponentViewTestCase(DeviceComponentViewTestCase):
-        def _edit_object_test_setup(self):
-            test_instance = self._get_queryset().first()
-            self.update_data = {
-                "name": test_instance.name,
-                "device": getattr(getattr(test_instance, "device", None), "pk", None),
-                "module": getattr(getattr(test_instance, "module", None), "pk", None),
-                "label": "new test label",
-                "description": "new test description",
-            }

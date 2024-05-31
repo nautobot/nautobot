@@ -1499,7 +1499,7 @@ module-bays:
 #
 
 
-class ConsolePortTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateViewTestCase):
+class ConsolePortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
     model = ConsolePortTemplate
 
     @classmethod
@@ -1531,8 +1531,17 @@ class ConsolePortTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateVi
             "type": ConsolePortTypeChoices.TYPE_RJ45,
         }
 
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
+            "name": test_instance.name,
+            "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
+            "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
+            "label": "new test label",
+            "description": "new test description",
+        }
 
-class ConsoleServerPortTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateViewTestCase):
+
+class ConsoleServerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
     model = ConsoleServerPortTemplate
 
     @classmethod
@@ -1564,8 +1573,17 @@ class ConsoleServerPortTemplateTestCase(ViewTestCases.ModularDeviceComponentTemp
             "type": ConsolePortTypeChoices.TYPE_RJ45,
         }
 
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
+            "name": test_instance.name,
+            "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
+            "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
+            "label": "new test label",
+            "description": "new test description",
+        }
 
-class PowerPortTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateViewTestCase):
+
+class PowerPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
     model = PowerPortTemplate
 
     @classmethod
@@ -1603,8 +1621,17 @@ class PowerPortTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateView
             "allocated_draw": 50,
         }
 
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
+            "name": test_instance.name,
+            "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
+            "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
+            "label": "new test label",
+            "description": "new test description",
+        }
 
-class PowerOutletTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateViewTestCase):
+
+class PowerOutletTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
     model = PowerOutletTemplate
 
     @classmethod
@@ -1640,9 +1667,8 @@ class PowerOutletTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateVi
             "feed_leg": PowerOutletFeedLegChoices.FEED_LEG_B,
         }
 
-    def _edit_object_test_setup(self):
-        test_instance = self._get_queryset().first()
-        self.update_data = {
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
             "name": test_instance.name,
             "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
             "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
@@ -1653,7 +1679,7 @@ class PowerOutletTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateVi
         }
 
 
-class InterfaceTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateViewTestCase):
+class InterfaceTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
     model = InterfaceTemplate
 
     @classmethod
@@ -1702,9 +1728,8 @@ class InterfaceTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateView
             "mgmt_only": True,
         }
 
-    def _edit_object_test_setup(self):
-        test_instance = self._get_queryset().first()
-        self.update_data = {
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
             "name": test_instance.name,
             "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
             "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
@@ -1714,7 +1739,7 @@ class InterfaceTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateView
         }
 
 
-class FrontPortTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateViewTestCase):
+class FrontPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
     model = FrontPortTemplate
 
     @classmethod
@@ -1803,9 +1828,8 @@ class FrontPortTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateView
             "type": PortTypeChoices.TYPE_4P4C,
         }
 
-    def _edit_object_test_setup(self):
-        test_instance = self._get_queryset().first()
-        self.update_data = {
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
             "name": test_instance.name,
             "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
             "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
@@ -1817,7 +1841,7 @@ class FrontPortTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateView
         }
 
 
-class RearPortTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateViewTestCase):
+class RearPortTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
     model = RearPortTemplate
 
     @classmethod
@@ -1866,9 +1890,8 @@ class RearPortTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateViewT
             "type": PortTypeChoices.TYPE_8P8C,
         }
 
-    def _edit_object_test_setup(self):
-        test_instance = self._get_queryset().first()
-        self.update_data = {
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
             "name": test_instance.name,
             "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
             "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
@@ -1917,8 +1940,16 @@ class DeviceBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "description": "Foo bar",
         }
 
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
+            "name": test_instance.name,
+            "device_type": test_instance.device_type.pk,
+            "label": "new test label",
+            "description": "new test description",
+        }
 
-class ModuleBayTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateViewTestCase):
+
+class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
     model = ModuleBayTemplate
     rename_field = "position"
 
@@ -1946,9 +1977,8 @@ class ModuleBayTemplateTestCase(ViewTestCases.ModularDeviceComponentTemplateView
             "description": "Description changed",
         }
 
-    def _edit_object_test_setup(self):
-        test_instance = self._get_queryset().first()
-        self.update_data = {
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
             "position": test_instance.position,
             "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
             "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
@@ -2748,7 +2778,7 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(self.client.get(url), 200)
 
 
-class ConsolePortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
+class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsolePort
 
     @classmethod
@@ -2787,8 +2817,17 @@ class ConsolePortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
             "description": "New description",
         }
 
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
+            "name": test_instance.name,
+            "device": getattr(getattr(test_instance, "device", None), "pk", None),
+            "module": getattr(getattr(test_instance, "module", None), "pk", None),
+            "label": "new test label",
+            "description": "new test description",
+        }
 
-class ConsoleServerPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
+
+class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsoleServerPort
 
     @classmethod
@@ -2826,8 +2865,17 @@ class ConsoleServerPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase
             "description": "New description",
         }
 
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
+            "name": test_instance.name,
+            "device": getattr(getattr(test_instance, "device", None), "pk", None),
+            "module": getattr(getattr(test_instance, "module", None), "pk", None),
+            "label": "new test label",
+            "description": "new test description",
+        }
 
-class PowerPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
+
+class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = PowerPort
 
     @classmethod
@@ -2870,8 +2918,17 @@ class PowerPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
             "description": "New description",
         }
 
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
+            "name": test_instance.name,
+            "device": getattr(getattr(test_instance, "device", None), "pk", None),
+            "module": getattr(getattr(test_instance, "module", None), "pk", None),
+            "label": "new test label",
+            "description": "new test description",
+        }
 
-class PowerOutletTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
+
+class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = PowerOutlet
 
     @classmethod
@@ -2929,9 +2986,8 @@ class PowerOutletTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
             "description": "New description",
         }
 
-    def _edit_object_test_setup(self):
-        test_instance = self._get_queryset().first()
-        self.update_data = {
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
             "name": test_instance.name,
             "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
             "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
@@ -2941,7 +2997,7 @@ class PowerOutletTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
         }
 
 
-class InterfaceTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
+class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = Interface
 
     @classmethod
@@ -3083,6 +3139,17 @@ class InterfaceTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
             "vrf": vrfs[2].pk,
         }
 
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
+            "name": test_instance.name,
+            "device": getattr(getattr(test_instance, "device", None), "pk", None),
+            "module": getattr(getattr(test_instance, "module", None), "pk", None),
+            "status": test_instance.status.pk,
+            "type": test_instance.type,
+            "label": "new test label",
+            "description": "new test description",
+        }
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_virtual_interface_with_parent_lag(self):
         """https://github.com/nautobot/nautobot/issues/4436."""
@@ -3118,20 +3185,8 @@ class InterfaceTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
         self.assertIn(valid_ipaddress_link, response_content)
         self.assertNotIn(invalid_ipaddress_link, response_content)
 
-    def _edit_object_test_setup(self):
-        test_instance = self._get_queryset().first()
-        self.update_data = {
-            "name": test_instance.name,
-            "device": getattr(getattr(test_instance, "device", None), "pk", None),
-            "module": getattr(getattr(test_instance, "module", None), "pk", None),
-            "status": test_instance.status.pk,
-            "type": test_instance.type,
-            "label": "new test label",
-            "description": "new test description",
-        }
 
-
-class FrontPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
+class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = FrontPort
 
     @classmethod
@@ -3229,13 +3284,8 @@ class FrontPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
             "description": "New description",
         }
 
-    @unittest.skip("No DeviceBulkAddFrontPortView exists at present")
-    def test_bulk_add_component(self):
-        pass
-
-    def _edit_object_test_setup(self):
-        test_instance = self._get_queryset().first()
-        self.update_data = {
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
             "name": test_instance.name,
             "device": getattr(getattr(test_instance, "device", None), "pk", None),
             "module": getattr(getattr(test_instance, "module", None), "pk", None),
@@ -3246,8 +3296,12 @@ class FrontPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
             "description": "new test description",
         }
 
+    @unittest.skip("No DeviceBulkAddFrontPortView exists at present")
+    def test_bulk_add_component(self):
+        pass
 
-class RearPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
+
+class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = RearPort
 
     @classmethod
@@ -3301,9 +3355,8 @@ class RearPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
             "description": "New description",
         }
 
-    def _edit_object_test_setup(self):
-        test_instance = self._get_queryset().first()
-        self.update_data = {
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
             "name": test_instance.name,
             "device": getattr(getattr(test_instance, "device", None), "pk", None),
             "module": getattr(getattr(test_instance, "module", None), "pk", None),
@@ -3351,6 +3404,14 @@ class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "New description",
         }
 
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
+            "name": test_instance.name,
+            "device": test_instance.device.pk,
+            "label": "new test label",
+            "description": "new test description",
+        }
+
 
 class ModuleBayTestCase(
     ViewTestCases.GetObjectViewTestCase,
@@ -3394,13 +3455,8 @@ class ModuleBayTestCase(
             "label": "New label",
         }
 
-    def get_deletable_object_pks(self):
-        # Since Modules and ModuleBays are nestable, we need to delete ModuleBays that don't have any child ModuleBays
-        return ModuleBay.objects.filter(installed_module__isnull=True).values_list("pk", flat=True)[:3]
-
-    def _edit_object_test_setup(self):
-        test_instance = self._get_queryset().first()
-        self.update_data = {
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
             "position": test_instance.position,
             "parent_device": getattr(getattr(test_instance, "parent_device", None), "pk", None),
             "parent_module": getattr(getattr(test_instance, "parent_module", None), "pk", None),
@@ -3408,15 +3464,9 @@ class ModuleBayTestCase(
             "description": "new test description",
         }
 
-    def test_edit_object_with_permission(self):
-        # Overload this test to account for mutually exclusive device and module fields
-        self._edit_object_test_setup()
-        super().test_edit_object_with_permission()
-
-    def test_edit_object_with_constrained_permission(self):
-        # Overload this test to account for mutually exclusive device and module fields
-        self._edit_object_test_setup()
-        super().test_edit_object_with_constrained_permission()
+    def get_deletable_object_pks(self):
+        # Since Modules and ModuleBays are nestable, we need to delete ModuleBays that don't have any child ModuleBays
+        return ModuleBay.objects.filter(installed_module__isnull=True).values_list("pk", flat=True)[:3]
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_bulk_add_component(self):
@@ -3510,6 +3560,14 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "part_id": "123456",
             "description": "New description",
             "software_version": software_versions[2].pk,
+        }
+
+        test_instance = cls.model.objects.first()
+        cls.update_data = {
+            "name": test_instance.name,
+            "device": test_instance.device.pk,
+            "label": "new test label",
+            "description": "new test description",
         }
 
     def test_table_with_indentation_is_removed_on_filter_or_sort(self):
