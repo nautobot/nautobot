@@ -287,9 +287,9 @@ def populate_model_features_registry(refresh=False):
             "additional_constraints": {"is_saved_view_model": True},
         },
         {
-            "feature_name": "static_groups",
-            "field_names": ["associated_static_groups"],
-            "additional_constraints": {"is_static_group_associable_model": True},
+            "feature_name": "dynamic_groups",
+            "field_names": ["static_group_association_set"],
+            "additional_constraints": {"is_dynamic_group_associable_model": True},
         },
     ]
 

@@ -161,6 +161,18 @@ class CustomLinkButtonClassChoices(ButtonClassChoices):
 #
 
 
+class DynamicGroupTypeChoices(ChoiceSet):
+    TYPE_DYNAMIC_FILTER = "dynamic-filter"
+    TYPE_DYNAMIC_SET = "dynamic-set"
+    TYPE_STATIC = "static"
+
+    CHOICES = (
+        (TYPE_DYNAMIC_FILTER, "Filter-based membership"),
+        (TYPE_DYNAMIC_SET, "Set-based membership"),
+        (TYPE_STATIC, "Static-assignment-based membership"),
+    )
+
+
 class DynamicGroupOperatorChoices(ChoiceSet):
     OPERATOR_UNION = "union"
     OPERATOR_INTERSECTION = "intersection"

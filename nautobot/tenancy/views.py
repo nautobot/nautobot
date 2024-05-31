@@ -4,7 +4,7 @@ from nautobot.circuits.models import Circuit
 from nautobot.core.views import generic
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.dcim.models import Device, Location, Rack, RackReservation
-from nautobot.extras.models import StaticGroup
+from nautobot.extras.models import DynamicGroup
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
 from nautobot.virtualization.models import Cluster, VirtualMachine
 
@@ -92,7 +92,7 @@ class TenantView(generic.ObjectView):
             "rackreservation_count": RackReservation.objects.restrict(request.user, "view")
             .filter(tenant=instance)
             .count(),
-            "staticgroup_count": StaticGroup.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            "dynamicgroup_count": DynamicGroup.objects.restrict(request.user, "view").filter(tenant=instance).count(),
             "virtualmachine_count": VirtualMachine.objects.restrict(request.user, "view")
             .filter(tenant=instance)
             .count(),

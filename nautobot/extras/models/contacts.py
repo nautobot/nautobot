@@ -92,7 +92,7 @@ class ContactAssociation(OrganizationalModel):
     status = StatusField(blank=False, null=False)
 
     is_contact_associable_model = False
-    is_static_group_associable_model = False
+    is_dynamic_group_associable_model = False
     is_saved_view_model = False
 
     class Meta:

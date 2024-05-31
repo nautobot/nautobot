@@ -44,7 +44,6 @@ from .models import (
     ScheduledJob,
     Secret,
     SecretsGroup,
-    StaticGroup,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -119,7 +118,7 @@ MEMBERS_COUNT = """
 {% load helpers %}
 {% with urlname=record.model|validated_viewname:"list" %}
 {% if urlname %}
-    <a href="{% url urlname %}?static_groups={{ record.name }}">{{ record.members_count }}</a>
+    <a href="{% url urlname %}?dynamic_groups={{ record.name }}">{{ record.members_count }}</a>
 {% else %}
     {{ record.members_count }}
 {% endif %}
@@ -349,6 +348,7 @@ class DynamicGroupTable(BaseTable):
             "name",
             "description",
             "content_type",
+            "group_type",
             "members",
             "actions",
         )
@@ -447,7 +447,21 @@ class NestedDynamicGroupAncestorsTable(DynamicGroupTable):
 
     class Meta(DynamicGroupTable.Meta):
         fields = ["name", "members", "description", "actions"]
-        exclude = ["content_type", "static_group_count"]
+        exclude = ["content_type"]
+
+
+class StaticGroupAssociationTable(BaseTable):
+    """Table for list view of `StaticGroupAssociation` objects."""
+
+    pk = ToggleColumn()
+    dynamic_group = tables.Column(linkify=True)
+    associated_object = tables.Column(linkify=True, verbose_name="Associated Object")
+    actions = ButtonsColumn(StaticGroupAssociation, buttons=["changelog", "delete"])
+
+    class Meta(BaseTable.Meta):
+        model = StaticGroupAssociation
+        fields = ["pk", "dynamic_group", "associated_object", "actions"]
+        default_columns = ["pk", "dynamic_group", "associated_object", "actions"]
 
 
 class ExportTemplateTable(BaseTable):
@@ -1042,43 +1056,6 @@ class SecretsGroupTable(BaseTable):
             "name",
             "description",
         )
-
-
-#
-# Static Groups
-#
-
-
-class StaticGroupTable(BaseTable):
-    """Table for list view of `StaticGroup` objects."""
-
-    pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-    hidden = BooleanColumn()
-    members_count = tables.TemplateColumn(MEMBERS_COUNT, verbose_name="Members")
-    tenant = tables.Column(linkify=True)
-    tags = TagColumn(url_name="extras:staticgroup_list")
-    actions = ButtonsColumn(StaticGroup)
-
-    class Meta(BaseTable.Meta):
-        model = StaticGroup
-        fields = ["pk", "name", "content_type", "hidden", "members_count", "description", "tenant", "tags", "actions"]
-        default_columns = ["pk", "name", "content_type", "members_count", "description", "tenant", "tags", "actions"]
-
-
-class StaticGroupAssociationTable(BaseTable):
-    """Table for list view of `StaticGroupAssociation` objects."""
-
-    pk = ToggleColumn()
-    static_group = tables.Column(linkify=True)
-    associated_object = tables.Column(linkify=True, verbose_name="Associated Object")
-    hidden = BooleanColumn(accessor="static_group__hidden")
-    actions = ButtonsColumn(StaticGroupAssociation, buttons=["changelog", "delete"])
-
-    class Meta(BaseTable.Meta):
-        model = StaticGroupAssociation
-        fields = ["pk", "static_group", "associated_object", "hidden", "actions"]
-        default_columns = ["pk", "static_group", "associated_object", "actions"]
 
 
 #

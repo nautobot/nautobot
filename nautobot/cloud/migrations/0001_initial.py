@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("dcim", "0059_add_role_field_to_interface_models"),
-        ("extras", "0107_staticgroup_staticgroupassociation"),
+        ("extras", "0107_alter_configcontext_cluster_groups_and_more"),
     ]
 
     operations = [

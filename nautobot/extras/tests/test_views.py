@@ -15,11 +15,9 @@ from django.utils.html import format_html
 from nautobot.circuits.models import Circuit
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
-from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import extract_form_failures, extract_page_body, TestCase, ViewTestCases
 from nautobot.core.testing.utils import disable_warnings, post_data
-from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
     ConsolePort,
     Controller,
@@ -33,6 +31,7 @@ from nautobot.dcim.models import (
 from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
+    DynamicGroupTypeChoices,
     JobExecutionType,
     LogLevelChoices,
     ObjectChangeActionChoices,
@@ -67,7 +66,6 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
-    StaticGroup,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -79,7 +77,6 @@ from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
-from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 
 # Use the proper swappable User model
@@ -2814,6 +2811,8 @@ class RelationshipAssociationTestCase(
         self.assertNotIn(instance2.destination.name, content, msg=content)
 
 
+# TODO move relevant content to DynamicGroupTestCase
+'''
 class StaticGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = StaticGroup
 
@@ -2838,7 +2837,7 @@ class StaticGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def _get_queryset(self):
         queryset = super()._get_queryset()
         # We want .first() to pick groups with members
-        return queryset.annotate(members_count=count_related(StaticGroupAssociation, "static_group")).order_by(
+        return queryset.annotate(members_count=count_related(StaticGroupAssociation, "dynamic_group")).order_by(
             "-members_count", "name"
         )
 
@@ -2874,7 +2873,7 @@ class StaticGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertIn(str(member1.pk), response_body)
         self.assertNotIn(str(member2.pk), response_body)
 
-    def test_get_object_static_groups_with_constrained_permission(self):
+    def test_get_object_dynamic_groups_with_constrained_permission(self):
         instance1 = self._get_queryset().first()
         member = instance1.members.first()
         self.add_permissions(get_permission_for_model(member, "view"))
@@ -2914,10 +2913,10 @@ class StaticGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         group_2.add_members(Location.objects.filter(name__startswith="Root"))
 
         self.add_permissions(
-            "extras.add_staticgroupassociation", "extras.delete_staticgroupassociation", "extras.add_staticgroup"
+            "extras.add_staticgroupassociation", "extras.delete_staticgroupassociation", "extras.add_dynamicgroup"
         )
 
-        url = reverse("extras:staticgroup_bulk_assign")
+        url = reverse("extras:dynamicgroup_bulk_assign")
         request = {
             "path": url,
             "data": post_data(
@@ -2947,10 +2946,10 @@ class StaticGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         group_2.add_members(Location.objects.filter(name__startswith="Root"))
 
         self.add_permissions(
-            "extras.add_staticgroupassociation", "extras.delete_staticgroupassociation", "extras.add_staticgroup"
+            "extras.add_staticgroupassociation", "extras.delete_staticgroupassociation", "extras.add_dynamicgroup"
         )
 
-        url = reverse("extras:staticgroup_bulk_assign")
+        url = reverse("extras:dynamicgroup_bulk_assign")
         request = {
             "path": url,
             "data": post_data(
@@ -2982,7 +2981,7 @@ class StaticGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         sg2 = StaticGroup.all_objects.filter(hidden=True).first()
         self.assertIsNotNone(sg2)
 
-        self.add_permissions("extras.view_staticgroup")
+        self.add_permissions("extras.view_dynamicgroup")
         response = self.client.get(self._get_url("list"))
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
@@ -2997,13 +2996,14 @@ class StaticGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         sg2 = StaticGroup.all_objects.filter(hidden=True).first()
         self.assertIsNotNone(sg2)
 
-        self.add_permissions("extras.view_staticgroup")
+        self.add_permissions("extras.view_dynamicgroup")
         response = self.client.get(f"{self._get_url('list')}?hidden=True")
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
 
         self.assertNotIn(sg1.get_absolute_url(), content, msg=content)
         self.assertIn(sg2.get_absolute_url(), content, msg=content)
+'''
 
 
 class StaticGroupAssociationTestCase(
@@ -3017,16 +3017,20 @@ class StaticGroupAssociationTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        sg = StaticGroup.all_objects.create(
+        sg = DynamicGroup.all_objects.create(
             name="Hidden Group", content_type=ContentType.objects.get_for_model(Device), hidden=True
         )
         sg.add_members(Device.objects.all())
 
     def test_list_objects_omits_hidden_by_default(self):
         """The list view should not by default include associations for hidden groups."""
-        sga1 = StaticGroupAssociation.all_objects.filter(static_group__hidden=False).first()
+        sga1 = StaticGroupAssociation.all_objects.filter(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
         self.assertIsNotNone(sga1)
-        sga2 = StaticGroupAssociation.all_objects.filter(static_group__hidden=True).first()
+        sga2 = StaticGroupAssociation.all_objects.exclude(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
         self.assertIsNotNone(sga2)
 
         self.add_permissions("extras.view_staticgroupassociation")
@@ -3039,9 +3043,13 @@ class StaticGroupAssociationTestCase(
 
     def test_list_objects_can_explicitly_include_hidden(self):
         """The list view can include hidden groups' associations with the correct query parameter."""
-        sga1 = StaticGroupAssociation.all_objects.filter(static_group__hidden=False).first()
+        sga1 = StaticGroupAssociation.all_objects.filter(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
         self.assertIsNotNone(sga1)
-        sga2 = StaticGroupAssociation.all_objects.filter(static_group__hidden=True).first()
+        sga2 = StaticGroupAssociation.all_objects.exclude(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
         self.assertIsNotNone(sga2)
 
         self.add_permissions("extras.view_staticgroupassociation")

@@ -1,3 +1,4 @@
+TODO update or remove these
 Added `StaticGroup` and `StaticGroupAssociation` data models, used for statically defining groups of Nautobot objects.
 Added `feature` filter to `/api/extras/content-types/`.
 Added `static_groups` filter to all applicable models via the `BaseFilterSet` class.

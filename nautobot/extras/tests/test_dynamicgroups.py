@@ -1,9 +1,7 @@
-import contextlib
 import random
-from unittest.mock import patch
 
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
 from django.urls import reverse
 
@@ -382,29 +380,6 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         for grp, cnt in expected.items():
             self.assertEqual(grp, cnt)
 
-    def test_get_queryset(self):
-        """Test `DynamicGroup.get_queryset()`."""
-        group = self.first_child
-        device1 = self.devices[0]
-
-        # Test that we can get a full queryset
-        qs = group.get_queryset()
-        devices = group.model.objects.filter(location=device1.location)
-
-        # Expect a single-member qs/list of Device names (only `device1`)
-        expected = [device1.name]
-        self.assertIn(device1, devices)
-        self.assertIn(device1, qs)
-        self.assertEqual(list(map(str, devices)), expected)
-        self.assertEqual(list(map(str, qs)), expected)
-        self.assertEqual(list(qs), list(devices))
-
-        # A new group that doesn't have a content_type and therefore
-        # `self.model`, should raise a RuntimeError
-        new_group = DynamicGroup()
-        with self.assertRaises(RuntimeError):
-            new_group.get_queryset()
-
     def test_model(self):
         """Test `DynamicGroup.model`."""
         # New instances should not have a model unless `content_type` is set.
@@ -648,17 +623,17 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         self.assertFalse(self.parent.children.filter(name=self.third_child.name).exists())
 
     def test_generate_query_for_filter(self):
-        """Test `DynamicGroup.generate_query_for_filter()`."""
+        """Test `DynamicGroup._generate_query_for_filter()`."""
         group = self.parent  # Any group will do, so why not this one?
         multi_value = ["Location 3"]
         fs = group.filterset_class()
         multi_field = fs.filters["location"]
-        multi_query = group.generate_query_for_filter(
+        multi_query = group._generate_query_for_filter(
             filter_field=multi_field,
             value=multi_value,
         )
 
-        queryset = group.get_queryset()
+        queryset = group.model.objects.all()
 
         # Assert that both querysets return the same results
         group_qs = queryset.filter(multi_query)
@@ -668,7 +643,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         # Now do a non-multi-value filter.
         solo_field = fs.filters["has_interfaces"]
         solo_value = False
-        solo_query = group.generate_query_for_filter(filter_field=solo_field, value=solo_value)
+        solo_query = group._generate_query_for_filter(filter_field=solo_field, value=solo_value)
         solo_qs = queryset.filter(solo_query)
         interface_qs = Device.objects.filter(interfaces__isnull=True)
         self.assertQuerysetEqual(solo_qs, interface_qs, ordered=False)
@@ -684,36 +659,35 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         # We are making sure the filterset generated from the name as an argument results in the same
         # filtered queryset, and more importantly that the nested filter expression `device_type__manufacturer`
         # is automatically used to get the related model name without failing.
-        nested_query = group.generate_query_for_filter(filter_field=fs.filters["manufacturer"], value=nested_value)
+        nested_query = group._generate_query_for_filter(filter_field=fs.filters["manufacturer"], value=nested_value)
         nested_qs = queryset.filter(nested_query)
         parent_qs = Device.objects.filter(device_type__manufacturer__name__in=nested_value)
         self.assertQuerysetEqual(nested_qs, parent_qs, ordered=False)
 
-    def test_generate_query_for_group(self):
-        """Test `DynamicGroup.generate_query_for_group()`."""
+    def test_generate_filter_based_query(self):
+        """Test `DynamicGroup._generate_filter_based_query()`."""
         group = self.parent
 
         # A group with an empty filter will have a null `Q` object
-        parent_q = group.generate_query_for_group(group)
+        parent_q = group._generate_filter_based_query(group)
         self.assertFalse(parent_q)
 
         # A child group with a filter set will result in a useful Q object.
-        child_q = group.generate_query_for_group(self.second_child)
+        child_q = group._generate_filter_based_query(self.second_child)
         lookup_kwargs = dict(child_q.children)  # {name: value}
 
-        # Assert that both querysets resturn the same results
-        group_qs = group.get_queryset().filter(child_q)
+        # Assert that both querysets return the same results
+        group_qs = group.members
         device_qs = Device.objects.filter(**lookup_kwargs)
         self.assertQuerysetEqual(group_qs, device_qs, ordered=False)
 
     def test_get_group_queryset(self):
-        """Test `DynamicGroup.get_group_queryset()`."""
-        # This is literally just calling `process_group_filters(self)` so let's
-        # just make sure that it stays consistent until we decide otherwise.
+        """Test `DynamicGroup._get_group_queryset()`."""
         group = self.parent
-        group_qs = group.get_group_queryset()
+        group_qs = group._get_group_queryset()
+
         process_query = group.generate_query()
-        base_qs = group.get_queryset()
+        base_qs = Device.objects.all()
         process_qs = base_qs.filter(process_query)
 
         self.assertQuerysetEqual(group_qs, process_qs, ordered=False)
@@ -831,7 +805,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         # Start with parent. Enumerate descendants and their operators to assert correct results.
         group = self.parent
         group_query = group.generate_query()
-        group_qs = group.get_queryset().filter(group_query)
+        group_qs = Device.objects.filter(group_query)
 
         # <DynamicGroupMembership: First Child: intersection (10)>
         # <DynamicGroupMembership: Second Child: union (20)>
@@ -841,7 +815,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         # Manually iterate over the groups to assert the same result that the queryset should have,
         # igoring weight since each set of members are already ordered by weight when queried from
         # the database.
-        child_set = set(group.get_queryset())
+        child_set = set(Device.objects.all())
         for member in group_members:
             child_members = set(member.members)
             operator = member.operator
@@ -1001,41 +975,9 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
     def test_member_caching_output(self):
         group = self.first_child
 
-        # Ensure the cache is empty from previous tests
-        with contextlib.suppress(ObjectDoesNotExist):
-            group._backing_group.delete()
-            group.refresh_from_db()
-
+        updated_members = group.update_cached_members()
+        self.assertEqual(sorted(list(group.members)), sorted(list(updated_members)))
         self.assertEqual(sorted(list(group.members)), sorted(list(group.members_cached)))
-
-    def test_member_caching(self):
-        """
-        Verify that the members list of the DynamicGroup is cached appropriately.
-        """
-        group = self.first_child
-
-        # Ensure the cache is empty from previous tests
-        with contextlib.suppress(ObjectDoesNotExist):
-            group._backing_group.delete()
-            group.refresh_from_db()
-
-        with patch.object(group, "get_queryset", return_value=Device.objects.none()) as mock_get_queryset:
-            group.refresh_from_db()
-            group.members
-            group.members
-            group.members
-            self.assertEqual(mock_get_queryset.call_count, 1)
-
-            group._backing_group.delete()
-            group.refresh_from_db()
-
-            group.members
-            self.assertEqual(mock_get_queryset.call_count, 2)
-
-        # Clean-up after ourselves
-        with contextlib.suppress(ObjectDoesNotExist):
-            group._backing_group.delete()
-            group.refresh_from_db()
 
 
 class DynamicGroupMembershipModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mixin?

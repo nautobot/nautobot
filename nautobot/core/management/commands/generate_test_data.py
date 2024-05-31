@@ -87,13 +87,13 @@ class Command(BaseCommand):
             )
             from nautobot.extras.factory import (
                 ContactFactory,
+                DynamicGroupFactory,
                 ExternalIntegrationFactory,
                 JobLogEntryFactory,
                 JobResultFactory,
                 ObjectChangeFactory,
                 RoleFactory,
                 StaticGroupAssociationFactory,
-                StaticGroupFactory,
                 StatusFactory,
                 TagFactory,
                 TeamFactory,
@@ -261,8 +261,8 @@ class Command(BaseCommand):
         # ClusterFactory.create_batch(10)
         # VirtualMachineFactory.create_batch(10)
         # We need to remove them from there and enable them here instead, but that will require many test updates.
-        self.stdout.write("Creating StaticGroups and StaticGroupAssociations...")
-        StaticGroupFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating DynamicGroups and StaticGroupAssociations...")
+        DynamicGroupFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating ObjectChanges...")
         ObjectChangeFactory.create_batch(100, using=db_name)
         self.stdout.write("Creating JobResults...")
@@ -285,6 +285,7 @@ class Command(BaseCommand):
                 DeviceFamilyFactory,
                 DeviceRedundancyGroupFactory,
                 DeviceTypeFactory,
+                DynamicGroupFactory,
                 ExternalIntegrationFactory,
                 FrontPortTemplateFactory,
                 InterfaceTemplateFactory,
@@ -313,7 +314,6 @@ class Command(BaseCommand):
                 SoftwareImageFileFactory,
                 SoftwareVersionFactory,
                 StaticGroupAssociationFactory,
-                StaticGroupFactory,
                 StatusFactory,
                 TagFactory,
                 TeamFactory,

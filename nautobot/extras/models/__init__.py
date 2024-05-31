@@ -2,7 +2,7 @@ from .change_logging import ChangeLoggedModel, ObjectChange
 from .contacts import Contact, ContactAssociation, Team
 from .customfields import ComputedField, CustomField, CustomFieldChoice, CustomFieldModel
 from .datasources import GitRepository
-from .groups import DynamicGroup, DynamicGroupMembership, StaticGroup, StaticGroupAssociation
+from .groups import DynamicGroup, DynamicGroupMembership, StaticGroupAssociation
 from .jobs import (
     Job,
     JobButton,
@@ -12,7 +12,7 @@ from .jobs import (
     ScheduledJob,
     ScheduledJobs,
 )
-from .mixins import ContactMixin, StaticGroupMixin
+from .mixins import ContactMixin, DynamicGroupMixin
 from .models import (
     ConfigContext,
     ConfigContextModel,
@@ -49,6 +49,7 @@ __all__ = (
     "CustomLink",
     "DynamicGroup",
     "DynamicGroupMembership",
+    "DynamicGroupMixin",
     "ExportTemplate",
     "ExternalIntegration",
     "FileAttachment",
@@ -74,9 +75,7 @@ __all__ = (
     "Secret",
     "SecretsGroup",
     "SecretsGroupAssociation",
-    "StaticGroup",
     "StaticGroupAssociation",
-    "StaticGroupMixin",
     "Status",
     "StatusField",
     "StatusModel",

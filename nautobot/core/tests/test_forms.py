@@ -639,10 +639,10 @@ class DynamicFilterFormTest(TestCase):
                     ("color", "Color"),
                     ("content_types", "Content type(s)"),
                     ("created", "Created"),
+                    ("dynamic_groups", "Dynamic groups (name or ID)"),
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
-                    ("static_groups", "Static groups (name or ID)"),
                 ],
             )
             self.assertEqual(
@@ -659,6 +659,7 @@ class DynamicFilterFormTest(TestCase):
                     ("created", "Created"),
                     ("description", "Description"),
                     ("devices", "Devices (name or ID)"),
+                    ("dynamic_groups", "Dynamic groups (name or ID)"),
                     ("cf_example_app_auto_custom_field", "Example App Automatically Added Custom Field"),
                     ("facility", "Facility"),
                     ("has_vlan_groups", "Has VLAN groups"),
@@ -685,7 +686,6 @@ class DynamicFilterFormTest(TestCase):
                     ("racks", "Rack (name or ID)"),
                     ("rack_groups", "Rack groups (name or ID)"),
                     ("shipping_address", "Shipping address"),
-                    ("static_groups", "Static groups (name or ID)"),
                     ("status", "Status (name or ID)"),
                     ("vlans", "Tagged VLANs (VID or ID)"),
                     ("tags", "Tags"),
@@ -727,10 +727,10 @@ class DynamicFilterFormTest(TestCase):
                     ("color", "Color"),
                     ("content_types", "Content type(s)"),
                     ("created", "Created"),
+                    ("dynaic_groups", "Dynamic groups (name or ID)"),
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
-                    ("static_groups", "Static groups (name or ID)"),
                 ],
             )
             self.assertEqual(

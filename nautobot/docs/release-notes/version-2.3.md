@@ -22,6 +22,7 @@ Added the ability for users to save multiple configurations of list views (table
 
 #### Static Groups
 
+TODO update this section.
 Added the new models `StaticGroup` and `StaticGroupAssociation`, which can be used to define arbitrary groups of objects of any one data type. These serve as a simplified alternative to the existing Dynamic Groups feature.
 
 ### Changed

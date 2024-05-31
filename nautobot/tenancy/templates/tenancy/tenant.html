@@ -76,8 +76,8 @@
                     <p>Rack reservations</p>
                 </div>
                 <div class="col-md-4 text-center">
-                    <h2><a href="{% url 'extras:staticgroup_list' %}?tenant={{ object.name }}" class="btn {% if stats.staticgroup_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.staticgroup_count }}</a></h2>
-                    <p>Static groups</p>
+                    <h2><a href="{% url 'extras:dynamicgroup_list' %}?tenant={{ object.name }}" class="btn {% if stats.dynamicgroup_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.dynamicgroup_count }}</a></h2>
+                    <p>Dynamic groups</p>
                 </div>
                 <div class="col-md-4 text-center">
                     <h2><a href="{% url 'virtualization:virtualmachine_list' %}?tenant={{ object.name }}" class="btn {% if stats.virtualmachine_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.virtualmachine_count }}</a></h2>

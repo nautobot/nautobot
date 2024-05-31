@@ -49,11 +49,11 @@ class BaseTable(django_tables2.Table):
         # Add custom field columns
         model = self._meta.model
 
-        if model.is_static_group_associable_model:
-            self.base_columns["static_group_count"] = LinkedCountColumn(
-                viewname="extras:staticgroup_list",
+        if model.is_dynamic_group_associable_model:
+            self.base_columns["dynamic_group_count"] = LinkedCountColumn(
+                viewname="extras:dynamicgroup_list",
                 url_params={"member_id": "pk"},
-                verbose_name="Static Groups",
+                verbose_name="Dynamic Groups",
                 reverse_lookup="static_group_associations__associated_object_id",
             )
 
