@@ -2371,7 +2371,8 @@ class StaticGroupAssociationUIViewSet(
 
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
-        if request is None or "hidden" not in request.GET:
+        # Default to only showing associations for static-type groups:
+        if request is None or "dynamic_group" not in request.GET:
             queryset = queryset.filter(dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC)
         return queryset
 

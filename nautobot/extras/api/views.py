@@ -339,7 +339,7 @@ class StaticGroupAssociationViewSet(NautobotModelViewSet):
         if (
             hasattr(self, "request")
             and self.request is not None
-            and "hidden" in self.request.GET
+            and "dynamic_group" in self.request.GET
             and self.action in ["list", "retrieve"]
         ):
             self.queryset = StaticGroupAssociation.all_objects.select_related("associated_object_type", "dynamic_group")

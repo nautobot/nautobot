@@ -630,7 +630,6 @@ class StaticGroupAssociationFilterForm(NautobotFilterForm):
         queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
         required=False,
     )
-    hidden = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
 
 
 #

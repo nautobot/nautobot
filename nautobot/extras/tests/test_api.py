@@ -3610,13 +3610,15 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
-    # TODO test omits non-static groups by default
-    '''
     def test_list_omits_hidden_by_default(self):
-        """Test that the list view defaults to omitting associations of hidden groups."""
-        sga1 = StaticGroupAssociation.all_objects.filter(dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC).first()
+        """Test that the list view defaults to omitting associations of non-static groups."""
+        sga1 = StaticGroupAssociation.all_objects.filter(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
         self.assertIsNotNone(sga1)
-        sga2 = StaticGroupAssociation.all_objects.exclude(dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC).first()
+        sga2 = StaticGroupAssociation.all_objects.exclude(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
         self.assertIsNotNone(sga2)
 
         self.add_permissions("extras.view_staticgroupassociation")
@@ -3634,30 +3636,26 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
         self.assertTrue(found_sga1)
         self.assertFalse(found_sga2)
 
-    def test_list_hidden_filter(self):
-        """Test that the list view can show hidden groups' associations with the appropriate filter."""
-        sga1 = StaticGroupAssociation.all_objects.filter(dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC).first()
+    def test_list_hidden_with_filter(self):
+        """Test that the list view can show hidden associations with the appropriate filter."""
+        sga1 = StaticGroupAssociation.all_objects.exclude(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
         self.assertIsNotNone(sga1)
-        sga2 = StaticGroupAssociation.all_objects.exclude(dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC).first()
-        self.assertIsNotNone(sga2)
 
         self.add_permissions("extras.view_staticgroupassociation")
-        response = self.client.get(f"{self._get_list_url()}?hidden=True", **self.header)
+        response = self.client.get(f"{self._get_list_url()}?dynamic_group={sga1.dynamic_group.pk}", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsInstance(response.data, dict)
         self.assertIn("results", response.data)
         found_sga1 = False
-        found_sga2 = False
         for record in response.data["results"]:
             if record["id"] == str(sga1.id):
                 found_sga1 = True
-            elif record["id"] == str(sga2.id):
-                found_sga2 = True
-        self.assertFalse(found_sga1)
-        self.assertTrue(found_sga2)
+        self.assertTrue(found_sga1)
 
     def test_changes_to_hidden_groups_not_permitted(self):
-        """Test that the REST API cannot create/update/delete associations for hidden groups."""
+        """Test that the REST API cannot create/update/delete hidden associations."""
         self.add_permissions(
             "extras.view_staticgroupassociation",
             "extras.add_staticgroupassociation",
@@ -3674,14 +3672,16 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
                 "associated_object_id": "00000000-0000-0000-0000-000000000000",
             }
             response = self.client.post(
-                f"{self._get_list_url()}?hidden=True", create_data, format="json", **self.header
+                f"{self._get_list_url()}?dynamic_group={sg.pk}", create_data, format="json", **self.header
             )
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
         with self.subTest("update hidden association"):
-            sga = StaticGroupAssociation.all_objects.exclude(dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC).first()
+            sga = StaticGroupAssociation.all_objects.exclude(
+                dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+            ).first()
             self.assertIsNotNone(sga)
-            url = self._get_detail_url(sga) + "?hidden=True"
+            url = self._get_detail_url(sga) + "?dynamic_group={sga.dynamic_group.pk}"
             update_data = {"associated_object_id": "00000000-0000-0000-0000-000000000000"}
             response = self.client.patch(url, update_data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
@@ -3689,13 +3689,14 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
             self.assertNotEqual(sga.associated_object_id, "00000000-0000-0000-0000-000000000000")
 
         with self.subTest("delete hidden association"):
-            sga = StaticGroupAssociation.all_objects.exclude(dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC).first()
+            sga = StaticGroupAssociation.all_objects.exclude(
+                dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+            ).first()
             self.assertIsNotNone(sga)
-            url = self._get_detail_url(sga) + "?hidden=True"
+            url = self._get_detail_url(sga) + "?dynamic_group={sga.dynamic_group.pk}"
             response = self.client.delete(url, **self.header)
             self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
             self.assertTrue(StaticGroupAssociation.all_objects.filter(pk=sga.pk).exists())
-    '''
 
 
 class StatusTest(APIViewTestCases.APIViewTestCase):

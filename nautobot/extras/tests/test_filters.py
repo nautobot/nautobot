@@ -21,7 +21,6 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
-    DynamicGroupTypeChoices,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
@@ -1886,13 +1885,6 @@ class StaticGroupAssociationTestCase(FilterTestCases.FilterTestCase):
         ["associated_object_id"],
     )
 
-    @classmethod
-    def setUpTestData(cls):
-        sg = DynamicGroup.all_objects.create(
-            name="Hidden group", content_type=ContentType.objects.get_for_model(Location), hidden=True
-        )
-        sg.add_members(Location.objects.all())
-
     def test_associated_object_type(self):
         ct = DynamicGroup.objects.filter(static_group_associations__isnull=False).first().content_type
         params = {"associated_object_type": [ct.model_class()._meta.label_lower]}
@@ -1900,18 +1892,6 @@ class StaticGroupAssociationTestCase(FilterTestCases.FilterTestCase):
             self.filterset(params, self.queryset).qs,
             StaticGroupAssociation.objects.filter(associated_object_type=ct),
             ordered=False,
-        )
-
-    def test_hidden(self):
-        params = {"hidden": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, StaticGroupAssociation.all_objects.all()).qs,
-            StaticGroupAssociation.all_objects.exclude(dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC),
-        )
-        params = {"hidden": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, StaticGroupAssociation.all_objects.all()).qs,
-            StaticGroupAssociation.all_objects.filter(dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC),
         )
 
 
