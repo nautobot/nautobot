@@ -655,7 +655,7 @@ def common_test_data(cls):
         ModuleType.objects.create(manufacturer=cls.manufacturers[1], model="Filter Test Module Type 2"),
         ModuleType.objects.create(manufacturer=cls.manufacturers[2], model="Filter Test Module Type 3"),
     )
-    module_status = Status.objects.get_for_model(Module).first()
+
     # Create 3 of each component template on the first two module types
     for i in range(6):
         ConsolePortTemplate.objects.create(
@@ -698,41 +698,54 @@ def common_test_data(cls):
             module_type=module_types[i % 2],
         )
 
+    module_statuses = Status.objects.get_for_model(Module)
     cls.modules = (
         Module.objects.create(
             module_type=module_types[0],
-            status=module_status,
+            status=module_statuses[0],
+            asset_tag="Test Filter Asset Tag Module1",
+            serial="Test Filter Serial Module1",
             tenant=tenants[0],
             parent_module_bay=cls.devices[0].module_bays.first(),
         ),
         Module.objects.create(
             module_type=module_types[1],
-            status=module_status,
+            status=module_statuses[0],
+            asset_tag="Test Filter Asset Tag Module2",
+            serial="Test Filter Serial Module2",
             tenant=tenants[1],
             parent_module_bay=cls.devices[1].module_bays.first(),
         ),
         Module.objects.create(
             module_type=module_types[2],
-            status=module_status,
+            status=module_statuses[0],
+            asset_tag="Test Filter Asset Tag Module3",
+            serial="Test Filter Serial Module3",
             tenant=tenants[2],
             parent_module_bay=cls.devices[2].module_bays.first(),
         ),
     )
     Module.objects.create(
         module_type=module_types[0],
-        status=module_status,
+        status=module_statuses[1],
+        asset_tag="Test Filter Asset Tag Module4",
+        serial="Test Filter Serial Module4",
         tenant=tenants[0],
         parent_module_bay=cls.modules[0].module_bays.first(),
     )
     Module.objects.create(
         module_type=module_types[1],
-        status=module_status,
+        status=module_statuses[1],
+        asset_tag="Test Filter Asset Tag Module5",
+        serial="Test Filter Serial Module5",
         tenant=tenants[1],
         parent_module_bay=cls.modules[1].module_bays.first(),
     )
     Module.objects.create(
         module_type=module_types[2],
-        status=module_status,
+        status=module_statuses[1],
+        asset_tag="Test Filter Asset Tag Module6",
+        serial="Test Filter Serial Module6",
         tenant=tenants[2],
         parent_module_bay=cls.modules[1].module_bays.last(),
     )
