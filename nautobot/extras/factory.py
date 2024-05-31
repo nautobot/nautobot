@@ -296,7 +296,7 @@ class RoleFactory(OrganizationalModelFactory):
     weight = factory.Maybe("has_weight", factory.Faker("pyint"), None)
 
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH - 5), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
     @factory.post_generation
     def content_types(self, create, extracted, **kwargs):
@@ -319,7 +319,7 @@ class StaticGroupFactory(PrimaryModelFactory):
         lambda o: f"{o.color} {bettertitle(o.content_type.model_class()._meta.verbose_name_plural)}"
     )
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH - 5), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
     has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
 
@@ -372,7 +372,7 @@ class StatusFactory(OrganizationalModelFactory):
     color = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[0])
 
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH - 5), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
     @factory.post_generation
     def content_types(self, create, extracted, **kwargs):
@@ -420,7 +420,7 @@ class TagFactory(OrganizationalModelFactory):
     color = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[0])
 
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH - 5), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
     @factory.post_generation
     def content_types(self, create, extracted, **kwargs):

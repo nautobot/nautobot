@@ -22,7 +22,7 @@ class TenantGroupFactory(OrganizationalModelFactory):
     name = UniqueFaker("company")
 
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH - 5), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
     has_parent = NautobotBoolIterator()
     parent = factory.Maybe("has_parent", random_instance(TenantGroup), None)
@@ -43,7 +43,7 @@ class TenantFactory(PrimaryModelFactory):
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH - 5), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
     has_tenant_group = NautobotBoolIterator()
     tenant_group = factory.Maybe("has_tenant_group", random_instance(TenantGroup), None)
