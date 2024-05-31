@@ -1360,8 +1360,10 @@ class FrontPortTemplateCreateForm(ModularComponentTemplateCreateForm):
         module_type = self.initial.get("module_type") or self.data.get("module_type")
         if device_type:
             parent = DeviceType.objects.get(pk=device_type)
-        if module_type:
+        elif module_type:
             parent = ModuleType.objects.get(pk=module_type)
+        else:
+            return
 
         # Determine which rear port positions are occupied. These will be excluded from the list of available mappings.
         occupied_port_positions = [
@@ -3231,8 +3233,10 @@ class FrontPortCreateForm(ModularComponentCreateForm):
         module = self.initial.get("module") or self.data.get("module")
         if device:
             parent = Device.objects.get(pk=device)
-        if module:
+        elif module:
             parent = Module.objects.get(pk=module)
+        else:
+            return
 
         # Determine which rear port positions are occupied. These will be excluded from the list of available
         # mappings.
