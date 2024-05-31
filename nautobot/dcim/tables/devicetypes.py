@@ -114,6 +114,7 @@ class DeviceFamilyTable(BaseTable):
 
 class DeviceTypeTable(BaseTable):
     pk = ToggleColumn()
+    manufacturer = tables.Column(linkify=True)
     model = tables.Column(linkify=True, verbose_name="Device Type")
     is_full_depth = BooleanColumn(verbose_name="Full Depth")
     device_count = LinkedCountColumn(
@@ -154,6 +155,7 @@ class DeviceTypeTable(BaseTable):
 
 class ModuleTypeTable(BaseTable):
     pk = ToggleColumn()
+    manufacturer = tables.Column(linkify=True)
     model = tables.Column(linkify=True, verbose_name="Module Type")
     module_count = LinkedCountColumn(
         viewname="dcim:module_list",
