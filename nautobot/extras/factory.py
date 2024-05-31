@@ -312,7 +312,7 @@ class DynamicGroupFactory(PrimaryModelFactory):
     """
     DynamicGroup model factory.
 
-    Currently only creates "static" DynamicGroups.
+    Currently only creates "static" and "dynamic-filter" DynamicGroups, no "dynamic-set" ones yet.
     """
 
     class Meta:
@@ -327,7 +327,7 @@ class DynamicGroupFactory(PrimaryModelFactory):
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
     has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
-    group_type = DynamicGroupTypeChoices.TYPE_STATIC  # TODO
+    group_type = factory.Iterator([DynamicGroupTypeChoices.TYPE_STATIC, DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER])
 
     @factory.post_generation
     def members(self, created, extracted, **kwargs):

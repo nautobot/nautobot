@@ -167,9 +167,9 @@ class DynamicGroupTypeChoices(ChoiceSet):
     TYPE_STATIC = "static"
 
     CHOICES = (
-        (TYPE_DYNAMIC_FILTER, "Filter-based membership"),
-        (TYPE_DYNAMIC_SET, "Set-based membership"),
-        (TYPE_STATIC, "Static-assignment-based membership"),
+        (TYPE_DYNAMIC_FILTER, "Filter-based"),
+        (TYPE_DYNAMIC_SET, "Set-based"),
+        (TYPE_STATIC, "Static-assignment-based"),
     )
 
 

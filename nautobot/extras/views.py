@@ -736,8 +736,14 @@ class DynamicGroupView(generic.ObjectView):
 
             if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
                 context["raw_query"] = pretty_print_query(instance.generate_query())
+                context["members_list_url"] = None
             else:
                 context["raw_query"] = None
+                try:
+                    context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
+                except NoReverseMatch:
+                    context["members_list_url"] = None
+            context["members_verbose_name_plural"] = instance.model._meta.verbose_name_plural
             context["members_table"] = members_table
             context["ancestors_table"] = ancestors_table
             context["ancestors_tree"] = ancestors_tree

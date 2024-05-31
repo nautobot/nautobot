@@ -377,7 +377,7 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
             "members",
             "description",
         )
-        exclude = ("content_type", "actions")
+        exclude = ("content_type", "actions", "group_type")
 
 
 DESCENDANTS_LINK = """

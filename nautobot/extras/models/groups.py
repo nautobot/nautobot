@@ -579,7 +579,7 @@ class DynamicGroup(PrimaryModel):
             raise ValidationError({"filter": "Filter must be a dict"})
 
         # Accessing `self.model` will determine if the `content_type` is not correctly set, blocking validation.
-        if self.model is None:
+        if self.model is None or self.filterset_class is None:
             raise ValidationError({"filter": "Filter requires a `content_type` to be set"})
 
         if self.group_type != DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:

@@ -533,7 +533,10 @@ class DynamicGroupMembershipFormSetForm(forms.ModelForm):
 
     group = DynamicModelChoiceField(
         queryset=DynamicGroup.objects.all(),
-        query_params={"content_type": "$content_type"},
+        query_params={
+            "content_type": "$content_type",
+            "group_type": [DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER, DynamicGroupTypeChoices.TYPE_DYNAMIC_SET],
+        },
     )
 
     class Meta:
