@@ -175,7 +175,7 @@ class BaseDeviceComponentsBulkRenameView(generic.BulkRenameView):
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()
         if selected_object and selected_object.device:
-            return selected_object.device.name
+            return selected_object.device.display
         if selected_object and selected_object.module:
             return selected_object.module.display
         return ""
