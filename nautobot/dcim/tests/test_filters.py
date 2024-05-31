@@ -698,6 +698,7 @@ def common_test_data(cls):
             module_type=module_types[i % 2],
         )
 
+    module_roles = Role.objects.get_for_model(Module)
     module_statuses = Status.objects.get_for_model(Module)
     cls.modules = (
         Module.objects.create(
@@ -705,6 +706,7 @@ def common_test_data(cls):
             status=module_statuses[0],
             asset_tag="Test Filter Asset Tag Module1",
             serial="Test Filter Serial Module1",
+            role=module_roles[0],
             tenant=tenants[0],
             parent_module_bay=cls.devices[0].module_bays.first(),
         ),
@@ -713,6 +715,7 @@ def common_test_data(cls):
             status=module_statuses[0],
             asset_tag="Test Filter Asset Tag Module2",
             serial="Test Filter Serial Module2",
+            role=module_roles[0],
             tenant=tenants[1],
             parent_module_bay=cls.devices[1].module_bays.first(),
         ),
@@ -721,6 +724,7 @@ def common_test_data(cls):
             status=module_statuses[0],
             asset_tag="Test Filter Asset Tag Module3",
             serial="Test Filter Serial Module3",
+            role=module_roles[1],
             tenant=tenants[2],
             parent_module_bay=cls.devices[2].module_bays.first(),
         ),
@@ -730,6 +734,7 @@ def common_test_data(cls):
         status=module_statuses[1],
         asset_tag="Test Filter Asset Tag Module4",
         serial="Test Filter Serial Module4",
+        role=module_roles[1],
         tenant=tenants[0],
         parent_module_bay=cls.modules[0].module_bays.first(),
     )
