@@ -16,7 +16,7 @@ import nautobot.extras.models.statuses
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0107_staticgroup_staticgroupassociation"),
+        ("extras", "0107_alter_configcontext_cluster_groups_and_more"),
         ("tenancy", "0009_update_all_charfields_max_length_to_255"),
         ("dcim", "0060_alter_cable_status_alter_consoleport__path_and_more"),
     ]
