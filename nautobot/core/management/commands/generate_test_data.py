@@ -62,16 +62,26 @@ class Command(BaseCommand):
                 CloudAccountFactory,
             )
             from nautobot.dcim.factory import (
+                ConsolePortTemplateFactory,
+                ConsoleServerPortTemplateFactory,
                 ControllerFactory,
                 ControllerManagedDeviceGroupFactory,
                 DeviceFactory,
                 DeviceFamilyFactory,
                 DeviceRedundancyGroupFactory,
                 DeviceTypeFactory,
+                FrontPortTemplateFactory,
+                InterfaceTemplateFactory,
                 LocationFactory,
                 LocationTypeFactory,
                 ManufacturerFactory,
+                ModuleBayTemplateFactory,
+                ModuleFactory,
+                ModuleTypeFactory,
                 PlatformFactory,
+                PowerOutletTemplateFactory,
+                PowerPortTemplateFactory,
+                RearPortTemplateFactory,
                 SoftwareImageFileFactory,
                 SoftwareVersionFactory,
             )
@@ -181,12 +191,25 @@ class Command(BaseCommand):
         ManufacturerFactory.create_batch(4, using=db_name)  # 4 more hard-coded Manufacturers
         self.stdout.write("Creating DeviceTypes...")
         DeviceTypeFactory.create_batch(30, using=db_name)
-        self.stdout.write("Creating Manufacturers without DeviceTypes or Platforms...")
+        self.stdout.write("Creating ModuleTypes...")
+        ModuleTypeFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating Modular Device Component Templates...")
+        ConsolePortTemplateFactory.create_batch(30, using=db_name)
+        ConsoleServerPortTemplateFactory.create_batch(30, using=db_name)
+        RearPortTemplateFactory.create_batch(30, using=db_name)
+        FrontPortTemplateFactory.create_batch(30, using=db_name)
+        InterfaceTemplateFactory.create_batch(30, using=db_name)
+        PowerPortTemplateFactory.create_batch(30, using=db_name)
+        PowerOutletTemplateFactory.create_batch(30, using=db_name)
+        ModuleBayTemplateFactory.create_batch(90, using=db_name)
+        self.stdout.write("Creating Manufacturers without DeviceTypes, ModuleTypes or Platforms...")
         ManufacturerFactory.create_batch(2, using=db_name)  # Last 2 hard-coded Manufacturers
         self.stdout.write("Creating DeviceRedundancyGroups...")
         DeviceRedundancyGroupFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Devices...")
         DeviceFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating Modules...")
+        ModuleFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating SoftwareVersions with Devices, InventoryItems or VirtualMachines...")
         SoftwareVersionFactory.create_batch(5)
         self.stdout.write("Creating SoftwareImageFiles without DeviceTypes...")
@@ -252,27 +275,37 @@ class Command(BaseCommand):
                 CircuitFactory,
                 CircuitTerminationFactory,
                 CircuitTypeFactory,
+                ConsolePortTemplateFactory,
+                ConsoleServerPortTemplateFactory,
                 CloudAccountFactory,
                 ContactFactory,
-                ControllerManagedDeviceGroupFactory,
                 ControllerFactory,
+                ControllerManagedDeviceGroupFactory,
                 DeviceFactory,
                 DeviceFamilyFactory,
                 DeviceRedundancyGroupFactory,
                 DeviceTypeFactory,
                 ExternalIntegrationFactory,
+                FrontPortTemplateFactory,
+                InterfaceTemplateFactory,
                 IPAddressFactory,
                 JobLogEntryFactory,
                 JobResultFactory,
                 LocationFactory,
                 LocationTypeFactory,
                 ManufacturerFactory,
+                ModuleBayTemplateFactory,
+                ModuleFactory,
+                ModuleTypeFactory,
                 NamespaceFactory,
                 ObjectChangeFactory,
                 PlatformFactory,
+                PowerOutletTemplateFactory,
+                PowerPortTemplateFactory,
                 PrefixFactory,
                 ProviderFactory,
                 ProviderNetworkFactory,
+                RearPortTemplateFactory,
                 RIRFactory,
                 RoleFactory,
                 RouteTargetFactory,

@@ -43,6 +43,9 @@
                     {% if perms.dcim.add_devicebay %}
                         <li><a href="{% url 'dcim:devicebay_add' %}?device={{ object.pk }}&return_url={% url 'dcim:device_devicebays' pk=object.pk %}">Device Bays</a></li>
                     {% endif %}
+                    {% if perms.dcim.add_modulebay %}
+                        <li><a href="{% url 'dcim:modulebay_add' %}?parent_device={{ object.pk }}&return_url={% url 'dcim:device_modulebays' pk=object.pk %}">Module Bays</a></li>
+                    {% endif %}
                     {% if perms.dcim.add_inventoryitem %}
                         <li><a href="{% url 'dcim:inventoryitem_add' %}?device={{ object.pk }}&return_url={% url 'dcim:device_inventory' pk=object.pk %}">Inventory Items</a></li>
                     {% endif %}
@@ -63,6 +66,11 @@
 {% endblock masthead %}
 
 {% block extra_nav_tabs %}
+        {% if modulebay_count %}
+            <li role="presentation" {% if active_tab == 'module-bays' %} class="active"{% endif %}>
+                <a href="{% url 'dcim:device_modulebays' pk=object.pk %}">Modules {% badge module_count %}</a>
+            </li>
+        {% endif %}
         {% with interface_count=object.vc_interfaces.count %}
             {% if interface_count %}
                 <li role="presentation" {% if active_tab == 'interfaces' %} class="active"{% endif %}>

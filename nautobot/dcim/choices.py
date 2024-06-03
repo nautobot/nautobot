@@ -1536,3 +1536,28 @@ class SoftwareVersionStatusChoices(ChoiceSet):
         (STATUS_EXTENDED_SUPPORT, "Extended Support"),
         (STATUS_END_OF_LIFE, "End-of-Life"),
     )
+
+
+#
+# Modules
+#
+
+
+class ModuleStatusChoices(ChoiceSet):
+    STATUS_OFFLINE = "offline"
+    STATUS_ACTIVE = "active"
+    STATUS_PLANNED = "planned"
+    STATUS_STAGED = "staged"
+    STATUS_FAILED = "failed"
+    STATUS_INVENTORY = "inventory"
+    STATUS_DECOMMISSIONING = "decommissioning"
+
+    CHOICES = (
+        (STATUS_OFFLINE, "Offline"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_PLANNED, "Planned"),
+        (STATUS_STAGED, "Staged"),
+        (STATUS_FAILED, "Failed"),
+        (STATUS_INVENTORY, "Inventory"),
+        (STATUS_DECOMMISSIONING, "Decommissioning"),
+    )

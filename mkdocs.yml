@@ -221,6 +221,10 @@ plugins:
         "models/dcim/location.md": "user-guide/core-data-model/dcim/location.md"
         "models/dcim/locationtype.md": "user-guide/core-data-model/dcim/locationtype.md"
         "models/dcim/manufacturer.md": "user-guide/core-data-model/dcim/manufacturer.md"
+        'models/dcim/module.md': 'user-guide/core-data-model/dcim/module.md'
+        'models/dcim/modulebay.md': 'user-guide/core-data-model/dcim/modulebay.md'
+        'models/dcim/modulebaytemplate.md': 'user-guide/core-data-model/dcim/modulebaytemplate.md'
+        'models/dcim/moduletype.md': 'user-guide/core-data-model/dcim/moduletype.md'
         "models/dcim/platform.md": "user-guide/core-data-model/dcim/platform.md"
         "models/dcim/powerfeed.md": "user-guide/core-data-model/dcim/powerfeed.md"
         "models/dcim/poweroutlet.md": "user-guide/core-data-model/dcim/poweroutlet.md"
@@ -397,6 +401,7 @@ nav:
                   - Device Bay Template: "user-guide/core-data-model/dcim/devicebaytemplate.md"
                   - Front Port Template: "user-guide/core-data-model/dcim/frontporttemplate.md"
                   - Interface Template: "user-guide/core-data-model/dcim/interfacetemplate.md"
+                  - Module Bay Template: "user-guide/core-data-model/dcim/modulebaytemplate.md"
                   - Power Outlet Template: "user-guide/core-data-model/dcim/poweroutlettemplate.md"
                   - Power Port Template: "user-guide/core-data-model/dcim/powerporttemplate.md"
                   - Rear Port Template: "user-guide/core-data-model/dcim/rearporttemplate.md"
@@ -408,6 +413,28 @@ nav:
                   - Front Port: "user-guide/core-data-model/dcim/frontport.md"
                   - Interface: "user-guide/core-data-model/dcim/interface.md"
                   - Inventory Item: "user-guide/core-data-model/dcim/inventoryitem.md"
+                  - Module Bay: "user-guide/core-data-model/dcim/modulebay.md"
+                  - Power Port: "user-guide/core-data-model/dcim/powerport.md"
+                  - Power Outlet: "user-guide/core-data-model/dcim/poweroutlet.md"
+                  - Rear Port: "user-guide/core-data-model/dcim/rearport.md"
+              - Module Type:
+                  - "user-guide/core-data-model/dcim/moduletype.md"
+                  - Console Port Template: "user-guide/core-data-model/dcim/consoleporttemplate.md"
+                  - Console Server Port Template: "user-guide/core-data-model/dcim/consoleserverporttemplate.md"
+                  - Front Port Template: "user-guide/core-data-model/dcim/frontporttemplate.md"
+                  - Interface Template: "user-guide/core-data-model/dcim/interfacetemplate.md"
+                  - Module Bay Template: "user-guide/core-data-model/dcim/modulebaytemplate.md"
+                  - Power Outlet Template: "user-guide/core-data-model/dcim/poweroutlettemplate.md"
+                  - Power Port Template: "user-guide/core-data-model/dcim/powerporttemplate.md"
+                  - Rear Port Template: "user-guide/core-data-model/dcim/rearporttemplate.md"
+              - Module:
+                  - "user-guide/core-data-model/dcim/module.md"
+                  - Console Port: "user-guide/core-data-model/dcim/consoleport.md"
+                  - Console Server Port: "user-guide/core-data-model/dcim/consoleserverport.md"
+                  - Front Port: "user-guide/core-data-model/dcim/frontport.md"
+                  - Interface: "user-guide/core-data-model/dcim/interface.md"
+                  - Inventory Item: "user-guide/core-data-model/dcim/inventoryitem.md"
+                  - Module Bay: "user-guide/core-data-model/dcim/modulebay.md"
                   - Power Port: "user-guide/core-data-model/dcim/powerport.md"
                   - Power Outlet: "user-guide/core-data-model/dcim/poweroutlet.md"
                   - Rear Port: "user-guide/core-data-model/dcim/rearport.md"

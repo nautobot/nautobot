@@ -36,6 +36,7 @@ from .device_components import (
     FrontPort,
     Interface,
     InventoryItem,
+    ModuleBay,
     PowerOutlet,
     PowerPort,
     RearPort,
@@ -295,6 +296,15 @@ class DeviceType(PrimaryModel):
                     "name": c.name,
                 }
                 for c in self.device_bay_templates.all()
+            ]
+        if self.module_bay_templates.exists():
+            data["module-bays"] = [
+                {
+                    "position": c.position,
+                    "label": c.label,
+                    "description": c.description,
+                }
+                for c in self.module_bay_templates.all()
             ]
 
         return yaml.dump(dict(data), sort_keys=False, allow_unicode=True)
@@ -840,7 +850,7 @@ class Device(PrimaryModel, ConfigContextModel):
         """Create device components from the device type definition."""
         # The order of these is significant as
         # - PowerOutlet depends on PowerPort
-        # - FrontPort depends on FrontPort
+        # - FrontPort depends on RearPort
         component_models = [
             (ConsolePort, self.device_type.console_port_templates.all()),
             (ConsoleServerPort, self.device_type.console_server_port_templates.all()),
@@ -850,10 +860,11 @@ class Device(PrimaryModel, ConfigContextModel):
             (RearPort, self.device_type.rear_port_templates.all()),
             (FrontPort, self.device_type.front_port_templates.all()),
             (DeviceBay, self.device_type.device_bay_templates.all()),
+            (ModuleBay, self.device_type.module_bay_templates.all()),
         ]
         instantiated_components = []
         for model, templates in component_models:
-            model.objects.bulk_create([x.instantiate(self) for x in templates])
+            model.objects.bulk_create([x.instantiate(device=self) for x in templates])
         return instantiated_components
 
     @property
@@ -1375,3 +1386,335 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
             raise ValidationError(
                 {"controller": "Controller device group must have the same controller as the parent group."}
             )
+
+
+#
+# Modules
+#
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class ModuleType(PrimaryModel):
+    """
+    A ModuleType represents a particular make (Manufacturer) and model of Module. A Module can represent
+    a line card, supervisor, or other interchangeable hardware component within a ModuleBay.
+
+    ModuleType implements a subset of the features of DeviceType.
+
+    Each ModuleType can have an arbitrary number of component templates assigned to it,
+    which define console, power, and interface objects. For example, a Cisco WS-SUP720-3B
+    ModuleType would have:
+
+      * 1 ConsolePortTemplate
+      * 2 InterfaceTemplates
+
+    When a new Module of this type is created, the appropriate console, power, and interface
+    objects (as defined by the ModuleType) are automatically created as well.
+    """
+
+    manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="module_types")
+    model = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    part_number = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Discrete part number (optional)"
+    )
+
+    clone_fields = [
+        "manufacturer",
+    ]
+
+    class Meta:
+        ordering = ("manufacturer", "model")
+        unique_together = [
+            ("manufacturer", "model"),
+        ]
+
+    def __str__(self):
+        return self.model
+
+    def to_yaml(self):
+        data = OrderedDict(
+            (
+                ("manufacturer", self.manufacturer.name),
+                ("model", self.model),
+                ("part_number", self.part_number),
+            )
+        )
+
+        # Component templates
+        if self.console_port_templates.exists():
+            data["console-ports"] = [
+                {
+                    "name": c.name,
+                    "type": c.type,
+                }
+                for c in self.console_port_templates.all()
+            ]
+        if self.console_server_port_templates.exists():
+            data["console-server-ports"] = [
+                {
+                    "name": c.name,
+                    "type": c.type,
+                }
+                for c in self.console_server_port_templates.all()
+            ]
+        if self.power_port_templates.exists():
+            data["power-ports"] = [
+                {
+                    "name": c.name,
+                    "type": c.type,
+                    "maximum_draw": c.maximum_draw,
+                    "allocated_draw": c.allocated_draw,
+                }
+                for c in self.power_port_templates.all()
+            ]
+        if self.power_outlet_templates.exists():
+            data["power-outlets"] = [
+                {
+                    "name": c.name,
+                    "type": c.type,
+                    "power_port": c.power_port_template.name if c.power_port_template else None,
+                    "feed_leg": c.feed_leg,
+                }
+                for c in self.power_outlet_templates.all()
+            ]
+        if self.interface_templates.exists():
+            data["interfaces"] = [
+                {
+                    "name": c.name,
+                    "type": c.type,
+                    "mgmt_only": c.mgmt_only,
+                }
+                for c in self.interface_templates.all()
+            ]
+        if self.front_port_templates.exists():
+            data["front-ports"] = [
+                {
+                    "name": c.name,
+                    "type": c.type,
+                    "rear_port": c.rear_port_template.name,
+                    "rear_port_position": c.rear_port_position,
+                }
+                for c in self.front_port_templates.all()
+            ]
+        if self.rear_port_templates.exists():
+            data["rear-ports"] = [
+                {
+                    "name": c.name,
+                    "type": c.type,
+                    "positions": c.positions,
+                }
+                for c in self.rear_port_templates.all()
+            ]
+        if self.module_bay_templates.exists():
+            data["module-bays"] = [
+                {
+                    "position": c.position,
+                    "label": c.label,
+                    "description": c.description,
+                }
+                for c in self.module_bay_templates.all()
+            ]
+
+        return yaml.dump(dict(data), sort_keys=False, allow_unicode=True)
+
+    @property
+    def display(self):
+        return f"{self.manufacturer.name} {self.model}"
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "locations",
+    "statuses",
+    "webhooks",
+)
+class Module(PrimaryModel):
+    """
+    A Module represents a line card, supervisor, or other interchangeable hardware component within a ModuleBay.
+    Each Module is assigned a ModuleType and Status, and optionally a Role and/or Tenant.
+
+    Each Module must be assigned to either a ModuleBay or a Location, but not both.
+
+    When a new Module is created, console, power and interface components are created along with it as dictated
+    by the component templates assigned to its ModuleType. Components can also be added, modified, or deleted after
+    the creation of a Module.
+    """
+
+    module_type = models.ForeignKey(to="dcim.ModuleType", on_delete=models.PROTECT, related_name="modules")
+    parent_module_bay = models.OneToOneField(
+        to="dcim.ModuleBay",
+        on_delete=models.CASCADE,
+        related_name="installed_module",
+        blank=True,
+        null=True,
+    )
+    status = StatusField()
+    role = RoleField(blank=True, null=True)
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="modules",
+        blank=True,
+        null=True,
+    )
+    serial = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- intentional
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=True,
+        null=True,
+        verbose_name="Serial number",
+        db_index=True,
+    )
+    asset_tag = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=True,
+        null=True,
+        unique=True,
+        verbose_name="Asset tag",
+        help_text="A unique tag used to identify this module",
+    )
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="modules",
+        blank=True,
+        null=True,
+    )
+    # TODO: add software support for Modules
+
+    clone_fields = [
+        "module_type",
+        "role",
+        "tenant",
+        "location",
+        "status",
+    ]
+
+    # The recursive nature of this model combined with the fact that it can be a child of a
+    # device or location makes our natural key implementation unusable, so just use the pk
+    natural_key_field_names = ["pk"]
+
+    class Meta:
+        ordering = ("parent_module_bay", "location", "module_type", "asset_tag", "serial")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["module_type", "serial"],
+                name="dcim_module_module_type_serial_unique",
+            ),
+        ]
+
+    def __str__(self):
+        serial = f" (Serial: {self.serial})" if self.serial else ""
+        asset_tag = f" (Asset Tag: {self.asset_tag})" if self.asset_tag else ""
+        return str(self.module_type) + serial + asset_tag
+
+    @property
+    def display(self):
+        if self.location:
+            return f"{self!s} at location {self.location}"
+        elif self.parent_module_bay.parent_device is not None:
+            return f"{self.module_type!s} installed in {self.parent_module_bay.parent_device.display}"
+        else:
+            return f"{self.module_type!s} installed in {self.parent_module_bay.parent_module.display}"
+
+    @property
+    def device(self):
+        """Walk up parent chain to find the Device that this Module is installed in, if one exists."""
+        if self.parent_module_bay is None:
+            return None
+        return self.parent_module_bay.parent
+
+    def clean(self):
+        super().clean()
+
+        # Validate that the Module is associated with a Location or a ModuleBay
+        if self.parent_module_bay is None and self.location is None:
+            raise ValidationError("One of location or parent_module_bay must be set")
+
+        # Validate location
+        if self.location is not None:
+            if self.parent_module_bay is not None:
+                raise ValidationError("Only one of location or parent_module_bay must be set")
+
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'Modules may not associate to locations of type "{self.location.location_type}".'}
+                )
+
+    def save(self, *args, **kwargs):
+        is_new = not self.present_in_database
+
+        if self.serial == "":
+            self.serial = None
+        if self.asset_tag == "":
+            self.asset_tag = None
+
+        # Prevent creating a Module that is its own ancestor, creating an infinite loop
+        parent_module = getattr(self.parent_module_bay, "parent_module", None)
+        while parent_module is not None:
+            if parent_module == self:
+                raise ValidationError("Creating this instance would cause an infinite loop.")
+            parent_module = getattr(parent_module.parent_module_bay, "parent_module", None)
+
+        super().save(*args, **kwargs)
+
+        # If this is a new Module, instantiate all related components per the ModuleType definition
+        if is_new:
+            self.create_components()
+
+    def create_components(self):
+        """Create module components from the module type definition."""
+        # The order of these is significant as
+        # - PowerOutlet depends on PowerPort
+        # - FrontPort depends on RearPort
+        component_models = [
+            (ConsolePort, self.module_type.console_port_templates.all()),
+            (ConsoleServerPort, self.module_type.console_server_port_templates.all()),
+            (PowerPort, self.module_type.power_port_templates.all()),
+            (PowerOutlet, self.module_type.power_outlet_templates.all()),
+            (Interface, self.module_type.interface_templates.all()),
+            (RearPort, self.module_type.rear_port_templates.all()),
+            (FrontPort, self.module_type.front_port_templates.all()),
+            (ModuleBay, self.module_type.module_bay_templates.all()),
+        ]
+        instantiated_components = []
+        for model, templates in component_models:
+            model.objects.bulk_create([x.instantiate(device=None, module=self) for x in templates])
+        return instantiated_components
+
+    def get_cables(self, pk_list=False):
+        """
+        Return a QuerySet or PK list matching all Cables connected to any component of this Module.
+        """
+        from .cables import Cable
+
+        cable_pks = []
+        for component_model in [
+            ConsolePort,
+            ConsoleServerPort,
+            PowerPort,
+            PowerOutlet,
+            Interface,
+            FrontPort,
+            RearPort,
+        ]:
+            cable_pks += component_model.objects.filter(module=self, cable__isnull=False).values_list(
+                "cable", flat=True
+            )
+        if pk_list:
+            return cable_pks
+        return Cable.objects.filter(pk__in=cable_pks)
+
+    def get_children(self):
+        """
+        Return the set of child Modules installed in ModuleBays within this Module.
+        """
+        return Module.objects.filter(parent_module_bay__parent_module=self.pk)
