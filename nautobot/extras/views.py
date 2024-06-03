@@ -714,6 +714,8 @@ class DynamicGroupView(generic.ObjectView):
             # Ensure that members cache is up-to-date for this specific group
             members = instance.update_cached_members()
             messages.success(request, f"Refreshed cached members list for {instance}")
+        else:
+            members = instance.members
 
         if table_class is not None:
             # Members table (for display on Members nav tab)
