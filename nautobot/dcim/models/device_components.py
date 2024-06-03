@@ -52,6 +52,7 @@ __all__ = (
     "InterfaceRedundancyGroup",
     "InterfaceRedundancyGroupAssociation",
     "InventoryItem",
+    "ModuleBay",
     "PathEndpoint",
     "PowerOutlet",
     "PowerPort",
@@ -70,7 +71,7 @@ class ComponentModel(PrimaryModel):
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
-    natural_key_field_names = ["name", "device"]
+    natural_key_field_names = ["device", "name"]
 
     class Meta:
         abstract = True
@@ -84,6 +85,9 @@ class ComponentModel(PrimaryModel):
         """
         Return a new ObjectChange with the `related_object` pinned to the `device` by default.
         """
+        if "related_object" in kwargs:
+            return super().to_objectchange(action, **kwargs)
+
         # Annotate the parent Device
         try:
             device = self.device
@@ -92,6 +96,72 @@ class ComponentModel(PrimaryModel):
             device = None
 
         return super().to_objectchange(action, related_object=device, **kwargs)
+
+    @property
+    def parent(self):
+        return self.device
+
+
+class ModularComponentModel(ComponentModel):
+    device = ForeignKeyWithAutoRelatedName(
+        to="dcim.Device",
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+    )
+    module = ForeignKeyWithAutoRelatedName(
+        to="dcim.Module",
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+    )
+
+    natural_key_field_names = ["device", "module", "name"]
+
+    class Meta:
+        abstract = True
+        ordering = ("device", "module", "_name")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("device", "name"),
+                name="%(app_label)s_%(class)s_device_name_unique",
+            ),
+            models.UniqueConstraint(
+                fields=("module", "name"),
+                name="%(app_label)s_%(class)s_module_name_unique",
+            ),
+        ]
+
+    @property
+    def parent(self):
+        """Device that this component belongs to, walking up module inheritance if necessary."""
+        return self.module.device if self.module else self.device
+
+    def to_objectchange(self, action, **kwargs):
+        """
+        Return a new ObjectChange with the `related_object` pinned to the parent `device` or `module`.
+        """
+        if "related_object" in kwargs:
+            return super().to_objectchange(action, **kwargs)
+
+        # Annotate the parent
+        try:
+            parent = self.device if self.device else self.module
+        except ObjectDoesNotExist:
+            # The parent may have already been deleted
+            parent = None
+
+        return super().to_objectchange(action, related_object=parent, **kwargs)
+
+    def clean(self):
+        super().clean()
+
+        # Validate that a Device or Module is set, but not both
+        if self.device and self.module:
+            raise ValidationError("Only one of device or module must be set")
+
+        if not (self.device or self.module):
+            raise ValidationError("Either device or module must be set")
 
 
 class CableTermination(models.Model):
@@ -212,9 +282,9 @@ class PathEndpoint(models.Model):
     "graphql",
     "webhooks",
 )
-class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
+class ConsolePort(ModularComponentModel, CableTermination, PathEndpoint):
     """
-    A physical console port within a Device. ConsolePorts connect to ConsoleServerPorts.
+    A physical console port within a Device or Module. ConsolePorts connect to ConsoleServerPorts.
     """
 
     type = models.CharField(
@@ -223,14 +293,6 @@ class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
         blank=True,
         help_text="Physical port type",
     )
-
-    class Meta:
-        ordering = ("device", "_name")
-        unique_together = ("device", "name")
-
-    @property
-    def parent(self):
-        return self.device
 
 
 #
@@ -239,9 +301,9 @@ class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
 
 
 @extras_features("custom_links", "cable_terminations", "custom_validators", "graphql", "webhooks")
-class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
+class ConsoleServerPort(ModularComponentModel, CableTermination, PathEndpoint):
     """
-    A physical port within a Device (typically a designated console server) which provides access to ConsolePorts.
+    A physical port within a Device or Module (typically a designated console server) which provides access to ConsolePorts.
     """
 
     type = models.CharField(
@@ -250,14 +312,6 @@ class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
         blank=True,
         help_text="Physical port type",
     )
-
-    class Meta:
-        ordering = ("device", "_name")
-        unique_together = ("device", "name")
-
-    @property
-    def parent(self):
-        return self.device
 
 
 #
@@ -273,9 +327,9 @@ class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
     "graphql",
     "webhooks",
 )
-class PowerPort(CableTermination, PathEndpoint, ComponentModel):
+class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
     """
-    A physical power supply (intake) port within a Device. PowerPorts connect to PowerOutlets.
+    A physical power supply (intake) port within a Device or Module. PowerPorts connect to PowerOutlets.
     """
 
     type = models.CharField(
@@ -296,14 +350,6 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
         validators=[MinValueValidator(1)],
         help_text="Allocated power draw (watts)",
     )
-
-    class Meta:
-        ordering = ("device", "_name")
-        unique_together = ("device", "name")
-
-    @property
-    def parent(self):
-        return self.device
 
     def clean(self):
         super().clean()
@@ -384,9 +430,9 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
 
 
 @extras_features("cable_terminations", "custom_links", "custom_validators", "graphql", "webhooks")
-class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
+class PowerOutlet(ModularComponentModel, CableTermination, PathEndpoint):
     """
-    A physical power outlet (output) within a Device which provides power to a PowerPort.
+    A physical power outlet (output) within a Device or Module which provides power to a PowerPort.
     """
 
     type = models.CharField(
@@ -410,19 +456,11 @@ class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
         help_text="Phase (for three-phase feeds)",
     )
 
-    class Meta:
-        ordering = ("device", "_name")
-        unique_together = ("device", "name")
-
-    @property
-    def parent(self):
-        return self.device
-
     def clean(self):
         super().clean()
 
         # Validate power port assignment
-        if self.power_port and self.power_port.device != self.device:
+        if self.power_port and self.parent and self.power_port.parent != self.parent:
             raise ValidationError(f"Parent power port ({self.power_port}) must belong to the same device")
 
 
@@ -501,9 +539,9 @@ class BaseInterface(RelationshipModel):
     "statuses",
     "webhooks",
 )
-class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
+class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInterface):
     """
-    A network interface within a Device. A physical Interface can connect to exactly one other Interface.
+    A network interface within a Device or Module. A physical Interface can connect to exactly one other Interface.
     """
 
     # Override ComponentModel._name to specify naturalize_interface function
@@ -560,15 +598,14 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         verbose_name="IP Addresses",
     )
 
-    class Meta:
-        ordering = ("device", CollateAsChar("_name"))
-        unique_together = ("device", "name")
+    class Meta(ModularComponentModel.Meta):
+        ordering = ("device", "module", CollateAsChar("_name"))
 
     def clean(self):
         super().clean()
 
         # VRF validation
-        if self.vrf and self.vrf not in self.device.vrfs.all():
+        if self.vrf and self.parent and self.vrf not in self.parent.vrfs.all():
             # TODO(jathan): Or maybe we automatically add the VRF to the device?
             raise ValidationError({"vrf": "VRF must be assigned to same Device."})
 
@@ -579,19 +616,23 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
                 raise ValidationError({"lag": "A LAG interface cannot be its own parent."})
 
             # An interface's LAG must belong to the same device or virtual chassis
-            if self.lag.device_id != self.device_id:
-                if self.device.virtual_chassis is None:
+            if self.parent and self.lag.parent != self.parent:
+                if self.lag.parent is None:
+                    raise ValidationError(
+                        {"lag": f"The selected LAG interface ({self.lag}) does not belong to a device."}
+                    )
+                elif self.parent.virtual_chassis is None:
                     raise ValidationError(
                         {
-                            "lag": f"The selected LAG interface ({self.lag}) belongs to a different device ({self.lag.device})."
+                            "lag": f"The selected LAG interface ({self.lag}) belongs to a different device ({self.lag.parent})."
                         }
                     )
-                elif self.lag.device.virtual_chassis_id != self.device.virtual_chassis_id:
+                elif self.lag.parent.virtual_chassis_id != self.parent.virtual_chassis_id:
                     raise ValidationError(
                         {
                             "lag": (
-                                f"The selected LAG interface ({self.lag}) belongs to {self.lag.device}, which is not part "
-                                f"of virtual chassis {self.device.virtual_chassis}."
+                                f"The selected LAG interface ({self.lag}) belongs to {self.lag.parent}, which is not part "
+                                f"of virtual chassis {self.parent.virtual_chassis}."
                             )
                         }
                     )
@@ -624,19 +665,19 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
                 )
 
             # An interface's parent must belong to the same device or virtual chassis
-            if self.parent_interface.device != self.device:
-                if getattr(self.device, "virtual_chassis", None) is None:
+            if self.parent and self.parent_interface.parent != self.parent:
+                if getattr(self.parent, "virtual_chassis", None) is None:
                     raise ValidationError(
                         {
                             "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to a different device "
-                            f"({self.parent_interface.device})."
+                            f"({self.parent_interface.parent})."
                         }
                     )
-                elif self.parent_interface.device.virtual_chassis != self.device.virtual_chassis:
+                elif self.parent_interface.parent.virtual_chassis != self.parent.virtual_chassis:
                     raise ValidationError(
                         {
-                            "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to {self.parent_interface.device}, which "
-                            f"is not part of virtual chassis {self.device.virtual_chassis}."
+                            "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to {self.parent_interface.parent}, which "
+                            f"is not part of virtual chassis {self.parent.virtual_chassis}."
                         }
                     )
 
@@ -646,7 +687,8 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         if (
             self.untagged_vlan
             and self.untagged_vlan.locations.exists()
-            and not self.untagged_vlan.locations.filter(id=self.device.location_id).exists()
+            and self.parent
+            and not self.untagged_vlan.locations.filter(id=self.parent.location_id).exists()
         ):
             raise ValidationError(
                 {
@@ -664,22 +706,22 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
                 raise ValidationError({"bridge": "An interface cannot be bridged to itself."})
 
             # A bridged interface belong to the same device or virtual chassis
-            if self.bridge.device.id != self.device.id:
-                if getattr(self.device, "virtual_chassis", None) is None:
+            if self.parent and self.bridge.parent != self.parent:
+                if getattr(self.parent, "virtual_chassis", None) is None:
                     raise ValidationError(
                         {
                             "bridge": (
                                 f"The selected bridge interface ({self.bridge}) belongs to a different device "
-                                f"({self.bridge.device})."
+                                f"({self.bridge.parent})."
                             )
                         }
                     )
-                elif self.bridge.device.virtual_chassis_id != self.device.virtual_chassis_id:
+                elif self.bridge.parent.virtual_chassis_id != self.parent.virtual_chassis_id:
                     raise ValidationError(
                         {
                             "bridge": (
-                                f"The selected bridge interface ({self.bridge}) belongs to {self.bridge.device}, which "
-                                f"is not part of virtual chassis {self.device.virtual_chassis}."
+                                f"The selected bridge interface ({self.bridge}) belongs to {self.bridge.parent}, which "
+                                f"is not part of virtual chassis {self.parent.virtual_chassis}."
                             )
                         }
                     )
@@ -766,10 +808,6 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
     @property
     def ip_address_count(self):
         return self.ip_addresses.count()
-
-    @property
-    def parent(self):
-        return self.device
 
 
 @extras_features(
@@ -889,7 +927,7 @@ class InterfaceRedundancyGroupAssociation(BaseModel, ChangeLoggedModel):
 
     def __str__(self):
         """Return a string representation of the instance."""
-        return f"{self.interface_redundancy_group}: {self.interface.device} {self.interface}: {self.priority}"
+        return f"{self.interface_redundancy_group}: {self.interface.device or self.interface.module} {self.interface}: {self.priority}"
 
 
 #
@@ -898,9 +936,9 @@ class InterfaceRedundancyGroupAssociation(BaseModel, ChangeLoggedModel):
 
 
 @extras_features("cable_terminations", "custom_links", "custom_validators", "graphql", "webhooks")
-class FrontPort(CableTermination, ComponentModel):
+class FrontPort(ModularComponentModel, CableTermination):
     """
-    A pass-through port on the front of a Device.
+    A pass-through port on the front of a Device or Module.
     """
 
     type = models.CharField(max_length=50, choices=PortTypeChoices)
@@ -913,22 +951,22 @@ class FrontPort(CableTermination, ComponentModel):
         ],
     )
 
-    class Meta:
-        ordering = ("device", "_name")
-        unique_together = (
-            ("device", "name"),
-            ("rear_port", "rear_port_position"),
-        )
+    natural_key_field_names = ["device", "module", "name", "rear_port", "rear_port_position"]
 
-    @property
-    def parent(self):
-        return self.device
+    class Meta(ModularComponentModel.Meta):
+        constraints = [
+            *ModularComponentModel.Meta.constraints,
+            models.UniqueConstraint(
+                fields=("rear_port", "rear_port_position"),
+                name="dcim_frontport_rear_port_position_unique",
+            ),
+        ]
 
     def clean(self):
         super().clean()
 
         # Validate rear port assignment
-        if self.rear_port.device != self.device:
+        if self.parent and self.rear_port.parent != self.parent:
             raise ValidationError({"rear_port": f"Rear port ({self.rear_port}) must belong to the same device"})
 
         # Validate rear port position assignment
@@ -942,9 +980,9 @@ class FrontPort(CableTermination, ComponentModel):
 
 
 @extras_features("cable_terminations", "custom_links", "custom_validators", "graphql", "webhooks")
-class RearPort(CableTermination, ComponentModel):
+class RearPort(ModularComponentModel, CableTermination):
     """
-    A pass-through port on the rear of a Device.
+    A pass-through port on the rear of a Device or Module.
     """
 
     type = models.CharField(max_length=50, choices=PortTypeChoices)
@@ -955,10 +993,6 @@ class RearPort(CableTermination, ComponentModel):
             MaxValueValidator(REARPORT_POSITIONS_MAX),
         ],
     )
-
-    class Meta:
-        ordering = ("device", "_name")
-        unique_together = ("device", "name")
 
     def clean(self):
         super().clean()
@@ -972,10 +1006,6 @@ class RearPort(CableTermination, ComponentModel):
                     f"({front_port_count})"
                 }
             )
-
-    @property
-    def parent(self):
-        return self.device
 
 
 #
@@ -1021,10 +1051,6 @@ class DeviceBay(ComponentModel):
                         "installed_device": f"Cannot install the specified device; device is already installed in {current_bay}"
                     }
                 )
-
-    @property
-    def parent(self):
-        return self.device
 
 
 #
@@ -1074,7 +1100,8 @@ class InventoryItem(TreeModel, ComponentModel):
         related_name="inventory_items",
         blank=True,
         null=True,
-        verbose_name="The software version installed on this inventory item",
+        verbose_name="Software Version",
+        help_text="The software version installed on this inventory item",
     )
     software_image_files = models.ManyToManyField(
         to="dcim.SoftwareImageFile",
@@ -1096,3 +1123,107 @@ class InventoryItem(TreeModel, ComponentModel):
         For the time being we just use the PK as a natural key.
         """
         return ["pk"]
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class ModuleBay(PrimaryModel):
+    """
+    A slot in a Device or Module which can contain Modules.
+    """
+
+    parent_device = models.ForeignKey(
+        to="dcim.Device",
+        on_delete=models.CASCADE,
+        related_name="module_bays",
+        blank=True,
+        null=True,
+    )
+    parent_module = models.ForeignKey(
+        to="dcim.Module",
+        on_delete=models.CASCADE,
+        related_name="module_bays",
+        blank=True,
+        null=True,
+    )
+    _position = NaturalOrderingField(
+        target_field="position", max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True
+    )
+    position = models.CharField(
+        blank=False,
+        null=False,
+        max_length=CHARFIELD_MAX_LENGTH,
+        help_text="The position of the module bay within the parent device/module",
+    )
+    label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+
+    clone_fields = ["parent_device", "parent_module"]
+
+    # The recursive nature of this model combined with the fact that it can be a child of a
+    # device or location makes our natural key implementation unusable, so just use the pk
+    natural_key_field_names = ["pk"]
+
+    class Meta:
+        # TODO: Ordering by parent_module.id is not correct but prevents an infinite loop
+        ordering = (
+            "parent_device",
+            "parent_module__id",
+            "_position",
+        )
+        constraints = [
+            models.UniqueConstraint(
+                fields=["parent_device", "position"],
+                name="dcim_modulebay_parent_device_position_unique",
+            ),
+            models.UniqueConstraint(
+                fields=["parent_module", "position"],
+                name="dcim_modulebay_parent_module_position_unique",
+            ),
+        ]
+
+    @property
+    def parent(self):
+        """Walk up parent chain to find the Device that this ModuleBay is installed in, if one exists."""
+        return self.parent_module.device if self.parent_module else self.parent_device
+
+    def __str__(self):
+        if self.parent_device is not None:
+            return f"{self.parent_device} ({self.position})"
+        else:
+            return f"{self.parent_module} ({self.position})"
+
+    @property
+    def display(self):
+        if self.parent_device is not None:
+            return f"{self.parent_device.display} ({self.position})"
+        else:
+            return f"{self.parent_module.display} ({self.position})"
+
+    def to_objectchange(self, action, **kwargs):
+        """
+        Return a new ObjectChange with the `related_object` pinned to the parent `device` or `module`.
+        """
+        # Annotate the parent
+        try:
+            parent = self.parent
+        except ObjectDoesNotExist:
+            # The parent has already been deleted
+            parent = None
+
+        return super().to_objectchange(action, related_object=parent, **kwargs)
+
+    def clean(self):
+        super().clean()
+
+        # Validate that a Device or Module is set, but not both
+        if self.parent_device and self.parent_module:
+            raise ValidationError("Only one of parent_device or parent_module must be set")
+
+        if not (self.parent_device or self.parent_module):
+            raise ValidationError("Either parent_device or parent_module must be set")

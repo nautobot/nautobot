@@ -35,3 +35,6 @@ IP addresses can be assigned to interfaces. VLANs can also be assigned to each i
 
 +++ 2.3.0
     Interfaces now have an optional `role` field and can be assigned [Role](../../platform-functionality/role.md) instances to track common configurations.
+
++/- 2.3.0
+    This model has been updated to support being installed in [Modules](module.md). As a result, there are now two fields for assignment to a Device or Module. One of the `device` or `module` fields must be populated but not both. If a `module` is supplied, the `device` field must be null, and similarly the `module` field must be null if a `device` is supplied.

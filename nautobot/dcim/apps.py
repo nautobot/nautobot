@@ -13,6 +13,8 @@ class DCIMConfig(NautobotConfig):
         "deviceredundancygroup",
         "devicetype",
         "location",
+        "module",
+        "moduletype",
         "powerfeed",
         "rack",
         "rackgroup",

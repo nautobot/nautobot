@@ -122,8 +122,8 @@ class MultiValueUUIDFilter(django_filters.UUIDFilter, django_filters.MultipleCho
 
 class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
     """
-    BooleanFilter for related objects that will explicitly perform `exclude=True` and `isnull`
-    lookups. The `field_name` argument is required and must be set to the related field on the
+    BooleanFilter for related objects that will explicitly perform `isnull` lookups.
+    The `field_name` argument is required and must be set to the related field on the
     model.
 
     This should be used instead of a default `BooleanFilter` paired `method=`
@@ -131,15 +131,33 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
 
     Example:
 
-        has_interfaces = RelatedMembershipBooleanFilter(
-            field_name="interfaces",
-            label="Has interfaces",
+        has_modules = RelatedMembershipBooleanFilter(
+            field_name="module_bays__installed_module",
+            label="Has modules",
         )
+
+        This would generate a filter that returns instances that have at least one module
+        bay with an installed module. The `has_modules=False` filter would exclude instances
+        with at least one module bay with an installed module.
+
+        Set `exclude=True` to reverse the behavior of the filter. This __may__ be useful
+        for filtering on null directly related fields but this filter is not smart enough
+        to differentiate between `fieldA__fieldB__isnull` and `fieldA__isnull` so it's not
+        suitable for cases like the `has_empty_module_bays` filter where an instance may
+        not have any module bays.
+
+        See the below table for more information:
+
+        | value       | exclude          | Result
+        |-------------|------------------|-------
+        | True        | False (default)  | Return instances with at least one non-null match -- qs.filter(field_name__isnull=False)
+        | False       | False (default)  | Exclude instances with at least one non-null match -- qs.exclude(field_name__isnull=False)
+        | True        | True             | Return instances with at least one null match -- qs.filter(field_name__isnull=True)
+        | False       | True             | Exclude instances with at least one null match -- qs.exclude(field_name__isnull=True)
+
     """
 
-    def __init__(
-        self, field_name=None, lookup_expr="isnull", *, label=None, method=None, distinct=False, exclude=True, **kwargs
-    ):
+    def __init__(self, field_name=None, lookup_expr="isnull", *, label=None, method=None, distinct=True, **kwargs):
         if field_name is None:
             raise ValueError(f"Field name is required for {self.__class__.__name__}")
 
@@ -149,10 +167,22 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
             label=label,
             method=method,
             distinct=distinct,
-            exclude=exclude,
             widget=forms.StaticSelect2(choices=forms.BOOLEAN_CHOICES),
             **kwargs,
         )
+
+    def filter(self, qs, value):
+        if value in EMPTY_VALUES:
+            return qs
+        if self.distinct:
+            qs = qs.distinct()
+        lookup = f"{self.field_name}__{self.lookup_expr}"
+        if bool(value):
+            # if self.exclude=False, return instances with field populated
+            return qs.filter(**{lookup: self.exclude})
+        else:
+            # if self.exclude=False, exclude instances with field populated
+            return qs.exclude(**{lookup: self.exclude})
 
 
 class NumericArrayFilter(django_filters.NumberFilter):
@@ -400,6 +430,10 @@ class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilte
     Filter that supports filtering on values matching the `pk` field and another
     field of a foreign-key related object. The desired field is set using the `to_field_name`
     keyword argument on filter initialization (defaults to `name`).
+
+    NOTE that the `to_field_name` field does not have to be a "true" natural key (ie. unique), it
+    was just the best name we could come up with for this filter
+
     """
 
     field_class = forms.MultiMatchModelMultipleChoiceField

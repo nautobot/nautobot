@@ -358,7 +358,7 @@ class PrefixFactory(PrimaryModelFactory):
             return
 
         # 50% chance to create children
-        if not faker.Faker().pybool():
+        if factory.random.randgen.choice([True, False]):
             return
 
         action = "create" if create else "build"
@@ -404,13 +404,10 @@ class PrefixFactory(PrimaryModelFactory):
             if child_cidr > 128 or self.ip_version == 4 and child_cidr > 32:
                 raise ValueError(f"Unable to create {child_count} child prefixes in container prefix {self.cidr_str}.")
 
-            if self.type == PrefixTypeChoices.TYPE_CONTAINER:
-                weights = [10, 1]  # prefer network prefixes
-                child_type = factory.random.randgen.choices(
-                    [PrefixTypeChoices.TYPE_NETWORK, PrefixTypeChoices.TYPE_CONTAINER], weights
-                )[0]
-            else:
-                child_type = PrefixTypeChoices.TYPE_POOL
+            weights = [1, 6, 3]  # prefer network and pool prefixes
+            child_type = factory.random.randgen.choices(
+                [PrefixTypeChoices.TYPE_CONTAINER, PrefixTypeChoices.TYPE_NETWORK, PrefixTypeChoices.TYPE_POOL], weights
+            )[0]
 
             # Create child prefixes, preserving is_ipv6 from parent
             for count, address in enumerate(self.prefix.subnet(child_cidr)):

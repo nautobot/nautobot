@@ -245,6 +245,44 @@ menu_items = (
                 ),
             ),
             NavMenuGroup(
+                name="Modules",
+                weight=250,
+                items=(
+                    NavMenuItem(
+                        link="dcim:module_list",
+                        name="Modules",
+                        weight=100,
+                        permissions=[
+                            "dcim.view_module",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:module_add",
+                                permissions=[
+                                    "dcim.add_module",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:moduletype_list",
+                        name="Module Types",
+                        weight=200,
+                        permissions=[
+                            "dcim.view_moduletype",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:moduletype_add",
+                                permissions=[
+                                    "dcim.add_moduletype",
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            NavMenuGroup(
                 name="Software",
                 weight=300,
                 items=(
@@ -445,6 +483,15 @@ menu_items = (
                         weight=800,
                         permissions=[
                             "dcim.view_devicebay",
+                        ],
+                        buttons=(),
+                    ),
+                    NavMenuItem(
+                        link="dcim:modulebay_list",
+                        name="Module Bays",
+                        weight=850,
+                        permissions=[
+                            "dcim.view_modulebay",
                         ],
                         buttons=(),
                     ),
