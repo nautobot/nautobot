@@ -72,6 +72,61 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.23 (2024-05-28)
+
+### Security
+
+- [#5762](https://github.com/nautobot/nautobot/issues/5762) - Fixed missing member object permission enforcement (e.g., enforce Device permissions for a Dynamic Group containing Devices) when viewing Dynamic Group member objects in the UI or REST API ([GHSA-qmjf-wc2h-6x3q](https://github.com/nautobot/nautobot/security/advisories/GHSA-qmjf-wc2h-6x3q)).
+- [#5740](https://github.com/nautobot/nautobot/issues/5740) - Updated `requests` to `2.32.1` to address [GHSA-9wx4-h78v-vm56](https://github.com/psf/requests/security/advisories/GHSA-9wx4-h78v-vm56). This is not a direct dependency so it will not auto-update when upgrading Nautobot. Please be sure to update your local environment.
+
+### Housekeeping
+
+- [#5740](https://github.com/nautobot/nautobot/issues/5740) - Updated test dependency `requests` to `~2.32.1`.
+
+## v1.6.22 (2024-05-13)
+
+### Security
+
+- [#1858](https://github.com/nautobot/nautobot/issues/1858) - Added sanitization of HTML tags in the content of `BANNER_TOP`, `BANNER_BOTTOM`, and `BANNER_LOGIN` configuration to prevent against potential injection of malicious scripts (stored XSS) via these features ([GHSA-r2hr-4v48-fjv3](https://github.com/nautobot/nautobot/security/advisories/GHSA-r2hr-4v48-fjv3)).
+
+### Added
+
+- [#1858](https://github.com/nautobot/nautobot/issues/1858) - Added support in `BRANDING_FILEPATHS` configuration to specify a custom `css` and/or `javascript` file to be added to Nautobot page content.
+- [#1858](https://github.com/nautobot/nautobot/issues/1858) - Added Markdown support to the `BANNER_TOP`, `BANNER_BOTTOM`, and `BANNER_LOGIN` configuration settings.
+
+### Fixed
+
+- [#2974](https://github.com/nautobot/nautobot/issues/2974) - Fixed an error when deleting and then recreating a GitRepository that provides Jobs.
+
+## v1.6.21 (2024-05-07)
+
+### Security
+
+- [#5521](https://github.com/nautobot/nautobot/issues/5521) - Updated `Pillow` dependency to `~10.3.0` to address `CVE-2024-28219`.
+- [#5561](https://github.com/nautobot/nautobot/issues/5561) - Updated `idna` to `3.7` due to `CVE-2024-3651`. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#5624](https://github.com/nautobot/nautobot/issues/5624) - Updated `social-auth-app-django` dependency to `~5.4.1` to address `CVE-2024-32879`.
+- [#5675](https://github.com/nautobot/nautobot/issues/5675) - Updated `Jinja2` dependency to `3.1.4` to address `CVE-2024-34064`.
+
+## v1.6.20 (2024-04-30)
+
+### Security
+
+- [#5647](https://github.com/nautobot/nautobot/issues/5647) - Fixed a reflected-XSS vulnerability ([GHSA-jxgr-gcj5-cqqg](https://github.com/nautobot/nautobot/security/advisories/GHSA-jxgr-gcj5-cqqg)) in object-list view rendering of user-provided query parameters.
+
+### Fixed
+
+- [#5626](https://github.com/nautobot/nautobot/issues/5626) - Increased performance of `brief=true` in API endpoints by eliminating unnecessary database joins.
+
+## v1.6.19 (2024-04-23)
+
+### Security
+
+- [#5579](https://github.com/nautobot/nautobot/issues/5579) - Updated `sqlparse` to `0.5.0` to fix [GHSA-2m57-hf25-phgg](https://github.com/advisories/GHSA-2m57-hf25-phgg). This is not a direct dependency so it will not auto-update when upgrading Nautobot. Please be sure to update your local environment.
+
+### Fixed
+
+- [#5610](https://github.com/nautobot/nautobot/issues/5610) - Fixed static media failure on `/graphql/` and `/admin/` pages.
+
 ## v1.6.18 (2024-04-15)
 
 ### Security

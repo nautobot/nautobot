@@ -306,13 +306,13 @@ class DynamicGroupViewSet(NotesViewSetMixin, ModelViewSet):
     # @extend_schema(methods=["get"], responses={200: member_response})
     @action(detail=True, methods=["get"])
     def members(self, request, pk, *args, **kwargs):
-        """List member objects of the same type as the `content_type` for this dynamic group."""
+        """List the member objects of this dynamic group."""
         instance = get_object_or_404(self.queryset, pk=pk)
 
         # Retrieve the serializer for the content_type and paginate the results
         member_model_class = instance.content_type.model_class()
         member_serializer_class = get_serializer_for_model(member_model_class)
-        members = self.paginate_queryset(instance.members)
+        members = self.paginate_queryset(instance.members.restrict(request.user, "view"))
         member_serializer = member_serializer_class(members, many=True, context={"request": request})
         return self.get_paginated_response(member_serializer.data)
 

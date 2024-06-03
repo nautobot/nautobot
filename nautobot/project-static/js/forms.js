@@ -698,7 +698,8 @@ function initializeDynamicFilterForm(context){
             }
         })
         dynamic_query.forEach((value, key) => { if (value != "") { search_query.append(key, value); }});
-        let default_query = new URLSearchParams(new FormData(document.getElementById("default-filter").firstElementChild));
+        // Some list views may lack a default-filter form
+        let default_query = new URLSearchParams(new FormData(document.getElementById("default-filter")?.firstElementChild));
         default_query.forEach((value, key) => {
             if (value != "" && !search_query.has(key, value)) { search_query.append(key, value); }
         });

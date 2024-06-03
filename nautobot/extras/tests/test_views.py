@@ -783,9 +783,11 @@ class DynamicGroupTestCase(
         content_type = ContentType.objects.get_for_model(Device)
 
         # DynamicGroup objects to test.
-        DynamicGroup.objects.create(name="DG 1", content_type=content_type)
-        DynamicGroup.objects.create(name="DG 2", content_type=content_type)
-        DynamicGroup.objects.create(name="DG 3", content_type=content_type)
+        cls.dynamic_groups = [
+            DynamicGroup.objects.create(name="DG 1", content_type=content_type),
+            DynamicGroup.objects.create(name="DG 2", content_type=content_type),
+            DynamicGroup.objects.create(name="DG 3", content_type=content_type),
+        ]
 
         cls.form_data = {
             "name": "new_dynamic_group",
@@ -797,6 +799,38 @@ class DynamicGroupTestCase(
             "dynamic_group_memberships-MIN_NUM_FORMS": "0",
             "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
         }
+
+    def test_get_object_with_permission(self):
+        instance = self._get_queryset().first()
+        # Add view permissions for the group's members:
+        self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"))
+
+        response = super().test_get_object_with_permission()
+
+        response_body = extract_page_body(response.content.decode(response.charset))
+        # Check that the "members" table in the detail view includes all appropriate member objects
+        for member in instance.members:
+            self.assertIn(str(member.pk), response_body)
+
+    def test_get_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        # Add view permission for one of the group's members but not the others:
+        member1, member2 = instance.members[:2]
+        obj_perm = ObjectPermission(
+            name="Members permission",
+            constraints={"pk": member1.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(instance.content_type)
+
+        response = super().test_get_object_with_constrained_permission()
+
+        response_body = extract_page_body(response.content.decode(response.charset))
+        # Check that the "members" table in the detail view includes all permitted member objects
+        self.assertIn(str(member1.pk), response_body)
+        self.assertNotIn(str(member2.pk), response_body)
 
     def test_get_object_dynamic_groups_anonymous(self):
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
@@ -821,7 +855,6 @@ class DynamicGroupTestCase(
         self.assertIn("DG 3", response_body, msg=response_body)
 
     def test_get_object_dynamic_groups_with_constrained_permission(self):
-        self.add_permissions("extras.view_dynamicgroup")
         obj_perm = ObjectPermission(
             name="View a device",
             constraints={"pk": Device.objects.first().pk},
@@ -830,12 +863,22 @@ class DynamicGroupTestCase(
         obj_perm.save()
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Device))
+        obj_perm_2 = ObjectPermission(
+            name="View a Dynamic Group",
+            constraints={"pk": self.dynamic_groups[0].pk},
+            actions=["view"],
+        )
+        obj_perm_2.save()
+        obj_perm_2.users.add(self.user)
+        obj_perm_2.object_types.add(ContentType.objects.get_for_model(DynamicGroup))
 
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
         response_body = response.content.decode(response.charset)
         self.assertIn("DG 1", response_body, msg=response_body)
+        self.assertNotIn("DG 2", response_body, msg=response_body)
+        self.assertNotIn("DG 3", response_body, msg=response_body)
 
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.last().pk})
         response = self.client.get(url)
