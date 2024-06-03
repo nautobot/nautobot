@@ -2928,7 +2928,7 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
         }
 
 
-class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
+class PowerOutletTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
     model = PowerOutlet
 
     @classmethod
@@ -2996,8 +2996,12 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "new test description",
         }
 
+    def _update_module_bulk_add_data(self):
+        # Exclude `power_port` field because it depend on a device selected but module is been used for this testcase.
+        self.bulk_create_data.pop("power_port")
 
-class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
+
+class InterfaceTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
     model = Interface
 
     @classmethod
@@ -3150,6 +3154,12 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "new test description",
         }
 
+    def _update_module_bulk_add_data(self):
+        # Excluding these fields because they depend on a device selected but module is been used for this testcase
+        exclude_fields = ["bridge", "lag", "vrf", "untagged_vlan", "tagged_vlans", "mode"]
+        for field in exclude_fields:
+            self.bulk_create_data.pop(field)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_virtual_interface_with_parent_lag(self):
         """https://github.com/nautobot/nautobot/issues/4436."""
@@ -3186,7 +3196,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertNotIn(invalid_ipaddress_link, response_content)
 
 
-class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
+class FrontPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
     model = FrontPort
 
     @classmethod
@@ -3299,6 +3309,30 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     @unittest.skip("No DeviceBulkAddFrontPortView exists at present")
     def test_bulk_add_component(self):
         pass
+
+    def _update_module_bulk_add_data(self):
+        module = Module.objects.first()
+        rearports = (
+            RearPort.objects.create(
+                module=module,
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=24,
+                name="Rear Port 7",
+            ),
+            RearPort.objects.create(
+                module=module,
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=24,
+                name="Rear Port 8",
+            ),
+            RearPort.objects.create(
+                module=module,
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=24,
+                name="Rear Port 9",
+            ),
+        )
+        self.bulk_create_data["rear_port_set"] = [f"{rp.pk}:1" for rp in rearports]
 
 
 class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):

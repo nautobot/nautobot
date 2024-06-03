@@ -20,6 +20,7 @@ from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags import helpers
 from nautobot.core.testing import mixins, utils
 from nautobot.core.utils import lookup
+from nautobot.dcim.models import Module
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
 from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
 from nautobot.extras.models import CustomFieldModel, RelationshipModel
@@ -1613,3 +1614,28 @@ class ViewTestCases:
                     response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
                     expected_message = f"No valid {verbose_name_plural} were selected."
                     self.assertIn(expected_message, response.content.decode(response.charset))
+
+    class ModularDeviceComponentViewTestCase(DeviceComponentViewTestCase):
+        def _update_module_bulk_add_data(self):
+            """Override to modify `self.bulk_create_data` for your use case"""
+
+        def test_replace_position_with_parent_module_bay(self):
+            """
+            Test that the {position} placeholder is correctly replaced with the
+            selected module's parent_module_bay when creating a component template.
+            """
+            module = Module.objects.first()
+            module_bulk_add_data = {
+                "module": module.pk,
+                "name_pattern": "Component-{position} [1-3]",
+                "device": None,
+            }
+            self.bulk_create_data.update(module_bulk_add_data)
+            self._update_module_bulk_add_data()
+            self.test_create_multiple_objects_with_permission()
+            for x in self._get_queryset():
+                print(x)
+            created_objs = self._get_queryset().filter(
+                name__istartswith=f"Component-{module.parent_module_bay.position}"
+            )
+            self.assertEqual(created_objs.count(), self.bulk_create_count)

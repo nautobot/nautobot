@@ -1369,6 +1369,9 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
             data = deepcopy(request.POST)
 
             names = form.cleaned_data["name_pattern"]
+            if module := form.cleaned_data.get("module"):
+                position = module.parent_module_bay.position
+                names = [name.replace("{position}", position) for name in names]
             labels = form.cleaned_data.get("label_pattern")
             for i, name in enumerate(names):
                 label = labels[i] if labels else None
