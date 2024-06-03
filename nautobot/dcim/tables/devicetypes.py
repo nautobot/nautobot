@@ -108,7 +108,6 @@ class DeviceTypeTable(BaseTable):
     pk = ToggleColumn()
     manufacturer = tables.Column(linkify=True)
     model = tables.Column(linkify=True, verbose_name="Device Type")
-    manufacturer = tables.Column(linkify=True)
     device_family = tables.Column(linkify=True)
     is_full_depth = BooleanColumn(verbose_name="Full Depth")
     device_count = LinkedCountColumn(
