@@ -27,7 +27,7 @@ class ContactMixin(models.Model):
     )
 
 
-class DynamicGroupMixin:
+class DynamicGroupMixin(models.Model):
     """
     Add to a model to mark it as an appropriate member of DynamicGroups.
 
