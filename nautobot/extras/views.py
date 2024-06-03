@@ -12,6 +12,7 @@ from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.urls import reverse
+from django.urls.exceptions import NoReverseMatch
 from django.utils import timezone
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
@@ -709,8 +710,10 @@ class DynamicGroupView(generic.ObjectView):
         model = instance.content_type.model_class()
         table_class = get_table_for_model(model)
 
-        # Ensure that members cache is up-to-date for this specific group
-        members = instance.update_cached_members()
+        if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+            # Ensure that members cache is up-to-date for this specific group
+            members = instance.update_cached_members()
+            messages.success(request, f"Refreshed cached members list for {instance}")
 
         if table_class is not None:
             # Members table (for display on Members nav tab)

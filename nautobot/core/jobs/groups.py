@@ -25,12 +25,14 @@ class RefreshDynamicGroupCaches(Job):
         has_sensitive_variables = False
 
     def run(self, single_group=None):
-        groups = DynamicGroup.objects.restrict(self.user, "view").filter(group_type__n=DynamicGroupTypeChoices.TYPE_STATIC)
+        groups = DynamicGroup.objects.restrict(self.user, "view").exclude(
+            group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        )
         if single_group is not None:
             groups = groups.filter(pk=single_group.pk)
 
         for group in groups:
-            self.logger.info("Refreshing membership cache", extra={"object": group})
             group.update_cached_members()
+            self.logger.info("Cache refreshed successfully, now with %d members", group.count, extra={"object": group})
 
         self.logger.info("Cache(s) refreshed")
