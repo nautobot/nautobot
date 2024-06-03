@@ -22,6 +22,8 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
+from nautobot.cloud.models import CloudAccount
+from nautobot.cloud.tables import CloudAccountTable
 from nautobot.core.forms import ConfirmationForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import has_perms
@@ -729,7 +731,25 @@ class ManufacturerView(generic.ObjectView):
         }
         RequestConfig(request, paginate).configure(device_table)
 
-        return {"device_table": device_table, **super().get_extra_context(request, instance)}
+        # Cloud Accounts
+        accounts = (
+            CloudAccount.objects.restrict(request.user, "view")
+            .filter(provider=instance)
+            .select_related("secrets_group")
+        )
+
+        account_table = CloudAccountTable(accounts)
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(account_table)
+
+        return {
+            "device_table": device_table,
+            "account_table": account_table,
+            **super().get_extra_context(request, instance),
+        }
 
 
 class ManufacturerEditView(generic.ObjectEditView):
