@@ -1,2 +1,1 @@
-TODO update this
-Added `ContactMixin` and `StaticGroupMixin` abstract model mixin classes. Models that inherit from `OrganizationalModel` or `PrimaryModel` will automatically include these mixins.
+Added `ContactMixin` abstract model mixin class. Models that inherit from `OrganizationalModel` or `PrimaryModel` will automatically include this mixin.
