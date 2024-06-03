@@ -16,7 +16,7 @@ There are currently three ways to define the object members of a Dynamic group:
 +++ 2.3.0 "Static group assignment"
     Support for static assignment to groups was added, and the distinction between filter-based and set-based assignment was formally established.
 
-The members of each Dynamic Group are cached and tracked by [Static Group Association](staticgroupassociation) database records.
+The members of each Dynamic Group are cached and tracked by [Static Group Association](staticgroupassociation.md) database records.
 
 ## Introduction
 
