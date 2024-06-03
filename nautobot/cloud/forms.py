@@ -4,7 +4,7 @@ from nautobot.cloud.models import CloudAccount
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import DynamicModelChoiceField, DynamicModelMultipleChoiceField, MultiValueCharField
 from nautobot.dcim.models import Manufacturer
-from nautobot.extras.forms import NautobotBulkEditForm, NautobotFilterForm, NautobotModelForm
+from nautobot.extras.forms import NautobotBulkEditForm, NautobotFilterForm, NautobotModelForm, TagsBulkEditFormMixin
 from nautobot.extras.models import SecretsGroup
 
 #
@@ -27,10 +27,11 @@ class CloudAccountForm(NautobotModelForm):
             "description",
             "provider",
             "secrets_group",
+            "tags",
         ]
 
 
-class CloudAccountBulkEditForm(NautobotBulkEditForm):
+class CloudAccountBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=CloudAccount.objects.all(), widget=forms.MultipleHiddenInput)
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
     provider = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)

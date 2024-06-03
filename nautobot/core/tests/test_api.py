@@ -957,6 +957,7 @@ class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
                     "Route Targets": "/ipam/route-targets/",
                 },
                 "Services": {"Services": "/ipam/services/"},
+                "Cloud": {"Cloud Accounts": "/cloud/cloud-accounts/"},
                 "Config Contexts": {
                     "Config Contexts": "/extras/config-contexts/",
                     "Config Context Schemas": "/extras/config-context-schemas/",

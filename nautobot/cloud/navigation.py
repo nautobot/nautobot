@@ -41,11 +41,11 @@ menu_items = (
 
 navigation = (
     NavContext(
-        name="Inventory",
+        name="Networks",
         groups=(
             NavGrouping(
                 name="Cloud",
-                weight=400,
+                weight=450,
                 items=(
                     NavItem(
                         link="cloud:cloudaccount_list",
