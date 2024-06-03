@@ -44,7 +44,6 @@ class Migration(migrations.Migration):
                 "abstract": False,
             },
             bases=(
-                nautobot.extras.models.mixins.DynamicGroupMixin,
                 nautobot.extras.models.mixins.NotesMixin,
                 models.Model,
             ),
@@ -82,7 +81,6 @@ class Migration(migrations.Migration):
                 "abstract": False,
             },
             bases=(
-                nautobot.extras.models.mixins.DynamicGroupMixin,
                 nautobot.extras.models.mixins.NotesMixin,
                 models.Model,
             ),
@@ -141,7 +139,6 @@ class Migration(migrations.Migration):
                 "ordering": ("manufacturer", "model"),
             },
             bases=(
-                nautobot.extras.models.mixins.DynamicGroupMixin,
                 nautobot.extras.models.mixins.NotesMixin,
                 models.Model,
             ),

@@ -57,7 +57,6 @@ class Migration(migrations.Migration):
                 "ordering": ["name"],
             },
             bases=(
-                nautobot.extras.models.mixins.DynamicGroupMixin,
                 nautobot.extras.models.mixins.NotesMixin,
                 models.Model,
             ),

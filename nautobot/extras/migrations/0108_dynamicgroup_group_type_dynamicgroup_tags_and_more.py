@@ -97,7 +97,6 @@ class Migration(migrations.Migration):
                 "unique_together": {("dynamic_group", "associated_object_type", "associated_object_id")},
             },
             bases=(
-                nautobot.extras.models.mixins.DynamicGroupMixin,
                 nautobot.extras.models.mixins.NotesMixin,
                 models.Model,
             ),

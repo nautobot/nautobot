@@ -727,7 +727,7 @@ class DynamicFilterFormTest(TestCase):
                     ("color", "Color"),
                     ("content_types", "Content type(s)"),
                     ("created", "Created"),
-                    ("dynaic_groups", "Dynamic groups (name or ID)"),
+                    ("dynamic_groups", "Dynamic groups (name or ID)"),
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),

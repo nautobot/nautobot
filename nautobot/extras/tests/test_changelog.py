@@ -518,7 +518,7 @@ class ObjectChangeModelTest(TestCase):  # TODO: change to BaseModelTestCase once
         dg._set_members([])
         dg._set_members(members)
 
-        for sga in dg.static_group_associations(manager="all_objects"):
+        for sga in dg.static_group_associations(manager="all_objects").all():
             self.assertIsNone(get_changes_for_model(sga).first())
 
     def test_get_snapshots(self):

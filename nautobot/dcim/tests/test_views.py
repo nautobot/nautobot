@@ -2139,9 +2139,9 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         intf_status = Status.objects.get_for_model(Interface).first()
         intf_role = Role.objects.get_for_model(Interface).first()
         cls.interfaces = (
-            Interface.objects.create(device=devices[0], name="Interface 1", status=intf_status, role=intf_role),
-            Interface.objects.create(device=devices[0], name="Interface 2", status=intf_status),
-            Interface.objects.create(device=devices[0], name="Interface 3", status=intf_status, role=intf_role),
+            Interface.objects.create(device=devices[0], name="Test Interface 1", status=intf_status, role=intf_role),
+            Interface.objects.create(device=devices[0], name="Test Interface 2", status=intf_status),
+            Interface.objects.create(device=devices[0], name="Test Interface 3", status=intf_status, role=intf_role),
         )
 
         for device, ipaddress in zip(devices, ipaddresses):
@@ -2556,9 +2556,9 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         intf_status = Status.objects.get_for_model(Interface).first()
         intf_role = Role.objects.get_for_model(Interface).first()
         cls.interfaces = (
-            Interface.objects.create(module=modules[0], name="Interface 1", status=intf_status, role=intf_role),
-            Interface.objects.create(module=modules[0], name="Interface 2", status=intf_status),
-            Interface.objects.create(module=modules[0], name="Interface 3", status=intf_status, role=intf_role),
+            Interface.objects.create(module=modules[0], name="Test Interface 1", status=intf_status, role=intf_role),
+            Interface.objects.create(module=modules[0], name="Test Interface 2", status=intf_status),
+            Interface.objects.create(module=modules[0], name="Test Interface 3", status=intf_status, role=intf_role),
         )
 
         for module, ipaddress in zip(modules, ipaddresses):
@@ -3012,9 +3012,9 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         status_active = statuses[0]
         role = Role.objects.get_for_model(Interface).first()
         interfaces = (
-            Interface.objects.create(device=device, name="Interface 1", status=status_active, role=role),
-            Interface.objects.create(device=device, name="Interface 2", status=status_active),
-            Interface.objects.create(device=device, name="Interface 3", status=status_active, role=role),
+            Interface.objects.create(device=device, name="Test Interface 1", status=status_active, role=role),
+            Interface.objects.create(device=device, name="Test Interface 2", status=status_active),
+            Interface.objects.create(device=device, name="Test Interface 3", status=status_active, role=role),
             Interface.objects.create(
                 device=device,
                 name="LAG",
@@ -3630,73 +3630,73 @@ class CableTestCase(
         interfaces = (
             Interface.objects.create(
                 device=devices[0],
-                name="Interface 1",
+                name="Test Interface 1",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[0],
-                name="Interface 2",
+                name="Test Interface 2",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[0],
-                name="Interface 3",
+                name="Test Interface 3",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[1],
-                name="Interface 1",
+                name="Test Interface 1",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[1],
-                name="Interface 2",
+                name="Test Interface 2",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[1],
-                name="Interface 3",
+                name="Test Interface 3",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[2],
-                name="Interface 1",
+                name="Test Interface 1",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[2],
-                name="Interface 2",
+                name="Test Interface 2",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[2],
-                name="Interface 3",
+                name="Test Interface 3",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[3],
-                name="Interface 1",
+                name="Test Interface 1",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[3],
-                name="Interface 2",
+                name="Test Interface 2",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
             Interface.objects.create(
                 device=devices[3],
-                name="Interface 3",
+                name="Test Interface 3",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
@@ -3998,21 +3998,21 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         cls.interfaces = (
             Interface.objects.create(
                 device=device_1,
-                name="Interface 1",
+                name="Test Interface 1",
                 type=InterfaceTypeChoices.TYPE_1GE_SFP,
                 status=interface_status,
                 role=interface_role,
             ),
             Interface.objects.create(
                 device=device_1,
-                name="Interface 2",
+                name="Test Interface 2",
                 type=InterfaceTypeChoices.TYPE_1GE_SFP,
                 status=interface_status,
                 role=interface_role,
             ),
             Interface.objects.create(
                 device=device_1,
-                name="Interface 3",
+                name="Test Interface 3",
                 type=InterfaceTypeChoices.TYPE_1GE_SFP,
                 status=interface_status,
             ),
@@ -4020,7 +4020,7 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
         cls.device_2_interface = Interface.objects.create(
             device=device_2,
-            name="Interface 1",
+            name="Test Interface 1",
             type=InterfaceTypeChoices.TYPE_1GE_SFP,
             status=interface_status,
             role=interface_role,
@@ -4431,9 +4431,9 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         intf_status = Status.objects.get_for_model(Interface).first()
         intf_role = Role.objects.get_for_model(Interface).first()
         cls.interfaces = (
-            Interface.objects.create(device=device, name="Interface 1", status=intf_status, role=intf_role),
-            Interface.objects.create(device=device, name="Interface 2", status=intf_status),
-            Interface.objects.create(device=device, name="Interface 3", status=intf_status, role=intf_role),
+            Interface.objects.create(device=device, name="Test Interface 1", status=intf_status, role=intf_role),
+            Interface.objects.create(device=device, name="Test Interface 2", status=intf_status),
+            Interface.objects.create(device=device, name="Test Interface 3", status=intf_status, role=intf_role),
         )
 
         cls.form_data = {

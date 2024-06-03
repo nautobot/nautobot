@@ -133,13 +133,24 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(
-            qs,
+            qs.with_tree_fields(),
             [
                 self.child_location_1,
                 self.child_location_same_name_1,
                 self.child_location_2,
                 self.child_location_2a,
                 self.child_location_2ab,
+                self.child_location_same_name_2,
+            ],
+        )
+        self.assertQuerysetEqual(
+            qs.without_tree_fields(),
+            [
+                self.child_location_1,
+                self.child_location_2,
+                self.child_location_2a,
+                self.child_location_2ab,
+                self.child_location_same_name_1,
                 self.child_location_same_name_2,
             ],
         )
@@ -203,13 +214,24 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
         qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(
-            qs,
+            qs.with_tree_fields(),
             [
                 self.child_location_1,
                 self.child_location_same_name_1,
                 self.child_location_2,
                 self.child_location_2a,
                 self.child_location_2ab,
+                self.child_location_same_name_2,
+            ],
+        )
+        self.assertQuerysetEqual(
+            qs.without_tree_fields(),
+            [
+                self.child_location_1,
+                self.child_location_2,
+                self.child_location_2a,
+                self.child_location_2ab,
+                self.child_location_same_name_1,
                 self.child_location_same_name_2,
             ],
         )

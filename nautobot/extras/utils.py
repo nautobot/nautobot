@@ -146,8 +146,11 @@ class FeatureQuery:
         populate_model_features_registry()
         try:
             query = Q()
-            for app_label, models in self.as_dict():
-                query |= Q(app_label=app_label, model__in=models)
+            if not self.as_dict():  # no registered models??
+                raise KeyError
+            else:
+                for app_label, models in self.as_dict():
+                    query |= Q(app_label=app_label, model__in=models)
         except KeyError:
             query = Q(pk__in=[])
 

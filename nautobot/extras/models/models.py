@@ -74,7 +74,7 @@ class ConfigContext(
     ChangeLoggedModel,
     ConfigContextSchemaValidationMixin,
     ContactMixin,
-    DynamicGroupMixin,
+    # DynamicGroupMixin,  # TODO: conflicts with "dynamic_groups" M2M field on this model
     NotesMixin,
     SavedViewMixin,
     BaseModel,

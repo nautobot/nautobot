@@ -3520,10 +3520,8 @@ class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
 
         cls.update_data = {
             "name": "Group of something unknown",
-            "description": "It is a mystery",
         }
         cls.bulk_update_data = {
-            "description": "New description",
             "tenant": Tenant.objects.last().pk,
         }
 
@@ -3664,7 +3662,7 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
         )
 
         with self.subTest("create hidden association"):
-            sg = DynamicGroup.all_objects.exclude(group_type=DynamicGroupTypeChoices.TYPE_STATIC).first()
+            sg = DynamicGroup.objects.exclude(group_type=DynamicGroupTypeChoices.TYPE_STATIC).first()
             self.assertIsNotNone(sg)
             create_data = {
                 "dynamic_group": str(sg.pk),
@@ -3681,7 +3679,7 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
                 dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
             ).first()
             self.assertIsNotNone(sga)
-            url = self._get_detail_url(sga) + "?dynamic_group={sga.dynamic_group.pk}"
+            url = self._get_detail_url(sga) + f"?dynamic_group={sga.dynamic_group.pk}"
             update_data = {"associated_object_id": "00000000-0000-0000-0000-000000000000"}
             response = self.client.patch(url, update_data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
@@ -3693,7 +3691,7 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
                 dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
             ).first()
             self.assertIsNotNone(sga)
-            url = self._get_detail_url(sga) + "?dynamic_group={sga.dynamic_group.pk}"
+            url = self._get_detail_url(sga) + f"?dynamic_group={sga.dynamic_group.pk}"
             response = self.client.delete(url, **self.header)
             self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
             self.assertTrue(StaticGroupAssociation.all_objects.filter(pk=sga.pk).exists())

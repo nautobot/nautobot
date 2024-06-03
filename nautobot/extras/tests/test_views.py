@@ -792,6 +792,7 @@ class DynamicGroupTestCase(
             "name": "new_dynamic_group",
             "description": "I am a new dynamic group object.",
             "content_type": content_type.pk,
+            "group_type": DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
             "tenant": Tenant.objects.first().pk,
             # Management form fields required for the dynamic formset
             "dynamic_group_memberships-TOTAL_FORMS": "0",
@@ -989,7 +990,7 @@ class DynamicGroupTestCase(
             "data": post_data(
                 {
                     "content_type": location_ct.pk,
-                    "pk": list(Location.objects.filter(parent__isnull=True).values_list("pk", flat=True)),
+                    "pk": list(Location.objects.filter(parent__isnull=True).distinct().values_list("pk", flat=True)),
                     "add_to_groups": [group_1.pk],
                 },
             ),

@@ -108,7 +108,7 @@ class DynamicGroupTestBase(TestCase):
             DynamicGroup.objects.create(
                 name="Parent",
                 description="The parent group with no filter",
-                filter={},
+                group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
                 content_type=cls.device_ct,
             ),
             # Location-1 only
@@ -129,7 +129,7 @@ class DynamicGroupTestBase(TestCase):
             DynamicGroup.objects.create(
                 name="Third Child",
                 description="A third child group with a child of its own",
-                filter={},
+                group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
                 content_type=cls.device_ct,
             ),
             # Nested child of third-child to test ancestors/descendants
@@ -245,19 +245,22 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
     def test_full_clean_valid(self):
         """Test a clean validation."""
-        group = self.groups[0]
-        group.refresh_from_db()
-        old_filter = group.filter
+        set_group = self.groups[0]
+        filter_group = self.groups[1]
+        old_filter = filter_group.filter
 
         # Overload the filter and validate that it is the same afterward.
         new_filter = {"has_interfaces": True}
-        group.set_filter(new_filter)
-        group.validated_save()
-        self.assertEqual(group.filter, new_filter)
+        with self.assertRaises(TypeError):
+            set_group.set_filter(new_filter)
+            set_group.validated_save()
+        filter_group.set_filter(new_filter)
+        filter_group.validated_save()
+        self.assertEqual(filter_group.filter, new_filter)
 
         # Restore the old filter.
-        group.filter = old_filter
-        group.save()
+        filter_group.filter = old_filter
+        filter_group.save()
 
     def test_get_for_object(self):
         """Test `DynamicGroup.objects.get_for_object()`."""
@@ -671,7 +674,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
     def test_generate_query_for_filter(self):
         """Test `DynamicGroup._generate_query_for_filter()`."""
-        group = self.parent  # Any group will do, so why not this one?
+        group = self.first_child  # Any filter-based group will do, so why not this one?
         multi_value = ["Location 3"]
         fs = group.filterset_class()
         multi_field = fs.filters["location"]
@@ -716,11 +719,11 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         group = self.parent
 
         # A group with an empty filter will have a null `Q` object
-        parent_q = group._generate_filter_based_query(group)
+        parent_q = group._generate_filter_based_query()
         self.assertFalse(parent_q)
 
         # A child group with a filter set will result in a useful Q object.
-        child_q = group._generate_filter_based_query(self.second_child)
+        child_q = self.second_child._generate_filter_based_query()
         lookup_kwargs = dict(child_q.children)  # {name: value}
 
         # Assert that both querysets return the same results
@@ -1012,7 +1015,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         """
         Test that tags without being applied to any member instances can still be added as filters on DynamicGroups
         """
-        dg = self.groups[0]
+        dg = self.first_child
         unapplied_tag = Tag.objects.create(name="Unapplied Tag")
         unapplied_tag.content_types.set([ContentType.objects.get_for_model(Device)])
         unapplied_tag.save()
@@ -1166,9 +1169,16 @@ class DynamicGroupMembershipFilterTest(DynamicGroupTestBase, FilterTestCases.Fil
         ["weight"],
         ["group", "group__id"],
         ["group", "group__name"],
-        ["parent_group", "parent_group__id"],
-        ["parent_group", "parent_group__name"],
+        # ["parent_group", "parent_group__id"],  # would work but we only have 2 valid parent groups
+        # ["parent_group", "parent_group__name"],  # would work but we only have 2 valid parent groups
     )
+    exclude_q_filter_predicates = ["operatior"]
+
+    def test_parent_group(self):
+        parent_group_pk = self.queryset.first().parent_group.pk  # expecting 3
+        parent_group_name = self.queryset.last().parent_group.name  # expecting 1
+        params = {"parent_group": [parent_group_pk, parent_group_name]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_search(self):
         tests = {

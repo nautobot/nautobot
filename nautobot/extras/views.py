@@ -2453,7 +2453,7 @@ class DynamicGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixi
                             for dynamic_group in add_to_groups:
                                 association, created = StaticGroupAssociation.objects.get_or_create(
                                     dynamic_group=dynamic_group,
-                                    associated_object_type=content_type,
+                                    associated_object_type_id=content_type.id,
                                     associated_object_id=pk,
                                 )
                                 association.validated_save()

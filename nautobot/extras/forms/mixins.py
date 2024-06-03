@@ -167,7 +167,7 @@ class DynamicGroupModelFormMixin(forms.ModelForm):
     def save(self, commit=True):
         obj = super().save(commit=commit)
         if commit and obj.is_dynamic_group_associable_model:
-            current_groups = set(obj.dynamic_groups)
+            current_groups = set(obj.dynamic_groups.filter(group_type=DynamicGroupTypeChoices.TYPE_STATIC))
             for dynamic_group in set(self.cleaned_data.get("dynamic_groups")).difference(current_groups):
                 dynamic_group.add_members([obj])
             for dynamic_group in current_groups.difference(self.cleaned_data.get("dynamic_groups")):

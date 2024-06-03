@@ -44,7 +44,6 @@ class Migration(migrations.Migration):
             },
             bases=(
                 models.Model,
-                nautobot.extras.models.mixins.DynamicGroupMixin,
                 nautobot.extras.models.mixins.NotesMixin,
             ),
         ),
