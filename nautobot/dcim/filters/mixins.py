@@ -56,6 +56,10 @@ class DeviceComponentTemplateModelFilterSetMixin(NameSearchFilterSet, CustomFiel
         to_field_name="model",
         label="Device type (model or ID)",
     )
+    has_device_type = RelatedMembershipBooleanFilter(
+        field_name="device_type",
+        label="Has device type",
+    )
     label = MultiValueCharFilter(label="Label")
     description = MultiValueCharFilter(label="Description")
     id = MultiValueUUIDFilter(label="ID")
@@ -67,6 +71,10 @@ class ModularDeviceComponentTemplateModelFilterSetMixin(DeviceComponentTemplateM
         queryset=ModuleType.objects.all(),
         to_field_name="model",
         label="Module type (model or ID)",
+    )
+    has_module_type = RelatedMembershipBooleanFilter(
+        field_name="module_type",
+        label="Has module type",
     )
 
 

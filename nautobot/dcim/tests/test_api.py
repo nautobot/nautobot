@@ -179,6 +179,8 @@ class Mixins:
 
     class ModularDeviceComponentMixin:
         modular_component_create_data = {}
+        device_field = "device"  # field name for the parent device
+        module_field = "module"  # field name for the parent module
         update_data = {"label": "updated label", "description": "updated description"}
 
         def test_module_device_validation(self):
@@ -186,8 +188,8 @@ class Mixins:
 
             self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
             data = {
-                "module": self.module.pk,
-                "device": self.device.pk,
+                self.module_field: self.module.pk,
+                self.device_field: self.device.pk,
                 "name": "test parent module validation",
                 **self.modular_component_create_data,
             }
@@ -196,22 +198,22 @@ class Mixins:
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
             self.assertEqual(
                 response.json(),
-                {"non_field_errors": ["Only one of device or module must be set"]},
+                {"non_field_errors": [f"Only one of {self.device_field} or {self.module_field} must be set"]},
             )
 
-            data.pop("module")
+            data.pop(self.module_field)
             self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
 
-            data.pop("device")
-            data["module"] = self.module.pk
+            data.pop(self.device_field)
+            data[self.module_field] = self.module.pk
             self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
 
-            data.pop("module")
+            data.pop(self.module_field)
             response = self.client.post(url, data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
             self.assertEqual(
                 response.json(),
-                {"__all__": ["Either device or module must be set"]},
+                {"__all__": [f"Either {self.device_field} or {self.module_field} must be set"]},
             )
 
         def test_module_device_name_unique_validation(self):
@@ -220,7 +222,7 @@ class Mixins:
             self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
             modules = Module.objects.all()[:2]
             data = {
-                "module": modules[0].pk,
+                self.module_field: modules[0].pk,
                 "name": "test modular device component parent validation",
                 **self.modular_component_create_data,
             }
@@ -230,16 +232,16 @@ class Mixins:
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
             self.assertEqual(
                 response.json(),
-                {"non_field_errors": ["The fields module, name must make a unique set."]},
+                {"non_field_errors": [f"The fields {self.module_field}, name must make a unique set."]},
             )
 
             # same name, different module works
-            data["module"] = modules[1].pk
+            data[self.module_field] = modules[1].pk
             self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
 
             devices = Device.objects.all()[:2]
             data = {
-                "device": devices[0].pk,
+                self.device_field: devices[0].pk,
                 "name": "test modular device component parent validation",
                 **self.modular_component_create_data,
             }
@@ -249,11 +251,11 @@ class Mixins:
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
             self.assertEqual(
                 response.json(),
-                {"non_field_errors": ["The fields device, name must make a unique set."]},
+                {"non_field_errors": [f"The fields {self.device_field}, name must make a unique set."]},
             )
 
             # same name, different device works
-            data["device"] = devices[1].pk
+            data[self.device_field] = devices[1].pk
             self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
 
     class ModularDeviceComponentTemplateMixin:
@@ -1353,10 +1355,9 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
         ]
 
 
-class ModuleBayTemplateTest(Mixins.BaseComponentTestMixin):
+class ModuleBayTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BaseComponentTestMixin):
     model = ModuleBayTemplate
     choices_fields = []
-    update_data = {"label": "updated label", "description": "updated description"}
 
     @classmethod
     def setUpTestData(cls):
@@ -1365,89 +1366,17 @@ class ModuleBayTemplateTest(Mixins.BaseComponentTestMixin):
         cls.create_data = [
             {
                 "device_type": cls.device_type.pk,
-                "position": "Test1",
+                "name": "Test1",
             },
             {
                 "module_type": cls.module_type.pk,
-                "position": "Test2",
+                "name": "Test2",
             },
             {
                 "device_type": cls.device_type.pk,
-                "position": "Test3",
+                "name": "Test3",
             },
         ]
-
-    def test_module_type_device_type_validation(self):
-        """Assert that a modulebay template can have a module_type or a device_type but not both."""
-
-        self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
-        data = {
-            "module_type": self.module_type.pk,
-            "device_type": self.device_type.pk,
-            "position": "test parent module_type validation",
-        }
-        url = self._get_list_url()
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.json(),
-            {"non_field_errors": ["Only one of device_type or module_type must be set"]},
-        )
-
-        data.pop("module_type")
-        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
-
-        data.pop("device_type")
-        data["module_type"] = self.module_type.pk
-        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
-
-        data.pop("module_type")
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.json(),
-            {"__all__": ["Either device_type or module_type must be set"]},
-        )
-
-    def test_module_type_device_type_position_unique_validation(self):
-        """Assert uniqueness constraint is enforced for (device_type,position) and (module_type,position) fields."""
-
-        self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
-        module_types = ModuleType.objects.all()[:2]
-        data = {
-            "module_type": module_types[0].pk,
-            "position": "test modular device component template parent validation",
-        }
-        url = self._get_list_url()
-        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.json(),
-            {"non_field_errors": ["The fields module_type, position must make a unique set."]},
-        )
-
-        # same position, different module_type works
-        data["module_type"] = module_types[1].pk
-        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
-
-        device_types = DeviceType.objects.all()[:2]
-        data = {
-            "device_type": device_types[0].pk,
-            "position": "test modular device component template parent validation",
-        }
-        url = self._get_list_url()
-        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.json(),
-            {"non_field_errors": ["The fields device_type, position must make a unique set."]},
-        )
-
-        # same position, different device_type works
-        data["device_type"] = device_types[1].pk
-        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
 
 
 class PlatformTest(APIViewTestCases.APIViewTestCase):
@@ -2589,10 +2518,11 @@ class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeMode
         pass
 
 
-class ModuleBayTest(Mixins.BaseComponentTestMixin):
+class ModuleBayTest(Mixins.ModularDeviceComponentMixin, Mixins.BaseComponentTestMixin):
     model = ModuleBay
     choices_fields = []
-    update_data = {"label": "updated label", "description": "updated description"}
+    device_field = "parent_device"
+    module_field = "parent_module"
 
     @classmethod
     def setUpTestData(cls):
@@ -2601,93 +2531,21 @@ class ModuleBayTest(Mixins.BaseComponentTestMixin):
         cls.create_data = [
             {
                 "parent_device": cls.device.pk,
-                "position": "Test1",
+                "name": "Test1",
             },
             {
                 "parent_module": cls.module.pk,
-                "position": "Test2",
+                "name": "Test2",
             },
             {
                 "parent_device": cls.device.pk,
-                "position": "Test3",
+                "name": "Test3",
             },
         ]
 
     def get_deletable_object_pks(self):
         # Since Modules and ModuleBays are nestable, we need to delete ModuleBays that don't have any child ModuleBays
         return ModuleBay.objects.filter(installed_module__isnull=True).values_list("pk", flat=True)[:3]
-
-    def test_parent_module_parent_device_validation(self):
-        """Assert that a module bay can have a parent_module or a parent_device but not both."""
-
-        self.add_permissions("dcim.add_modulebay")
-        data = {
-            "parent_module": self.module.pk,
-            "parent_device": self.device.pk,
-            "position": "test parent module validation",
-        }
-        url = self._get_list_url()
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.json(),
-            {"non_field_errors": ["Only one of parent_device or parent_module must be set"]},
-        )
-
-        data.pop("parent_module")
-        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
-
-        data.pop("parent_device")
-        data["parent_module"] = self.module.pk
-        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
-
-        data.pop("parent_module")
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.json(),
-            {"__all__": ["Either parent_device or parent_module must be set"]},
-        )
-
-    def test_parent_module_parent_device_position_unique_validation(self):
-        """Assert uniqueness constraint is enforced for (parent_device,position) and (parent_module,position) fields."""
-
-        self.add_permissions("dcim.add_modulebay")
-        modules = Module.objects.all()[:2]
-        data = {
-            "parent_module": modules[0].pk,
-            "position": "test modulebay parent validation",
-        }
-        url = self._get_list_url()
-        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.json(),
-            {"non_field_errors": ["The fields parent_module, position must make a unique set."]},
-        )
-
-        # same position, different parent_module works
-        data["parent_module"] = modules[1].pk
-        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
-
-        devices = Device.objects.all()[:2]
-        data = {
-            "parent_device": devices[0].pk,
-            "position": "test modulebay parent validation",
-        }
-        url = self._get_list_url()
-        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
-        response = self.client.post(url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.json(),
-            {"non_field_errors": ["The fields parent_device, position must make a unique set."]},
-        )
-
-        # same position, different parent_device works
-        data["parent_device"] = devices[1].pk
-        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
 
 
 class CableTest(Mixins.BaseComponentTestMixin):

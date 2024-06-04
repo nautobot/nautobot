@@ -465,54 +465,25 @@ class DeviceBayTemplate(ComponentTemplateModel):
 
 
 @extras_features("custom_validators")
-class ModuleBayTemplate(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class ModuleBayTemplate(ModularComponentTemplateModel):
     """Template for a slot in a Device or Module which can contain Modules."""
 
-    device_type = models.ForeignKey(
-        to="dcim.DeviceType",
-        on_delete=models.CASCADE,
-        related_name="module_bay_templates",
-        blank=True,
-        null=True,
-    )
-    module_type = models.ForeignKey(
-        to="dcim.ModuleType",
-        on_delete=models.CASCADE,
-        related_name="module_bay_templates",
-        blank=True,
-        null=True,
-    )
-    _position = NaturalOrderingField(target_field="position", max_length=CHARFIELD_MAX_LENGTH, blank=True)
     position = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
-        blank=False,
-        null=False,
+        blank=True,
         help_text="The position of the module bay within the device or module",
     )
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
-    natural_key_field_names = ["device_type", "module_type", "position"]
-
-    class Meta:
-        ordering = ("device_type", "module_type", "_position")
-        constraints = [
-            models.UniqueConstraint(
-                fields=["device_type", "position"],
-                name="dcim_modulebaytemplate_device_type_position_unique",
-            ),
-            models.UniqueConstraint(
-                fields=["module_type", "position"],
-                name="dcim_modulebaytemplate_module_type_position_unique",
-            ),
-        ]
+    natural_key_field_names = ["device_type", "module_type", "name"]
 
     @property
     def parent(self):
         return self.device_type if self.device_type else self.module_type
 
     def __str__(self):
-        return f"{self.parent} ({self.position})"
+        return f"{self.parent} ({self.name})"
 
     def instantiate(self, device, module=None):
         custom_field_data = {}
@@ -524,6 +495,7 @@ class ModuleBayTemplate(BaseModel, ChangeLoggedModel, CustomFieldModel, Relation
         return ModuleBay(
             parent_device=device,
             parent_module=module,
+            name=self.name,
             position=self.position,
             label=self.label,
             description=self.description,
