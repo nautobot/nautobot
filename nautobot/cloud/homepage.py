@@ -10,7 +10,7 @@ layout = (
                 name="Cloud Accounts",
                 link="cloud:cloudaccount_list",
                 model=CloudAccount,
-                description="Accounts that provide a way to track account details for public and private cloud providers",
+                description="Account tracking for public and private cloud providers",
                 permissions=["cloud.view_cloudaccount"],
                 weight=100,
             ),
