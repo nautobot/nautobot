@@ -38,25 +38,3 @@ menu_items = (
         ),
     ),
 )
-
-navigation = (
-    NavContext(
-        name="Networks",
-        groups=(
-            NavGrouping(
-                name="Cloud",
-                weight=450,
-                items=(
-                    NavItem(
-                        link="cloud:cloudaccount_list",
-                        name="Cloud Accounts",
-                        weight=100,
-                        permissions=[
-                            "cloud.view_cloudaccount",
-                        ],
-                    ),
-                ),
-            ),
-        ),
-    ),
-)

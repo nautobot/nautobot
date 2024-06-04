@@ -59,10 +59,14 @@ class NautobotConfig(AppConfig):
         except ModuleNotFoundError:
             pass
 
+        # TODO we should remove this because it is no longer relevant.
         try:
             navigation = import_string(f"{self.name}.{self.navigation}")
             register_new_ui_menu_items(navigation)
         except ModuleNotFoundError:
+            pass
+        except ImportError:
+            # Cloud does not have navigation defined
             pass
 
         try:
