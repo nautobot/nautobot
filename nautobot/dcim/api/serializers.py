@@ -402,6 +402,7 @@ class RackElevationDetailFilterSerializer(serializers.Serializer):
 
 
 class ManufacturerSerializer(NautobotModelSerializer):
+    cloud_account_count = serializers.IntegerField(read_only=True)
     device_type_count = serializers.IntegerField(read_only=True)
     inventory_item_count = serializers.IntegerField(read_only=True)
     platform_count = serializers.IntegerField(read_only=True)

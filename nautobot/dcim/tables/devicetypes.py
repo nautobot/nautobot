@@ -49,6 +49,9 @@ __all__ = (
 class ManufacturerTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
+    cloud_account_count = LinkedCountColumn(
+        viewname="cloud:cloudaccount_list", url_params={"provider": "name"}, verbose_name="Cloud Accounts"
+    )
     device_type_count = LinkedCountColumn(
         viewname="dcim:devicetype_list", url_params={"manufacturer": "name"}, verbose_name="Device Types"
     )
@@ -65,6 +68,7 @@ class ManufacturerTable(BaseTable):
         fields = (
             "pk",
             "name",
+            "cloud_account_count",
             "device_type_count",
             "inventory_item_count",
             "platform_count",

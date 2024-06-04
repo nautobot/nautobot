@@ -16,6 +16,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from nautobot.circuits.models import Circuit
+from nautobot.cloud.models import CloudAccount
 from nautobot.core.api.exceptions import ServiceUnavailable
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.views import ModelViewSet
@@ -262,6 +263,7 @@ class RackReservationViewSet(NautobotModelViewSet):
 
 class ManufacturerViewSet(NautobotModelViewSet):
     queryset = Manufacturer.objects.annotate(
+        cloud_account_count=count_related(CloudAccount, "provider"),
         device_type_count=count_related(DeviceType, "manufacturer"),
         inventory_item_count=count_related(InventoryItem, "manufacturer"),
         platform_count=count_related(Platform, "manufacturer"),
