@@ -84,7 +84,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 self.saved_view = None
                 if saved_view_pk is not None:
                     try:
-                        self.saved_view = SavedView.objects.restrict(request.user, "view").get(pk=saved_view_pk)
+                        self.saved_view = SavedView.objects.get(pk=saved_view_pk)
                     except ObjectDoesNotExist:
                         pass
                 if view.request.GET.getlist("sort") or (

@@ -53,25 +53,23 @@
                 <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span> Saved Views <span class="caret"></span>
             </button>
             <ul class="dropdown-menu">
-                {% if perms.users.view_savedview %}
-                    {% for saved_view in saved_views %}
-                        <li>
-                            <a href="{{ saved_view.get_absolute_url }}">
-                                {% if saved_view == current_saved_view %}
-                                    <i class="mdi mdi-view-compact-outline text-bold" aria-hidden="true"></i>
-                                    <strong>
-                                        {{saved_view.name}}
-                                    </strong>
-                                {% else %}
-                                    <i class="mdi mdi-view-compact-outline text-muted" aria-hidden="true"></i>
+                {% for saved_view in saved_views %}
+                    <li>
+                        <a href="{{ saved_view.get_absolute_url }}">
+                            {% if saved_view == current_saved_view %}
+                                <i class="mdi mdi-view-compact-outline text-bold" aria-hidden="true"></i>
+                                <strong>
                                     {{saved_view.name}}
-                                {% endif %}
-                            </a>
-                        </li>
-                    {% endfor %}
-                    {% if saved_views %}
-                        <li role="separator" class="divider"></li>
-                    {% endif %}
+                                </strong>
+                            {% else %}
+                                <i class="mdi mdi-view-compact-outline text-muted" aria-hidden="true"></i>
+                                {{saved_view.name}}
+                            {% endif %}
+                        </a>
+                    </li>
+                {% endfor %}
+                {% if saved_views %}
+                    <li role="separator" class="divider"></li>
                 {% endif %}
                 {% if current_saved_view %}
                     {% if perms.users.change_savedview %}
@@ -83,14 +81,12 @@
                         </li>
                     {% endif %}
                 {% endif %}
-                {% if perms.users.add_savedview %}
-                    <li>
-                        <a href="" data-toggle="modal" data-target="#saved_view_modal" title="Save Current View As">
-                            <i class="mdi mdi-content-save-plus-outline text-muted" aria-hidden="true"></i>
-                            <span>Save As New View</span>
-                        </a>
-                    </li>
-                {% endif %}
+                <li>
+                    <a href="" data-toggle="modal" data-target="#saved_view_modal" title="Save Current View As">
+                        <i class="mdi mdi-content-save-plus-outline text-muted" aria-hidden="true"></i>
+                        <span>Save As New View</span>
+                    </a>
+                </li>
                 {% if current_saved_view and perms.users.change_savedview %}
                     <li>
                         <a href="" data-toggle="modal" data-target="#clear_view_modal" title="Confirm Clear View">

@@ -250,6 +250,13 @@ class SavedViewUIViewSet(
     table_class = SavedViewTable
     action_buttons = ("export",)
 
+    def get_queryset(self):
+        """
+        Get the list of items for this view.
+        All users should be able to see saved views so we do not apply extra permissions.
+        """
+        return self.queryset
+
     def get_required_permission(self):
         """
         Obtain the permissions needed to perform certain actions on a model.
@@ -257,10 +264,15 @@ class SavedViewUIViewSet(
         queryset = self.get_queryset()
         try:
             actions = [self.get_action()]
+            actions_copy = [self.get_action()]
             for i, item in enumerate(actions):
                 # Enforce users:change_savedview instead of users:clear_savedview
                 if item == "clear":
-                    actions[i] = "change"
+                    actions_copy[i] = "change"
+                # All users should be able to view existing saved views and add new saved views.
+                if item in ["add", "view"]:
+                    actions_copy.pop(i)
+            actions = actions_copy
         except KeyError:
             messages.error(
                 self.request,
@@ -402,7 +414,7 @@ class SavedViewUIViewSet(
     @action(detail=True, name="Clear", methods=["post"], url_path="clear", url_name="clear")
     def clear(self, request, pk):
         try:
-            sv = SavedView.objects.restrict(request.user, "view").get(pk=pk)
+            sv = SavedView.objects.get(pk=pk)
             sv.config = {}
             sv.validated_save()
             list_view_url = reverse(sv.view) + f"?saved_view={pk}"
