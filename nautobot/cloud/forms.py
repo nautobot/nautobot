@@ -2,7 +2,12 @@ from django import forms
 
 from nautobot.cloud.models import CloudAccount
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
-from nautobot.core.forms import DynamicModelChoiceField, DynamicModelMultipleChoiceField, MultiValueCharField
+from nautobot.core.forms import (
+    DynamicModelChoiceField,
+    DynamicModelMultipleChoiceField,
+    MultiValueCharField,
+    TagFilterField,
+)
 from nautobot.dcim.models import Manufacturer
 from nautobot.extras.forms import NautobotBulkEditForm, NautobotFilterForm, NautobotModelForm, TagsBulkEditFormMixin
 from nautobot.extras.models import SecretsGroup
@@ -52,13 +57,15 @@ class CloudAccountFilterForm(NautobotFilterForm):
         "name",
         "provider",
         "secrets_group",
+        "tags",
     ]
     q = forms.CharField(required=False, label="Search")
-    name = MultiValueCharField(required=False, label="Name")
-    account_number = MultiValueCharField(required=False, label="Account Number")
+    name = MultiValueCharField(required=False)
+    account_number = MultiValueCharField(required=False)
     secrets_group = DynamicModelMultipleChoiceField(
         queryset=SecretsGroup.objects.all(), to_field_name="name", required=False
     )
     provider = DynamicModelMultipleChoiceField(
         queryset=Manufacturer.objects.all(), to_field_name="name", required=False
     )
+    tags = TagFilterField(model)

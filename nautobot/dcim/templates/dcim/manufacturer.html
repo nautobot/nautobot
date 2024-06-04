@@ -17,12 +17,14 @@
                         <a href="{% url 'dcim:device_list' %}?manufacturer={{ object.name }}">{{ device_table.rows|length }}</a>
                     </td>
                 </tr>
-                <tr>
-                    <td>Cloud Accounts</td>
-                    <td>
-                        <a href="{% url 'cloud:cloudaccount_list' %}?provider={{ object.name }}">{{ account_table.rows|length }}</a>
-                    </td>
-                </tr>
+                {% if cloud_account_table.rows %}
+                    <tr>
+                        <td>Cloud Accounts</td>
+                        <td>
+                            <a href="{% url 'cloud:cloudaccount_list' %}?provider={{ object.name }}">{{ cloud_account_table.rows|length }}</a>
+                        </td>
+                    </tr>
+                {% endif %}
             </table>
         </div>
 {% endblock content_left_page %}
@@ -41,20 +43,22 @@
                 </div>
             {% endif %}
         </div>
-    {% include 'inc/paginator.html' with paginator=account_table.paginator page=account_table.page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <strong>Cloud Accounts</strong>
-        </div>
-        {% include 'inc/table.html' with table=account_table %}
-        {% if perms.cloud.add_cloudaccount %}
-            <div class="panel-footer text-right noprint">
-                <a href="{% url 'cloud:cloudaccount_add' %}?provider={{ object.pk }}" class="btn btn-xs btn-primary">
-                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Cloud Account
-                </a>
+    {% include 'inc/paginator.html' with paginator=device_table.paginator page=device_table.page %}
+    {% if cloud_account_table.rows %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Cloud Accounts</strong>
             </div>
-        {% endif %}
-    </div>
-    {% include 'inc/paginator.html' with paginator=account_table.paginator page=account_table.page %}
+            {% include 'inc/table.html' with table=cloud_account_table %}
+            {% if perms.cloud.add_cloudaccount %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'cloud:cloudaccount_add' %}?provider={{ object.pk }}" class="btn btn-xs btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Cloud Account
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        {% include 'inc/paginator.html' with paginator=cloud_account_table.paginator page=cloud_account_table.page %}
+    {% endif %}
     <div class="row"></div>
 {% endblock content_full_width_page %}

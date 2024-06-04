@@ -761,22 +761,22 @@ class ManufacturerView(generic.ObjectView):
         RequestConfig(request, paginate).configure(device_table)
 
         # Cloud Accounts
-        accounts = (
+        cloud_accounts = (
             CloudAccount.objects.restrict(request.user, "view")
             .filter(provider=instance)
             .select_related("secrets_group")
         )
 
-        account_table = CloudAccountTable(accounts)
+        cloud_account_table = CloudAccountTable(cloud_accounts)
         paginate = {
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
         }
-        RequestConfig(request, paginate).configure(account_table)
+        RequestConfig(request, paginate).configure(cloud_account_table)
 
         return {
             "device_table": device_table,
-            "account_table": account_table,
+            "cloud_account_table": cloud_account_table,
             **super().get_extra_context(request, instance),
         }
 
