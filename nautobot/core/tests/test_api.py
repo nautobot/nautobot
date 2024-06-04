@@ -945,6 +945,7 @@ class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
                 },
             },
             "Networks": {
+                "Cloud": {"Cloud Accounts": "/cloud/cloud-accounts/"},
                 "IP Management": {
                     "IP Addresses": "/ipam/ip-addresses/",
                     "Prefixes": "/ipam/prefixes/",
