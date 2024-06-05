@@ -2,6 +2,7 @@ from nautobot.cloud import models
 from nautobot.core.testing import APIViewTestCases
 from nautobot.dcim.models import Manufacturer
 from nautobot.extras.models import SecretsGroup
+from nautobot.ipam.models import Prefix
 
 
 class CloudAccountTest(APIViewTestCases.APIViewTestCase):
@@ -14,37 +15,49 @@ class CloudAccountTest(APIViewTestCases.APIViewTestCase):
             SecretsGroup.objects.create(name="Secrets Group 2"),
             SecretsGroup.objects.create(name="Secrets Group 3"),
         )
-        manufacturers = Manufacturer.objects.all()
+        cls.manufacturers = Manufacturer.objects.all()
         cls.create_data = [
             {
                 "name": "Account 1",
                 "account_number": "1238910123",
-                "provider": manufacturers[0].pk,
+                "provider": cls.manufacturers[0].pk,
                 "secrets_group": secrets_groups[0].pk,
             },
             {
                 "name": "Account 2",
                 "account_number": "5123121012",
-                "provider": manufacturers[1].pk,
+                "provider": cls.manufacturers[1].pk,
                 "secrets_group": secrets_groups[1].pk,
             },
             {
                 "name": "Account 3",
                 "account_number": "6782109915",
-                "provider": manufacturers[3].pk,
+                "provider": cls.manufacturers[3].pk,
                 "secrets_group": secrets_groups[2].pk,
                 "description": "This is cloud account 3",
             },
             {
                 "name": "Account 4",
                 "account_number": "0989076098",
-                "provider": manufacturers[4].pk,
+                "provider": cls.manufacturers[4].pk,
             },
         ]
         cls.bulk_update_data = {
-            "provider": manufacturers[2].pk,
+            "provider": cls.manufacturers[2].pk,
             "secrets_group": secrets_groups[1].pk,
         }
+
+    def get_deletable_object_pks(self):
+        models.CloudAccount.objects.create(
+            name="Deletable Account 1", account_number="12345", provider=self.manufacturers[0]
+        )
+        models.CloudAccount.objects.create(
+            name="Deletable Account 2", account_number="23467", provider=self.manufacturers[0]
+        )
+        models.CloudAccount.objects.create(
+            name="Deletable Account 3", account_number="345678", provider=self.manufacturers[0]
+        )
+        return super().get_deletable_object_pks()
 
 
 class CloudTypeTest(APIViewTestCases.APIViewTestCase):
@@ -55,31 +68,37 @@ class CloudTypeTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        manufacturers = Manufacturer.objects.all()
+        cls.manufacturers = Manufacturer.objects.all()
         cls.create_data = [
             {
-                "name": "Account 1",
-                "provider": manufacturers[0].pk,
-                "content_types": ["ipam.prefix", "ipam.vlangroup", "ipam.vlan"],
+                "name": "Type 1",
+                "provider": cls.manufacturers[0].pk,
+                "content_types": ["cloud.cloudnetwork"],
                 "description": "An example description",
             },
             {
-                "name": "Account 2",
-                "provider": manufacturers[1].pk,
-                "content_types": ["ipam.prefix", "ipam.vlangroup"],
+                "name": "Type 2",
+                "provider": cls.manufacturers[1].pk,
+                "content_types": [],
             },
             {
-                "name": "Account 3",
-                "provider": manufacturers[3].pk,
-                "content_types": ["ipam.prefix"],
+                "name": "Type 3",
+                "provider": cls.manufacturers[3].pk,
+                "content_types": ["cloud.cloudnetwork"],
             },
             {
-                "name": "Account 4",
-                "provider": manufacturers[4].pk,
+                "name": "Type 4",
+                "provider": cls.manufacturers[4].pk,
                 "description": "An example description",
-                "content_types": ["ipam.vlan"],
+                "content_types": [],
             },
         ]
+
+    def get_deletable_object_pks(self):
+        models.CloudType.objects.create(name="Deletable Type 1", provider=self.manufacturers[0])
+        models.CloudType.objects.create(name="Deletable Type 2", provider=self.manufacturers[0])
+        models.CloudType.objects.create(name="Deletable Type 3", provider=self.manufacturers[0])
+        return super().get_deletable_object_pks()
 
 
 class CloudNetworkTest(APIViewTestCases.APIViewTestCase):
@@ -118,3 +137,25 @@ class CloudNetworkTest(APIViewTestCases.APIViewTestCase):
             "cloud_account": models.CloudAccount.objects.last().pk,
             "extra_config": {"A": 1, "B": 2, "C": 3},
         }
+
+
+class CloudNetworkPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
+    model = models.CloudNetworkPrefixAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        prefixes = list(Prefix.objects.all()[:3])
+        cls.create_data = [
+            {
+                "cloud_network": models.CloudNetwork.objects.exclude(prefixes=prefixes[0]).first().pk,
+                "prefix": prefixes[0].pk,
+            },
+            {
+                "cloud_network": models.CloudNetwork.objects.exclude(prefixes=prefixes[1]).first().pk,
+                "prefix": prefixes[1].pk,
+            },
+            {
+                "cloud_network": models.CloudNetwork.objects.exclude(prefixes=prefixes[2]).first().pk,
+                "prefix": prefixes[2].pk,
+            },
+        ]

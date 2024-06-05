@@ -52,7 +52,7 @@ class CloudTypeFactory(PrimaryModelFactory):
 class CloudNetworkFactory(PrimaryModelFactory):
     class Meta:
         model = models.CloudNetwork
-        exclude = ("has_description", "has_parent", "has_prefixes")
+        exclude = ("has_description", "has_parent")
 
     name = factory.LazyAttributeSequence(lambda o, n: f"CloudNetwork {n + 1}")
     has_description = NautobotBoolIterator()
@@ -60,7 +60,6 @@ class CloudNetworkFactory(PrimaryModelFactory):
     cloud_type = random_instance(models.CloudType, allow_null=False)
     cloud_account = random_instance(models.CloudAccount, allow_null=False)
     has_parent = NautobotBoolIterator()
-    has_prefixes = NautobotBoolIterator()
     extra_config = factory.Faker("pydict", value_types=[str, bool, int])
 
     @factory.lazy_attribute
@@ -77,5 +76,5 @@ class CloudNetworkFactory(PrimaryModelFactory):
         if create:
             if extracted:
                 self.prefixes.set(extracted)
-            elif self.has_prefixes:
+            else:
                 self.prefixes.set(get_random_instances(Prefix))

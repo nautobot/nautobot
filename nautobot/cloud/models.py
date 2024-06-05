@@ -5,6 +5,7 @@ from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 from jsonschema.validators import Draft7Validator
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.extras.utils import extras_features
 
@@ -97,7 +98,12 @@ class CloudNetwork(PrimaryModel):
     parent = models.ForeignKey(
         to="cloud.CloudNetwork", on_delete=models.SET_NULL, blank=True, null=True, related_name="children"
     )
-    prefixes = models.ManyToManyField(to="ipam.Prefix", related_name="cloud_networks")
+    prefixes = models.ManyToManyField(
+        blank=True,
+        related_name="cloud_networks",
+        to="ipam.Prefix",
+        through="cloud.CloudNetworkPrefixAssignment",
+    )
     extra_config = models.JSONField(null=True, blank=True)
 
     class Meta:
@@ -117,6 +123,8 @@ class CloudNetwork(PrimaryModel):
             if self.parent == self:
                 raise ValidationError({"parent": "A CloudNetwork may not be its own parent."})
 
+        # TODO: should we enforce that self.cloud_type.provider == self.cloud_account.provider?
+
         # Copied from nautobot.extras.models.models.ConfigContextSchemaValidationMixin
         schema = self.cloud_type.config_schema
         if schema:
@@ -131,3 +139,16 @@ class CloudNetwork(PrimaryModel):
                         ]
                     }
                 )
+
+
+@extras_features("graphql")
+class CloudNetworkPrefixAssignment(BaseModel):
+    cloud_network = models.ForeignKey(CloudNetwork, on_delete=models.CASCADE, related_name="prefix_assignments")
+    prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="cloud_network_assignments")
+
+    class Meta:
+        unique_together = ["cloud_network", "prefix"]
+        ordering = ["cloud_network", "prefix"]
+
+    def __str__(self):
+        return f"{self.cloud_network}: {self.prefix}"

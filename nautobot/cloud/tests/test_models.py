@@ -18,7 +18,7 @@ class CloudNetworkModelTestCase(ModelTestCases.BaseModelTestCase):
     def test_parent_may_not_have_parent(self):
         illegal_parent = models.CloudNetwork.objects.filter(parent__isnull=False).first()
         with self.assertRaises(ValidationError):
-            CloudNetwork(
+            models.CloudNetwork(
                 name="Grandchild",
                 cloud_account=models.CloudAccount.objects.first(),
                 cloud_type=models.CloudType.objects.first(),
@@ -26,7 +26,7 @@ class CloudNetworkModelTestCase(ModelTestCases.BaseModelTestCase):
             ).clean()
 
     def test_parent_may_not_be_self(self):
-        cloud_network = CloudNetwork(
+        cloud_network = models.CloudNetwork(
             name="Loop",
             cloud_account=models.CloudAccount.objects.last(),
             cloud_type=models.CloudType.objects.last(),
@@ -37,3 +37,7 @@ class CloudNetworkModelTestCase(ModelTestCases.BaseModelTestCase):
             cloud_network.clean()
 
     # TODO: test schema validation of extra_config
+
+
+class CloudNetworkPrefixAssignmentModelTestCase(ModelTestCases.BaseModelTestCase):
+    model = models.CloudNetworkPrefixAssignment

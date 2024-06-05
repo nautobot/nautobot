@@ -42,11 +42,11 @@ class CloudTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
     ]
 
     def test_content_types(self):
-        ca_ct = ContentType.objects.get_for_model(CloudAccount)
-        params = {"content_types": ["cloud.cloudaccount"]}
+        cn_ct = ContentType.objects.get_for_model(models.CloudNetwork)
+        params = {"content_types": ["cloud.cloudnetwork"]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            CloudType.objects.filter(content_types=ca_ct),
+            models.CloudType.objects.filter(content_types=cn_ct),
         )
 
 
@@ -62,4 +62,14 @@ class CloudNetworkTestCase(FilterTestCases.NameOnlyFilterTestCase):
         ("name",),
         ("parent", "parent__id"),
         ("parent", "parent__name"),
+    ]
+
+
+class CloudNetworkPrefixAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = models.CloudNetworkPrefixAssignment.objects.all()
+    filterset = filters.CloudNetworkPrefixAssignmentFilterSet
+    generic_filter_tests = [
+        ("cloud_network", "cloud_network__id"),
+        ("cloud_network", "cloud_network__name"),
+        ("prefix", "prefix__id"),
     ]

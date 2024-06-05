@@ -1,5 +1,8 @@
+import django_filters
+
 from nautobot.cloud import models
 from nautobot.core.filters import (
+    BaseFilterSet,
     ContentTypeMultipleChoiceFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
     SearchFilter,
@@ -7,6 +10,7 @@ from nautobot.core.filters import (
 from nautobot.dcim.models import Manufacturer
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import SecretsGroup
+from nautobot.ipam.models import Prefix
 
 
 class CloudAccountFilterSet(NautobotFilterSet):
@@ -61,7 +65,7 @@ class CloudTypeFilterSet(NautobotFilterSet):
 
     class Meta:
         model = models.CloudType
-        fields = ["id", "name", "description"]
+        fields = ["id", "name", "description", "tags"]
 
 
 class CloudNetworkFilterSet(NautobotFilterSet):
@@ -86,4 +90,24 @@ class CloudNetworkFilterSet(NautobotFilterSet):
 
     class Meta:
         model = models.CloudNetwork
-        fields = ["id", "name", "description"]
+        fields = ["id", "name", "description", "tags"]
+
+
+class CloudNetworkPrefixAssignmentFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "cloud_network__name": "icontains",
+            "cloud_network__description": "icontains",
+            # TODO: add prefix search, currently implemented as a custom search() method on PrefixFilterSet
+        }
+    )
+    cloud_network = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.CloudNetwork.objects.all(),
+        label="Cloud network (name or ID)",
+    )
+    # Prefix doesn't have an appropriate natural key for NaturalKeyOrPKMultipleChoiceFilter
+    prefix = django_filters.ModelMultipleChoiceFilter(queryset=Prefix.objects.all())
+
+    class Meta:
+        model = models.CloudNetworkPrefixAssignment
+        fields = ["id"]
