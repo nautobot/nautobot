@@ -9,7 +9,7 @@ from django.contrib.auth import (
     update_session_auth_hash,
 )
 from django.contrib.auth.models import AnonymousUser
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
@@ -19,7 +19,7 @@ from django.utils.encoding import iri_to_uri
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
-from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.utils.config import get_settings_or_config
@@ -266,11 +266,7 @@ class SavedViewUIViewSet(
             actions = [self.get_action()]
             actions_copy = [self.get_action()]
             for i, item in enumerate(actions):
-                # Enforce users:change_savedview instead of users:clear_savedview
-                if item == "clear":
-                    actions_copy[i] = "change"
-                # All users should be able to view existing saved views and add new saved views.
-                if item in ["add", "view"]:
+                if item in ["add", "view", "change", "delete"]:
                     actions_copy.pop(i)
             actions = actions_copy
         except KeyError:
@@ -294,7 +290,14 @@ class SavedViewUIViewSet(
         """
         Extract filter_params, pagination and sort_order from request.GET and apply it to the SavedView specified
         """
-        sv = get_object_or_404(SavedView, pk=kwargs.get("pk", None))
+        sv = SavedView.objects.get(pk=kwargs.get("pk", None))
+        if sv.owner == request.user or request.user.has_perms(["users.change_savedview"]):
+            pass
+        else:
+            messages.error(
+                request, f"You do not have the required permission to modify this Saved View owned by {sv.owner}"
+            )
+            return redirect(self.get_return_url(request, obj=sv))
         table_changes_pending = request.GET.get("table_changes_pending", False)
         all_filters_removed = request.GET.get("all_filters_removed", False)
         pagination_count = request.GET.get("per_page", None)
@@ -411,18 +414,21 @@ class SavedViewUIViewSet(
             messages.error(request, e)
             return redirect(self.get_return_url(request))
 
-    @action(detail=True, name="Clear", methods=["post"], url_path="clear", url_name="clear")
-    def clear(self, request, pk):
-        try:
-            sv = SavedView.objects.get(pk=pk)
-            sv.config = {}
-            sv.validated_save()
-            list_view_url = reverse(sv.view) + f"?saved_view={pk}"
-            messages.success(request, f"Successfully cleared saved view {sv.name}")
-            return redirect(list_view_url)
-        except ObjectDoesNotExist:
-            messages.error(request, f"Saved view {pk} not found")
-            return redirect(reverse("users:savedview_list"))
+    def destroy(self, request, *args, **kwargs):
+        """
+        request.GET: render the ObjectDeleteConfirmationForm which is passed to NautobotHTMLRenderer as Response.
+        request.POST: call perform_destroy() which validates the form and perform the action of delete.
+        Override to add more variables to Response
+        """
+        sv = SavedView.objects.get(pk=kwargs.get("pk", None))
+        if sv.owner == request.user or request.user.has_perms(["users.delete_savedview"]):
+            pass
+        else:
+            messages.error(
+                request, f"You do not have the required permission to delete this Saved View owned by {sv.owner}"
+            )
+            return redirect(self.get_return_url(request, obj=sv))
+        return super().destroy(request, *args, **kwargs)
 
 
 #

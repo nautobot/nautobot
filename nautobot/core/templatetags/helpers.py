@@ -821,11 +821,6 @@ def saved_view_modal(
     }
 
 
-@register.inclusion_tag("utilities/templatetags/clear_view_modal.html")
-def clear_view_modal(saved_view):
-    return {"saved_view": saved_view}
-
-
 @register.inclusion_tag("utilities/templatetags/static_group_assignment_modal.html")
 def static_group_assignment_modal(request, content_type):
     from nautobot.extras.forms import StaticGroupBulkAssignForm
