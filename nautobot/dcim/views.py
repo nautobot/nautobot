@@ -27,6 +27,8 @@ from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
 
 from nautobot.circuits.models import Circuit
+from nautobot.cloud.models import CloudAccount
+from nautobot.cloud.tables import CloudAccountTable
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
@@ -758,7 +760,25 @@ class ManufacturerView(generic.ObjectView):
         }
         RequestConfig(request, paginate).configure(device_table)
 
-        return {"device_table": device_table, **super().get_extra_context(request, instance)}
+        # Cloud Accounts
+        cloud_accounts = (
+            CloudAccount.objects.restrict(request.user, "view")
+            .filter(provider=instance)
+            .select_related("secrets_group")
+        )
+
+        cloud_account_table = CloudAccountTable(cloud_accounts)
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(cloud_account_table)
+
+        return {
+            "device_table": device_table,
+            "cloud_account_table": cloud_account_table,
+            **super().get_extra_context(request, instance),
+        }
 
 
 class ManufacturerEditView(generic.ObjectEditView):
