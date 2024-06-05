@@ -769,6 +769,7 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         Platform.objects.all().delete()
         Module.objects.all().delete()
         ModuleType.objects.all().delete()
+        CloudNetwork.objects.all().delete()
         CloudAccount.objects.all().delete()
         CloudType.objects.all().delete()
 

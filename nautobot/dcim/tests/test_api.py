@@ -981,6 +981,7 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
         Module.objects.all().delete()
         ModuleType.objects.all().delete()
         Platform.objects.all().delete()
+        CloudNetwork.objects.all().delete()
         CloudAccount.objects.all().delete()
         CloudType.objects.all().delete()
 
