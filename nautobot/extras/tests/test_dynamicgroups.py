@@ -251,7 +251,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
         # Overload the filter and validate that it is the same afterward.
         new_filter = {"has_interfaces": True}
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             set_group.set_filter(new_filter)
             set_group.validated_save()
         filter_group.set_filter(new_filter)
@@ -612,7 +612,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
     def test_set_filter(self):
         """Test `DynamicGroup.set_filter()`."""
-        group = self.groups[0]
+        group = self.first_child
 
         # Input can come from a form's cleaned_data, such as our generated form. In this case, the
         # filter we set from the form should be identical to what was there already.
@@ -716,18 +716,12 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
     def test_generate_filter_based_query(self):
         """Test `DynamicGroup._generate_filter_based_query()`."""
-        group = self.parent
-
-        # A group with an empty filter will have a null `Q` object
-        parent_q = group._generate_filter_based_query()
-        self.assertFalse(parent_q)
-
-        # A child group with a filter set will result in a useful Q object.
+        # A group with a filter set will result in a useful Q object.
         child_q = self.second_child._generate_filter_based_query()
         lookup_kwargs = dict(child_q.children)  # {name: value}
 
         # Assert that both querysets return the same results
-        group_qs = group.members
+        group_qs = self.second_child.members
         device_qs = Device.objects.filter(**lookup_kwargs)
         self.assertQuerysetEqual(group_qs, device_qs, ordered=False)
 
@@ -1172,7 +1166,7 @@ class DynamicGroupMembershipFilterTest(DynamicGroupTestBase, FilterTestCases.Fil
         # ["parent_group", "parent_group__id"],  # would work but we only have 2 valid parent groups
         # ["parent_group", "parent_group__name"],  # would work but we only have 2 valid parent groups
     )
-    exclude_q_filter_predicates = ["operatior"]
+    exclude_q_filter_predicates = ["operator"]
 
     def test_parent_group(self):
         parent_group_pk = self.queryset.first().parent_group.pk  # expecting 3

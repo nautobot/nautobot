@@ -1,0 +1,1 @@
+Changed `TreeManager` class (used for tree-models such as Location, RackGroup, and TenantGroup) default behavior from `with_tree_fields` to `without_tree_fields`. This should improve performance in many cases but may impact Apps or Jobs that were relying on the old default; such code should be updated to explicitly call `.with_tree_fields()` where appropriate.

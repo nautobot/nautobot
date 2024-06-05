@@ -562,8 +562,6 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
         if value in EMPTY_VALUES:
             return qs
 
-        qs = qs.with_tree_fields()
-
         # Fetch the generated Q object and filter the incoming qs with it before passing it along.
         query = self.generate_query(value)
         result = self.get_method(qs)(query)
