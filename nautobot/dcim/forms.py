@@ -1543,7 +1543,7 @@ class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
     position_pattern = ExpandableNameField(
         label="Position",
         required=False,
-        help_text="Numeric ranges are supported. (Must match the number of names being created.)",
+        help_text="Alphanumeric ranges are supported. (Must match the number of names being created.)",
     )
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
