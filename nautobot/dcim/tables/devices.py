@@ -879,7 +879,7 @@ class DeviceBayTable(DeviceComponentTable):
         )
 
 
-class ModuleBayTable(StatusTableMixin, BaseTable):
+class ModuleBayTable(BaseTable):
     pk = ToggleColumn()
     parent_device = tables.Column(
         linkify=lambda record: record.parent_device.get_absolute_url(),
@@ -979,8 +979,6 @@ class DeviceModuleBayTable(ModuleBayTable):
             "position",
             "installed_module",
             "installed_module__status",
-            "label",
-            "description",
             "actions",
         )
 
