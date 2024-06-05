@@ -10,7 +10,7 @@ from django.utils.html import escape
 from social_django.utils import load_backend, load_strategy
 
 from nautobot.core.testing import ModelViewTestCase, post_data, TestCase
-from nautobot.core.testing.utils import disable_warnings, extract_page_body
+from nautobot.core.testing.utils import extract_page_body
 from nautobot.users.models import ObjectPermission, SavedView
 
 User = get_user_model()
@@ -242,9 +242,23 @@ class SavedViewTest(ModelViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_update_saved_view(self):
         instance = self._get_queryset().first()
-        self.add_permissions("users.change_savedview")
+        # self.add_permissions("users.change_savedview")
         update_query_strings = ["per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
         update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
+        different_user = self._get_queryset().exclude(owner=instance.owner).first().owner
+        # Try update the saved view with a different user from the owner of the saved view
+        self.client.force_login(different_user)
+        response = self.client.get(update_url, follow=True)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            f"You do not have the required permission to modify this Saved View owned by {instance.owner}",
+            response_body,
+            msg=response_body,
+        )
+        self.client.logout()
+        # Try update the saved view with the same user as the owner of the saved view
+        self.client.force_login(instance.owner)
         response = self.client.get(update_url)
         self.assertHttpStatus(response, 302)
         instance.refresh_from_db()
@@ -254,7 +268,7 @@ class SavedViewTest(ModelViewTestCase):
         self.assertEqual(instance.config["sort_order"], ["name"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_clear_saved_view(self):
+    def test_delete_saved_view(self):
         instance = self._get_queryset().first()
         instance.config = {
             "filter_params": {
@@ -264,17 +278,40 @@ class SavedViewTest(ModelViewTestCase):
             "table_config": {"LocationTable": {"columns": ["name", "status", "location_type", "tags"]}},
         }
         instance.validated_save()
-        self.add_permissions("users.change_savedview")
-        clear_url = reverse("users:savedview_clear", kwargs={"pk": instance.pk})
-        response = self.client.post(clear_url)
-        self.assertHttpStatus(response, 302)
-        instance.refresh_from_db()
-        self.assertEqual(instance.config, {})
+        delete_url = reverse("users:savedview_delete", kwargs={"pk": instance.pk})
+        saved_view_with_different_user = self._get_queryset().exclude(owner=instance.owner).first()
+        # Try delete the saved view with a different user from the owner of the saved view
+        self.client.force_login(saved_view_with_different_user.owner)
+        response = self.client.post(delete_url, follow=True)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            f"You do not have the required permission to delete this Saved View owned by {instance.owner}",
+            response_body,
+            msg=response_body,
+        )
+        self.client.logout()
+        # Delete functionality should work even without "users.delete_savedview" permissions
+        # if the saved view belongs to the user.
+        self.client.force_login(instance.owner)
+        response = self.client.post(delete_url, follow=True)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            "Are you sure you want to delete saved view",
+            response_body,
+            msg=response_body,
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_saved_view(self):
         instance = self._get_queryset().first()
-        self.add_permissions("users.add_savedview")
+        # User should be able to create saved view with only "{app_label}.view_{model_name}" permission
+        # self.add_permissions("users.add_savedview")
+        view = instance.view
+        app_label = view.split(":")[0]
+        model_name = view.split(":")[1].split("_")[0]
+        self.add_permissions(f"{app_label}.view_{model_name}")
         create_query_strings = [
             f"saved_view={instance.pk}",
             "&per_page=12",

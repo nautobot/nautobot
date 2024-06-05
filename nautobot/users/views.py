@@ -19,7 +19,6 @@ from django.utils.encoding import iri_to_uri
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
-from rest_framework.response import Response
 
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.utils.config import get_settings_or_config
