@@ -2328,6 +2328,7 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         return cleaned_data
 
 
+# TODO: add parent_module_bay to module bulk edit
 class ModuleBulkEditForm(
     TagsBulkEditFormMixin,
     LocatableModelBulkEditFormMixin,
@@ -3748,6 +3749,7 @@ class InventoryItemFilterForm(DeviceComponentFilterForm):
 #
 
 
+# TODO: Cable connection forms need to support components within Modules
 class ConnectCableToDeviceForm(ConnectCableExcludeIDMixin, NautobotModelForm):
     """
     Base form for connecting a Cable to a Device component

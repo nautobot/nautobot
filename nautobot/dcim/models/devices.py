@@ -743,6 +743,7 @@ class Device(PrimaryModel, ConfigContextModel):
             except DeviceType.DoesNotExist:
                 pass
 
+        # TODO: allow primary IP from interfaces in child modules
         # Validate primary IP addresses
         vc_interfaces = self.vc_interfaces.all()
         for field in ["primary_ip4", "primary_ip6"]:
@@ -954,6 +955,54 @@ class Device(PrimaryModel, ConfigContextModel):
         Return the set of child Devices installed in DeviceBays within this Device.
         """
         return Device.objects.filter(parent_bay__device=self.pk)
+
+    @property
+    def modules(self):
+        """
+        Return all child Modules installed in ModuleBays within this Device.
+        """
+        # Supports Device->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module
+        # TODO: Document this
+        recursion_depth = 4
+        qs = Module.objects.all()
+        query = models.Q()
+        for level in range(recursion_depth):
+            recursive_query = "parent_module_bay__parent_module__" * level
+            query = query | models.Q(**{f"{recursive_query}parent_module_bay__parent_device": self})
+        return qs.filter(query)
+
+    @property
+    def all_console_ports(self):
+        # TODO: These could probably be optimized to reduce the number of joins
+        return ConsolePort.objects.filter(models.Q(device=self) | models.Q(module__in=self.modules))
+
+    @property
+    def all_console_server_ports(self):
+        return ConsoleServerPort.objects.filter(models.Q(device=self) | models.Q(module__in=self.modules))
+
+    @property
+    def all_front_ports(self):
+        return FrontPort.objects.filter(models.Q(device=self) | models.Q(module__in=self.modules))
+
+    @property
+    def all_interfaces(self):
+        return self.vc_interfaces | Interface.objects.filter(module__in=self.modules)
+
+    @property
+    def all_module_bays(self):
+        return ModuleBay.objects.filter(models.Q(parent_device=self) | models.Q(parent_device__in=self.modules))
+
+    @property
+    def all_power_ports(self):
+        return PowerPort.objects.filter(models.Q(device=self) | models.Q(module__in=self.modules))
+
+    @property
+    def all_power_outlets(self):
+        return PowerOutlet.objects.filter(models.Q(device=self) | models.Q(module__in=self.modules))
+
+    @property
+    def all_rear_ports(self):
+        return RearPort.objects.filter(device=self) | RearPort.objects.filter(module__in=self.modules)
 
 
 #
@@ -1394,6 +1443,7 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
 #
 
 
+# TODO: Translate comments field from devicetype library, Nautobot doesn't use that field for ModuleType
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -1720,3 +1770,49 @@ class Module(PrimaryModel):
         Return the set of child Modules installed in ModuleBays within this Module.
         """
         return Module.objects.filter(parent_module_bay__parent_module=self.pk)
+
+    @property
+    def modules(self):
+        """
+        Return all child Modules installed in ModuleBays within this Module.
+        """
+        # Supports Module->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module
+        recursion_depth = 3
+        qs = Module.objects.all()
+        query = models.Q()
+        for level in range(recursion_depth):
+            recursive_query = "parent_module_bay__parent_module__" * level
+            query = query | models.Q(**{f"{recursive_query}parent_module_bay__parent_module": self})
+        return qs.filter(query)
+
+    @property
+    def all_console_ports(self):
+        return ConsolePort.objects.filter(models.Q(module=self) | models.Q(module__in=self.modules))
+
+    @property
+    def all_console_server_ports(self):
+        return ConsoleServerPort.objects.filter(models.Q(module=self) | models.Q(module__in=self.modules))
+
+    @property
+    def all_front_ports(self):
+        return FrontPort.objects.filter(models.Q(module=self) | models.Q(module__in=self.modules))
+
+    @property
+    def all_interfaces(self):
+        return Interface.objects.filter(models.Q(module=self) | models.Q(module__in=self.modules))
+
+    @property
+    def all_module_bays(self):
+        return ModuleBay.objects.filter(models.Q(parent_module=self) | models.Q(parent_module__in=self.modules))
+
+    @property
+    def all_power_ports(self):
+        return PowerPort.objects.filter(models.Q(module=self) | models.Q(module__in=self.modules))
+
+    @property
+    def all_power_outlets(self):
+        return PowerOutlet.objects.filter(models.Q(module=self) | models.Q(module__in=self.modules))
+
+    @property
+    def all_rear_ports(self):
+        return RearPort.objects.filter(module=self) | RearPort.objects.filter(module__in=self.modules)
