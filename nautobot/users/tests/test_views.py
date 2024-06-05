@@ -179,14 +179,15 @@ class SavedViewTest(ModelViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_object_without_permission(self):
         instance = self._get_queryset().first()
-        url = self.get_view_url_for_saved_view(instance)
+        view = instance.view
+        app_label = view.split(":")[0]
+        model_name = view.split(":")[1].split("_")[0]
+        # SavedView detail view should only require the model's view permission
+        self.add_permissions(f"{app_label}.view_{model_name}")
 
-        # Try GET without permission
-        with disable_warnings("django.request"):
-            response = self.client.get(url)
-            self.assertHttpStatus(response, [403, 404])
-            response_body = response.content.decode(response.charset)
-            self.assertNotIn("/login/", response_body, msg=response_body)
+        # Try GET with model-level permission
+        response = self.client.get(instance.get_absolute_url(), follow=True)
+        self.assertHttpStatus(response, 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_object_with_permission(self):
@@ -235,7 +236,8 @@ class SavedViewTest(ModelViewTestCase):
         self.assertHttpStatus(self.client.get(instance1.get_absolute_url()), 302)
 
         # Try GET to non-permitted object
-        self.assertHttpStatus(self.client.get(instance2.get_absolute_url()), 404)
+        # Should be able to get to any SavedView instance as long as the user has "{app_label}.view_{model_name}" permission
+        self.assertHttpStatus(self.client.get(instance2.get_absolute_url()), 302)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_update_saved_view(self):
