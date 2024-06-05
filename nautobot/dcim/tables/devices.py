@@ -959,6 +959,7 @@ class DeviceModuleBayTable(ModuleBayTable):
         attrs={"td": {"class": "text-nowrap"}},
     )
     installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
+    installed_module__status = ColoredLabelColumn(verbose_name="Installed Module Status")
     actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=MODULEBAY_BUTTONS)
 
     class Meta(ModularDeviceComponentTable.Meta):
@@ -966,20 +967,20 @@ class DeviceModuleBayTable(ModuleBayTable):
         fields = (
             "pk",
             "position",
-            "label",
-            "description",
             "installed_module",
             "installed_module__status",
+            "label",
+            "description",
             "tags",
             "actions",
         )
         default_columns = (
             "pk",
             "position",
-            "label",
-            "description",
             "installed_module",
             "installed_module__status",
+            "label",
+            "description",
             "actions",
         )
 

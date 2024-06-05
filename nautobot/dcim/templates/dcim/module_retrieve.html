@@ -18,9 +18,9 @@
             <td>
                 {% if object.parent_module_bay %}
                     {% if object.parent_module_bay.parent_device %}
-                        <a href="{{ object.parent_module_bay.parent_device.get_absolute_url }}">{{ object.parent_module_bay.display }}</a>
+                        <a href="{% url 'dcim:device_modulebays' pk=object.parent_module_bay.parent_device.pk %}">{{ object.parent_module_bay.display }}</a>
                     {% else %}
-                        <a href="{{ object.parent_module_bay.parent_module.get_absolute_url }}">{{ object.parent_module_bay.display }}</a>
+                        <a href="{% url 'dcim:module_modulebays' pk=object.parent_module_bay.parent_module.pk %}">{{ object.parent_module_bay.display }}</a>
                     {% endif %}
                 {% else %}
                     {{ None|placeholder }}

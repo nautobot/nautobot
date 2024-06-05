@@ -1,3 +1,5 @@
+import re
+
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -136,6 +138,48 @@ class ModularComponentModel(ComponentModel):
     def parent(self):
         """Device that this component belongs to, walking up module inheritance if necessary."""
         return self.module.device if self.module else self.device
+
+    def render_name_template(self, save=False):
+        """
+        Replace the {module}, {module.parent}, {module.parent.parent}, etc. variables in the name
+        field with the actual module bay positions.
+
+        Args:
+            save (bool, optional): If True, save the object after updating the name field. Defaults to False.
+
+        If a module bay position is blank, it will be skipped and the parents will be checked until a non-blank
+        position is found. If all parent module bays are exhausted, the variable is left as-is.
+
+        Example:
+            - Device (name="Device 1")
+              - ModuleBay (position="A")
+                - Module
+                  - ModuleBay (position="")
+                    - Module
+                      - Interface (name="{module}{module.parent}")
+
+            The deeply nested interface would be named "A{module.parent}" after calling this method.
+        """
+        if self.module and self.module.parent_module_bay and "{module" in self.name:
+            name = ""
+            module_bay = self.module.parent_module_bay
+            positions = []
+            while module_bay is not None:
+                position = getattr(module_bay, "position", None)
+                if position:
+                    positions.append(position)
+                module_bay = getattr(getattr(module_bay, "parent_module", None), "parent_module_bay", None)
+            for part in re.split(r"({module(?:\.parent)*})", self.name):
+                if re.fullmatch(r"{module(\.parent)*}", part):
+                    depth = part.count(".parent")
+                    if depth < len(positions):
+                        name += positions[depth]
+                        continue
+                name += part
+            if self.name != name:
+                self.name = name
+                if save:
+                    self.save(update_fields=["name"])
 
     def to_objectchange(self, action, **kwargs):
         """
