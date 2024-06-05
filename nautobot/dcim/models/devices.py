@@ -1664,7 +1664,7 @@ class Module(PrimaryModel):
                 raise ValidationError("Creating this instance would cause an infinite loop.")
             parent_module = getattr(parent_module.parent_module_bay, "parent_module", None)
 
-        # Keep track of whether the parent module bay position has changed so we can update the component names
+        # Keep track of whether the parent module bay has changed so we can update the component names
         parent_module_changed = (
             not is_new and not Module.objects.filter(pk=self.pk, parent_module_bay=self.parent_module_bay).exists()
         )
