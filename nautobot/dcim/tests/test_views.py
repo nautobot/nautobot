@@ -1119,6 +1119,9 @@ module-bays:
 
         self.assertEqual(dt.module_bay_templates.count(), 3)
         # ModuleBayTemplate doesn't have a type field.
+        mbt = ModuleBayTemplate.objects.filter(device_type=dt).first()
+        self.assertEqual(mbt.position, "1")
+        self.assertEqual(mbt.name, "Module Bay 1")
 
     def test_devicetype_export(self):
         url = reverse("dcim:devicetype_list")
@@ -1391,6 +1394,7 @@ module-bays:
         self.assertEqual(mt.module_bay_templates.count(), 3)
         mb1 = mt.module_bay_templates.first()
         self.assertEqual(mb1.name, "Module Bay 1")
+        self.assertEqual(mb1.position, "1")
 
     def test_import_objects_unknown_type_enums(self):
         """
@@ -1490,6 +1494,9 @@ module-bays:
 
         self.assertEqual(mt.module_bay_templates.count(), 3)
         # ModuleBayTemplate doesn't have a type field.
+        mbt = ModuleBayTemplate.objects.filter(module_type=mt).first()
+        self.assertEqual(mbt.position, "1")
+        self.assertEqual(mbt.name, "Module Bay 1")
 
     def test_moduletype_export(self):
         url = reverse("dcim:moduletype_list")
@@ -1973,6 +1980,7 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "device_type": device_type.pk,
             "module_type": None,
             "name": "Module Bay Template X",
+            "position": "Test modulebaytemplate position",
             "description": "Test modulebaytemplate description",
             "label": "Test modulebaytemplate label",
         }
@@ -1980,6 +1988,7 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
         cls.bulk_create_data = {
             "module_type": module_type.pk,
             "name_pattern": "Test Module Bay Template [5-7]",
+            "position_pattern": "Test Module Bay Template Position [10-12]",
             "label_pattern": "Test modulebaytemplate label [1-3]",
             "description": "Test modulebaytemplate description",
         }
@@ -1993,6 +2002,7 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "name": test_instance.name,
             "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
             "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
+            "position": "new test position",
             "label": "new test label",
             "description": "new test description",
         }
@@ -3461,6 +3471,7 @@ class ModuleBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
         }
 
         cls.bulk_edit_data = {
+            "position": "new position",
             "description": "New description",
             "label": "New label",
         }
@@ -3470,6 +3481,7 @@ class ModuleBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "name": test_instance.name,
             "parent_device": getattr(getattr(test_instance, "parent_device", None), "pk", None),
             "parent_module": getattr(getattr(test_instance, "parent_module", None), "pk", None),
+            "position": "new test position",
             "label": "new test label",
             "description": "new test description",
         }

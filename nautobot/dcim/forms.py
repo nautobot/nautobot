@@ -1599,7 +1599,8 @@ class ModuleBayTemplateCreateForm(ModuleBayBaseCreateForm):
 class ModuleBayTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ModuleBayTemplate.objects.all(), widget=forms.MultipleHiddenInput())
     label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-    description = forms.CharField(required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    position = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         nullable_fields = ("label", "description")
@@ -3586,7 +3587,7 @@ class ModuleModuleBayBulkCreateForm(ModuleBayBulkCreateForm):
 
 
 class ModuleBayBulkEditForm(
-    form_from_model(ModuleBay, ["label", "description"]),
+    form_from_model(ModuleBay, ["label", "description", "position"]),
     TagsBulkEditFormMixin,
     NautobotBulkEditForm,
 ):
