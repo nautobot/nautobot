@@ -1,5 +1,8 @@
 from django.db import models  # noqa: I001
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
+from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
+from jsonschema.validators import Draft7Validator
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.generics import PrimaryModel
@@ -65,7 +68,7 @@ class CloudType(PrimaryModel):
         to=ContentType,
         help_text="The content type(s) to which this model applies.",
         related_name="cloud_types",
-        limit_choices_to=models.Q(app_label="cloud", model="cloudaccount"),
+        limit_choices_to=models.Q(app_label="cloud", model="cloudnetwork"),
     )
 
     class Meta:
@@ -77,3 +80,54 @@ class CloudType(PrimaryModel):
     @property
     def display(self):
         return f"{self.provider}: {self.name}"
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class CloudNetwork(PrimaryModel):
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    cloud_type = models.ForeignKey(to=CloudType, on_delete=models.PROTECT, related_name="cloud_networks")
+    cloud_account = models.ForeignKey(to=CloudAccount, on_delete=models.PROTECT, related_name="cloud_networks")
+    parent = models.ForeignKey(
+        to="cloud.CloudNetwork", on_delete=models.SET_NULL, blank=True, null=True, related_name="children"
+    )
+    prefixes = models.ManyToManyField(to="ipam.Prefix", related_name="cloud_networks")
+    extra_config = models.JSONField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    def clean(self):
+        super().clean()
+
+        if self.parent is not None:
+            if self.parent.parent is not None:
+                raise ValidationError(
+                    {"parent": "A CloudNetwork may not be the child of a CloudNetwork that itself has a parent."}
+                )
+            if self.parent == self:
+                raise ValidationError({"parent": "A CloudNetwork may not be its own parent."})
+
+        # Copied from nautobot.extras.models.models.ConfigContextSchemaValidationMixin
+        schema = self.cloud_type.config_schema
+        if schema:
+            try:
+                Draft7Validator(schema, format_checker=Draft7Validator.FORMAT_CHECKER).validate(self.extra_config)
+            except JSONSchemaValidationError as e:
+                raise ValidationError(
+                    {
+                        "extra_config": [
+                            f"Validation according to CloudType {self.cloud_type} config_schema failed.",
+                            e.message,
+                        ]
+                    }
+                )

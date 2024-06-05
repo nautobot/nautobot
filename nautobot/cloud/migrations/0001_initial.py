@@ -14,6 +14,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
+        ("contenttypes", "0002_remove_content_type_name"),
         ("dcim", "0059_add_role_field_to_interface_models"),
         ("extras", "0107_staticgroup_staticgroupassociation"),
     ]
@@ -55,6 +56,103 @@ class Migration(migrations.Migration):
                         to="extras.secretsgroup",
                     ),
                 ),
+                ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
+            ],
+            options={
+                "ordering": ["name"],
+            },
+            bases=(
+                nautobot.extras.models.mixins.DynamicGroupMixin,
+                nautobot.extras.models.mixins.NotesMixin,
+                models.Model,
+            ),
+        ),
+        migrations.CreateModel(
+            name="CloudType",
+            fields=[
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("created", models.DateTimeField(auto_now_add=True, null=True)),
+                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
+                (
+                    "_custom_field_data",
+                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
+                ),
+                ("name", models.CharField(max_length=255, unique=True)),
+                ("description", models.CharField(blank=True, max_length=255)),
+                ("config_schema", models.JSONField(blank=True, null=True)),
+                (
+                    "content_types",
+                    models.ManyToManyField(
+                        limit_choices_to=models.Q(("app_label", "cloud"), ("model", "cloudnetwork")),
+                        related_name="cloud_types",
+                        to="contenttypes.ContentType",
+                    ),
+                ),
+                (
+                    "provider",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT, related_name="cloud_types", to="dcim.manufacturer"
+                    ),
+                ),
+                ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
+            ],
+            options={
+                "ordering": ["name"],
+            },
+            bases=(
+                nautobot.extras.models.mixins.DynamicGroupMixin,
+                nautobot.extras.models.mixins.NotesMixin,
+                models.Model,
+            ),
+        ),
+        migrations.CreateModel(
+            name="CloudNetwork",
+            fields=[
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("created", models.DateTimeField(auto_now_add=True, null=True)),
+                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
+                (
+                    "_custom_field_data",
+                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
+                ),
+                ("name", models.CharField(max_length=255, unique=True)),
+                ("description", models.CharField(blank=True, max_length=255)),
+                ("extra_config", models.JSONField(blank=True, null=True)),
+                (
+                    "cloud_account",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="cloud_networks",
+                        to="cloud.cloudaccount",
+                    ),
+                ),
+                (
+                    "cloud_type",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT, related_name="cloud_networks", to="cloud.cloudtype"
+                    ),
+                ),
+                (
+                    "parent",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="children",
+                        to="cloud.cloudnetwork",
+                    ),
+                ),
+                ("prefixes", models.ManyToManyField(related_name="cloud_networks", to="ipam.prefix")),
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={

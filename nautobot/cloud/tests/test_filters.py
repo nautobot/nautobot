@@ -1,14 +1,13 @@
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.cloud.filters import CloudAccountFilterSet, CloudTypeFilterSet
-from nautobot.cloud.models import CloudAccount, CloudType
+from nautobot.cloud import filters, models
 from nautobot.core.testing import FilterTestCases
 from nautobot.extras.models import SecretsGroup
 
 
 class CloudAccountTestCase(FilterTestCases.NameOnlyFilterTestCase):
-    queryset = CloudAccount.objects.all()
-    filterset = CloudAccountFilterSet
+    queryset = models.CloudAccount.objects.all()
+    filterset = filters.CloudAccountFilterSet
     generic_filter_tests = [
         ("account_number",),
         ("description",),
@@ -26,15 +25,15 @@ class CloudAccountTestCase(FilterTestCases.NameOnlyFilterTestCase):
             SecretsGroup.objects.create(name="Secrets Group 3"),
             SecretsGroup.objects.create(name="Secrets Group 4"),
         )
-        cls.cloud_accounts = list(CloudAccount.objects.all()[:4])
+        cls.cloud_accounts = list(models.CloudAccount.objects.all()[:4])
         for i in range(4):
             cls.cloud_accounts[i].secrets_group = secrets_groups[i]
             cls.cloud_accounts[i].validated_save()
 
 
 class CloudTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
-    queryset = CloudType.objects.all()
-    filterset = CloudTypeFilterSet
+    queryset = models.CloudType.objects.all()
+    filterset = filters.CloudTypeFilterSet
     generic_filter_tests = [
         ("description",),
         ("name",),
@@ -49,3 +48,18 @@ class CloudTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
             self.filterset(params, self.queryset).qs,
             CloudType.objects.filter(content_types=ca_ct),
         )
+
+
+class CloudNetworkTestCase(FilterTestCases.NameOnlyFilterTestCase):
+    queryset = models.CloudNetwork.objects.all()
+    filterset = filters.CloudNetworkFilterSet
+    generic_filter_tests = [
+        ("cloud_account", "cloud_account__id"),
+        ("cloud_account", "cloud_account__name"),
+        ("cloud_type", "cloud_type__id"),
+        ("cloud_type", "cloud_type__name"),
+        ("description",),
+        ("name",),
+        ("parent", "parent__id"),
+        ("parent", "parent__name"),
+    ]
