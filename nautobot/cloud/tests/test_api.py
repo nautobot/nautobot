@@ -15,49 +15,46 @@ class CloudAccountTest(APIViewTestCases.APIViewTestCase):
             SecretsGroup.objects.create(name="Secrets Group 2"),
             SecretsGroup.objects.create(name="Secrets Group 3"),
         )
-        cls.manufacturers = Manufacturer.objects.all()
+        manufacturers = Manufacturer.objects.all()
+        models.CloudAccount.objects.create(
+            name="Deletable Account 1", account_number="12345", provider=manufacturers[0]
+        )
+        models.CloudAccount.objects.create(
+            name="Deletable Account 2", account_number="23467", provider=manufacturers[0]
+        )
+        models.CloudAccount.objects.create(
+            name="Deletable Account 3", account_number="345678", provider=manufacturers[0]
+        )
         cls.create_data = [
             {
                 "name": "Account 1",
                 "account_number": "1238910123",
-                "provider": cls.manufacturers[0].pk,
+                "provider": manufacturers[0].pk,
                 "secrets_group": secrets_groups[0].pk,
             },
             {
                 "name": "Account 2",
                 "account_number": "5123121012",
-                "provider": cls.manufacturers[1].pk,
+                "provider": manufacturers[1].pk,
                 "secrets_group": secrets_groups[1].pk,
             },
             {
                 "name": "Account 3",
                 "account_number": "6782109915",
-                "provider": cls.manufacturers[3].pk,
+                "provider": manufacturers[3].pk,
                 "secrets_group": secrets_groups[2].pk,
                 "description": "This is cloud account 3",
             },
             {
                 "name": "Account 4",
                 "account_number": "0989076098",
-                "provider": cls.manufacturers[4].pk,
+                "provider": manufacturers[4].pk,
             },
         ]
         cls.bulk_update_data = {
-            "provider": cls.manufacturers[2].pk,
+            "provider": manufacturers[2].pk,
             "secrets_group": secrets_groups[1].pk,
         }
-
-    def get_deletable_object_pks(self):
-        models.CloudAccount.objects.create(
-            name="Deletable Account 1", account_number="12345", provider=self.manufacturers[0]
-        )
-        models.CloudAccount.objects.create(
-            name="Deletable Account 2", account_number="23467", provider=self.manufacturers[0]
-        )
-        models.CloudAccount.objects.create(
-            name="Deletable Account 3", account_number="345678", provider=self.manufacturers[0]
-        )
-        return super().get_deletable_object_pks()
 
 
 class CloudTypeTest(APIViewTestCases.APIViewTestCase):
@@ -68,37 +65,34 @@ class CloudTypeTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.manufacturers = Manufacturer.objects.all()
+        manufacturers = Manufacturer.objects.all()
+        models.CloudType.objects.create(name="Deletable Type 1", provider=manufacturers[0])
+        models.CloudType.objects.create(name="Deletable Type 2", provider=manufacturers[0])
+        models.CloudType.objects.create(name="Deletable Type 3", provider=manufacturers[0])
         cls.create_data = [
             {
                 "name": "Type 1",
-                "provider": cls.manufacturers[0].pk,
+                "provider": manufacturers[0].pk,
                 "content_types": ["cloud.cloudnetwork"],
                 "description": "An example description",
             },
             {
                 "name": "Type 2",
-                "provider": cls.manufacturers[1].pk,
+                "provider": manufacturers[1].pk,
                 "content_types": [],
             },
             {
                 "name": "Type 3",
-                "provider": cls.manufacturers[3].pk,
+                "provider": manufacturers[3].pk,
                 "content_types": ["cloud.cloudnetwork"],
             },
             {
                 "name": "Type 4",
-                "provider": cls.manufacturers[4].pk,
+                "provider": manufacturers[4].pk,
                 "description": "An example description",
                 "content_types": [],
             },
         ]
-
-    def get_deletable_object_pks(self):
-        models.CloudType.objects.create(name="Deletable Type 1", provider=self.manufacturers[0])
-        models.CloudType.objects.create(name="Deletable Type 2", provider=self.manufacturers[0])
-        models.CloudType.objects.create(name="Deletable Type 3", provider=self.manufacturers[0])
-        return super().get_deletable_object_pks()
 
 
 class CloudNetworkTest(APIViewTestCases.APIViewTestCase):
