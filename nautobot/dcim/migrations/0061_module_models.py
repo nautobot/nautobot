@@ -64,11 +64,12 @@ class Migration(migrations.Migration):
                     "_custom_field_data",
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
-                ("position", models.CharField(max_length=255)),
+                ("position", models.CharField(blank=True, max_length=255)),
+                ("name", models.CharField(max_length=255, db_index=True)),
                 (
-                    "_position",
+                    "_name",
                     nautobot.core.models.fields.NaturalOrderingField(
-                        "position",
+                        "name",
                         blank=True,
                         db_index=True,
                         max_length=255,
@@ -102,11 +103,12 @@ class Migration(migrations.Migration):
                     "_custom_field_data",
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
-                ("position", models.CharField(max_length=255)),
+                ("position", models.CharField(blank=True, max_length=255)),
+                ("name", models.CharField(max_length=255)),
                 (
-                    "_position",
+                    "_name",
                     nautobot.core.models.fields.NaturalOrderingField(
-                        "position",
+                        "name",
                         blank=True,
                         max_length=255,
                         naturalize_function=nautobot.core.models.ordering.naturalize,
@@ -161,23 +163,15 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="modulebaytemplate",
             name="device_type",
-            field=models.ForeignKey(
-                blank=True,
-                null=True,
-                on_delete=django.db.models.deletion.CASCADE,
-                related_name="module_bay_templates",
-                to="dcim.devicetype",
+            field=nautobot.core.models.fields.ForeignKeyWithAutoRelatedName(
+                blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="dcim.devicetype"
             ),
         ),
         migrations.AddField(
             model_name="modulebaytemplate",
             name="module_type",
-            field=models.ForeignKey(
-                blank=True,
-                null=True,
-                on_delete=django.db.models.deletion.CASCADE,
-                related_name="module_bay_templates",
-                to="dcim.moduletype",
+            field=nautobot.core.models.fields.ForeignKeyWithAutoRelatedName(
+                blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="dcim.moduletype"
             ),
         ),
         migrations.AddField(
@@ -772,11 +766,11 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterModelOptions(
             name="modulebay",
-            options={"ordering": ("parent_device", "parent_module__id", "_position")},
+            options={"ordering": ("parent_device", "parent_module__id", "_name")},
         ),
         migrations.AlterModelOptions(
             name="modulebaytemplate",
-            options={"ordering": ("device_type", "module_type", "_position")},
+            options={"ordering": ("device_type", "module_type", "_name")},
         ),
         migrations.AddConstraint(
             model_name="module",
@@ -787,25 +781,25 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="modulebay",
             constraint=models.UniqueConstraint(
-                fields=("parent_device", "position"), name="dcim_modulebay_parent_device_position_unique"
+                fields=("parent_device", "name"), name="dcim_modulebay_parent_device_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="modulebay",
             constraint=models.UniqueConstraint(
-                fields=("parent_module", "position"), name="dcim_modulebay_parent_module_position_unique"
+                fields=("parent_module", "name"), name="dcim_modulebay_parent_module_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="modulebaytemplate",
             constraint=models.UniqueConstraint(
-                fields=("device_type", "position"), name="dcim_modulebaytemplate_device_type_position_unique"
+                fields=("device_type", "name"), name="dcim_modulebaytemplate_device_type_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="modulebaytemplate",
             constraint=models.UniqueConstraint(
-                fields=("module_type", "position"), name="dcim_modulebaytemplate_module_type_position_unique"
+                fields=("module_type", "name"), name="dcim_modulebaytemplate_module_type_name_unique"
             ),
         ),
         migrations.AlterUniqueTogether(

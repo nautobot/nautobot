@@ -935,6 +935,7 @@ class ModuleBayTemplateFactory(ModularDeviceComponentTemplateFactory):
     class Meta:
         model = ModuleBayTemplate
 
+    name = factory.Sequence(lambda n: f"ModuleBay {n}")
     position = factory.Maybe(
         "has_device_type",
         factory.LazyAttribute(lambda o: o.device_type.module_bay_templates.count() + 1),

@@ -1436,7 +1436,6 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
 
     parent_model = None
     parent_field = None
-    primary_pattern_field = "name"
     form = None
     queryset = None
     model_form = None
@@ -1480,14 +1479,14 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
                 try:
                     with transaction.atomic():
                         for obj in data["pk"]:
-                            names = data[f"{self.primary_pattern_field}_pattern"]
+                            names = data["name_pattern"]
                             labels = data["label_pattern"] if "label_pattern" in data else None
                             for i, name in enumerate(names):
                                 label = labels[i] if labels else None
 
                                 component_data = {
                                     self.parent_field: obj.pk,
-                                    self.primary_pattern_field: name,
+                                    "name": name,
                                     "label": label,
                                 }
                                 component_data.update(data)
