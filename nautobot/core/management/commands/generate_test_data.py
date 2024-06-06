@@ -83,7 +83,6 @@ class Command(BaseCommand):
             from nautobot.extras.utils import TaggableClassesQuery
             from nautobot.ipam.choices import PrefixTypeChoices
             from nautobot.ipam.factory import (
-                IPAddressFactory,
                 NamespaceFactory,
                 PrefixFactory,
                 RIRFactory,
@@ -101,177 +100,133 @@ class Command(BaseCommand):
         self.stdout.write(f'Seeding the pseudo-random number generator with seed "{seed}"...')
         factory.random.reseed_random(seed)
 
+        def _create_batch(some_factory, count, **kwargs):
+            some_factory.create_batch(count, using=db_name, **kwargs)
+            if is_truthy(os.environ.get("GITHUB_ACTIONS", "false")):
+                model = some_factory._meta.get_model_class()
+                model_ids = list(model.objects.order_by("id").values_list("id", flat=True))
+                sha256_hash = hashlib.sha256(json.dumps(model_ids, cls=DjangoJSONEncoder).encode()).hexdigest()
+                self.stdout.write(f"  SHA256 hash of {model.__name__} PKs: {sha256_hash}")
+
         self.stdout.write("Creating Roles...")
         populate_role_choices(verbosity=0, using=db_name)
-        RoleFactory.create_batch(20)
+        _create_batch(RoleFactory, 20)
         self.stdout.write("Creating Statuses...")
         populate_status_choices(verbosity=0, using=db_name)
-        StatusFactory.create_batch(10, using=db_name)
+        _create_batch(StatusFactory, 10)
         self.stdout.write("Creating Tags...")
         # Ensure that we have some tags that are applicable to all relevant content-types
-        TagFactory.create_batch(5, content_types=TaggableClassesQuery().as_queryset(), using=db_name)
+        _create_batch(TagFactory, 5, content_types=TaggableClassesQuery().as_queryset())
         # ...and some tags that apply to a random subset of content-types
-        TagFactory.create_batch(15, using=db_name)
+        _create_batch(TagFactory, 15)
         self.stdout.write("Creating Contacts...")
-        ContactFactory.create_batch(20, using=db_name)
+        _create_batch(ContactFactory, 20)
         self.stdout.write("Creating Teams...")
-        TeamFactory.create_batch(20, using=db_name)
+        _create_batch(TeamFactory, 20)
         self.stdout.write("Creating TenantGroups...")
-        TenantGroupFactory.create_batch(10, has_parent=False, using=db_name)
-        TenantGroupFactory.create_batch(10, has_parent=True, using=db_name)
+        _create_batch(TenantGroupFactory, 10, has_parent=False)
+        _create_batch(TenantGroupFactory, 10, has_parent=True)
         self.stdout.write("Creating Tenants...")
-        TenantFactory.create_batch(10, has_tenant_group=False, using=db_name)
-        TenantFactory.create_batch(10, has_tenant_group=True, using=db_name)
+        _create_batch(TenantFactory, 10, has_tenant_group=False)
+        _create_batch(TenantFactory, 10, has_tenant_group=True)
         self.stdout.write("Creating LocationTypes...")
-        LocationTypeFactory.create_batch(7, using=db_name)  # only 7 unique LocationTypes are hard-coded presently
+        _create_batch(LocationTypeFactory, 7)  # only 7 unique LocationTypes are hard-coded presently
         self.stdout.write("Creating Locations...")
         # First 7 locations must be created in specific order so subsequent objects have valid parents to reference
-        LocationFactory.create_batch(7, has_parent=True, using=db_name)
-        LocationFactory.create_batch(40, using=db_name)
-        LocationFactory.create_batch(10, has_parent=False, using=db_name)
+        _create_batch(LocationFactory, 7, has_parent=True)
+        _create_batch(LocationFactory, 40)
+        _create_batch(LocationFactory, 10, has_parent=False)
         self.stdout.write("Creating Controller with Groups...")
-        ControllerFactory.create_batch(1)
-        ControllerManagedDeviceGroupFactory.create_batch(5)
+        _create_batch(ControllerFactory, 1)
+        _create_batch(ControllerManagedDeviceGroupFactory, 5)
         self.stdout.write("Creating RIRs...")
-        RIRFactory.create_batch(9, using=db_name)  # only 9 unique RIR names are hard-coded presently
+        _create_batch(RIRFactory, 9)  # only 9 unique RIR names are hard-coded presently
         self.stdout.write("Creating RouteTargets...")
-        RouteTargetFactory.create_batch(20, using=db_name)
+        _create_batch(RouteTargetFactory, 20)
         self.stdout.write("Creating Namespaces...")
-        NamespaceFactory.create_batch(10, using=db_name)
+        _create_batch(NamespaceFactory, 10)
         self.stdout.write("Creating VRFs...")
-        VRFFactory.create_batch(10, has_tenant=True, using=db_name)
-        VRFFactory.create_batch(10, has_tenant=False, using=db_name)
+        _create_batch(VRFFactory, 10, has_tenant=True)
+        _create_batch(VRFFactory, 10, has_tenant=False)
         self.stdout.write("Creating VLANGroups...")
-        VLANGroupFactory.create_batch(20, using=db_name)
+        _create_batch(VLANGroupFactory, 20)
         self.stdout.write("Creating VLANs...")
-        VLANFactory.create_batch(20, using=db_name)
+        _create_batch(VLANFactory, 20)
         self.stdout.write("Creating Prefixes and IP Addresses...")
         for i in range(30):
             PrefixFactory.create(prefix=f"10.{i}.0.0/16", type=PrefixTypeChoices.TYPE_CONTAINER, using=db_name)
             PrefixFactory.create(prefix=f"2001:db8:0:{i}::/64", type=PrefixTypeChoices.TYPE_CONTAINER, using=db_name)
         self.stdout.write("Creating Empty Namespaces...")
-        NamespaceFactory.create_batch(5, using=db_name)
+        _create_batch(NamespaceFactory, 5)
         self.stdout.write("Creating Device Families...")
-        DeviceFamilyFactory.create_batch(20)
+        _create_batch(DeviceFamilyFactory, 20)
         self.stdout.write("Creating Manufacturers...")
-        ManufacturerFactory.create_batch(8, using=db_name)  # First 8 hard-coded Manufacturers
+        _create_batch(ManufacturerFactory, 8)  # First 8 hard-coded Manufacturers
         self.stdout.write("Creating Platforms (with manufacturers)...")
-        PlatformFactory.create_batch(20, has_manufacturer=True, using=db_name)
+        _create_batch(PlatformFactory, 20, has_manufacturer=True)
         self.stdout.write("Creating Platforms (without manufacturers)...")
-        PlatformFactory.create_batch(5, has_manufacturer=False, using=db_name)
+        _create_batch(PlatformFactory, 5, has_manufacturer=False)
         self.stdout.write("Creating SoftwareVersions...")
-        SoftwareVersionFactory.create_batch(20)
+        _create_batch(SoftwareVersionFactory, 20)
         self.stdout.write("Creating SoftwareImageFiles...")
-        SoftwareImageFileFactory.create_batch(25)
+        _create_batch(SoftwareImageFileFactory, 25)
         self.stdout.write("Creating Manufacturers without Platforms...")
-        ManufacturerFactory.create_batch(4, using=db_name)  # 4 more hard-coded Manufacturers
+        _create_batch(ManufacturerFactory, 4)  # 4 more hard-coded Manufacturers
         self.stdout.write("Creating DeviceTypes...")
-        DeviceTypeFactory.create_batch(30, using=db_name)
+        _create_batch(DeviceTypeFactory, 30)
         self.stdout.write("Creating Manufacturers without DeviceTypes or Platforms...")
-        ManufacturerFactory.create_batch(2, using=db_name)  # Last 2 hard-coded Manufacturers
+        _create_batch(ManufacturerFactory, 2)  # Last 2 hard-coded Manufacturers
         self.stdout.write("Creating DeviceRedundancyGroups...")
-        DeviceRedundancyGroupFactory.create_batch(20, using=db_name)
+        _create_batch(DeviceRedundancyGroupFactory, 20)
         self.stdout.write("Creating Devices...")
-        DeviceFactory.create_batch(20, using=db_name)
+        _create_batch(DeviceFactory, 20)
         self.stdout.write("Creating SoftwareVersions with Devices, InventoryItems or VirtualMachines...")
-        SoftwareVersionFactory.create_batch(5)
+        _create_batch(SoftwareVersionFactory, 5)
         self.stdout.write("Creating SoftwareImageFiles without DeviceTypes...")
-        SoftwareImageFileFactory.create_batch(5)
+        _create_batch(SoftwareImageFileFactory, 5)
         self.stdout.write("Creating CircuitTypes...")
-        CircuitTypeFactory.create_batch(40, using=db_name)
+        _create_batch(CircuitTypeFactory, 40)
         self.stdout.write("Creating Providers...")
-        ProviderFactory.create_batch(20, using=db_name)
+        _create_batch(ProviderFactory, 20)
         self.stdout.write("Creating ProviderNetworks...")
-        ProviderNetworkFactory.create_batch(20, using=db_name)
+        _create_batch(ProviderNetworkFactory, 20)
         self.stdout.write("Creating Circuits...")
-        CircuitFactory.create_batch(40, using=db_name)
+        _create_batch(CircuitFactory, 40)
         self.stdout.write("Creating Providers without Circuits...")
-        ProviderFactory.create_batch(20, using=db_name)
+        _create_batch(ProviderFactory, 20)
         self.stdout.write("Creating CircuitTerminations...")
-        CircuitTerminationFactory.create_batch(2, has_location=True, term_side="A", using=db_name)
-        CircuitTerminationFactory.create_batch(2, has_location=True, term_side="Z", using=db_name)
-        CircuitTerminationFactory.create_batch(2, has_location=False, term_side="A", using=db_name)
-        CircuitTerminationFactory.create_batch(2, has_location=False, term_side="Z", using=db_name)
-        CircuitTerminationFactory.create_batch(2, has_port_speed=True, has_upstream_speed=False, using=db_name)
-        CircuitTerminationFactory.create_batch(
-            size=2,
+        _create_batch(CircuitTerminationFactory, 2, has_location=True, term_side="A")
+        _create_batch(CircuitTerminationFactory, 2, has_location=True, term_side="Z")
+        _create_batch(CircuitTerminationFactory, 2, has_location=False, term_side="A")
+        _create_batch(CircuitTerminationFactory, 2, has_location=False, term_side="Z")
+        _create_batch(CircuitTerminationFactory, 2, has_port_speed=True, has_upstream_speed=False)
+        _create_batch(
+            CircuitTerminationFactory,
+            2,
             has_location=True,
             has_port_speed=True,
             has_upstream_speed=True,
             has_xconnect_id=True,
             has_pp_info=True,
             has_description=True,
-            using=db_name,
         )
         self.stdout.write("Creating ExternalIntegrations...")
-        ExternalIntegrationFactory.create_batch(20, using=db_name)
+        _create_batch(ExternalIntegrationFactory, 20)
         self.stdout.write("Creating Controllers with Device or DeviceRedundancyGroups...")
-        ControllerFactory.create_batch(10)
-        ControllerManagedDeviceGroupFactory.create_batch(30)
+        _create_batch(ControllerFactory, 10)
+        _create_batch(ControllerManagedDeviceGroupFactory, 30)
         # make sure we have some tenants that have null relationships to make filter tests happy
         self.stdout.write("Creating Tenants without Circuits, Locations, IPAddresses, or Prefixes...")
-        TenantFactory.create_batch(10, using=db_name)
+        _create_batch(TenantFactory, 10)
         # TODO: nautobot.tenancy.tests.test_filters currently calls the following additional factories:
-        # UserFactory.create_batch(10)
-        # RackFactory.create_batch(10)
-        # RackReservationFactory.create_batch(10)
-        # ClusterTypeFactory.create_batch(10)
-        # ClusterGroupFactory.create_batch(10)
-        # ClusterFactory.create_batch(10)
-        # VirtualMachineFactory.create_batch(10)
+        # _create_batch(UserFactory, 10)
+        # _create_batch(RackFactory, 10)
+        # _create_batch(RackReservationFactory, 10)
+        # _create_batch(ClusterTypeFactory, 10)
+        # _create_batch(ClusterGroupFactory, 10)
+        # _create_batch(ClusterFactory, 10)
+        # _create_batch(VirtualMachineFactory, 10)
         # We need to remove them from there and enable them here instead, but that will require many test updates.
-
-        self._output_hash_for_factory_models(
-            factories=[
-                CircuitFactory,
-                CircuitTerminationFactory,
-                CircuitTypeFactory,
-                ContactFactory,
-                ControllerManagedDeviceGroupFactory,
-                ControllerFactory,
-                DeviceFactory,
-                DeviceFamilyFactory,
-                DeviceRedundancyGroupFactory,
-                DeviceTypeFactory,
-                ExternalIntegrationFactory,
-                IPAddressFactory,
-                LocationFactory,
-                LocationTypeFactory,
-                ManufacturerFactory,
-                NamespaceFactory,
-                PlatformFactory,
-                PrefixFactory,
-                ProviderFactory,
-                ProviderNetworkFactory,
-                RIRFactory,
-                RoleFactory,
-                RouteTargetFactory,
-                SoftwareImageFileFactory,
-                SoftwareVersionFactory,
-                StatusFactory,
-                TagFactory,
-                TeamFactory,
-                TenantFactory,
-                TenantGroupFactory,
-                VLANFactory,
-                VLANGroupFactory,
-                VRFFactory,
-            ]
-        )
-
-    def _output_hash_for_factory_models(self, factories):
-        """Output a hash of the IDs of all objects in the given factories' model.
-
-        Used for identifying factory determinism problems in unit tests. Only prints if GITHUB_ACTIONS environment variable is set to "true".
-        """
-        if not is_truthy(os.environ.get("GITHUB_ACTIONS", "false")):
-            return
-
-        for factory in factories:
-            model = factory._meta.get_model_class()
-            model_ids = list(model.objects.order_by("id").values_list("id", flat=True))
-            sha256_hash = hashlib.sha256(json.dumps(model_ids, cls=DjangoJSONEncoder).encode()).hexdigest()
-            self.stdout.write(f"SHA256 hash for {model.__name__}: {sha256_hash}")
 
     def handle(self, *args, **options):
         if options["flush"]:
