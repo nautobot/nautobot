@@ -55,17 +55,19 @@
             <ul class="dropdown-menu">
                 {% for saved_view in saved_views %}
                     <li>
-                        <a href="{{ saved_view.get_absolute_url }}">
-                            {% if saved_view == current_saved_view %}
-                                <i class="mdi mdi-view-compact-outline text-bold" aria-hidden="true"></i>
+                        {% if saved_view == current_saved_view %}
+                            <a href="{% url list_url %}">
+                                <i class="mdi mdi-check-bold text-bold" aria-hidden="true"></i>
                                 <strong>
                                     {{saved_view.name}}
                                 </strong>
-                            {% else %}
+                            </a>
+                        {% else %}
+                            <a href="{{ saved_view.get_absolute_url }}">
                                 <i class="mdi mdi-view-compact-outline text-muted" aria-hidden="true"></i>
                                 {{saved_view.name}}
-                            {% endif %}
-                        </a>
+                            </a>
+                        {% endif %}
                     </li>
                 {% endfor %}
                 {% if saved_views %}
