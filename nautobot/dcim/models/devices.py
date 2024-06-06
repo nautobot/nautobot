@@ -300,6 +300,7 @@ class DeviceType(PrimaryModel):
         if self.module_bay_templates.exists():
             data["module-bays"] = [
                 {
+                    "name": c.name,
                     "position": c.position,
                     "label": c.label,
                     "description": c.description,
@@ -1514,6 +1515,7 @@ class ModuleType(PrimaryModel):
         if self.module_bay_templates.exists():
             data["module-bays"] = [
                 {
+                    "name": c.name,
                     "position": c.position,
                     "label": c.label,
                     "description": c.description,

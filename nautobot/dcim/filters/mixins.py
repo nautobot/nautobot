@@ -63,10 +63,18 @@ class DeviceComponentTemplateModelFilterSetMixin(NameSearchFilterSet, CustomFiel
 
 
 class ModularDeviceComponentTemplateModelFilterSetMixin(DeviceComponentTemplateModelFilterSetMixin):
+    has_device_type = RelatedMembershipBooleanFilter(
+        field_name="device_type",
+        label="Has device type",
+    )
     module_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ModuleType.objects.all(),
         to_field_name="model",
         label="Module type (model or ID)",
+    )
+    has_module_type = RelatedMembershipBooleanFilter(
+        field_name="module_type",
+        label="Has module type",
     )
 
 

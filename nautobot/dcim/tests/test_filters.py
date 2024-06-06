@@ -565,19 +565,22 @@ def common_test_data(cls):
     )
     ModuleBayTemplate.objects.create(
         device_type=device_types[0],
-        position="device test module bay 1",
+        name="device test module bay 1",
+        position=1,
         label="devicemodulebay1",
         description="device test module bay 1 description",
     )
     ModuleBayTemplate.objects.create(
         device_type=device_types[1],
-        position="device test module bay 2",
+        name="device test module bay 2",
+        position=2,
         label="devicemodulebay2",
         description="device test module bay 2 description",
     )
     ModuleBayTemplate.objects.create(
         device_type=device_types[2],
-        position="device test module bay 3",
+        name="device test module bay 3",
+        position=3,
         label="devicemodulebay3",
         description="device test module bay 3 description",
     )
@@ -694,7 +697,8 @@ def common_test_data(cls):
             type=PortTypeChoices.TYPE_8P8C,
         )
         ModuleBayTemplate.objects.create(
-            position=f"Test Filters Module Module Bay {i+1}",
+            name=f"Test Filters Module Module Bay {i+1}",
+            position=i + 1,
             module_type=module_types[i % 2],
         )
 
@@ -878,13 +882,15 @@ class ModuleDeviceCommonTestsMixin:
         ModuleBay.objects.create(
             **{
                 f"parent_{self.queryset.model._meta.model_name}": test_instances[0],
-                "position": "test filters position 1",
+                "name": "test filters position 1",
+                "position": 1,
             }
         )
         ModuleBay.objects.create(
             **{
                 f"parent_{self.queryset.model._meta.model_name}": test_instances[1],
-                "position": "test filters position 1",
+                "name": "test filters position 1",
+                "position": 1,
             }
         )
         with self.subTest():
@@ -3710,6 +3716,7 @@ class ModuleBayTemplateTestCase(FilterTestCases.FilterTestCase):
         ("label",),
         ("module_type", "module_type__id"),
         ("module_type", "module_type__model"),
+        ("name",),
         ("position",),
     ]
 
@@ -3728,6 +3735,7 @@ class ModuleBayTestCase(FilterTestCases.FilterTestCase):
         ("parent_device", "parent_device__name"),
         ("parent_module", "parent_module__id"),
         ("installed_module", "installed_module__id"),
+        ("name",),
         ("position",),
     ]
 

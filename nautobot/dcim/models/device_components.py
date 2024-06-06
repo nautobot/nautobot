@@ -1195,12 +1195,10 @@ class ModuleBay(PrimaryModel):
         blank=True,
         null=True,
     )
-    _position = NaturalOrderingField(
-        target_field="position", max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True
-    )
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
+    _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True)
     position = models.CharField(
-        blank=False,
-        null=False,
+        blank=True,
         max_length=CHARFIELD_MAX_LENGTH,
         help_text="The position of the module bay within the parent device/module",
     )
@@ -1218,16 +1216,16 @@ class ModuleBay(PrimaryModel):
         ordering = (
             "parent_device",
             "parent_module__id",
-            "_position",
+            "_name",
         )
         constraints = [
             models.UniqueConstraint(
-                fields=["parent_device", "position"],
-                name="dcim_modulebay_parent_device_position_unique",
+                fields=["parent_device", "name"],
+                name="dcim_modulebay_parent_device_name_unique",
             ),
             models.UniqueConstraint(
-                fields=["parent_module", "position"],
-                name="dcim_modulebay_parent_module_position_unique",
+                fields=["parent_module", "name"],
+                name="dcim_modulebay_parent_module_name_unique",
             ),
         ]
 
@@ -1238,16 +1236,16 @@ class ModuleBay(PrimaryModel):
 
     def __str__(self):
         if self.parent_device is not None:
-            return f"{self.parent_device} ({self.position})"
+            return f"{self.parent_device} ({self.name})"
         else:
-            return f"{self.parent_module} ({self.position})"
+            return f"{self.parent_module} ({self.name})"
 
     @property
     def display(self):
         if self.parent_device is not None:
-            return f"{self.parent_device.display} ({self.position})"
+            return f"{self.parent_device.display} ({self.name})"
         else:
-            return f"{self.parent_module.display} ({self.position})"
+            return f"{self.parent_module.display} ({self.name})"
 
     def to_objectchange(self, action, **kwargs):
         """

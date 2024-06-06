@@ -933,9 +933,12 @@ device-bays:
   - name: Device Bay 2
   - name: Device Bay 3
 module-bays:
-  - position: Module Bay 1
-  - position: Module Bay 2
-  - position: Module Bay 3
+  - name: Module Bay 1
+    position: 1
+  - name: Module Bay 2
+    position: 2
+  - name: Module Bay 3
+    position: 3
 """
 
         # Add all required permissions to the test user
@@ -1004,7 +1007,7 @@ module-bays:
 
         self.assertEqual(dt.module_bay_templates.count(), 3)
         mb1 = dt.module_bay_templates.first()
-        self.assertEqual(mb1.position, "Module Bay 1")
+        self.assertEqual(mb1.name, "Module Bay 1")
 
     def test_import_objects_unknown_type_enums(self):
         """
@@ -1045,9 +1048,12 @@ device-bays:
     type: unknown  # should be ignored
   - name: Device Bay of Unspecified Type
 module-bays:
-  - position: Module Bay 1
-  - position: Module Bay 2
-  - position: Module Bay 3
+  - name: Module Bay 1
+    position: 1
+  - name: Module Bay 2
+    position: 2
+  - name: Module Bay 3
+    position: 3
 """
         # Add all required permissions to the test user
         self.add_permissions(
@@ -1113,6 +1119,9 @@ module-bays:
 
         self.assertEqual(dt.module_bay_templates.count(), 3)
         # ModuleBayTemplate doesn't have a type field.
+        mbt = ModuleBayTemplate.objects.filter(device_type=dt).first()
+        self.assertEqual(mbt.position, "1")
+        self.assertEqual(mbt.name, "Module Bay 1")
 
     def test_devicetype_export(self):
         url = reverse("dcim:devicetype_list")
@@ -1316,9 +1325,12 @@ front-ports:
     type: 8p8c
     rear_port: Rear Port 3
 module-bays:
-  - position: Module Bay 1
-  - position: Module Bay 2
-  - position: Module Bay 3
+  - name: Module Bay 1
+    position: 1
+  - name: Module Bay 2
+    position: 2
+  - name: Module Bay 3
+    position: 3
 """
 
         # Add all required permissions to the test user
@@ -1381,7 +1393,8 @@ module-bays:
 
         self.assertEqual(mt.module_bay_templates.count(), 3)
         mb1 = mt.module_bay_templates.first()
-        self.assertEqual(mb1.position, "Module Bay 1")
+        self.assertEqual(mb1.name, "Module Bay 1")
+        self.assertEqual(mb1.position, "1")
 
     def test_import_objects_unknown_type_enums(self):
         """
@@ -1415,9 +1428,12 @@ front-ports:
     type: pickleball
     rear_port_template: Rear Port Foosball
 module-bays:
-  - position: Module Bay 1
-  - position: Module Bay 2
-  - position: Module Bay 3
+  - name: Module Bay 1
+    position: 1
+  - name: Module Bay 2
+    position: 2
+  - name: Module Bay 3
+    position: 3
 """
         # Add all required permissions to the test user
         self.add_permissions(
@@ -1478,6 +1494,9 @@ module-bays:
 
         self.assertEqual(mt.module_bay_templates.count(), 3)
         # ModuleBayTemplate doesn't have a type field.
+        mbt = ModuleBayTemplate.objects.filter(module_type=mt).first()
+        self.assertEqual(mbt.position, "1")
+        self.assertEqual(mbt.name, "Module Bay 1")
 
     def test_moduletype_export(self):
         url = reverse("dcim:moduletype_list")
@@ -1951,7 +1970,6 @@ class DeviceBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
 
 class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
     model = ModuleBayTemplate
-    rename_field = "position"
 
     @classmethod
     def setUpTestData(cls):
@@ -1961,14 +1979,16 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
         cls.form_data = {
             "device_type": device_type.pk,
             "module_type": None,
-            "position": "Module Bay Template X",
+            "name": "Module Bay Template X",
+            "position": "Test modulebaytemplate position",
             "description": "Test modulebaytemplate description",
             "label": "Test modulebaytemplate label",
         }
 
         cls.bulk_create_data = {
             "module_type": module_type.pk,
-            "position_pattern": "Test Module Bay Template [5-7]",
+            "name_pattern": "Test Module Bay Template [5-7]",
+            "position_pattern": "Test Module Bay Template Position [10-12]",
             "label_pattern": "Test modulebaytemplate label [1-3]",
             "description": "Test modulebaytemplate description",
         }
@@ -1979,9 +1999,10 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
 
         test_instance = cls.model.objects.first()
         cls.update_data = {
-            "position": test_instance.position,
+            "name": test_instance.name,
             "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
             "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
+            "position": "new test position",
             "label": "new test label",
             "description": "new test description",
         }
@@ -2770,9 +2791,9 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def test_module_modulebays(self):
         module = Module.objects.first()
 
-        ModuleBay.objects.create(parent_module=module, position="Module Bay 1")
-        ModuleBay.objects.create(parent_module=module, position="Module Bay 2")
-        ModuleBay.objects.create(parent_module=module, position="Module Bay 3")
+        ModuleBay.objects.create(parent_module=module, name="Test View Module Bay 1")
+        ModuleBay.objects.create(parent_module=module, name="Test View Module Bay 2")
+        ModuleBay.objects.create(parent_module=module, name="Test View Module Bay 3")
 
         url = reverse("dcim:module_modulebays", kwargs={"pk": module.pk})
         self.assertHttpStatus(self.client.get(url), 200)
@@ -3413,29 +3434,27 @@ class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
         }
 
 
-class ModuleBayTestCase(
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.GetObjectNotesViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.CreateMultipleObjectsViewTestCase,
-    ViewTestCases.BulkEditObjectsViewTestCase,
-    ViewTestCases.BulkRenameObjectsViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-):
+class ModuleBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ModuleBay
-    rename_field = "position"
 
     @classmethod
     def setUpTestData(cls):
         device = Device.objects.first()
         module = Module.objects.first()
 
+        module_bays = (
+            ModuleBay.objects.create(parent_device=device, name="Test View Module Bay 1"),
+            ModuleBay.objects.create(parent_device=device, name="Test View Module Bay 2"),
+            ModuleBay.objects.create(parent_device=device, name="Test View Module Bay 3"),
+        )
+        # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
+        cls.selected_objects = module_bays
+        cls.selected_objects_parent_name = device.name
+
         cls.form_data = {
             "parent_device": device.pk,
-            "position": "Test ModuleBay 1",
+            "name": "Test ModuleBay 1",
+            "position": 1,
             "description": "Test modulebay description",
             "label": "Test modulebay label",
             "tags": sorted([t.pk for t in Tag.objects.get_for_model(ModuleBay)]),
@@ -3443,7 +3462,8 @@ class ModuleBayTestCase(
 
         cls.bulk_create_data = {
             "parent_module": module.pk,
-            "position_pattern": "Test ModuleBay [0-2]",
+            "name_pattern": "Test ModuleBay [0-2]",
+            "position_pattern": "[1-3]",
             # Test that a label can be applied to each generated module bay
             "label_pattern": "Slot[1-3]",
             "description": "Test modulebay description",
@@ -3451,15 +3471,17 @@ class ModuleBayTestCase(
         }
 
         cls.bulk_edit_data = {
+            "position": "new position",
             "description": "New description",
             "label": "New label",
         }
 
         test_instance = cls.model.objects.first()
         cls.update_data = {
-            "position": test_instance.position,
+            "name": test_instance.name,
             "parent_device": getattr(getattr(test_instance, "parent_device", None), "pk", None),
             "parent_module": getattr(getattr(test_instance, "parent_module", None), "pk", None),
+            "position": "new test position",
             "label": "new test label",
             "description": "new test description",
         }

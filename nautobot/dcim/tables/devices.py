@@ -891,7 +891,7 @@ class ModuleBayTable(BaseTable):
         verbose_name="Parent Module",
         accessor="parent_module__display",
     )
-    position = tables.Column(linkify=True, order_by=("_position",))
+    name = tables.Column(linkify=True, order_by=("_name",))
     installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
     installed_module__status = ColoredLabelColumn()
     tags = TagColumn(url_name="dcim:devicebay_list")
@@ -902,6 +902,7 @@ class ModuleBayTable(BaseTable):
             "pk",
             "parent_device",
             "parent_module",
+            "name",
             "position",
             "label",
             "description",
@@ -913,6 +914,7 @@ class ModuleBayTable(BaseTable):
             "pk",
             "parent_device",
             "parent_module",
+            "name",
             "position",
             "label",
             "description",
@@ -953,7 +955,7 @@ class DeviceDeviceBayTable(DeviceBayTable):
 
 
 class DeviceModuleBayTable(ModuleBayTable):
-    position = tables.TemplateColumn(
+    name = tables.TemplateColumn(
         template_code='<i class="mdi mdi-{% if record.installed_module %}expansion-card-variant{% else %}tray{% endif %}'
         '"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
         attrs={"td": {"class": "text-nowrap"}},
@@ -966,6 +968,7 @@ class DeviceModuleBayTable(ModuleBayTable):
         model = ModuleBay
         fields = (
             "pk",
+            "name",
             "position",
             "installed_module",
             "installed_module__status",
@@ -976,6 +979,7 @@ class DeviceModuleBayTable(ModuleBayTable):
         )
         default_columns = (
             "pk",
+            "name",
             "position",
             "installed_module",
             "installed_module__status",
