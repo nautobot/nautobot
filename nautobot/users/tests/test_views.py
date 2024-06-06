@@ -242,7 +242,6 @@ class SavedViewTest(ModelViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_update_saved_view(self):
         instance = self._get_queryset().first()
-        # self.add_permissions("users.change_savedview")
         update_query_strings = ["per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
         update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
         different_user = self._get_queryset().exclude(owner=instance.owner).first().owner

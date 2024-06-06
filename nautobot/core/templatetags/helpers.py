@@ -756,6 +756,8 @@ def saved_view_modal(
             if current_saved_view_pk:
                 current_saved_view_pk = current_saved_view_pk[0]
                 try:
+                    # We are not using .restrict(request.user, "view") here
+                    # User should be able to see any saved view that he has the list view access to.
                     current_saved_view = SavedView.objects.get(pk=current_saved_view_pk)
                 except ObjectDoesNotExist:
                     messages.error(request, f"Saved view {current_saved_view_pk} not found")
