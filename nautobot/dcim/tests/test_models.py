@@ -2861,6 +2861,53 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
 
         self.assertEqual(context.exception.message, "Creating this instance would cause an infinite loop.")
 
+    def test_render_component_names(self):
+        """Test that creating a Module with components properly renders the {module} and {module.parent} variables."""
+
+        manufacturer = Manufacturer.objects.first()
+        module_type = ModuleType.objects.create(manufacturer=manufacturer, model="test component render name templates")
+        ModuleBayTemplate.objects.create(position="1", module_type=module_type)
+        InterfaceTemplate.objects.create(
+            name="Interface {module.parent.parent}/{module.parent}/{module}", module_type=module_type
+        )
+        grandparent_module = Module.objects.create(
+            module_type=module_type,
+            location=self.location,
+            status=self.status,
+        )
+        parent_module = Module.objects.create(
+            parent_module_bay=grandparent_module.module_bays.first(),
+            module_type=module_type,
+            location=self.location,
+            status=self.status,
+        )
+        child_module = Module.objects.create(
+            parent_module_bay=parent_module.module_bays.first(),
+            module_type=module_type,
+            location=self.location,
+            status=self.status,
+        )
+
+        self.assertEqual(
+            grandparent_module.interfaces.first().name, "Interface {module.parent.parent}/{module.parent}/{module}"
+        )
+        self.assertEqual(parent_module.interfaces.first().name, "Interface {module.parent.parent}/{module.parent}/1")
+        self.assertEqual(child_module.interfaces.first().name, "Interface {module.parent.parent}/1/1")
+
+        # Moving the grandparent module out of inventory populates the template variables on all descendant interfaces
+        module_bay_position = self.module_bay.position
+        grandparent_module.parent_module_bay = self.module_bay
+        grandparent_module.location = None
+        grandparent_module.save()
+        self.assertEqual(
+            grandparent_module.interfaces.first().name,
+            "Interface {module.parent.parent}/{module.parent}/" + module_bay_position,
+        )
+        self.assertEqual(
+            parent_module.interfaces.first().name, "Interface {module.parent.parent}/" + module_bay_position + "/1"
+        )
+        self.assertEqual(child_module.interfaces.first().name, "Interface " + module_bay_position + "/1/1")
+
 
 class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
     model = ModuleType
