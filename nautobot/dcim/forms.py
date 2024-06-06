@@ -2349,7 +2349,6 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         return cleaned_data
 
 
-# TODO: add parent_module_bay to module bulk edit
 class ModuleBulkEditForm(
     TagsBulkEditFormMixin,
     LocatableModelBulkEditFormMixin,
