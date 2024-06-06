@@ -324,9 +324,7 @@ class DeviceBayTemplateTable(ComponentTemplateTable):
         empty_text = "None"
 
 
-class ModuleBayTemplateTable(BaseTable):
-    pk = ToggleColumn()
-    position = tables.Column()
+class ModuleBayTemplateTable(ComponentTemplateTable):
     actions = ButtonsColumn(
         model=ModuleBayTemplate,
         buttons=("edit", "delete"),
@@ -335,5 +333,5 @@ class ModuleBayTemplateTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = ModuleBayTemplate
-        fields = ("pk", "position", "label", "description", "actions")
+        fields = ("pk", "name", "position", "label", "description", "actions")
         empty_text = "None"

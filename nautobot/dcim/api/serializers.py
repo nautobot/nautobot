@@ -1135,12 +1135,12 @@ class ModuleBaySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             raise serializers.ValidationError("Only one of parent_device or parent_module must be set")
         if data.get("parent_device"):
             validator = UniqueTogetherValidator(
-                queryset=self.Meta.model.objects.all(), fields=("parent_device", "position")
+                queryset=self.Meta.model.objects.all(), fields=("parent_device", "name")
             )
             validator(data, self)
         if data.get("parent_module"):
             validator = UniqueTogetherValidator(
-                queryset=self.Meta.model.objects.all(), fields=("parent_module", "position")
+                queryset=self.Meta.model.objects.all(), fields=("parent_module", "name")
             )
             validator(data, self)
         return super().validate(data)
@@ -1157,14 +1157,10 @@ class ModuleBayTemplateSerializer(NautobotModelSerializer):
         if data.get("device_type") and data.get("module_type"):
             raise serializers.ValidationError("Only one of device_type or module_type must be set")
         if data.get("device_type"):
-            validator = UniqueTogetherValidator(
-                queryset=self.Meta.model.objects.all(), fields=("device_type", "position")
-            )
+            validator = UniqueTogetherValidator(queryset=self.Meta.model.objects.all(), fields=("device_type", "name"))
             validator(data, self)
         if data.get("module_type"):
-            validator = UniqueTogetherValidator(
-                queryset=self.Meta.model.objects.all(), fields=("module_type", "position")
-            )
+            validator = UniqueTogetherValidator(queryset=self.Meta.model.objects.all(), fields=("module_type", "name"))
             validator(data, self)
         return super().validate(data)
 
