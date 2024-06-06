@@ -15,16 +15,15 @@ class CloudAccountTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             SecretsGroup.objects.create(name="Secrets Group 2"),
             SecretsGroup.objects.create(name="Secrets Group 3"),
         )
-        CloudAccount.objects.create(name="Deletable Cloud Account 1", account_number="123456")
-        CloudAccount.objects.create(name="Deletable Cloud Account 2", account_number="234567")
-        CloudAccount.objects.create(name="Deletable Cloud Account 3", account_number="345678")
+        CloudAccount.objects.create(name="Deletable Cloud Account 1", account_number="123456", provider=providers[0])
+        CloudAccount.objects.create(name="Deletable Cloud Account 2", account_number="234567", provider=providers[0])
+        CloudAccount.objects.create(name="Deletable Cloud Account 3", account_number="345678", provider=providers[0])
         cls.form_data = {
             "name": "New Cloud Account",
             "account_number": "8928371982310",
-            "cid": "Circuit X",
             "provider": providers[1].pk,
             "secrets_group": secrets_groups[1].pk,
-            "description": "A new circuit",
+            "description": "A new cloud account",
             "tags": [t.pk for t in Tag.objects.get_for_model(CloudAccount)],
         }
 
