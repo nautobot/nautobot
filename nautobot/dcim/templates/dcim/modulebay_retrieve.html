@@ -15,7 +15,7 @@
                         <li><a href="{% url module_breadcrumb_url pk=object.parent_module.pk %}">{{ object|meta:"verbose_name_plural"|bettertitle }}</a></li>
                     {% endif %}
                 {% endif %}
-                <li><a href="{{ object.get_absolute_url }}">{{ object.position }}</a></li>
+                <li><a href="{{ object.get_absolute_url }}">{{ object.name }}</a></li>
 {% endblock breadcrumbs %}
 {% block content_left_page %}
                     <div class="panel panel-default">
@@ -35,6 +35,10 @@
                                         {{ object.parent_module|hyperlinked_object }}
                                     </td>
                                 {% endif %}
+                            </tr>
+                            <tr>
+                                <td>Name</td>
+                                <td>{{ object.name }}</td>
                             </tr>
                             <tr>
                                 <td>Position</td>

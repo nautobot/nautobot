@@ -1841,6 +1841,10 @@ class ModuleFilterSet(
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },
+            "parent_module_bay__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
             "parent_module_bay__position": {
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
@@ -1903,7 +1907,7 @@ class ModuleTypeFilterSet(DeviceTypeModuleTypeCommonFiltersMixin, NautobotFilter
         fields = "__all__"
 
 
-class ModuleBayTemplateFilterSet(NautobotFilterSet):
+class ModuleBayTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMixin, NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "device_type__manufacturer__name": {
@@ -1922,29 +1926,15 @@ class ModuleBayTemplateFilterSet(NautobotFilterSet):
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },
+            "name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
             "position": {
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },
         }
-    )
-    device_type = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=DeviceType.objects.all(),
-        to_field_name="model",
-        label="Device type (model or ID)",
-    )
-    has_device_type = RelatedMembershipBooleanFilter(
-        field_name="device_type",
-        label="Has device type",
-    )
-    module_type = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=ModuleType.objects.all(),
-        to_field_name="model",
-        label="Module type (model or ID)",
-    )
-    has_module_type = RelatedMembershipBooleanFilter(
-        field_name="module_type",
-        label="Has module type",
     )
 
     class Meta:
@@ -1964,6 +1954,10 @@ class ModuleBayFilterSet(NautobotFilterSet):
                 "preprocessor": str.strip,
             },
             "parent_module__module_type__model": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "name": {
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },
