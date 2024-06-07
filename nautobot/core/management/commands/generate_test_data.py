@@ -31,6 +31,17 @@ class Command(BaseCommand):
             help="Do NOT prompt the user for input or confirmation of any kind.",
         )
         parser.add_argument(
+            "--print-hashes",
+            action="store_true",
+            help=(
+                "After creating each batch of records, print a hash of the list of all IDs of all objects of "
+                "the given type. This is useful for identifying any problems with factory randomness / determinism; "
+                "in general, successive runs with the same seed should output identical hashes for each stage, "
+                "while successive runs with differing seeds should output different hashes. "
+                "Setting environment variable GITHUB_ACTIONS to true is equivalent to specifying this argument."
+            ),
+        )
+        parser.add_argument(
             "--cache-test-fixtures",
             action="store_true",
             help="Save test database to a json fixture file to re-use on subsequent tests.",
@@ -46,7 +57,7 @@ class Command(BaseCommand):
             help='The database to generate the test data in. Defaults to the "default" database.',
         )
 
-    def _generate_factory_data(self, seed, db_name):
+    def _generate_factory_data(self, seed, db_name, print_hashes=False):
         try:
             import factory.random
 
@@ -101,12 +112,12 @@ class Command(BaseCommand):
         factory.random.reseed_random(seed)
 
         def _create_batch(some_factory, count, **kwargs):
-            some_factory.create_batch(count, using=db_name, **kwargs)
-            if is_truthy(os.environ.get("GITHUB_ACTIONS", "false")):
+            records = some_factory.create_batch(count, using=db_name, **kwargs)
+            if print_hashes:
                 model = some_factory._meta.get_model_class()
-                model_ids = list(model.objects.order_by("id").values_list("id", flat=True))
+                model_ids = [record.id for record in records]
                 sha256_hash = hashlib.sha256(json.dumps(model_ids, cls=DjangoJSONEncoder).encode()).hexdigest()
-                self.stdout.write(f"  SHA256 hash of {model.__name__} PKs: {sha256_hash}")
+                self.stdout.write(f"  SHA256 hash of created {model.__name__} PKs: {sha256_hash}")
 
         self.stdout.write("Creating Roles...")
         populate_role_choices(verbosity=0, using=db_name)
@@ -253,7 +264,10 @@ Type 'yes' to continue, or 'no' to cancel: """
             self.stdout.write(self.style.WARNING(f"Loading factory data from file {options['fixture_file']}"))
             call_command("loaddata", "--database", options["database"], options["fixture_file"])
         else:
-            self._generate_factory_data(options["seed"], options["database"])
+            print_hashes = options["print_hashes"]
+            if is_truthy(os.environ.get("GITHUB_ACTIONS", "false")):
+                print_hashes = True
+            self._generate_factory_data(options["seed"], options["database"], print_hashes=print_hashes)
 
             if options["cache_test_fixtures"]:
                 self.stdout.write(self.style.WARNING(f"Saving factory data to file {options['fixture_file']}"))
