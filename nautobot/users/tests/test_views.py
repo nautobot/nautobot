@@ -169,11 +169,13 @@ class SavedViewTest(ModelViewTestCase):
     def test_get_object_anonymous(self):
         # Make the request as an unauthenticated user
         self.client.logout()
-        response = self.client.get(self._get_queryset().first().get_absolute_url())
+        response = self.client.get(self._get_queryset().first().get_absolute_url(), follow=True)
         self.assertHttpStatus(response, 200)
         response_body = response.content.decode(response.charset)
         self.assertIn(
-            "/login/?next=" + self._get_queryset().first().get_absolute_url(), response_body, msg=response_body
+            f'<input type="hidden" name="next" value="{self._get_queryset().first().get_absolute_url()}" />',
+            response_body,
+            msg=response_body,
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -244,7 +246,7 @@ class SavedViewTest(ModelViewTestCase):
         instance = self._get_queryset().first()
         update_query_strings = ["per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
         update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
-        different_user = self._get_queryset().exclude(owner=instance.owner).first().owner
+        different_user = User.objects.create(username="User 1", is_active=True)
         # Try update the saved view with a different user from the owner of the saved view
         self.client.force_login(different_user)
         response = self.client.get(update_url, follow=True)
@@ -278,9 +280,9 @@ class SavedViewTest(ModelViewTestCase):
         }
         instance.validated_save()
         delete_url = reverse("users:savedview_delete", kwargs={"pk": instance.pk})
-        saved_view_with_different_user = self._get_queryset().exclude(owner=instance.owner).first()
+        different_user = User.objects.create(username="User 2", is_active=True)
         # Try delete the saved view with a different user from the owner of the saved view
-        self.client.force_login(saved_view_with_different_user.owner)
+        self.client.force_login(different_user)
         response = self.client.post(delete_url, follow=True)
         self.assertHttpStatus(response, 200)
         response_body = extract_page_body(response.content.decode(response.charset))
