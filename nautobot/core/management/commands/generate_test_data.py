@@ -8,7 +8,6 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connections, DEFAULT_DB_ALIAS
 from django.utils.crypto import get_random_string
 
-from nautobot.cloud.factory import CloudTypeFactory
 from nautobot.core.settings_funcs import is_truthy
 
 
@@ -71,6 +70,8 @@ class Command(BaseCommand):
             )
             from nautobot.cloud.factory import (
                 CloudAccountFactory,
+                CloudNetworkFactory,
+                CloudTypeFactory,
             )
             from nautobot.dcim.factory import (
                 ConsolePortTemplateFactory,
@@ -215,6 +216,7 @@ class Command(BaseCommand):
         _create_batch(SoftwareImageFileFactory, 5, description="without DeviceTypes")
         _create_batch(CloudAccountFactory, 10)
         _create_batch(CloudTypeFactory, 10)
+        _create_batch(CloudNetworkFactory, 20)
         _create_batch(CircuitTypeFactory, 40)
         _create_batch(ProviderFactory, 20, description="to be usable by Circuits")
         _create_batch(ProviderNetworkFactory, 20)
