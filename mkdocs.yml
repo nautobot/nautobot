@@ -95,6 +95,10 @@ markdown_extensions:
       base_path: "docs"
   - "md_in_html"
   - "pymdownx.details"
+    # Need pymdownx.emoji for Grid icon search
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - "pymdownx.highlight":
       anchor_linenums: true
   - "pymdownx.inlinehilite"
@@ -112,6 +116,8 @@ plugins:
   - "gen-files":
       scripts:
         - docs/generate_code_reference_pages.py
+  - "glightbox":
+      manual: true # See https://blueswen.github.io/mkdocs-glightbox/flexibility/enable-by-image-or-page/
   - "macros":
       module_name: "docs/macros"
       on_error_fail: true
@@ -297,6 +303,7 @@ plugins:
         "user-guides/s3-django-storage.md": "user-guide/administration/guides/s3-django-storage.md"
 
         # Post 2.x redirects
+        "index.md": "overview/index.md"
         "development/apps/api/ui-extensions/object-detail-views.md": "development/apps/api/ui-extensions/object-views.md"
         "development/core/extending-models.md": "development/core/model-checklist.md"
         "user-guide/administration/installation/docker.md": "user-guide/administration/installation-extras/docker.md"
@@ -304,7 +311,10 @@ plugins:
         "user-guide/administration/installation/selinux-troubleshooting.md": "user-guide/administration/installation-extras/selinux-troubleshooting.md"
 
 nav:
-  - Overview: "index.md"
+  - Overview:
+      - "overview/index.md"
+      - Design Philosophy: "overview/design_philosophy.md"
+      - Application Stack: "overview/application_stack.md"
   - User Guide:
       - "user-guide/index.md"
       - Administration:
