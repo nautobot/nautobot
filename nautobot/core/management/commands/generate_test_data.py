@@ -104,7 +104,6 @@ class Command(BaseCommand):
                 JobResultFactory,
                 ObjectChangeFactory,
                 RoleFactory,
-                StaticGroupAssociationFactory,
                 StaticGroupFactory,
                 StatusFactory,
                 TagFactory,
