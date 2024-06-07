@@ -389,9 +389,9 @@ nav:
               - Circuit Provider Network: "user-guide/core-data-model/circuits/providernetwork.md"
           - Cloud:
               - Cloud Account: "user-guide/core-data-model/cloud/cloudaccount.md"
-              - Cloud Type: "user-guide/core-data-model/cloud/cloudtype.md"
               - Cloud Network: "user-guide/core-data-model/cloud/cloudnetwork.md"
               - Cloud Network Prefix Assignment: "user-guide/core-data-model/cloud/cloudnetworkprefixassignment.md"
+              - Cloud Type: "user-guide/core-data-model/cloud/cloudtype.md"
           - DCIM:
               - Location Type: "user-guide/core-data-model/dcim/locationtype.md"
               - Location: "user-guide/core-data-model/dcim/location.md"
