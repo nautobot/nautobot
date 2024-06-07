@@ -1,4 +1,8 @@
+import django_filters
+
+from nautobot.cloud import models
 from nautobot.core.filters import (
+    BaseFilterSet,
     ContentTypeMultipleChoiceFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
     SearchFilter,
@@ -6,14 +10,14 @@ from nautobot.core.filters import (
 from nautobot.dcim.models import Manufacturer
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import SecretsGroup
-
-from .models import CloudAccount, CloudType
+from nautobot.ipam.models import Prefix
 
 
 class CloudAccountFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
+            "description": "icontains",
             "account_number": "icontains",
             "provider__name": "icontains",
         },
@@ -31,7 +35,7 @@ class CloudAccountFilterSet(NautobotFilterSet):
     )
 
     class Meta:
-        model = CloudAccount
+        model = models.CloudAccount
         fields = [
             "account_number",
             "description",
@@ -47,6 +51,7 @@ class CloudTypeFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
+            "description": "icontains",
             "provider__name": "icontains",
         },
     )
@@ -59,5 +64,50 @@ class CloudTypeFilterSet(NautobotFilterSet):
     content_types = ContentTypeMultipleChoiceFilter(choices=(("cloud", "cloudaccount"),))
 
     class Meta:
-        model = CloudType
-        fields = ["id", "name", "description"]
+        model = models.CloudType
+        fields = ["id", "name", "description", "tags"]
+
+
+class CloudNetworkFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+        },
+    )
+    cloud_type = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.CloudType.objects.all(),
+        label="Cloud type (name or ID)",
+    )
+    cloud_account = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.CloudAccount.objects.all(),
+        label="Cloud account (name or ID)",
+    )
+    parent = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.CloudNetwork.objects.all(),
+        label="Parent cloud network (name or ID)",
+    )
+
+    class Meta:
+        model = models.CloudNetwork
+        fields = ["id", "name", "description", "tags"]
+
+
+class CloudNetworkPrefixAssignmentFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "cloud_network__name": "icontains",
+            "cloud_network__description": "icontains",
+            # TODO: add prefix search, currently implemented as a custom search() method on PrefixFilterSet
+        }
+    )
+    cloud_network = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.CloudNetwork.objects.all(),
+        label="Cloud network (name or ID)",
+    )
+    # Prefix doesn't have an appropriate natural key for NaturalKeyOrPKMultipleChoiceFilter
+    prefix = django_filters.ModelMultipleChoiceFilter(queryset=Prefix.objects.all())
+
+    class Meta:
+        model = models.CloudNetworkPrefixAssignment
+        fields = ["id"]
