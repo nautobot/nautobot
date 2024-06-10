@@ -46,6 +46,8 @@ from nautobot.extras.filters import (
     JobHookFilterSet,
     JobLogEntryFilterSet,
     JobResultFilterSet,
+    MetadataChoiceFilterSet,
+    MetadataTypeFilterSet,
     ObjectChangeFilterSet,
     RelationshipAssociationFilterSet,
     RelationshipFilterSet,
@@ -79,6 +81,8 @@ from nautobot.extras.models import (
     JobHook,
     JobLogEntry,
     JobResult,
+    MetadataChoice,
+    MetadataType,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -1335,6 +1339,27 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
                 # pylint: enable=unsupported-binary-operation
             ),
         )
+
+
+class MetadataChoiceTestCase(FilterTestCases.FilterTestCase):
+    queryset = MetadataChoice.objects.all()
+    filterset = MetadataChoiceFilterSet
+    generic_filter_tests = (
+        ["metadata_type", "metadata_type__name"],
+        ["metadata_type", "metadata_type__id"],
+        ["value"],
+        ["weight"],
+    )
+
+
+class MetadataTypeTestCase(FilterTestCases.FilterTestCase):
+    queryset = MetadataType.objects.all()
+    filterset = MetadataTypeFilterSet
+    generic_filter_tests = (
+        ["name"],
+        ["description"],
+        ["data_type"],
+    )
 
 
 class ObjectChangeTestCase(FilterTestCases.FilterTestCase):

@@ -35,6 +35,7 @@ class MetadataType(PrimaryModel):
     # TODO: weight, grouping, advanced_ui?
 
     clone_fields = ["data_type"]
+    documentation_static_path = "docs/user-guide/platform-functionality/metadata.html"
 
     class Meta:
         ordering = ["name"]
@@ -77,6 +78,8 @@ class MetadataChoice(ChangeLoggedModel, BaseModel):
     )
     value = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")
+
+    documentation_static_path = "docs/user-guide/platform-functionality/metadata.html"
 
     class Meta:
         ordering = ["metadata_type", "weight", "value"]

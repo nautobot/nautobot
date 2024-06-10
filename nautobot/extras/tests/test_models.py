@@ -30,6 +30,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.choices import (
     JobResultStatusChoices,
     LogLevelChoices,
+    MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
     SecretsGroupAccessTypeChoices,
@@ -55,6 +56,8 @@ from nautobot.extras.models import (
     Job as JobModel,
     JobLogEntry,
     JobResult,
+    MetadataChoice,
+    MetadataType,
     ObjectChange,
     Role,
     Secret,
@@ -1208,6 +1211,38 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             handler.exception.message_dict["approval_required"][0],
             "A job that may have sensitive variables cannot be marked as requiring approval",
         )
+
+
+class MetadataChoiceTest(ModelTestCases.BaseModelTestCase):
+    model = MetadataChoice
+
+    def test_immutable_metadata_type(self):
+        instance1 = MetadataChoice.objects.first()
+        instance2 = MetadataChoice.objects.exclude(metadata_type=instance1.metadata_type).first()
+        self.assertIsNotNone(instance2)
+        with self.assertRaises(ValidationError):
+            instance1.metadata_type = instance2.metadata_type
+            instance1.validated_save()
+
+    def test_wrong_metadata_type(self):
+        with self.assertRaises(ValidationError):
+            instance = MetadataChoice(
+                metadata_type=MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_TEXT).first(),
+                value="Hello",
+                weight=100,
+            )
+            self.assertIsNotNone(instance.metadata_type)
+            instance.validated_save()
+
+
+class MetadataTypeTest(ModelTestCases.BaseModelTestCase):
+    model = MetadataType
+
+    def test_immutable_data_type(self):
+        instance = MetadataType.objects.exclude(data_type=MetadataTypeDataTypeChoices.TYPE_TEXT).first()
+        with self.assertRaises(ValidationError):
+            instance.data_type = MetadataTypeDataTypeChoices.TYPE_TEXT
+            instance.validated_save()
 
 
 class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
