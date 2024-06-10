@@ -255,12 +255,10 @@ class SavedViewUIViewSet(
 
     def check_permissions(self, request):
         """
-        We only need to check whether the user is authenticated for SavedViews.
+        Override this method to not check any permissions.
         Since users with <app_label>.view_<model_name> permissions should be able to view saved views related to this model.
+        And those permissions will be enforced in the related view.
         """
-        user = self.request.user
-        if not user.is_authenticated:
-            return self.handle_no_permission()
 
     def retrieve(self, request, *args, **kwargs):
         """

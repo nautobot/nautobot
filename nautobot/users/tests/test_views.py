@@ -174,7 +174,7 @@ class SavedViewTest(ModelViewTestCase):
         self.assertHttpStatus(response, 200)
         response_body = response.content.decode(response.charset)
         url = reverse(instance.view)
-        self.assertIn("/login/?next=" + url, response_body, msg=response_body)
+        self.assertIn("/login/?next=" + f"{url}", response_body, msg=response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_object_without_permission(self):

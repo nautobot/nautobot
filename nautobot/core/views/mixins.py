@@ -280,26 +280,6 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
                     code=getattr(permission, "code", None),
                 )
 
-    def dispatch(self, request, *args, **kwargs):
-        """
-        Override the default dispatch() method to check permissions first.
-        Used to determine whether the user has permissions to a view and object-level permissions.
-        Using AccessMixin handle_no_permission() to deal with Object-Level permissions and API-Level permissions in one pass.
-        """
-        # self.initialize_request() converts a WSGI request and returns an API request object which can be passed into self.check_permissions()
-        # If the user is not authenticated or does not have the permission to perform certain actions,
-        # DRF NotAuthenticated or PermissionDenied exception can be raised appropriately and handled by self.handle_no_permission() in the UI.
-        # initialize_request() also instantiates self.action which is needed for permission checks.
-        api_request = self.initialize_request(request, *args, **kwargs)
-        try:
-            self.check_permissions(api_request)
-        # check_permissions() could raise NotAuthenticated and PermissionDenied Error.
-        # We handle them by a single except statement since self.handle_no_permission() is able to handle both errors
-        except (exceptions.NotAuthenticated, exceptions.PermissionDenied):
-            return self.handle_no_permission()
-
-        return super().dispatch(request, *args, **kwargs)
-
     def get_table_class(self):
         # Check if self.table_class is specified in the ModelViewSet before performing subsequent actions
         # If not, display an error message
