@@ -1,19 +1,21 @@
 from django.contrib.contenttypes.models import ContentType
 import factory
 
-from nautobot.cloud.models import CloudAccount, CloudType
+from nautobot.cloud import models
 from nautobot.core.factory import (
+    get_random_instances,
     NautobotBoolIterator,
     PrimaryModelFactory,
     random_instance,
     UniqueFaker,
 )
 from nautobot.dcim.models import Manufacturer
+from nautobot.ipam.models import Prefix
 
 
 class CloudAccountFactory(PrimaryModelFactory):
     class Meta:
-        model = CloudAccount
+        model = models.CloudAccount
         exclude = ("has_description",)
 
     name = UniqueFaker("company")
@@ -30,7 +32,7 @@ class CloudAccountFactory(PrimaryModelFactory):
 
 class CloudTypeFactory(PrimaryModelFactory):
     class Meta:
-        model = CloudType
+        model = models.CloudType
         exclude = ("has_description",)
 
     provider = random_instance(Manufacturer)
@@ -44,4 +46,35 @@ class CloudTypeFactory(PrimaryModelFactory):
             if extracted:
                 self.content_types.set(extracted)
             else:
-                self.content_types.add(ContentType.objects.get_for_model(CloudAccount))
+                self.content_types.add(ContentType.objects.get_for_model(models.CloudNetwork))
+
+
+class CloudNetworkFactory(PrimaryModelFactory):
+    class Meta:
+        model = models.CloudNetwork
+        exclude = ("has_description", "has_parent")
+
+    name = factory.LazyAttributeSequence(lambda o, n: f"CloudNetwork {n + 1}")
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    cloud_type = random_instance(models.CloudType, allow_null=False)
+    cloud_account = random_instance(models.CloudAccount, allow_null=False)
+    has_parent = NautobotBoolIterator()
+    extra_config = factory.Faker("pydict", value_types=[str, bool, int])
+
+    @factory.lazy_attribute
+    def parent(self):
+        if not self.has_parent:
+            return None
+        candidate_parents = models.CloudNetwork.objects.filter(parent__isnull=True).exclude(pk=self.id)
+        if candidate_parents.exists():
+            return factory.random.randgen.choice(candidate_parents)
+        return None
+
+    @factory.post_generation
+    def prefixes(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.prefixes.set(extracted)
+            else:
+                self.prefixes.set(get_random_instances(Prefix))

@@ -17,7 +17,7 @@ except ImportError:  # python 3.8
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
-from nautobot.cloud.models import CloudAccount, CloudType
+from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudType
 from nautobot.core.templatetags.buttons import job_export_url, job_import_url
 from nautobot.core.testing import (
     extract_page_body,
@@ -769,6 +769,7 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         Platform.objects.all().delete()
         Module.objects.all().delete()
         ModuleType.objects.all().delete()
+        CloudNetwork.objects.all().delete()
         CloudAccount.objects.all().delete()
         CloudType.objects.all().delete()
 
