@@ -22,7 +22,7 @@ from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic.edit import FormView
 from drf_spectacular.utils import extend_schema
-from rest_framework import exceptions, mixins
+from rest_framework import mixins
 from rest_framework.decorators import action as drf_action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
