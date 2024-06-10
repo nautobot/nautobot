@@ -276,9 +276,10 @@ class ModularComponentForm(ComponentForm):
             </ul>
 
             The variables <code>{module}</code>, <code>{module.parent}</code>, <code>{module.parent.parent}</code>, etc.
-            may be used in the name field and will be replaced by the position that the module occupies in the parent
-            device or module. These variables can be used multiple times in the component name and there is no limit to
-            the depth of parent levels. Any variables that cannot be replaced by a suitable parent position will remain unchanged.
+            may be used in the name field and will be replaced by the <code>position</code> of the module bay that the
+            module occupies (skipping over any bays with a blank <code>position</code>). These variables can be used
+            multiple times in the component name and there is no limit to the depth of parent levels.
+            Any variables that cannot be replaced by a suitable position value will remain unchanged.
                 """,
     )
 
