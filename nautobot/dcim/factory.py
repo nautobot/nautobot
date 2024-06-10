@@ -744,7 +744,7 @@ class ControllerManagedDeviceGroupFactory(PrimaryModelFactory):
     name = UniqueFaker("word")
     parent = factory.Maybe("has_parent", random_instance(ControllerManagedDeviceGroup), None)
     controller = factory.LazyAttribute(
-        lambda o: o.parent.controller if o.parent else Controller.objects.order_by("?").first()
+        lambda o: o.parent.controller if o.parent else factory.random.randgen.choice(Controller.objects.all())
     )
     weight = factory.Faker("pyint", min_value=1, max_value=1000)
 
