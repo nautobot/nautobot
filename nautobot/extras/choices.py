@@ -315,14 +315,14 @@ class MetadataTypeDataTypeChoices(CustomFieldTypeChoices):
 
     TYPE_CONTACT_TEAM = "contact-or-team"
     # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
-    TYPE_DATE_TIME = "datetime"
+    TYPE_DATETIME = "datetime"
     TYPE_FLOAT = "float"
 
     CHOICES = (
         *CustomFieldTypeChoices.CHOICES,
         (TYPE_CONTACT_TEAM, "Contact or Team"),
         # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
-        (TYPE_DATE_TIME, "Date/time"),
+        (TYPE_DATETIME, "Date/time"),
         (TYPE_FLOAT, "Floating point number"),
     )
 
