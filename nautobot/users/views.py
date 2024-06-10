@@ -19,7 +19,6 @@ from django.utils.encoding import iri_to_uri
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
-from rest_framework.decorators import action as drf_action
 
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.utils.config import get_settings_or_config
@@ -257,36 +256,17 @@ class SavedViewUIViewSet(
 
     def check_permissions(self, request):
         """
-        Check whether the user has the permissions needed to perform certain actions.
+        We only need to check whether the user is authenticated for SavedViews.
+        Since users with <app_label>.view_<model_name> permissions should be able to view saved views related to this model.
         """
         user = self.request.user
-        permission_required = self.get_required_permission()
-        # Check that the user has been granted the required permission(s) one by one.
-        # In case the permission has `message` or `code`` attribute, we want to include those information in the permission_denied error.
-        for permission in permission_required:
-            # If the user does not have the permission required, we raise DRF's `NotAuthenticated` or `PermissionDenied` exception
-            # which will be handled by self.handle_no_permission() in the UI appropriately in the dispatch() method
-            # Cast permission to a list since has_perms() takes a list type parameter.
-            if "savedview" in permission:
-                continue
-            if not user.has_perms([permission]):
-                self.permission_denied(
-                    request,
-                    message=getattr(permission, "message", None),
-                    code=getattr(permission, "code", None),
-                )
-
-    def list(self, request, *args, **kwargs):
-        if isinstance(request.user, AnonymousUser):
+        if not user.is_authenticated:
             return self.handle_no_permission()
-        return super().list(request, *args, **kwargs)
 
     def retrieve(self, request, *args, **kwargs):
         """
         The detail view for a saved view should the related ObjectListView with saved configurations applied
         """
-        if isinstance(request.user, AnonymousUser):
-            return self.handle_no_permission()
         instance = self.get_object()
         list_view_url = reverse(instance.view) + f"?saved_view={instance.pk}"
         return redirect(list_view_url)
@@ -295,8 +275,6 @@ class SavedViewUIViewSet(
         """
         Extract filter_params, pagination and sort_order from request.GET and apply it to the SavedView specified
         """
-        if isinstance(request.user, AnonymousUser):
-            return self.handle_no_permission()
         sv = SavedView.objects.get(pk=kwargs.get("pk", None))
         if sv.owner == request.user or request.user.has_perms(["users.change_savedview"]):
             pass
@@ -342,8 +320,6 @@ class SavedViewUIViewSet(
         return redirect(list_view_url)
 
     def create(self, request, *args, **kwargs):
-        if isinstance(request.user, AnonymousUser):
-            return self.handle_no_permission()
         """
         This method will extract filter_params, pagination and sort_order from request.GET
         and the name of the new SavedView from request.POST to create a new SavedView.
@@ -423,20 +399,12 @@ class SavedViewUIViewSet(
             messages.error(request, e)
             return redirect(self.get_return_url(request))
 
-    @drf_action(detail=True)
-    def changelog(self, request, *args, **kwargs):
-        if isinstance(request.user, AnonymousUser):
-            return self.handle_no_permission()
-        return super().changelog(request, *args, **kwargs)
-
     def destroy(self, request, *args, **kwargs):
         """
         request.GET: render the ObjectDeleteConfirmationForm which is passed to NautobotHTMLRenderer as Response.
         request.POST: call perform_destroy() which validates the form and perform the action of delete.
         Override to add more variables to Response
         """
-        if isinstance(request.user, AnonymousUser):
-            return self.handle_no_permission()
         sv = SavedView.objects.get(pk=kwargs.get("pk", None))
         if sv.owner == request.user or request.user.has_perms(["users.delete_savedview"]):
             pass

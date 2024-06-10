@@ -169,14 +169,12 @@ class SavedViewTest(ModelViewTestCase):
     def test_get_object_anonymous(self):
         # Make the request as an unauthenticated user
         self.client.logout()
-        response = self.client.get(self._get_queryset().first().get_absolute_url(), follow=True)
+        instance = self._get_queryset().first()
+        response = self.client.get(instance.get_absolute_url(), follow=True)
         self.assertHttpStatus(response, 200)
         response_body = response.content.decode(response.charset)
-        self.assertIn(
-            f'<input type="hidden" name="next" value="{self._get_queryset().first().get_absolute_url()}" />',
-            response_body,
-            msg=response_body,
-        )
+        url = reverse(instance.view)
+        self.assertIn("/login/?next=" + url, response_body, msg=response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_object_without_permission(self):
@@ -239,6 +237,9 @@ class SavedViewTest(ModelViewTestCase):
 
         # Try GET to non-permitted object
         # Should be able to get to any SavedView instance as long as the user has "{app_label}.view_{model_name}" permission
+        app_label = instance2.view.split(":")[0]
+        model_name = instance2.view.split(":")[1].split("_")[0]
+        self.add_permissions(f"{app_label}.view_{model_name}")
         self.assertHttpStatus(self.client.get(instance2.get_absolute_url()), 302)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
