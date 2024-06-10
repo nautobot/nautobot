@@ -243,7 +243,7 @@ class SavedViewTest(ModelViewTestCase):
         self.assertHttpStatus(self.client.get(instance2.get_absolute_url()), 302)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_update_saved_view(self):
+    def test_update_saved_view_as_different_user(self):
         instance = self._get_queryset().first()
         update_query_strings = ["per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
         update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
@@ -258,8 +258,15 @@ class SavedViewTest(ModelViewTestCase):
             response_body,
             msg=response_body,
         )
-        self.client.logout()
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_saved_view_as_owner(self):
+        instance = self._get_queryset().first()
+        update_query_strings = ["per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
+        update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
         # Try update the saved view with the same user as the owner of the saved view
+        instance.owner.is_active = True
+        instance.owner.save()
         self.client.force_login(instance.owner)
         response = self.client.get(update_url)
         self.assertHttpStatus(response, 302)
@@ -270,7 +277,7 @@ class SavedViewTest(ModelViewTestCase):
         self.assertEqual(instance.config["sort_order"], ["name"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_delete_saved_view(self):
+    def test_delete_saved_view_as_different_user(self):
         instance = self._get_queryset().first()
         instance.config = {
             "filter_params": {
@@ -292,9 +299,23 @@ class SavedViewTest(ModelViewTestCase):
             response_body,
             msg=response_body,
         )
-        self.client.logout()
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_delete_saved_view_as_owner(self):
+        instance = self._get_queryset().first()
+        instance.config = {
+            "filter_params": {
+                "location_type": ["Campus", "Building", "Floor", "Elevator"],
+                "tenant": ["Krause, Welch and Fuentes"],
+            },
+            "table_config": {"LocationTable": {"columns": ["name", "status", "location_type", "tags"]}},
+        }
+        instance.validated_save()
+        delete_url = reverse("users:savedview_delete", kwargs={"pk": instance.pk})
         # Delete functionality should work even without "users.delete_savedview" permissions
         # if the saved view belongs to the user.
+        instance.owner.is_active = True
+        instance.owner.save()
         self.client.force_login(instance.owner)
         response = self.client.post(delete_url, follow=True)
         self.assertHttpStatus(response, 200)
