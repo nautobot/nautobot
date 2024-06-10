@@ -199,7 +199,6 @@ plugins:
         "models/circuits/circuittype.md": "user-guide/core-data-model/circuits/circuittype.md"
         "models/circuits/provider.md": "user-guide/core-data-model/circuits/provider.md"
         "models/circuits/providernetwork.md": "user-guide/core-data-model/circuits/providernetwork.md"
-        "models/cloud/cloudaccount.md": "user-guide/core-data-model/cloud/cloudaccount.md"
         "models/dcim/cable.md": "user-guide/core-data-model/dcim/cable.md"
         "models/dcim/controller.md": "user-guide/core-data-model/dcim/controller.md"
         "models/dcim/controllermanageddevicegroup.md": "user-guide/core-data-model/dcim/controllermanageddevicegroup.md"
@@ -299,6 +298,10 @@ plugins:
         # Post 2.x redirects
         "development/apps/api/ui-extensions/object-detail-views.md": "development/apps/api/ui-extensions/object-views.md"
         "development/core/extending-models.md": "development/core/model-checklist.md"
+        "models/cloud/cloudaccount.md": "user-guide/core-data-model/cloud/cloudaccount.md"
+        "models/cloud/cloudnetwork.md": "user-guide/core-data-model/cloud/cloudnetwork.md"
+        "models/cloud/cloudnetworkprefixassignment.md": "user-guide/core-data-model/cloud/cloudnetworkprefixassignment.md"
+        "models/cloud/cloudtype.md": "user-guide/core-data-model/cloud/cloudtype.md"
         "user-guide/administration/installation/docker.md": "user-guide/administration/installation-extras/docker.md"
         "user-guide/administration/installation/health-checks.md": "user-guide/administration/installation-extras/health-checks.md"
         "user-guide/administration/installation/selinux-troubleshooting.md": "user-guide/administration/installation-extras/selinux-troubleshooting.md"
@@ -386,6 +389,9 @@ nav:
               - Circuit Provider Network: "user-guide/core-data-model/circuits/providernetwork.md"
           - Cloud:
               - Cloud Account: "user-guide/core-data-model/cloud/cloudaccount.md"
+              - Cloud Network: "user-guide/core-data-model/cloud/cloudnetwork.md"
+              - Cloud Network Prefix Assignment: "user-guide/core-data-model/cloud/cloudnetworkprefixassignment.md"
+              - Cloud Type: "user-guide/core-data-model/cloud/cloudtype.md"
           - DCIM:
               - Location Type: "user-guide/core-data-model/dcim/locationtype.md"
               - Location: "user-guide/core-data-model/dcim/location.md"

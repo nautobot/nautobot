@@ -1,11 +1,12 @@
-from nautobot.cloud.models import CloudAccount, CloudType
+from nautobot.cloud import models
 from nautobot.core.testing import APIViewTestCases
 from nautobot.dcim.models import Manufacturer
 from nautobot.extras.models import SecretsGroup
+from nautobot.ipam.models import Prefix
 
 
 class CloudAccountTest(APIViewTestCases.APIViewTestCase):
-    model = CloudAccount
+    model = models.CloudAccount
 
     @classmethod
     def setUpTestData(cls):
@@ -15,6 +16,15 @@ class CloudAccountTest(APIViewTestCases.APIViewTestCase):
             SecretsGroup.objects.create(name="Secrets Group 3"),
         )
         manufacturers = Manufacturer.objects.all()
+        models.CloudAccount.objects.create(
+            name="Deletable Account 1", account_number="12345", provider=manufacturers[0]
+        )
+        models.CloudAccount.objects.create(
+            name="Deletable Account 2", account_number="23467", provider=manufacturers[0]
+        )
+        models.CloudAccount.objects.create(
+            name="Deletable Account 3", account_number="345678", provider=manufacturers[0]
+        )
         cls.create_data = [
             {
                 "name": "Account 1",
@@ -48,7 +58,7 @@ class CloudAccountTest(APIViewTestCases.APIViewTestCase):
 
 
 class CloudTypeTest(APIViewTestCases.APIViewTestCase):
-    model = CloudType
+    model = models.CloudType
     bulk_update_data = {
         "description": "Some generic description of multiple types. Not very useful.",
     }
@@ -56,27 +66,90 @@ class CloudTypeTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         manufacturers = Manufacturer.objects.all()
+        models.CloudType.objects.create(name="Deletable Type 1", provider=manufacturers[0])
+        models.CloudType.objects.create(name="Deletable Type 2", provider=manufacturers[0])
+        models.CloudType.objects.create(name="Deletable Type 3", provider=manufacturers[0])
         cls.create_data = [
             {
-                "name": "Account 1",
+                "name": "Type 1",
                 "provider": manufacturers[0].pk,
-                "content_types": ["ipam.prefix", "ipam.vlangroup", "ipam.vlan"],
+                "content_types": ["cloud.cloudnetwork"],
                 "description": "An example description",
             },
             {
-                "name": "Account 2",
+                "name": "Type 2",
                 "provider": manufacturers[1].pk,
-                "content_types": ["ipam.prefix", "ipam.vlangroup"],
+                "content_types": [],
             },
             {
-                "name": "Account 3",
+                "name": "Type 3",
                 "provider": manufacturers[3].pk,
-                "content_types": ["ipam.prefix"],
+                "content_types": ["cloud.cloudnetwork"],
             },
             {
-                "name": "Account 4",
+                "name": "Type 4",
                 "provider": manufacturers[4].pk,
                 "description": "An example description",
-                "content_types": ["ipam.vlan"],
+                "content_types": [],
+            },
+        ]
+
+
+class CloudNetworkTest(APIViewTestCases.APIViewTestCase):
+    model = models.CloudNetwork
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_data = [
+            {
+                "name": "Test VPC",
+                "description": "A VPC is one example object that a CloudNetwork might represent",
+                "cloud_type": models.CloudType.objects.first().pk,
+                "cloud_account": models.CloudAccount.objects.first().pk,
+                "extra_config": {},
+            },
+            {
+                "name": "Test VNET",
+                "description": "A VNET is another example object that a CloudNetwork might be",
+                "cloud_type": models.CloudType.objects.last().pk,
+                "cloud_account": models.CloudAccount.objects.last().pk,
+                "extra_config": {
+                    "alpha": 1,
+                    "beta": False,
+                },
+            },
+            {
+                "name": "Test subnet",
+                "cloud_type": models.CloudType.objects.first().pk,
+                "cloud_account": models.CloudAccount.objects.first().pk,
+                "parent": models.CloudNetwork.objects.filter(parent__isnull=True).first().pk,
+            },
+        ]
+        cls.bulk_update_data = {
+            "description": "A new description",
+            "cloud_type": models.CloudType.objects.last().pk,
+            "cloud_account": models.CloudAccount.objects.last().pk,
+            "extra_config": {"A": 1, "B": 2, "C": 3},
+        }
+
+
+class CloudNetworkPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
+    model = models.CloudNetworkPrefixAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        prefixes = list(Prefix.objects.all()[:3])
+        cls.create_data = [
+            {
+                "cloud_network": models.CloudNetwork.objects.exclude(prefixes=prefixes[0]).first().pk,
+                "prefix": prefixes[0].pk,
+            },
+            {
+                "cloud_network": models.CloudNetwork.objects.exclude(prefixes=prefixes[1]).first().pk,
+                "prefix": prefixes[1].pk,
+            },
+            {
+                "cloud_network": models.CloudNetwork.objects.exclude(prefixes=prefixes[2]).first().pk,
+                "prefix": prefixes[2].pk,
             },
         ]

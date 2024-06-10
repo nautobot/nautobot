@@ -992,12 +992,15 @@ def _build_hyperlink(value, field="", target="", rel=""):
     attributes = {}
     display = getattr(value, field) if hasattr(value, field) else str(value)
     if hasattr(value, "get_absolute_url"):
-        attributes["href"] = value.get_absolute_url()
-        if hasattr(value, "description") and value.description:
-            attributes["title"] = value.description
-        if target:
-            attributes["target"] = target
-        if rel:
-            attributes["rel"] = rel
-        return format_html("<a {}>{}</a>", format_html_join(" ", '{}="{}"', attributes.items()), display)
+        try:
+            attributes["href"] = value.get_absolute_url()
+            if hasattr(value, "description") and value.description:
+                attributes["title"] = value.description
+            if target:
+                attributes["target"] = target
+            if rel:
+                attributes["rel"] = rel
+            return format_html("<a {}>{}</a>", format_html_join(" ", '{}="{}"', attributes.items()), display)
+        except AttributeError:
+            pass
     return format_html("{}", display)

@@ -78,11 +78,8 @@ EMAIL = """
 """
 
 TAGGED_ITEM = """
-{% if value.get_absolute_url %}
-    <a href="{{ value.get_absolute_url }}">{{ value }}</a>
-{% else %}
-    {{ value }}
-{% endif %}
+{% load helpers %}
+{{ value|hyperlinked_object }}
 """
 
 GITREPOSITORY_PROVIDES = """
