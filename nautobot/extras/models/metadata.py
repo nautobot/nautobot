@@ -5,6 +5,7 @@ from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.extras.choices import MetadataTypeDataTypeChoices
+from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.utils import extras_features
 
 
@@ -63,7 +64,7 @@ class MetadataType(PrimaryModel):
     "graphql",
     "webhooks",
 )
-class MetadataChoice(BaseModel):
+class MetadataChoice(ChangeLoggedModel, BaseModel):
     """Store the possible set of values for a select/multi-select metadata type."""
 
     metadata_type = models.ForeignKey(
@@ -71,7 +72,7 @@ class MetadataChoice(BaseModel):
         on_delete=models.CASCADE,
         related_name="choices",
         limit_choices_to=models.Q(
-            datatype__in=[MetadataTypeDataTypeChoices.TYPE_SELECT, MetadataTypeDataTypeChoices.TYPE_MULTISELECT]
+            data_type__in=[MetadataTypeDataTypeChoices.TYPE_SELECT, MetadataTypeDataTypeChoices.TYPE_MULTISELECT]
         ),
     )
     value = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
