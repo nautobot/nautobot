@@ -7,7 +7,11 @@ from jsonschema.validators import Draft7Validator
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import PrimaryModel
-from nautobot.extras.utils import extras_features
+from nautobot.extras.utils import CloudTypeModelsQuery, extras_features
+
+
+class CloudTypeCompatibleMixin:
+    """Mixin that designates a model as compatible with CloudType content_types selections."""
 
 
 @extras_features(
@@ -18,7 +22,7 @@ from nautobot.extras.utils import extras_features
     "graphql",
     "webhooks",
 )
-class CloudAccount(PrimaryModel):
+class CloudAccount(CloudTypeCompatibleMixin, PrimaryModel):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, help_text="The name of this Cloud Account.", unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     account_number = models.CharField(
@@ -69,7 +73,7 @@ class CloudType(PrimaryModel):
         to=ContentType,
         help_text="The content type(s) to which this model applies.",
         related_name="cloud_types",
-        limit_choices_to=models.Q(app_label="cloud", model="cloudnetwork"),
+        limit_choices_to=CloudTypeModelsQuery,
     )
 
     class Meta:
@@ -90,7 +94,7 @@ class CloudType(PrimaryModel):
     "graphql",
     "webhooks",
 )
-class CloudNetwork(PrimaryModel):
+class CloudNetwork(CloudTypeCompatibleMixin, PrimaryModel):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     cloud_type = models.ForeignKey(to=CloudType, on_delete=models.PROTECT, related_name="cloud_networks")

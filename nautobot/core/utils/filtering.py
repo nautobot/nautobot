@@ -12,6 +12,7 @@ from django_filters.utils import verbose_lookup_expr
 
 from nautobot.core import exceptions
 from nautobot.core.utils.lookup import get_filterset_for_model
+from nautobot.extras.utils import CloudTypeModelsQuery
 
 # Check if field name contains a lookup expr
 # e.g `name__ic` has lookup expr `ic (icontains)` while `name` has no lookup expr
@@ -144,6 +145,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
                 "tags": TaggableClassesQuery,
                 "job_hooks": ChangeLoggedModelsQuery,
                 "roles": RoleModelsQuery,
+                "cloud_types": CloudTypeModelsQuery,
             }
             form_field = MultipleContentTypeField(
                 choices_as_strings=True, queryset=queryset_map[plural_name]().as_queryset()

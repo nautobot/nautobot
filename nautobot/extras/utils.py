@@ -219,6 +219,26 @@ class RoleModelsQuery(FeaturedQueryMixin):
         return model_classes
 
 
+@deconstructible
+class CloudTypeModelsQuery(FeaturedQueryMixin):
+    """
+    Helper class to get ContentType models that implements CloudTypeCompatibleMixin.
+    """
+
+    def list_subclasses(self):
+        """
+        Return a list of classes that inherits from CloudTypeCompatibleMixin
+        """
+        # Avoid circular imports
+        from nautobot.cloud.models import CloudTypeCompatibleMixin
+
+        model_classes = []
+        for model_class in apps.get_models():
+            if issubclass(model_class, CloudTypeCompatibleMixin):
+                model_classes.append(model_class)
+        return model_classes
+
+
 def extras_features(*features):
     """
     Decorator used to register extras provided features to a model

@@ -10,6 +10,7 @@ from nautobot.core.filters import (
 from nautobot.dcim.models import Manufacturer
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import SecretsGroup
+from nautobot.extras.utils import CloudTypeModelsQuery
 from nautobot.ipam.models import Prefix
 
 
@@ -61,7 +62,7 @@ class CloudTypeFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Provider (name or ID)",
     )
-    content_types = ContentTypeMultipleChoiceFilter(choices=(("cloud", "cloudaccount"),))
+    content_types = ContentTypeMultipleChoiceFilter(choices=CloudTypeModelsQuery().get_choices)
 
     class Meta:
         model = models.CloudType
