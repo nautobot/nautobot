@@ -102,6 +102,8 @@ class Command(BaseCommand):
                 ExternalIntegrationFactory,
                 JobLogEntryFactory,
                 JobResultFactory,
+                MetadataChoiceFactory,
+                MetadataTypeFactory,
                 ObjectChangeFactory,
                 RoleFactory,
                 StaticGroupFactory,
@@ -275,6 +277,8 @@ class Command(BaseCommand):
         # _create_batch(VirtualMachineFactory, 10)
         # We need to remove them from there and enable them here instead, but that will require many test updates.
         _create_batch(StaticGroupFactory, 20)
+        _create_batch(MetadataTypeFactory, 20)
+        _create_batch(MetadataChoiceFactory, 20)
         _create_batch(ObjectChangeFactory, 100)
         _create_batch(JobResultFactory, 20)
         _create_batch(JobLogEntryFactory, 100)

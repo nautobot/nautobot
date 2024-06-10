@@ -88,6 +88,12 @@ class MetadataChoice(ChangeLoggedModel, BaseModel):
     def clean(self):
         super().clean()
 
+        if self.present_in_database:
+            # Check immutable fields
+            database_object = self.__class__.objects.get(pk=self.pk)
+            if self.metadata_type != database_object.metadata_type:
+                raise ValidationError({"metadata_type": "Cannot be changed once created"})
+
         if self.metadata_type.data_type not in (
             MetadataTypeDataTypeChoices.TYPE_SELECT,
             MetadataTypeDataTypeChoices.TYPE_MULTISELECT,
