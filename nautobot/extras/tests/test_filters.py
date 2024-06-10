@@ -1361,6 +1361,13 @@ class MetadataTypeTestCase(FilterTestCases.FilterTestCase):
         ["data_type"],
     )
 
+    def test_content_types(self):
+        device_ct = ContentType.objects.get_for_model(Device)
+        rack_ct = ContentType.objects.get_for_model(Rack)
+        mdts = self.queryset.filter(content_types=device_ct).filter(content_types=rack_ct).distinct()
+        params = {"content_types": ["dcim.device", "dcim.rack"]}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, mdts)
+
 
 class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
     queryset = ObjectChange.objects.all()

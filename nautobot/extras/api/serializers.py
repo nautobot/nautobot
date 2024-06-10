@@ -750,6 +750,11 @@ class JobButtonSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
 
 class MetadataTypeSerializer(NautobotModelSerializer):
+    content_types = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
+        many=True,
+    )
+
     class Meta:
         model = MetadataType
         fields = "__all__"

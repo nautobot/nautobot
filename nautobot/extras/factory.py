@@ -208,7 +208,7 @@ class MetadataChoiceFactory(BaseModelFactory):
         ),
         allow_null=False,
     )
-    value = factory.Faker("word")
+    value = UniqueFaker("word")
     weight = factory.Faker("pyint")
 
 
@@ -224,6 +224,18 @@ class MetadataTypeFactory(PrimaryModelFactory):
     name = UniqueFaker("job")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
     data_type = factory.Iterator(MetadataTypeDataTypeChoices.CHOICES, getter=lambda choice: choice[0])
+
+    @factory.post_generation
+    def content_types(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.content_types.set(extracted)
+            else:
+                self.content_types.set(
+                    get_random_instances(
+                        lambda: ContentType.objects.filter(FeatureQuery("metadata").get_query()), minimum=1
+                    )
+                )
 
 
 class ObjectChangeFactory(BaseModelFactory):

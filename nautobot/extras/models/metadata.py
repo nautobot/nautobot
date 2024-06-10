@@ -1,12 +1,32 @@
+from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.validators import ValidationError
 from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.extras.choices import MetadataTypeDataTypeChoices
 from nautobot.extras.models.change_logging import ChangeLoggedModel
-from nautobot.extras.utils import extras_features
+from nautobot.extras.utils import extras_features, FeatureQuery
+
+
+class MetadataTypeManager(BaseManager.from_queryset(RestrictedQuerySet)):
+    use_in_migrations = True
+
+    def get_for_model(self, model):
+        """Return all MetadataTypes assigned to the given model."""
+        concrete_model = model._meta.concrete_model
+        cache_key = f"{self.get_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}"
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            content_type = ContentType.objects.get_for_model(concrete_model)
+            queryset = self.get_queryset().filter(content_types=content_type)
+            cache.set(cache_key, queryset)
+        return queryset
+
+    get_for_model.cache_key_prefix = "nautobot.extras.metadatatype.get_for_model"
 
 
 @extras_features(
@@ -17,13 +37,12 @@ from nautobot.extras.utils import extras_features
     "webhooks",
 )
 class MetadataType(PrimaryModel):
-    # TODO?
-    # content_types = models.ManyToManyField(
-    #     to=ContentType,
-    #     related_name="metadata_types",
-    #     # TODO limit_choices_to=FeatureQuery("metadata"),
-    #     help_text="The object type(s) to which this metadata type applies.",
-    # )
+    content_types = models.ManyToManyField(
+        to=ContentType,
+        related_name="metadata_types",
+        limit_choices_to=FeatureQuery("metadata"),
+        help_text="The object type(s) to which Metadata of this type can be applied.",
+    )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     data_type = models.CharField(
@@ -34,6 +53,7 @@ class MetadataType(PrimaryModel):
     # TODO: validation_minimum, validation_maximum, validation_regex?
     # TODO: weight, grouping, advanced_ui?
 
+    objects = MetadataTypeManager()
     clone_fields = ["data_type"]
     documentation_static_path = "docs/user-guide/platform-functionality/metadata.html"
 

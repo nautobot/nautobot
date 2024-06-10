@@ -950,6 +950,9 @@ class MetadataTypeFilterSet(NautobotFilterSet):
             "description": "icontains",
         },
     )
+    content_types = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("metadata").get_choices,
+    )
 
     class Meta:
         model = MetadataType

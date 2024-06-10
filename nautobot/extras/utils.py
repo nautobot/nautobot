@@ -277,6 +277,11 @@ def populate_model_features_registry(refresh=False):
             "field_names": ["_custom_field_data"],
         },
         {
+            "feature_name": "metadata",
+            "field_names": [],  # TODO: add "associated_metadata" ReverseRelation here when implemented
+            "additional_constraints": {"is_metadata_associable_model": True},
+        },
+        {
             "feature_name": "relationships",
             "field_names": ["source_for_associations", "destination_for_associations"],
             "field_attributes": {"related_model": RelationshipAssociation},

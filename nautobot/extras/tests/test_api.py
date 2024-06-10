@@ -2491,20 +2491,24 @@ class MetadataTypeTest(APIViewTestCases.APIViewTestCase):
             "name": "System of Record",
             "description": "The SoR that this record or field originates from",
             "data_type": MetadataTypeDataTypeChoices.TYPE_TEXT,
+            "content_types": ["dcim.device", "dcim.interface", "ipam.ipaddress"],
         },
         {
             "name": "Last Synced",
             "description": "The last time this record or field was synced from the SoR",
             "data_type": MetadataTypeDataTypeChoices.TYPE_DATETIME,
+            "content_types": ["dcim.device", "dcim.interface", "ipam.ipaddress"],
         },
         {
             "name": "Data Owner",
             "data_type": MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM,
+            "content_types": ["extras.customfield"],
         },
     ]
     update_data = {
         "name": "Something new",
         "description": "A new name for existing metadata.",
+        "content_types": ["dcim.interface", "ipam.vrf"],
     }
 
 
@@ -2512,7 +2516,7 @@ class MetadataChoiceTest(APIViewTestCases.APIViewTestCase):
     model = MetadataChoice
 
     update_data = {
-        "value": "Somthing new",
+        "value": "Something new",
         "weight": 0,
     }
 
