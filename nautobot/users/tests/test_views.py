@@ -172,6 +172,7 @@ class SavedViewTest(ModelViewTestCase):
         instance = self._get_queryset().first()
         response = self.client.get(instance.get_absolute_url(), follow=True)
         self.assertHttpStatus(response, 200)
+        # This view should redirect to /login/?next={saved_view's absolute url}
         self.assertRedirects(response, f"/login/?next={instance.get_absolute_url()}")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
