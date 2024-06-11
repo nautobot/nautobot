@@ -879,7 +879,7 @@ class DeviceBayTable(DeviceComponentTable):
         )
 
 
-class ModuleBayTable(StatusTableMixin, BaseTable):
+class ModuleBayTable(BaseTable):
     pk = ToggleColumn()
     parent_device = tables.Column(
         linkify=lambda record: record.parent_device.get_absolute_url(),
@@ -961,6 +961,7 @@ class DeviceModuleBayTable(ModuleBayTable):
         attrs={"td": {"class": "text-nowrap"}},
     )
     installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
+    installed_module__status = ColoredLabelColumn(verbose_name="Installed Module Status")
     actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=MODULEBAY_BUTTONS)
 
     class Meta(ModularDeviceComponentTable.Meta):
@@ -969,10 +970,10 @@ class DeviceModuleBayTable(ModuleBayTable):
             "pk",
             "name",
             "position",
-            "label",
-            "description",
             "installed_module",
             "installed_module__status",
+            "label",
+            "description",
             "tags",
             "actions",
         )
@@ -980,8 +981,6 @@ class DeviceModuleBayTable(ModuleBayTable):
             "pk",
             "name",
             "position",
-            "label",
-            "description",
             "installed_module",
             "installed_module__status",
             "actions",
