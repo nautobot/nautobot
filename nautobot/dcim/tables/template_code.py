@@ -291,6 +291,10 @@ MODULEBAY_BUTTONS = """
         <a href="{% url 'dcim:module_add' %}?parent_module_bay={{ record.pk }}&return_url={{ request.path }}" class="btn btn-success btn-xs">
             <i class="mdi mdi-plus-thick" aria-hidden="true" title="Install module"></i>
         </a>
+    {% else %}
+        <a href="{% url 'dcim:module_delete' pk=record.installed_module.pk %}?return_url={{ request.path }}" class="btn btn-danger btn-xs">
+            <i class="mdi mdi-minus-thick" aria-hidden="true" title="Delete installed module"></i>
+        </a>
     {% endif %}
 {% endif %}
 """
