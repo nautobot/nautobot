@@ -271,16 +271,16 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         current_saved_view = None
         current_saved_view_pk = self.request.GET.get("saved_view", None)
         list_url = validated_viewname(model, "list")
-        saved_views = (
-            SavedView.objects.filter(view=list_url).restrict(request.user, "view").order_by("name").only("pk", "name")
-        )
+        # We are not using .restrict(request.user, "view") here
+        # User should be able to see any saved view that he has the list view access to.
+        saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
         if self.table:
             # Construct the objects table
             if current_saved_view_pk:
                 try:
-                    current_saved_view = SavedView.objects.restrict(request.user, "view").get(
-                        view=list_url, pk=current_saved_view_pk
-                    )
+                    # We are not using .restrict(request.user, "view") here
+                    # User should be able to see any saved view that he has the list view access to.
+                    current_saved_view = SavedView.objects.get(view=list_url, pk=current_saved_view_pk)
                 except ObjectDoesNotExist:
                     messages.error(request, f"Saved view {current_saved_view_pk} not found")
             if self.request.GET.getlist("sort") or (

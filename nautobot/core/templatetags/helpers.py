@@ -756,7 +756,9 @@ def saved_view_modal(
             if current_saved_view_pk:
                 current_saved_view_pk = current_saved_view_pk[0]
                 try:
-                    current_saved_view = SavedView.objects.restrict(request.user, "view").get(pk=current_saved_view_pk)
+                    # We are not using .restrict(request.user, "view") here
+                    # User should be able to see any saved view that he has the list view access to.
+                    current_saved_view = SavedView.objects.get(pk=current_saved_view_pk)
                 except ObjectDoesNotExist:
                     messages.error(request, f"Saved view {current_saved_view_pk} not found")
 
@@ -819,11 +821,6 @@ def saved_view_modal(
         "param_dict": param_dict,
         "view": view,
     }
-
-
-@register.inclusion_tag("utilities/templatetags/clear_view_modal.html")
-def clear_view_modal(saved_view):
-    return {"saved_view": saved_view}
 
 
 @register.inclusion_tag("utilities/templatetags/static_group_assignment_modal.html")
