@@ -2903,7 +2903,7 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
         # Moving the grandparent module out of inventory populates the template variables on all descendant interfaces
         grandparent_module.parent_module_bay = self.module_bay
         grandparent_module.location = None
-        grandparent_module.save()
+        grandparent_module.validated_save()
         module_bay_position = self.module_bay.position
         self.assertEqual(
             grandparent_module.interfaces.first().name,
