@@ -2890,9 +2890,9 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
         child_module = Module.objects.create(
             parent_module_bay=parent_module.module_bays.first(),
             module_type=self.module_type,
-            location=self.location,
             status=self.status,
         )
+        child_module.clean()
 
         self.assertEqual(
             grandparent_module.interfaces.first().name, "Interface {module.parent.parent}/{module.parent}/{module}"
