@@ -74,7 +74,7 @@ class CloudAccountFilterForm(NautobotFilterForm):
 
 
 #
-# Cloud Account
+# Cloud Type
 #
 
 

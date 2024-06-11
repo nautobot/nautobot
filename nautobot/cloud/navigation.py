@@ -33,7 +33,7 @@ menu_items = (
                     NavMenuItem(
                         link="cloud:cloudtype_list",
                         name="Cloud Types",
-                        weight=100,
+                        weight=200,
                         permissions=[
                             "cloud.view_cloudtype",
                         ],
