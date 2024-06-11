@@ -2881,9 +2881,9 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
         parent_module = Module.objects.create(
             parent_module_bay=grandparent_module.module_bays.first(),
             module_type=self.module_type,
-            location=self.location,
             status=self.status,
         )
+        parent_module.clean()
         parent_module_bay = parent_module.module_bays.first()
         parent_module_bay.position = "2"
         parent_module_bay.save()
