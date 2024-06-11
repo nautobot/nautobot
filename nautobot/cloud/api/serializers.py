@@ -1,4 +1,3 @@
-
 from nautobot.cloud import models
 from nautobot.core.api import NautobotModelSerializer, ValidatedModelSerializer
 from nautobot.core.api.fields import ContentTypeField
