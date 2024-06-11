@@ -8,6 +8,7 @@ from django.contrib.auth import (
     logout as auth_logout,
     update_session_auth_hash,
 )
+from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.http import HttpResponseForbidden, HttpResponseRedirect
@@ -259,6 +260,11 @@ class SavedViewUIViewSet(
         Since users with <app_label>.view_<model_name> permissions should be able to view saved views related to this model.
         And those permissions will be enforced in the related view.
         """
+
+    def dispatch(self, request, *args, **kwargs):
+        if isinstance(request.user, AnonymousUser):
+            return self.handle_no_permission()
+        return super().dispatch(request, *args, **kwargs)
 
     def retrieve(self, request, *args, **kwargs):
         """
