@@ -1,0 +1,1 @@
+Added a feature that replaces `{module}`, `{module.parent}`, `{module.parent.parent}`, etc. with the selected module's parent_module_bay `position` when creating a component in a module.

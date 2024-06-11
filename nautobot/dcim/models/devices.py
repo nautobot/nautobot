@@ -1666,11 +1666,20 @@ class Module(PrimaryModel):
                 raise ValidationError("Creating this instance would cause an infinite loop.")
             parent_module = getattr(parent_module.parent_module_bay, "parent_module", None)
 
+        # Keep track of whether the parent module bay has changed so we can update the component names
+        parent_module_changed = (
+            not is_new and not Module.objects.filter(pk=self.pk, parent_module_bay=self.parent_module_bay).exists()
+        )
+
         super().save(*args, **kwargs)
 
         # If this is a new Module, instantiate all related components per the ModuleType definition
         if is_new:
             self.create_components()
+
+        # Render component names when this Module is first created or when the parent module bay has changed
+        if is_new or parent_module_changed:
+            self.render_component_names()
 
     def create_components(self):
         """Create module components from the module type definition."""
@@ -1691,6 +1700,30 @@ class Module(PrimaryModel):
         for model, templates in component_models:
             model.objects.bulk_create([x.instantiate(device=None, module=self) for x in templates])
         return instantiated_components
+
+    def render_component_names(self):
+        """
+        Replace the {module}, {module.parent}, {module.parent.parent}, etc. template variables in descendant
+        component names with the correct parent module bay positions.
+        """
+
+        # disable sorting to improve performance, sorting isn't necessary here
+        component_models = [
+            self.console_ports.all().order_by(),
+            self.console_server_ports.all().order_by(),
+            self.power_ports.all().order_by(),
+            self.power_outlets.all().order_by(),
+            self.interfaces.all().order_by(),
+            self.rear_ports.all().order_by(),
+            self.front_ports.all().order_by(),
+        ]
+
+        for component_qs in component_models:
+            for component in component_qs.only("name", "module"):
+                component.render_name_template(save=True)
+
+        for child in self.get_children():
+            child.render_component_names()
 
     def get_cables(self, pk_list=False):
         """
@@ -1719,4 +1752,4 @@ class Module(PrimaryModel):
         """
         Return the set of child Modules installed in ModuleBays within this Module.
         """
-        return Module.objects.filter(parent_module_bay__parent_module=self.pk)
+        return Module.objects.filter(parent_module_bay__parent_module=self)

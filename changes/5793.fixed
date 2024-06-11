@@ -1,0 +1,1 @@
+Fixed a bug in `ControllerManagedDeviceGroupFactory` that could result in nondeterministic test data.
