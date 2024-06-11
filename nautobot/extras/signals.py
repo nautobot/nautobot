@@ -487,7 +487,7 @@ def refresh_job_models(sender, *, apps, **kwargs):
 def handle_mdt_removed_obj_types(instance, action, pk_set, **kwargs):
     """Handle the cleanup of old Metadata when a MetadataType is removed from one or more ContentTypes."""
     if action != "post_remove":
-        return
+        return  # pylint: disable=useless-return
     # Existing content types have been removed from the MetadataType, delete their data.
     # TODO delete Metadata records with object_type in pk_set and metadata_type == instance
 
