@@ -264,6 +264,26 @@ class ComponentForm(BootstrapMixin, forms.Form):
                 )
 
 
+class ModularComponentForm(ComponentForm):
+    name_pattern = ExpandableNameField(
+        label="Name",
+        help_text="""
+            Alphanumeric ranges are supported for bulk creation. Mixed cases and types within a single range
+            are not supported. Examples:
+            <ul>
+                <li><code>[ge,xe]-0/0/[0-9]</code></li>
+                <li><code>e[0-3][a-d,f]</code></li>
+            </ul>
+
+            The variables <code>{module}</code>, <code>{module.parent}</code>, <code>{module.parent.parent}</code>, etc.
+            may be used in the name field and will be replaced by the <code>position</code> of the module bay that the
+            module occupies (skipping over any bays with a blank <code>position</code>). These variables can be used
+            multiple times in the component name and there is no limit to the depth of parent levels.
+            Any variables that cannot be replaced by a suitable position value will remain unchanged.
+                """,
+    )
+
+
 #
 # Fields
 #
@@ -1035,7 +1055,7 @@ class ComponentTemplateCreateForm(ComponentForm):
     description = forms.CharField(required=False)
 
 
-class ModularComponentTemplateCreateForm(ComponentTemplateCreateForm):
+class ModularComponentTemplateCreateForm(ModularComponentForm):
     """
     Base form for the creation of modular device component templates (subclassed from ModularComponentTemplateModel).
     """
@@ -1048,6 +1068,7 @@ class ModularComponentTemplateCreateForm(ComponentTemplateCreateForm):
         queryset=ModuleType.objects.all(),
         required=False,
     )
+    description = forms.CharField(required=False)
 
 
 class ConsolePortTemplateForm(ModularComponentTemplateForm):
@@ -2442,7 +2463,7 @@ class ComponentCreateForm(ComponentForm):
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
 
-class ModularComponentCreateForm(ComponentForm):
+class ModularComponentCreateForm(ModularComponentForm):
     """
     Base form for the creation of modular device components (models subclassed from ModularComponentModel).
     """
@@ -2493,8 +2514,12 @@ class DeviceBulkAddComponentForm(ComponentForm, CustomFieldModelBulkEditFormMixi
         nullable_fields = []
 
 
-class ModuleBulkAddComponentForm(DeviceBulkAddComponentForm):
+class ModuleBulkAddComponentForm(ModularComponentForm, CustomFieldModelBulkEditFormMixin):
     pk = forms.ModelMultipleChoiceField(queryset=Module.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        nullable_fields = []
 
 
 #
