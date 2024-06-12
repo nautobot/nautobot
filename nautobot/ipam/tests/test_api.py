@@ -210,7 +210,9 @@ class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.vrfs = VRF.objects.annotate(prefixes_count=Count("namespace__prefixes")).filter(prefixes_count__gte=2)
+        cls.vrfs = (
+            VRF.objects.annotate(prefixes_count=Count("namespace__prefixes")).filter(prefixes_count__gte=2).distinct()
+        )
         cls.prefixes = Prefix.objects.all()
 
         VRFPrefixAssignment.objects.create(
@@ -232,15 +234,15 @@ class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "vrf": cls.vrfs[2].pk,
-                "prefix": cls.prefixes.filter(namespace=cls.vrfs[2].namespace).exclude(vrfs__in=[cls.vrfs[2]])[0].pk,
+                "prefix": cls.prefixes.filter(namespace=cls.vrfs[2].namespace).exclude(vrfs=cls.vrfs[2])[0].pk,
             },
             {
                 "vrf": cls.vrfs[3].pk,
-                "prefix": cls.prefixes.filter(namespace=cls.vrfs[3].namespace).exclude(vrfs__in=[cls.vrfs[3]])[0].pk,
+                "prefix": cls.prefixes.filter(namespace=cls.vrfs[3].namespace).exclude(vrfs=cls.vrfs[3])[0].pk,
             },
             {
                 "vrf": cls.vrfs[4].pk,
-                "prefix": cls.prefixes.filter(namespace=cls.vrfs[4].namespace).exclude(vrfs__in=[cls.vrfs[4]])[0].pk,
+                "prefix": cls.prefixes.filter(namespace=cls.vrfs[4].namespace).exclude(vrfs=cls.vrfs[4])[0].pk,
             },
         ]
 

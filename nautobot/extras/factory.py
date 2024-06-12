@@ -20,6 +20,7 @@ from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.extras.choices import (
     JobResultStatusChoices,
     LogLevelChoices,
+    MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
     WebhookHttpMethodChoices,
@@ -31,6 +32,8 @@ from nautobot.extras.models import (
     Job,
     JobLogEntry,
     JobResult,
+    MetadataChoice,
+    MetadataType,
     ObjectChange,
     Role,
     StaticGroup,
@@ -191,6 +194,48 @@ class JobResultFactory(BaseModelFactory):
             else:
                 # TODO, should we create "in progress" job results without a date_done value as well?
                 self.date_done = self.date_created + timedelta(minutes=faker.Faker().random_int())
+
+
+class MetadataChoiceFactory(BaseModelFactory):
+    """MetadataChoice model factory."""
+
+    class Meta:
+        model = MetadataChoice
+
+    metadata_type = random_instance(
+        MetadataType.objects.filter(
+            data_type__in=[MetadataTypeDataTypeChoices.TYPE_SELECT, MetadataTypeDataTypeChoices.TYPE_MULTISELECT]
+        ),
+        allow_null=False,
+    )
+    value = UniqueFaker("word")
+    weight = factory.Faker("pyint")
+
+
+class MetadataTypeFactory(PrimaryModelFactory):
+    """MetadataType model factory."""
+
+    class Meta:
+        model = MetadataType
+
+    class Params:
+        has_description = NautobotBoolIterator()
+
+    name = UniqueFaker("job")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
+    data_type = factory.Iterator(MetadataTypeDataTypeChoices.CHOICES, getter=lambda choice: choice[0])
+
+    @factory.post_generation
+    def content_types(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.content_types.set(extracted)
+            else:
+                self.content_types.set(
+                    get_random_instances(
+                        lambda: ContentType.objects.filter(FeatureQuery("metadata").get_query()), minimum=1
+                    )
+                )
 
 
 class ObjectChangeFactory(BaseModelFactory):
@@ -397,7 +442,7 @@ class TeamFactory(PrimaryModelFactory):
         has_address = NautobotBoolIterator()
         has_comments = NautobotBoolIterator()
 
-    name = factory.Faker("job")
+    name = UniqueFaker("job")
     phone = factory.Maybe("has_phone", factory.Faker("phone_number"), "")
     email = factory.Maybe("has_email", factory.Faker("email"), "")
     address = factory.Maybe("has_address", factory.Faker("address"), "")

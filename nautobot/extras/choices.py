@@ -302,6 +302,37 @@ class LogLevelChoices(ChoiceSet):
 
 
 #
+# Metadata
+#
+
+
+class MetadataTypeDataTypeChoices(CustomFieldTypeChoices):
+    """
+    Values for the MetadataType.data_type field.
+
+    Generally equivalent to CustomFieldTypeChoices, but adds TYPE_CONTACT_OR_TEAM.
+    """
+
+    TYPE_CONTACT_TEAM = "contact-or-team"
+    # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
+    TYPE_DATETIME = "datetime"
+    TYPE_FLOAT = "float"
+
+    CHOICES = (
+        *CustomFieldTypeChoices.CHOICES,
+        (TYPE_CONTACT_TEAM, "Contact or Team"),
+        # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
+        (TYPE_DATETIME, "Date/time"),
+        (TYPE_FLOAT, "Floating point number"),
+    )
+
+    MIN_MAX_TYPES = (
+        *CustomFieldTypeChoices.MIN_MAX_TYPES,
+        TYPE_FLOAT,
+    )
+
+
+#
 # ObjectChanges
 #
 

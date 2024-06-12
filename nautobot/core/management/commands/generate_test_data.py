@@ -2,6 +2,7 @@ import hashlib
 import json
 import os
 
+from django.contrib.contenttypes.models import ContentType
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.core.serializers.json import DjangoJSONEncoder
@@ -97,11 +98,14 @@ class Command(BaseCommand):
                 SoftwareImageFileFactory,
                 SoftwareVersionFactory,
             )
+            from nautobot.extras.choices import MetadataTypeDataTypeChoices
             from nautobot.extras.factory import (
                 ContactFactory,
                 ExternalIntegrationFactory,
                 JobLogEntryFactory,
                 JobResultFactory,
+                MetadataChoiceFactory,
+                MetadataTypeFactory,
                 ObjectChangeFactory,
                 RoleFactory,
                 StaticGroupFactory,
@@ -110,7 +114,7 @@ class Command(BaseCommand):
                 TeamFactory,
             )
             from nautobot.extras.management import populate_role_choices, populate_status_choices
-            from nautobot.extras.utils import TaggableClassesQuery
+            from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
             from nautobot.ipam.choices import PrefixTypeChoices
             from nautobot.ipam.factory import (
                 NamespaceFactory,
@@ -275,6 +279,18 @@ class Command(BaseCommand):
         # _create_batch(VirtualMachineFactory, 10)
         # We need to remove them from there and enable them here instead, but that will require many test updates.
         _create_batch(StaticGroupFactory, 20)
+        _create_batch(
+            MetadataTypeFactory,
+            len(MetadataTypeDataTypeChoices.CHOICES),
+            description="on all content-types",
+            content_types=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
+        )
+        _create_batch(
+            MetadataTypeFactory,
+            2 * len(MetadataTypeDataTypeChoices.CHOICES),
+            description="on various content-types",
+        )
+        _create_batch(MetadataChoiceFactory, 20)
         _create_batch(ObjectChangeFactory, 100)
         _create_batch(JobResultFactory, 20)
         _create_batch(JobLogEntryFactory, 100)

@@ -68,6 +68,10 @@ router.register("job-results", views.JobResultViewSet)
 # Scheduled Jobs
 router.register("scheduled-jobs", views.ScheduledJobViewSet)
 
+# Metadata
+router.register("metadata-types", views.MetadataTypeViewSet)
+router.register("metadata-choices", views.MetadataChoiceViewSet)
+
 # Notes
 router.register("notes", views.NoteViewSet)
 

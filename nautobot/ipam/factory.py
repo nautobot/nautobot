@@ -236,7 +236,7 @@ class VLANFactory(PrimaryModelFactory):
 
 class VLANGetOrCreateFactory(VLANFactory):
     class Meta:
-        django_get_or_create = ("vlan_group", "tenant")
+        django_get_or_create = ("vlan_group", "vid")
 
 
 class VRFGetOrCreateFactory(VRFFactory):
