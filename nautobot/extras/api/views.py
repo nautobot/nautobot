@@ -56,6 +56,8 @@ from nautobot.extras.models import (
     JobHook,
     JobLogEntry,
     JobResult,
+    MetadataChoice,
+    MetadataType,
     Note,
     ObjectChange,
     Relationship,
@@ -984,6 +986,23 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})
 
         return Response(serializer.data)
+
+
+#
+# Metadata
+#
+
+
+class MetadataTypeViewSet(NautobotModelViewSet):
+    queryset = MetadataType.objects.all()
+    serializer_class = serializers.MetadataTypeSerializer
+    filterset_class = filters.MetadataTypeFilterSet
+
+
+class MetadataChoiceViewSet(ModelViewSet):
+    queryset = MetadataChoice.objects.select_related("metadata_type")
+    serializer_class = serializers.MetadataChoiceSerializer
+    filterset_class = filters.MetadataChoiceFilterSet
 
 
 #

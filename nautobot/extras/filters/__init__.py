@@ -23,6 +23,7 @@ from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     JobResultStatusChoices,
+    MetadataTypeDataTypeChoices,
     RelationshipTypeChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -72,6 +73,8 @@ from nautobot.extras.models import (
     JobHook,
     JobLogEntry,
     JobResult,
+    MetadataChoice,
+    MetadataType,
     Note,
     ObjectChange,
     Relationship,
@@ -130,6 +133,8 @@ __all__ = (
     "JobResultFilterSet",
     "LocalContextFilterSet",
     "LocalContextModelFilterSetMixin",
+    "MetadataTypeFilterSet",
+    "MetadataChoiceFilterSet",
     "NautobotFilterSet",
     "NoteFilterSet",
     "ObjectChangeFilterSet",
@@ -931,6 +936,51 @@ class JobButtonFilterSet(BaseFilterSet):
 @class_deprecated_in_favor_of(LocalContextModelFilterSetMixin)
 class LocalContextFilterSet(LocalContextModelFilterSetMixin):
     pass
+
+
+#
+# Metadata
+#
+
+
+class MetadataTypeFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+        },
+    )
+    content_types = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("metadata").get_choices,
+    )
+
+    class Meta:
+        model = MetadataType
+        fields = "__all__"
+
+
+class MetadataChoiceFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "value": "icontains",
+        },
+    )
+
+    metadata_type = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=MetadataType.objects.filter(
+            data_type__in=[MetadataTypeDataTypeChoices.TYPE_SELECT, MetadataTypeDataTypeChoices.TYPE_MULTISELECT]
+        ),
+        label="Metadata type (name or ID)",
+    )
+
+    class Meta:
+        model = MetadataChoice
+        fields = "__all__"
+
+
+#
+# Notes
+#
 
 
 class NoteFilterSet(BaseFilterSet):

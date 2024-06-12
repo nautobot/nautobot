@@ -32,6 +32,7 @@ from nautobot.extras.models import (
     DynamicGroupMembership,
     GitRepository,
     JobResult,
+    MetadataType,
     ObjectChange,
     Relationship,
     StaticGroup,
@@ -67,19 +68,27 @@ def get_user_if_authenticated(user, instance):
 @receiver(post_save, sender=ComputedField)
 @receiver(post_save, sender=CustomField)
 @receiver(post_save, sender=CustomField.content_types.through)
+@receiver(post_save, sender=MetadataType)
+@receiver(post_save, sender=MetadataType.content_types.through)
 @receiver(post_save, sender=StaticGroup)
 @receiver(m2m_changed, sender=ComputedField)
 @receiver(m2m_changed, sender=CustomField)
 @receiver(m2m_changed, sender=CustomField.content_types.through)
+@receiver(m2m_changed, sender=MetadataType)
+@receiver(m2m_changed, sender=MetadataType.content_types.through)
 @receiver(m2m_changed, sender=StaticGroup)
 @receiver(post_delete, sender=ComputedField)
 @receiver(post_delete, sender=CustomField)
 @receiver(post_delete, sender=CustomField.content_types.through)
+@receiver(post_delete, sender=MetadataType)
+@receiver(post_delete, sender=MetadataType.content_types.through)
 @receiver(post_delete, sender=StaticGroup)
 def invalidate_models_cache(sender, **kwargs):
     """Invalidate the related-models cache for ComputedFields and CustomFields."""
     if sender is CustomField.content_types.through:
         manager = CustomField.objects
+    elif sender is MetadataType.content_types.through:
+        manager = MetadataType.objects
     else:
         manager = sender.objects
 
@@ -468,3 +477,19 @@ def refresh_job_models(sender, *, apps, **kwargs):
             )
             job_model.installed = False
             job_model.save()
+
+
+#
+# Metadata
+#
+
+
+def handle_mdt_removed_obj_types(instance, action, pk_set, **kwargs):  # pylint: disable=useless-return
+    """Handle the cleanup of old Metadata when a MetadataType is removed from one or more ContentTypes."""
+    if action != "post_remove":
+        return
+    # Existing content types have been removed from the MetadataType, delete their data.
+    # TODO delete Metadata records with object_type in pk_set and metadata_type == instance
+
+
+m2m_changed.connect(handle_mdt_removed_obj_types, sender=MetadataType.content_types.through)
