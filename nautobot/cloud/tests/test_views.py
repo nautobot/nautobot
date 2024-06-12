@@ -43,11 +43,7 @@ class CloudTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         providers = Manufacturer.objects.all()
-        CloudType.objects.create(name="Deletable Cloud Account 1", account_number="123456", provider=providers[0])
-        CloudType.objects.create(name="Deletable Cloud Account 2", account_number="234567", provider=providers[0])
-        CloudType.objects.create(name="Deletable Cloud Account 3", account_number="345678", provider=providers[0])
         cts = [
-            ContentType.objects.get_for_model(CloudAccount),
             ContentType.objects.get_for_model(CloudNetwork),
         ]
 
@@ -61,6 +57,6 @@ class CloudTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.bulk_edit_data = {
             "provider": providers[1].pk,
-            "content_types": [cts[1].id],
+            "content_types": [cts[0].id],
             "description": "New description",
         }

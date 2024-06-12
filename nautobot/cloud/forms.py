@@ -12,7 +12,6 @@ from nautobot.core.forms.fields import MultipleContentTypeField
 from nautobot.dcim.models import Manufacturer
 from nautobot.extras.forms import NautobotBulkEditForm, NautobotFilterForm, NautobotModelForm, TagsBulkEditFormMixin
 from nautobot.extras.models import SecretsGroup
-from nautobot.extras.utils import CloudTypeModelsQuery
 
 #
 # Cloud Account
@@ -84,7 +83,7 @@ class CloudTypeForm(NautobotModelForm):
         help_text="Manufacturers are the recommended model to represent cloud providers.",
     )
     content_types = MultipleContentTypeField(
-        queryset=CloudTypeModelsQuery().as_queryset(),
+        feature="cloud_types",
         label="Content Type(s)",
     )
 
@@ -104,7 +103,7 @@ class CloudTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=CloudType.objects.all(), widget=forms.MultipleHiddenInput)
     provider = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     content_types = MultipleContentTypeField(
-        queryset=CloudTypeModelsQuery().as_queryset(),
+        feature="cloud_types",
         required=False,
         label="Content Type(s)",
     )
@@ -131,7 +130,7 @@ class CloudTypeFilterForm(NautobotFilterForm):
         queryset=Manufacturer.objects.all(), to_field_name="name", required=False
     )
     content_types = MultipleContentTypeField(
-        queryset=CloudTypeModelsQuery().as_queryset(),
+        feature="cloud_types",
         required=False,
         choices_as_strings=True,
         label="Content Type(s)",
