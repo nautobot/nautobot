@@ -638,6 +638,13 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             status=statuses[0],
             namespace=cls.namespace,
         )
+        IPAddress.objects.create(
+            address="10.1.1.1/32",
+            tenant=None,
+            status=statuses[0],
+            namespace=cls.namespace,
+            nat_inside=ip0,
+        )
 
     def test_search(self):
         ipv4_octets = self.ipv4_address.host.split(".")

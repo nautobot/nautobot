@@ -433,11 +433,15 @@ class IPAddressFilterSet(
         method="_has_interface_assignments",
         label="Has Interface Assignments",
     )
+    has_nat_inside = RelatedMembershipBooleanFilter(
+        field_name="nat_inside",
+        label="Has NAT Inside",
+    )
     ip_version = django_filters.NumberFilter()
 
     class Meta:
         model = IPAddress
-        fields = ["id", "dns_name", "type", "tags", "mask_length"]
+        fields = ["id", "dns_name", "type", "tags", "mask_length", "nat_inside"]
 
     def generate_query__has_interface_assignments(self, value):
         """Helper method used by DynamicGroups and by _assigned_to_interface method."""
