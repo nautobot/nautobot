@@ -688,13 +688,25 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         List the model instances.
         """
         context = {"use_new_ui": True}
+        queryset = self.get_queryset()
         if "export" in request.GET:  # 3.0 TODO: remove, irrelevant after #4746
-            queryset = self.get_queryset()
             model = queryset.model
             content_type = ContentType.objects.get_for_model(model)
             response = self.check_for_export(request, model, content_type)
             if response is not None:
                 return response
+        # Check if there is a global default for this view
+        global_saved_view = None
+        app_label, model_name = queryset.model._meta.label.split(".")
+        view_name = f"{app_label}:{model_name.lower()}_list"
+        try:
+            global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
+        except ObjectDoesNotExist:
+            pass
+
+        if global_saved_view is not None and not request.GET.get("saved_view"):
+            return redirect(reverse("users:savedview", kwargs={"pk": global_saved_view.pk}))
+
         return Response(context)
 
 
@@ -750,6 +762,18 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
     UI mixin to create or update a model instance.
     """
 
+    def extra_message_context(self, obj):
+        """
+        Context variables for this extra message.
+        """
+        return {}
+
+    def extra_message(self, **kwargs):
+        """
+        Append extra message at the end of create or update success message.
+        """
+        return ""
+
     def _process_create_or_update_form(self, form):
         """
         Helper method to create or update an object after the form is validated successfully.
@@ -769,9 +793,14 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             msg = f'{"Created" if object_created else "Modified"} {queryset.model._meta.verbose_name}'
             self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
             try:
-                msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+                msg = format_html(
+                    '{} <a href="{}">{}</a>' + self.extra_message(**self.extra_message_context(obj)),
+                    msg,
+                    obj.get_absolute_url(),
+                    obj,
+                )
             except AttributeError:
-                msg = format_html("{} {}", msg, obj)
+                msg = format_html("{} {}" + self.extra_message(**self.extra_message_context(obj)), msg, obj)
             messages.success(request, msg)
             if "_addanother" in request.POST:
                 # If the object has clone_fields, pre-populate a new instance of the form

@@ -8,7 +8,7 @@ from nautobot.users.models import SavedView
 class SavedViewTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    actions = ButtonsColumn(SavedView, buttons=("changelog", "delete"))
+    actions = ButtonsColumn(SavedView)
 
     class Meta(BaseTable.Meta):
         model = SavedView
@@ -18,6 +18,8 @@ class SavedViewTable(BaseTable):
             "owner",
             "view",
             "config",
+            "is_global_default",
+            "is_shared",
             "actions",
         )
         default_columns = (
@@ -25,6 +27,7 @@ class SavedViewTable(BaseTable):
             "name",
             "owner",
             "view",
+            "is_global_default",
             "actions",
         )
 

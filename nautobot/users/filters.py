@@ -44,6 +44,8 @@ class SavedViewFilterSet(BaseFilterSet):
             "owner",
             "name",
             "view",
+            "is_global_default",
+            "is_shared",
         ]
 
 

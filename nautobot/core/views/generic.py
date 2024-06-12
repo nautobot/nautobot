@@ -16,6 +16,7 @@ from django.db.models import ManyToManyField, ProtectedError
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -201,6 +202,19 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         dynamic_filter_form = None
         filter_form = None
         hide_hierarchy_ui = False
+
+        # Check if there is a global default for this view
+        global_saved_view = None
+        app_label, model_name = model._meta.label.split(".")
+        view_name = f"{app_label}:{model_name.lower()}_list"
+
+        try:
+            global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
+        except ObjectDoesNotExist:
+            pass
+
+        if global_saved_view is not None and not request.GET.get("saved_view"):
+            return redirect(reverse("users:savedview", kwargs={"pk": global_saved_view.pk}))
 
         if self.filterset:
             filter_params = self.get_filter_params(request)

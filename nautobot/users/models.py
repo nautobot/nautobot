@@ -317,6 +317,8 @@ class SavedView(BaseModel, ChangeLoggedModel):
     config = models.JSONField(
         encoder=DjangoJSONEncoder, blank=True, default=dict, help_text="Saved Configuration on this view"
     )
+    is_global_default = models.BooleanField(default=False)
+    is_shared = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["owner", "view", "name"]
@@ -326,3 +328,10 @@ class SavedView(BaseModel, ChangeLoggedModel):
 
     def __str__(self):
         return f"{self.owner.username} - {self.view} - {self.name}"
+
+    def clean(self):
+        super().clean()
+
+        # If this SavedView is set to a global default, all other saved views related to this view name should not be the global default.
+        if self.is_global_default:
+            SavedView.objects.filter(view=self.view).exclude(pk=self.pk).update(is_global_default=False)

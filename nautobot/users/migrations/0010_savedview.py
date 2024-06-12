@@ -32,6 +32,8 @@ class Migration(migrations.Migration):
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
                 ("owner", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                ("is_global_default", models.BooleanField(default=False)),
+                ("is_shared", models.BooleanField(default=True)),
             ],
             options={
                 "verbose_name": "saved view",

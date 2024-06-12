@@ -23,7 +23,7 @@ from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
-from nautobot.users.forms import SavedViewForm
+from nautobot.users.forms import SavedViewModalForm
 from nautobot.users.models import SavedView
 
 # S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
@@ -816,7 +816,7 @@ def saved_view_modal(
 
     param_dict = json.dumps(param_dict, indent=4, sort_keys=True, ensure_ascii=False)
     return {
-        "form": SavedViewForm(),
+        "form": SavedViewModalForm(),
         "params": params,
         "param_dict": param_dict,
         "view": view,
