@@ -43,6 +43,10 @@ class CloudTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         providers = Manufacturer.objects.all()
+        CloudType.objects.create(name="Deletable Cloud Type 1", provider=providers[0])
+        CloudType.objects.create(name="Deletable Cloud Type 2", provider=providers[0])
+        CloudType.objects.create(name="Deletable Cloud Type 3", provider=providers[0])
+
         cts = [
             ContentType.objects.get_for_model(CloudNetwork),
         ]
