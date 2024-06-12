@@ -30,6 +30,22 @@ menu_items = (
                             ),
                         ),
                     ),
+                    NavMenuItem(
+                        link="cloud:cloudtype_list",
+                        name="Cloud Types",
+                        weight=200,
+                        permissions=[
+                            "cloud.view_cloudtype",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="cloud:cloudtype_add",
+                                permissions=[
+                                    "cloud.add_cloudtype",
+                                ],
+                            ),
+                        ),
+                    ),
                 ),
             ),
         ),

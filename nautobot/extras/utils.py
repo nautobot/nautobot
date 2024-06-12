@@ -277,6 +277,11 @@ def populate_model_features_registry(refresh=False):
             "field_names": ["_custom_field_data"],
         },
         {
+            "feature_name": "cloud_types",
+            "field_names": [],
+            "additional_constraints": {"is_cloud_type_model": True},
+        },
+        {
             "feature_name": "relationships",
             "field_names": ["source_for_associations", "destination_for_associations"],
             "field_attributes": {"related_model": RelationshipAssociation},
