@@ -1,1 +1,0 @@
-Fixed invalid installation of `xmlsec` library in the Nautobot Docker images.
