@@ -1,0 +1,1 @@
+Updated the `IPAddressFilterSet`, `IPAddressDetailTable` and `IPAddressFilterForm` in the ipam application in order to make the nat_inside field sortable and searchable.
