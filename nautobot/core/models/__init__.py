@@ -50,6 +50,7 @@ class BaseModel(models.Model):
     is_metadata_associable_model = True
     is_saved_view_model = False  # SavedViewMixin overrides this to default True
     is_static_group_associable_model = False  # StaticGroupMixin overrides this to default True
+    is_cloud_type_model = False  # CloudTypeMixin overrides this to default True
 
     class Meta:
         abstract = True

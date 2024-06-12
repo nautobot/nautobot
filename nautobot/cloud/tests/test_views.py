@@ -1,4 +1,6 @@
-from nautobot.cloud.models import CloudAccount
+from django.contrib.contenttypes.models import ContentType
+
+from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudType
 from nautobot.core.testing import ViewTestCases
 from nautobot.dcim.models import Manufacturer
 from nautobot.extras.models import SecretsGroup, Tag
@@ -32,4 +34,33 @@ class CloudAccountTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "secrets_group": secrets_groups[1].pk,
             "description": "New description",
             "comments": "New comments",
+        }
+
+
+class CloudTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = CloudType
+
+    @classmethod
+    def setUpTestData(cls):
+        providers = Manufacturer.objects.all()
+        CloudType.objects.create(name="Deletable Cloud Type 1", provider=providers[0])
+        CloudType.objects.create(name="Deletable Cloud Type 2", provider=providers[0])
+        CloudType.objects.create(name="Deletable Cloud Type 3", provider=providers[0])
+
+        cts = [
+            ContentType.objects.get_for_model(CloudNetwork),
+        ]
+
+        cls.form_data = {
+            "name": "New Cloud Type",
+            "provider": providers[1].pk,
+            "description": "A new cloud type",
+            "content_types": [cts[0].id],
+            "tags": [t.pk for t in Tag.objects.get_for_model(CloudType)],
+        }
+
+        cls.bulk_edit_data = {
+            "provider": providers[1].pk,
+            "content_types": [cts[0].id],
+            "description": "New description",
         }
