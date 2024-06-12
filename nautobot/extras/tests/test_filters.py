@@ -46,6 +46,8 @@ from nautobot.extras.filters import (
     JobHookFilterSet,
     JobLogEntryFilterSet,
     JobResultFilterSet,
+    MetadataChoiceFilterSet,
+    MetadataTypeFilterSet,
     ObjectChangeFilterSet,
     RelationshipAssociationFilterSet,
     RelationshipFilterSet,
@@ -79,6 +81,8 @@ from nautobot.extras.models import (
     JobHook,
     JobLogEntry,
     JobResult,
+    MetadataChoice,
+    MetadataType,
     ObjectChange,
     Relationship,
     RelationshipAssociation,
@@ -1335,6 +1339,34 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
                 # pylint: enable=unsupported-binary-operation
             ),
         )
+
+
+class MetadataChoiceTestCase(FilterTestCases.FilterTestCase):
+    queryset = MetadataChoice.objects.all()
+    filterset = MetadataChoiceFilterSet
+    generic_filter_tests = (
+        ["metadata_type", "metadata_type__name"],
+        ["metadata_type", "metadata_type__id"],
+        ["value"],
+        ["weight"],
+    )
+
+
+class MetadataTypeTestCase(FilterTestCases.FilterTestCase):
+    queryset = MetadataType.objects.all()
+    filterset = MetadataTypeFilterSet
+    generic_filter_tests = (
+        ["name"],
+        ["description"],
+        ["data_type"],
+    )
+
+    def test_content_types(self):
+        device_ct = ContentType.objects.get_for_model(Device)
+        rack_ct = ContentType.objects.get_for_model(Rack)
+        mdts = self.queryset.filter(content_types=device_ct).filter(content_types=rack_ct).distinct()
+        params = {"content_types": ["dcim.device", "dcim.rack"]}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, mdts)
 
 
 class ObjectChangeTestCase(FilterTestCases.FilterTestCase):

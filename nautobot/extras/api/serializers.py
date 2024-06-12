@@ -66,6 +66,8 @@ from nautobot.extras.models import (
     JobHook,
     JobLogEntry,
     JobResult,
+    MetadataChoice,
+    MetadataType,
     Note,
     ObjectChange,
     Relationship,
@@ -739,6 +741,28 @@ class JobButtonSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
     class Meta:
         model = JobButton
+        fields = "__all__"
+
+
+#
+# Metadata
+#
+
+
+class MetadataTypeSerializer(NautobotModelSerializer):
+    content_types = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
+        many=True,
+    )
+
+    class Meta:
+        model = MetadataType
+        fields = "__all__"
+
+
+class MetadataChoiceSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = MetadataChoice
         fields = "__all__"
 
 

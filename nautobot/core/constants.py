@@ -155,6 +155,8 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
     "jobresult",
     "locationtype",
     "manufacturer",
+    "metadatachoice",
+    "metadatatype",
     "modulebay",
     "modulebaytemplate",
     "note",
