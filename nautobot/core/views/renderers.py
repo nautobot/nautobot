@@ -84,7 +84,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 self.saved_view = None
                 if saved_view_pk is not None:
                     try:
-                        self.saved_view = SavedView.objects.restrict(request.user, "view").get(pk=saved_view_pk)
+                        # We are not using .restrict(request.user, "view") here
+                        # User should be able to see any saved view that he has the list view access to.
+                        self.saved_view = SavedView.objects.get(pk=saved_view_pk)
                     except ObjectDoesNotExist:
                         pass
                 if view.request.GET.getlist("sort") or (
@@ -296,12 +298,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             list_url = validated_viewname(model, "list")
             saved_views = None
             if model.is_saved_view_model:
-                saved_views = (
-                    SavedView.objects.filter(view=list_url)
-                    .restrict(request.user, "view")
-                    .order_by("name")
-                    .only("pk", "name")
-                )
+                # We are not using .restrict(request.user, "view") here
+                # User should be able to see any saved view that he has the list view access to.
+                saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
 
             new_changes_not_applied = view_changes_not_saved(request, view, self.saved_view)
             context.update(
