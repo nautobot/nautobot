@@ -159,7 +159,7 @@ class SavedViewTest(ModelViewTestCase):
         if action == "detail":
             url = reverse(view) + f"?saved_view={pk}"
         elif action == "edit":
-            url = saved_view.get_absolute_url() + "edit/"
+            url = saved_view.get_absolute_url() + "update-config/"
         else:
             url = reverse("users:savedview_add")
 
