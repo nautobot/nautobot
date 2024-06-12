@@ -80,6 +80,12 @@
                             <span>Update Current Saved View</span>
                         </a>
                     </li>
+                    <li>
+                        <a href="{% url 'user:savedview_set_default' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                            <i class="mdi mdi-view-compact text-muted" aria-hidden="true"></i>
+                            <span>Set Current Saved View As Default</span>
+                        </a>
+                    </li>
                 {% endif %}
                 <li>
                     <a href="" data-toggle="modal" data-target="#saved_view_modal" title="Save Current View As">

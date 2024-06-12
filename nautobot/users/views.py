@@ -289,6 +289,23 @@ class SavedViewUIViewSet(
         list_view_url = reverse(instance.view) + f"?saved_view={instance.pk}"
         return redirect(list_view_url)
 
+    @action(detail=True, name="Set Default", methods=["get"], url_path="set-default", url_name="set_default")
+    def set_default(self, request, *args, **kwargs):
+        """
+        Set current saved view as the the request.user default view. Overriding the global default view if there is one.
+        """
+        user = request.user
+        sv = SavedView.objects.get(pk=kwargs.get("pk", None))
+        if not user.config_data.get("saved_views", None):
+            user.config_data["saved_views"] = {}
+        user.config_data["saved_views"][f"{sv.view}"] = sv.pk
+        user.save()
+        list_view_url = sv.get_absolute_url()
+        messages.success(
+            request, f"Successfully set current view '{sv.name}' as the default '{sv.view}' view for user {user}"
+        )
+        return redirect(list_view_url)
+
     @action(detail=True, name="Update Config", methods=["get"], url_path="update-config", url_name="update_config")
     def update_saved_view_config(self, request, *args, **kwargs):
         """

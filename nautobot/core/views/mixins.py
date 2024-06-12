@@ -695,10 +695,25 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             response = self.check_for_export(request, model, content_type)
             if response is not None:
                 return response
-        # Check if there is a global default for this view
-        global_saved_view = None
+        # Check if there is a default for this view for this specific user
         app_label, model_name = queryset.model._meta.label.split(".")
         view_name = f"{app_label}:{model_name.lower()}_list"
+        user = request.user
+        user_default_saved_view_pk = user.config_data.get("saved_views", {}).get(view_name, None)
+        if user_default_saved_view_pk is not None and not request.GET.get("saved_view"):
+            try:
+                SavedView.objects.get(pk=user_default_saved_view_pk)
+                sv_url = reverse("users:savedview", kwargs={"pk": user_default_saved_view_pk})
+                return redirect(sv_url)
+            except ObjectDoesNotExist:
+                # Saved view was deleted
+                messages.warning(
+                    request,
+                    f"Saved view with pk '{user_default_saved_view_pk}' was set as the default view for {user} but is now deleted. Please set a new default view.",
+                )
+
+        # Check if there is a global default for this view
+        global_saved_view = None
         try:
             global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
         except ObjectDoesNotExist:
