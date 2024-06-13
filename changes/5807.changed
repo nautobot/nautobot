@@ -1,0 +1,1 @@
+Added the ability to sort and filter the `IPAddress` list view by the `nat_inside` field.
