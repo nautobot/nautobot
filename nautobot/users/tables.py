@@ -1,6 +1,6 @@
 import django_tables2 as tables
 
-from nautobot.core.tables import BaseTable, ButtonsColumn, ToggleColumn
+from nautobot.core.tables import BaseTable, BooleanColumn, ButtonsColumn, ToggleColumn
 from nautobot.core.templatetags.helpers import render_json
 from nautobot.users.models import SavedView
 
@@ -9,6 +9,8 @@ class SavedViewTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     actions = ButtonsColumn(SavedView)
+    is_global_default = BooleanColumn()
+    is_shared = BooleanColumn()
 
     class Meta(BaseTable.Meta):
         model = SavedView

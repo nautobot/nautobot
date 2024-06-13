@@ -298,6 +298,11 @@ class SavedViewUIViewSet(
             message += f"<br>The global default saved View for '{view_name}' is set to <a href='{new_global_default_view.get_absolute_url()}'>{new_global_default_view.name}</a>."
         return message
 
+    def list(self, request, *args, **kwargs):
+        if not request.user.has_perms(["users.view_savedview"]):
+            return self.handle_no_permission()
+        return super().list(request, *args, **kwargs)
+
     def retrieve(self, request, *args, **kwargs):
         """
         The detail view for a saved view should the related ObjectListView with saved configurations applied
@@ -378,9 +383,6 @@ class SavedViewUIViewSet(
         and the name of the new SavedView from request.POST to create a new SavedView.
         """
         name = request.POST.get("name")
-        is_global_default = request.POST.get("is_global_default", False)
-        if is_global_default:
-            is_global_default = True
         is_shared = request.POST.get("is_shared", False)
         if is_shared:
             is_shared = True
@@ -409,9 +411,7 @@ class SavedViewUIViewSet(
         table_changes_pending = param_dict.get("table_changes_pending", False)
         all_filters_removed = param_dict.get("all_filters_removed", False)
         try:
-            sv = SavedView.objects.create(
-                name=name, owner=request.user, view=view_name, is_global_default=is_global_default, is_shared=is_shared
-            )
+            sv = SavedView.objects.create(name=name, owner=request.user, view=view_name, is_shared=is_shared)
         except IntegrityError:
             messages.error(request, f"You already have a Saved View named '{name}' for this view '{view_name}'")
             if derived_view_pk:

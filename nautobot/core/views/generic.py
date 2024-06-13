@@ -218,10 +218,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                     return redirect(sv_url)
                 except ObjectDoesNotExist:
                     # Saved view was deleted
-                    messages.warning(
-                        request,
-                        f"Saved view with pk '{user_default_saved_view_pk}' was set as the default view for {user} but is now deleted. Please set a new default view.",
-                    )
+                    pass
 
         # Check if there is a global default for this view
         global_saved_view = None

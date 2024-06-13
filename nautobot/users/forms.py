@@ -40,11 +40,6 @@ class SavedViewForm(BootstrapMixin, forms.ModelForm):
 
 
 class SavedViewModalForm(BootstrapMixin, forms.ModelForm):
-    is_global_default = forms.BooleanField(
-        label="Is global default",
-        required=False,
-        help_text="If checked, this saved view will be used globally as the default saved view for this particular view",
-    )
     is_shared = forms.BooleanField(
         label="Is shared",
         required=False,
@@ -53,7 +48,7 @@ class SavedViewModalForm(BootstrapMixin, forms.ModelForm):
 
     class Meta:
         model = SavedView
-        fields = ["name", "config", "is_global_default", "is_shared"]
+        fields = ["name", "config", "is_shared"]
 
 
 class TokenForm(BootstrapMixin, forms.ModelForm):
