@@ -433,6 +433,10 @@ class IPAddressFilterSet(
         method="_has_interface_assignments",
         label="Has Interface Assignments",
     )
+    nat_inside = django_filters.ModelMultipleChoiceFilter(
+        queryset=IPAddress.objects.all(),
+        label="NAT (Inside)",
+    )
     has_nat_inside = RelatedMembershipBooleanFilter(
         field_name="nat_inside",
         label="Has NAT Inside",
