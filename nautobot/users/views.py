@@ -249,12 +249,28 @@ class SavedViewUIViewSet(
     table_class = SavedViewTable
     action_buttons = ("export",)
 
+    def alter_queryset(self, request):
+        """
+        Two scenarios we need to handle here:
+        1. User can view all saved views with users.view_savedview permission.
+        2. User without the permission can only view published savedviews and his/her own saved views.
+        """
+        queryset = super().alter_queryset(request)
+        user = request.user
+        if user.has_perms(["users.view_savedview"]):
+            saved_views = queryset
+        else:
+            shared_saved_views = queryset.filter(is_shared=True)
+            user_owned_saved_views = queryset.filter(owner=user)
+            saved_views = shared_saved_views | user_owned_saved_views
+        return saved_views
+
     def get_queryset(self):
         """
         Get the list of items for this view.
         All users should be able to see saved views so we do not apply extra permissions.
         """
-        return self.queryset
+        return self.queryset.all()
 
     def check_permissions(self, request):
         """
@@ -278,7 +294,8 @@ class SavedViewUIViewSet(
         new_global_default_view = kwargs.get("new_global_default_view")
         view_name = new_global_default_view.view
         message = ""
-        message += f"<br>The global default saved View for '{view_name}' is set to <a href='{new_global_default_view.get_absolute_url()}'>{new_global_default_view.name}</a>."
+        if new_global_default_view.is_global_default:
+            message += f"<br>The global default saved View for '{view_name}' is set to <a href='{new_global_default_view.get_absolute_url()}'>{new_global_default_view.name}</a>."
         return message
 
     def retrieve(self, request, *args, **kwargs):
@@ -446,13 +463,14 @@ class SavedViewUIViewSet(
             sv.validated_save()
             list_view_url = sv.get_absolute_url()
             message = f"Successfully created new Saved View '{sv.name}'."
-            if old_global_default_view is not None:
-                message += (
-                    " "
-                    + f"The global default saved View for '{view_name}' is changed from '{old_global_default_view.name}' to '{sv.name}'."
-                )
-            else:
-                message += " " + f"The global default saved View for '{view_name}' is set to '{sv.name}'."
+            if sv.is_global_default:
+                if old_global_default_view is not None:
+                    message += (
+                        " "
+                        + f"The global default saved View for '{view_name}' is changed from '{old_global_default_view.name}' to '{sv.name}'."
+                    )
+                else:
+                    message += " " + f"The global default saved View for '{view_name}' is set to '{sv.name}'."
             messages.success(request, message)
             return redirect(list_view_url)
         except ValidationError as e:
