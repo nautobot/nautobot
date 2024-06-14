@@ -335,3 +335,5 @@ class SavedView(BaseModel, ChangeLoggedModel):
         # If this SavedView is set to a global default, all other saved views related to this view name should not be the global default.
         if self.is_global_default:
             SavedView.objects.filter(view=self.view).exclude(pk=self.pk).update(is_global_default=False)
+            # If the view is set to Global default, is_shared should be true regardless
+            self.is_shared = True
