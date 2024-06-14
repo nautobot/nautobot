@@ -747,6 +747,7 @@ def saved_view_modal(
         "sort",
         "saved_view",
         "table_changes_pending",
+        "clear_view",
     ]
 
     table_name = lookup.get_table_for_model(model).__name__
@@ -770,6 +771,8 @@ def saved_view_modal(
             per_page = filters_applied.pop(param, None)
         elif param == "sort":
             sort_order = filters_applied.pop(param, [])
+        elif param == "clear_view":
+            filters_applied.pop(param, False)
 
     if filters_applied:
         param_dict["filter_params"] = filters_applied

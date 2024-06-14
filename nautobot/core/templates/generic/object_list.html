@@ -56,7 +56,7 @@
                 {% for saved_view in saved_views %}
                     <li>
                         {% if saved_view == current_saved_view %}
-                            <a href="{% url list_url %}">
+                            <a href="{% url list_url %}?clear_view=true">
                                 <i class="mdi mdi-check-bold text-bold" aria-hidden="true"></i>
                                 <strong>
                                     {{saved_view.name}}

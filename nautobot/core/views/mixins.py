@@ -623,6 +623,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         "saved_view",  # saved_view indicator pk or composite keys
         "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
         "all_filters_removed",  # indicator for if all filters have been removed from the saved view
+        "clear_view",  # indicator for if the clear view button is clicked or not
     )
 
     def filter_queryset(self, queryset):

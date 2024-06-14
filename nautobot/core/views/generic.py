@@ -154,6 +154,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         "saved_view",  # saved_view indicator pk or composite keys
         "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
         "all_filters_removed",  # indicator for if all filters have been removed from the saved view
+        "clear_view",  # indicator for if the clear view button is clicked or not
     )
 
     def get_filter_params(self, request):
@@ -199,36 +200,39 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         content_type = ContentType.objects.get_for_model(model)
 
         filter_params = request.GET
+        user = request.user
         display_filter_params = []
         dynamic_filter_form = None
         filter_form = None
         hide_hierarchy_ui = False
+        clear_view = filter_params.get("clear_view", False)
 
-        # Check if there is a default for this view for this specific user
-        app_label, model_name = model._meta.label.split(".")
-        view_name = f"{app_label}:{model_name.lower()}_list"
-        user = request.user
+        # If the user clicks on the clear view button, we do not check for global or user defaults
+        if not clear_view:
+            # Check if there is a default for this view for this specific user
+            app_label, model_name = model._meta.label.split(".")
+            view_name = f"{app_label}:{model_name.lower()}_list"
 
-        if not isinstance(user, AnonymousUser):
-            user_default_saved_view_pk = user.config_data.get("saved_views", {}).get(view_name, None)
-            if user_default_saved_view_pk is not None and not request.GET.get("saved_view"):
-                try:
-                    SavedView.objects.get(pk=user_default_saved_view_pk)
-                    sv_url = reverse("users:savedview", kwargs={"pk": user_default_saved_view_pk})
-                    return redirect(sv_url)
-                except ObjectDoesNotExist:
-                    # Saved view was deleted
-                    pass
+            if not isinstance(user, AnonymousUser):
+                user_default_saved_view_pk = user.config_data.get("saved_views", {}).get(view_name, None)
+                if user_default_saved_view_pk is not None and not request.GET.get("saved_view"):
+                    try:
+                        SavedView.objects.get(pk=user_default_saved_view_pk)
+                        sv_url = reverse("users:savedview", kwargs={"pk": user_default_saved_view_pk})
+                        return redirect(sv_url)
+                    except ObjectDoesNotExist:
+                        # Saved view was deleted
+                        pass
 
-        # Check if there is a global default for this view
-        global_saved_view = None
-        try:
-            global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
-        except ObjectDoesNotExist:
-            pass
+            # Check if there is a global default for this view
+            global_saved_view = None
+            try:
+                global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
+            except ObjectDoesNotExist:
+                pass
 
-        if global_saved_view is not None and not request.GET.get("saved_view"):
-            return redirect(reverse("users:savedview", kwargs={"pk": global_saved_view.pk}))
+            if global_saved_view is not None and not request.GET.get("saved_view"):
+                return redirect(reverse("users:savedview", kwargs={"pk": global_saved_view.pk}))
 
         if self.filterset:
             filter_params = self.get_filter_params(request)
