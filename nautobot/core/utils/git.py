@@ -119,7 +119,11 @@ class GitRepo:
         is_tag = branch in self.repo.tags
         maybe_commit = set(branch).issubset(string.hexdigits)
         logger.debug(
-            "Branch %s --> is_branch: %s, is_tag: %s, maybe_commit: %s", branch, is_branch, is_tag, maybe_commit,
+            "Branch %s --> is_branch: %s, is_tag: %s, maybe_commit: %s",
+            branch,
+            is_branch,
+            is_tag,
+            maybe_commit,
         )
 
         if is_branch:
@@ -155,7 +159,7 @@ class GitRepo:
                         f" If this is a new repo, please add a commit before syncing. {git_error}"
                     )
 
-            logger.info(f"Checking out latest commit on branch %s...", branch)
+            logger.info("Checking out latest commit on branch %s...", branch)
             branch_head.checkout()
             # No specific commit hash was given, so make sure we get the latest from origin
             # We would use repo.remotes.origin.pull() here, but that will fail in the case where someone has
@@ -203,16 +207,18 @@ class GitRepo:
         is_tag = branch in self.repo.tags
         maybe_commit = set(branch).issubset(string.hexdigits)
         logger.debug(
-            "Branch %s --> is_branch: %s, is_tag: %s, maybe_commit: %s", branch, is_branch, is_tag, maybe_commit,
+            "Branch %s --> is_branch: %s, is_tag: %s, maybe_commit: %s",
+            branch,
+            is_branch,
+            is_tag,
+            maybe_commit,
         )
 
         if not is_branch and not is_tag and not maybe_commit:
-            logger.error(
-                "Branch %s does not exist at %s. %s", branch, next(iter(self.repo.remotes.origin.urls)), git_error
-            )
+            logger.error("Branch %s does not exist at %s", branch, next(iter(self.repo.remotes.origin.urls)))
             raise BranchDoesNotExist(
                 f"Please create branch '{branch}' in upstream and try again."
-                f" If this is a new repo, please add a commit before syncing. {git_error}"
+                f" If this is a new repo, please add a commit before syncing."
             )
 
         if is_branch:

@@ -1170,4 +1170,11 @@ def enqueue_job_hooks(object_change):
     # Enqueue the jobs related to the job_hooks
     for job_hook in job_hooks:
         job_model = job_hook.job
-        JobResult.enqueue_job(job_model, object_change.user, object_change=object_change.pk)
+        if not job_model.installed or not job_model.enabled:
+            logger.warning(
+                "JobHook %s is enabled, but the underlying Job %s is not installed and enabled", job_hook, job_model
+            )
+        elif get_job(job_model.class_path, reload=True) is None:
+            logger.error("JobHook %s is enabled, but the underlying Job implementation is missing", job_hook)
+        else:
+            JobResult.enqueue_job(job_model, object_change.user, object_change=object_change.pk)

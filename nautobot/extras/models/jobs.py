@@ -363,6 +363,9 @@ class JobHook(OrganizationalModel):
         if not self.type_create and not self.type_delete and not self.type_update:
             raise ValidationError("You must select at least one type: create, update, and/or delete.")
 
+        if self.enabled and not (self.job.installed and self.job.enabled):
+            raise ValidationError({"enabled": "The selected Job is not installed and enabled"})
+
     @classmethod
     def check_for_conflicts(
         cls, instance=None, content_types=None, job=None, type_create=None, type_update=None, type_delete=None
@@ -375,6 +378,7 @@ class JobHook(OrganizationalModel):
         """
 
         conflicts = {}
+
         job_hook_error_msg = "A job hook already exists for {action} on {content_type} to job {job}"
 
         if instance is not None and instance.present_in_database:
@@ -783,6 +787,7 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
         help_text="The object type(s) to which this job button applies.",
     )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    enabled = models.BooleanField(default=True)
     text = models.CharField(
         max_length=500,
         help_text="Jinja2 template code for button text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.name }}</code>. Buttons which render as empty text will not be displayed.",
@@ -816,6 +821,12 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        super().clean()
+
+        if self.enabled and not (self.job.installed and self.job.enabled):
+            raise ValidationError({"enabled": "The selected Job is not installed and enabled"})
 
 
 class ScheduledJobs(models.Model):

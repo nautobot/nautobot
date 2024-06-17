@@ -818,6 +818,7 @@ class JobButtonTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     job = tables.Column(linkify=True)
+    enabled = BooleanColumn()
     confirmation = BooleanColumn()
     content_types = ContentTypesColumn(truncate_words=15)
 
@@ -829,6 +830,7 @@ class JobButtonTable(BaseTable):
             "content_types",
             "text",
             "job",
+            "enabled",
             "group_name",
             "weight",
             "button_class",
@@ -841,6 +843,7 @@ class JobButtonTable(BaseTable):
             "group_name",
             "weight",
             "job",
+            "enabled",
             "confirmation",
         )
 

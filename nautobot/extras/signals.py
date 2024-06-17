@@ -486,11 +486,29 @@ def refresh_job_models(sender, *, apps, **kwargs):
             job_models.append(job_model)
 
     for job_model in Job.objects.filter(installed=True):
-        if job_model not in job_models:
-            logger.info(
-                "Job %s/%s is no longer installed",
-                job_model.module_name,
-                job_model.job_class_name,
-            )
-            job_model.installed = False
-            job_model.save()
+        if job_model in job_models:
+            continue
+        logger.info(
+            "Job %s/%s is no longer installed",
+            job_model.module_name,
+            job_model.job_class_name,
+        )
+        job_model.installed = False
+        job_model.save()
+        if job_model.is_job_button_receiver:
+            JobButton = apps.get_model("extras", "JobButton")
+            for jb in JobButton.objects.filter(job=job_model, enabled=True):
+                logger.info("Disabling JobButton %s derived from %s", jb, job_model)
+                jb.enabled = False
+                jb.save()
+        if job_model.is_job_hook_receiver:
+            JobHook = apps.get_model("extras", "JobHook")
+            for jh in JobHook.objects.filter(job=job_model, enabled=True):
+                logger.info("Disabling JobHook %s derived from %s", jh, job_model)
+                jh.enabled = False
+                jh.save()
+        ScheduledJob = apps.get_model("extras", "ScheduledJob")
+        for sj in ScheduledJob.objects.filter(job_model=job_model, enabled=True):
+            logger.info("Disabling ScheduledJob %s derived from %s", sj, job_model)
+            sj.enabled = False
+            sj.save()
