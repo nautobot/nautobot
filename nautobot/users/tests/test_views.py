@@ -354,3 +354,99 @@ class SavedViewTest(ModelViewTestCase):
         self.assertEqual(instance.config["filter_params"]["status"], ["active"])
         self.assertEqual(instance.config["filter_params"]["name"], ["new_name_filter"])
         self.assertEqual(instance.config["sort_order"], ["name"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_is_global_default(self):
+        view_name = "dcim:location_list"
+        SavedView.objects.create(
+            name="Global Location Default View",
+            owner=self.user,
+            view=view_name,
+            is_shared=True,
+            is_global_default=True,
+        )
+        response = self.client.get(reverse(view_name), follow=True)
+        # Assert that Location List View got redirected to Saved View set as global default
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            "Global Location Default View",
+            response_body,
+            msg=response_body,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_user_default(self):
+        view_name = "dcim:location_list"
+        sv = SavedView.objects.create(
+            name="User Location Default View",
+            owner=self.user,
+            view=view_name,
+            is_shared=True,
+            is_global_default=True,
+        )
+        self.user.config_data["saved_views"] = {}
+        self.user.config_data["saved_views"][view_name] = sv.pk
+        response = self.client.get(reverse(view_name), follow=True)
+        # Assert that Location List View got redirected to Saved View set as user default
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            "User Location Default View",
+            response_body,
+            msg=response_body,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_user_default_precedes_global_default(self):
+        view_name = "dcim:location_list"
+        SavedView.objects.create(
+            name="Global Location Default View",
+            owner=self.user,
+            view=view_name,
+            is_shared=True,
+            is_global_default=True,
+        )
+        sv = SavedView.objects.create(
+            name="User Location Default View",
+            owner=self.user,
+            view=view_name,
+            is_shared=True,
+        )
+        self.user.config_data["saved_views"] = {}
+        self.user.config_data["saved_views"][view_name] = sv.pk
+        response = self.client.get(reverse(view_name), follow=True)
+        # Assert that Location List View got redirected to Saved View set as user default
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            "User Location Default View",
+            response_body,
+            msg=response_body,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_is_shared(self):
+        view_name = "dcim:location_list"
+        new_user = User.objects.create(username="Different User", is_active=True)
+        sv_shared = SavedView.objects.create(
+            name="Shared Location Saved View",
+            owner=new_user,
+            view=view_name,
+            is_shared=True,
+        )
+        sv_not_shared = SavedView.objects.create(
+            name="Private Location Saved View",
+            owner=new_user,
+            view=view_name,
+            is_shared=False,
+        )
+        app_label = view_name.split(":")[0]
+        model_name = view_name.split(":")[1].split("_")[0]
+        self.add_permissions(f"{app_label}.view_{model_name}")
+        response = self.client.get(reverse(view_name), follow=True)
+        # Assert that Location List View got redirected to Saved View set as user default
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(str(sv_shared.pk), response_body, msg=response_body)
+        self.assertNotIn(str(sv_not_shared.pk), response_body, msg=response_body)

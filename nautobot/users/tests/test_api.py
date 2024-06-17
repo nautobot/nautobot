@@ -484,6 +484,8 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
                 "config": {
                     "filter_params": {"circuit_type": ["#047c4c", "#06cc23"], "status": ["Active", "Decommissioned"]}
                 },
+                "is_global_default": False,
+                "is_shared": True,
             },
             {
                 "owner": self.user.pk,
@@ -496,6 +498,8 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
                         "status": ["Active", "ExtremeOriginal"],
                     }
                 },
+                "is_global_default": False,
+                "is_shared": False,
             },
             {
                 "owner": self.user.pk,
@@ -515,5 +519,7 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
                         }
                     },
                 },
+                "is_global_default": False,
+                "is_shared": True,
             },
         ]
