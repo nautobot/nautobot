@@ -4,6 +4,7 @@ from django import forms as django_forms
 from django.apps import apps
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import QueryDict
 from django.test import TestCase
@@ -11,7 +12,7 @@ from django.test import TestCase
 from nautobot.circuits import models as circuits_models
 from nautobot.core import exceptions, forms, settings_funcs
 from nautobot.core.api import utils as api_utils
-from nautobot.core.models import fields as core_fields, utils as models_utils
+from nautobot.core.models import fields as core_fields, utils as models_utils, validators
 from nautobot.core.utils import data as data_utils, filtering, lookup, requests
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
 from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models, tables
@@ -370,6 +371,52 @@ class SlugifyFunctionsTest(TestCase):
             (" 123 main st", "a_123_main_st"),
         ):
             self.assertEqual(core_fields.slugify_dashes_to_underscores(content), expected)
+
+
+class LaxURLFieldTest(TestCase):
+    """Test LaxURLField and related functionality."""
+
+    VALID_URLS = [
+        "http://example.com",
+        "https://local-dns/foo/bar.git",  # not supported out-of-the-box by Django, hence our custom classes
+        "https://1.1.1.1:8080/",
+        "https://[2001:db8::]/",
+    ]
+    INVALID_URLS = [
+        "unknown://example.com/",
+        "foo:/",
+        "http://file://",
+    ]
+
+    def test_enhanced_url_validator(self):
+        for valid in self.VALID_URLS:
+            with self.subTest(valid=valid):
+                validators.EnhancedURLValidator()(valid)
+
+        for invalid in self.INVALID_URLS:
+            with self.subTest(invalid=invalid):
+                with self.assertRaises(django_forms.ValidationError):
+                    validators.EnhancedURLValidator()(invalid)
+
+    def test_forms_lax_url_field(self):
+        for valid in self.VALID_URLS:
+            with self.subTest(valid=valid):
+                forms.LaxURLField().clean(valid)
+
+        for invalid in self.INVALID_URLS:
+            with self.subTest(invalid=invalid):
+                with self.assertRaises(django_forms.ValidationError):
+                    forms.LaxURLField().clean(invalid)
+
+    def test_models_lax_url_field(self):
+        for valid in self.VALID_URLS:
+            with self.subTest(valid=valid):
+                core_fields.LaxURLField().run_validators(valid)
+
+        for invalid in self.INVALID_URLS:
+            with self.subTest(invalid=invalid):
+                with self.assertRaises(ValidationError):
+                    core_fields.LaxURLField().run_validators(invalid)
 
 
 class LookupRelatedFunctionTest(TestCase):

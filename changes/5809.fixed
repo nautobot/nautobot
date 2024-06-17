@@ -1,0 +1,1 @@
+Fixed missing support for the GitRepository model in GraphQL.

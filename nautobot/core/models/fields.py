@@ -13,6 +13,7 @@ from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import fields, widgets
 from nautobot.core.models import ordering
 from nautobot.core.models.managers import TagsManager
+from nautobot.core.models.validators import EnhancedURLValidator
 
 
 class mac_unix_expanded_uppercase(mac_unix_expanded):
@@ -378,6 +379,20 @@ class JSONArrayField(models.JSONField):
                 "base_field": self.base_field.formfield(),
                 **kwargs,
             }
+        )
+
+
+class LaxURLField(models.URLField):
+    """Like models.URLField, but using validators.EnhancedURLValidator and forms.LaxURLField."""
+
+    default_validators = [EnhancedURLValidator()]
+
+    def formfield(self, **kwargs):
+        return super().formfield(
+            **{
+                "form_class": fields.LaxURLField,
+                **kwargs,
+            },
         )
 
 

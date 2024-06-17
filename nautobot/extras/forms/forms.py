@@ -27,6 +27,7 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
     JSONArrayFormField,
     JSONField,
+    LaxURLField,
     MultipleContentTypeField,
     SlugField,
     StaticSelect2,
@@ -687,7 +688,7 @@ class PasswordInputWithPlaceholder(forms.PasswordInput):
 class GitRepositoryForm(NautobotModelForm):
     slug = SlugField(help_text="Filesystem-friendly unique shorthand")
 
-    remote_url = forms.URLField(
+    remote_url = LaxURLField(
         required=True,
         label="Remote URL",
         help_text="Only http:// and https:// URLs are presently supported",
@@ -738,7 +739,7 @@ class GitRepositoryBulkEditForm(NautobotBulkEditForm):
         queryset=GitRepository.objects.all(),
         widget=forms.MultipleHiddenInput(),
     )
-    remote_url = forms.CharField(
+    remote_url = LaxURLField(
         label="Remote URL",
         required=False,
     )
