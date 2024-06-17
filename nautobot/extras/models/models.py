@@ -22,9 +22,8 @@ from rest_framework.utils.encoders import JSONEncoder
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
-from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName
+from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, LaxURLField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.core.models.validators import EnhancedURLValidator
 from nautobot.core.utils.data import deepmerge, render_jinja2
 from nautobot.extras.choices import (
     ButtonClassChoices,
@@ -442,10 +441,9 @@ class ExternalIntegration(PrimaryModel):
     """Model for tracking integrations with external applications."""
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
-    remote_url = models.CharField(
+    remote_url = LaxURLField(
         max_length=500,
         verbose_name="Remote URL",
-        validators=[EnhancedURLValidator()],
     )
     secrets_group = models.ForeignKey(
         null=True,

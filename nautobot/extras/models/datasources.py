@@ -6,18 +6,19 @@ import os
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.core.validators import URLValidator
 from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
-from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
+from nautobot.core.models.fields import AutoSlugField, LaxURLField, slugify_dashes_to_underscores
 from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models.validators import EnhancedURLValidator
 from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features
 
 
 @extras_features(
     "config_context_owners",
     "export_template_owners",
+    "graphql",
     "job_results",
     "webhooks",
 )
@@ -34,11 +35,11 @@ class GitRepository(PrimaryModel):
         slugify_function=slugify_dashes_to_underscores,
     )
 
-    remote_url = models.URLField(
+    remote_url = LaxURLField(
         max_length=CHARFIELD_MAX_LENGTH,
         # For the moment we don't support ssh:// and git:// URLs
         help_text="Only HTTP and HTTPS URLs are presently supported",
-        validators=[URLValidator(schemes=["http", "https"])],
+        validators=[EnhancedURLValidator(schemes=["http", "https"])],
     )
     branch = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
