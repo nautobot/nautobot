@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 
 from nautobot.core.testing.models import ModelTestCases
-from nautobot.users.models import ObjectPermission, Token
+from nautobot.users.models import ObjectPermission, SavedView, Token
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -12,6 +12,19 @@ class ObjectPermissionTest(ModelTestCases.BaseModelTestCase):
 
     def setUp(self):
         ObjectPermission.objects.create(name="Test Permission", actions=["view", "add", "change", "delete"])
+
+
+class SavedViewTest(ModelTestCases.BaseModelTestCase):
+    model = SavedView
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="Saved View test user")
+        self.sv = SavedView.objects.create(name="Saved View", owner=self.user, view="dcim:location_list")
+
+    def test_is_global_default_saved_view_is_shared_automatically(self):
+        self.sv.is_global_default = True
+        self.sv.save()
+        self.assertEqual(self.sv.is_shared, True)
 
 
 class TokenTest(ModelTestCases.BaseModelTestCase):
