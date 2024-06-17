@@ -1,0 +1,1 @@
+Fixed inability to use bare (local-DNS) hostnames when specifying a GitRepository remote URL.

@@ -996,7 +996,7 @@ class GitRepositoryTestCase(
         # Create four GitRepository records
         repos = (
             GitRepository(name="Repo 1", slug="repo_1", remote_url="https://example.com/repo1.git"),
-            GitRepository(name="Repo 2", slug="repo_2", remote_url="https://example.com/repo2.git"),
+            GitRepository(name="Repo 2", slug="repo_2", remote_url="https://some-local-host/repo2.git"),
             GitRepository(name="Repo 3", slug="repo_3", remote_url="https://example.com/repo3.git"),
             GitRepository(name="Repo 4", remote_url="https://example.com/repo4.git", secrets_group=secrets_groups[0]),
         )
@@ -1006,7 +1006,7 @@ class GitRepositoryTestCase(
         cls.form_data = {
             "name": "A new Git repository",
             "slug": "a_new_git_repository",
-            "remote_url": "http://example.com/a_new_git_repository.git",
+            "remote_url": "http://another-local-host/a_new_git_repository.git",
             "branch": "develop",
             "_token": "1234567890abcdef1234567890abcdef",
             "secrets_group": secrets_groups[1].pk,
