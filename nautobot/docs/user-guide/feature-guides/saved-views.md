@@ -30,9 +30,9 @@ Once you are satisfied with the current list view configurations, click on the "
 
 ![Save As New View Dropdown](./images/saved-views/save-as-new-view-drop-down.png)
 
-Click the "Save As New View" option, a modal should appear to prompt you to give a name to your new saved view.
+Click the "Save As New View" option, a modal should appear to prompt you to give a name to your new saved view and decide whether to make this saved view available to other users.
 
-We will name this new saved view "Campus Staging Location List View".
+We will name this new saved view "Campus Staging Location List View" and make this view public.
 
 ![Saved View Modal](./images/saved-views/save-view-modal.png)
 
@@ -52,9 +52,9 @@ Note that an asterisk appeared next to the title of the view. The asterisk is an
 
 ![Unsaved saved view](./images/saved-views/unsaved-saved-view.png)
 
-Once you have made desired changes, click the "Saved Views" dropdown button and you should see the option "Update Current View".
+Once you have made desired changes, click the "Saved Views" dropdown button and you should see the option "Update Current Saved View".
 
-Click "Update Current View" option and the page should refresh and you should see the success banner on top of the page stating "Successfully updated current view Campus Staging Location List View".
+Click "Update Current Saved View" option and the page should refresh and you should see the success banner on top of the page stating "Successfully updated current view Campus Staging Location List View".
 
 Congratulations, you have successfully updated your saved view!
 
@@ -62,7 +62,7 @@ Congratulations, you have successfully updated your saved view!
 
 ### How to navigate Saved Views
 
-There are several ways you can navigate saved views. All saved views created by any user for any list view can be accessed from the navigation menu on the left hand side under "Extensibility -> Saved Views":
+There are several ways you can navigate saved views. All saved views created by any user for any list view can be accessed from the navigation menu on the left hand side under "Extensibility -> Saved Views" as an admin or user with "users:view_savedview" permission:
 
 ![Navigation Menu](./images/saved-views/navigation-menu.png)
 
@@ -72,14 +72,50 @@ Another way is from the "Saved View" dropdown button on any given model list vie
 
 ![Current Saved View](./images/saved-views/current-saved-view-drop-down-menu.png)
 
+### How to set a saved view as global default for all users
+
+There can only be one global default for each object list view and the only way to set a saved view as the global default for all users is from the SavedViewTable at SavedViewListView that is only accessible to admins and users with "users:view_savedview" and "users:edit_savedview" permissions.
+
+![Saved View Table Edit Button](./images/saved-views/saved-view-admin-edit-buttons.png)
+
+Clicking on the edit button will direct you to a standard edit view where you can edit the `name`, `is_shared` and `is_global_default` attributes of the current saved view.
+
+![Saved View Edit View](./images/saved-views/saved-view-admin-edit-view.png)
+
+Check the box for `is_global_default` and click on the Update button.
+
+You should be redirected to the SavedViewListView with a success message.
+
+![Saved View Edit Success](./images/saved-views/saved-view-admin-edit-success.png)
+
+### How to hide a saved view from all other users but yourself
+
+In order to create a saved view only for yourself to see, you should make sure that you uncheck the box for `is_shared` when you are creating a new saved view. This will make sure that you are the only who is able to see this saved view.
+
+![Saved View Modal Unchecked](./images/saved-views/saved-view-modal-unchecked.png)
+
+As an admin or a user with the appropriate permissions, you can also edit the `is_shared` attribute from Saved View Edit View. Make sure to uncheck both the `is_shared` box and the `is_global_default` box as a global default view will be automatically made as public to all users.
+
+![Saved View Edit View Unchecked](./images/saved-views/saved-view-admin-edit-view-unchecked.png)
+
+After the saved view is updated, we can log in as a **different** user and see that this private saved view is not available in the saved view dropdown of the ObjectListView.
+
+![Privated Saved View Drop Down](./images/saved-views/saved-view-different-user.png)
+
+### How to set a user-specific default saved view
+
+You can also set a saved view as default for an object list view for yourself, overriding the global default. You can set a view as default by navigate to the view from the saved view dropdown, for example, "Elevator Only Location List View". Clicking on the saved views dropdown again, you should be able to see the option named "Set As My Default".
+
+![Set As My Default Button](./images/saved-views/set-as-my-default-button.png)
+
+Clicking on that option will set the current saved view as your default view for this object list view. The page should refresh with a success message.
+
+![Set As My Default Success](./images/saved-views/set-as-my-default-success.png)
+
 ### How to clear configurations on a Saved View
 
-If the user is currently viewing a saved view, a "Clear View" button will be at the bottom of the dropdown menu. A modal should appear when the button is clicked, prompting the user to confirm the action.
+If the user is currently viewing a saved view, the current saved view should have a checkmark next to its name in the dropdown menu. Clicking on button with the checkmark (current saved view) will direct you back to the default object list view with no configurations applied.
 
 ![Clear View Button](./images/saved-views/clear-view-button.png)
-
-![Clear View Modal](./images/saved-views/clear-view-modal.png)
-
-Clicking the confirm button will clear the saved and unsaved configurations of the saved view and the saved view will have the same configuration as the default model list view.
 
 ![Cleared Saved View](./images/saved-views/cleared-view.png)
