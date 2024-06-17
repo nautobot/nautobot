@@ -44,6 +44,7 @@ class GitRepository(PrimaryModel):
     branch = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         default="main",
+        help_text="Branch, tag, or commit",
     )
 
     current_head = models.CharField(
