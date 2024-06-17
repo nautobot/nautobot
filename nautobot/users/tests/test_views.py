@@ -362,17 +362,19 @@ class SavedViewTest(ModelViewTestCase):
             name="Global Location Default View",
             owner=self.user,
             view=view_name,
-            is_shared=True,
             is_global_default=True,
         )
         response = self.client.get(reverse(view_name), follow=True)
         # Assert that Location List View got redirected to Saved View set as global default
         self.assertHttpStatus(response, 200)
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn(
-            "Global Location Default View",
+        self.assertInHTML(
+            """
+            <strong>
+                Global Location Default View
+            </strong>
+            """,
             response_body,
-            msg=response_body,
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -382,19 +384,22 @@ class SavedViewTest(ModelViewTestCase):
             name="User Location Default View",
             owner=self.user,
             view=view_name,
-            is_shared=True,
             is_global_default=True,
         )
         self.user.config_data["saved_views"] = {}
         self.user.config_data["saved_views"][view_name] = sv.pk
+        self.user.save()
         response = self.client.get(reverse(view_name), follow=True)
         # Assert that Location List View got redirected to Saved View set as user default
         self.assertHttpStatus(response, 200)
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn(
-            "User Location Default View",
+        self.assertInHTML(
+            """
+            <strong>
+                User Location Default View
+            </strong>
+            """,
             response_body,
-            msg=response_body,
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -404,25 +409,27 @@ class SavedViewTest(ModelViewTestCase):
             name="Global Location Default View",
             owner=self.user,
             view=view_name,
-            is_shared=True,
             is_global_default=True,
         )
         sv = SavedView.objects.create(
             name="User Location Default View",
             owner=self.user,
             view=view_name,
-            is_shared=True,
         )
         self.user.config_data["saved_views"] = {}
         self.user.config_data["saved_views"][view_name] = sv.pk
+        self.user.save()
         response = self.client.get(reverse(view_name), follow=True)
         # Assert that Location List View got redirected to Saved View set as user default
         self.assertHttpStatus(response, 200)
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn(
-            "User Location Default View",
+        self.assertInHTML(
+            """
+            <strong>
+                User Location Default View
+            </strong>
+            """,
             response_body,
-            msg=response_body,
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -433,7 +440,6 @@ class SavedViewTest(ModelViewTestCase):
             name="Shared Location Saved View",
             owner=new_user,
             view=view_name,
-            is_shared=True,
         )
         sv_not_shared = SavedView.objects.create(
             name="Private Location Saved View",

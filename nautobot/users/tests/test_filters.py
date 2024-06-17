@@ -225,7 +225,7 @@ class SavedViewTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         user = User.objects.create(username="User1", is_active=True)
         SavedView.objects.create(
-            name="Global default View", owner=user, view="dcim:location_list", is_shared=True, is_global_default=True
+            name="Global default View", owner=user, view="dcim:location_list", is_global_default=True
         )
 
     def test_is_shared(self):

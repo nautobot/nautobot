@@ -1,6 +1,6 @@
 import django_tables2 as tables
 
-from nautobot.core.tables import BaseTable, BooleanColumn, ButtonsColumn, ToggleColumn
+from nautobot.core.tables import BaseTable, BooleanColumn, ButtonsColumn
 from nautobot.core.templatetags.helpers import render_json
 from nautobot.users.models import SavedView
 

@@ -222,7 +222,8 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                         return redirect(sv_url)
                     except ObjectDoesNotExist:
                         # Saved view was deleted
-                        pass
+                        user.config_data["saved_views"][view_name] = None
+                        user.save()
 
             # Check if there is a global default for this view
             global_saved_view = None

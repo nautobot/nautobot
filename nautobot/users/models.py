@@ -329,11 +329,13 @@ class SavedView(BaseModel, ChangeLoggedModel):
     def __str__(self):
         return f"{self.owner.username} - {self.view} - {self.name}"
 
-    def clean(self):
-        super().clean()
-
+    def save(self, *args, **kwargs):
         # If this SavedView is set to a global default, all other saved views related to this view name should not be the global default.
         if self.is_global_default:
-            SavedView.objects.filter(view=self.view).exclude(pk=self.pk).update(is_global_default=False)
+            SavedView.objects.filter(view=self.view, is_global_default=True).exclude(pk=self.pk).update(
+                is_global_default=False
+            )
             # If the view is set to Global default, is_shared should be true regardless
             self.is_shared = True
+
+        super().save(*args, **kwargs)
