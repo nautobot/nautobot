@@ -208,14 +208,14 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         clear_view = filter_params.get("clear_view", False)
 
         # If the user clicks on the clear view button, we do not check for global or user defaults
-        if not clear_view:
+        if not clear_view and not request.GET.get("saved_view"):
             # Check if there is a default for this view for this specific user
             app_label, model_name = model._meta.label.split(".")
             view_name = f"{app_label}:{model_name.lower()}_list"
 
             if not isinstance(user, AnonymousUser):
                 user_default_saved_view_pk = user.config_data.get("saved_views", {}).get(view_name, None)
-                if user_default_saved_view_pk is not None and not request.GET.get("saved_view"):
+                if user_default_saved_view_pk is not None:
                     try:
                         SavedView.objects.get(pk=user_default_saved_view_pk)
                         sv_url = reverse("users:savedview", kwargs={"pk": user_default_saved_view_pk})
@@ -232,7 +232,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             except ObjectDoesNotExist:
                 pass
 
-            if global_saved_view is not None and not request.GET.get("saved_view"):
+            if global_saved_view is not None:
                 return redirect(reverse("users:savedview", kwargs={"pk": global_saved_view.pk}))
 
         if self.filterset:

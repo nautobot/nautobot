@@ -691,37 +691,41 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         """
         context = {"use_new_ui": True}
         queryset = self.get_queryset()
+        clear_view = request.GET.get("clear_view", False)
         if "export" in request.GET:  # 3.0 TODO: remove, irrelevant after #4746
             model = queryset.model
             content_type = ContentType.objects.get_for_model(model)
             response = self.check_for_export(request, model, content_type)
             if response is not None:
                 return response
-        # Check if there is a default for this view for this specific user
-        app_label, model_name = queryset.model._meta.label.split(".")
-        view_name = f"{app_label}:{model_name.lower()}_list"
-        user = request.user
-        if not isinstance(user, AnonymousUser):
-            user_default_saved_view_pk = user.config_data.get("saved_views", {}).get(view_name, None)
-            if user_default_saved_view_pk is not None and not request.GET.get("saved_view"):
-                try:
-                    SavedView.objects.get(pk=user_default_saved_view_pk)
-                    sv_url = reverse("users:savedview", kwargs={"pk": user_default_saved_view_pk})
-                    return redirect(sv_url)
-                except ObjectDoesNotExist:
-                    # Saved view was deleted
-                    user.config_data["saved_views"][view_name] = None
-                    user.save()
 
-        # Check if there is a global default for this view
-        global_saved_view = None
-        try:
-            global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
-        except ObjectDoesNotExist:
-            pass
+        # If the user clicks on the clear view button, we do not check for global or user defaults
+        if not clear_view and not request.GET.get("saved_view"):
+            # Check if there is a default for this view for this specific user
+            app_label, model_name = queryset.model._meta.label.split(".")
+            view_name = f"{app_label}:{model_name.lower()}_list"
+            user = request.user
+            if not isinstance(user, AnonymousUser):
+                user_default_saved_view_pk = user.config_data.get("saved_views", {}).get(view_name, None)
+                if user_default_saved_view_pk is not None:
+                    try:
+                        SavedView.objects.get(pk=user_default_saved_view_pk)
+                        sv_url = reverse("users:savedview", kwargs={"pk": user_default_saved_view_pk})
+                        return redirect(sv_url)
+                    except ObjectDoesNotExist:
+                        # Saved view was deleted
+                        user.config_data["saved_views"][view_name] = None
+                        user.save()
 
-        if global_saved_view is not None and not request.GET.get("saved_view"):
-            return redirect(reverse("users:savedview", kwargs={"pk": global_saved_view.pk}))
+            # Check if there is a global default for this view
+            global_saved_view = None
+            try:
+                global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
+            except ObjectDoesNotExist:
+                pass
+
+            if global_saved_view is not None:
+                return redirect(reverse("users:savedview", kwargs={"pk": global_saved_view.pk}))
 
         return Response(context)
 
