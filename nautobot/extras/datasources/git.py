@@ -136,7 +136,7 @@ def get_repo_from_url_to_path_and_from_branch(repository_record):
 
 def ensure_git_repository(repository_record, logger=None, head=None):  # pylint: disable=redefined-outer-name
     """Ensure that the given Git repo is present, up-to-date, and has the correct branch selected.
-    Note that this function may be called independently of the `GitRepositoryiSync` job,
+    Note that this function may be called independently of the `GitRepositorySync` job,
     such as to ensure that different Nautobot instances and/or worker instances all have a local copy of the same HEAD.
     Args:
       repository_record (GitRepository): Repository to ensure the state of.
