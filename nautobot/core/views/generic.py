@@ -205,7 +205,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         dynamic_filter_form = None
         filter_form = None
         hide_hierarchy_ui = False
-        clear_view = filter_params.get("clear_view", False)
+        clear_view = request.GET.get("clear_view", False)
 
         # If the user clicks on the clear view button, we do not check for global or user defaults
         if not clear_view and not request.GET.get("saved_view"):
@@ -226,14 +226,11 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                         user.save()
 
             # Check if there is a global default for this view
-            global_saved_view = None
             try:
                 global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
+                return redirect(reverse("users:savedview", kwargs={"pk": global_saved_view.pk}))
             except ObjectDoesNotExist:
                 pass
-
-            if global_saved_view is not None:
-                return redirect(reverse("users:savedview", kwargs={"pk": global_saved_view.pk}))
 
         if self.filterset:
             filter_params = self.get_filter_params(request)

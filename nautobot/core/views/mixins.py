@@ -718,14 +718,11 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
                         user.save()
 
             # Check if there is a global default for this view
-            global_saved_view = None
             try:
                 global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
+                return redirect(reverse("users:savedview", kwargs={"pk": global_saved_view.pk}))
             except ObjectDoesNotExist:
                 pass
-
-            if global_saved_view is not None:
-                return redirect(reverse("users:savedview", kwargs={"pk": global_saved_view.pk}))
 
         return Response(context)
 
