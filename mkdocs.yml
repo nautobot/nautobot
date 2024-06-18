@@ -298,7 +298,6 @@ plugins:
         "user-guides/graphql.md": "user-guide/feature-guides/graphql.md"
         "user-guides/ip-address-merge-tool.md": "user-guide/feature-guides/ip-address-merge-tool.md"
         "user-guides/relationships.md": "user-guide/feature-guides/relationships.md"
-        "user-guides/saved-views.md": "user-guide/feature-guides/saved-views.md"
         "user-guides/s3-django-storage.md": "user-guide/administration/guides/s3-django-storage.md"
 
         # Post 2.x redirects
@@ -388,7 +387,6 @@ nav:
           - GraphQL: "user-guide/feature-guides/graphql.md"
           - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
           - Relationships: "user-guide/feature-guides/relationships.md"
-          - Saved Views: "user-guide/feature-guides/saved-views.md"
           - Software Image Files and Versions: "user-guide/feature-guides/software-image-files-and-versions.md"
       - Core Data Model:
           - Overview:

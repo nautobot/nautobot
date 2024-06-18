@@ -258,7 +258,7 @@ class SavedViewUIViewSet(
         queryset = super().alter_queryset(request)
         user = request.user
         if user.has_perms(["users.view_savedview"]):
-            saved_views = queryset
+            saved_views = queryset.restrict(user, "view")
         else:
             shared_saved_views = queryset.filter(is_shared=True)
             user_owned_saved_views = queryset.filter(owner=user)
