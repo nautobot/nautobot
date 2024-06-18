@@ -239,7 +239,8 @@ omit = [
 load-plugins = "pylint_django"
 py-version = "3.8"
 ignore-paths = [
-    ".*third_party.*"
+    ".*third_party.*",
+    "nautobot/extras/tests/git_data/02-invalid-files/",
 ]
 jobs = 0
 
@@ -332,6 +333,10 @@ signature-mutators=["unittest.mock.patch"]
 [tool.ruff]
 line-length = 120
 target-version = "py38"
+extend-exclude = [
+    # Intentionally malformed files
+    "nautobot/extras/tests/git_data/02-invalid-files/jobs",
+]
 
 [tool.ruff.lint]
 select = [

@@ -1,4 +1,3 @@
-import json
 import os
 import sys
 import tempfile
@@ -82,7 +81,7 @@ class GitTest(TransactionTestCase):
             status=status,
         )
 
-        self.tempdir = tempfile.TemporaryDirectory()
+        self.tempdir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
         create_and_populate_git_repository(self.tempdir.name)
 
         self.repo_slug = "test_git_repo"
@@ -600,8 +599,28 @@ class GitTest(TransactionTestCase):
                     (job_result.traceback, list(job_result.job_log_entries.values_list("message", flat=True))),
                 )
 
-                # TODO assert logs list the added files/diffs
-                # TODO assert no DB records actually created
+                log_entries = JobLogEntry.objects.filter(job_result=job_result)
+
+                try:
+                    log_entries.get(message__contains="Addition - `__init__.py`")
+                    log_entries.get(message__contains="Addition - `config_context_schemas/schema-1.yaml`")
+                    log_entries.get(message__contains="Addition - `config_contexts/context.yaml`")
+                    log_entries.get(message__contains="Addition - `config_contexts/devices/test-device.json`")
+                    log_entries.get(message__contains="Addition - `config_contexts/locations/Test Location.json`")
+                    log_entries.get(message__contains="Addition - `export_templates/dcim/device/template.j2`")
+                    log_entries.get(message__contains="Addition - `export_templates/dcim/device/template2.html`")
+                    log_entries.get(message__contains="Addition - `export_templates/ipam/vlan/template.j2`")
+                    log_entries.get(message__contains="Addition - `jobs/__init__.py`")
+                    log_entries.get(message__contains="Addition - `jobs/my_job.py`")
+                except JobLogEntry.DoesNotExist:
+                    for log in log_entries:
+                        print(log.message)
+                    raise
+
+                self.assertFalse(ConfigContextSchema.objects.filter(owner_object_id=self.repo.pk).exists())
+                self.assertFalse(ConfigContext.objects.filter(owner_object_id=self.repo.pk).exists())
+                self.assertFalse(ExportTemplate.objects.filter(owner_object_id=self.repo.pk).exists())
+                self.assertFalse(Job.objects.filter(module_name__startswith=self.repo.slug).exists())
 
     def test_duplicate_repo_url_with_unique_provided_contents(self):
         """Create a duplicate repo but with unique provided_contents."""
