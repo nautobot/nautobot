@@ -48,7 +48,7 @@ Click the "Saved Views" dropdown button again and you should see your new saved 
 
 Stay on the same page where we just created the new Saved View and make some modifications to the view.
 
-Note that an asterisk appeared next to the title of the view. The asterisk is an indicator that this saved view currently has unsaved changes.
+Note that the title font of the saved view became italicized. This is an indicator that this saved view currently has unsaved changes.
 
 ![Unsaved saved view](./images/saved-views/unsaved-saved-view.png)
 
