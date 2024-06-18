@@ -11,7 +11,7 @@ from django.core.exceptions import (
     ValidationError,
 )
 from django.db import transaction
-from django.db.models import ManyToManyField, ProtectedError
+from django.db.models import ManyToManyField, ProtectedError, Q
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -709,7 +709,11 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
                 user_default_saved_view_pk = user.config_data.get("saved_views", {}).get(view_name, None)
                 if user_default_saved_view_pk is not None:
                     try:
-                        SavedView.objects.get(pk=user_default_saved_view_pk)
+                        # Saved view should either belong to the user or be public
+                        SavedView.objects.get(
+                            Q(pk=user_default_saved_view_pk),
+                            Q(owner=user) | Q(is_shared=True),
+                        )
                         sv_url = reverse("users:savedview", kwargs={"pk": user_default_saved_view_pk})
                         return redirect(sv_url)
                     except ObjectDoesNotExist:

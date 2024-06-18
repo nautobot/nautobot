@@ -9,7 +9,7 @@ from django.contrib.auth import (
     update_session_auth_hash,
 )
 from django.contrib.auth.models import AnonymousUser
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
@@ -452,25 +452,9 @@ class SavedViewUIViewSet(
             ):
                 sv.config["table_config"][f"{table_class}"] = derived_instance.config["table_config"][f"{table_class}"]
         try:
-            old_global_default_view = None
-            try:
-                old_global_default_view = SavedView.objects.exclude(pk=sv.pk).get(
-                    view=view_name, is_global_default=True
-                )
-            except ObjectDoesNotExist:
-                pass
-
             sv.validated_save()
             list_view_url = sv.get_absolute_url()
             message = f"Successfully created new Saved View '{sv.name}'."
-            if sv.is_global_default:
-                if old_global_default_view is not None:
-                    message += (
-                        " "
-                        + f"The global default saved View for '{view_name}' is changed from '{old_global_default_view.name}' to '{sv.name}'."
-                    )
-                else:
-                    message += " " + f"The global default saved View for '{view_name}' is set to '{sv.name}'."
             messages.success(request, message)
             return redirect(list_view_url)
         except ValidationError as e:
