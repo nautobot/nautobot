@@ -88,7 +88,7 @@ class GitTest(TransactionTestCase):
         self.repo = GitRepository(
             name="Test Git Repository",
             slug=self.repo_slug,
-            remote_url="file://" + self.tempdir.name,
+            remote_url="file://" + self.tempdir.name,  # file:// URLs aren't permitted normally, but very useful here!
             branch="empty-repo",
             # Provide everything we know we can provide
             provided_contents=[entry.content_identifier for entry in get_datasource_contents("extras.gitrepository")],
@@ -316,7 +316,7 @@ class GitTest(TransactionTestCase):
         with tempfile.TemporaryDirectory() as tempdir:
             with self.settings(GIT_ROOT=tempdir):
                 # Run the Git operation and refresh the object from the DB
-                self.repo.branch = "valid-files"
+                self.repo.branch = "valid-files"  # actually a tag
                 self.repo.save()
                 job_model = GitRepositorySync().job_model
                 job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
@@ -359,9 +359,11 @@ class GitTest(TransactionTestCase):
                 )
                 JobHook.objects.create(name="MyJobHook", enabled=True, job=Job.objects.get(name="MyJobHookReceiver"))
 
+                # TODO: test successful sync against a branch name or a commit hash as well
+
                 # Now "resync" the repository, but now those files no longer exist in the repository
                 self.repo.refresh_from_db()
-                self.repo.branch = "empty-repo"
+                self.repo.branch = "empty-repo"  # actually a tag
                 self.repo.save()
 
                 # Run the Git operation and refresh the object from the DB
@@ -621,6 +623,9 @@ class GitTest(TransactionTestCase):
                 self.assertFalse(ConfigContext.objects.filter(owner_object_id=self.repo.pk).exists())
                 self.assertFalse(ExportTemplate.objects.filter(owner_object_id=self.repo.pk).exists())
                 self.assertFalse(Job.objects.filter(module_name__startswith=self.repo.slug).exists())
+
+    # TODO: test dry-run against a branch name
+    # TODO: test dry-run against a specific commit hash
 
     def test_duplicate_repo_url_with_unique_provided_contents(self):
         """Create a duplicate repo but with unique provided_contents."""

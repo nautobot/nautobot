@@ -486,12 +486,11 @@ def refresh_job_models(sender, *, apps, **kwargs):
             job_models.append(job_model)
 
     for job_model in Job.objects.filter(installed=True):
-        if job_model in job_models:
-            continue
-        logger.info(
-            "Job %s/%s is no longer installed",
-            job_model.module_name,
-            job_model.job_class_name,
-        )
-        job_model.installed = False
-        job_model.save()
+        if job_model not in job_models:
+            logger.info(
+                "Job %s/%s is no longer installed",
+                job_model.module_name,
+                job_model.job_class_name,
+            )
+            job_model.installed = False
+            job_model.save()
