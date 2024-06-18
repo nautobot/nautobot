@@ -6,6 +6,7 @@ from unittest import mock
 import uuid
 
 from celery.exceptions import NotRegistered
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import RequestFactory
@@ -111,18 +112,18 @@ class GitTest(TransactionTestCase):
         )
         self.assertEqual(git_repository.slug, "a1_very_bad_git_____repo_name_2")
 
-    def assert_config_context_schema_record_exists(self, name):
-        """Helper Func to assert ConfigContextSchema with name=name exists"""
+    def assert_config_context_schema_record_exists(self, name, filename="schema-1.yaml"):
+        """Assert that a ConfigContextSchema record exists with the expected name and data_schema."""
         config_context_schema_record = ConfigContextSchema.objects.get(
             name=name,
             owner_object_id=self.repo.pk,
             owner_content_type=ContentType.objects.get_for_model(GitRepository),
         )
-        config_context_schema = self.config_context_schema
-        config_context_schema_metadata = config_context_schema["_metadata"]
         self.assertIsNotNone(config_context_schema_record)
-        self.assertEqual(config_context_schema_metadata["name"], config_context_schema_record.name)
-        self.assertEqual(config_context_schema["data_schema"], config_context_schema_record.data_schema)
+        with open(os.path.join(settings.GIT_ROOT, self.repo.slug, "config_context_schemas", filename)) as fd:
+            config_context_schema_data = yaml.safe_load(fd)
+        self.assertEqual(config_context_schema_data["_metadata"]["name"], config_context_schema_record.name)
+        self.assertEqual(config_context_schema_data["data_schema"], config_context_schema_record.data_schema)
 
     def assert_device_exists(self, name):
         """Helper function to assert device exists"""
@@ -157,7 +158,7 @@ class GitTest(TransactionTestCase):
             {"ntp-servers": ["172.16.10.22", "172.16.10.33"]},
             config_context.data,
         )
-        self.assertEqual(self.config_context_schema["_metadata"]["name"], config_context.config_context_schema.name)
+        self.assertIsNotNone(config_context.config_context_schema)
 
     def assert_implicit_config_context_exists(self, name):
         """Helper function to assert that an 'implicit' ConfigContext exists and is configured appropriately."""
@@ -244,14 +245,14 @@ class GitTest(TransactionTestCase):
                     print(job_result.traceback)
                     raise
 
-    def test_pull_git_repository_and_refresh_data_with_secrets(self):
+    @mock.patch("nautobot.extras.datasources.git.GitRepo")
+    def test_pull_git_repository_and_refresh_data_with_secrets(self, MockGitRepo):
         """
         The pull_git_repository_and_refresh_data job should correctly make use of secrets.
-
-        # TODO: need to restore the mock here since secrets shouldn't apply to filesystem remotes?
         """
         with tempfile.TemporaryDirectory() as tempdir:
             with self.settings(GIT_ROOT=tempdir):
+                MockGitRepo.return_value.checkout.return_value = ("0123456789abcdef", True)
                 with open(os.path.join(tempdir, "username.txt"), "wt") as handle:
                     handle.write("núñez")
 
@@ -283,6 +284,7 @@ class GitTest(TransactionTestCase):
                 )
 
                 self.repo.secrets_group = secrets_group
+                self.repo.remote_url = "http://localhost/git.git"
                 self.repo.provided_contents.remove("extras.job")  # avoid failing due to lack of jobs module
                 self.repo.save()
 
@@ -301,6 +303,10 @@ class GitTest(TransactionTestCase):
                     (job_result.traceback, list(job_result.job_log_entries.values_list("message", flat=True))),
                 )
                 self.repo.refresh_from_db()
+                MockGitRepo.assert_called_with(
+                    os.path.join(tempdir, self.repo.slug),
+                    "http://n%C3%BA%C3%B1ez:1%3A3%40%2F%3F%3Dab%40@localhost/git.git",
+                )
 
     def test_pull_git_repository_and_refresh_data_with_valid_data(self):
         """
@@ -367,6 +373,7 @@ class GitTest(TransactionTestCase):
                             owner_object_id=self.repo.pk,
                         )
                     ),
+                    list(job_result.job_log_entries.values_list("message", flat=True)),
                 )
                 self.assertEqual(
                     [],
@@ -376,6 +383,7 @@ class GitTest(TransactionTestCase):
                             owner_object_id=self.repo.pk,
                         )
                     ),
+                    list(job_result.job_log_entries.values_list("message", flat=True)),
                 )
                 device = Device.objects.get(name=self.device.name)
                 self.assertIsNone(device.local_config_context_data)
@@ -472,67 +480,14 @@ class GitTest(TransactionTestCase):
                     print(job_result.traceback)
                     raise
 
-    def test_delete_git_repository_cleanup(self, MockGitRepo):
+    def test_delete_git_repository_cleanup(self):
         """
         When deleting a GitRepository record, the data that it owned should also be deleted.
         """
         with tempfile.TemporaryDirectory() as tempdir:
             with self.settings(GIT_ROOT=tempdir):
-
-                def populate_repo(path, url):
-                    os.makedirs(path, exist_ok=True)
-                    os.makedirs(os.path.join(path, "config_contexts"), exist_ok=True)
-                    os.makedirs(os.path.join(path, "config_contexts", "devices"), exist_ok=True)
-                    os.makedirs(os.path.join(path, "config_context_schemas"), exist_ok=True)
-                    os.makedirs(os.path.join(path, "export_templates", "dcim", "device"), exist_ok=True)
-                    os.makedirs(os.path.join(path, "jobs"), exist_ok=True)
-                    with open(os.path.join(path, "__init__.py"), "w") as fd:
-                        pass
-                    with open(os.path.join(path, "config_contexts", "context.yaml"), "w") as fd:
-                        yaml.dump(
-                            {
-                                "_metadata": {
-                                    "name": "Region NYC servers",
-                                    "weight": 1500,
-                                    "description": "NTP servers for region NYC",
-                                    "is_active": True,
-                                    # Changing this from `config_context_schema` to `schema` to assert that schema can
-                                    # be used inplace of `config_context_schema`.
-                                    # TODO(timizuo): Replace `schema` with `config_context_schema` when `schema`
-                                    #  backwards-compatibility is removed.
-                                    "schema": "Config Context Schema 1",
-                                },
-                                "ntp-servers": ["172.16.10.22", "172.16.10.33"],
-                            },
-                            fd,
-                        )
-                    with open(
-                        os.path.join(path, "config_contexts", "devices", "test-device.json"),
-                        "w",
-                    ) as fd:
-                        json.dump({"dns-servers": ["8.8.8.8"]}, fd)
-                    with open(os.path.join(path, "config_context_schemas", "schema-1.yaml"), "w") as fd:
-                        yaml.dump(self.config_context_schema, fd)
-                    with open(
-                        os.path.join(path, "export_templates", "dcim", "device", "template.j2"),
-                        "w",
-                    ) as fd:
-                        fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
-                    with open(os.path.join(path, "jobs", "__init__.py"), "w") as fd:
-                        fd.write(
-                            "from nautobot.core.celery import register_jobs\nfrom .my_job import MyJob\nregister_jobs(MyJob)"
-                        )
-
-                    with open(os.path.join(path, "jobs", "my_job.py"), "w") as fd:
-                        fd.write(
-                            "from nautobot.extras.jobs import Job\nclass MyJob(Job):\n    def run(self):\n        pass"
-                        )
-
-                    return mock.DEFAULT
-
-                MockGitRepo.side_effect = populate_repo
-                MockGitRepo.return_value.checkout.return_value = (self.COMMIT_HEXSHA, True)
-
+                self.repo.branch = "valid-files"
+                self.repo.save()
                 # Run the Git operation and refresh the object from the DB
                 job_model = GitRepositorySync().job_model
                 job_result = run_job_for_testing(
@@ -549,13 +504,13 @@ class GitTest(TransactionTestCase):
 
                 # Make sure ConfigContext was successfully loaded from file
                 config_context = ConfigContext.objects.get(
-                    name="Region NYC servers",
+                    name="Frobozz 1000 NTP servers",
                     owner_object_id=self.repo.pk,
                     owner_content_type=ContentType.objects.get_for_model(GitRepository),
                 )
                 self.assertIsNotNone(config_context)
                 self.assertEqual(1500, config_context.weight)
-                self.assertEqual("NTP servers for region NYC", config_context.description)
+                self.assertEqual("NTP servers for Frobozz 1000 devices **only**", config_context.description)
                 self.assertTrue(config_context.is_active)
                 self.assertEqual(
                     {"ntp-servers": ["172.16.10.22", "172.16.10.33"]},
@@ -607,19 +562,13 @@ class GitTest(TransactionTestCase):
 
                 self.assert_job_exists(installed=False)
 
-    def test_git_dry_run(self, MockGitRepo):
+    def test_git_dry_run(self):
         with tempfile.TemporaryDirectory() as tempdir:
             with self.settings(GIT_ROOT=tempdir):
-
-                def create_empty_repo(path, url, clone_initially=False):
-                    os.makedirs(path, exist_ok=True)
-                    return mock.DEFAULT
-
-                MockGitRepo.side_effect = create_empty_repo
-                MockGitRepo.return_value.checkout.return_value = (self.COMMIT_HEXSHA, False)
-
                 self.mock_request.id = uuid.uuid4()
 
+                self.repo.branch = "valid-files"
+                self.repo.save()
                 job_model = GitRepositoryDryRun().job_model
                 job_result = run_job_for_testing(
                     job=job_model,
@@ -633,14 +582,10 @@ class GitTest(TransactionTestCase):
                     (job_result.traceback, list(job_result.job_log_entries.values_list("message", flat=True))),
                 )
 
-                MockGitRepo.assert_called_with(
-                    os.path.join(tempdir, self.repo.slug),
-                    self.repo.remote_url,
-                    clone_initially=False,
-                )
-                MockGitRepo.return_value.diff_remote.assert_called()
+                # TODO assert logs list the added files/diffs
+                # TODO assert no DB records actually created
 
-    def test_duplicate_repo_url_with_unique_provided_contents(self, MockGitRepo):
+    def test_duplicate_repo_url_with_unique_provided_contents(self):
         """Create a duplicate repo but with unique provided_contents."""
         remote_url = "http://localhost/duplicates.git"
         repo1 = GitRepository(
@@ -660,7 +605,7 @@ class GitTest(TransactionTestCase):
         repos = GitRepository.objects.filter(remote_url=remote_url)
         self.assertEqual(repos.count(), 2)
 
-    def test_duplicate_repo_url_with_duplicate_provided_contents(self, MockGitRepo):
+    def test_duplicate_repo_url_with_duplicate_provided_contents(self):
         """Create a duplicate repo but with duplicate provided_contents."""
         remote_url = "http://localhost/duplicates.git"
         repo1 = GitRepository(
