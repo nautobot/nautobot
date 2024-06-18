@@ -318,6 +318,25 @@ class Job(PrimaryModel):
                 {"approval_required": "A job that may have sensitive variables cannot be marked as requiring approval"}
             )
 
+    def save(self, *args, **kwargs):
+        """When a Job is uninstalled, auto-disable all associated JobButtons, JobHooks, and ScheduledJobs."""
+        super().save(*args, **kwargs)
+        if not self.installed:
+            if self.is_job_button_receiver:
+                for jb in JobButton.objects.filter(job=self, enabled=True):
+                    logger.info("Disabling JobButton %s derived from %s", jb, self)
+                    jb.enabled = False
+                    jb.save()
+            if self.is_job_hook_receiver:
+                for jh in JobHook.objects.filter(job=self, enabled=True):
+                    logger.info("Disabling JobHook %s derived from %s", jh, self)
+                    jh.enabled = False
+                    jh.save()
+            for sj in ScheduledJob.objects.filter(job_model=self, enabled=True):
+                logger.info("Disabling ScheduledJob %s derived from %s", sj, self)
+                sj.enabled = False
+                sj.save()
+
 
 @extras_features("graphql")
 class JobHook(OrganizationalModel):

@@ -32,6 +32,8 @@ from nautobot.extras.models import (
     ExportTemplate,
     GitRepository,
     Job,
+    JobButton,
+    JobHook,
     JobLogEntry,
     JobResult,
     Role,
@@ -196,10 +198,10 @@ class GitTest(TransactionTestCase):
         )
         self.assertIsNotNone(export_template_vlan)
 
-    def assert_job_exists(self, installed=True):
+    def assert_job_exists(self, name="MyJob", installed=True):
         """Helper function to assert JobModel and registered Job exist."""
         # Is it registered correctly in the database?
-        job_model = Job.objects.get(name="MyJob", module_name=f"{self.repo_slug}.jobs.my_job", job_class_name="MyJob")
+        job_model = Job.objects.get(name=name, module_name=f"{self.repo_slug}.jobs.my_job", job_class_name=name)
         self.assertIsNotNone(job_model)
         if installed:
             self.assertTrue(job_model.installed)
@@ -347,8 +349,16 @@ class GitTest(TransactionTestCase):
                 # Case when ContentType.model != ContentType.name, template was added and deleted during sync (#570)
                 self.assert_export_template_vlan_exists("template.j2")
 
-                # Make sure Job was successfully loaded from file and registered as a JobModel
-                self.assert_job_exists()
+                # Make sure Jobs were successfully loaded from file and registered as JobModels
+                self.assert_job_exists(name="MyJob")
+                self.assert_job_exists(name="MyJobButtonReceiver")
+                self.assert_job_exists(name="MyJobHookReceiver")
+
+                # Create JobButton and JobHook
+                JobButton.objects.create(
+                    name="MyJobButton", enabled=True, text="Click me", job=Job.objects.get(name="MyJobButtonReceiver")
+                )
+                JobHook.objects.create(name="MyJobHook", enabled=True, job=Job.objects.get(name="MyJobHookReceiver"))
 
                 # Now "resync" the repository, but now those files no longer exist in the repository
                 self.repo.refresh_from_db()
@@ -391,6 +401,14 @@ class GitTest(TransactionTestCase):
 
                 # Verify that Job database record still exists but code is no longer installed/loaded
                 self.assert_job_exists(installed=False)
+                self.assert_job_exists(name="MyJobButtonReceiver", installed=False)
+                self.assert_job_exists(name="MyJobHookReceiver", installed=False)
+
+                # Verify that JobButton and JobHook are auto-disabled since the jobs are no longer available
+                jb = JobButton.objects.get(name="MyJobButton")
+                self.assertFalse(jb.enabled)
+                jh = JobHook.objects.get(name="MyJobHook")
+                self.assertFalse(jh.enabled)
 
     def test_pull_git_repository_and_refresh_data_with_bad_data(self):
         """
