@@ -84,7 +84,7 @@ Clicking on the edit button will direct you to a standard edit view where you ca
 
 Check the box for `is_global_default` and click on the Update button.
 
-You should be redirected to the SavedViewListView with a success message.
+You should be redirected to the SavedViewListView with a success message. Now all users without a default view of their own will be directed to "Campus Staing Location List View" when they are trying to access location list view.
 
 ![Saved View Edit Success](./images/saved-views/saved-view-admin-edit-success.png)
 
@@ -108,7 +108,7 @@ You can also set a saved view as default for an object list view for yourself, o
 
 ![Set As My Default Button](./images/saved-views/set-as-my-default-button.png)
 
-Clicking on that option will set the current saved view as your default view for this object list view. The page should refresh with a success message.
+Clicking on that option will set the current saved view as your default view for this object list view. The page should refresh with a success message. Now whenever this user is trying to access location list view, he/she will be redirected to "Elevator Only Location List View".
 
 ![Set As My Default Success](./images/saved-views/set-as-my-default-success.png)
 
