@@ -2,7 +2,7 @@
 
 +++ 2.3.0
 
-Saved Views give users the ability to save multiple configurations of list views, including table columns, filtering, pagination, and sorting, for ease of later use and reuse. Check out this [user guide](../feature-guides/saved-views.md) on how to use saved views.
+Saved Views give users the ability to save multiple configurations of list views, including table columns, filtering, pagination, and sorting, for ease of later use and reuse. Check out this [user guide](../../feature-guides/saved-views.md) on how to use saved views.
 
 The essential attributes for a Saved View are `owner`, `name`, `view`, `is_shared` and `is_global_default`. The `owner` attribute links to the user account active during the creation of the Saved View. The `view` attribute refers to the specific list view from which the Saved View is derived, such as `dcim:device_list` or `circuits:circuit_list`.
 The `is_shared` attribute dictates whether the saved view will be public or private. The `is_global_default` attribute dictates whether all users trying to access the object list view indicated by the value of the `view` attribute will be redirected to the current saved view or not.
