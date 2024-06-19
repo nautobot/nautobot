@@ -56,6 +56,15 @@ class User(BaseModel, AbstractUser):
     """
 
     config_data = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
+    default_saved_views = models.ManyToManyField(
+        to="users.SavedView",
+        related_name="users",
+        through="users.UserToSavedView",
+        through_fields=("user", "saved_view"),
+        blank=True,
+        verbose_name="User Specific Default Saved Views",
+        help_text="User specific default saved views",
+    )
 
     # TODO: we don't currently have a general "Users" guide.
     documentation_static_path = "docs/development/core/user-preferences.html"
@@ -157,6 +166,23 @@ class User(BaseModel, AbstractUser):
 
         if commit:
             self.save()
+
+
+@extras_features("graphql")
+class UserToSavedView(BaseModel):
+    saved_view = models.ForeignKey("users.SavedView", on_delete=models.CASCADE, related_name="user_assignments")
+    user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="saved_view_assignments")
+    view_name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+
+    class Meta:
+        unique_together = [["user", "view_name"]]
+
+    def __str__(self):
+        return f"{self.user}: {self.saved_view} - {self.view_name}"
+
+    def clean(self):
+        super().clean()
+        self.view_name = self.saved_view.view
 
 
 #

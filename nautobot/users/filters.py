@@ -10,8 +10,9 @@ from nautobot.core.filters import (
     SearchFilter,
 )
 from nautobot.dcim.models import RackReservation
+from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import ObjectChange
-from nautobot.users.models import ObjectPermission, SavedView, Token
+from nautobot.users.models import ObjectPermission, SavedView, Token, UserToSavedView
 
 __all__ = (
     "GroupFilterSet",
@@ -111,6 +112,23 @@ class UserFilterSet(BaseFilterSet):
             "is_staff",
             "is_active",
         ]
+
+
+class UserToSavedViewFilterSet(NautobotFilterSet):
+    saved_view = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SavedView.objects.all(),
+        to_field_name="name",
+        label="Saved View (ID or name)",
+    )
+    user = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="username",
+        queryset=get_user_model().objects.all(),
+        label="User (ID or name)",
+    )
+
+    class Meta:
+        model = UserToSavedView
+        fields = ["id", "saved_view", "user", "view_name"]
 
 
 class TokenFilterSet(BaseFilterSet):
