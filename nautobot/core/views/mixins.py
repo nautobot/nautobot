@@ -51,7 +51,7 @@ from nautobot.extras.forms import NoteForm
 from nautobot.extras.models import ExportTemplate
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template, remove_prefix_from_cf_key
-from nautobot.users.models import SavedView
+from nautobot.users.models import SavedView, UserToSavedView
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -706,20 +706,19 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             view_name = f"{app_label}:{model_name.lower()}_list"
             user = request.user
             if not isinstance(user, AnonymousUser):
-                user_default_saved_view_pk = user.config_data.get("saved_views", {}).get(view_name, None)
-                if user_default_saved_view_pk is not None:
-                    try:
-                        # Saved view should either belong to the user or be public
-                        SavedView.objects.get(
-                            Q(pk=user_default_saved_view_pk),
-                            Q(owner=user) | Q(is_shared=True),
-                        )
-                        sv_url = reverse("users:savedview", kwargs={"pk": user_default_saved_view_pk})
-                        return redirect(sv_url)
-                    except ObjectDoesNotExist:
-                        # Saved view was deleted
-                        user.config_data["saved_views"][view_name] = None
-                        user.save()
+                try:
+                    user_default_saved_view_pk = UserToSavedView.objects.get(
+                        user=user, view_name=view_name
+                    ).saved_view.pk
+                    # Saved view should either belong to the user or be public
+                    SavedView.objects.get(
+                        Q(pk=user_default_saved_view_pk),
+                        Q(owner=user) | Q(is_shared=True),
+                    )
+                    sv_url = reverse("users:savedview", kwargs={"pk": user_default_saved_view_pk})
+                    return redirect(sv_url)
+                except ObjectDoesNotExist:
+                    pass
 
             # Check if there is a global default for this view
             try:
