@@ -165,7 +165,7 @@ class GitRepo:
             # We would use repo.remotes.origin.pull() here, but that will fail in the case where someone has
             # force-pushed to the upstream repo since the last time we did a pull. To be safe, we reset instead.
             self.repo.head.reset(f"origin/{branch}", index=True, working_tree=True)
-            logger.info(f"Latest commit on branch `{branch}` is `{self.head}`")
+            logger.info("Latest commit on branch `%s` is `%s`", branch, self.head)
             return (self.head, True)
 
         if is_tag:
