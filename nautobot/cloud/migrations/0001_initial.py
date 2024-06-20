@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
         ("dcim", "0062_module_data_migration"),
         ("ipam", "0047_alter_ipaddress_role_alter_ipaddress_status_and_more"),
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0107_alter_configcontext_cluster_groups_and_more"),
+        ("extras", "0108_alter_configcontext_cluster_groups_and_more"),
     ]
 
     operations = [
@@ -63,6 +63,7 @@ class Migration(migrations.Migration):
                 "ordering": ["name"],
             },
             bases=(
+                nautobot.extras.models.mixins.DynamicGroupMixin,
                 nautobot.extras.models.mixins.NotesMixin,
                 models.Model,
             ),

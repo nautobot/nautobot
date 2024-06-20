@@ -13,7 +13,7 @@ from .jobs import (
     ScheduledJobs,
 )
 from .metadata import MetadataChoice, MetadataType
-from .mixins import ContactMixin, DynamicGroupMixin
+from .mixins import ContactMixin, DynamicGroupMixin, DynamicGroupsModelMixin
 from .models import (
     ConfigContext,
     ConfigContextModel,
@@ -50,7 +50,8 @@ __all__ = (
     "CustomLink",
     "DynamicGroup",
     "DynamicGroupMembership",
-    "DynamicGroupMixin",
+    "DynamicGroupMixin",  # deprecated
+    "DynamicGroupsModelMixin",
     "ExportTemplate",
     "ExternalIntegration",
     "FileAttachment",

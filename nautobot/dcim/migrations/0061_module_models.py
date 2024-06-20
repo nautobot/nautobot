@@ -16,7 +16,7 @@ import nautobot.extras.models.statuses
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0107_alter_configcontext_cluster_groups_and_more"),
+        ("extras", "0107_dynamicgroup_group_type_dynamicgroup_tags_and_more"),
         ("tenancy", "0009_update_all_charfields_max_length_to_255"),
         ("dcim", "0060_alter_cable_status_alter_consoleport__path_and_more"),
     ]
@@ -44,6 +44,7 @@ class Migration(migrations.Migration):
                 "abstract": False,
             },
             bases=(
+                nautobot.extras.models.mixins.DynamicGroupMixin,
                 nautobot.extras.models.mixins.NotesMixin,
                 models.Model,
             ),
@@ -82,6 +83,7 @@ class Migration(migrations.Migration):
                 "abstract": False,
             },
             bases=(
+                nautobot.extras.models.mixins.DynamicGroupMixin,
                 nautobot.extras.models.mixins.NotesMixin,
                 models.Model,
             ),
@@ -141,6 +143,7 @@ class Migration(migrations.Migration):
                 "ordering": ("manufacturer", "model"),
             },
             bases=(
+                nautobot.extras.models.mixins.DynamicGroupMixin,
                 nautobot.extras.models.mixins.NotesMixin,
                 models.Model,
             ),

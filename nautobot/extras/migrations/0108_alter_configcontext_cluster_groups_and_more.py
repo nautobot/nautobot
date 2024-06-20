@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
         ("virtualization", "0026_change_virtualmachine_primary_ip_fields"),
         ("contenttypes", "0002_remove_content_type_name"),
         ("tenancy", "0008_tagsfield"),
-        ("extras", "0106_populate_default_statuses_and_roles_for_contact_associations"),
+        ("extras", "0107_dynamicgroup_group_type_dynamicgroup_tags_and_more"),
     ]
 
     operations = [

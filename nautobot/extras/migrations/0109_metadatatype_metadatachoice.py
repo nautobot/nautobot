@@ -14,10 +14,8 @@ import nautobot.extras.utils
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("cloud", "0001_initial"),
         ("contenttypes", "0002_remove_content_type_name"),
-        ("dcim", "0059_add_role_field_to_interface_models"),
-        ("extras", "0109_dynamic_group_group_type_data_migration"),
+        ("extras", "0108_alter_configcontext_cluster_groups_and_more"),
     ]
 
     operations = [
@@ -53,6 +51,7 @@ class Migration(migrations.Migration):
                 "ordering": ["name"],
             },
             bases=(
+                nautobot.extras.models.mixins.DynamicGroupMixin,
                 nautobot.extras.models.mixins.NotesMixin,
                 models.Model,
             ),

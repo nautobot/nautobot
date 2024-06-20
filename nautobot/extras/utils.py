@@ -301,7 +301,8 @@ def populate_model_features_registry(refresh=False):
         },
         {
             "feature_name": "dynamic_groups",
-            "field_names": ["static_group_association_set"],
+            # models using DynamicGroupMixin but not DynamicGroupsModelMixin will lack a static_group_association_set
+            "field_names": [],
             "additional_constraints": {"is_dynamic_group_associable_model": True},
         },
     ]

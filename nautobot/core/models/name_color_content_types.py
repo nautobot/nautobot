@@ -12,7 +12,7 @@ from nautobot.extras.models.change_logging import ChangeLoggedModel
 # Importing CustomFieldModel, ChangeLoggedModel, RelationshipModel from  nautobot.extras.models
 # caused circular import error
 from nautobot.extras.models.customfields import CustomFieldModel
-from nautobot.extras.models.mixins import ContactMixin, DynamicGroupMixin, NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.users.models import SavedViewMixin
 
@@ -43,7 +43,7 @@ class NameColorContentTypesModel(
     ChangeLoggedModel,
     ContactMixin,
     CustomFieldModel,
-    DynamicGroupMixin,
+    DynamicGroupsModelMixin,
     NotesMixin,
     RelationshipModel,
     SavedViewMixin,

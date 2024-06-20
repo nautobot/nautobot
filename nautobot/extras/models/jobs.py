@@ -43,7 +43,7 @@ from nautobot.extras.constants import (
 )
 from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.models import ChangeLoggedModel, GitRepository
-from nautobot.extras.models.mixins import ContactMixin, DynamicGroupMixin, NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -770,7 +770,7 @@ class JobResult(BaseModel, CustomFieldModel):
 
 
 @extras_features("graphql")
-class JobButton(ContactMixin, ChangeLoggedModel, DynamicGroupMixin, NotesMixin, BaseModel):
+class JobButton(ContactMixin, ChangeLoggedModel, DynamicGroupsModelMixin, NotesMixin, BaseModel):
     """
     A predefined button that includes all information to run a Nautobot Job based on a single object as a source.
 

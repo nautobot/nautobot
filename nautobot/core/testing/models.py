@@ -47,12 +47,6 @@ class ModelTestCases:
         def test_dynamic_group_api(self):
             """For dynamic-group capable models, check that they work as intended."""
             if getattr(self.model, "is_dynamic_group_associable_model", False):
-                self.assertTrue(hasattr(self.model, "static_group_association_set"))
-                self.assertIsInstance(self.model.objects.first().static_group_association_set.all(), QuerySet)
-                self.assertEqual(
-                    self.model.objects.first().static_group_association_set.all().model, StaticGroupAssociation
-                )
-
                 self.assertTrue(hasattr(self.model, "dynamic_groups"))
                 self.assertIsInstance(self.model.objects.first().dynamic_groups, QuerySet)
                 self.assertEqual(self.model.objects.first().dynamic_groups.model, DynamicGroup)
@@ -60,3 +54,10 @@ class ModelTestCases:
                 if DynamicGroup.objects.get_for_model(self.model).exists():
                     sg = DynamicGroup.objects.get_for_model(self.model).first()
                     self.assertEqual(sg.members.model, self.model)
+
+                # Models using DynamicGroupMixin w/o DynamicGroupsModelMixin will not have static_group_association_set
+                if hasattr(self.model, "static_group_association_set"):
+                    self.assertIsInstance(self.model.objects.first().static_group_association_set.all(), QuerySet)
+                    self.assertEqual(
+                        self.model.objects.first().static_group_association_set.all().model, StaticGroupAssociation
+                    )

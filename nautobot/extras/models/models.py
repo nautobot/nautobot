@@ -32,7 +32,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import ContactMixin, DynamicGroupMixin, NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
@@ -74,7 +74,7 @@ class ConfigContext(
     ChangeLoggedModel,
     ConfigContextSchemaValidationMixin,
     ContactMixin,
-    # DynamicGroupMixin,  # TODO: conflicts with "dynamic_groups" M2M field on this model
+    # DynamicGroupsModelMixin,  # TODO: conflicts with "dynamic_groups" M2M field on this model
     NotesMixin,
     SavedViewMixin,
     BaseModel,
@@ -310,7 +310,7 @@ class ConfigContextSchema(OrganizationalModel):
 class CustomLink(
     ChangeLoggedModel,
     ContactMixin,
-    DynamicGroupMixin,
+    DynamicGroupsModelMixin,
     NotesMixin,
     SavedViewMixin,
     BaseModel,
@@ -372,7 +372,7 @@ class CustomLink(
 class ExportTemplate(
     ChangeLoggedModel,
     ContactMixin,
-    DynamicGroupMixin,
+    DynamicGroupsModelMixin,
     RelationshipModel,
     NotesMixin,
     SavedViewMixin,
@@ -674,7 +674,7 @@ class FileProxy(BaseModel):
 class GraphQLQuery(
     ChangeLoggedModel,
     ContactMixin,
-    DynamicGroupMixin,
+    DynamicGroupsModelMixin,
     NotesMixin,
     SavedViewMixin,
     BaseModel,
@@ -844,7 +844,7 @@ class Note(ChangeLoggedModel, BaseModel):
 class Webhook(
     ChangeLoggedModel,
     ContactMixin,
-    DynamicGroupMixin,
+    DynamicGroupsModelMixin,
     NotesMixin,
     SavedViewMixin,
     BaseModel,

@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("tenancy", "0009_update_all_charfields_max_length_to_255"),
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0107_alter_configcontext_cluster_groups_and_more"),
+        ("extras", "0106_populate_default_statuses_and_roles_for_contact_associations"),
     ]
 
     operations = [

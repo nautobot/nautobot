@@ -13,7 +13,7 @@ from nautobot.users.models import SavedViewMixin
 # These imports are in this particular order because of circular import problems
 from .change_logging import ChangeLoggedModel
 from .customfields import CustomFieldModel
-from .mixins import ContactMixin, DynamicGroupMixin, NotesMixin
+from .mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin
 from .relationships import RelationshipModel
 
 #
@@ -39,7 +39,7 @@ class Tag(
     ChangeLoggedModel,
     ContactMixin,
     CustomFieldModel,
-    DynamicGroupMixin,
+    DynamicGroupsModelMixin,
     NotesMixin,
     RelationshipModel,
     SavedViewMixin,

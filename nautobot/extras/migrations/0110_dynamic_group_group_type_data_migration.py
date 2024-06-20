@@ -17,7 +17,7 @@ def set_dynamic_group_group_types(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0108_dynamicgroup_group_type_dynamicgroup_tags_and_more"),
+        ("extras", "0109_metadatatype_metadatachoice"),
     ]
 
     operations = [

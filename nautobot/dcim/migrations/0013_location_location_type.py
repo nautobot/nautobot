@@ -68,6 +68,7 @@ class Migration(migrations.Migration):
             options={
                 "ordering": ("name",),
             },
+            bases=(models.Model, nautobot.extras.models.mixins.DynamicGroupMixin),
         ),
         migrations.CreateModel(
             name="Location",
@@ -152,6 +153,7 @@ class Migration(migrations.Migration):
             options={
                 "ordering": ("_name",),
             },
+            bases=(models.Model, nautobot.extras.models.mixins.DynamicGroupMixin),
         ),
         migrations.AddField(
             model_name="device",

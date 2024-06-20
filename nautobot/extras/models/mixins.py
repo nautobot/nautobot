@@ -27,9 +27,15 @@ class ContactMixin(models.Model):
     )
 
 
-class DynamicGroupMixin(models.Model):
+class DynamicGroupMixin:
     """
-    Add to a model to mark it as an appropriate member of DynamicGroups.
+    DEPRECATED - use DynamicGroupsModelMixin instead if you need to mark a model as supporting Dynamic Groups.
+
+    This is necessary because DynamicGroupMixin was incorrectly not implemented as a subclass of models.Model,
+    and so it cannot properly implement Model behaviors like the `static_group_association_set` ReverseRelation.
+    However, adding this inheritance to DynamicGroupMixin itself would negatively impact existing migrations.
+    So unfortunately our best option is to deprecate this class and gradually convert core and app models alike
+    to the new DynamicGroupsModelMixin in its place.
 
     Adds `dynamic_groups` property to a model to facilitate reversing (cached) DynamicGroup membership.
 
@@ -39,18 +45,7 @@ class DynamicGroupMixin(models.Model):
     Other related properties added by this mixin should be considered obsolete.
     """
 
-    class Meta:
-        abstract = True
-
     is_dynamic_group_associable_model = True
-
-    # Reverse relation so that deleting a DynamicGroupMixin automatically deletes any related StaticGroupAssociations
-    static_group_association_set = GenericRelation(  # not "static_group_associations" as that'd collide on DynamicGroup
-        "extras.StaticGroupAssociation",
-        content_type_field="associated_object_type",
-        object_id_field="associated_object_id",
-        related_query_name="static_group_association_set_%(app_label)s_%(class)s",
-    )
 
     @property
     def dynamic_groups(self):
@@ -96,6 +91,22 @@ class DynamicGroupMixin(models.Model):
                 continue
 
         return None
+
+
+class DynamicGroupsModelMixin(DynamicGroupMixin, models.Model):
+    """
+    Add this to models to make them fully support Dynamic Groups.
+    """
+    class Meta:
+        abstract = True
+
+    # Reverse relation so that deleting a DynamicGroupMixin automatically deletes any related StaticGroupAssociations
+    static_group_association_set = GenericRelation(  # not "static_group_associations" as that'd collide on DynamicGroup
+        "extras.StaticGroupAssociation",
+        content_type_field="associated_object_type",
+        object_id_field="associated_object_id",
+        related_query_name="static_group_association_set_%(app_label)s_%(class)s",
+    )
 
 
 class NotesMixin:
