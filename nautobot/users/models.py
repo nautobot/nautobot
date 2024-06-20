@@ -346,6 +346,8 @@ class SavedView(BaseModel, ChangeLoggedModel):
     is_global_default = models.BooleanField(default=False)
     is_shared = models.BooleanField(default=True)
 
+    documentation_static_path = "docs/user-guide/platform-functionality/savedview.html"
+
     class Meta:
         ordering = ["owner", "view", "name"]
         unique_together = [["owner", "name", "view"]]

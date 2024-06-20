@@ -9,7 +9,7 @@ from django.contrib.auth import (
     update_session_auth_hash,
 )
 from django.contrib.auth.models import AnonymousUser
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
