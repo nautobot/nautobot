@@ -1,1 +1,1 @@
-Fixed issue with git sync for jobs not been updated with new changes from repo.
+Fixed an issue with Job code not being fully reloaded after syncing a Git repository.
