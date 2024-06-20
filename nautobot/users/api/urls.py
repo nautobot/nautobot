@@ -10,7 +10,7 @@ router.register("groups", views.GroupViewSet)
 
 # Saved Views
 router.register("saved-views", views.SavedViewViewSet)
-router.register("user-to-savedviews", views.UserToSavedViewViewSet)
+router.register("user-saved-view-associations", views.UserSavedViewAssociationViewSet)
 
 
 # Tokens

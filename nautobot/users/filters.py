@@ -12,7 +12,7 @@ from nautobot.core.filters import (
 from nautobot.dcim.models import RackReservation
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import ObjectChange
-from nautobot.users.models import ObjectPermission, SavedView, Token, UserToSavedView
+from nautobot.users.models import ObjectPermission, SavedView, Token, UserSavedViewAssociation
 
 __all__ = (
     "GroupFilterSet",
@@ -114,7 +114,7 @@ class UserFilterSet(BaseFilterSet):
         ]
 
 
-class UserToSavedViewFilterSet(NautobotFilterSet):
+class UserSavedViewAssociationFilterSet(NautobotFilterSet):
     saved_view = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SavedView.objects.all(),
         to_field_name="name",
@@ -123,11 +123,11 @@ class UserToSavedViewFilterSet(NautobotFilterSet):
     user = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="username",
         queryset=get_user_model().objects.all(),
-        label="User (ID or name)",
+        label="User (ID or username)",
     )
 
     class Meta:
-        model = UserToSavedView
+        model = UserSavedViewAssociation
         fields = ["id", "saved_view", "user", "view_name"]
 
 

@@ -462,7 +462,7 @@ def get_docs_url(model):
         path = model.documentation_static_path
     elif model._meta.app_label in settings.PLUGINS:
         path = f"{model._meta.app_label}/docs/models/{model._meta.model_name}.html"
-    elif model._meta.app_label == "extras":
+    elif model._meta.app_label == "extras" or model._meta.model_name == "savedview":
         path = f"docs/user-guide/platform-functionality/{model._meta.model_name}.html"
     else:
         path = f"docs/user-guide/core-data-model/{model._meta.app_label}/{model._meta.model_name}.html"

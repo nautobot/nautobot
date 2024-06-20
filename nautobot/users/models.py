@@ -59,7 +59,7 @@ class User(BaseModel, AbstractUser):
     default_saved_views = models.ManyToManyField(
         to="users.SavedView",
         related_name="users",
-        through="users.UserToSavedView",
+        through="users.UserSavedViewAssociation",
         through_fields=("user", "saved_view"),
         blank=True,
         verbose_name="User Specific Default Saved Views",
@@ -169,7 +169,7 @@ class User(BaseModel, AbstractUser):
 
 
 @extras_features("graphql")
-class UserToSavedView(BaseModel):
+class UserSavedViewAssociation(BaseModel):
     saved_view = models.ForeignKey("users.SavedView", on_delete=models.CASCADE, related_name="user_assignments")
     user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="saved_view_assignments")
     view_name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)

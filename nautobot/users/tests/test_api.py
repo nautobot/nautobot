@@ -11,7 +11,7 @@ from rest_framework import HTTP_HEADER_ENCODING, status
 from nautobot.core.testing import APITestCase, APIViewTestCases, get_deletable_objects
 from nautobot.core.utils.data import deepmerge
 from nautobot.users.filters import GroupFilterSet
-from nautobot.users.models import ObjectPermission, SavedView, Token, UserToSavedView
+from nautobot.users.models import ObjectPermission, SavedView, Token, UserSavedViewAssociation
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -525,8 +525,8 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
-class UserToSavedViewTest(APIViewTestCases.APIViewTestCase):
-    model = UserToSavedView
+class UserSavedViewAssociationTest(APIViewTestCases.APIViewTestCase):
+    model = UserSavedViewAssociation
 
     @classmethod
     def setUpTestData(cls):
@@ -545,7 +545,7 @@ class UserToSavedViewTest(APIViewTestCases.APIViewTestCase):
             )
         for i, saved_view in enumerate(cls.saved_view_views_distinct[4:7]):
             sv = SavedView.objects.filter(view=saved_view["view"]).first()
-            UserToSavedView.objects.create(
+            UserSavedViewAssociation.objects.create(
                 user=cls.users[i],
                 saved_view=sv,
                 view_name=sv.view,
@@ -556,7 +556,7 @@ class UserToSavedViewTest(APIViewTestCases.APIViewTestCase):
         duplicate_view_name = self.saved_view_views_distinct[0]["view"]
         saved_view = SavedView.objects.filter(view=duplicate_view_name).first()
         user = self.users[0]
-        UserToSavedView.objects.create(
+        UserSavedViewAssociation.objects.create(
             saved_view=saved_view,
             user=user,
             view_name=saved_view.view,
@@ -566,7 +566,7 @@ class UserToSavedViewTest(APIViewTestCases.APIViewTestCase):
             "saved_view": saved_view.pk,
             "view_name": duplicate_view_name,
         }
-        self.add_permissions("users.add_usertosavedview")
+        self.add_permissions("users.add_usersavedviewassociation")
         response = self.client.post(
             self._get_list_url(), duplicate_user_to_savedview_create_data, format="json", **self.header
         )

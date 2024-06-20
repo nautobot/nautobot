@@ -36,7 +36,7 @@ from nautobot.core.views.mixins import (
 from .api.serializers import SavedViewSerializer
 from .filters import SavedViewFilterSet
 from .forms import AdvancedProfileSettingsForm, LoginForm, PasswordChangeForm, SavedViewForm, TokenForm
-from .models import SavedView, Token, UserToSavedView
+from .models import SavedView, Token, UserSavedViewAssociation
 from .tables import SavedViewTable
 
 #
@@ -318,12 +318,8 @@ class SavedViewUIViewSet(
         """
         user = request.user
         sv = SavedView.objects.get(pk=kwargs.get("pk", None))
-        try:
-            user_to_sv = UserToSavedView.objects.get(user=user, view_name=sv.view)
-            user_to_sv.delete()
-        except ObjectDoesNotExist:
-            pass
-        UserToSavedView.objects.create(user=user, saved_view=sv, view_name=sv.view)
+        UserSavedViewAssociation.objects.filter(user=user, view_name=sv.view).delete()
+        UserSavedViewAssociation.objects.create(user=user, saved_view=sv, view_name=sv.view)
         list_view_url = sv.get_absolute_url()
         messages.success(
             request, f"Successfully set current view '{sv.name}' as the default '{sv.view}' view for user {user}"

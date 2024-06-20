@@ -60,7 +60,7 @@ from nautobot.core.views.utils import (
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.models import ExportTemplate
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
-from nautobot.users.models import SavedView, UserToSavedView
+from nautobot.users.models import SavedView, UserSavedViewAssociation
 
 
 class GenericView(LoginRequiredMixin, View):
@@ -215,7 +215,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
             if not isinstance(user, AnonymousUser):
                 try:
-                    user_default_saved_view_pk = UserToSavedView.objects.get(
+                    user_default_saved_view_pk = UserSavedViewAssociation.objects.get(
                         user=user, view_name=view_name
                     ).saved_view.pk
                     # Saved view should either belong to the user or be public

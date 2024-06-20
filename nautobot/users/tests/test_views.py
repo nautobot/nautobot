@@ -11,7 +11,7 @@ from social_django.utils import load_backend, load_strategy
 
 from nautobot.core.testing import ModelViewTestCase, post_data, TestCase
 from nautobot.core.testing.utils import extract_page_body
-from nautobot.users.models import ObjectPermission, SavedView, UserToSavedView
+from nautobot.users.models import ObjectPermission, SavedView, UserSavedViewAssociation
 
 User = get_user_model()
 
@@ -386,7 +386,7 @@ class SavedViewTest(ModelViewTestCase):
             view=view_name,
             is_global_default=True,
         )
-        UserToSavedView.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
+        UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
         response = self.client.get(reverse(view_name), follow=True)
         # Assert that Location List View got redirected to Saved View set as user default
         self.assertHttpStatus(response, 200)
@@ -414,7 +414,7 @@ class SavedViewTest(ModelViewTestCase):
             owner=self.user,
             view=view_name,
         )
-        UserToSavedView.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
+        UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
         response = self.client.get(reverse(view_name), follow=True)
         # Assert that Location List View got redirected to Saved View set as user default
         self.assertHttpStatus(response, 200)

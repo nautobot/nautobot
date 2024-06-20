@@ -483,8 +483,6 @@ nav:
           - Tenancy:
               - Tenant: "user-guide/core-data-model/tenancy/tenant.md"
               - Tenant Group: "user-guide/core-data-model/tenancy/tenantgroup.md"
-          - Users:
-              - Saved Views: "user-guide/core-data-model/users/savedview.md"
           - Virtualization:
               - Cluster: "user-guide/core-data-model/virtualization/cluster.md"
               - Cluster Group: "user-guide/core-data-model/virtualization/clustergroup.md"
