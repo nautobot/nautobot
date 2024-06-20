@@ -543,8 +543,8 @@ class UserToSavedViewTest(APIViewTestCases.APIViewTestCase):
                     "view_name": sv.view,
                 }
             )
-        for i, object in enumerate(cls.saved_view_views_distinct[4:7]):
-            sv = SavedView.objects.filter(view=object["view"]).first()
+        for i, saved_view in enumerate(cls.saved_view_views_distinct[4:7]):
+            sv = SavedView.objects.filter(view=saved_view["view"]).first()
             UserToSavedView.objects.create(
                 user=cls.users[i],
                 saved_view=sv,
