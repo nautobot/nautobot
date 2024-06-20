@@ -56,7 +56,7 @@
                 {% for saved_view in saved_views %}
                     <li>
                         {% if saved_view == current_saved_view %}
-                            <a href="{% url list_url %}">
+                            <a href="{% url list_url %}?clear_view=true">
                                 <i class="mdi mdi-check-bold text-bold" aria-hidden="true"></i>
                                 <strong>
                                     {{saved_view.name}}
@@ -75,9 +75,15 @@
                 {% endif %}
                 {% if current_saved_view %}
                     <li>
-                        <a href="{% url 'user:savedview_edit' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                        <a href="{% url 'user:savedview_update_config' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
                             <i class="mdi mdi-content-save-outline text-muted" aria-hidden="true"></i>
                             <span>Update Current Saved View</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'user:savedview_set_default' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                            <i class="mdi mdi-star text-muted" aria-hidden="true"></i>
+                            <span>Set As My Default</span>
                         </a>
                     </li>
                 {% endif %}

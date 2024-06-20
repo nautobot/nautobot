@@ -300,7 +300,16 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             if model.is_saved_view_model:
                 # We are not using .restrict(request.user, "view") here
                 # User should be able to see any saved view that he has the list view access to.
-                saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
+                if request.user.has_perms(["users.view_savedview"]):
+                    saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
+                else:
+                    shared_saved_views = (
+                        SavedView.objects.filter(view=list_url, is_shared=True).order_by("name").only("pk", "name")
+                    )
+                    user_owned_saved_views = (
+                        SavedView.objects.filter(view=list_url, owner=request.user).order_by("name").only("pk", "name")
+                    )
+                    saved_views = shared_saved_views | user_owned_saved_views
 
             new_changes_not_applied = view_changes_not_saved(request, view, self.saved_view)
             context.update(

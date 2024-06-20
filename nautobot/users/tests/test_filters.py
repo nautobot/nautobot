@@ -221,6 +221,25 @@ class SavedViewTestCase(FilterTestCases.FilterTestCase):
         ["view"],
     )
 
+    @classmethod
+    def setUpTestData(cls):
+        user = User.objects.create(username="User1", is_active=True)
+        SavedView.objects.create(
+            name="Global default View", owner=user, view="dcim:location_list", is_global_default=True
+        )
+
+    def test_is_shared(self):
+        params = {"is_shared": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(is_shared=True)
+        )
+
+    def test_is_global_default(self):
+        params = {"is_global_default": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(is_global_default=True)
+        )
+
 
 class TokenTestCase(FilterTestCases.FilterTestCase):
     queryset = Token.objects.all()

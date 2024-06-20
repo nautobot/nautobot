@@ -12,7 +12,7 @@ from nautobot.core.api.views import ModelViewSet
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import deepmerge
 from nautobot.users import filters
-from nautobot.users.models import ObjectPermission, SavedView, Token
+from nautobot.users.models import ObjectPermission, SavedView, Token, UserSavedViewAssociation
 
 from . import serializers
 
@@ -46,6 +46,12 @@ class SavedViewViewSet(ModelViewSet):
     queryset = SavedView.objects.select_related("owner")
     serializer_class = serializers.SavedViewSerializer
     filterset_class = filters.SavedViewFilterSet
+
+
+class UserSavedViewAssociationViewSet(ModelViewSet):
+    queryset = UserSavedViewAssociation.objects.select_related("user", "saved_view")
+    serializer_class = serializers.UserSavedViewAssociationSerializer
+    filterset_class = filters.UserSavedViewAssociationFilterSet
 
 
 #
