@@ -1,1 +1,1 @@
-Fixed issue with git sync causing stale git Job module imports due to lingering sys.modules data.
+Fixed issue with git sync for jobs not been updated with new changes from repo.
