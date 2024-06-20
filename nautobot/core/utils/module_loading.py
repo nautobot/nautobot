@@ -28,9 +28,9 @@ def clear_module_from_sys_modules(module_name):
     """
     Remove the module and all its submodules from sys.modules.
     """
-    module_names_to_remove = [name for name in sys.modules if name == module_name or name.startswith(f"{module_name}.")]
-    for name in module_names_to_remove:
-        del sys.modules[name]
+    for name in list(sys.modules.keys()):
+        if name == module_name or name.startswith(f"{module_name}."):
+            del sys.modules[name]
 
 
 def import_modules_privately(path, module_path=None, ignore_import_errors=True):
