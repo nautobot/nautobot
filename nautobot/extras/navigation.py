@@ -481,7 +481,7 @@ menu_items = (
                         ),
                     ),
                 ),
-            )
+            ),
         ),
     ),
     NavMenuTab(

@@ -83,7 +83,6 @@ from .models import (
     JobHook,
     JobLogEntry,
     JobResult,
-    MetadataChoice,
     MetadataType,
     Note,
     ObjectChange,

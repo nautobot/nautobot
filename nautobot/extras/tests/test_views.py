@@ -1100,6 +1100,7 @@ class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.form_data["data_type"] = self.model.objects.first().data_type
         return super().test_edit_object_with_permission()
 
+
 class NoteTestCase(
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,

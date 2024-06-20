@@ -859,6 +859,7 @@ class JobButtonTable(BaseTable):
 # Metadata
 #
 
+
 class MetadataTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
