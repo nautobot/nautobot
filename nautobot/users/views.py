@@ -253,7 +253,7 @@ class SavedViewUIViewSet(
         """
         Two scenarios we need to handle here:
         1. User can view all saved views with users.view_savedview permission.
-        2. User without the permission can only view published savedviews and his/her own saved views.
+        2. User without the permission can only view shared savedviews and his/her own saved views.
         """
         queryset = super().alter_queryset(request)
         user = request.user
