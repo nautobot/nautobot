@@ -130,7 +130,7 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
 
     def test_filter_multiple_name(self):
         kwargs = {"parent": [self.parent_location_1.name, self.parent_location_2.name]}
-        qs = self.LocationFilterSet(kwargs, self.queryset).qs
+        qs = self.LocationFilterSet(kwargs, self.queryset.with_tree_fields()).qs
 
         self.assertQuerysetEqual(
             qs.with_tree_fields(),
@@ -211,7 +211,7 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
 
     def test_filter_null_exclude(self):
         kwargs = {"parent__n": [settings.FILTERS_NULL_CHOICE_VALUE]}
-        qs = self.LocationFilterSet(kwargs, self.queryset).qs
+        qs = self.LocationFilterSet(kwargs, self.queryset.with_tree_fields()).qs
 
         self.assertQuerysetEqual(
             qs.with_tree_fields(),
