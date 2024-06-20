@@ -62,7 +62,7 @@ class User(BaseModel, AbstractUser):
         through="users.UserSavedViewAssociation",
         through_fields=("user", "saved_view"),
         blank=True,
-        verbose_name="User Specific Default Saved Views",
+        verbose_name="user-specific default saved views",
         help_text="User specific default saved views",
     )
 

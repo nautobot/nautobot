@@ -571,4 +571,4 @@ class UserSavedViewAssociationTest(APIViewTestCases.APIViewTestCase):
             self._get_list_url(), duplicate_user_to_savedview_create_data, format="json", **self.header
         )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("User to saved view with this User and View name already exists", str(response.content))
+        self.assertIn("User saved view association with this User and View name already exists.", str(response.content))
