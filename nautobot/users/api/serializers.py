@@ -9,7 +9,7 @@ from nautobot.core.api import (
     ContentTypeField,
     ValidatedModelSerializer,
 )
-from nautobot.users.models import ObjectPermission, SavedView, Token
+from nautobot.users.models import ObjectPermission, SavedView, Token, UserSavedViewAssociation
 
 
 class UserSerializer(ValidatedModelSerializer):
@@ -56,6 +56,13 @@ class UserSerializer(ValidatedModelSerializer):
             instance.set_password(password)
             instance.save()
         return instance
+
+
+class UserSavedViewAssociationSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = UserSavedViewAssociation
+        fields = "__all__"
+        validators = []
 
 
 class GroupSerializer(ValidatedModelSerializer):

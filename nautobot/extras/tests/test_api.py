@@ -35,6 +35,7 @@ from nautobot.extras.choices import (
     DynamicGroupTypeChoices,
     JobExecutionType,
     JobResultStatusChoices,
+    MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
     RelationshipTypeChoices,
@@ -62,6 +63,8 @@ from nautobot.extras.models import (
     Job,
     JobLogEntry,
     JobResult,
+    MetadataChoice,
+    MetadataType,
     Note,
     ObjectChange,
     Relationship,
@@ -2493,6 +2496,73 @@ class JobApprovalTest(APITestCase):
         url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.scheduled_job.pk})
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+class MetadataTypeTest(APIViewTestCases.APIViewTestCase):
+    model = MetadataType
+    choices_fields = ["data_type"]
+    create_data = [
+        {
+            "name": "System of Record",
+            "description": "The SoR that this record or field originates from",
+            "data_type": MetadataTypeDataTypeChoices.TYPE_TEXT,
+            "content_types": ["dcim.device", "dcim.interface", "ipam.ipaddress"],
+        },
+        {
+            "name": "Last Synced",
+            "description": "The last time this record or field was synced from the SoR",
+            "data_type": MetadataTypeDataTypeChoices.TYPE_DATETIME,
+            "content_types": ["dcim.device", "dcim.interface", "ipam.ipaddress"],
+        },
+        {
+            "name": "Data Owner",
+            "data_type": MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM,
+            "content_types": ["extras.customfield"],
+        },
+    ]
+    update_data = {
+        "name": "Something new",
+        "description": "A new name for existing metadata.",
+        "content_types": ["dcim.interface", "ipam.vrf"],
+    }
+
+
+class MetadataChoiceTest(APIViewTestCases.APIViewTestCase):
+    model = MetadataChoice
+
+    update_data = {
+        "value": "Something new",
+        "weight": 0,
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        mdts = [
+            MetadataType.objects.create(name="SoR", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT),
+            MetadataType.objects.create(name="Colors", data_type=MetadataTypeDataTypeChoices.TYPE_MULTISELECT),
+        ]
+
+        cls.create_data = [
+            {
+                "metadata_type": mdts[0].pk,
+                "value": "ServiceNow",
+                "weight": 200,
+            },
+            {
+                "metadata_type": mdts[0].pk,
+                "value": "IPFabric",
+            },
+            {
+                "metadata_type": mdts[1].pk,
+                "value": "red",
+                "weight": 250,
+            },
+            {
+                "metadata_type": mdts[1].pk,
+                "value": "green",
+                "weight": 250,
+            },
+        ]
 
 
 class NoteTest(APIViewTestCases.APIViewTestCase):

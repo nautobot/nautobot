@@ -27,6 +27,8 @@ from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
 
 from nautobot.circuits.models import Circuit
+from nautobot.cloud.models import CloudAccount
+from nautobot.cloud.tables import CloudAccountTable
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
@@ -758,7 +760,25 @@ class ManufacturerView(generic.ObjectView):
         }
         RequestConfig(request, paginate).configure(device_table)
 
-        return {"device_table": device_table, **super().get_extra_context(request, instance)}
+        # Cloud Accounts
+        cloud_accounts = (
+            CloudAccount.objects.restrict(request.user, "view")
+            .filter(provider=instance)
+            .select_related("secrets_group")
+        )
+
+        cloud_account_table = CloudAccountTable(cloud_accounts)
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(cloud_account_table)
+
+        return {
+            "device_table": device_table,
+            "cloud_account_table": cloud_account_table,
+            **super().get_extra_context(request, instance),
+        }
 
 
 class ManufacturerEditView(generic.ObjectEditView):
@@ -1497,13 +1517,16 @@ class ModuleBayCommonViewSetMixin:
             new_components = []
             data = deepcopy(request.POST)
 
-            positions = form.cleaned_data["position_pattern"]
+            names = form.cleaned_data["name_pattern"]
             labels = form.cleaned_data.get("label_pattern")
-            for i, position in enumerate(positions):
+            positions = form.cleaned_data.get("position_pattern")
+            for i, name in enumerate(names):
                 label = labels[i] if labels else None
+                position = positions[i] if positions else None
                 # Initialize the individual component form
-                data["position"] = position
+                data["name"] = name
                 data["label"] = label
+                data["position"] = position
                 component_form = self.model_form_class(
                     data,
                     initial=normalize_querydict(request.GET, form_class=self.model_form_class),
@@ -1512,14 +1535,12 @@ class ModuleBayCommonViewSetMixin:
                     new_components.append(component_form)
                 else:
                     for field, errors in component_form.errors.as_data().items():
-                        # Assign errors on the child form's position/label field to position_pattern/label_pattern on the parent form
-                        if field == "position":
-                            field = "position_pattern"
-                        elif field == "label":
-                            field = "label_pattern"
+                        # Assign errors on the child form's name/position/label field to *_pattern fields on the parent form
+                        if field.endswith("_pattern"):
+                            field = field[:-8]
                         for e in errors:
                             err_str = ", ".join(e)
-                            form.add_error(field, f"{position}: {err_str}")
+                            form.add_error(field, f"{name}: {err_str}")
 
             if not form.errors:
                 try:
@@ -1585,17 +1606,17 @@ class ModuleBayCommonViewSetMixin:
                             replace = form.cleaned_data["replace"]
                             if form.cleaned_data["use_regex"]:
                                 try:
-                                    obj.new_position = re.sub(find, replace, obj.position)
+                                    obj.new_name = re.sub(find, replace, obj.name)
                                 # Catch regex group reference errors
                                 except re.error:
-                                    obj.new_position = obj.position
+                                    obj.new_name = obj.name
                             else:
-                                obj.new_position = obj.position.replace(find, replace)
+                                obj.new_name = obj.name.replace(find, replace)
                             renamed_pks.append(obj.pk)
 
                         if "_apply" in request.POST:
                             for obj in selected_objects:
-                                obj.position = obj.new_position
+                                obj.name = obj.new_name
                                 obj.save()
 
                             # Enforce constrained permissions
@@ -1617,7 +1638,7 @@ class ModuleBayCommonViewSetMixin:
 
         return Response(
             {
-                "template": "dcim/modulebay_bulk_rename.html",
+                "template": "generic/object_bulk_rename.html",
                 "form": form,
                 "obj_type_plural": self.queryset.model._meta.verbose_name_plural,
                 "selected_objects": selected_objects,
@@ -1994,6 +2015,7 @@ class DeviceModuleBaysView(DeviceComponentTabView):
     template_name = "dcim/device/modulebays.html"
 
     def get_extra_context(self, request, instance):
+        # note: Device modules tab shouldn't show descendant modules until a proper tree view is implemented
         modulebays = (
             ModuleBay.objects.restrict(request.user, "view")
             .filter(parent_device=instance)
@@ -2130,9 +2152,7 @@ class DeviceBulkDeleteView(generic.BulkDeleteView):
 
 
 class BulkComponentCreateUIViewSetMixin:
-    def _bulk_component_create(
-        self, request, component_queryset, bulk_component_form, parent_field=None, primary_pattern_field="name"
-    ):
+    def _bulk_component_create(self, request, component_queryset, bulk_component_form, parent_field=None):
         parent_model_name = self.queryset.model._meta.verbose_name_plural
         if parent_field is None:
             parent_field = self.queryset.model._meta.model_name
@@ -2165,14 +2185,14 @@ class BulkComponentCreateUIViewSetMixin:
                 try:
                     with transaction.atomic():
                         for obj in data["pk"]:
-                            names = data[f"{primary_pattern_field}_pattern"]
+                            names = data["name_pattern"]
                             labels = data["label_pattern"] if "label_pattern" in data else None
                             for i, name in enumerate(names):
                                 label = labels[i] if labels else None
 
                                 component_data = {
                                     parent_field: obj.pk,
-                                    primary_pattern_field: name,
+                                    "name": name,
                                     "label": label,
                                 }
                                 component_data.update(data)
@@ -2539,7 +2559,6 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             component_queryset=ModuleBay.objects.all(),
             bulk_component_form=forms.ModuleModuleBayBulkCreateForm,
             parent_field="parent_module",
-            primary_pattern_field="position",
         )
 
 
@@ -3412,7 +3431,6 @@ class DeviceBulkAddModuleBayView(generic.BulkComponentCreateView):
     model_form = forms.ModuleBayForm
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
-    primary_pattern_field = "position"
     default_return_url = "dcim:device_list"
 
 

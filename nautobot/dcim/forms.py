@@ -264,6 +264,26 @@ class ComponentForm(BootstrapMixin, forms.Form):
                 )
 
 
+class ModularComponentForm(ComponentForm):
+    name_pattern = ExpandableNameField(
+        label="Name",
+        help_text="""
+            Alphanumeric ranges are supported for bulk creation. Mixed cases and types within a single range
+            are not supported. Examples:
+            <ul>
+                <li><code>[ge,xe]-0/0/[0-9]</code></li>
+                <li><code>e[0-3][a-d,f]</code></li>
+            </ul>
+
+            The variables <code>{module}</code>, <code>{module.parent}</code>, <code>{module.parent.parent}</code>, etc.
+            may be used in the name field and will be replaced by the <code>position</code> of the module bay that the
+            module occupies (skipping over any bays with a blank <code>position</code>). These variables can be used
+            multiple times in the component name and there is no limit to the depth of parent levels.
+            Any variables that cannot be replaced by a suitable position value will remain unchanged.
+                """,
+    )
+
+
 #
 # Fields
 #
@@ -1035,7 +1055,7 @@ class ComponentTemplateCreateForm(ComponentForm):
     description = forms.CharField(required=False)
 
 
-class ModularComponentTemplateCreateForm(ComponentTemplateCreateForm):
+class ModularComponentTemplateCreateForm(ModularComponentForm):
     """
     Base form for the creation of modular device component templates (subclassed from ModularComponentTemplateModel).
     """
@@ -1048,6 +1068,7 @@ class ModularComponentTemplateCreateForm(ComponentTemplateCreateForm):
         queryset=ModuleType.objects.all(),
         required=False,
     )
+    description = forms.CharField(required=False)
 
 
 class ConsolePortTemplateForm(ModularComponentTemplateForm):
@@ -1526,6 +1547,7 @@ class ModuleBayTemplateForm(ModularComponentTemplateForm):
         fields = [
             "device_type",
             "module_type",
+            "name",
             "position",
             "label",
             "description",
@@ -1533,28 +1555,45 @@ class ModuleBayTemplateForm(ModularComponentTemplateForm):
 
 
 class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
-    position_pattern = ExpandableNameField(label="Position")
+    name_pattern = ExpandableNameField(label="Name")
     label_pattern = ExpandableNameField(
         label="Label",
         required=False,
-        help_text="Alphanumeric ranges are supported. (Must match the number of positions being created.)",
+        help_text="Alphanumeric ranges are supported. (Must match the number of names being created.)",
+    )
+    position_pattern = ExpandableNameField(
+        label="Position",
+        required=False,
+        help_text="Alphanumeric ranges are supported. (Must match the number of names being created.)",
     )
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     def clean(self):
         super().clean()
 
-        # Validate that the number of components being created from both the position_pattern and label_pattern are equal
+        # Validate that the number of components being created from both the name_pattern, position_pattern and label_pattern are equal
         if self.cleaned_data["label_pattern"]:
-            position_pattern_count = len(self.cleaned_data["position_pattern"])
+            name_pattern_count = len(self.cleaned_data["name_pattern"])
             label_pattern_count = len(self.cleaned_data["label_pattern"])
-            if position_pattern_count != label_pattern_count:
+            if name_pattern_count != label_pattern_count:
                 raise forms.ValidationError(
                     {
-                        "label_pattern": f"The provided position pattern will create {position_pattern_count} components, however "
+                        "label_pattern": f"The provided name pattern will create {name_pattern_count} components, however "
                         f"{label_pattern_count} labels will be generated. These counts must match."
                     },
                     code="label_pattern_mismatch",
+                )
+
+        if self.cleaned_data["position_pattern"]:
+            name_pattern_count = len(self.cleaned_data["name_pattern"])
+            position_pattern_count = len(self.cleaned_data["position_pattern"])
+            if name_pattern_count != position_pattern_count:
+                raise forms.ValidationError(
+                    {
+                        "position_pattern": f"The provided name pattern will create {name_pattern_count} components, however "
+                        f"{position_pattern_count} positions will be generated. These counts must match."
+                    },
+                    code="position_pattern_mismatch",
                 )
 
 
@@ -1571,8 +1610,9 @@ class ModuleBayTemplateCreateForm(ModuleBayBaseCreateForm):
     field_order = (
         "device_type",
         "module_type",
-        "position_pattern",
+        "name_pattern",
         "label_pattern",
+        "position_pattern",
         "description",
     )
 
@@ -1580,7 +1620,8 @@ class ModuleBayTemplateCreateForm(ModuleBayBaseCreateForm):
 class ModuleBayTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ModuleBayTemplate.objects.all(), widget=forms.MultipleHiddenInput())
     label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-    description = forms.CharField(required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    position = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         nullable_fields = ("label", "description")
@@ -1789,6 +1830,7 @@ class ModuleBayTemplateImportForm(ComponentTemplateImportForm):
         fields = [
             "device_type",
             "module_type",
+            "name",
             "position",
         ]
 
@@ -2421,7 +2463,7 @@ class ComponentCreateForm(ComponentForm):
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
 
-class ModularComponentCreateForm(ComponentForm):
+class ModularComponentCreateForm(ModularComponentForm):
     """
     Base form for the creation of modular device components (models subclassed from ModularComponentModel).
     """
@@ -2472,8 +2514,12 @@ class DeviceBulkAddComponentForm(ComponentForm, CustomFieldModelBulkEditFormMixi
         nullable_fields = []
 
 
-class ModuleBulkAddComponentForm(DeviceBulkAddComponentForm):
+class ModuleBulkAddComponentForm(ModularComponentForm, CustomFieldModelBulkEditFormMixin):
     pk = forms.ModelMultipleChoiceField(queryset=Module.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        nullable_fields = []
 
 
 #
@@ -3509,6 +3555,7 @@ class ModuleBayForm(NautobotModelForm):
         fields = [
             "parent_device",
             "parent_module",
+            "name",
             "position",
             "label",
             "description",
@@ -3532,7 +3579,15 @@ class ModuleBayCreateForm(ModuleBayBaseCreateForm):
         required=False,
         query_params={"content_types": ModuleBay._meta.label_lower},
     )
-    field_order = ("parent_device", "parent_module", "position_pattern", "label_pattern", "description", "tags")
+    field_order = (
+        "parent_device",
+        "parent_module",
+        "name_pattern",
+        "label_pattern",
+        "position_pattern",
+        "description",
+        "tags",
+    )
 
 
 class ModuleBayBulkCreateForm(
@@ -3543,7 +3598,7 @@ class ModuleBayBulkCreateForm(
     pk = forms.ModelMultipleChoiceField(queryset=Device.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
-    field_order = ("position_pattern", "label_pattern", "description", "tags")
+    field_order = ("name_pattern", "label_pattern", "position_pattern", "description", "tags")
 
     class Meta:
         nullable_fields = []
@@ -3557,7 +3612,7 @@ class ModuleModuleBayBulkCreateForm(ModuleBayBulkCreateForm):
 
 
 class ModuleBayBulkEditForm(
-    form_from_model(ModuleBay, ["label", "description"]),
+    form_from_model(ModuleBay, ["label", "description", "position"]),
     TagsBulkEditFormMixin,
     NautobotBulkEditForm,
 ):

@@ -271,6 +271,11 @@ def populate_model_features_registry(refresh=False):
 
     lookup_confs = [
         {
+            "feature_name": "cloud_types",
+            "field_names": [],
+            "additional_constraints": {"is_cloud_type_model": True},
+        },
+        {
             "feature_name": "contacts",
             "field_names": ["associated_contacts"],
             "additional_constraints": {"is_contact_associable_model": True},
@@ -278,6 +283,11 @@ def populate_model_features_registry(refresh=False):
         {
             "feature_name": "custom_fields",
             "field_names": ["_custom_field_data"],
+        },
+        {
+            "feature_name": "metadata",
+            "field_names": [],  # TODO: add "associated_metadata" ReverseRelation here when implemented
+            "additional_constraints": {"is_metadata_associable_model": True},
         },
         {
             "feature_name": "relationships",

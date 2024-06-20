@@ -49,6 +49,9 @@ __all__ = (
 class ManufacturerTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
+    cloud_account_count = LinkedCountColumn(
+        viewname="cloud:cloudaccount_list", url_params={"provider": "name"}, verbose_name="Cloud Accounts"
+    )
     device_type_count = LinkedCountColumn(
         viewname="dcim:devicetype_list", url_params={"manufacturer": "name"}, verbose_name="Device Types"
     )
@@ -65,6 +68,7 @@ class ManufacturerTable(BaseTable):
         fields = (
             "pk",
             "name",
+            "cloud_account_count",
             "device_type_count",
             "inventory_item_count",
             "platform_count",
@@ -320,9 +324,7 @@ class DeviceBayTemplateTable(ComponentTemplateTable):
         empty_text = "None"
 
 
-class ModuleBayTemplateTable(BaseTable):
-    pk = ToggleColumn()
-    position = tables.Column()
+class ModuleBayTemplateTable(ComponentTemplateTable):
     actions = ButtonsColumn(
         model=ModuleBayTemplate,
         buttons=("edit", "delete"),
@@ -331,5 +333,5 @@ class ModuleBayTemplateTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = ModuleBayTemplate
-        fields = ("pk", "position", "label", "description", "actions")
+        fields = ("pk", "name", "position", "label", "description", "actions")
         empty_text = "None"

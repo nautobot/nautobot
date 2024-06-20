@@ -9,7 +9,7 @@ from django.contrib.auth import (
     update_session_auth_hash,
 )
 from django.contrib.auth.models import AnonymousUser
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
@@ -26,7 +26,6 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_table_class_string_from_view_name
 from nautobot.core.views.generic import GenericView
 from nautobot.core.views.mixins import (
-    ObjectBulkDestroyViewMixin,
     ObjectChangeLogViewMixin,
     ObjectDestroyViewMixin,
     ObjectDetailViewMixin,
@@ -36,8 +35,8 @@ from nautobot.core.views.mixins import (
 
 from .api.serializers import SavedViewSerializer
 from .filters import SavedViewFilterSet
-from .forms import AdvancedProfileSettingsForm, LoginForm, PasswordChangeForm, TokenForm
-from .models import SavedView, Token
+from .forms import AdvancedProfileSettingsForm, LoginForm, PasswordChangeForm, SavedViewForm, TokenForm
+from .models import SavedView, Token, UserSavedViewAssociation
 from .tables import SavedViewTable
 
 #
@@ -238,51 +237,108 @@ class ChangePasswordView(GenericView):
 
 class SavedViewUIViewSet(
     ObjectDetailViewMixin,
-    ObjectBulkDestroyViewMixin,
     ObjectChangeLogViewMixin,
     ObjectDestroyViewMixin,
     ObjectEditViewMixin,
     ObjectListViewMixin,
 ):
     queryset = SavedView.objects.all()
+    form_class = SavedViewForm
     filterset_class = SavedViewFilterSet
     serializer_class = SavedViewSerializer
     table_class = SavedViewTable
     action_buttons = ("export",)
 
-    def get_required_permission(self):
+    def alter_queryset(self, request):
         """
-        Obtain the permissions needed to perform certain actions on a model.
+        Two scenarios we need to handle here:
+        1. User can view all saved views with users.view_savedview permission.
+        2. User without the permission can only view shared savedviews and his/her own saved views.
         """
-        queryset = self.get_queryset()
-        try:
-            actions = [self.get_action()]
-            for i, item in enumerate(actions):
-                # Enforce users:change_savedview instead of users:clear_savedview
-                if item == "clear":
-                    actions[i] = "change"
-        except KeyError:
-            messages.error(
-                self.request,
-                "This action is not permitted. Please use the buttons at the bottom of the table for Bulk Delete and Bulk Update",
-            )
-        return self.get_permissions_for_model(queryset.model, actions)
+        queryset = super().alter_queryset(request)
+        user = request.user
+        if user.has_perms(["users.view_savedview"]):
+            saved_views = queryset.restrict(user, "view")
+        else:
+            shared_saved_views = queryset.filter(is_shared=True)
+            user_owned_saved_views = queryset.filter(owner=user)
+            saved_views = shared_saved_views | user_owned_saved_views
+        return saved_views
+
+    def get_queryset(self):
+        """
+        Get the list of items for this view.
+        All users should be able to see saved views so we do not apply extra permissions.
+        """
+        return self.queryset.all()
+
+    def check_permissions(self, request):
+        """
+        Override this method to not check any permissions.
+        Since users with <app_label>.view_<model_name> permissions should be able to view saved views related to this model.
+        And those permissions will be enforced in the related view.
+        """
+
+    def dispatch(self, request, *args, **kwargs):
+        if isinstance(request.user, AnonymousUser):
+            return self.handle_no_permission()
+        return super().dispatch(request, *args, **kwargs)
+
+    def extra_message_context(self, obj):
+        """
+        Context variables for this extra message.
+        """
+        return {"new_global_default_view": obj}
+
+    def extra_message(self, **kwargs):
+        new_global_default_view = kwargs.get("new_global_default_view")
+        view_name = new_global_default_view.view
+        message = ""
+        if new_global_default_view.is_global_default:
+            message += f"<br>The global default saved View for '{view_name}' is set to <a href='{new_global_default_view.get_absolute_url()}'>{new_global_default_view.name}</a>."
+        return message
+
+    def list(self, request, *args, **kwargs):
+        if not request.user.has_perms(["users.view_savedview"]):
+            return self.handle_no_permission()
+        return super().list(request, *args, **kwargs)
 
     def retrieve(self, request, *args, **kwargs):
         """
         The detail view for a saved view should the related ObjectListView with saved configurations applied
         """
-        if isinstance(request.user, AnonymousUser):
-            return super().retrieve(request, *args, **kwargs)
         instance = self.get_object()
         list_view_url = reverse(instance.view) + f"?saved_view={instance.pk}"
         return redirect(list_view_url)
 
-    def update(self, request, *args, **kwargs):
+    @action(detail=True, name="Set Default", methods=["get"], url_path="set-default", url_name="set_default")
+    def set_default(self, request, *args, **kwargs):
+        """
+        Set current saved view as the the request.user default view. Overriding the global default view if there is one.
+        """
+        user = request.user
+        sv = SavedView.objects.get(pk=kwargs.get("pk", None))
+        UserSavedViewAssociation.objects.filter(user=user, view_name=sv.view).delete()
+        UserSavedViewAssociation.objects.create(user=user, saved_view=sv, view_name=sv.view)
+        list_view_url = sv.get_absolute_url()
+        messages.success(
+            request, f"Successfully set current view '{sv.name}' as the default '{sv.view}' view for user {user}"
+        )
+        return redirect(list_view_url)
+
+    @action(detail=True, name="Update Config", methods=["get"], url_path="update-config", url_name="update_config")
+    def update_saved_view_config(self, request, *args, **kwargs):
         """
         Extract filter_params, pagination and sort_order from request.GET and apply it to the SavedView specified
         """
-        sv = get_object_or_404(SavedView, pk=kwargs.get("pk", None))
+        sv = SavedView.objects.get(pk=kwargs.get("pk", None))
+        if sv.owner == request.user or request.user.has_perms(["users.change_savedview"]):
+            pass
+        else:
+            messages.error(
+                request, f"You do not have the required permission to modify this Saved View owned by {sv.owner}"
+            )
+            return redirect(self.get_return_url(request, obj=sv))
         table_changes_pending = request.GET.get("table_changes_pending", False)
         all_filters_removed = request.GET.get("all_filters_removed", False)
         pagination_count = request.GET.get("per_page", None)
@@ -325,6 +381,9 @@ class SavedViewUIViewSet(
         and the name of the new SavedView from request.POST to create a new SavedView.
         """
         name = request.POST.get("name")
+        is_shared = request.POST.get("is_shared", False)
+        if is_shared:
+            is_shared = True
         params = request.POST.get("params", "")
 
         param_dict = parse_qs(params)
@@ -346,11 +405,11 @@ class SavedViewUIViewSet(
             if derived_view_pk:
                 return redirect(self.get_return_url(request, obj=derived_instance))
             else:
-                return redirect(reverse(view_name))
+                return redirect(self.get_return_url(request))
         table_changes_pending = param_dict.get("table_changes_pending", False)
         all_filters_removed = param_dict.get("all_filters_removed", False)
         try:
-            sv = SavedView.objects.create(name=name, owner=request.user, view=view_name)
+            sv = SavedView.objects.create(name=name, owner=request.user, view=view_name, is_shared=is_shared)
         except IntegrityError:
             messages.error(request, f"You already have a Saved View named '{name}' for this view '{view_name}'")
             if derived_view_pk:
@@ -393,24 +452,28 @@ class SavedViewUIViewSet(
         try:
             sv.validated_save()
             list_view_url = sv.get_absolute_url()
-            messages.success(request, f"Successfully created new Saved View {sv.name}")
+            message = f"Successfully created new Saved View '{sv.name}'."
+            messages.success(request, message)
             return redirect(list_view_url)
         except ValidationError as e:
             messages.error(request, e)
             return redirect(self.get_return_url(request))
 
-    @action(detail=True, name="Clear", methods=["post"], url_path="clear", url_name="clear")
-    def clear(self, request, pk):
-        try:
-            sv = SavedView.objects.restrict(request.user, "view").get(pk=pk)
-            sv.config = {}
-            sv.validated_save()
-            list_view_url = reverse(sv.view) + f"?saved_view={pk}"
-            messages.success(request, f"Successfully cleared saved view {sv.name}")
-            return redirect(list_view_url)
-        except ObjectDoesNotExist:
-            messages.error(request, f"Saved view {pk} not found")
-            return redirect(reverse("users:savedview_list"))
+    def destroy(self, request, *args, **kwargs):
+        """
+        request.GET: render the ObjectDeleteConfirmationForm which is passed to NautobotHTMLRenderer as Response.
+        request.POST: call perform_destroy() which validates the form and perform the action of delete.
+        Override to add more variables to Response
+        """
+        sv = SavedView.objects.get(pk=kwargs.get("pk", None))
+        if sv.owner == request.user or request.user.has_perms(["users.delete_savedview"]):
+            pass
+        else:
+            messages.error(
+                request, f"You do not have the required permission to delete this Saved View owned by {sv.owner}"
+            )
+            return redirect(self.get_return_url(request, obj=sv))
+        return super().destroy(request, *args, **kwargs)
 
 
 #
