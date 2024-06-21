@@ -24,6 +24,15 @@ def _temporarily_add_to_sys_path(path):
         sys.path = old_sys_path
 
 
+def clear_module_from_sys_modules(module_name):
+    """
+    Remove the module and all its submodules from sys.modules.
+    """
+    for name in list(sys.modules.keys()):
+        if name == module_name or name.startswith(f"{module_name}."):
+            del sys.modules[name]
+
+
 def import_modules_privately(path, module_path=None, ignore_import_errors=True):
     """
     Import modules from the filesystem without adding the path permanently to `sys.path`.
@@ -69,7 +78,7 @@ def import_modules_privately(path, module_path=None, ignore_import_errors=True):
                     continue
 
             if discovered_module_name in sys.modules:
-                del sys.modules[discovered_module_name]
+                clear_module_from_sys_modules(discovered_module_name)
 
             try:
                 if not is_package:
@@ -81,7 +90,6 @@ def import_modules_privately(path, module_path=None, ignore_import_errors=True):
                     spec.loader.exec_module(module)
                 else:
                     module = importlib.import_module(discovered_module_name)
-
                 importlib.reload(module)
             except Exception as exc:
                 logger.error("Unable to load module %s from %s: %s", discovered_module_name, path, exc)
