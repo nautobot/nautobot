@@ -2,6 +2,7 @@ import logging
 
 from django.contrib import messages
 from django.contrib.auth.mixins import AccessMixin
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
@@ -10,7 +11,7 @@ from django.core.exceptions import (
     ValidationError,
 )
 from django.db import transaction
-from django.db.models import ManyToManyField, ProtectedError
+from django.db.models import ManyToManyField, ProtectedError, Q
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -50,7 +51,7 @@ from nautobot.extras.forms import NoteForm
 from nautobot.extras.models import ExportTemplate
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template, remove_prefix_from_cf_key
-from nautobot.users.models import SavedView
+from nautobot.users.models import SavedView, UserSavedViewAssociation
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -622,6 +623,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         "saved_view",  # saved_view indicator pk or composite keys
         "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
         "all_filters_removed",  # indicator for if all filters have been removed from the saved view
+        "clear_view",  # indicator for if the clear view button is clicked or not
     )
 
     def filter_queryset(self, queryset):
@@ -688,13 +690,43 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         List the model instances.
         """
         context = {"use_new_ui": True}
+        queryset = self.get_queryset()
+        clear_view = request.GET.get("clear_view", False)
         if "export" in request.GET:  # 3.0 TODO: remove, irrelevant after #4746
-            queryset = self.get_queryset()
             model = queryset.model
             content_type = ContentType.objects.get_for_model(model)
             response = self.check_for_export(request, model, content_type)
             if response is not None:
                 return response
+
+        # If the user clicks on the clear view button, we do not check for global or user defaults
+        if not clear_view and not request.GET.get("saved_view"):
+            # Check if there is a default for this view for this specific user
+            app_label, model_name = queryset.model._meta.label.split(".")
+            view_name = f"{app_label}:{model_name.lower()}_list"
+            user = request.user
+            if not isinstance(user, AnonymousUser):
+                try:
+                    user_default_saved_view_pk = UserSavedViewAssociation.objects.get(
+                        user=user, view_name=view_name
+                    ).saved_view.pk
+                    # Saved view should either belong to the user or be public
+                    SavedView.objects.get(
+                        Q(pk=user_default_saved_view_pk),
+                        Q(owner=user) | Q(is_shared=True),
+                    )
+                    sv_url = reverse("users:savedview", kwargs={"pk": user_default_saved_view_pk})
+                    return redirect(sv_url)
+                except ObjectDoesNotExist:
+                    pass
+
+            # Check if there is a global default for this view
+            try:
+                global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
+                return redirect(reverse("users:savedview", kwargs={"pk": global_saved_view.pk}))
+            except ObjectDoesNotExist:
+                pass
+
         return Response(context)
 
 
@@ -750,6 +782,18 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
     UI mixin to create or update a model instance.
     """
 
+    def extra_message_context(self, obj):
+        """
+        Context variables for this extra message.
+        """
+        return {}
+
+    def extra_message(self, **kwargs):
+        """
+        Append extra message at the end of create or update success message.
+        """
+        return ""
+
     def _process_create_or_update_form(self, form):
         """
         Helper method to create or update an object after the form is validated successfully.
@@ -769,9 +813,14 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             msg = f'{"Created" if object_created else "Modified"} {queryset.model._meta.verbose_name}'
             self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
             try:
-                msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+                msg = format_html(
+                    '{} <a href="{}">{}</a>' + self.extra_message(**self.extra_message_context(obj)),
+                    msg,
+                    obj.get_absolute_url(),
+                    obj,
+                )
             except AttributeError:
-                msg = format_html("{} {}", msg, obj)
+                msg = format_html("{} {}" + self.extra_message(**self.extra_message_context(obj)), msg, obj)
             messages.success(request, msg)
             if "_addanother" in request.POST:
                 # If the object has clone_fields, pre-populate a new instance of the form

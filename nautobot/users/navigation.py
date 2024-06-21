@@ -20,7 +20,9 @@ menu_items = (
                         link="user:savedview_list",
                         name="Saved Views",
                         weight=100,
-                        permissions=[],
+                        permissions=[
+                            "users.view_savedview",
+                        ],
                     ),
                 ),
             ),

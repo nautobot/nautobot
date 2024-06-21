@@ -22,7 +22,7 @@ TODO
 
 #### Saved Views
 
-Added the ability for users to save multiple configurations of list views (table columns, filtering, pagination and sorting) for ease of later use and reuse. Refer to the [Saved View](../user-guide/platform-functionality/savedview.md) documentation for more details and the [user guide](../user-guide/feature-guides/saved-views.md) on how to use saved views.
+Added the ability for users to save multiple configurations of list views (table columns, filtering, pagination and sorting) for ease of later use and reuse. Refer to the [Saved View](../user-guide/platform-functionality/savedview.md) documentation for more details and on how to use saved views.
 
 #### Static Groups
 
