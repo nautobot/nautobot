@@ -86,6 +86,11 @@ class BaseTable(django_tables2.Table):
 
         # Init table
         super().__init__(*args, order_by=order_by, **kwargs)
+
+        # Don't show hierarchy if we're sorted
+        if order_by is not None and hide_hierarchy_ui is None:
+            hide_hierachy_ui = True
+
         self.hide_hierarchy_ui = hide_hierarchy_ui
 
         # Set default empty_text if none was provided
@@ -136,6 +141,12 @@ class BaseTable(django_tables2.Table):
         # Dynamically update the table's QuerySet to ensure related fields are pre-fetched
         if isinstance(self.data, TableQuerysetData):
             queryset = self.data.data
+
+            if hasattr(queryset, "with_tree_fields") and not self.hide_hierarchy_ui:
+                queryset = queryset.with_tree_fields()
+            elif hasattr(queryset, "without_tree_fields") and self.hide_hierarchy_ui:
+                queryset = queryset.without_tree_fields()
+
             select_fields = []
             prefetch_fields = []
             count_fields = []

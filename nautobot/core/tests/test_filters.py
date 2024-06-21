@@ -130,10 +130,10 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
 
     def test_filter_multiple_name(self):
         kwargs = {"parent": [self.parent_location_1.name, self.parent_location_2.name]}
-        qs = self.LocationFilterSet(kwargs, self.queryset.with_tree_fields()).qs
+        qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(
-            qs.with_tree_fields(),
+            qs,
             [
                 self.child_location_1,
                 self.child_location_same_name_1,
@@ -142,17 +142,7 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
                 self.child_location_2ab,
                 self.child_location_same_name_2,
             ],
-        )
-        self.assertQuerysetEqual(
-            qs.without_tree_fields(),
-            [
-                self.child_location_1,
-                self.child_location_2,
-                self.child_location_2a,
-                self.child_location_2ab,
-                self.child_location_same_name_1,
-                self.child_location_same_name_2,
-            ],
+            ordered=False,
         )
 
     def test_filter_null(self):
@@ -211,10 +201,10 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
 
     def test_filter_null_exclude(self):
         kwargs = {"parent__n": [settings.FILTERS_NULL_CHOICE_VALUE]}
-        qs = self.LocationFilterSet(kwargs, self.queryset.with_tree_fields()).qs
+        qs = self.LocationFilterSet(kwargs, self.queryset).qs
 
         self.assertQuerysetEqual(
-            qs.with_tree_fields(),
+            qs,
             [
                 self.child_location_1,
                 self.child_location_same_name_1,
@@ -223,17 +213,7 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
                 self.child_location_2ab,
                 self.child_location_same_name_2,
             ],
-        )
-        self.assertQuerysetEqual(
-            qs.without_tree_fields(),
-            [
-                self.child_location_1,
-                self.child_location_2,
-                self.child_location_2a,
-                self.child_location_2ab,
-                self.child_location_same_name_1,
-                self.child_location_same_name_2,
-            ],
+            ordered=False,
         )
 
     def test_filter_combined_name_exclude(self):

@@ -199,7 +199,7 @@ class BaseDeviceComponentTemplatesBulkRenameView(generic.BulkRenameView):
 
 
 class LocationTypeListView(generic.ObjectListView):
-    queryset = LocationType.objects.with_tree_fields()
+    queryset = LocationType.objects.all()
     filterset = filters.LocationTypeFilterSet
     filterset_form = forms.LocationTypeFilterForm
     table = tables.LocationTypeTable
@@ -260,7 +260,7 @@ class LocationTypeBulkDeleteView(generic.BulkDeleteView):
 
 
 class LocationListView(generic.ObjectListView):
-    queryset = Location.objects.with_tree_fields().all()
+    queryset = Location.objects.all()
     filterset = filters.LocationFilterSet
     filterset_form = forms.LocationFilterForm
     table = tables.LocationTable

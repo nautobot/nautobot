@@ -22,14 +22,14 @@ class NautobotTemplatetagsHelperTest(TestCase):
         location.description = ""
         location.save()
         self.assertEqual(
-            helpers.hyperlinked_object(location), f'<a href="/dcim/locations/{location.pk}/">{location.name}</a>'
+            helpers.hyperlinked_object(location), f'<a href="/dcim/locations/{location.pk}/">{location.display}</a>'
         )
         # An object with get_absolute_url and a description gives a titled hyperlink
         location.description = "An important location"
         location.save()
         self.assertEqual(
             helpers.hyperlinked_object(location),
-            f'<a href="/dcim/locations/{location.pk}/" title="An important location">{location.name}</a>',
+            f'<a href="/dcim/locations/{location.pk}/" title="An important location">{location.display}</a>',
         )
         # Optionally you can request a field other than the object's display string
         self.assertEqual(
@@ -296,14 +296,14 @@ class NautobotTemplatetagsHelperTest(TestCase):
         location.save()
         self.assertEqual(
             helpers.hyperlinked_object_target_new_tab(location),
-            f'<a href="/dcim/locations/{location.pk}/" target="_blank" rel="noreferrer">{location.name}</a>',
+            f'<a href="/dcim/locations/{location.pk}/" target="_blank" rel="noreferrer">{location.display}</a>',
         )
         # An object with get_absolute_url and a description gives a titled hyperlink
         location.description = "An important location"
         location.save()
         self.assertEqual(
             helpers.hyperlinked_object_target_new_tab(location),
-            f'<a href="/dcim/locations/{location.pk}/" title="An important location" target="_blank" rel="noreferrer">{location.name}</a>',
+            f'<a href="/dcim/locations/{location.pk}/" title="An important location" target="_blank" rel="noreferrer">{location.display}</a>',
         )
         # Optionally you can request a field other than the object's display string
         self.assertEqual(
