@@ -177,7 +177,7 @@ class ObjectMetadata(BaseModel, ChangeLoggedModel):
 
     class Meta:
         ordering = ["metadata_type"]
-        unique_together = ["metadata_type", "assigned_object_type", "assigned_object_id", "scoped_fields"]
+        unique_together = ["metadata_type", "assigned_object_type", "assigned_object_id"]
 
         indexes = [
             models.Index(
