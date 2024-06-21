@@ -18,19 +18,8 @@
         </div>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Choices</strong></div>
+        <div class="panel-heading"><strong>Choices (select and multi-select data types)</strong></div>
         <div class="panel-body">
-            {% if choices.errors %}
-                <div class="text-danger">
-                    Please correct the error(s) below:
-
-                    {% for choice in choices.forms %}
-                        {% if choice.errors %}
-                            {% for error in choice.errors.values %}{{ error }}{% endfor %}
-                        {% endif %}
-                    {% endfor %}
-                </div>
-            {% endif %}
             {{ choices.non_field_errors }}
             <table class="table" id="metadata-choices">
                 {{ choices.management_form }}
@@ -66,6 +55,15 @@
                             </td>
                         {% endfor %}
                     </tr>
+                    {% if choice.errors %}
+                        <tr>
+                            <td colspan="3">
+                                <div class="text-danger">
+                                    {% for error in choice.errors.values %}{{ error }}{% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
                {% endfor %}
             </table>
         </div>

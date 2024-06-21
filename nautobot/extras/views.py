@@ -1940,7 +1940,6 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-        logger.info("Action is %s", self.action)
 
         if self.action in ("create", "update"):
             if request.POST:

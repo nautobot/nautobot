@@ -864,6 +864,7 @@ class MetadataTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     content_types = ContentTypesColumn(truncate_words=15)
+    actions = ButtonsColumn(MetadataType)
 
     class Meta(BaseTable.Meta):
         model = MetadataType
@@ -873,12 +874,14 @@ class MetadataTypeTable(BaseTable):
             "description",
             "content_types",
             "data_type",
+            "actions",
         )
         default_columns = (
             "pk",
             "name",
             "content_types",
             "data_type",
+            "actions",
         )
 
 

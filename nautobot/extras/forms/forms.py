@@ -438,8 +438,8 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if self.instance and self.instance.present_in_database:
-            self.fields["key"].widget.attrs["readonly"] = True
+        if self.initial.get("key"):
+            self.fields["key"].disabled = True
 
 
 class CustomFieldFilterForm(NautobotFilterForm):
@@ -1281,8 +1281,8 @@ class MetadataTypeForm(NautobotModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if self.instance and self.instance.present_in_database:
-            self.fields["data_type"].widget.attrs["readonly"] = True
+        if self.initial.get("data_type"):
+            self.fields["data_type"].disabled = True
 
 
 class MetadataTypeFilterForm(NautobotFilterForm):
