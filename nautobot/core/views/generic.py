@@ -5,6 +5,7 @@ import re
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
@@ -12,10 +13,11 @@ from django.core.exceptions import (
     ValidationError,
 )
 from django.db import IntegrityError, transaction
-from django.db.models import ManyToManyField, ProtectedError
+from django.db.models import ManyToManyField, ProtectedError, Q
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -58,7 +60,7 @@ from nautobot.core.views.utils import (
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.models import ExportTemplate
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
-from nautobot.users.models import SavedView
+from nautobot.users.models import SavedView, UserSavedViewAssociation
 
 
 class GenericView(LoginRequiredMixin, View):
@@ -152,6 +154,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         "saved_view",  # saved_view indicator pk or composite keys
         "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
         "all_filters_removed",  # indicator for if all filters have been removed from the saved view
+        "clear_view",  # indicator for if the clear view button is clicked or not
     )
 
     def get_filter_params(self, request):
@@ -197,10 +200,40 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         content_type = ContentType.objects.get_for_model(model)
 
         filter_params = request.GET
+        user = request.user
         display_filter_params = []
         dynamic_filter_form = None
         filter_form = None
         hide_hierarchy_ui = False
+        clear_view = request.GET.get("clear_view", False)
+
+        # If the user clicks on the clear view button, we do not check for global or user defaults
+        if not clear_view and not request.GET.get("saved_view"):
+            # Check if there is a default for this view for this specific user
+            app_label, model_name = model._meta.label.split(".")
+            view_name = f"{app_label}:{model_name.lower()}_list"
+
+            if not isinstance(user, AnonymousUser):
+                try:
+                    user_default_saved_view_pk = UserSavedViewAssociation.objects.get(
+                        user=user, view_name=view_name
+                    ).saved_view.pk
+                    # Saved view should either belong to the user or be public
+                    SavedView.objects.get(
+                        Q(pk=user_default_saved_view_pk),
+                        Q(owner=user) | Q(is_shared=True),
+                    )
+                    sv_url = reverse("users:savedview", kwargs={"pk": user_default_saved_view_pk})
+                    return redirect(sv_url)
+                except ObjectDoesNotExist:
+                    pass
+
+            # Check if there is a global default for this view
+            try:
+                global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
+                return redirect(reverse("users:savedview", kwargs={"pk": global_saved_view.pk}))
+            except ObjectDoesNotExist:
+                pass
 
         if self.filterset:
             filter_params = self.get_filter_params(request)
@@ -273,7 +306,16 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         list_url = validated_viewname(model, "list")
         # We are not using .restrict(request.user, "view") here
         # User should be able to see any saved view that he has the list view access to.
-        saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
+        if user.has_perms(["users.view_savedview"]):
+            saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
+        else:
+            shared_saved_views = (
+                SavedView.objects.filter(view=list_url, is_shared=True).order_by("name").only("pk", "name")
+            )
+            user_owned_saved_views = (
+                SavedView.objects.filter(view=list_url, owner=user).order_by("name").only("pk", "name")
+            )
+            saved_views = shared_saved_views | user_owned_saved_views
         if self.table:
             # Construct the objects table
             if current_saved_view_pk:
