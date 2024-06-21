@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.validators import ValidationError
@@ -5,10 +6,12 @@ from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
+from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.extras.choices import MetadataTypeDataTypeChoices
 from nautobot.extras.models.change_logging import ChangeLoggedModel
+from nautobot.extras.models.contacts import Contact, Team
 from nautobot.extras.utils import extras_features, FeatureQuery
 
 
@@ -135,3 +138,70 @@ class MetadataChoice(ChangeLoggedModel, BaseModel):
     def delete(self, *args, **kwargs):
         # TODO: should we behave like CustomFieldChoice and raise a ProtectedError if this choice is in use anywhere?
         super().delete(*args, **kwargs)
+
+
+class ObjectMetadata(BaseModel, ChangeLoggedModel):
+    metadata_type = models.ForeignKey(
+        to=MetadataType,
+        on_delete=models.CASCADE,
+        related_name="object_metadatas",
+    )
+    contact = models.ForeignKey(
+        to=Contact,
+        on_delete=models.SET_NULL,
+        related_name="object_metadatas",
+        null=True,
+    )
+    team = models.ForeignKey(
+        to=Team,
+        on_delete=models.SET_NULL,
+        related_name="object_metadatas",
+        null=True,
+    )
+    scoped_fields = JSONArrayField(
+        base_field=models.CharField(max_length=50),
+        help_text="List of scoped fields, only direct fields on the model",
+    )
+    value = models.JSONField(
+        blank=True,
+        null=True,
+        help_text="Relevant data value to an object field or a set of object fields",
+    )
+    assigned_object_type = models.ForeignKey(to=ContentType, on_delete=models.SET_NULL, null=True, related_name="+")
+    assigned_object_id = models.UUIDField(db_index=True)
+    assigned_object = GenericForeignKey(ct_field="assigned_object_type", fk_field="assigned_object_id")
+
+    class Meta:
+        ordering = ["metadata_type"]
+        unique_together = ["metadata_type", "assigned_object_type", "assigned_object_id", "scoped_fields"]
+
+        indexes = [
+            models.Index(
+                name="assigned_object",
+                fields=["assigned_object_type", "assigned_object_id"],
+            ),
+            models.Index(
+                name="assigned_object_scoped_fields",
+                fields=["assigned_object_type", "assigned_object_id", "scoped_fields"],
+            ),
+            models.Index(
+                name="assigned_object_contact",
+                fields=["assigned_object_type", "assigned_object_id", "contact"],
+            ),
+            models.Index(
+                name="assigned_object_team",
+                fields=["assigned_object_type", "assigned_object_id", "team"],
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.metadata_type} - {self.assigned_object}"
+
+    def clean(self):
+        super().clean()
+
+        if self.present_in_database:
+            # Check immutable fields
+            database_object = self.__class__.objects.get(pk=self.pk)
+            if self.metadata_type != database_object.metadata_type:
+                raise ValidationError({"metadata_type": "Cannot be changed once created"})

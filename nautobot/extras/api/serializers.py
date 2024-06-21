@@ -70,6 +70,7 @@ from nautobot.extras.models import (
     MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -763,6 +764,12 @@ class MetadataTypeSerializer(NautobotModelSerializer):
 class MetadataChoiceSerializer(ValidatedModelSerializer):
     class Meta:
         model = MetadataChoice
+        fields = "__all__"
+
+
+class ObjectMetadataSerializer(NautobotModelSerializer):
+    class Meta:
+        model = ObjectMetadata
         fields = "__all__"
 
 

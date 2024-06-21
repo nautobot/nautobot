@@ -77,6 +77,7 @@ from nautobot.extras.models import (
     MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -975,6 +976,19 @@ class MetadataChoiceFilterSet(BaseFilterSet):
 
     class Meta:
         model = MetadataChoice
+        fields = "__all__"
+
+
+class ObjectMetadataFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "contact__name": "icontains",
+            "team__name": "icontains",
+        },
+    )
+
+    class Meta:
+        model = ObjectMetadata
         fields = "__all__"
 
 

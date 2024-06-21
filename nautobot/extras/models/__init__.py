@@ -12,7 +12,7 @@ from .jobs import (
     ScheduledJob,
     ScheduledJobs,
 )
-from .metadata import MetadataChoice, MetadataType
+from .metadata import MetadataChoice, MetadataType, ObjectMetadata
 from .mixins import ContactMixin, StaticGroupMixin
 from .models import (
     ConfigContext,
@@ -67,6 +67,7 @@ __all__ = (
     "MetadataType",
     "Note",
     "ObjectChange",
+    "ObjectMetadata",
     "Relationship",
     "RelationshipModel",
     "RelationshipAssociation",

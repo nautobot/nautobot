@@ -87,4 +87,75 @@ class Migration(migrations.Migration):
                 "unique_together": {("metadata_type", "value")},
             },
         ),
+        migrations.CreateModel(
+            name="ObjectMetadata",
+            fields=[
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("created", models.DateTimeField(auto_now_add=True, null=True)),
+                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
+                (
+                    "scoped_fields",
+                    nautobot.core.models.fields.JSONArrayField(base_field=models.CharField(max_length=50)),
+                ),
+                ("value", models.JSONField(blank=True, null=True)),
+                ("assigned_object_id", models.UUIDField(db_index=True)),
+                (
+                    "assigned_object_type",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="+",
+                        to="contenttypes.contenttype",
+                    ),
+                ),
+                (
+                    "contact",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="object_metadatas",
+                        to="extras.contact",
+                    ),
+                ),
+                (
+                    "metadata_type",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="object_metadatas",
+                        to="extras.metadatatype",
+                    ),
+                ),
+                (
+                    "team",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="object_metadatas",
+                        to="extras.team",
+                    ),
+                ),
+            ],
+            options={
+                "ordering": ["metadata_type"],
+                "indexes": [
+                    models.Index(fields=["assigned_object_type", "assigned_object_id"], name="assigned_object"),
+                    models.Index(
+                        fields=["assigned_object_type", "assigned_object_id", "scoped_fields"],
+                        name="assigned_object_scoped_fields",
+                    ),
+                    models.Index(
+                        fields=["assigned_object_type", "assigned_object_id", "contact"], name="assigned_object_contact"
+                    ),
+                    models.Index(
+                        fields=["assigned_object_type", "assigned_object_id", "team"], name="assigned_object_team"
+                    ),
+                ],
+                "unique_together": {("metadata_type", "assigned_object_type", "assigned_object_id", "scoped_fields")},
+            },
+        ),
     ]
