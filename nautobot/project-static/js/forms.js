@@ -658,7 +658,7 @@ function initializeDynamicFilterForm(context){
         if (query_params.has("saved_view")) {
             var all_filters_removed = true
 
-            const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending", "all_filters_removed"]
+            const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending", "all_filters_removed", "clear_view"]
 
             query_params.forEach((value, key) => {
                 if (!non_filter_params.includes(key)){
@@ -691,7 +691,7 @@ function initializeDynamicFilterForm(context){
         let search_query = new URLSearchParams();
         let dynamic_query = new URLSearchParams(new FormData(document.getElementById("dynamic-filter-form")));
         const urlParams = new URLSearchParams(window.location.search);
-        const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending"]
+        const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending", "clear_view"]
         urlParams.forEach((value, key) => {
             if (non_filter_params.includes(key)){
                 search_query.append(key, value)
@@ -708,7 +708,7 @@ function initializeDynamicFilterForm(context){
         if (search_query.has("saved_view")) {
             var all_filters_removed = true
 
-            const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending", "all_filters_removed"]
+            const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending", "all_filters_removed", "clear_view"]
 
             search_query.forEach((value, key) => {
                 if (!non_filter_params.includes(key)){
@@ -737,12 +737,15 @@ function initializeDynamicFilterForm(context){
         const urlParams = new URLSearchParams(window.location.search);
         const newUrlParams = new URLSearchParams(window.location.search);
         // every query string that is non-filter-related
-        const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending"]
+        const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending", "all_filters_removed", "clear_view"]
         for (const [key, value] of urlParams.entries()) {
             // remove filter params
             if (non_filter_params.includes(key) === false) {
                 newUrlParams.delete(key, value)
             }
+        }
+        if (!newUrlParams.has("all_filters_removed")){
+            newUrlParams.append("all_filters_removed", true)
         }
         location.assign("?" + newUrlParams.toString())
     })

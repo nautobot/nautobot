@@ -19,6 +19,7 @@
                                 <pre><code class="language-json" style="background-color: #F2F2F2;">{{ param_dict }}</code></pre>
                             </div>
                         </div>
+                        {% render_field form.is_shared %}
                         <input type="hidden" id="view" name="view" value="{{view}}">
                         <input type="hidden" id="params" name="params" value="{{params}}">
                     </div>
