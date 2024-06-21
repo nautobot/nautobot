@@ -2405,12 +2405,14 @@ class SoftwareVersionTestCase(ModelTestCases.BaseModelTestCase):
 
         # Only return the device types with a direct m2m relationship to the version's software image files
         device_type = DeviceType.objects.filter(software_image_files__isnull=False).first()
+        self.assertIsNotNone(device_type)
         self.assertQuerysetEqualAndNotEmpty(
             qs.get_for_object(device_type), qs.filter(software_image_files__device_types=device_type)
         )
 
         # Only return the software version set on the device's software_version foreign key
         device = Device.objects.filter(software_version__isnull=False).first()
+        self.assertIsNotNone(device)
         self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(device), [device.software_version])
 
         # Only return the software version set on the inventory item's software_version foreign key
@@ -2651,8 +2653,8 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
     @classmethod
     def setUpTestData(cls):
         cls.device = Device.objects.filter(module_bays__isnull=True).first()
-        cls.module_type = ModuleType.objects.first()
-        cls.module_bay = ModuleBay.objects.filter(installed_module__isnull=True).first()
+        manufacturer = Manufacturer.objects.first()
+        cls.module_type = ModuleType.objects.create(manufacturer=manufacturer, model="module model tests")
         cls.location = Location.objects.get_for_model(Module).first()
         cls.status = Status.objects.get_for_model(Module).first()
 
@@ -2676,7 +2678,7 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
 
         InterfaceTemplate.objects.create(
             module_type=cls.module_type,
-            name="Interface 1",
+            name="Interface {module.parent.parent}/{module.parent}/{module}",
             type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             mgmt_only=True,
         )
@@ -2700,6 +2702,13 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
             module_type=cls.module_type,
             position="1111",
         )
+
+        cls.module = Module.objects.create(
+            module_type=cls.module_type,
+            location=cls.location,
+            status=cls.status,
+        )
+        cls.module_bay = cls.module.module_bays.first()
 
     def test_parent_validation_module_bay_and_location(self):
         """Assert that a module must have a parent module bay or location but not both."""
@@ -2840,7 +2849,7 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
 
         Interface.objects.get(
             module=module,
-            name="Interface 1",
+            name="Interface {module.parent.parent}/{module.parent}/{module}",
             type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             mgmt_only=True,
         )

@@ -32,6 +32,8 @@ class Migration(migrations.Migration):
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
                 ("owner", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                ("is_global_default", models.BooleanField(default=False)),
+                ("is_shared", models.BooleanField(default=True)),
             ],
             options={
                 "verbose_name": "saved view",
@@ -39,5 +41,43 @@ class Migration(migrations.Migration):
                 "ordering": ["owner", "view", "name"],
                 "unique_together": {("owner", "name", "view")},
             },
+        ),
+        migrations.CreateModel(
+            name="UserSavedViewAssociation",
+            fields=[
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("view_name", models.CharField(max_length=255)),
+                (
+                    "saved_view",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="user_assignments",
+                        to="users.savedview",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="saved_view_assignments",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+            ],
+            options={
+                "unique_together": {("user", "view_name")},
+            },
+        ),
+        migrations.AddField(
+            model_name="user",
+            name="default_saved_views",
+            field=models.ManyToManyField(
+                blank=True, related_name="users", through="users.UserSavedViewAssociation", to="users.savedview"
+            ),
         ),
     ]

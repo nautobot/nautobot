@@ -2091,6 +2091,17 @@ platformdirs = ">=2.2.0"
 pyyaml = ">=5.1"
 
 [[package]]
+name = "mkdocs-glightbox"
+version = "0.4.0"
+description = "MkDocs plugin supports image lightbox with GLightbox."
+optional = false
+python-versions = "*"
+files = [
+    {file = "mkdocs-glightbox-0.4.0.tar.gz", hash = "sha256:392b34207bf95991071a16d5f8916d1d2f2cd5d5bb59ae2997485ccd778c70d9"},
+    {file = "mkdocs_glightbox-0.4.0-py3-none-any.whl", hash = "sha256:e0107beee75d3eb7380ac06ea2d6eac94c999eaa49f8c3cbab0e7be2ac006ccf"},
+]
+
+[[package]]
 name = "mkdocs-include-markdown-plugin"
 version = "6.0.6"
 description = "Mkdocs Markdown includer plugin."
@@ -4207,4 +4218,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.13"
-content-hash = "ad957a074c8bc5fdcd0c1bd214af69087c08fdb05f5d39c005fb6cc986a40963"
+content-hash = "097f1ef30fb40712f5a8d2ad455e6d71e36ea9090b977c16f341a403e4b6e9a9"

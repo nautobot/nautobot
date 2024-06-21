@@ -733,6 +733,9 @@ def common_test_data(cls):
             parent_module_bay=cls.devices[2].module_bays.first(),
         ),
     )
+    cls.modules[0].tags.set(Tag.objects.get_for_model(Module))
+    cls.modules[1].tags.set(Tag.objects.get_for_model(Module)[:3])
+
     Module.objects.create(
         module_type=module_types[0],
         status=module_statuses[1],

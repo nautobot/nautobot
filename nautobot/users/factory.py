@@ -46,3 +46,5 @@ class SavedViewFactory(BaseModelFactory):
     ct = random_instance(lambda: ContentType.objects.filter(FeatureQuery("saved_views").get_query()), allow_null=False)
     view = factory.LazyAttribute(lambda o: f"{o.ct.app_label}:{o.ct.model}_list")
     config = factory.Faker("pydict")
+    is_shared = NautobotBoolIterator()
+    # is_global_default currently just defaults to False for all randomly generated saved views

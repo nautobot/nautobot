@@ -23,7 +23,7 @@ from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
-from nautobot.users.forms import SavedViewForm
+from nautobot.users.forms import SavedViewModalForm
 from nautobot.users.models import SavedView
 
 # S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
@@ -747,6 +747,7 @@ def saved_view_modal(
         "sort",
         "saved_view",
         "table_changes_pending",
+        "clear_view",
     ]
 
     table_name = lookup.get_table_for_model(model).__name__
@@ -756,7 +757,9 @@ def saved_view_modal(
             if current_saved_view_pk:
                 current_saved_view_pk = current_saved_view_pk[0]
                 try:
-                    current_saved_view = SavedView.objects.restrict(request.user, "view").get(pk=current_saved_view_pk)
+                    # We are not using .restrict(request.user, "view") here
+                    # User should be able to see any saved view that he has the list view access to.
+                    current_saved_view = SavedView.objects.get(pk=current_saved_view_pk)
                 except ObjectDoesNotExist:
                     messages.error(request, f"Saved view {current_saved_view_pk} not found")
 
@@ -768,6 +771,8 @@ def saved_view_modal(
             per_page = filters_applied.pop(param, None)
         elif param == "sort":
             sort_order = filters_applied.pop(param, [])
+        elif param == "clear_view":
+            filters_applied.pop(param, False)
 
     if filters_applied:
         param_dict["filter_params"] = filters_applied
@@ -814,16 +819,11 @@ def saved_view_modal(
 
     param_dict = json.dumps(param_dict, indent=4, sort_keys=True, ensure_ascii=False)
     return {
-        "form": SavedViewForm(),
+        "form": SavedViewModalForm(),
         "params": params,
         "param_dict": param_dict,
         "view": view,
     }
-
-
-@register.inclusion_tag("utilities/templatetags/clear_view_modal.html")
-def clear_view_modal(saved_view):
-    return {"saved_view": saved_view}
 
 
 @register.inclusion_tag("utilities/templatetags/static_group_assignment_modal.html")
@@ -992,12 +992,15 @@ def _build_hyperlink(value, field="", target="", rel=""):
     attributes = {}
     display = getattr(value, field) if hasattr(value, field) else str(value)
     if hasattr(value, "get_absolute_url"):
-        attributes["href"] = value.get_absolute_url()
-        if hasattr(value, "description") and value.description:
-            attributes["title"] = value.description
-        if target:
-            attributes["target"] = target
-        if rel:
-            attributes["rel"] = rel
-        return format_html("<a {}>{}</a>", format_html_join(" ", '{}="{}"', attributes.items()), display)
+        try:
+            attributes["href"] = value.get_absolute_url()
+            if hasattr(value, "description") and value.description:
+                attributes["title"] = value.description
+            if target:
+                attributes["target"] = target
+            if rel:
+                attributes["rel"] = rel
+            return format_html("<a {}>{}</a>", format_html_join(" ", '{}="{}"', attributes.items()), display)
+        except AttributeError:
+            pass
     return format_html("{}", display)
