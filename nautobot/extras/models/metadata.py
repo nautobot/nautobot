@@ -1,6 +1,5 @@
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.postgres.indexes import GinIndex
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -184,10 +183,6 @@ class ObjectMetadata(BaseModel, ChangeLoggedModel):
             models.Index(
                 name="assigned_object",
                 fields=["assigned_object_type", "assigned_object_id"],
-            ),
-            GinIndex(
-                name="assigned_object_scoped_fields",
-                fields=["assigned_object_type", "assigned_object_id", "scoped_fields"],
             ),
             models.Index(
                 name="assigned_object_contact",
