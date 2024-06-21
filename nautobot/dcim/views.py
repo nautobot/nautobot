@@ -2308,7 +2308,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     def consoleports(self, request, *args, **kwargs):
         instance = self.get_object()
         consoleports = (
-            instance.all_console_ports.restrict(request.user, "view")
+            instance.console_ports.restrict(request.user, "view")
             .select_related("cable")
             .prefetch_related("_path__destination")
         )
@@ -2327,7 +2327,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     def consoleserverports(self, request, *args, **kwargs):
         instance = self.get_object()
         consoleserverports = (
-            instance.all_console_server_ports.restrict(request.user, "view")
+            instance.console_server_ports.restrict(request.user, "view")
             .select_related("cable")
             .prefetch_related("_path__destination")
         )
@@ -2350,7 +2350,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     def powerports(self, request, *args, **kwargs):
         instance = self.get_object()
         powerports = (
-            instance.all_power_ports.restrict(request.user, "view")
+            instance.power_ports.restrict(request.user, "view")
             .select_related("cable")
             .prefetch_related("_path__destination")
         )
@@ -2371,7 +2371,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     def poweroutlets(self, request, *args, **kwargs):
         instance = self.get_object()
         poweroutlets = (
-            instance.all_power_outlets.restrict(request.user, "view")
+            instance.power_outlets.restrict(request.user, "view")
             .select_related("cable", "power_port")
             .prefetch_related("_path__destination")
         )
@@ -2392,7 +2392,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     def interfaces(self, request, *args, **kwargs):
         instance = self.get_object()
         interfaces = (
-            instance.all_interfaces.restrict(request.user, "view")
+            instance.interfaces.restrict(request.user, "view")
             .prefetch_related(
                 Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)),
                 Prefetch("member_interfaces", queryset=Interface.objects.restrict(request.user)),
@@ -2417,7 +2417,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     @action(detail=True, url_path="front-ports", component_model=FrontPort)
     def frontports(self, request, *args, **kwargs):
         instance = self.get_object()
-        frontports = instance.all_front_ports.restrict(request.user, "view").select_related("cable", "rear_port")
+        frontports = instance.front_ports.restrict(request.user, "view").select_related("cable", "rear_port")
         frontport_table = tables.DeviceModuleFrontPortTable(
             data=frontports, user=request.user, orderable=False, parent_module=instance
         )
@@ -2434,7 +2434,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     @action(detail=True, url_path="rear-ports", component_model=RearPort)
     def rearports(self, request, *args, **kwargs):
         instance = self.get_object()
-        rearports = instance.all_rear_ports.restrict(request.user, "view").select_related("cable")
+        rearports = instance.rear_ports.restrict(request.user, "view").select_related("cable")
         rearport_table = tables.DeviceModuleRearPortTable(
             data=rearports, user=request.user, orderable=False, parent_module=instance
         )
@@ -2451,7 +2451,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     @action(detail=True, url_path="module-bays", component_model=ModuleBay)
     def modulebays(self, request, *args, **kwargs):
         instance = self.get_object()
-        modulebays = instance.all_module_bays.restrict(request.user, "view").prefetch_related(
+        modulebays = instance.module_bays.restrict(request.user, "view").prefetch_related(
             "installed_module__status", "installed_module"
         )
         modulebay_table = tables.ModuleModuleBayTable(data=modulebays, user=request.user, orderable=False)
