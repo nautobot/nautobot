@@ -2722,7 +2722,7 @@ class InventoryItemTestCase(DeviceComponentTestMixin, FilterTestCases.FilterTest
             Device.objects.get(name="Device 3"),
         )
 
-        software_versions = SoftwareVersion.objects.filter(software_image_files__isnull=False)[:3]
+        software_versions = SoftwareVersion.objects.filter(software_image_files__isnull=False).distinct()[:3]
 
         inventory_items = (
             InventoryItem.objects.create(

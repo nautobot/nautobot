@@ -338,8 +338,10 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
     @extend_schema_field({"type": "string"})
     def _subtree(self, queryset, name, value):
         """FilterSet method for getting Locations that are or are descended from a given Location(s)."""
-        params = self.generate_query__subtree(value)
-        return queryset.filter(params)
+        if value:
+            params = self.generate_query__subtree(value)
+            return queryset.with_tree_fields().filter(params)
+        return queryset
 
 
 class RackGroupFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet, NameSearchFilterSet):
