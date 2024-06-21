@@ -797,31 +797,42 @@ class DynamicGroupTestMixin:
 class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     model = DynamicGroup
     choices_fields = ["content_type", "group_type"]
-    create_data = [
-        {
-            "name": "API DynamicGroup 4",
-            "content_type": "dcim.device",
-            "filter": {"location": ["Location 1"]},
-            "tags": [tag.pk for tag in Tag.objects.get_for_model(DynamicGroup)],
-            "tenant": Tenant.objects.first().pk,
-        },
-        {
-            "name": "API DynamicGroup 5",
-            "content_type": "dcim.device",
-            "group_type": "dynamic-filter",
-            "filter": {"has_interfaces": False},
-        },
-        {
-            "name": "API DynamicGroup 6",
-            "content_type": "dcim.device",
-            "filter": {"location": ["Location 2"]},
-        },
-        {
-            "name": "API DynamicGroup 7",
-            "content_type": "dcim.device",
-            "group_type": "static",
-        },
-    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        cls.create_data = [
+            {
+                "name": "API DynamicGroup 4",
+                "content_type": "dcim.device",
+                "filter": {"location": ["Location 1"]},
+                "tags": [tag.pk for tag in Tag.objects.get_for_model(DynamicGroup)],
+                "tenant": Tenant.objects.first().pk,
+            },
+            {
+                "name": "API DynamicGroup 5",
+                "content_type": "dcim.device",
+                "group_type": "dynamic-filter",
+                "filter": {"has_interfaces": False},
+            },
+            {
+                "name": "API DynamicGroup 6",
+                "content_type": "dcim.device",
+                "filter": {"location": ["Location 2"]},
+            },
+            {
+                "name": "API DynamicGroup 7",
+                "content_type": "dcim.device",
+                "group_type": "static",
+            },
+        ]
+        cls.update_data = {
+            "name": "A new name",
+            "tags": [],
+            "tenant": Tenant.objects.last().pk,
+            "description": "a new description",
+        }
 
     def test_changing_content_type_not_allowed(self):
         self.add_permissions("extras.change_dynamicgroup")

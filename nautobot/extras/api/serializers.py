@@ -330,7 +330,7 @@ class DynamicGroupMembershipSerializer(ValidatedModelSerializer):
         fields = "__all__"
 
 
-class DynamicGroupSerializer(NautobotModelSerializer):
+class DynamicGroupSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
     )
@@ -340,7 +340,7 @@ class DynamicGroupSerializer(NautobotModelSerializer):
         fields = "__all__"
         extra_kwargs = {
             "children": {"source": "dynamic_group_memberships", "read_only": True},
-            "filter": {"read_only": False},
+            "filter": {"read_only": False, "required": False},
         }
 
 

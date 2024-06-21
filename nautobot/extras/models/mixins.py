@@ -97,6 +97,7 @@ class DynamicGroupsModelMixin(DynamicGroupMixin, models.Model):
     """
     Add this to models to make them fully support Dynamic Groups.
     """
+
     class Meta:
         abstract = True
 

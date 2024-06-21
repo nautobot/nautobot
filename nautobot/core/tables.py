@@ -89,7 +89,7 @@ class BaseTable(django_tables2.Table):
 
         # Don't show hierarchy if we're sorted
         if order_by is not None and hide_hierarchy_ui is None:
-            hide_hierachy_ui = True
+            hide_hierarchy_ui = True
 
         self.hide_hierarchy_ui = hide_hierarchy_ui
 
