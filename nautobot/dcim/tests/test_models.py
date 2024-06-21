@@ -1670,6 +1670,38 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         device.primary_ip6 = interface.ip_addresses.all().filter(ip_version=6).first()
         device.validated_save()
 
+    def test_primary_ip_validation_logic_modules(self):
+        device = Device(
+            name="Test IP Device",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+        )
+        device.validated_save()
+        manufacturer = Manufacturer.objects.first()
+        module_type = ModuleType.objects.create(manufacturer=manufacturer, model="module model tests")
+
+        status = Status.objects.get_for_model(Module).first()
+        module_bay = ModuleBay.objects.create(
+            parent_device=device,
+            name="1111",
+            position="1111",
+        )
+
+        module = Module.objects.create(
+            module_type=module_type,
+            parent_module_bay=module_bay,
+            status=status,
+        )
+
+        interface = Interface.objects.create(name="Int1", module=module, status=self.device_status, role=self.intf_role)
+        ips = list(IPAddress.objects.filter(ip_version=4)[:5]) + list(IPAddress.objects.filter(ip_version=6)[:5])
+        interface.add_ip_addresses(ips)
+        device.primary_ip4 = interface.ip_addresses.all().filter(ip_version=4).first()
+        device.primary_ip6 = interface.ip_addresses.all().filter(ip_version=6).first()
+        device.validated_save()
+
     def test_software_version_device_type_validation(self):
         """
         Assert that device's software version contains a software image file that matches the device's device type or a default image.

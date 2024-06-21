@@ -743,9 +743,8 @@ class Device(PrimaryModel, ConfigContextModel):
             except DeviceType.DoesNotExist:
                 pass
 
-        # TODO: allow primary IP from interfaces in child modules
         # Validate primary IP addresses
-        vc_interfaces = self.vc_interfaces.all()
+        interfaces = self.all_interfaces.all()
         for field in ["primary_ip4", "primary_ip6"]:
             ip = getattr(self, field)
             if ip is not None:
@@ -755,12 +754,12 @@ class Device(PrimaryModel, ConfigContextModel):
                 else:
                     if ip.ip_version != 6:
                         raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
-                if ipam_models.IPAddressToInterface.objects.filter(ip_address=ip, interface__in=vc_interfaces).exists():
+                if ipam_models.IPAddressToInterface.objects.filter(ip_address=ip, interface__in=interfaces).exists():
                     pass
                 elif (
                     ip.nat_inside is not None
                     and ipam_models.IPAddressToInterface.objects.filter(
-                        ip_address=ip.nat_inside, interface__in=vc_interfaces
+                        ip_address=ip.nat_inside, interface__in=interfaces
                     ).exists()
                 ):
                     pass
@@ -917,6 +916,7 @@ class Device(PrimaryModel, ConfigContextModel):
             filter_q |= Q(device__virtual_chassis=self.virtual_chassis, mgmt_only=False)
         return Interface.objects.filter(filter_q)
 
+    # TODO - I am not sure if this should change with the introduction of modules
     @property
     def common_vc_interfaces(self):
         """
@@ -962,7 +962,8 @@ class Device(PrimaryModel, ConfigContextModel):
         Return all child Modules installed in ModuleBays within this Device.
         """
         # Supports Device->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module
-        # TODO: Document this
+        # This query looks for modules that are installed in a module_bay and attached to this device
+        # We artificially limit the recursion to 4 levels or we would be stuck in an infinite loop.
         recursion_depth = 4
         qs = Module.objects.all()
         query = models.Q()

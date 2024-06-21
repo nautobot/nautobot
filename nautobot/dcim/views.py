@@ -2061,7 +2061,7 @@ class DeviceLLDPNeighborsView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         interfaces = (
-            instance.vc_interfaces.restrict(request.user, "view")
+            instance.all_interfaces.restrict(request.user, "view")
             .prefetch_related("_path__destination")
             .exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
         )
