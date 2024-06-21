@@ -234,7 +234,6 @@ class GitTest(TransactionTestCase):
                     (job_result.result, list(job_result.job_log_entries.values_list("message", "log_object"))),
                 )
                 self.repo.refresh_from_db()
-                # self.assertEqual(self.repo.current_head, self.COMMIT_HEXSHA, job_result.result)
 
                 log_entries = JobLogEntry.objects.filter(job_result=job_result)
                 failure_logs = log_entries.filter(log_level=LogLevelChoices.LOG_ERROR)

@@ -15,7 +15,32 @@ SOURCE_DIR = os.path.join(os.path.dirname(__file__), "git_data")
 
 
 def create_and_populate_git_repository(target_path):
-    """Main entry point to this script."""
+    """
+    Create a Git repository in `target_path` and populate it with commits and tags based on contents of `SOURCE_DIR`.
+
+    An initial commit will always be created, containing no tracked files, and will be given the tag `empty-repo`.
+    After that, each subdir under `SOURCE_DIR` will be used as the basis for a single commit to the repo, so given:
+
+        nautobot/extras/tests/git_data
+        ├── 01-valid-files
+        │   ├── config_context_schemas
+        │   │   └── schema-1.yaml
+        │   └── config_contexts
+        │       └── context.yaml
+        └── 02-invalid-files
+            └── config_context_schemas
+             ├── badschema1.json
+             └── badschema2.json
+
+    ...after the initial empty commit, the next commit would contain files `config_context_schemas/schema-1.yaml` and
+    `config_contexts/context.yaml`, and would be given the tag `valid-files`. The next commit would remove those files
+    but add the files `config_context_schemas/badschema1.json` and `config_context_schemas/badschema2.json`, and would
+    be tagged as `invalid-files`.
+
+    Note that each commit is fully defined by the files in the appropriate subdirectory; if you want a file to exist
+    across multiple separate commits, it must exist in multiple subdirectories. Use of symlinks is encouraged in such
+    a scenario.
+    """
     os.makedirs(target_path, exist_ok=True)
     repo = Repo.init(target_path, initial_branch="main")
     repo.config_writer().set_value("user", "name", "Nautobot Automation").release()
