@@ -66,6 +66,7 @@ from nautobot.extras.models import (
     MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -2548,6 +2549,54 @@ class MetadataChoiceTest(APIViewTestCases.APIViewTestCase):
                 "weight": 250,
             },
         ]
+
+
+class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
+    model = ObjectMetadata
+
+    @classmethod
+    def setUpTestData(cls):
+        mdts = [
+            MetadataType.objects.create(
+                name="Location Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT
+            ),
+            MetadataType.objects.create(
+                name="Device Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_MULTISELECT
+            ),
+        ]
+        cls.create_data = [
+            {
+                "metadata_type": mdts[0],
+                "contact": Contact.objects.first().pk,
+                "team": None,
+                "scoped_fields": ["location_type", "status"],
+                "value": {},
+                "assigned_object_type": ContentType.objects.get_for_model(Location).pk,
+                "assigned_object_id": Location.objects.first().pk,
+            },
+            {
+                "metadata_type": mdts[0],
+                "contact": Contact.objects.last().pk,
+                "team": None,
+                "scoped_fields": ["location_type", "status"],
+                "value": {},
+                "assigned_object_type": ContentType.objects.get_for_model(Location).pk,
+                "assigned_object_id": Location.objects.first().pk,
+            },
+            {
+                "metadata_type": mdts[1],
+                "contact": None,
+                "team": Team.objects.first().pk,
+                "scoped_fields": ["device_type", "status"],
+                "value": {},
+                "assigned_object_type": ContentType.objects.get_for_model(Device).pk,
+                "assigned_object_id": Device.objects.first().pk,
+            },
+        ]
+        cls.update_data = {
+            "team": Team.objects.last().pk,
+            "value": {"new_role": "Active"},
+        }
 
 
 class NoteTest(APIViewTestCases.APIViewTestCase):

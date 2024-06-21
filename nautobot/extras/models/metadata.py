@@ -1,7 +1,8 @@
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.postgres.indexes import GinIndex
 from django.core.cache import cache
-from django.core.validators import ValidationError
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -143,23 +144,27 @@ class MetadataChoice(ChangeLoggedModel, BaseModel):
 class ObjectMetadata(BaseModel, ChangeLoggedModel):
     metadata_type = models.ForeignKey(
         to=MetadataType,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="object_metadatas",
     )
     contact = models.ForeignKey(
         to=Contact,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name="object_metadatas",
+        blank=True,
         null=True,
     )
     team = models.ForeignKey(
         to=Team,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name="object_metadatas",
+        blank=True,
         null=True,
     )
     scoped_fields = JSONArrayField(
-        base_field=models.CharField(max_length=50),
+        base_field=models.CharField(
+            max_length=CHARFIELD_MAX_LENGTH,
+        ),
         help_text="List of scoped fields, only direct fields on the model",
     )
     value = models.JSONField(
@@ -180,7 +185,7 @@ class ObjectMetadata(BaseModel, ChangeLoggedModel):
                 name="assigned_object",
                 fields=["assigned_object_type", "assigned_object_id"],
             ),
-            models.Index(
+            GinIndex(
                 name="assigned_object_scoped_fields",
                 fields=["assigned_object_type", "assigned_object_id", "scoped_fields"],
             ),
@@ -195,10 +200,19 @@ class ObjectMetadata(BaseModel, ChangeLoggedModel):
         ]
 
     def __str__(self):
-        return f"{self.metadata_type} - {self.assigned_object}"
+        if self.contact:
+            return f"{self.contact}: {self.metadata_type} - {self.assigned_object} - {self.value}"
+        else:
+            return f"{self.team}: {self.metadata_type} - {self.assigned_object} - {self.value}"
 
     def clean(self):
         super().clean()
+        if self.contact is None and self.team is None:
+            raise ValidationError("Either a contact or a team must be specified")
+        if self.contact is not None and self.team is not None:
+            raise ValidationError("A contact and a team cannot be both specified at once")
+        if self.assigned_object is None:
+            raise ValidationError("The associated object must be valid")
 
         if self.present_in_database:
             # Check immutable fields

@@ -982,6 +982,8 @@ class MetadataChoiceFilterSet(BaseFilterSet):
 class ObjectMetadataFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
+            "value": "icontains",
+            "metadata_type__name": "icontains",
             "contact__name": "icontains",
             "team__name": "icontains",
         },
