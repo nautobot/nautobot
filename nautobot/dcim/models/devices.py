@@ -1828,4 +1828,4 @@ class Module(PrimaryModel):
         """
         Return the set of child Modules installed in ModuleBays within this Module.
         """
-        return Module.objects.filter(parent_module_bay__parent_module=self.pk)
+        return Module.objects.filter(parent_module_bay__parent_module=self)
