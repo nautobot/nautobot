@@ -2553,6 +2553,7 @@ class MetadataChoiceTest(APIViewTestCases.APIViewTestCase):
 
 class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
     model = ObjectMetadata
+    choices_fields = ["assigned_object_type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -2564,28 +2565,46 @@ class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
                 name="Device Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_MULTISELECT
             ),
         ]
+        ObjectMetadata.objects.create(
+            metadata_type=mdts[0],
+            contact=Contact.objects.first(),
+            scoped_fields=["parent", "status"],
+            assigned_object_type=ContentType.objects.get_for_model(IPAddress),
+            assigned_object_id=IPAddress.objects.first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=mdts[0],
+            contact=Contact.objects.first(),
+            scoped_fields=["namespace", "status"],
+            assigned_object_type=ContentType.objects.get_for_model(Prefix),
+            assigned_object_id=Prefix.objects.first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=mdts[1],
+            contact=Contact.objects.first(),
+            scoped_fields=["namespace", "status"],
+            assigned_object_type=ContentType.objects.get_for_model(Prefix),
+            assigned_object_id=Prefix.objects.last().pk,
+        )
         cls.create_data = [
             {
-                "metadata_type": mdts[0],
+                "metadata_type": mdts[0].pk,
                 "contact": Contact.objects.first().pk,
-                "team": None,
                 "scoped_fields": ["location_type", "status"],
                 "value": {},
                 "assigned_object_type": ContentType.objects.get_for_model(Location).pk,
                 "assigned_object_id": Location.objects.first().pk,
             },
             {
-                "metadata_type": mdts[0],
+                "metadata_type": mdts[0].pk,
                 "contact": Contact.objects.last().pk,
-                "team": None,
                 "scoped_fields": ["location_type", "status"],
                 "value": {},
                 "assigned_object_type": ContentType.objects.get_for_model(Location).pk,
                 "assigned_object_id": Location.objects.first().pk,
             },
             {
-                "metadata_type": mdts[1],
-                "contact": None,
+                "metadata_type": mdts[1].pk,
                 "team": Team.objects.first().pk,
                 "scoped_fields": ["device_type", "status"],
                 "value": {},

@@ -140,7 +140,12 @@ class MetadataChoice(ChangeLoggedModel, BaseModel):
         super().delete(*args, **kwargs)
 
 
-class ObjectMetadata(BaseModel, ChangeLoggedModel):
+@extras_features(
+    "custom_validators",
+    "graphql",
+    "webhooks",
+)
+class ObjectMetadata(ChangeLoggedModel, BaseModel):
     metadata_type = models.ForeignKey(
         to=MetadataType,
         on_delete=models.PROTECT,
@@ -206,8 +211,6 @@ class ObjectMetadata(BaseModel, ChangeLoggedModel):
             raise ValidationError("Either a contact or a team must be specified")
         if self.contact is not None and self.team is not None:
             raise ValidationError("A contact and a team cannot be both specified at once")
-        if self.assigned_object is None:
-            raise ValidationError("The associated object must be valid")
 
         if self.present_in_database:
             # Check immutable fields

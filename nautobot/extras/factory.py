@@ -35,6 +35,7 @@ from nautobot.extras.models import (
     MetadataChoice,
     MetadataType,
     ObjectChange,
+    ObjectMetadata,
     Role,
     StaticGroup,
     StaticGroupAssociation,
@@ -236,6 +237,35 @@ class MetadataTypeFactory(PrimaryModelFactory):
                         lambda: ContentType.objects.filter(FeatureQuery("metadata").get_query()), minimum=1
                     )
                 )
+
+
+class ObjectMetadataFactory(BaseModelFactory):
+    """ObjectMetatdata model factory"""
+
+    class Meta:
+        model = ObjectMetadata
+
+    class Params:
+        has_contact = NautobotBoolIterator()
+
+    metadata_type = random_instance(
+        MetadataType.objects.all(),
+        allow_null=False,
+    )
+    contact = factory.Maybe("has_contact", random_instance(Contact.objects.all(), allow_null=False), None)
+    team = factory.Maybe("has_contact", None, random_instance(Team.objects.all(), allow_null=False))
+    scoped_fields = factory.Faker("pylist", allowed_types=[str])
+    value = factory.Faker("pydict", allowed_types=[bool, int, str])
+    assigned_object_type = random_instance(
+        ContentType.objects.filter(FeatureQuery("metadata").get_query()), allow_null=False
+    )
+
+    @factory.lazy_attribute
+    def assigned_object_id(self):
+        queryset = self.assigned_object_type.model_class().objects.all()
+        if queryset.exists():
+            return factory.random.randgen.choice(queryset).pk
+        return faker.Faker().uuid4()
 
 
 class ObjectChangeFactory(BaseModelFactory):
