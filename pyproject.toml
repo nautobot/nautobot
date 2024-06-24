@@ -212,7 +212,7 @@ coverage = "~7.2.7"
 # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
 django-slowtests = "^1.1.1"
 # Integration Tests
-requests = "~2.32.1"
+requests = "~2.32.2"
 # Selenium web drivers for live integration testing
 # Selenium 4.10 is available but splinter is not yet compatible with it
 # https://github.com/cobrateam/splinter/issues/1173
