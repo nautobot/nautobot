@@ -377,6 +377,8 @@ class PrefixFactory(PrimaryModelFactory):
 
         # Default to maximum of 4 children unless overridden in kwargs
         max_count = int(kwargs.pop("max_count", 4))
+        if max_count == 0:
+            return
         child_count = faker.Faker().pyint(min_value=1, max_value=min(max_count, self.prefix.size))
 
         # Propagate parent tenant to children if parent tenant is set
