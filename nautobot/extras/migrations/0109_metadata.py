@@ -125,7 +125,6 @@ class Migration(migrations.Migration):
                         fields=["assigned_object_type", "assigned_object_id", "team"], name="assigned_object_team"
                     ),
                 ],
-                "unique_together": {("metadata_type", "assigned_object_type", "assigned_object_id")},
             },
         ),
         migrations.CreateModel(
