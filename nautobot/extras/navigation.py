@@ -460,6 +460,28 @@ menu_items = (
                     ),
                 ),
             ),
+            NavMenuGroup(
+                name="Metadata",
+                weight=700,
+                items=(
+                    NavMenuItem(
+                        link="extras:metadatatype_list",
+                        name="Metadata Types",
+                        weight=100,
+                        permissions=[
+                            "extras.view_metadatatype",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:metadatatype_add",
+                                permissions=[
+                                    "extras.add_metadatatype",
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
         ),
     ),
     NavMenuTab(
