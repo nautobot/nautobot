@@ -1,1 +1,0 @@
-Fixed an issue with Job code not being fully reloaded after syncing a Git repository.

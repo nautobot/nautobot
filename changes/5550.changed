@@ -1,1 +1,0 @@
-Changed the behavior on removal of a previously-installed Job class to additionally auto-disable any JobButtons, JobHooks, and ScheduledJobs referencing this class.
