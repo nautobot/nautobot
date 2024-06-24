@@ -314,6 +314,9 @@ class CablePath(BaseModel):
     path = JSONPathField()
     is_active = models.BooleanField(default=False)
     is_split = models.BooleanField(default=False)
+    # `CablePathSerializer` currently does not inherit from `BaseModelSerializer`
+    # thus it does not have `object_type` field needed for the `assigned_object` field using `PolymorphicProxySerializer`.
+    is_metadata_associable_model = False
 
     natural_key_field_names = ["pk"]
 
