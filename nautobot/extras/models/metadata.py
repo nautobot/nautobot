@@ -182,7 +182,6 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
 
     class Meta:
         ordering = ["metadata_type"]
-        unique_together = ["metadata_type", "assigned_object_type", "assigned_object_id"]
 
         indexes = [
             models.Index(
@@ -217,3 +216,23 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
             database_object = self.__class__.objects.get(pk=self.pk)
             if self.metadata_type != database_object.metadata_type:
                 raise ValidationError({"metadata_type": "Cannot be changed once created"})
+
+        # Check if there is any intersections of scoped_fields of ObjectMetadata instances in the database.
+        object_metadata_scoped_fields = ObjectMetadata.objects.filter(
+            metadata_type=self.metadata_type,
+            assigned_object_type=self.assigned_object_type,
+            assigned_object_id=self.assigned_object_id,
+        ).values_list("scoped_fields", flat=True)
+        duplicate_scoped_fields_list = set([])
+
+        for scoped_fields in object_metadata_scoped_fields:
+            for field in scoped_fields:
+                if field in self.scoped_fields:
+                    duplicate_scoped_fields_list.add(field)
+
+        if duplicate_scoped_fields_list:
+            raise ValidationError(
+                {
+                    "scoped_fields": f"There are other Object Metadata instances of metadata type {self.metadata_type} scoping the same fields {duplicate_scoped_fields_list} for {self.assigned_object}"
+                }
+            )
