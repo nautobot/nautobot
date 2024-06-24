@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "1.6.23"
+version = "1.6.24"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -212,7 +212,7 @@ coverage = "~7.2.7"
 # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
 django-slowtests = "^1.1.1"
 # Integration Tests
-requests = "~2.32.1"
+requests = "~2.32.2"
 # Selenium web drivers for live integration testing
 # Selenium 4.10 is available but splinter is not yet compatible with it
 # https://github.com/cobrateam/splinter/issues/1173
