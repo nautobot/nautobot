@@ -89,6 +89,8 @@ When editing a set-based Dynamic Group, under the **Filter Options** section, yo
 
 ### Static-Assignment-Based Dynamic Groups
 
++++ 2.3.0
+
 Unlike the other types of Dynamic Groups, the members of a static-assignment-based Dynamic Group are not automatically derived by Nautobot, but instead are each explicitly assigned to such a group. Each association of a given object into a given static-assignment-based Dynamic Group is recorded by a [Static Group Association](staticgroupassociation.md) database record. Individual objects can be associated to these Dynamic Groups in the object's create/edit form, but in most cases it's easier and quicker to bulk-update a set of objects from their appropriate list/table view via the "Update Group Assignment" button.
 
 ## Example Workflow
@@ -618,7 +620,7 @@ DELETE /api/extras/dynamic-group-memberships/{uuid}/
 ## Dynamic Groups and the Python API (Django ORM)
 
 !!! tip
-    By default, all models inheriting from Nautobot's `OrganizationalModel` or `PrimaryModel` classes are assumed to be a viable object type for Dynamic Groups to be defined for. Individual models that do not wish to be assignable to Dynamic Groups can declare the flag `is_dynamic_group_associable_model = False` on their model definition. Conversely, models that inherit directly from Nautobot's `BaseModel` default to *not* supporting Dynamic Groups, but can include the `nautobot.apps.models.DynamicGroupMixin` class as a part of their class definition in order to enable Dynamic Group support.
+    By default, all models inheriting from Nautobot's `OrganizationalModel` or `PrimaryModel` classes are assumed to be a viable object type for Dynamic Groups to be defined for. Individual models that do not wish to be assignable to Dynamic Groups can declare the flag `is_dynamic_group_associable_model = False` on their model definition. Conversely, models that inherit directly from Nautobot's `BaseModel` default to *not* supporting Dynamic Groups, but can include the `nautobot.apps.models.DynamicGroupsModelMixin` class as a part of their class definition in order to enable Dynamic Group support.
 
 ### Working with a Dynamic Group's Members
 

@@ -1,4 +1,3 @@
-
 from django.conf import settings
 from django.test import tag
 from drf_spectacular.settings import spectacular_settings
