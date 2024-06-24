@@ -83,6 +83,7 @@ from .models import (
     JobHook,
     JobLogEntry,
     JobResult,
+    MetadataType,
     Note,
     ObjectChange,
     Relationship,
@@ -1921,6 +1922,45 @@ class ObjectChangeLogView(generic.GenericView):
                 "active_tab": "changelog",
             },
         )
+
+
+#
+# Metadata
+#
+
+
+class MetadataTypeUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.MetadataTypeBulkEditForm
+    filterset_class = filters.MetadataTypeFilterSet
+    filterset_form_class = forms.MetadataTypeFilterForm
+    form_class = forms.MetadataTypeForm
+    queryset = MetadataType.objects.all()
+    serializer_class = serializers.MetadataTypeSerializer
+    table_class = tables.MetadataTypeTable
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        if self.action in ("create", "update"):
+            if request.POST:
+                context["choices"] = forms.MetadataChoiceFormSet(data=request.POST, instance=instance)
+            else:
+                context["choices"] = forms.MetadataChoiceFormSet(instance=instance)
+
+        return context
+
+    def form_save(self, form, **kwargs):
+        obj = super().form_save(form, **kwargs)
+
+        # Process the formset for choices
+        ctx = self.get_extra_context(self.request, obj)
+        choices = ctx["choices"]
+        if choices.is_valid():
+            choices.save()
+        else:
+            raise ValidationError(choices.errors)
+
+        return obj
 
 
 #

@@ -1,0 +1,89 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+{% load static %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Metadata Type</strong></div>
+        <div class="panel-body">
+            {% render_field form.name %}
+            {% render_field form.description %}
+            {% render_field form.data_type %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Assignment</strong></div>
+        <div class="panel-body">
+            {% render_field form.content_types %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Choices (select and multi-select data types)</strong></div>
+        <div class="panel-body">
+            {{ choices.non_field_errors }}
+            <table class="table" id="metadata-choices">
+                {{ choices.management_form }}
+                {% for choice in choices.forms %}
+                    {% if forloop.first %}
+                        <thead>
+                        <tr>
+                            {% for field in choice.visible_fields %}
+                                <th>{{ field.label|capfirst }}</th>
+                            {% endfor %}
+                        </tr>
+                        </thead>
+                    {% endif %}
+                    <tr class="formset_row-{{ choices.prefix }}">
+                        {% for field in choice.visible_fields %}
+                            <td>
+                                {# Include the hidden fields in the form #}
+                                {% if forloop.first %}
+                                    {% for hidden in choice.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+                                {% endif %}
+                                {{ field }}
+                                {% if field.errors %}
+                                    <ul>
+                                        {% for error in field.errors %}
+                                            {# Embed an HTML comment indicating the error for extraction by tests #}
+                                            <!-- FORM-ERROR {{ field.name }}: {{ error }} -->
+                                            <li class="text-danger">{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                    {% if choice.errors %}
+                        <tr>
+                            <td colspan="3">
+                                <div class="text-danger">
+                                    {% for error in choice.errors.values %}{{ error }}{% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+               {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock form %}
+
+{% block javascript %}
+{{ block.super }}
+<script src="{% static 'jquery/jquery.formset.js' %}"></script>
+<script type="text/javascript">
+    $('.formset_row-{{ choices.prefix }}').formset({
+        addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Choice',
+        addCssClass: 'btn btn-primary add-row',
+        deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
+        deleteCssClass: 'btn btn-danger delete-row',
+        prefix: '{{ choices.prefix }}',
+        formCssClass: 'dynamic-formset-{{ choices.prefix }}',
+        keepFieldValues: 'input[type="number"]',
+        added: jsify_form
+    });
+</script>
+{% endblock javascript %}
