@@ -93,14 +93,6 @@ class ModularDeviceComponentTestCaseMixin:
             **self.modular_component_create_data,
         )
 
-        print(f"instance: {instance}")
-        print(f"self.model._meta.model_name: {self.model._meta.model_name}")
-        print(f"self.device_field: {self.device_field}")
-        print(f"self.module_field: {self.module_field}")
-        print(f"self.device: {self.device}")
-        print(f"self.module: {self.module}")
-        print(f"self.modular_component_create_data: {self.modular_component_create_data}")
-
         with self.assertRaises(ValidationError):
             instance.full_clean()
 
@@ -2584,8 +2576,13 @@ class ModuleBayTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, Mod
 
     @classmethod
     def setUpTestData(cls):
-        cls.device_type = cls.device = DeviceType.objects.filter(module_bay_templates__isnull=True).first()
-        cls.module_type = cls.module = ModuleType.objects.filter(module_bay_templates__isnull=True).first()
+        manufacturer = Manufacturer.objects.first()
+        cls.device_type = cls.device = DeviceType.objects.create(
+            manufacturer=manufacturer, model="Test ModuleBayTemplate DT1"
+        )
+        cls.module_type = cls.module = ModuleType.objects.create(
+            manufacturer=manufacturer, model="Test ModuleBayTemplate MT1"
+        )
 
         # Create some instances for the generic natural key tests to use
         ModuleBayTemplate.objects.create(
