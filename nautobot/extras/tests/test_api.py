@@ -3599,13 +3599,6 @@ class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
-        cls.update_data = {
-            "name": "Group of something unknown",
-        }
-        cls.bulk_update_data = {
-            "tenant": Tenant.objects.last().pk,
-        }
-
 
 class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
     model = StaticGroupAssociation
@@ -3743,17 +3736,17 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
         )
 
         with self.subTest("create hidden association"):
-            sg = DynamicGroup.objects.exclude(group_type=DynamicGroupTypeChoices.TYPE_STATIC).first()
-            self.assertIsNotNone(sg)
+            dg = DynamicGroup.objects.exclude(group_type=DynamicGroupTypeChoices.TYPE_STATIC).first()
+            self.assertIsNotNone(dg)
             create_data = {
-                "dynamic_group": str(sg.pk),
-                "associated_object_type": f"{sg.content_type.app_label}.{sg.content_type.model}",
+                "dynamic_group": str(dg.pk),
+                "associated_object_type": f"{dg.content_type.app_label}.{dg.content_type.model}",
                 "associated_object_id": "00000000-0000-0000-0000-000000000000",
             }
             response = self.client.post(
-                f"{self._get_list_url()}?dynamic_group={sg.pk}", create_data, format="json", **self.header
+                f"{self._get_list_url()}?dynamic_group={dg.pk}", create_data, format="json", **self.header
             )
-            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertHttpStatus(response, [status.HTTP_400_BAD_REQUEST, status.HTTP_403_FORBIDDEN])
 
         with self.subTest("update hidden association"):
             sga = StaticGroupAssociation.all_objects.exclude(

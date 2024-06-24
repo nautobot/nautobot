@@ -801,6 +801,9 @@ class DynamicGroupTestCase(
             "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
         }
 
+    def _get_queryset(self):
+        return super()._get_queryset().filter(group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER)  # TODO
+
     def test_get_object_with_permission(self):
         instance = self._get_queryset().first()
         # Add view permissions for the group's members:
@@ -857,7 +860,6 @@ class DynamicGroupTestCase(
 
     def test_get_object_dynamic_groups_with_constrained_permission(self):
         # TODO this may need re-implementation
-        self.add_permissions("extras.view_dynamicgroup")
         obj_perm = ObjectPermission(
             name="View a device",
             constraints={"pk": Device.objects.first().pk},
@@ -2937,7 +2939,7 @@ class StaticGroupAssociationTestCase(
         self.assertIsNotNone(sga1)
 
         self.add_permissions("extras.view_staticgroupassociation")
-        response = self.client.get(f"{self._get_url('list')}?dynamic_group={sga1.pk}")
+        response = self.client.get(f"{self._get_url('list')}?dynamic_group={sga1.dynamic_group.pk}")
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
 

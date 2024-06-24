@@ -16,6 +16,7 @@ from nautobot.core.tables import (
     ToggleColumn,
 )
 from nautobot.core.templatetags.helpers import render_boolean, render_markdown
+from nautobot.tenancy.tables import TenantColumn
 
 from .models import (
     ComputedField,
@@ -336,6 +337,8 @@ class DynamicGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     members = tables.Column(accessor="count", verbose_name="Group Members", orderable=False)
+    tenant = TenantColumn()
+    tags = TagColumn(url_name="extras:dynamicgroup_list")
     actions = ButtonsColumn(DynamicGroup)
 
     class Meta(BaseTable.Meta):  # pylint: disable=too-few-public-methods
@@ -346,6 +349,16 @@ class DynamicGroupTable(BaseTable):
             "description",
             "content_type",
             "group_type",
+            "members",
+            "tenant",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "description",
+            "content_type",
             "members",
             "actions",
         )

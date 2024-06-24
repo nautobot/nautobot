@@ -18,6 +18,7 @@ from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.deprecation import method_deprecated, method_deprecated_in_favor_of
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices, DynamicGroupTypeChoices
@@ -305,7 +306,9 @@ class DynamicGroup(PrimaryModel):
     def members(self, value):
         """Set the member objects (QuerySet or list of records) for this staticly defined group."""
         if self.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
-            raise ValueError(f"Group {self} is not staticly defined, setting its members directly is not permitted.")
+            raise ValidationError(
+                f"Group {self} is not staticly defined, setting its members directly is not permitted."
+            )
         return self._set_members(value)
 
     def _set_members(self, value):
@@ -338,7 +341,7 @@ class DynamicGroup(PrimaryModel):
     def add_members(self, objects_to_add):
         """Add the given list or QuerySet of objects to this staticly defined group."""
         if self.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
-            raise ValueError(f"Group {self} is not staticly defined, adding members directly is not permitted.")
+            raise ValidationError(f"Group {self} is not staticly defined, adding members directly is not permitted.")
         return self._add_members(objects_to_add)
 
     def _add_members(self, objects_to_add):
@@ -371,7 +374,7 @@ class DynamicGroup(PrimaryModel):
     def remove_members(self, objects_to_remove):
         """Remove the given list or QuerySet of objects from this staticly defined group."""
         if self.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
-            raise ValueError(f"Group {self} is not staticly defined, removing members directly is not permitted.")
+            raise ValidationError(f"Group {self} is not staticly defined, removing members directly is not permitted.")
         return self._remove_members(objects_to_remove)
 
     def _remove_members(self, objects_to_remove):
@@ -472,7 +475,7 @@ class DynamicGroup(PrimaryModel):
             form_data (dict): Dict of filter parameters, generally from a filter form's `cleaned_data`
         """
         if self.group_type != DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
-            raise ValueError(f"Group {self} is not a filter-defined group (instead, group_type {self.group_type})")
+            raise ValidationError(f"Group {self} is not a filter-defined group (instead, group_type {self.group_type})")
 
         # Get the authoritative source of filter fields we want to keep.
         filter_fields = self.get_filter_fields()
@@ -538,7 +541,7 @@ class DynamicGroup(PrimaryModel):
 
     def get_initial(self):
         """
-        Return an form-friendly version of `self.filter` for initial form data.
+        Return a form-friendly version of `self.filter` for initial form data.
 
         This is intended for use to populate the dynamically-generated filter form created by
         `generate_filter_form()`.
@@ -661,7 +664,7 @@ class DynamicGroup(PrimaryModel):
             # pass it to `generate_query` to get a correct Q object back out. When values are being
             # reconstructed from saved filters, lists of names are common e.g. (`{"location": ["ams01",
             # "ams02"]}`, the value being a list of location names (`["ams01", "ams02"]`).
-            if value and isinstance(value, list) and isinstance(value[0], str):
+            if value and isinstance(value, list) and isinstance(value[0], str) and not is_uuid(value[0]):
                 model_field = django_filters.utils.get_model_field(self._model, filter_field.field_name)
                 related_model = model_field.related_model
                 lookup_kwargs = {f"{to_field_name}__in": value}
@@ -773,7 +776,7 @@ class DynamicGroup(PrimaryModel):
         """
         if self.group_type != DynamicGroupTypeChoices.TYPE_DYNAMIC_SET:
             if self.filter or self.group_type != DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
-                raise ValueError(f"{self} is not a dynamic-set group.")
+                raise ValidationError(f"{self} is not a dynamic-set group.")
             else:
                 # For backwards compatibility
                 self.group_type = DynamicGroupTypeChoices.TYPE_DYNAMIC_SET
@@ -791,7 +794,7 @@ class DynamicGroup(PrimaryModel):
             child (DynamicGroup): child group to remove
         """
         if self.group_type != DynamicGroupTypeChoices.TYPE_DYNAMIC_SET:
-            raise ValueError(f"{self} is not a dynamic-set group.")
+            raise ValidationError(f"{self} is not a dynamic-set group.")
 
         instance = self.children.through.objects.get(parent_group=self, group=child)
         return instance.delete()

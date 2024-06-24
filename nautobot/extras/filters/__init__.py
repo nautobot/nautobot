@@ -601,7 +601,7 @@ class DynamicGroupFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
 
     class Meta:
         model = DynamicGroup
-        fields = ("id", "name", "description", "group_type")
+        fields = ("id", "name", "description", "group_type", "tags")
 
 
 class DynamicGroupMembershipFilterSet(NautobotFilterSet):

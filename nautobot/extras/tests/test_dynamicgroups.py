@@ -43,6 +43,7 @@ from nautobot.extras.models import (
 from nautobot.ipam.models import IPAddress, Prefix
 from nautobot.ipam.querysets import PrefixQuerySet
 from nautobot.tenancy.models import Tenant
+from nautobot.virtualization.models import VirtualMachine
 
 
 class DynamicGroupTestBase(TestCase):
@@ -251,7 +252,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
         # Overload the filter and validate that it is the same afterward.
         new_filter = {"has_interfaces": True}
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValidationError):
             set_group.set_filter(new_filter)
             set_group.validated_save()
         filter_group.set_filter(new_filter)
@@ -650,6 +651,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         """Test various ways in which adding a child group should fail."""
         parent = self.parent
         parent.filter = {"location": ["Location 1"]}
+        parent.group_type = DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER
         child = self.no_match_filter
 
         # parent.add_child() should fail
@@ -895,6 +897,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
         device = self.devices[0]
         prefix = Prefix.objects.first()
+        self.assertIsNotNone(prefix)
 
         relationship = Relationship(
             label="Device to Prefix",
@@ -1138,19 +1141,34 @@ class DynamicGroupFilterTest(DynamicGroupTestBase, FilterTestCases.FilterTestCas
 
     def test_content_type(self):
         params = {"content_type": ["dcim.device", "virtualization.virtualmachine"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 8)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            DynamicGroup.objects.filter(
+                content_type__in=[
+                    ContentType.objects.get_for_model(Device),
+                    ContentType.objects.get_for_model(VirtualMachine),
+                ]
+            ),
+        )
 
     def test_search(self):
         tests = {
             "Devices No Filter": 0,  # name
             "Invalid Filter": 1,  # name
             "A group with a non-matching filter": 1,  # description
-            "dcim": 8,  # content_type__app_label
-            "device": 8,  # content_type__model
         }
         for value, cnt in tests.items():
             params = {"q": value}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), cnt)
+
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset({"q": "dcim"}).qs,
+            DynamicGroup.objects.filter(content_type__app_label="dcim"),
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset({"q": "device"}).qs,
+            DynamicGroup.objects.filter(content_type__model__icontains="device"),
+        )
 
 
 class DynamicGroupMembershipFilterTest(DynamicGroupTestBase, FilterTestCases.FilterTestCase):

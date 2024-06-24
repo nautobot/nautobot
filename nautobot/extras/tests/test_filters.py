@@ -991,17 +991,17 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
         location_ct = ContentType.objects.get(app_label="dcim", model="location")
         rack_ct = ContentType.objects.get(app_label="dcim", model="rack")
 
-        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
+        cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
         rack_status = Status.objects.get_for_model(Rack).first()
         racks = (
-            Rack.objects.create(name="Rack 1", location=locations[0], status=rack_status),
-            Rack.objects.create(name="Rack 2", location=locations[1], status=rack_status),
+            Rack.objects.create(name="Rack 1", location=cls.locations[0], status=rack_status),
+            Rack.objects.create(name="Rack 2", location=cls.locations[1], status=rack_status),
         )
 
         ImageAttachment.objects.create(
             content_type=location_ct,
-            object_id=locations[0].pk,
+            object_id=cls.locations[0].pk,
             name="Image Attachment 1",
             image="http://example.com/image1.png",
             image_height=100,
@@ -1009,7 +1009,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
         )
         ImageAttachment.objects.create(
             content_type=location_ct,
-            object_id=locations[1].pk,
+            object_id=cls.locations[1].pk,
             name="Image Attachment 2",
             image="http://example.com/image2.png",
             image_height=100,
@@ -1043,7 +1043,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
     def test_content_type_id_and_object_id(self):
         params = {
             "content_type_id": ContentType.objects.get(app_label="dcim", model="location").pk,
-            "object_id": [Location.objects.first().pk],
+            "object_id": [self.locations[0].pk],
         }
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 

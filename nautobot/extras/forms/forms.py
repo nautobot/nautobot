@@ -85,6 +85,7 @@ from nautobot.extras.utils import (
     RoleModelsQuery,
     TaggableClassesQuery,
 )
+from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 
@@ -509,7 +510,7 @@ class CustomLinkFilterForm(BootstrapMixin, forms.Form):
 #
 
 
-class DynamicGroupForm(NautobotModelForm):
+class DynamicGroupForm(TenancyForm, NautobotModelForm):
     """DynamicGroup model form."""
 
     content_type = CSVContentTypeField(
@@ -525,6 +526,8 @@ class DynamicGroupForm(NautobotModelForm):
             "description",
             "content_type",
             "group_type",
+            "tenant",
+            "tags",
         ]
 
 
@@ -566,12 +569,15 @@ class DynamicGroupMembershipFormSet(BaseDynamicGroupMembershipFormSet):
     """
 
 
-class DynamicGroupFilterForm(BootstrapMixin, forms.Form):
+class DynamicGroupFilterForm(TenancyFilterForm, NautobotFilterForm):
     """DynamicGroup filter form."""
 
     model = DynamicGroup
     q = forms.CharField(required=False, label="Search")
-    content_type = MultipleContentTypeField(feature="dynamic_groups", choices_as_strings=True, label="Content Type")
+    content_type = MultipleContentTypeField(
+        feature="dynamic_groups", choices_as_strings=True, label="Content Type", required=False
+    )
+    tags = TagFilterField(model)
 
 
 class DynamicGroupBulkAssignForm(BootstrapMixin, BulkEditForm):
@@ -594,7 +600,7 @@ class DynamicGroupBulkAssignForm(BootstrapMixin, BulkEditForm):
             required=False,
         )
         self.fields["add_to_groups"] = DynamicModelMultipleChoiceField(
-            queryset=DynamicGroup.objects.all(),
+            queryset=DynamicGroup.objects.filter(group_type=DynamicGroupTypeChoices.TYPE_STATIC),
             required=False,
             query_params={
                 "group_type": "static",
@@ -603,7 +609,7 @@ class DynamicGroupBulkAssignForm(BootstrapMixin, BulkEditForm):
             label="Add to existing group(s)",
         )
         self.fields["remove_from_groups"] = DynamicModelMultipleChoiceField(
-            queryset=DynamicGroup.objects.all(),
+            queryset=DynamicGroup.objects.filter(group_type=DynamicGroupTypeChoices.TYPE_STATIC),
             required=False,
             query_params={
                 "group_type": "static",
