@@ -1,2 +1,0 @@
-Added support for specifying a tag or a commit hash as the GitRepository `branch` value.
-Added an `enabled` flag to the JobButton class; disabled JobButtons will not appear in the UI.
