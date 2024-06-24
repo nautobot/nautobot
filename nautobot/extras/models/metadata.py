@@ -180,6 +180,9 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
     assigned_object_id = models.UUIDField(db_index=True)
     assigned_object = GenericForeignKey(ct_field="assigned_object_type", fk_field="assigned_object_id")
 
+    natural_key_field_names = ["pk"]
+    documentation_static_path = "docs/user-guide/platform-functionality/metadata.html"
+
     class Meta:
         ordering = ["metadata_type"]
 

@@ -47,6 +47,7 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
     DynamicGroup,
     ExportTemplate,
     ExternalIntegration,
@@ -59,6 +60,7 @@ from nautobot.extras.models import (
     MetadataChoice,
     MetadataType,
     ObjectChange,
+    ObjectMetadata,
     Role,
     Secret,
     SecretsGroup,
@@ -67,6 +69,7 @@ from nautobot.extras.models import (
     StaticGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
 from nautobot.extras.models.statuses import StatusModel
@@ -1317,6 +1320,55 @@ class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual("Hi 2", log.message)
         self.assertEqual("a" * JOB_LOG_MAX_LOG_OBJECT_LENGTH, log.log_object)
         self.assertEqual("", log.absolute_url)
+
+
+class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
+    model = ObjectMetadata
+
+    def test_immutable_metadata_type(self):
+        instance1 = ObjectMetadata.objects.first()
+        instance2 = ObjectMetadata.objects.exclude(metadata_type=instance1.metadata_type).first()
+        self.assertIsNotNone(instance2)
+        with self.assertRaises(ValidationError):
+            instance1.metadata_type = instance2.metadata_type
+            instance1.validated_save()
+
+    def test_contact_team_mutual_exclusive(self):
+        instance1 = ObjectMetadata.objects.filter(contact__isnull=False).first()
+        instance2 = ObjectMetadata.objects.filter(team__isnull=False).first()
+        contact = Contact.objects.first()
+        team = Team.objects.first()
+        with self.assertRaises(ValidationError):
+            instance1.team = team
+            instance1.validated_save()
+
+        with self.assertRaises(ValidationError):
+            instance2.contact = contact
+            instance2.validated_save()
+
+    def test_no_scoped_fields_overlap(self):
+        """Test that overlapping between scoped_fields of ObjectMetadata with the same metadata_type and the same assigned_object is not allowed"""
+        ObjectMetadata.objects.create(
+            metadata_type=MetadataType.objects.first(),
+            contact=Contact.objects.first(),
+            scoped_fields=["host", "mask_length", "type", "role", "status"],
+            assigned_object_type=ContentType.objects.get_for_model(IPAddress),
+            assigned_object_id=IPAddress.objects.first().pk,
+        )
+        instance2 = ObjectMetadata.objects.create(
+            metadata_type=MetadataType.objects.first(),
+            contact=Contact.objects.first(),
+            scoped_fields=[],
+            assigned_object_type=ContentType.objects.get_for_model(IPAddress),
+            assigned_object_id=IPAddress.objects.first().pk,
+        )
+        with self.assertRaises(ValidationError):
+            instance2.scoped_fields = ["host", "mask_length"]
+            instance2.validated_save()
+
+        with self.assertRaises(ValidationError):
+            instance2.scoped_fields = ["role", "status", "type"]
+            instance2.validated_save()
 
 
 class RoleTest(ModelTestCases.BaseModelTestCase):

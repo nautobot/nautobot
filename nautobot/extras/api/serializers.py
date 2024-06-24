@@ -781,9 +781,7 @@ class ObjectMetadataSerializer(ValidatedModelSerializer):
         PolymorphicProxySerializer(
             component_name="ObjectMetadataAssignedObject",
             resource_type_field_name="object_type",
-            serializers=lambda: nested_serializers_for_models(
-                get_all_concrete_models(FeatureQuery("metadata").list_subclasses())
-            ),
+            serializers=lambda: nested_serializers_for_models(FeatureQuery("metadata").list_subclasses()),
             allow_null=True,
         )
     )
