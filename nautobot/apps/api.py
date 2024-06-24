@@ -12,6 +12,7 @@ from nautobot.core.api import (
 from nautobot.core.api.fields import (
     ChoiceField,
     ContentTypeField,
+    LaxURLField,
     NautobotHyperlinkedRelatedField,
     ObjectTypeField,
     SerializedPKRelatedField,
@@ -63,6 +64,7 @@ __all__ = (
     "get_view_name",
     "GetObjectCountsView",
     "is_api_request",
+    "LaxURLField",
     "ModelViewSet",
     "ModelViewSetMixin",
     "MultipleChoiceJSONField",

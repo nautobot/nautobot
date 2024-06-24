@@ -2045,46 +2045,56 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        jhr_log = Job.objects.get(job_class_name="TestJobHookReceiverLog")
+        jhr_log.enabled = True
+        jhr_log.save()
+        jhr_change = Job.objects.get(job_class_name="TestJobHookReceiverChange")
+        jhr_change.enabled = True
+        jhr_change.save()
+        jhr_fail = Job.objects.get(job_class_name="TestJobHookReceiverFail")
+        jhr_fail.enabled = True
+        jhr_fail.save()
+
         cls.create_data = [
             {
                 "name": "JobHook4",
                 "content_types": ["dcim.consoleport"],
                 "type_delete": True,
-                "job": Job.objects.get(job_class_name="TestJobHookReceiverLog").pk,
+                "job": jhr_log.pk,
                 "enabled": False,
             },
             {
                 "name": "JobHook5",
                 "content_types": ["dcim.consoleport"],
                 "type_delete": True,
-                "job": Job.objects.get(job_class_name="TestJobHookReceiverChange").pk,
+                "job": jhr_change.pk,
                 "enabled": False,
             },
             {
                 "name": "JobHook6",
                 "content_types": ["dcim.consoleport"],
                 "type_delete": True,
-                "job": Job.objects.get(job_class_name="TestJobHookReceiverFail").pk,
+                "job": jhr_fail.pk,
                 "enabled": False,
             },
         ]
         cls.job_hooks = (
             JobHook(
                 name="JobHook1",
+                job=jhr_log,
                 type_create=True,
-                job=Job.objects.get(job_class_name="TestJobHookReceiverLog"),
                 type_delete=True,
             ),
             JobHook(
                 name="JobHook2",
+                job=jhr_change,
                 type_create=True,
-                job=Job.objects.get(job_class_name="TestJobHookReceiverChange"),
                 type_delete=True,
             ),
             JobHook(
                 name="JobHook3",
+                job=jhr_fail,
                 type_create=True,
-                job=Job.objects.get(job_class_name="TestJobHookReceiverFail"),
                 type_delete=True,
             ),
         )
@@ -2138,18 +2148,25 @@ class JobButtonTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        jbr_simple = Job.objects.get(job_class_name="TestJobButtonReceiverSimple")
+        jbr_simple.enabled = True
+        jbr_simple.save()
+        jbr_complex = Job.objects.get(job_class_name="TestJobButtonReceiverComplex")
+        jbr_complex.enabled = True
+        jbr_complex.save()
+
         cls.create_data = [
             {
                 "name": "JobButton4",
                 "text": "JobButton4",
                 "content_types": ["dcim.location"],
-                "job": Job.objects.get(job_class_name="TestJobButtonReceiverSimple").pk,
+                "job": jbr_simple.pk,
             },
             {
                 "name": "JobButton5",
                 "text": "JobButton5",
                 "content_types": ["circuits.circuit"],
-                "job": Job.objects.get(job_class_name="TestJobButtonReceiverComplex").pk,
+                "job": jbr_complex.pk,
             },
         ]
         location_type = ContentType.objects.get_for_model(Location)
@@ -2158,7 +2175,7 @@ class JobButtonTest(APIViewTestCases.APIViewTestCase):
         location_jb = JobButton(
             name="api-test-location",
             text="API job button location text",
-            job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+            job=jbr_simple,
             weight=100,
             confirmation=True,
         )
@@ -2168,7 +2185,7 @@ class JobButtonTest(APIViewTestCases.APIViewTestCase):
         device_jb = JobButton.objects.create(
             name="api-test-device",
             text="API job button device text",
-            job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+            job=jbr_simple,
             weight=100,
             confirmation=True,
         )
@@ -2178,7 +2195,7 @@ class JobButtonTest(APIViewTestCases.APIViewTestCase):
         complex_jb = JobButton.objects.create(
             name="api-test-complex",
             text="API job button complex text",
-            job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+            job=jbr_complex,
             weight=100,
             confirmation=True,
         )

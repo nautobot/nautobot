@@ -996,7 +996,7 @@ class GitRepositoryTestCase(
         # Create four GitRepository records
         repos = (
             GitRepository(name="Repo 1", slug="repo_1", remote_url="https://example.com/repo1.git"),
-            GitRepository(name="Repo 2", slug="repo_2", remote_url="https://example.com/repo2.git"),
+            GitRepository(name="Repo 2", slug="repo_2", remote_url="https://some-local-host/repo2.git"),
             GitRepository(name="Repo 3", slug="repo_3", remote_url="https://example.com/repo3.git"),
             GitRepository(name="Repo 4", remote_url="https://example.com/repo4.git", secrets_group=secrets_groups[0]),
         )
@@ -1006,7 +1006,7 @@ class GitRepositoryTestCase(
         cls.form_data = {
             "name": "A new Git repository",
             "slug": "a_new_git_repository",
-            "remote_url": "http://example.com/a_new_git_repository.git",
+            "remote_url": "http://another-local-host/a_new_git_repository.git",
             "branch": "develop",
             "_token": "1234567890abcdef1234567890abcdef",
             "secrets_group": secrets_groups[1].pk,
@@ -2329,23 +2329,30 @@ class JobButtonTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        jbr_simple = Job.objects.get(job_class_name="TestJobButtonReceiverSimple")
+        jbr_simple.enabled = True
+        jbr_simple.save()
+        jbr_complex = Job.objects.get(job_class_name="TestJobButtonReceiverComplex")
+        jbr_complex.enabled = True
+        jbr_complex.save()
+
         job_buttons = (
             JobButton.objects.create(
                 name="JobButton1",
                 text="JobButton1",
-                job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+                job=jbr_simple,
                 confirmation=True,
             ),
             JobButton.objects.create(
                 name="JobButton2",
                 text="JobButton2",
-                job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+                job=jbr_simple,
                 confirmation=False,
             ),
             JobButton.objects.create(
                 name="JobButton3",
                 text="JobButton3",
-                job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+                job=jbr_complex,
                 confirmation=True,
                 weight=50,
             ),
@@ -2359,7 +2366,7 @@ class JobButtonTestCase(
             "content_types": [location_ct.pk],
             "name": "jobbutton-4",
             "text": "jobbutton text 4",
-            "job": Job.objects.get(job_class_name="TestJobButtonReceiverComplex").pk,
+            "job": jbr_complex.pk,
             "weight": 100,
             "button_class": "default",
             "confirmation": False,
@@ -2374,6 +2381,9 @@ class JobButtonRenderingTestCase(TestCase):
     def setUp(self):
         super().setUp()
         self.job = Job.objects.get(job_class_name="TestJobButtonReceiverSimple")
+        self.job.enabled = True
+        self.job.save()
+
         self.job_button_1 = JobButton(
             name="JobButton 1",
             text="JobButton {{ obj.name }}",
@@ -2383,10 +2393,14 @@ class JobButtonRenderingTestCase(TestCase):
         self.job_button_1.validated_save()
         self.job_button_1.content_types.add(ContentType.objects.get_for_model(LocationType))
 
+        job_2 = Job.objects.get(job_class_name="TestJobButtonReceiverComplex")
+        job_2.enabled = True
+        job_2.save()
+
         self.job_button_2 = JobButton(
             name="JobButton 2",
             text="Click me!",
-            job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+            job=job_2,
             confirmation=False,
         )
         self.job_button_2.validated_save()

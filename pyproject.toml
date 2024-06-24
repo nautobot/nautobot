@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.2.5"
+version = "2.2.6"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -166,7 +166,7 @@ rich = "~13.7.1"
 # Change log management and generation
 towncrier = "~23.11.0"
 # Watch files for celery and mkdocs reload
-watchdog = "~4.0.0"
+watchdog = "~4.0.1"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
@@ -177,13 +177,15 @@ markdown-data-tables = "~1.0.0"
 markdown-version-annotations = "~1.0.1"
 # Automatically generate some files as part of mkdocs build
 mkdocs-gen-files = "~0.5.0"
+# Image lightboxing in mkdocs
+mkdocs-glightbox = "^0.4.0"
 # Allow Markdown files to include other files
 # 3.0 TODO: remove this, as we don't actually use it any more since 2.0?
 mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see optional-settings.md and required-settings.md
 mkdocs-macros-plugin = "~1.0.5"
 # Material for mkdocs theme
-mkdocs-material = "~9.5.23"
+mkdocs-material = "~9.5.25"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.1"
 # Automatically handle index pages for docs sections
@@ -209,7 +211,7 @@ coverage = "6.4.0"
 # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
 django-slowtests = "^1.1.1"
 # Integration Tests
-requests = "~2.32.1"
+requests = "~2.32.2"
 # Selenium web drivers for live integration testing
 selenium = "~4.19.0"
 # Abstraction layer for working with Selenium
@@ -237,7 +239,8 @@ omit = [
 load-plugins = "pylint_django"
 py-version = "3.8"
 ignore-paths = [
-    ".*third_party.*"
+    ".*third_party.*",
+    "nautobot/extras/tests/git_data/02-invalid-files/",
 ]
 jobs = 0
 
@@ -330,6 +333,10 @@ signature-mutators=["unittest.mock.patch"]
 [tool.ruff]
 line-length = 120
 target-version = "py38"
+extend-exclude = [
+    # Intentionally malformed files
+    "nautobot/extras/tests/git_data/02-invalid-files/jobs",
+]
 
 [tool.ruff.lint]
 select = [
