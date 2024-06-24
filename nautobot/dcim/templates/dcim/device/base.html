@@ -78,14 +78,14 @@
                 </li>
             {% endif %}
         {% endwith %}
-        {% with frontport_count=object.front_ports.count %}
+        {% with frontport_count=object.all_front_ports.count %}
             {% if frontport_count %}
                 <li role="presentation" {% if active_tab == 'front-ports' %} class="active"{% endif %}>
                     <a href="{% url 'dcim:device_frontports' pk=object.pk %}">Front Ports {% badge frontport_count %}</a>
                 </li>
             {% endif %}
         {% endwith %}
-        {% with rearport_count=object.rear_ports.count %}
+        {% with rearport_count=object.all_rear_ports.count %}
             {% if rearport_count %}
                 <li role="presentation" {% if active_tab == 'rear-ports' %} class="active"{% endif %}>
                     <a href="{% url 'dcim:device_rearports' pk=object.pk %}">Rear Ports {% badge rearport_count %}</a>

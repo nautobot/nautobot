@@ -744,7 +744,7 @@ class Device(PrimaryModel, ConfigContextModel):
                 pass
 
         # Validate primary IP addresses
-        interfaces = self.all_interfaces.all()
+        all_interfaces = self.all_interfaces.all()
         for field in ["primary_ip4", "primary_ip6"]:
             ip = getattr(self, field)
             if ip is not None:
@@ -754,12 +754,14 @@ class Device(PrimaryModel, ConfigContextModel):
                 else:
                     if ip.ip_version != 6:
                         raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
-                if ipam_models.IPAddressToInterface.objects.filter(ip_address=ip, interface__in=interfaces).exists():
+                if ipam_models.IPAddressToInterface.objects.filter(
+                    ip_address=ip, interface__in=all_interfaces
+                ).exists():
                     pass
                 elif (
                     ip.nat_inside is not None
                     and ipam_models.IPAddressToInterface.objects.filter(
-                        ip_address=ip.nat_inside, interface__in=interfaces
+                        ip_address=ip.nat_inside, interface__in=all_interfaces
                     ).exists()
                 ):
                     pass
@@ -916,7 +918,6 @@ class Device(PrimaryModel, ConfigContextModel):
             filter_q |= Q(device__virtual_chassis=self.virtual_chassis, mgmt_only=False)
         return Interface.objects.filter(filter_q)
 
-    # TODO - I am not sure if this should change with the introduction of modules
     @property
     def common_vc_interfaces(self):
         """
@@ -925,7 +926,7 @@ class Device(PrimaryModel, ConfigContextModel):
         """
         if self.virtual_chassis:
             return self.virtual_chassis.member_interfaces
-        return self.interfaces
+        return self.all_interfaces
 
     def get_cables(self, pk_list=False):
         """
@@ -957,7 +958,7 @@ class Device(PrimaryModel, ConfigContextModel):
         return Device.objects.filter(parent_bay__device=self.pk)
 
     @property
-    def modules(self):
+    def all_modules(self):
         """
         Return all child Modules installed in ModuleBays within this Device.
         """
@@ -974,36 +975,60 @@ class Device(PrimaryModel, ConfigContextModel):
 
     @property
     def all_console_ports(self):
+        """
+        Return all Console Ports that are installed in the device or in modules that are installed in the device.
+        """
         # TODO: These could probably be optimized to reduce the number of joins
-        return ConsolePort.objects.filter(models.Q(device=self) | models.Q(module__in=self.modules))
+        return ConsolePort.objects.filter(models.Q(device=self) | models.Q(module__in=self.all_modules))
 
     @property
     def all_console_server_ports(self):
-        return ConsoleServerPort.objects.filter(models.Q(device=self) | models.Q(module__in=self.modules))
+        """
+        Return all Console Server Ports that are installed in the device or in modules that are installed in the device.
+        """
+        return ConsoleServerPort.objects.filter(models.Q(device=self) | models.Q(module__in=self.all_modules))
 
     @property
     def all_front_ports(self):
-        return FrontPort.objects.filter(models.Q(device=self) | models.Q(module__in=self.modules))
+        """
+        Return all Front Ports that are installed in the device or in modules that are installed in the device.
+        """
+        return FrontPort.objects.filter(models.Q(device=self) | models.Q(module__in=self.all_modules))
 
     @property
     def all_interfaces(self):
-        return self.vc_interfaces | Interface.objects.filter(module__in=self.modules)
+        """
+        Return all Interfaces that are installed in the device or in modules that are installed in the device.
+        """
+        return self.vc_interfaces | Interface.objects.filter(module__in=self.all_modules)
 
     @property
     def all_module_bays(self):
-        return ModuleBay.objects.filter(models.Q(parent_device=self) | models.Q(parent_device__in=self.modules))
+        """
+        Return all Module Bays that are installed in the device or in modules that are installed in the device.
+        """
+        return ModuleBay.objects.filter(models.Q(parent_device=self) | models.Q(parent_module__in=self.all_modules))
 
     @property
     def all_power_ports(self):
-        return PowerPort.objects.filter(models.Q(device=self) | models.Q(module__in=self.modules))
+        """
+        Return all Power Ports that are installed in the device or in modules that are installed in the device.
+        """
+        return PowerPort.objects.filter(models.Q(device=self) | models.Q(module__in=self.all_modules))
 
     @property
     def all_power_outlets(self):
-        return PowerOutlet.objects.filter(models.Q(device=self) | models.Q(module__in=self.modules))
+        """
+        Return all Power Outlets that are installed in the device or in modules that are installed in the device.
+        """
+        return PowerOutlet.objects.filter(models.Q(device=self) | models.Q(module__in=self.all_modules))
 
     @property
     def all_rear_ports(self):
-        return RearPort.objects.filter(device=self) | RearPort.objects.filter(module__in=self.modules)
+        """
+        Return all Rear Ports that are installed in the device or in modules that are installed in the device.
+        """
+        return RearPort.objects.filter(models.Q(device=self) | models.Q(module__in=self.all_modules))
 
 
 #
@@ -1444,7 +1469,7 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
 #
 
 
-# TODO: Translate comments field from devicetype library, Nautobot doesn't use that field for ModuleType
+# TODO: 5840 - Translate comments field from devicetype library, Nautobot doesn't use that field for ModuleType
 @extras_features(
     "custom_links",
     "custom_validators",

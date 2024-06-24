@@ -2114,7 +2114,6 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         ("child_interfaces", "child_interfaces__name"),
         ("description",),
         # ("device", "device__id"),  # TODO - InterfaceFilterSet overrides device as a MultiValueCharFilter on name only
-        # ("device", "device__name"),
         ("label",),
         ("lag", "lag__id"),
         ("lag", "lag__name"),
