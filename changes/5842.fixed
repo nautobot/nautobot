@@ -1,1 +1,1 @@
-Fixed missing classes when importing * from nautobot.ipam.models.
+Fixed missing classes when importing `*` from nautobot.ipam.models.
