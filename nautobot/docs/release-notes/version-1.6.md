@@ -74,7 +74,7 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 <!-- towncrier release notes start -->
 ## v1.6.24 (2024-06-24)
 
-### Dependencies
+### Security
 
 - [#5821](https://github.com/nautobot/nautobot/issues/5821) - Updated `urllib3` to 2.2.2 due to CVE-2024-37891. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
 
