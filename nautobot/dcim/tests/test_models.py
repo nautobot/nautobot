@@ -93,6 +93,14 @@ class ModularDeviceComponentTestCaseMixin:
             **self.modular_component_create_data,
         )
 
+        print(f"instance: {instance}")
+        print(f"self.model._meta.model_name: {self.model._meta.model_name}")
+        print(f"self.device_field: {self.device_field}")
+        print(f"self.module_field: {self.module_field}")
+        print(f"self.device: {self.device}")
+        print(f"self.module: {self.module}")
+        print(f"self.modular_component_create_data: {self.modular_component_create_data}")
+
         with self.assertRaises(ValidationError):
             instance.full_clean()
 
