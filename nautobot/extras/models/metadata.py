@@ -218,11 +218,15 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
                 raise ValidationError({"metadata_type": "Cannot be changed once created"})
 
         # Check if there is any intersections of scoped_fields of ObjectMetadata instances in the database.
-        object_metadata_scoped_fields = ObjectMetadata.objects.filter(
-            metadata_type=self.metadata_type,
-            assigned_object_type=self.assigned_object_type,
-            assigned_object_id=self.assigned_object_id,
-        ).values_list("scoped_fields", flat=True)
+        object_metadata_scoped_fields = (
+            ObjectMetadata.objects.filter(
+                metadata_type=self.metadata_type,
+                assigned_object_type=self.assigned_object_type,
+                assigned_object_id=self.assigned_object_id,
+            )
+            .exclude(pk=self.pk)
+            .values_list("scoped_fields", flat=True)
+        )
         duplicate_scoped_fields_list = set([])
 
         for scoped_fields in object_metadata_scoped_fields:

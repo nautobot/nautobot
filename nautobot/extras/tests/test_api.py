@@ -2575,14 +2575,14 @@ class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
         ObjectMetadata.objects.create(
             metadata_type=mdts[0],
             contact=Contact.objects.first(),
-            scoped_fields=["namespace", "status"],
+            scoped_fields=["namespace"],
             assigned_object_type=ContentType.objects.get_for_model(Prefix),
             assigned_object_id=Prefix.objects.first().pk,
         )
         ObjectMetadata.objects.create(
             metadata_type=mdts[1],
             contact=Contact.objects.first(),
-            scoped_fields=["namespace", "status"],
+            scoped_fields=["status"],
             assigned_object_type=ContentType.objects.get_for_model(Prefix),
             assigned_object_id=Prefix.objects.last().pk,
         )
@@ -2590,17 +2590,17 @@ class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
             {
                 "metadata_type": mdts[0].pk,
                 "contact": Contact.objects.first().pk,
-                "scoped_fields": ["location_type", "status"],
+                "scoped_fields": ["location_type"],
                 "value": {},
-                "assigned_object_type": ContentType.objects.get_for_model(Location).pk,
+                "assigned_object_type": "dcim.location",
                 "assigned_object_id": Location.objects.first().pk,
             },
             {
                 "metadata_type": mdts[0].pk,
                 "contact": Contact.objects.last().pk,
-                "scoped_fields": ["location_type", "status"],
+                "scoped_fields": ["parent", "status"],
                 "value": {},
-                "assigned_object_type": ContentType.objects.get_for_model(Location).pk,
+                "assigned_object_type": "dcim.location",
                 "assigned_object_id": Location.objects.first().pk,
             },
             {
@@ -2608,12 +2608,13 @@ class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
                 "team": Team.objects.first().pk,
                 "scoped_fields": ["device_type", "status"],
                 "value": {},
-                "assigned_object_type": ContentType.objects.get_for_model(Device).pk,
+                "assigned_object_type": "dcim.device",
                 "assigned_object_id": Device.objects.first().pk,
             },
         ]
         cls.update_data = {
             "team": Team.objects.last().pk,
+            "contact": None,
             "value": {"new_role": "Active"},
         }
 
