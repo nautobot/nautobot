@@ -1,1 +1,1 @@
-Added `MetadataType` and `MetadataChoice` data models and REST API.
+Added `MetadataType` and `MetadataChoice` data models, REST API, and UI.
