@@ -1,1 +1,1 @@
-Allow Device Primary IP can now be selected from Child Modules.
+Added support for specifying a Device's Primary IP from an interface on a child Module.
