@@ -88,7 +88,6 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5550](https://github.com/nautobot/nautobot/issues/5550) - Fixed an issue where config-contexts and export-templates sourced from a Git repository might not be automatically deleted from Nautobot after removing them from the repository and resyncing it.
 - [#5550](https://github.com/nautobot/nautobot/issues/5550) - Fixed an exception that might be raised when performing a Git repository "dry-run" sync if certain types of diffs are present.
 - [#5782](https://github.com/nautobot/nautobot/issues/5782) - Fixed an issue with Job code not being fully reloaded after syncing a Git repository.
-- [#5793](https://github.com/nautobot/nautobot/issues/5793) - Fixed a bug in `ControllerManagedDeviceGroupFactory` that could result in nondeterministic test data.
 - [#5809](https://github.com/nautobot/nautobot/issues/5809) - Fixed missing support for the GitRepository model in GraphQL.
 - [#5819](https://github.com/nautobot/nautobot/issues/5819) - Fixed inability to use bare (local-DNS) hostnames when specifying a GitRepository remote URL.
 
@@ -102,6 +101,7 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 
 - [#5754](https://github.com/nautobot/nautobot/issues/5754) - Updated development dependencies `requests` to `~2.32.2` and `watchdog` to `~4.0.1`.
 - [#5793](https://github.com/nautobot/nautobot/issues/5793) - Refactored `generate_test_data` implementation for improved debuggability.
+- [#5793](https://github.com/nautobot/nautobot/issues/5793) - Fixed a bug in `ControllerManagedDeviceGroupFactory` that could result in nondeterministic test data.
 
 ## v2.2.5 (2024-05-28)
 
