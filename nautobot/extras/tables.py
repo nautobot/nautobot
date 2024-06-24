@@ -36,6 +36,7 @@ from .models import (
     JobHook,
     JobLogEntry,
     JobResult,
+    MetadataType,
     Note,
     ObjectChange,
     Relationship,
@@ -851,6 +852,36 @@ class JobButtonTable(BaseTable):
             "weight",
             "job",
             "confirmation",
+        )
+
+
+#
+# Metadata
+#
+
+
+class MetadataTypeTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    content_types = ContentTypesColumn(truncate_words=15)
+    actions = ButtonsColumn(MetadataType)
+
+    class Meta(BaseTable.Meta):
+        model = MetadataType
+        fields = (
+            "pk",
+            "name",
+            "description",
+            "content_types",
+            "data_type",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "content_types",
+            "data_type",
+            "actions",
         )
 
 

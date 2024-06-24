@@ -63,6 +63,8 @@ from nautobot.extras.models import (
     JobButton,
     JobHook,
     JobResult,
+    MetadataChoice,
+    MetadataType,
     Note,
     ObjectChange,
     Relationship,
@@ -145,6 +147,10 @@ __all__ = (
     "LocalContextFilterForm",
     "LocalContextModelForm",
     "LocalContextModelBulkEditForm",
+    "MetadataTypeBulkEditForm",
+    "MetadataTypeForm",
+    "MetadataTypeFilterForm",
+    "MetadataChoiceFormSet",
     "NoteForm",
     "NoteFilterForm",
     "ObjectChangeFilterForm",
@@ -432,8 +438,8 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if self.instance and self.instance.present_in_database:
-            self.fields["key"].widget.attrs["readonly"] = True
+        if self.initial.get("key"):
+            self.fields["key"].disabled = True
 
 
 class CustomFieldFilterForm(NautobotFilterForm):
@@ -1233,6 +1239,72 @@ class JobButtonFilterForm(BootstrapMixin, forms.Form):
         required=False,
         label="Object Types",
     )
+
+
+#
+# Metadata
+#
+
+
+# MetadataChoice inline formset for use with providing dynamic rows when creating/editing choices
+# for `MetadataType` objects in UI views. Fields/exclude must be set but since we're using all the
+# fields we're just setting `exclude=()` here.
+MetadataChoiceFormSet = inlineformset_factory(
+    parent_model=MetadataType,
+    model=MetadataChoice,
+    exclude=(),
+    extra=5,
+    widgets={
+        "value": forms.TextInput(attrs={"class": "form-control"}),
+        "weight": forms.NumberInput(attrs={"class": "form-control"}),
+    },
+)
+
+
+class MetadataTypeForm(NautobotModelForm):
+    name = forms.CharField(required=True, max_length=CHARFIELD_MAX_LENGTH)
+    description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
+    content_types = MultipleContentTypeField(
+        feature="metadata", help_text="The object(s) to which Metadata of this type can be applied."
+    )
+
+    class Meta:
+        model = MetadataType
+        fields = (
+            "name",
+            "description",
+            "data_type",
+            "content_types",
+            "tags",
+        )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.initial.get("data_type"):
+            self.fields["data_type"].disabled = True
+
+
+class MetadataTypeFilterForm(NautobotFilterForm):
+    model = MetadataType
+    q = forms.CharField(required=False, label="Search")
+    content_types = MultipleContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
+        choices_as_strings=True,
+        required=False,
+        label="Content Type(s)",
+    )
+    tags = TagFilterField(model)
+
+
+class MetadataTypeBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=MetadataType.objects.all(), widget=forms.MultipleHiddenInput)
+    description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
+
+    class Meta:
+        nullable_fields = [
+            "description",
+        ]
 
 
 #

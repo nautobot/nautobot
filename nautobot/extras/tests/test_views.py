@@ -35,6 +35,7 @@ from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     JobExecutionType,
     LogLevelChoices,
+    MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -58,6 +59,7 @@ from nautobot.extras.models import (
     JobButton,
     JobLogEntry,
     JobResult,
+    MetadataType,
     Note,
     ObjectChange,
     Relationship,
@@ -1066,6 +1068,37 @@ class GitRepositoryTestCase(
         self.assertHttpStatus(response, [403, 404])
 
     # TODO: mock/stub out `enqueue_git_repository_diff_origin_and_local` and test successful POST with permissions
+
+
+class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = MetadataType
+    bulk_edit_data = {"description": "A new description"}
+
+    def setUp(self):
+        super().setUp()
+        self.form_data = {
+            "name": "New Metadata Type",
+            "description": "A new type of metadata",
+            "data_type": MetadataTypeDataTypeChoices.TYPE_DATETIME,
+            "content_types": [
+                ContentType.objects.get_for_model(Device).pk,
+                ContentType.objects.get_for_model(ContactAssociation).pk,
+            ],
+            "choices-TOTAL_FORMS": "0",
+            "choices-INITIAL_FORMS": "5",
+            "choices-MIN_NUM_FORMS": "0",
+            "choices-MAX_NUM_FORMS": "1000",
+        }
+
+    def test_edit_object_with_constrained_permission(self):
+        # Can't change data_type once set
+        self.form_data["data_type"] = self.model.objects.first().data_type
+        return super().test_edit_object_with_constrained_permission()
+
+    def test_edit_object_with_permission(self):
+        # Can't change data_type once set
+        self.form_data["data_type"] = self.model.objects.first().data_type
+        return super().test_edit_object_with_permission()
 
 
 class NoteTestCase(
