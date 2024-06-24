@@ -1013,6 +1013,10 @@ class JobHookForm(BootstrapMixin, forms.ModelForm):
     content_types = MultipleContentTypeField(
         queryset=ChangeLoggedModelsQuery().as_queryset(), required=True, label="Content Type(s)"
     )
+    job = DynamicModelChoiceField(
+        queryset=Job.objects.filter(is_job_hook_receiver=True),
+        query_params={"is_job_hook_receiver": True},
+    )
 
     class Meta:
         model = JobHook
@@ -1180,14 +1184,19 @@ class JobButtonForm(BootstrapMixin, forms.ModelForm):
             api_url="/api/extras/content-types/",
         ),
     )
+    job = DynamicModelChoiceField(
+        queryset=Job.objects.filter(is_job_button_receiver=True),
+        query_params={"is_job_button_receiver": True},
+    )
 
     class Meta:
         model = JobButton
         fields = (
             "content_types",
             "name",
-            "text",
             "job",
+            "enabled",
+            "text",
             "weight",
             "group_name",
             "button_class",
@@ -1206,6 +1215,9 @@ class JobButtonBulkEditForm(BootstrapMixin, BulkEditForm):
             api_url="/api/extras/content-types/",
         ),
         required=False,
+    )
+    enabled = forms.NullBooleanField(
+        required=False, widget=BulkEditNullBooleanSelect, help_text="Whether this job button appears in the UI"
     )
     weight = forms.IntegerField(required=False)
     group_name = forms.CharField(required=False)
