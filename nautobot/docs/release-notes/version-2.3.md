@@ -16,9 +16,9 @@ Added an optional `role` field to Interface and VMInterface models to track comm
 
 Added the new models `CloudAccount`, `CloudType`, and `CloudNetwork` to support recording of cloud provider accounts and cloud network objects such as VPCs in Nautobot.
 
-#### Metadata Models ([#5663](https://github.com/nautobot/nautobot/issues/5663))
+#### Object Metadata Models ([#5663](https://github.com/nautobot/nautobot/issues/5663))
 
-TODO
+Added [a set of functionality](../user-guide/platform-functionality/metadata.md) for defining and managing object metadata, that is to say, data _about_ the network data managed in Nautobot, such as data provenance, data ownership, and data classification. For more details, refer to the linked documentation.
 
 #### Saved Views
 

@@ -133,7 +133,9 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
         plural_name = slugify_dashes_to_underscores(model._meta.verbose_name_plural)
         # Cable-connectable models use "cable_terminations", not "cables", as the feature name
         if plural_name == "cables":
-            plural_name == "cable_terminations"
+            plural_name = "cable_terminations"
+        elif plural_name == "metadata_types":
+            plural_name = "metadata"
         try:
             form_field = MultipleContentTypeField(choices_as_strings=True, feature=plural_name)
         except KeyError:
