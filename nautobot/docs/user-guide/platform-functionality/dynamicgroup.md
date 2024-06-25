@@ -26,6 +26,9 @@ Dynamic Groups can be created through the UI under _Organization > Groups > Dyna
 
 When creating a Dynamic Group, you must provide a unique **Name** for the group, select an **Object Type** (also known as content-type) of the objects that it will contain as members, for example `dcim.device`, and also select a **Group Type**, specifying which of the supported member assignment patterns will apply to this group. (Any given Dynamic Group can only use one such pattern; mixing assignment types within a single group is not permitted at this time.) You can also optionally provide a **Description** for the group, select a [**Tenant**](../core-data-model/tenancy/tenant.md) that the group applies to, and/or apply [**Tags**](tag.md) to it.
 
++++ 2.3.0 "Tenant and tags"
+    Support for assigning a tenant and/or tags to a Dynamic Group was added.
+
 !!! warning
     After initial creation, the Content Type for a Dynamic Group may not be modified, as doing so would invalidate the filter, set definition, or static assignments of members for this group. Similarly, the Group Type also generally may not be modified, except in a few specific cases that are permitted for backwards compatibility with the behavior of Dynamic Groups before an explicit Group Type field was added to the model. All other fields may be updated at any time.
 

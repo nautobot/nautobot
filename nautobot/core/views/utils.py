@@ -351,6 +351,7 @@ def common_detail_view_context(request, instance):
         paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
         dynamic_groups = instance.dynamic_groups.restrict(request.user, "view")
         dynamic_groups_table = DynamicGroupTable(dynamic_groups, orderable=False)
+        dynamic_groups_table.columns.hide("content_type")
         RequestConfig(request, paginate).configure(dynamic_groups_table)
         # dynamic_groups_table.columns.show("pk")  # we don't have any supported bulk ops here presently
         context["associated_dynamic_groups_table"] = dynamic_groups_table

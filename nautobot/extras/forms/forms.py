@@ -541,7 +541,9 @@ class DynamicGroupMembershipFormSetForm(forms.ModelForm):
     """DynamicGroupMembership model form for use inline on DynamicGroupFormSet."""
 
     group = DynamicModelChoiceField(
-        queryset=DynamicGroup.objects.all(),
+        queryset=DynamicGroup.objects.filter(
+            group_type__in=[DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER, DynamicGroupTypeChoices.TYPE_DYNAMIC_SET]
+        ),
         query_params={
             "content_type": "$content_type",
             "group_type": [DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER, DynamicGroupTypeChoices.TYPE_DYNAMIC_SET],

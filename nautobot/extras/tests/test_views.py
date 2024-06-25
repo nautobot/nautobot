@@ -861,7 +861,6 @@ class DynamicGroupTestCase(
         self.assertIn("DG 3", response_body, msg=response_body)
 
     def test_get_object_dynamic_groups_with_constrained_permission(self):
-        # TODO this may need re-implementation
         obj_perm = ObjectPermission(
             name="View a device",
             constraints={"pk": Device.objects.first().pk},

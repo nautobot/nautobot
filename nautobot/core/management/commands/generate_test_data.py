@@ -218,7 +218,7 @@ class Command(BaseCommand):
         _create_batch(SoftwareVersionFactory, 5, description="without Devices")
         _create_batch(SoftwareImageFileFactory, 5, description="without DeviceTypes")
         _create_batch(CloudAccountFactory, 10)
-        _create_batch(CloudTypeFactory, 10)
+        _create_batch(CloudTypeFactory, 20)
         _create_batch(CloudNetworkFactory, 20)
         _create_batch(CircuitTypeFactory, 40)
         _create_batch(ProviderFactory, 20, description="to be usable by Circuits")
