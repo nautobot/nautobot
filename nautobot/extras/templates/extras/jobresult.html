@@ -66,9 +66,6 @@
 {% endblock %}
 
 {% block extra_nav_tabs %}
-    <li role="presentation">
-        <a href="#json" role="tab" data-toggle="tab">Additional Data</a>
-    </li>
     {% if result.data.output %}
         <li role="presentation">
             <a href="#output" role="tab" data-toggle="tab">Output</a>
@@ -80,8 +77,8 @@
     {% include 'extras/inc/jobresult.html' with result=result log_table=log_table %}
 {% endblock content_full_width_page %}
 
-{% block extra_tab_content %}
-    <div role="tabpanel" class="tab-pane" id="json">
+{% block advanced_content_full_width_page %}
+    <div role="tabpanel" class="tab-pane">
         <div class="row">
             <div class="col-md-6">
                 <div class="panel panel-default">
@@ -153,6 +150,31 @@
             </div>
         </div>
     </div>
+{% endblock advanced_content_full_width_page %}
+{% block advanced_content_right_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Worker</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tbody>
+                <tr>
+                    <td>Worker Hostname</td>
+                    <td>{{ result.worker }}</td>
+                </tr>
+                <tr>
+                    <td>Task Name</td>
+                    <td>{{ result.task_name }}</td>
+                </tr>
+                <tr>
+                    <td>Meta</td>
+                    <td>{% include 'extras/inc/json_data.html' with data=result.meta format="json" %}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+{% endblock advanced_content_right_page %}
+{% block extra_tab_content %}
     {% if result.data.output %}
         <div role="tabpanel" class="tab-pane" id="output">
             <pre>{{ result.data.output }}</pre>
@@ -160,29 +182,6 @@
     {% endif %}
 {% endblock extra_tab_content %}
 
-{% block advanced_content_right_page %}
-<div class="panel panel-default">
-    <div class="panel-heading">
-        <strong>Worker</strong>
-    </div>
-    <table class="table table-hover panel-body attr-table">
-        <tbody>
-            <tr>
-                <td>Worker Hostname</td>
-                <td>{{ result.worker }}</td>
-            </tr>
-            <tr>
-                <td>Task Name</td>
-                <td>{{ result.task_name }}</td>
-            </tr>
-            <tr>
-                <td>Meta</td>
-                <td>{% include 'extras/inc/json_data.html' with data=result.meta format="json" %}</td>
-            </tr>
-        </tbody>
-    </table>
-</div>
-{% endblock advanced_content_right_page%}
 
 {% block javascript %}
     {{ block.super }}
