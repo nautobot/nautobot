@@ -1811,7 +1811,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.device.all_power_outlets.count(), 2)
 
         child_module_bay = module.module_bays.first()
-        module2 = Module.objects.create(
+        Module.objects.create(
             module_type=module_type,
             status=status,
             parent_module_bay=child_module_bay,
