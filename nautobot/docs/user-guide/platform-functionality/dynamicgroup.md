@@ -73,7 +73,7 @@ When editing a filter-based Dynamic Group, under the **Filter Options** section,
 
 +++ 1.4.0
 
-Set-based Dynamic Groups do not directly define a filter for identifying member objects; instead, they define their members based on set operations (AND, OR, and NOT, or Union, Intersection, and Difference if you prefer) involving *other* Dynamic Groups.
+Set-based Dynamic Groups do not directly define a filter for identifying member objects; instead, they define their members based on set operations (AND, OR, and NOT, or Union, Intersection, and Difference if you prefer) involving _other_ Dynamic Groups.
 
 !!! tip
     At this time, a set-based Dynamic Group may include filter-based Dynamic Groups and other set-based Dynamic Groups in its members definition, but set-based Dynamic Groups _may not_ currently include static-assignment-based Dynamic Groups. This restriction may be removed in a future Nautobot release.
@@ -81,7 +81,7 @@ Set-based Dynamic Groups do not directly define a filter for identifying member 
 An object is considered a member of an set-based Dynamic Group if it matches the aggregated filter criteria derived from the "descendant" groups included in this group definition by way of the "Dynamic Group Membership" through table.
 
 !!! info
-    The name "Dynamic Group Membership" is potentially confusing -- it does *not* define member objects of a Dynamic Group directly (that's the "Static Group Association" table, for static-assignment-based groups and caching); rather, this table defines the association between a set-based Dynamic Group and the other Dynamic Groups that are its "members" or "children".
+    The name "Dynamic Group Membership" is potentially confusing -- it does _not_ define member objects of a Dynamic Group directly (that's the "Static Group Association" table, for static-assignment-based groups and caching); rather, this table defines the association between a set-based Dynamic Group and the other Dynamic Groups that are its "members" or "children".
 
 When editing a set-based Dynamic Group, under the **Filter Options** section, you will find a **Child Groups** tab that allows you to select other Dynamic Groups of the same Content Type to be "children" of this "parent" group and how they will be used to select or exclude candidate objects from the "parent" group's members.
 
@@ -620,7 +620,7 @@ DELETE /api/extras/dynamic-group-memberships/{uuid}/
 ## Dynamic Groups and the Python API (Django ORM)
 
 !!! tip
-    By default, all models inheriting from Nautobot's `OrganizationalModel` or `PrimaryModel` classes are assumed to be a viable object type for Dynamic Groups to be defined for. Individual models that do not wish to be assignable to Dynamic Groups can declare the flag `is_dynamic_group_associable_model = False` on their model definition. Conversely, models that inherit directly from Nautobot's `BaseModel` default to *not* supporting Dynamic Groups, but can include the `nautobot.apps.models.DynamicGroupsModelMixin` class as a part of their class definition in order to enable Dynamic Group support.
+    By default, all models inheriting from Nautobot's `OrganizationalModel` or `PrimaryModel` classes are assumed to be a viable object type for Dynamic Groups to be defined for. Individual models that do not wish to be assignable to Dynamic Groups can declare the flag `is_dynamic_group_associable_model = False` on their model definition. Conversely, models that inherit directly from Nautobot's `BaseModel` default to _not_ supporting Dynamic Groups, but can include the `nautobot.apps.models.DynamicGroupsModelMixin` class as a part of their class definition in order to enable Dynamic Group support.
 
 ### Working with a Dynamic Group's Members
 
