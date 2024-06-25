@@ -1652,6 +1652,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         ips = list(IPAddress.objects.filter(ip_version=4)[:5]) + list(IPAddress.objects.filter(ip_version=6)[:5])
         interface.add_ip_addresses(ips)
         device.primary_ip4 = interface.ip_addresses.all().filter(ip_version=6).first()
+        self.assertIsNotNone(device.primary_ip4)
         with self.assertRaises(ValidationError) as cm:
             device.validated_save()
         self.assertIn(
@@ -1660,6 +1661,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         )
         device.primary_ip4 = None
         device.primary_ip6 = interface.ip_addresses.all().filter(ip_version=4).first()
+        self.assertIsNotNone(device.primary_ip6)
         with self.assertRaises(ValidationError) as cm:
             device.validated_save()
         self.assertIn(
@@ -2574,8 +2576,13 @@ class ModuleBayTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, Mod
 
     @classmethod
     def setUpTestData(cls):
-        cls.device_type = cls.device = DeviceType.objects.filter(module_bay_templates__isnull=True).first()
-        cls.module_type = cls.module = ModuleType.objects.filter(module_bay_templates__isnull=True).first()
+        manufacturer = Manufacturer.objects.first()
+        cls.device_type = cls.device = DeviceType.objects.create(
+            manufacturer=manufacturer, model="Test ModuleBayTemplate DT1"
+        )
+        cls.module_type = cls.module = ModuleType.objects.create(
+            manufacturer=manufacturer, model="Test ModuleBayTemplate MT1"
+        )
 
         # Create some instances for the generic natural key tests to use
         ModuleBayTemplate.objects.create(
