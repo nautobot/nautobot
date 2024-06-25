@@ -1827,6 +1827,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.device.all_power_ports.count(), 3)
         self.assertEqual(self.device.all_power_outlets.count(), 3)
 
+
 class DeviceTypeToSoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
     model = DeviceTypeToSoftwareImageFile
 
