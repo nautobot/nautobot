@@ -21,6 +21,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
+    DynamicGroupTypeChoices,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
@@ -1918,7 +1919,14 @@ class StaticGroupAssociationTestCase(FilterTestCases.FilterTestCase):
     )
 
     def test_associated_object_type(self):
-        ct = DynamicGroup.objects.filter(static_group_associations__isnull=False).first().content_type
+        ct = (
+            DynamicGroup.objects.filter(
+                static_group_associations__isnull=False,
+                group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+            )
+            .first()
+            .content_type
+        )
         params = {"associated_object_type": [ct.model_class()._meta.label_lower]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
