@@ -269,6 +269,15 @@ JobClassInfo = collections.namedtuple(
 )
 
 
+def clear_module_from_sys_modules(module_name):
+    """
+    Remove the module and all its submodules from sys.modules.
+    """
+    for name in list(sys.modules.keys()):
+        if name == module_name or name.startswith(f"{module_name}."):
+            del sys.modules[name]
+
+
 def jobs_in_directory(path, module_name=None, reload_modules=True, report_errors=False):
     """
     Walk the available Python modules in the given directory, and for each module, walk its Job class members.
@@ -285,11 +294,19 @@ def jobs_in_directory(path, module_name=None, reload_modules=True, report_errors
     """
     from .jobs import is_job  # avoid circular import
 
+    # unload all modules in the path if reload_modules was requested
+    if reload_modules:
+        for importer, discovered_module_name, _ in pkgutil.iter_modules([path]):
+            if discovered_module_name in sys.modules:
+                del sys.modules[discovered_module_name]
+
+    # unload the module and any submodules if reload_modules was requested for a specific module_name
+    if reload_modules and module_name:
+        clear_module_from_sys_modules(module_name)
+
     for importer, discovered_module_name, _ in pkgutil.iter_modules([path]):
         if module_name and discovered_module_name != module_name:
             continue
-        if reload_modules and discovered_module_name in sys.modules:
-            del sys.modules[discovered_module_name]
         try:
             module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
             # Get all members of the module that are Job subclasses
