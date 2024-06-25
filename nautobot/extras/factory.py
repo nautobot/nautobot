@@ -244,18 +244,53 @@ class ObjectMetadataFactory(BaseModelFactory):
 
     class Meta:
         model = ObjectMetadata
+        exclude = ("has_contact",)
 
-    class Params:
-        has_contact = NautobotBoolIterator()
-
+    has_contact = NautobotBoolIterator()
     metadata_type = random_instance(
         MetadataType.objects.all(),
         allow_null=False,
     )
-    contact = factory.Maybe("has_contact", random_instance(Contact.objects.all(), allow_null=False), None)
-    team = factory.Maybe("has_contact", None, random_instance(Team.objects.all(), allow_null=False))
     scoped_fields = factory.Faker("pylist", allowed_types=[str])
-    value = factory.Faker("pydict", allowed_types=[bool, int, str])
+
+    @factory.lazy_attribute
+    def contact(self):
+        if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM and self.has_contact:
+            return factory.random.randgen.choice(Contact.objects.all())
+
+    @factory.lazy_attribute
+    def team(self):
+        if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM and not self.has_contact:
+            return factory.random.randgen.choice(Team.objects.all())
+        # return None
+
+    @factory.lazy_attribute
+    def value(self):
+        metadata_type_data_type = self.metadata_type.data_type
+        if metadata_type_data_type in (
+            MetadataTypeDataTypeChoices.TYPE_TEXT,
+            MetadataTypeDataTypeChoices.TYPE_URL,
+            MetadataTypeDataTypeChoices.TYPE_MARKDOWN,
+        ):
+            return faker.Faker().pystr()
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_JSON:
+            return faker.Faker().pydict(allowed_types=[str])
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_INTEGER:
+            return faker.Faker().pyint()
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:
+            return faker.Faker().pybool()
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_FLOAT:
+            return faker.Faker().pyfloat()
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_DATE:
+            return str(faker.Faker().date())
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_DATETIME:
+            return str(faker.Faker().date_time())
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_SELECT:
+            return factory.random.randgen.choice(self.metadata_type.choices.values_list("value", flat=True))
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_MULTISELECT:
+            return [factory.random.randgen.choice(self.metadata_type.choices.values_list("value", flat=True))]
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
+            return None
 
     @factory.lazy_attribute
     def assigned_object_type(self):
