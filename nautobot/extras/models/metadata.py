@@ -1,3 +1,5 @@
+from datetime import date, datetime
+
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -9,6 +11,7 @@ from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.settings_funcs import is_truthy
 from nautobot.extras.choices import MetadataTypeDataTypeChoices
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.models.contacts import Contact, Team
@@ -140,6 +143,23 @@ class MetadataChoice(ChangeLoggedModel, BaseModel):
         super().delete(*args, **kwargs)
 
 
+class ObjectMetadataManager(BaseManager.from_queryset(RestrictedQuerySet)):
+    use_in_migrations = True
+
+    def get_for_model(self, model):
+        """Return all ObjectMetadatas assigned to the given model."""
+        concrete_model = model._meta.concrete_model
+        cache_key = f"{self.get_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}"
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            content_type = ContentType.objects.get_for_model(concrete_model)
+            queryset = self.get_queryset().filter(content_types=content_type)
+            cache.set(cache_key, queryset)
+        return queryset
+
+    get_for_model.cache_key_prefix = "nautobot.extras.objectmetadata.get_for_model"
+
+
 @extras_features(
     "custom_validators",
     "graphql",
@@ -203,16 +223,121 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
 
     def __str__(self):
         if self.contact:
-            return f"{self.contact}: {self.metadata_type} - {self.assigned_object} - {self.value}"
+            return f"{self.metadata_type} - {self.assigned_object} - {self.contact}"
+        elif self.team:
+            return f"{self.metadata_type} - {self.assigned_object} - {self.team}"
         else:
-            return f"{self.team}: {self.metadata_type} - {self.assigned_object} - {self.value}"
+            return f"{self.metadata_type} - {self.assigned_object} - {self.value}"
 
     def clean(self):
         super().clean()
-        if self.contact is None and self.team is None:
-            raise ValidationError("Either a contact or a team must be specified")
-        if self.contact is not None and self.team is not None:
-            raise ValidationError("A contact and a team cannot be both specified at once")
+        """
+        Validate a value according to the field's type validation rules.
+
+        Returns the value, possibly cleaned up
+        """
+        value = self.value
+        metadata_type_data_type = self.metadata_type.data_type
+        # Check for MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM first
+        if metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
+            if value not in [None, "", []]:
+                raise ValidationError(f"A value cannot be specified for type {metadata_type_data_type}")
+            if self.contact is None and self.team is None:
+                raise ValidationError("Either a contact or a team must be specified")
+            if self.contact is not None and self.team is not None:
+                raise ValidationError("A contact and a team cannot be both specified at once")
+
+        if value not in [None, "", []]:
+            # Validate text field
+            if metadata_type_data_type in (
+                MetadataTypeDataTypeChoices.TYPE_TEXT,
+                MetadataTypeDataTypeChoices.TYPE_URL,
+                MetadataTypeDataTypeChoices.TYPE_MARKDOWN,
+            ):
+                if not isinstance(value, str):
+                    raise ValidationError("Value must be a string")
+                # TODO uncomment this when MetaDataType validation_minimum, validation_maximum and validation_regex fields are implemented
+                # if self.metadata_type.validation_minimum is not None and len(value) < self.metadata_type.validation_minimum:
+                #     raise ValidationError(f"Value must be at least {self.metadata_type.validation_minimum} characters in length")
+                # if self.metadata_type.validation_maximum is not None and len(value) > self.metadata_type.validation_maximum:
+                #     raise ValidationError(f"Value must not exceed {self.metadata_type.validation_maximum} characters in length")
+                # if self.metadata_type.validation_regex and not re.search(self.metadata_type.validation_regex, value):
+                #     raise ValidationError(f"Value must match regex '{self.metadata_type.validation_regex}'")
+
+            # Validate JSON
+            elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_JSON:
+                pass
+                # TODO uncomment this when MetaDataType validation_minimum, validation_maximum and validation_regex fields are implemented
+                # if (
+                #     self.metadata_type.validation_regex
+                #     or self.metadata_type.validation_minimum is not None
+                #     or self.metadata_type.validation_maximum is not None
+                # ):
+                #     json_value = json.dumps(value)
+                #     if (
+                #         self.metadata_type.validation_minimum is not None
+                #         and len(json_value) < self.metadata_type.validation_minimum
+                #     ):
+                #         raise ValidationError(
+                #             f"Value must be at least {self.metadata_type.validation_minimum} characters in length"
+                #         )
+                #     if (
+                #         self.metadata_type.validation_maximum is not None
+                #         and len(json_value) > self.metadata_type.validation_maximum
+                #     ):
+                #         raise ValidationError(
+                #             f"Value must not exceed {self.metadata_type.validation_maximum} characters in length"
+                #         )
+                #     if self.metadata_type.validation_regex and not re.search(
+                #         self.metadata_type.validation_regex, json_value
+                #     ):
+                #         raise ValidationError(f"Value must match regex '{self.metadata_type.validation_regex}'")
+
+            # Validate integer
+            elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_INTEGER:
+                try:
+                    value = int(value)
+                except ValueError:
+                    raise ValidationError("Value must be an integer.")
+                # TODO uncomment this when MetaDataType validation_minimum, validation_maximum and validation_regex fields are implemented
+                # if self.metadata_type.validation_minimum is not None and value < self.metadata_type.validation_minimum:
+                #     raise ValidationError(f"Value must be at least {self.metadata_type.validation_minimum}")
+                # if self.metadata_type.validation_maximum is not None and value > self.metadata_type.validation_maximum:
+                #     raise ValidationError(f"Value must not exceed {self.metadata_type.validation_maximum}")
+
+            # Validate boolean
+            elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:
+                try:
+                    value = is_truthy(value)
+                except ValueError as exc:
+                    raise ValidationError("Value must be true or false.") from exc
+
+            # Validate date
+            elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_DATE:
+                if not isinstance(value, date):
+                    try:
+                        datetime.strptime(value, "%Y-%m-%d")
+                    except ValueError:
+                        raise ValidationError("Date values must be in the format YYYY-MM-DD.")
+
+            # Validate selected choice
+            elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_SELECT:
+                if value not in self.metadata_type.choices.values_list("value", flat=True):
+                    raise ValidationError(
+                        f"Invalid choice ({value}). Available choices are: {', '.join(self.metadata_type.choices.values_list('value', flat=True))}"
+                    )
+
+            elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_MULTISELECT:
+                if isinstance(value, str):
+                    value = value.split(",")
+                if not set(value).issubset(self.metadata_type.choices.values_list("value", flat=True)):
+                    raise ValidationError(
+                        f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.metadata_type.choices.values_list('value', flat=True))}"
+                    )
+        else:
+            raise ValidationError(
+                f"value is a required field that cannot be empty for metadata type {metadata_type_data_type}."
+            )
 
         if self.present_in_database:
             # Check immutable fields
@@ -233,9 +358,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
         duplicate_scoped_fields_list = set([])
 
         for scoped_fields in object_metadata_scoped_fields:
-            for field in scoped_fields:
-                if field in self.scoped_fields:
-                    duplicate_scoped_fields_list.add(field)
+            duplicate_scoped_fields_list |= set(self.scoped_fields).intersection(scoped_fields)
 
         if duplicate_scoped_fields_list:
             raise ValidationError(

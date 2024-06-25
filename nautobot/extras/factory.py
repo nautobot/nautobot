@@ -256,16 +256,20 @@ class ObjectMetadataFactory(BaseModelFactory):
     team = factory.Maybe("has_contact", None, random_instance(Team.objects.all(), allow_null=False))
     scoped_fields = factory.Faker("pylist", allowed_types=[str])
     value = factory.Faker("pydict", allowed_types=[bool, int, str])
-    assigned_object_type = random_instance(
-        ContentType.objects.filter(FeatureQuery("metadata").get_query()), allow_null=False
-    )
+
+    @factory.lazy_attribute
+    def assigned_object_type(self):
+        while True:
+            content_type = factory.random.randgen.choice(
+                ContentType.objects.filter(FeatureQuery("metadata").get_query())
+            )
+            if content_type.model_class().objects.exists():
+                return content_type
 
     @factory.lazy_attribute
     def assigned_object_id(self):
         queryset = self.assigned_object_type.model_class().objects.all()
-        if queryset.exists():
-            return factory.random.randgen.choice(queryset).pk
-        return faker.Faker().uuid4()
+        return factory.random.randgen.choice(queryset).pk
 
 
 class ObjectChangeFactory(BaseModelFactory):

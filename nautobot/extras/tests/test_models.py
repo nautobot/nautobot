@@ -1334,17 +1334,42 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
             instance1.validated_save()
 
     def test_contact_team_mutual_exclusive(self):
-        instance1 = ObjectMetadata.objects.filter(contact__isnull=False).first()
-        instance2 = ObjectMetadata.objects.filter(team__isnull=False).first()
-        contact = Contact.objects.first()
-        team = Team.objects.first()
+        type_contact_team = MetadataType.objects.create(
+            name="TCT", data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
+        )
+        instance1 = ObjectMetadata.objects.create(
+            metadata_type=type_contact_team,
+            contact=Contact.objects.first(),
+            team=Team.objects.first(),
+            scoped_fields=["address"],
+            assigned_object_type=ContentType.objects.get_for_model(Contact),
+            assigned_object_id=Contact.objects.first().pk,
+        )
+        instance2 = ObjectMetadata.objects.create(
+            metadata_type=type_contact_team,
+            contact=None,
+            team=None,
+            scoped_fields=["phone"],
+            assigned_object_type=ContentType.objects.get_for_model(Contact),
+            assigned_object_id=Contact.objects.last().pk,
+        )
+        instance3 = ObjectMetadata.objects.create(
+            metadata_type=type_contact_team,
+            contact=Contact.objects.first(),
+            team=None,
+            value="Value should be empty",
+            scoped_fields=["email"],
+            assigned_object_type=ContentType.objects.get_for_model(Team),
+            assigned_object_id=Team.objects.first().pk,
+        )
         with self.assertRaises(ValidationError):
-            instance1.team = team
             instance1.validated_save()
 
         with self.assertRaises(ValidationError):
-            instance2.contact = contact
             instance2.validated_save()
+
+        with self.assertRaises(ValidationError):
+            instance3.validated_save()
 
     def test_no_scoped_fields_overlap(self):
         """Test that overlapping between scoped_fields of ObjectMetadata with the same metadata_type and the same assigned_object is not allowed"""
