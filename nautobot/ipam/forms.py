@@ -664,6 +664,8 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         "role",
         "tenant_group",
         "tenant",
+        "nat_inside",
+        "has_nat_inside",
     ]
     q = forms.CharField(required=False, label="Search")
     parent = forms.CharField(
@@ -700,6 +702,12 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         widget=StaticSelect2(),
     )
     tags = TagFilterField(model)
+    nat_inside = DynamicModelChoiceField(queryset=IPAddress.objects.all(), required=False, label="NAT Inside Address")
+    has_nat_inside = forms.NullBooleanField(
+        required=False,
+        label="Has NAT Inside",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
 
 
 #
