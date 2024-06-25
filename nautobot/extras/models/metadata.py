@@ -317,6 +317,8 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
                 if not isinstance(value, date):
                     try:
                         datetime.strptime(value, "%Y-%m-%d")
+                    except TypeError:
+                        raise ValidationError("Value must be a date or str object.")
                     except ValueError:
                         raise ValidationError("Date values must be in the format YYYY-MM-DD.")
 

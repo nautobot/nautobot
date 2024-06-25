@@ -1371,6 +1371,178 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError):
             instance3.validated_save()
 
+    def test_text_field_value(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        text_metadata_type = MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_TEXT).first()
+
+        # Create an ObjectMetadata
+        obj_metadata = ObjectMetadata.objects.create(
+            metadata_type=text_metadata_type,
+            value="Some text value",
+            scoped_fields=["status", "parent"],
+            assigned_object_type=obj_type,
+            assigned_object_id=Location.objects.first().pk,
+        )
+        obj_metadata.save()
+
+        # Assign a disallowed value (list) to obj_metadata
+        obj_metadata.value = ["I", "am", "a", "list"]
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.validated_save()
+        self.assertIn("Value must be a string", str(context.exception))
+
+        # Assign another disallowed value (int) to the first Location
+        obj_metadata.value = 2
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.validated_save()
+        self.assertIn("Value must be a string", str(context.exception))
+
+        # Assign another disallowed value (bool) to the first Location
+        obj_metadata.value = True
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.validated_save()
+        self.assertIn("Value must be a string", str(context.exception))
+        obj_metadata.delete()
+
+    def test_integer_field_value(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        text_metadata_type = MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_INTEGER).first()
+
+        # Create an ObjectMetadata
+        obj_metadata = ObjectMetadata.objects.create(
+            metadata_type=text_metadata_type,
+            value=15,
+            scoped_fields=["status", "parent"],
+            assigned_object_type=obj_type,
+            assigned_object_id=Location.objects.first().pk,
+        )
+        obj_metadata.save()
+
+        # Assign another disallowed value (str) to the first Location
+        obj_metadata.value = "I am not an integer"
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.validated_save()
+        self.assertIn("Value must be an integer", str(context.exception))
+
+        # TODO add validation_minimum/validation_maximum tests
+        obj_metadata.delete()
+
+    def test_boolean_field_value(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        text_metadata_type = MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_BOOLEAN).first()
+
+        # Create an ObjectMetadata
+        obj_metadata = ObjectMetadata.objects.create(
+            metadata_type=text_metadata_type,
+            value=False,
+            scoped_fields=["status", "parent"],
+            assigned_object_type=obj_type,
+            assigned_object_id=Location.objects.first().pk,
+        )
+        obj_metadata.save()
+
+        # Assign a disallowed value (list) to obj_metadata
+        obj_metadata.value = ["I", "am", "a", "list"]
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.validated_save()
+        self.assertIn("Value must be true or false.", str(context.exception))
+
+        # Assign another disallowed value (str) to the first Location
+        obj_metadata.value = "I am not an integer"
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.validated_save()
+        self.assertIn("Value must be true or false.", str(context.exception))
+
+        # Assign another disallowed value (int) to the first Location
+        obj_metadata.value = 2
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.validated_save()
+        self.assertIn("Value must be true or false.", str(context.exception))
+        obj_metadata.delete()
+
+    def test_date_field_value(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        text_metadata_type = MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_DATE).first()
+
+        # Create an ObjectMetadata
+        obj_metadata = ObjectMetadata.objects.create(
+            metadata_type=text_metadata_type,
+            value="1994-01-01",
+            scoped_fields=["status", "parent"],
+            assigned_object_type=obj_type,
+            assigned_object_id=Location.objects.first().pk,
+        )
+        obj_metadata.save()
+
+        # Assign a disallowed value (invalidly formatted date) to obj_metadata
+        obj_metadata.value = "01/01/1994"
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.validated_save()
+        self.assertIn("Date values must be in the format YYYY-MM-DD.", str(context.exception))
+
+        # Assign another disallowed value (str) to the first Location
+        obj_metadata.value = "I am not an integer"
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.validated_save()
+        self.assertIn("Date values must be in the format YYYY-MM-DD.", str(context.exception))
+
+        # Assign another disallowed value (int) to the first Location
+        obj_metadata.value = 2
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.validated_save()
+        self.assertIn("Value must be a date or str object.", str(context.exception))
+        # TODO add validation_minimum/validation_maximum tests
+        obj_metadata.delete()
+
+    def test_select_field(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        select_metadata_type = MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_SELECT).first()
+
+        MetadataChoice.objects.create(metadata_type=select_metadata_type, value="Option A")
+        MetadataChoice.objects.create(metadata_type=select_metadata_type, value="Option B")
+        MetadataChoice.objects.create(metadata_type=select_metadata_type, value="Option C")
+
+        # Create an ObjectMetadata
+        obj_metadata = ObjectMetadata.objects.create(
+            metadata_type=select_metadata_type,
+            value="Option A",
+            scoped_fields=["status", "parent"],
+            assigned_object_type=obj_type,
+            assigned_object_id=Location.objects.first().pk,
+        )
+        obj_metadata.validated_save()
+
+        obj_metadata.value = "Not valid option"
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.validated_save()
+        self.assertIn("Invalid choice (Not valid option)", str(context.exception))
+
+    def test_multi_select_field(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        multi_select_metadata_type = MetadataType.objects.filter(
+            data_type=MetadataTypeDataTypeChoices.TYPE_MULTISELECT
+        ).first()
+
+        MetadataChoice.objects.create(metadata_type=multi_select_metadata_type, value="Option A")
+        MetadataChoice.objects.create(metadata_type=multi_select_metadata_type, value="Option B")
+        MetadataChoice.objects.create(metadata_type=multi_select_metadata_type, value="Option C")
+
+        # Create an ObjectMetadata
+        obj_metadata = ObjectMetadata.objects.create(
+            metadata_type=multi_select_metadata_type,
+            value=["Option A"],
+            scoped_fields=["status", "parent"],
+            assigned_object_type=obj_type,
+            assigned_object_id=Location.objects.first().pk,
+        )
+        obj_metadata.validated_save()
+
+        invalid_options = ["Not A valid option", "NOT A VALID OPTION"]
+        obj_metadata.value = invalid_options
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.validated_save()
+        self.assertIn(f"Invalid choice(s) ({invalid_options})", str(context.exception))
+
     def test_no_scoped_fields_overlap(self):
         """Test that overlapping between scoped_fields of ObjectMetadata with the same metadata_type and the same assigned_object is not allowed"""
         ObjectMetadata.objects.create(
