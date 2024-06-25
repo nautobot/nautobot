@@ -3470,7 +3470,7 @@ class InterfaceRedundancyGroupAssociationTestCase(FilterTestCases.FilterTestCase
 
         for i, group in enumerate(interface_redundancy_groups):
             group.add_interface(cls.interfaces[i], 100 * i)
-            group.add_interface(cls.interfaces[i+4], 100 * (i+4))
+            group.add_interface(cls.interfaces[i + 4], 100 * (i + 4))
 
 
 class SoftwareImageFileFilterSetTestCase(FilterTestCases.FilterTestCase):
