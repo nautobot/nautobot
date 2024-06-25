@@ -1,2 +1,0 @@
-Fixed an issue where config-contexts and export-templates sourced from a Git repository might not be automatically deleted from Nautobot after removing them from the repository and resyncing it.
-Fixed an exception that might be raised when performing a Git repository "dry-run" sync if certain types of diffs are present.

@@ -66,6 +66,43 @@ The CSV import functionality for all models has been changed from a synchronous 
 Model CharFields' `max_length` attributes have been standardized globally to have at least 255 characters except where a shorter `max_length` is explicitly justified.
 
 <!-- towncrier release notes start -->
+## v2.2.6 (2024-06-24)
+
+### Security
+
+- [#5821](https://github.com/nautobot/nautobot/issues/5821) - Updated `urllib3` to 2.2.2 due to CVE-2024-37891. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+### Added
+
+- [#5550](https://github.com/nautobot/nautobot/issues/5550) - Added support for specifying a tag or a commit hash as the GitRepository `branch` value.
+- [#5550](https://github.com/nautobot/nautobot/issues/5550) - Added an `enabled` flag to the JobButton class; disabled JobButtons will not appear in the UI.
+- [#5793](https://github.com/nautobot/nautobot/issues/5793) - Added `--print-hashes` option to `nautobot-server generate_test_data` command.
+- [#5807](https://github.com/nautobot/nautobot/issues/5807) - Added the ability to sort and filter the `IPAddress` list view by the `nat_inside` field.
+
+### Changed
+
+- [#5550](https://github.com/nautobot/nautobot/issues/5550) - Changed the behavior on removal of a previously-installed Job class to additionally auto-disable any JobButtons, JobHooks, and ScheduledJobs referencing this class.
+
+### Fixed
+
+- [#5550](https://github.com/nautobot/nautobot/issues/5550) - Fixed an issue where config-contexts and export-templates sourced from a Git repository might not be automatically deleted from Nautobot after removing them from the repository and resyncing it.
+- [#5550](https://github.com/nautobot/nautobot/issues/5550) - Fixed an exception that might be raised when performing a Git repository "dry-run" sync if certain types of diffs are present.
+- [#5782](https://github.com/nautobot/nautobot/issues/5782) - Fixed an issue with Job code not being fully reloaded after syncing a Git repository.
+- [#5809](https://github.com/nautobot/nautobot/issues/5809) - Fixed missing support for the GitRepository model in GraphQL.
+- [#5819](https://github.com/nautobot/nautobot/issues/5819) - Fixed inability to use bare (local-DNS) hostnames when specifying a GitRepository remote URL.
+
+### Documentation
+
+- [#5726](https://github.com/nautobot/nautobot/issues/5726) - Updated, cleaned up, and separated out the main landing page for Nautobot docs.
+- [#5752](https://github.com/nautobot/nautobot/issues/5752) - Corrected incorrect entry for `nautobot.utilities.ordering` in `v2-code-location-changes` table.
+- [#5754](https://github.com/nautobot/nautobot/issues/5754) - Updated `mkdocs-material` to 9.5.25.
+
+### Housekeeping
+
+- [#5754](https://github.com/nautobot/nautobot/issues/5754) - Updated development dependencies `requests` to `~2.32.2` and `watchdog` to `~4.0.1`.
+- [#5793](https://github.com/nautobot/nautobot/issues/5793) - Refactored `generate_test_data` implementation for improved debuggability.
+- [#5793](https://github.com/nautobot/nautobot/issues/5793) - Fixed a bug in `ControllerManagedDeviceGroupFactory` that could result in nondeterministic test data.
+
 ## v2.2.5 (2024-05-28)
 
 ### Security
