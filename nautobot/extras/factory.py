@@ -290,8 +290,7 @@ class ObjectMetadataFactory(BaseModelFactory):
             return factory.random.randgen.choice(self.metadata_type.choices.values_list("value", flat=True))
         elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_MULTISELECT:
             return [factory.random.randgen.choice(self.metadata_type.choices.values_list("value", flat=True))]
-        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
-            return None
+        return None
 
     @factory.lazy_attribute
     def assigned_object_type(self):
