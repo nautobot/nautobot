@@ -257,15 +257,16 @@ class ObjectMetadataFactory(BaseModelFactory):
     def contact(self):
         if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM and self.has_contact:
             return factory.random.randgen.choice(Contact.objects.all())
+        return None
 
     @factory.lazy_attribute
     def team(self):
         if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM and not self.has_contact:
             return factory.random.randgen.choice(Team.objects.all())
-        # return None
+        return None
 
     @factory.lazy_attribute
-    def value(self):
+    def _value(self):
         metadata_type_data_type = self.metadata_type.data_type
         if metadata_type_data_type in (
             MetadataTypeDataTypeChoices.TYPE_TEXT,

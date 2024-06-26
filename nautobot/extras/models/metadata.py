@@ -229,7 +229,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
         if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
             return self.contact or self.team
         else:
-            return self.value
+            return self._value
 
     def __str__(self):
         return f"{self.metadata_type} - {self.assigned_object} - {self.value}"
@@ -241,7 +241,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
         Returns the value, possibly cleaned up
         """
         super().clean()
-        value = self.value
+        value = self._value
         metadata_type_data_type = self.metadata_type.data_type
         # Check for MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM first
         if metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
