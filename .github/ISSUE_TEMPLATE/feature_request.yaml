@@ -44,9 +44,8 @@ body:
       description: WHY; Please enter the reason or value for the desired functionality.
       placeholder: >
         My App is seen as first-class citizen by my users and so that the
-        app drop-down menu isn't overloaded. When I use Nautobot as an App Platform,
-        it'll also provide more focus on the Plugins/Apps than core SoT drop-downs (for
-        users that aren't permitted to view those items)
+        Apps drop-down menu isn't overloaded. When I use Nautobot as an App Platform,
+        it'll also provide more focus on the Apps.
     validations:
       required: true
   - type: textarea
