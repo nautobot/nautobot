@@ -80,18 +80,18 @@
 {% block advanced_content_left_page %}
     <div class="panel panel-default">
         <div class="panel-heading">
-            <strong>Job Positional Arguments</strong>
-        </div>
-        <div class="panel-body">
-            {% include 'extras/inc/json_data.html' with data=result.task_args format="json" %}
-        </div>
-    </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
             <strong>Job Keyword Arguments</strong>
         </div>
         <div class="panel-body">
             {% include 'extras/inc/json_data.html' with data=result.task_kwargs format="json" %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Job Positional Arguments</strong>
+        </div>
+        <div class="panel-body">
+            {% include 'extras/inc/json_data.html' with data=result.task_args format="json" %}
         </div>
     </div>
     <div class="panel panel-default">
@@ -115,6 +115,10 @@
                     <td>{{ result.worker }}</td>
                 </tr>
                 <tr>
+                    <td>Queue</td>
+                    <td>{{ result.celery_kwargs.queue}}</td>
+                </tr>
+                <tr>
                     <td>Task Name</td>
                     <td>{{ result.task_name }}</td>
                 </tr>
@@ -124,38 +128,6 @@
                 </tr>
             </tbody>
         </table>
-    </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <strong>Return Data</strong>
-        </div>
-        <div class="panel-body">
-            {% include 'extras/inc/json_data.html' with data=result.result format="json" %}
-        </div>
-    </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <strong>File Output(s)</strong>
-        </div>
-        <div class="panel-body">
-            <ul>
-                {% for file_proxy in result.files.all %}
-                    {% if file_proxy.file %}
-                        <li>
-                            <a
-                            {% if settings.JOB_FILE_IO_STORAGE == "db_file_storage.storage.DatabaseFileStorage" %}
-                                href="{% url "db_file_storage.download_file" %}?name={{ file_proxy.file }}"
-                            {% else %}
-                                href="{{ file_proxy.file.url }}"
-                            {% endif %}
-                                download="{{ file_proxy.name }}">
-                                {{ file_proxy.name }}
-                            </a>
-                        </li>
-                    {% endif %}
-                {% endfor %}
-            </ul>
-        </div>
     </div>
     <div class="panel panel-default">
         <div class="panel-heading">
