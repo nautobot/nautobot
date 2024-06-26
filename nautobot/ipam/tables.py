@@ -474,7 +474,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
 
 class IPAddressDetailTable(IPAddressTable):
-    nat_inside = tables.Column(linkify=True, orderable=False, verbose_name="NAT (Inside)")
+    nat_inside = tables.Column(linkify=True, verbose_name="NAT (Inside)")
     tenant = TenantColumn()
     tags = TagColumn(url_name="ipam:ipaddress_list")
     assigned = BooleanColumn(accessor="assigned_count")

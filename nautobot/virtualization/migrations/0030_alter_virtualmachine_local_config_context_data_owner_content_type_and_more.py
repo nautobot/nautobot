@@ -12,7 +12,7 @@ import nautobot.extras.utils
 class Migration(migrations.Migration):
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0108_alter_configcontext_cluster_groups_and_more"),
+        ("extras", "0110_alter_configcontext_cluster_groups_and_more"),
         ("virtualization", "0029_add_role_field_to_interface_models"),
     ]
 
