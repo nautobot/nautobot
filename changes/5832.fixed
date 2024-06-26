@@ -1,0 +1,2 @@
+Fixed lack of API versioning of responses to a POST to `/api/ipam/prefixes/<id>/available-prefixes/` to allocate child prefixes of a prefix.
+Fixed incorrect OpenAPI schema for `/api/ipam/prefixes/<id>/available-prefixes/` and `/api/ipam/prefixes/<id>/available-ips/`.
