@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
         ("virtualization", "0026_change_virtualmachine_primary_ip_fields"),
         ("contenttypes", "0002_remove_content_type_name"),
         ("tenancy", "0008_tagsfield"),
-        ("extras", "0107_staticgroup_staticgroupassociation"),
+        ("extras", "0109_staticgroup_staticgroupassociation"),
     ]
 
     operations = [

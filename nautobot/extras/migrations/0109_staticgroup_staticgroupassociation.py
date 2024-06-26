@@ -15,7 +15,7 @@ import nautobot.extras.utils
 class Migration(migrations.Migration):
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0106_populate_default_statuses_and_roles_for_contact_associations"),
+        ("extras", "0108_jobbutton_enabled"),
         ("tenancy", "0001_initial"),
     ]
 
