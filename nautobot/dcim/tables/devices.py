@@ -1,3 +1,4 @@
+from django.utils.html import format_html
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
@@ -305,7 +306,16 @@ class DeviceComponentTable(BaseTable):
 
 
 class ModularDeviceComponentTable(DeviceComponentTable):
-    module = tables.Column(linkify=True)
+    module = tables.Column()
+
+    def __init__(self, *args, parent_module=None, **kwargs):
+        self.parent_module = parent_module
+        super().__init__(*args, **kwargs)
+
+    def render_module(self, record, value, **kwargs):
+        if value and value == self.parent_module:
+            return self.default
+        return format_html('<a href="{}">{}</a>', value.get_absolute_url(), value)
 
 
 class CableTerminationTable(BaseTable):
@@ -365,6 +375,7 @@ class DeviceModuleConsolePortTable(ConsolePortTable):
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "description",
             "cable",
@@ -377,6 +388,7 @@ class DeviceModuleConsolePortTable(ConsolePortTable):
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "description",
             "cable",
@@ -427,6 +439,7 @@ class DeviceModuleConsoleServerPortTable(ConsoleServerPortTable):
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "description",
             "cable",
@@ -439,6 +452,7 @@ class DeviceModuleConsoleServerPortTable(ConsoleServerPortTable):
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "description",
             "cable",
@@ -497,6 +511,7 @@ class DeviceModulePowerPortTable(PowerPortTable):
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "maximum_draw",
             "allocated_draw",
@@ -511,6 +526,7 @@ class DeviceModulePowerPortTable(PowerPortTable):
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "maximum_draw",
             "allocated_draw",
@@ -573,6 +589,7 @@ class DeviceModulePowerOutletTable(PowerOutletTable):
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "power_port",
             "feed_leg",
@@ -587,6 +604,7 @@ class DeviceModulePowerOutletTable(PowerOutletTable):
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "power_port",
             "feed_leg",
@@ -678,6 +696,7 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "status",
             "device",
             "label",
+            "module",
             "enabled",
             "type",
             "parent_interface",
@@ -703,6 +722,7 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "name",
             "status",
             "label",
+            "module",
             "enabled",
             "type",
             "parent_interface",
@@ -770,6 +790,7 @@ class DeviceModuleFrontPortTable(FrontPortTable):
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "rear_port",
             "rear_port_position",
@@ -783,6 +804,7 @@ class DeviceModuleFrontPortTable(FrontPortTable):
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "rear_port",
             "rear_port_position",
@@ -829,6 +851,7 @@ class DeviceModuleRearPortTable(RearPortTable):
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "positions",
             "description",
@@ -841,6 +864,7 @@ class DeviceModuleRearPortTable(RearPortTable):
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "positions",
             "description",

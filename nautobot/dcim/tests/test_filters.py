@@ -2114,7 +2114,6 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         ("child_interfaces", "child_interfaces__name"),
         ("description",),
         # ("device", "device__id"),  # TODO - InterfaceFilterSet overrides device as a MultiValueCharFilter on name only
-        ("device", "device__name"),
         ("label",),
         ("lag", "lag__id"),
         ("lag", "lag__name"),
@@ -2452,6 +2451,21 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         # Assert interface of a device not belonging as `device` to same VC are not returned
         with self.subTest():
             self.assertFalse(queryset.filter(name="int4").exists())
+
+    def test_device_name(self):
+        """Assert only interfaces belonging to devices and it's modules are returned"""
+
+        params = {"device": self.devices[0].name}
+        queryset = self.filterset(params, self.queryset).qs
+
+        # Capture the first device so that we can use it in the next test.
+        device = Device.objects.get(pk=self.devices[0].pk)
+
+        with self.subTest():
+            self.assertQuerysetEqual(
+                queryset,
+                self.queryset.filter(pk__in=device.all_interfaces.values_list("pk", flat=True)),
+            )
 
     def test_kind(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
