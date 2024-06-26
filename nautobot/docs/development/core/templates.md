@@ -38,6 +38,11 @@ The most customizable template is `generic/object_detail.html`, as object detail
       can be rendered in a single block.
     * `content_right_page`: is a half-width column on the right.
     * `content_full_width_page`: is a full-width column.
+    * `advanced_content_left_page`: is a half-width column on the left on the
+      Advanced Tab. This will render below Object Details and Data Provenance.
+    * `advanced_content_right_page`: is half-width column on the right on the Advanced Tab.
+    * `advanced_content_full_width_page`: is a full-width column on the Advanced Tab.
+    * `extra_tab_content`: this block allows content from new tabs and is related to `extra_nav_tabs`.
 
 ## Object List
 
