@@ -1,0 +1,1 @@
+Fixed missing mysqldump client when trying to run tests with --parallel on mysql.

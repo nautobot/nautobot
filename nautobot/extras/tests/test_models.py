@@ -263,7 +263,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             slug="test_git_repo",
             remote_url="http://localhost/git.git",
         )
-        repo.save()
+        repo.validated_save()
 
         with self.assertRaises(ValidationError):
             nonduplicate_context = ConfigContext(name="context 1", weight=300, data={"a": "22"}, owner=repo)
@@ -877,7 +877,7 @@ class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
             slug="test_git_repo",
             remote_url="http://localhost/git.git",
         )
-        repo.save()
+        repo.validated_save()
 
         with self.assertRaises(ValidationError):
             nonduplicate_template = ExportTemplate(
@@ -901,7 +901,7 @@ class ExternalIntegrationTest(ModelTestCases.BaseModelTestCase):
             )
             ei.validated_save()
 
-        ei.remote_url = "http://localhost"
+        ei.remote_url = "http://some-local-host"
         ei.validated_save()
 
     def test_timeout_validation(self):
@@ -1057,6 +1057,11 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError) as handler:
             repo.validated_save()
         self.assertIn("Please choose a different slug", str(handler.exception))
+
+    def test_remote_url_hostname(self):
+        """Confirm that a bare hostname (no domain name) can be used for a remote URL."""
+        self.repo.remote_url = "http://some-private-host/example.git"
+        self.repo.validated_save()
 
 
 class JobModelTest(ModelTestCases.BaseModelTestCase):
