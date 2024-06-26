@@ -27,6 +27,7 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
     JSONArrayFormField,
     JSONField,
+    LaxURLField,
     MultipleContentTypeField,
     SlugField,
     StaticSelect2,
@@ -705,7 +706,7 @@ class PasswordInputWithPlaceholder(forms.PasswordInput):
 class GitRepositoryForm(NautobotModelForm):
     slug = SlugField(help_text="Filesystem-friendly unique shorthand")
 
-    remote_url = forms.URLField(
+    remote_url = LaxURLField(
         required=True,
         label="Remote URL",
         help_text="Only http:// and https:// URLs are presently supported",
@@ -756,7 +757,7 @@ class GitRepositoryBulkEditForm(NautobotBulkEditForm):
         queryset=GitRepository.objects.all(),
         widget=forms.MultipleHiddenInput(),
     )
-    remote_url = forms.CharField(
+    remote_url = LaxURLField(
         label="Remote URL",
         required=False,
     )
@@ -1030,6 +1031,10 @@ class JobHookForm(BootstrapMixin, forms.ModelForm):
     content_types = MultipleContentTypeField(
         queryset=ChangeLoggedModelsQuery().as_queryset(), required=True, label="Content Type(s)"
     )
+    job = DynamicModelChoiceField(
+        queryset=Job.objects.filter(is_job_hook_receiver=True),
+        query_params={"is_job_hook_receiver": True},
+    )
 
     class Meta:
         model = JobHook
@@ -1197,14 +1202,19 @@ class JobButtonForm(BootstrapMixin, forms.ModelForm):
             api_url="/api/extras/content-types/",
         ),
     )
+    job = DynamicModelChoiceField(
+        queryset=Job.objects.filter(is_job_button_receiver=True),
+        query_params={"is_job_button_receiver": True},
+    )
 
     class Meta:
         model = JobButton
         fields = (
             "content_types",
             "name",
-            "text",
             "job",
+            "enabled",
+            "text",
             "weight",
             "group_name",
             "button_class",
@@ -1223,6 +1233,9 @@ class JobButtonBulkEditForm(BootstrapMixin, BulkEditForm):
             api_url="/api/extras/content-types/",
         ),
         required=False,
+    )
+    enabled = forms.NullBooleanField(
+        required=False, widget=BulkEditNullBooleanSelect, help_text="Whether this job button appears in the UI"
     )
     weight = forms.IntegerField(required=False)
     group_name = forms.CharField(required=False)

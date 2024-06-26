@@ -9,7 +9,7 @@ import nautobot.extras.models.statuses
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0108_alter_configcontext_cluster_groups_and_more"),
+        ("extras", "0110_alter_configcontext_cluster_groups_and_more"),
         ("ipam", "0046_update_all_charfields_max_length_to_255"),
     ]
 
