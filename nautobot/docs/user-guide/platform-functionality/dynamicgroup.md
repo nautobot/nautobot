@@ -22,7 +22,7 @@ The members of each Dynamic Group are cached and tracked by [Static Group Associ
 
 ### Creating Dynamic Groups in the UI
 
-Dynamic Groups can be created through the UI under _Organization > Groups > Dynamic Groups_ and clicking the "Add" button, or through the REST API.
+Dynamic Groups can be created through the UI under _Organization > Groups > Dynamic Groups_ and clicking the "Add" button.
 
 When creating a Dynamic Group, you must provide a unique **Name** for the group, select an **Object Type** (also known as content-type) of the objects that it will contain as members, for example `dcim.device`, and also select a **Group Type**, specifying which of the supported member assignment patterns will apply to this group. (Any given Dynamic Group can only use one such pattern; mixing assignment types within a single group is not permitted at this time.) You can also optionally provide a **Description** for the group, select a [**Tenant**](../core-data-model/tenancy/tenant.md) that the group applies to, and/or apply [**Tags**](tag.md) to it.
 

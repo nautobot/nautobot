@@ -9,11 +9,11 @@ Each Static Group Association database record represents the association of a si
 
 ## UI
 
-The `/extras/static-group-associations/` UI views normally only show Static Group Associations corresponding to static-assignment-based Dynamic Groups; those corresponding to other types of Dynamic Groups are not displayed. It is possible to view (but not modify) such records in the UI list view by specifying a Dynamic Group of another type as a query parameter but this should be treated as debugging functionality rather than a feature intended for consumption by end users.
+The `/extras/static-group-associations/` UI views normally only show Static Group Associations corresponding to static-assignment-based Dynamic Groups; those corresponding to other types of Dynamic Groups are not displayed. It is possible to view (but not modify) such records in the UI list view by filtering on a specific Dynamic Group of another type, but this should be treated as debugging functionality rather than a feature intended for consumption by end users.
 
 ## REST API
 
-The REST API endpoints under `/api/extras/static-group-associations/` normally only show Static Group Associations corresponding to static-assignment-based Dynamic Groups; those corresponding to other types of Dynamic Groups are not displayed. It is possible to view (but not modify) such records in the REST API by specifying a Dynamic Group of another type as a query parameter but this should be treated as debugging functionality rather than a feature intended for consumption by end users.
+The REST API endpoints under `/api/extras/static-group-associations/` normally only show Static Group Associations corresponding to static-assignment-based Dynamic Groups; those corresponding to other types of Dynamic Groups are not displayed. It is possible to view (but not modify) such records in the REST API by filtering on a specific Dynamic Group of another type, but this should be treated as debugging functionality rather than a feature intended for consumption by end users.
 
 ## Python ORM
 
