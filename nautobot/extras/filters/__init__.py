@@ -918,6 +918,7 @@ class JobButtonFilterSet(BaseFilterSet):
         fields = (
             "content_types",
             "name",
+            "enabled",
             "text",
             "job",
             "weight",

@@ -67,7 +67,7 @@ This is done by setting the corresponding "override" flag (`grouping_override`, 
 
 ### Deleting Jobs
 
-When a previously installed Job class is removed, after running `nautobot-server <migrate|post_upgrade>` or refreshing the providing Git repository, the Job database record will *not* be automatically deleted, but *will* be flagged as `installed = False` and can no longer be run or scheduled.
+When a previously installed Job class is removed, after running `nautobot-server <migrate|post_upgrade>` or refreshing the providing Git repository, the Job database record will *not* be automatically deleted, but *will* be flagged as `installed = False` and can no longer be run or scheduled. Any [Job Buttons](jobbutton.md), [Job Hooks](jobhook.md), and [scheduled Jobs](job-scheduling-and-approvals.md) corresponding to the no-longer-installed Job will automatically be disabled as well.
 
 !!! note
     The Job list view hides by default any Jobs that are not installed. To view non-installed Job records, you need to select the "Filter" button in the list view and explicitly specify the filter "Installed: No".
