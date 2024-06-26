@@ -363,11 +363,13 @@ class DynamicGroup(PrimaryModel):
                 )
         else:
             # Cached/hidden static group associations, so we can use bulk-create to bypass change logging.
+            existing_members = self.members
             sgas = [
                 StaticGroupAssociation(
                     dynamic_group=self, associated_object_type=self.content_type, associated_object_id=obj.pk
                 )
                 for obj in objects_to_add
+                if obj not in existing_members
             ]
             StaticGroupAssociation.all_objects.bulk_create(sgas)
 

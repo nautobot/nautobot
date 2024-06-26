@@ -407,6 +407,8 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
             self.assertTrue(group.has_member(device1))
         with self.assertNumQueries(1):
             self.assertFalse(group.has_member(device2))
+        # Test idempotence
+        group.update_cached_members()
 
         # Test fail-closed behavior of an invalid group filter
         group = self.invalid_filter
@@ -416,6 +418,8 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
             self.assertFalse(group.has_member(device1))
         with self.assertNumQueries(1):
             self.assertFalse(group.has_member(device2))
+        # Test idempotence
+        group.update_cached_members()
 
     def test_count(self):
         """Test `DynamicGroup.count`."""
