@@ -52,8 +52,8 @@ class ModelTestCases:
                 self.assertEqual(self.model.objects.first().dynamic_groups.model, DynamicGroup)
 
                 if DynamicGroup.objects.get_for_model(self.model).exists():
-                    sg = DynamicGroup.objects.get_for_model(self.model).first()
-                    self.assertEqual(sg.members.model, self.model)
+                    dg = DynamicGroup.objects.get_for_model(self.model).first()
+                    self.assertEqual(dg.members.model, self.model)
 
                 # Models using DynamicGroupMixin w/o DynamicGroupsModelMixin will not have static_group_association_set
                 if hasattr(self.model, "static_group_association_set"):

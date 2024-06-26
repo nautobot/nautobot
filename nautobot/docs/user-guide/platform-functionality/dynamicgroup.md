@@ -483,11 +483,11 @@ Response:
 #### Updating or Deleting a Dynamic Group via REST
 
 !!! important
-    It is not possible to perform a nested update of `children` when updating a new Dynamic Group. You must use the endpoint for creating Dynamic Group Memberships as explained below under [Updating or Deleting Child Groups via REST](#updating-or-deleting-child-groups-via-rest).
+    It is not possible to perform a nested update of `children` when updating a Dynamic Group. You must use the endpoint for creating Dynamic Group Memberships as explained below under [Updating or Deleting Child Groups via REST](#updating-or-deleting-child-groups-via-rest).
 
 Updating or deleting a Dynamic Group is done by sending a request to the detail endpoint for that object.
 
-A Dynamic Group may be updated using `PUT` or `PATCH` (for a partial update) requests. As usual for REST, a `PUT` request requires the entire object to be described, while a `PATCH` allows for individual fields to be updated without affecting the other fields. For example if you wanted to update the `name` and the `description` together, leaving every other field with their current values as provided:
+A Dynamic Group may be updated using `PUT` or `PATCH` requests. As usual for REST, a `PUT` request requires the entire object to be described, while a `PATCH` allows for individual fields to be updated without affecting the other fields. For example if you wanted to update the `name` and the `description` together, leaving every other field with their current values as provided:
 
 ```json
 PATCH /api/extras/dynamic-groups/{uuid}/
@@ -604,7 +604,7 @@ GET /api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/
 
 Updating or deleting Dynamic Group Membership is done by sending a request to the detail endpoint for that membership object.
 
-A Dynamic Group Membership may be updated using `PUT` or `PATCH` (for a partial update) requests. Again, a `PUT` request requires the entire object to be described, while performing a partial update using a `PATCH` request can allow any single field to be updated without affecting the other fields. For example, if we only wanted to update the `weight` for a membership:
+A Dynamic Group Membership may be updated using `PUT` or `PATCH` requests. Again, a `PUT` request requires the entire object to be described, while performing a partial update using a `PATCH` request can allow any single field to be updated without affecting the other fields. For example, if we only wanted to update the `weight` for a membership:
 
 ```json
 PATCH /api/extras/dynamic-group-memberships/{uuid}/
@@ -638,7 +638,7 @@ Neither of the above attributes provide a way to directly bypass the cache used 
 
     Similarly, `.has_member(obj)` was previously non-cached by default, but the Redis cache could be used by invoking it as `.has_member(obj, use_cache=True)`; this too has been changed in this release, and the `use_cache` flag should be considered deprecated as well.
 
-For static-assignment-based Dynamic groups (only!) you can update its member list by assigning directly to its `.members` or calling its `.add_members()` or `remove_members()` methods as desired. Invoking any of these APIs for a filter-based or set-based Dynamic Group is an error and will raise an exception.
+For static-assignment-based Dynamic groups (only!) you can update its member list by assigning directly to its `.members` or calling its `.add_members()` or `.remove_members()` methods as desired. Invoking any of these APIs for a filter-based or set-based Dynamic Group is an error and will raise an exception.
 
 ### Working with an Object's Containing Dynamic Groups
 
