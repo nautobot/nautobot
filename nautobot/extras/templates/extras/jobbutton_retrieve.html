@@ -32,11 +32,15 @@
                 </tr>
                 <tr>
                     <td>Text</td>
-                    <td><span>{{ object.text }}</span></td>
+                    <td><pre>{{ object.text }}</pre></td>
                 </tr>
                 <tr>
                     <td>Job</td>
                     <td><a href="{% url 'extras:job_run_by_class_path' class_path=object.job.class_path %}">{{ object.job }}</a></td>
+                </tr>
+                <tr>
+                    <td>Enabled</td>
+                    <td>{{ object.enabled|render_boolean }}</td>
                 </tr>
                 <tr>
                     <td>Button Class</td>
@@ -44,7 +48,7 @@
                 </tr>
                 <tr>
                     <td>Confirmation</td>
-                    <td><span>{{ object.confirmation }}</span></td>
+                    <td>{{ object.confirmation|render_boolean}}</td>
                 </tr>
             </table>
         </div>

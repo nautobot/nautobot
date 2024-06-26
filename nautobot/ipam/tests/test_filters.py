@@ -480,6 +480,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
     queryset = IPAddress.objects.all()
     filterset = IPAddressFilterSet
     tenancy_related_name = "ip_addresses"
+    generic_filter_tests = (["nat_inside", "nat_inside__id"],)
 
     @classmethod
     def setUpTestData(cls):
@@ -655,6 +656,20 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             tenant=None,
             status=statuses[0],
             namespace=cls.namespace,
+        )
+        IPAddress.objects.create(
+            address="10.1.1.1/32",
+            tenant=None,
+            status=statuses[0],
+            namespace=cls.namespace,
+            nat_inside=ip0,
+        )
+        IPAddress.objects.create(
+            address="10.2.2.2/32",
+            tenant=None,
+            status=statuses[0],
+            namespace=cls.namespace,
+            nat_inside=ip1,
         )
 
     def test_search(self):
