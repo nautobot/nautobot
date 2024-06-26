@@ -708,7 +708,7 @@ class DynamicGroupView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-        model = instance.content_type.model_class()
+        model = instance.model
         table_class = get_table_for_model(model)
 
         if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
