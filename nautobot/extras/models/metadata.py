@@ -146,14 +146,16 @@ class MetadataChoice(ChangeLoggedModel, BaseModel):
 class ObjectMetadataManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    def get_for_model(self, model):
-        """Return all ObjectMetadatas assigned to the given model."""
-        concrete_model = model._meta.concrete_model
-        cache_key = f"{self.get_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}"
+    def get_for_model(self, instance):
+        """Return all ObjectMetadatas assigned to the given instance."""
+        cache_key = f"{self.get_for_model.cache_key_prefix}.{instance}"
         queryset = cache.get(cache_key)
         if queryset is None:
-            content_type = ContentType.objects.get_for_model(concrete_model)
-            queryset = self.get_queryset().filter(content_types=content_type)
+            assigned_object_type = ContentType.objects.get_for_model(instance)
+            assigned_object_id = instance.pk
+            queryset = self.get_queryset().filter(
+                assigned_object_type=assigned_object_type, assigned_object_id=assigned_object_id
+            )
             cache.set(cache_key, queryset)
         return queryset
 
@@ -191,7 +193,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
         ),
         help_text="List of scoped fields, only direct fields on the model",
     )
-    value = models.JSONField(
+    _value = models.JSONField(
         blank=True,
         null=True,
         help_text="Relevant data value to an object field or a set of object fields",
@@ -200,6 +202,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
     assigned_object_id = models.UUIDField(db_index=True)
     assigned_object = GenericForeignKey(ct_field="assigned_object_type", fk_field="assigned_object_id")
 
+    objects = ObjectMetadataManager()
     natural_key_field_names = ["pk"]
     documentation_static_path = "docs/user-guide/platform-functionality/metadata.html"
 
@@ -221,13 +224,15 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
             ),
         ]
 
-    def __str__(self):
-        if self.contact:
-            return f"{self.metadata_type} - {self.assigned_object} - {self.contact}"
-        elif self.team:
-            return f"{self.metadata_type} - {self.assigned_object} - {self.team}"
+    @property
+    def value(self):
+        if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
+            return self.contact or self.team
         else:
-            return f"{self.metadata_type} - {self.assigned_object} - {self.value}"
+            return self.value
+
+    def __str__(self):
+        return f"{self.metadata_type} - {self.assigned_object} - {self.value}"
 
     def clean(self):
         """
@@ -304,7 +309,12 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
                     #     raise ValidationError(f"Value must be at least {self.metadata_type.validation_minimum}")
                     # if self.metadata_type.validation_maximum is not None and value > self.metadata_type.validation_maximum:
                     #     raise ValidationError(f"Value must not exceed {self.metadata_type.validation_maximum}")
-
+                # Validate integer
+                elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_FLOAT:
+                    try:
+                        value = float(value)
+                    except ValueError:
+                        raise ValidationError("Value must be an float.")
                 # Validate boolean
                 elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:
                     try:
@@ -321,6 +331,15 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
                             raise ValidationError("Value must be a date or str object.")
                         except ValueError:
                             raise ValidationError("Date values must be in the format YYYY-MM-DD.")
+                # Validate datetime
+                elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_DATETIME:
+                    if not isinstance(value, datetime):
+                        try:
+                            datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+                        except TypeError:
+                            raise ValidationError("Value must be a datetime or str object.")
+                        except ValueError:
+                            raise ValidationError("Datetime values must be in the format YYYY-MM-DD HH:MM:SS.")
 
                 # Validate selected choice
                 elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_SELECT:
