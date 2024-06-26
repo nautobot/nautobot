@@ -1672,6 +1672,40 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         device.primary_ip6 = interface.ip_addresses.all().filter(ip_version=6).first()
         device.validated_save()
 
+    def test_primary_ip_validation_logic_modules(self):
+        device = Device(
+            name="Test IP Device",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+        )
+        device.validated_save()
+        manufacturer = Manufacturer.objects.first()
+        module_type = ModuleType.objects.create(manufacturer=manufacturer, model="module model tests")
+
+        status = Status.objects.get_for_model(Module).first()
+        module_bay = ModuleBay.objects.create(
+            parent_device=device,
+            name="1111",
+            position="1111",
+        )
+
+        module = Module.objects.create(
+            module_type=module_type,
+            parent_module_bay=module_bay,
+            status=status,
+        )
+
+        interface = Interface.objects.create(name="Int1", module=module, status=self.device_status, role=self.intf_role)
+        ips = list(IPAddress.objects.filter(ip_version=4)[:5]) + list(IPAddress.objects.filter(ip_version=6)[:5])
+        interface.add_ip_addresses(ips)
+        device.primary_ip4 = interface.ip_addresses.all().filter(ip_version=4).first()
+        self.assertIsNotNone(device.primary_ip4)
+        device.primary_ip6 = interface.ip_addresses.all().filter(ip_version=6).first()
+        self.assertIsNotNone(device.primary_ip6)
+        device.validated_save()
+
     def test_software_version_device_type_validation(self):
         """
         Assert that device's software version contains a software image file that matches the device's device type or a default image.
@@ -1697,6 +1731,101 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         software_image_file.save()
         self.device_type.software_image_files.add(software_image_file)
         self.device.validated_save()
+
+    def test_all_x_properties(self):
+        self.assertEqual(self.device.all_modules.count(), 0)
+        self.assertEqual(self.device.all_module_bays.count(), 1)
+        self.assertEqual(self.device.all_console_server_ports.count(), 1)
+        self.assertEqual(self.device.all_console_ports.count(), 1)
+        self.assertEqual(self.device.all_front_ports.count(), 1)
+        self.assertEqual(self.device.all_interfaces.count(), 1)
+        self.assertEqual(self.device.all_rear_ports.count(), 1)
+        self.assertEqual(self.device.all_power_ports.count(), 1)
+        self.assertEqual(self.device.all_power_outlets.count(), 1)
+
+        parent_module_bay = self.device.all_module_bays.first()
+
+        manufacturer = Manufacturer.objects.first()
+        module_type = ModuleType.objects.create(manufacturer=manufacturer, model="module model tests")
+        status = Status.objects.get_for_model(Module).first()
+
+        # Create ModuleType components
+        ConsolePortTemplate.objects.create(module_type=module_type, name="Console Port 1")
+        ConsoleServerPortTemplate.objects.create(module_type=module_type, name="Console Server Port 1")
+
+        ppt = PowerPortTemplate.objects.create(
+            module_type=module_type,
+            name="Power Port 1",
+            maximum_draw=1000,
+            allocated_draw=500,
+        )
+
+        PowerOutletTemplate.objects.create(
+            module_type=module_type,
+            name="Power Outlet 1",
+            power_port_template=ppt,
+            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
+        )
+
+        InterfaceTemplate.objects.create(
+            module_type=module_type,
+            name="Interface {module.parent.parent}/{module.parent}/{module}",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mgmt_only=True,
+        )
+
+        rpt = RearPortTemplate.objects.create(
+            module_type=module_type,
+            name="Rear Port 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            positions=8,
+        )
+
+        FrontPortTemplate.objects.create(
+            module_type=module_type,
+            name="Front Port 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=rpt,
+            rear_port_position=2,
+        )
+
+        ModuleBayTemplate.objects.create(
+            module_type=module_type,
+            position="1111",
+        )
+
+        module = Module.objects.create(
+            module_type=module_type,
+            status=status,
+            parent_module_bay=parent_module_bay,
+        )
+
+        self.assertEqual(self.device.all_modules.count(), 1)
+        self.assertEqual(self.device.all_module_bays.count(), 2)
+        self.assertEqual(self.device.all_console_server_ports.count(), 2)
+        self.assertEqual(self.device.all_console_ports.count(), 2)
+        self.assertEqual(self.device.all_front_ports.count(), 2)
+        self.assertEqual(self.device.all_interfaces.count(), 2)
+        self.assertEqual(self.device.all_rear_ports.count(), 2)
+        self.assertEqual(self.device.all_power_ports.count(), 2)
+        self.assertEqual(self.device.all_power_outlets.count(), 2)
+
+        child_module_bay = module.module_bays.first()
+        Module.objects.create(
+            module_type=module_type,
+            status=status,
+            parent_module_bay=child_module_bay,
+        )
+
+        self.assertEqual(self.device.all_modules.count(), 2)
+        self.assertEqual(self.device.all_module_bays.count(), 3)
+        self.assertEqual(self.device.all_console_server_ports.count(), 3)
+        self.assertEqual(self.device.all_console_ports.count(), 3)
+        self.assertEqual(self.device.all_front_ports.count(), 3)
+        self.assertEqual(self.device.all_interfaces.count(), 3)
+        self.assertEqual(self.device.all_rear_ports.count(), 3)
+        self.assertEqual(self.device.all_power_ports.count(), 3)
+        self.assertEqual(self.device.all_power_outlets.count(), 3)
 
 
 class DeviceTypeToSoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):

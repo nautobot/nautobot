@@ -895,7 +895,7 @@ class ServiceForm(NautobotModelForm):
         # Limit IP address choices to those assigned to interfaces of the parent device/VM
         if self.instance.device:
             self.fields["ip_addresses"].queryset = IPAddress.objects.filter(
-                interfaces__in=self.instance.device.vc_interfaces.values_list("id", flat=True)
+                interfaces__in=self.instance.device.all_interfaces.values_list("id", flat=True)
             )
         elif self.instance.virtual_machine:
             self.fields["ip_addresses"].queryset = IPAddress.objects.filter(

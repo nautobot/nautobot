@@ -1835,8 +1835,7 @@ class DeviceConsolePortsView(DeviceComponentTabView):
 
     def get_extra_context(self, request, instance):
         consoleports = (
-            ConsolePort.objects.restrict(request.user, "view")
-            .filter(device=instance)
+            instance.all_console_ports.restrict(request.user, "view")
             .select_related("cable")
             .prefetch_related("_path__destination")
         )
@@ -1857,8 +1856,7 @@ class DeviceConsoleServerPortsView(DeviceComponentTabView):
 
     def get_extra_context(self, request, instance):
         consoleserverports = (
-            ConsoleServerPort.objects.restrict(request.user, "view")
-            .filter(device=instance)
+            instance.all_console_server_ports.restrict(request.user, "view")
             .select_related("cable")
             .prefetch_related("_path__destination")
         )
@@ -1883,8 +1881,7 @@ class DevicePowerPortsView(DeviceComponentTabView):
 
     def get_extra_context(self, request, instance):
         powerports = (
-            PowerPort.objects.restrict(request.user, "view")
-            .filter(device=instance)
+            instance.all_power_ports.restrict(request.user, "view")
             .select_related("cable")
             .prefetch_related("_path__destination")
         )
@@ -1905,8 +1902,7 @@ class DevicePowerOutletsView(DeviceComponentTabView):
 
     def get_extra_context(self, request, instance):
         poweroutlets = (
-            PowerOutlet.objects.restrict(request.user, "view")
-            .filter(device=instance)
+            instance.all_power_outlets.restrict(request.user, "view")
             .select_related("cable", "power_port")
             .prefetch_related("_path__destination")
         )
@@ -1927,7 +1923,7 @@ class DeviceInterfacesView(DeviceComponentTabView):
 
     def get_extra_context(self, request, instance):
         interfaces = (
-            instance.vc_interfaces.restrict(request.user, "view")
+            instance.all_interfaces.restrict(request.user, "view")
             .prefetch_related(
                 Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)),
                 Prefetch("member_interfaces", queryset=Interface.objects.restrict(request.user)),
@@ -1935,6 +1931,7 @@ class DeviceInterfacesView(DeviceComponentTabView):
                 "tags",
             )
             .select_related("lag", "cable")
+            .order_by("_name")
         )
         interface_table = tables.DeviceModuleInterfaceTable(data=interfaces, user=request.user, orderable=False)
         if VirtualChassis.objects.filter(master=instance).exists():
@@ -1954,11 +1951,7 @@ class DeviceFrontPortsView(DeviceComponentTabView):
     template_name = "dcim/device/frontports.html"
 
     def get_extra_context(self, request, instance):
-        frontports = (
-            FrontPort.objects.restrict(request.user, "view")
-            .filter(device=instance)
-            .select_related("cable", "rear_port")
-        )
+        frontports = instance.all_front_ports.restrict(request.user, "view").select_related("cable", "rear_port")
         frontport_table = tables.DeviceModuleFrontPortTable(data=frontports, user=request.user, orderable=False)
         if request.user.has_perm("dcim.change_frontport") or request.user.has_perm("dcim.delete_frontport"):
             frontport_table.columns.show("pk")
@@ -1975,7 +1968,7 @@ class DeviceRearPortsView(DeviceComponentTabView):
     template_name = "dcim/device/rearports.html"
 
     def get_extra_context(self, request, instance):
-        rearports = RearPort.objects.restrict(request.user, "view").filter(device=instance).select_related("cable")
+        rearports = instance.all_rear_ports.restrict(request.user, "view").select_related("cable")
         rearport_table = tables.DeviceModuleRearPortTable(data=rearports, user=request.user, orderable=False)
         if request.user.has_perm("dcim.change_rearport") or request.user.has_perm("dcim.delete_rearport"):
             rearport_table.columns.show("pk")
@@ -2068,7 +2061,7 @@ class DeviceLLDPNeighborsView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         interfaces = (
-            instance.vc_interfaces.restrict(request.user, "view")
+            instance.all_interfaces.restrict(request.user, "view")
             .prefetch_related("_path__destination")
             .exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
         )
@@ -2339,7 +2332,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             .prefetch_related("_path__destination")
         )
         consoleserverport_table = tables.DeviceModuleConsoleServerPortTable(
-            data=consoleserverports, user=request.user, orderable=False
+            data=consoleserverports, user=request.user, orderable=False, parent_module=instance
         )
         if request.user.has_perm("dcim.change_consoleserverport") or request.user.has_perm(
             "dcim.delete_consoleserverport"
@@ -2361,7 +2354,9 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             .select_related("cable")
             .prefetch_related("_path__destination")
         )
-        powerport_table = tables.DeviceModulePowerPortTable(data=powerports, user=request.user, orderable=False)
+        powerport_table = tables.DeviceModulePowerPortTable(
+            data=powerports, user=request.user, orderable=False, parent_module=instance
+        )
         if request.user.has_perm("dcim.change_powerport") or request.user.has_perm("dcim.delete_powerport"):
             powerport_table.columns.show("pk")
 
@@ -2380,7 +2375,9 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             .select_related("cable", "power_port")
             .prefetch_related("_path__destination")
         )
-        poweroutlet_table = tables.DeviceModulePowerOutletTable(data=poweroutlets, user=request.user, orderable=False)
+        poweroutlet_table = tables.DeviceModulePowerOutletTable(
+            data=poweroutlets, user=request.user, orderable=False, parent_module=instance
+        )
         if request.user.has_perm("dcim.change_poweroutlet") or request.user.has_perm("dcim.delete_poweroutlet"):
             poweroutlet_table.columns.show("pk")
 
@@ -2404,7 +2401,9 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             )
             .select_related("lag", "cable")
         )
-        interface_table = tables.DeviceModuleInterfaceTable(data=interfaces, user=request.user, orderable=False)
+        interface_table = tables.DeviceModuleInterfaceTable(
+            data=interfaces, user=request.user, orderable=False, parent_module=instance
+        )
         if request.user.has_perm("dcim.change_interface") or request.user.has_perm("dcim.delete_interface"):
             interface_table.columns.show("pk")
 
@@ -2419,7 +2418,9 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     def frontports(self, request, *args, **kwargs):
         instance = self.get_object()
         frontports = instance.front_ports.restrict(request.user, "view").select_related("cable", "rear_port")
-        frontport_table = tables.DeviceModuleFrontPortTable(data=frontports, user=request.user, orderable=False)
+        frontport_table = tables.DeviceModuleFrontPortTable(
+            data=frontports, user=request.user, orderable=False, parent_module=instance
+        )
         if request.user.has_perm("dcim.change_frontport") or request.user.has_perm("dcim.delete_frontport"):
             frontport_table.columns.show("pk")
 
@@ -2434,7 +2435,9 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     def rearports(self, request, *args, **kwargs):
         instance = self.get_object()
         rearports = instance.rear_ports.restrict(request.user, "view").select_related("cable")
-        rearport_table = tables.DeviceModuleRearPortTable(data=rearports, user=request.user, orderable=False)
+        rearport_table = tables.DeviceModuleRearPortTable(
+            data=rearports, user=request.user, orderable=False, parent_module=instance
+        )
         if request.user.has_perm("dcim.change_rearport") or request.user.has_perm("dcim.delete_rearport"):
             rearport_table.columns.show("pk")
 
