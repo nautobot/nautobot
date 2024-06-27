@@ -18,6 +18,7 @@ from nautobot.core.filters import (
 )
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
+from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
 from nautobot.tenancy import models
 
 
@@ -121,6 +122,31 @@ class FilterTestCases:
                     )
                 This expects a field named `devices` on the model and a filter named `devices` on the filterset.
             """
+            if getattr(self.queryset.model, "is_contact_associable_model", False):
+                for generic_filter_test in (
+                    ["contacts", "associated_contacts__contact__name"],
+                    ["contacts", "associated_contacts__contact__id"],
+                    ["teams", "associated_contacts__team__name"],
+                    ["teams", "associated_contacts__team__id"],
+                ):
+                    if generic_filter_test not in self.generic_filter_tests:
+                        self.generic_filter_tests = (*self.generic_filter_tests, generic_filter_test)
+
+                # Make sure we have some valid contact-associations:
+                for contact, team, instance in zip(Contact.objects.all()[:3], Team.objects.all()[:3], self.queryset):
+                    ContactAssociation.objects.create(
+                        contact=contact,
+                        associated_object=instance,
+                        role=Role.objects.get_for_model(ContactAssociation).first(),
+                        status=Status.objects.get_for_model(ContactAssociation).first(),
+                    )
+                    ContactAssociation.objects.create(
+                        team=team,
+                        associated_object=instance,
+                        role=Role.objects.get_for_model(ContactAssociation).last(),
+                        status=Status.objects.get_for_model(ContactAssociation).last(),
+                    )
+
             if not self.generic_filter_tests:
                 self.skipTest("No generic_filter_tests defined?")
 
