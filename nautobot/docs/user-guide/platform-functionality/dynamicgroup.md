@@ -81,10 +81,10 @@ Set-based Dynamic Groups do not directly define a filter for identifying member 
 !!! tip
     At this time, a set-based Dynamic Group may include filter-based Dynamic Groups and other set-based Dynamic Groups in its members definition, but set-based Dynamic Groups _may not_ currently include static-assignment-based Dynamic Groups. This restriction may be removed in a future Nautobot release.
 
-An object is considered a member of an set-based Dynamic Group if it matches the aggregated filter criteria derived from the "descendant" groups included in this group definition by way of the "Dynamic Group Membership" through table.
+An object is considered a member of an set-based Dynamic Group if it matches the aggregated filter criteria derived from the "child" or "descendant" groups included in this group definition. The immediate descendants of a Dynamic Group are accessible through its `.children` attribute, but if the children are also set-based Dynamic Groups, then they may have their own descendants as well, and so forth. The many-to-many mapping of "parent" to "child" Dynamic Groups is implemented via a "through table" of `DynamicGroupMembership` records.
 
 !!! info
-    The name "Dynamic Group Membership" is potentially confusing -- it does _not_ define member objects of a Dynamic Group directly (that's the "Static Group Association" table, for static-assignment-based groups and caching); rather, this table defines the association between a set-based Dynamic Group and the other Dynamic Groups that are its "members" or "children".
+    The name "Dynamic Group Membership" is potentially confusing -- it does _not_ describe the member objects (devices, IP addresses, etc.) of a Dynamic Group (that's the "Static Group Association" table, described below, used for static-assignment-based groups and caching); rather, this table defines the association between each set-based Dynamic Group and the other Dynamic Groups that are its "children".
 
 When editing a set-based Dynamic Group, under the **Filter Options** section, you will find a **Child Groups** tab that allows you to select other Dynamic Groups of the same Content Type to be "children" of this "parent" group and how they will be used to select or exclude candidate objects from the "parent" group's members.
 
