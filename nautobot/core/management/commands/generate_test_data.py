@@ -291,7 +291,7 @@ class Command(BaseCommand):
             2 * len(MetadataTypeDataTypeChoices.CHOICES),
             description="on various content-types",
         )
-        _create_batch(MetadataChoiceFactory, 50)
+        _create_batch(MetadataChoiceFactory, 100)
         _create_batch(ObjectChangeFactory, 100)
         _create_batch(ObjectMetadataFactory, 100)
         _create_batch(JobResultFactory, 20)

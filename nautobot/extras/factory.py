@@ -232,15 +232,22 @@ class MetadataTypeFactory(PrimaryModelFactory):
             if extracted:
                 self.content_types.set(extracted)
             else:
+                existing_content_type_pks = []
+                for content_type in ContentType.objects.all():
+                    if content_type.model_class().objects.exists():
+                        existing_content_type_pks.append(content_type.id)
                 self.content_types.set(
                     get_random_instances(
-                        lambda: ContentType.objects.filter(FeatureQuery("metadata").get_query()), minimum=1
+                        lambda: ContentType.objects.filter(
+                            FeatureQuery("metadata").get_query(), pk__in=existing_content_type_pks
+                        ),
+                        minimum=1,
                     )
                 )
 
 
 class ObjectMetadataFactory(BaseModelFactory):
-    """ObjectMetatdata model factory"""
+    """ObjectMetadata model factory"""
 
     class Meta:
         model = ObjectMetadata
@@ -290,13 +297,17 @@ class ObjectMetadataFactory(BaseModelFactory):
             return factory.random.randgen.choice(self.metadata_type.choices.values_list("value", flat=True))
         elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_MULTISELECT:
             return [factory.random.randgen.choice(self.metadata_type.choices.values_list("value", flat=True))]
-        return None
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
+            return None
+        else:
+            raise RuntimeError(f"Unsupported metadatatype datatype {metadata_type_data_type}")
 
     @factory.lazy_attribute
     def assigned_object_type(self):
         while True:
+            allowed_content_types = list(self.metadata_type.content_types.values_list("pk", flat=True))
             content_type = factory.random.randgen.choice(
-                ContentType.objects.filter(FeatureQuery("metadata").get_query())
+                ContentType.objects.filter(FeatureQuery("metadata").get_query(), pk__in=allowed_content_types)
             )
             if content_type.model_class().objects.exists():
                 return content_type
