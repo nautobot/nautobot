@@ -14,7 +14,7 @@ labels: ["type: bug", "triage"]
 
     Please describe the environment in which you are running Nautobot. Be sure
     that you are running an unmodified instance of the latest stable release
-    before submitting a bug report, and that any plugins have been disabled.
+    before submitting a bug report, and that any Apps have been disabled.
 -->
 ### Environment
 * Nautobot version (Docker tag too if applicable):
