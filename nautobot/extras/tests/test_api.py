@@ -2529,6 +2529,16 @@ class MetadataTypeTest(APIViewTestCases.APIViewTestCase):
         "content_types": ["dcim.interface", "ipam.vrf"],
     }
 
+    def get_deletable_object_pks(self):
+        mdts = [
+            MetadataType.objects.create(name="SoR", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT),
+            MetadataType.objects.create(name="Colors", data_type=MetadataTypeDataTypeChoices.TYPE_MULTISELECT),
+            MetadataType.objects.create(
+                name="Location Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT
+            ),
+        ]
+        return [mdt.pk for mdt in mdts]
+
 
 class MetadataChoiceTest(APIViewTestCases.APIViewTestCase):
     model = MetadataChoice
