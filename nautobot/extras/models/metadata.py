@@ -260,6 +260,11 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
             and self.metadata_type.data_type != MetadataTypeDataTypeChoices.TYPE_MULTISELECT
         ):
             value = value[0]
+        if self.present_in_database:
+            # Check immutable fields
+            database_object = self.__class__.objects.get(pk=self.pk)
+            if self.metadata_type != database_object.metadata_type:
+                raise ValidationError({"metadata_type": "Cannot be changed once created"})
         # Validate the assigned_object_type is allowed in metadata_type's content_types
         if not self.metadata_type.content_types.filter(pk=self.assigned_object_type.id).exists():
             raise ValidationError(
@@ -267,13 +272,13 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
             )
         # Check for MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM first
         if metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
-            if value not in [None, "", []]:
+            if value is not None:
                 raise ValidationError(f"A value cannot be specified for type {metadata_type_data_type}")
             if self.contact is None and self.team is None:
                 raise ValidationError("Either a contact or a team must be specified")
             if self.contact is not None and self.team is not None:
                 raise ValidationError("A contact and a team cannot be both specified at once")
-        elif value in [None, "", []]:
+        elif value is None:
             raise ValidationError(
                 f"value is a required field that cannot be empty for metadata type {metadata_type_data_type}."
             )
@@ -399,12 +404,6 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
                     )
             self._value = value
 
-        if self.present_in_database:
-            # Check immutable fields
-            database_object = self.__class__.objects.get(pk=self.pk)
-            if self.metadata_type != database_object.metadata_type:
-                raise ValidationError({"metadata_type": "Cannot be changed once created"})
-
         # Check if there is any intersections of scoped_fields of ObjectMetadata instances in the database.
         object_metadata_scoped_fields = (
             ObjectMetadata.objects.filter(
@@ -423,7 +422,13 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
             duplicate_scoped_fields_list |= set(self.scoped_fields).intersection(scoped_fields)
             # if self.scoped_fields or scoped_fields are [] which means all fields are scoped
             # That means any fields in self.scoped_fields or scoped_fields are considered overlapped
-            if not self.scoped_fields or not scoped_fields:
+            if not self.scoped_fields:
+                raise ValidationError(
+                    {
+                        "scoped_fields": f"This Object Metadata {self} scoping all the fields for {self.assigned_object} has overlapped with the scoped fields of other Object Metadata instances."
+                    }
+                )
+            if not scoped_fields:
                 raise ValidationError(
                     {
                         "scoped_fields": f"There are other Object Metadata instances of metadata type {self.metadata_type} scoping all the fields for {self.assigned_object}"

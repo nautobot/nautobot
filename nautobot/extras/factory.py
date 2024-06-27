@@ -292,7 +292,7 @@ class ObjectMetadataFactory(BaseModelFactory):
         elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_DATE:
             return str(faker.Faker().date())
         elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_DATETIME:
-            return str(faker.Faker().date_time_between_dates())
+            return str(faker.Faker().date()) + "T" + str(faker.Faker().time())
         elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_SELECT:
             return factory.random.randgen.choice(self.metadata_type.choices.values_list("value", flat=True))
         elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_MULTISELECT:

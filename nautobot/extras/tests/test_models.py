@@ -1443,12 +1443,21 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
             obj_metadata.value = "I am not an integer"
         self.assertIn("Value must be an integer", str(context.exception))
 
+        obj_metadata.value = 2.0
+        self.assertEqual(obj_metadata.value, 2)
+        obj_metadata.value = 15.0
+        self.assertEqual(obj_metadata.value, 15)
+        obj_metadata.value = 15.2
+        self.assertEqual(obj_metadata.value, 15)
+        obj_metadata.value = 15
+        self.assertEqual(obj_metadata.value, 15)
+
         # TODO add validation_minimum/validation_maximum tests
         obj_metadata.delete()
 
     def test_float_field_value(self):
         obj_type = ContentType.objects.get_for_model(Location)
-        float_metadata_type = MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_INTEGER).first()
+        float_metadata_type = MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_FLOAT).first()
         float_metadata_type.content_types.add(obj_type)
         # Create an ObjectMetadata
         obj_metadata = ObjectMetadata.objects.create(
@@ -1466,9 +1475,12 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
         self.assertIn("Value must be a float", str(context.exception))
 
         # Assign another disallowed value (int) to the first Location
-        with self.assertRaises(ValidationError) as context:
-            obj_metadata.value = 2
-        self.assertIn("Value must be a float", str(context.exception))
+        obj_metadata.value = 2
+        self.assertEqual(obj_metadata.value, 2.0)
+        obj_metadata.value = 15
+        self.assertEqual(obj_metadata.value, 15.0)
+        obj_metadata.value = 15.2
+        self.assertEqual(obj_metadata.value, 15.2)
 
         # TODO add validation_minimum/validation_maximum tests
         obj_metadata.delete()

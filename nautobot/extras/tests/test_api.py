@@ -2587,9 +2587,13 @@ class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
         mdts = [
             MetadataType.objects.create(name="Location Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT),
             MetadataType.objects.create(name="Device Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT),
+            MetadataType.objects.create(
+                name="Contact/Team Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
+            ),
         ]
         mdts[0].content_types.set(list(ContentType.objects.values_list("pk", flat=True)))
         mdts[1].content_types.set(list(ContentType.objects.values_list("pk", flat=True)))
+        mdts[2].content_types.set(list(ContentType.objects.values_list("pk", flat=True)))
         ObjectMetadata.objects.create(
             metadata_type=mdts[0],
             value="Hey",
@@ -2605,8 +2609,8 @@ class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
             assigned_object_id=Prefix.objects.first().pk,
         )
         ObjectMetadata.objects.create(
-            metadata_type=mdts[1],
-            value="Aloha",
+            metadata_type=mdts[2],
+            contact=Contact.objects.first(),
             scoped_fields=["status"],
             assigned_object_type=ContentType.objects.get_for_model(Prefix),
             assigned_object_id=Prefix.objects.last().pk,
@@ -2620,16 +2624,23 @@ class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
                 "assigned_object_id": Location.objects.first().pk,
             },
             {
-                "metadata_type": mdts[0].pk,
+                "metadata_type": mdts[1].pk,
                 "scoped_fields": ["name"],
                 "value": "random words",
                 "assigned_object_type": "dcim.location",
                 "assigned_object_id": Location.objects.first().pk,
             },
             {
-                "metadata_type": mdts[0].pk,
+                "metadata_type": mdts[2].pk,
                 "scoped_fields": ["device_type"],
-                "value": "Greetings",
+                "contact": Contact.objects.first().pk,
+                "assigned_object_type": "dcim.device",
+                "assigned_object_id": Device.objects.first().pk,
+            },
+            {
+                "metadata_type": mdts[2].pk,
+                "scoped_fields": ["interfaces"],
+                "team": Team.objects.first().pk,
                 "assigned_object_type": "dcim.device",
                 "assigned_object_id": Device.objects.first().pk,
             },
