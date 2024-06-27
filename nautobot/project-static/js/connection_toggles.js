@@ -4,13 +4,12 @@ function toggleConnection(elem) {
         $.ajax({
             url: url,
             method: 'PATCH',
+            contentType: "application/json",
             dataType: 'json',
             beforeSend: function(xhr, settings) {
                 xhr.setRequestHeader("X-CSRFToken", nautobot_csrf_token);
             },
-            data: {
-                'status': 'planned'
-            },
+            data: JSON.stringify({'status': 'Planned'}),
             context: this,
             success: function() {
                 elem.parents('tr').removeClass('success').addClass('info');
@@ -23,13 +22,12 @@ function toggleConnection(elem) {
         $.ajax({
             url: url,
             method: 'PATCH',
+            contentType: "application/json",
             dataType: 'json',
             beforeSend: function(xhr, settings) {
                 xhr.setRequestHeader("X-CSRFToken", nautobot_csrf_token);
             },
-            data: {
-                'status': 'connected'
-            },
+            data: JSON.stringify({'status': 'Connected'}),
             context: this,
             success: function() {
                 elem.parents('tr').removeClass('info').addClass('success');
