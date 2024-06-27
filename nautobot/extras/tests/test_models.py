@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import os
 import tempfile
 from unittest import expectedFailure, mock
@@ -15,7 +15,6 @@ from django.test import override_settings
 from django.test.utils import isolate_apps
 from django.utils.timezone import now
 from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
-from zoneinfo import ZoneInfo
 
 from nautobot.circuits.models import CircuitType
 from nautobot.core.choices import ColorChoices
@@ -1584,8 +1583,8 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(obj_metadata.value, "2020-11-01T01:00:00+00:00")
         obj_metadata.value = datetime(2020, 11, 1, 1, 35, 22)
         self.assertEqual(obj_metadata.value, "2020-11-01T01:35:22+00:00")
-        obj_metadata.value = datetime(2020, 11, 1, 1, 35, 22, tzinfo=ZoneInfo(key="Asia/Tokyo"))
-        self.assertEqual(obj_metadata.value, "2020-11-01T01:35:22+09:00")
+        obj_metadata.value = datetime(2020, 11, 1, 1, 35, 22, tzinfo=timezone(timedelta(hours=3)))
+        self.assertEqual(obj_metadata.value, "2020-11-01T01:35:22+03:00")
 
         error_message = f"Datetime values must be in the following formats {acceptable_datetime_formats}"
         with self.assertRaises(ValidationError) as context:
