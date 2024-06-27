@@ -88,6 +88,7 @@ from nautobot.extras.forms.forms import (
     provider_choices_with_blank,
 )
 from nautobot.extras.forms.mixins import (
+    ContactTeamModelFilterFormMixin,
     CustomFieldModelFilterFormMixin,
     NoteFormBase,
     RelationshipModelFilterFormMixin,
@@ -110,6 +111,7 @@ __all__ = (
     "ColorSelect",
     "CommentField",
     "ConfirmationForm",
+    "ContactTeamModelFilterFormMixin",
     "ContentTypeSelect",
     "CSVChoiceField",
     "CSVContentTypeField",

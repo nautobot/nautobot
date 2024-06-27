@@ -17,6 +17,7 @@ from nautobot.extras.choices import (
     RelationshipTypeChoices,
 )
 from nautobot.extras.models import (
+    Contact,
     CustomField,
     Note,
     Relationship,
@@ -25,6 +26,7 @@ from nautobot.extras.models import (
     StaticGroup,
     Status,
     Tag,
+    Team,
 )
 from nautobot.extras.utils import remove_prefix_from_cf_key
 
@@ -32,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 __all__ = (
+    "ContactTeamModelFilterFormMixin",
     "CustomFieldModelBulkEditFormMixin",
     "CustomFieldModelFilterFormMixin",
     "CustomFieldModelFormMixin",
@@ -61,6 +64,30 @@ __all__ = (
 #
 # Form mixins
 #
+
+
+class ContactTeamModelFilterFormMixin(forms.Form):
+    """Adds the `contacts` and `teams` form fields to a filter form."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if getattr(self.model, "is_contact_associable_model", False):
+            if "contacts" not in self.fields:
+                self.fields["contacts"] = DynamicModelMultipleChoiceField(
+                    required=False,
+                    queryset=Contact.objects.all(),
+                    to_field_name="name",
+                )
+
+            if "teams" not in self.fields:
+                self.fields["teams"] = DynamicModelMultipleChoiceField(
+                    required=False,
+                    queryset=Team.objects.all(),
+                    to_field_name="name",
+                )
+
+            self.order_fields(self.field_order)
 
 
 class CustomFieldModelFilterFormMixin(forms.Form):

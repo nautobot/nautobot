@@ -760,6 +760,26 @@ class BaseFilterSet(django_filters.FilterSet):
             if filter_name.startswith("_"):
                 del filters[filter_name]
 
+        if getattr(cls._meta.model, "is_contact_associable_model", False):
+            # Add "contacts" and "teams" filters
+            from nautobot.extras.models import Contact, Team
+
+            if "contacts" not in filters:
+                filters["contacts"] = NaturalKeyOrPKMultipleChoiceFilter(
+                    queryset=Contact.objects.all(),
+                    field_name="associated_contacts__contact",
+                    to_field_name="name",
+                    label="Contacts (name or ID)",
+                )
+
+            if "teams" not in filters:
+                filters["teams"] = NaturalKeyOrPKMultipleChoiceFilter(
+                    queryset=Team.objects.all(),
+                    field_name="associated_contacts__team",
+                    to_field_name="name",
+                    label="Teams (name or ID)",
+                )
+
         if "static_groups" not in filters and getattr(cls._meta.model, "is_static_group_associable_model", False):
             # Add "static_groups" field as the last key
             from nautobot.extras.models import StaticGroup
