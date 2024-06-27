@@ -83,7 +83,7 @@ djangorestframework = "~3.15.1"
 # Adds JSON schema support to API endpoints for rendering JSON schema forms.
 drf-react-template-framework = "^0.0.17"
 # OpenAPI 3.0 schema generation for the REST API
-drf-spectacular = {version = "~0.26.5", extras = ["sidecar"]}
+drf-spectacular = {version = "~0.27.2", extras = ["sidecar"]}
 # Emoji terminal output for Python.
 emoji = "~2.11.0"
 # Git integrations for Python
