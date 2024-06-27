@@ -989,7 +989,7 @@ class ObjectMetadataFilterSet(NautobotFilterSet):
             "team__name": "icontains",
         },
     )
-    value = django_filters.Filter(method="filter_value")
+    value = django_filters.Filter(field_name="_value", method="filter_value")
 
     class Meta:
         model = ObjectMetadata

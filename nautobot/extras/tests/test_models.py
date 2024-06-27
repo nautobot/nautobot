@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import tempfile
 from unittest import expectedFailure, mock
@@ -14,6 +15,7 @@ from django.test import override_settings
 from django.test.utils import isolate_apps
 from django.utils.timezone import now
 from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
+from zoneinfo import ZoneInfo
 
 from nautobot.circuits.models import CircuitType
 from nautobot.core.choices import ColorChoices
@@ -1434,12 +1436,39 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
             assigned_object_type=obj_type,
             assigned_object_id=Location.objects.first().pk,
         )
-        obj_metadata.save()
+        obj_metadata.validated_save()
 
         # Assign another disallowed value (str) to the first Location
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = "I am not an integer"
         self.assertIn("Value must be an integer", str(context.exception))
+
+        # TODO add validation_minimum/validation_maximum tests
+        obj_metadata.delete()
+
+    def test_float_field_value(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        float_metadata_type = MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_INTEGER).first()
+        float_metadata_type.content_types.add(obj_type)
+        # Create an ObjectMetadata
+        obj_metadata = ObjectMetadata.objects.create(
+            metadata_type=float_metadata_type,
+            value=15.245,
+            scoped_fields=["status", "parent"],
+            assigned_object_type=obj_type,
+            assigned_object_id=Location.objects.first().pk,
+        )
+        obj_metadata.validated_save()
+
+        # Assign another disallowed value (str) to the first Location
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = "I am not an integer"
+        self.assertIn("Value must be a float", str(context.exception))
+
+        # Assign another disallowed value (int) to the first Location
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = 2
+        self.assertIn("Value must be a float", str(context.exception))
 
         # TODO add validation_minimum/validation_maximum tests
         obj_metadata.delete()
@@ -1457,7 +1486,7 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
             assigned_object_type=obj_type,
             assigned_object_id=Location.objects.first().pk,
         )
-        obj_metadata.save()
+        obj_metadata.validated_save()
 
         # Assign a disallowed value (list) to obj_metadata
         with self.assertRaises(ValidationError) as context:
@@ -1488,7 +1517,7 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
             assigned_object_type=obj_type,
             assigned_object_id=Location.objects.first().pk,
         )
-        obj_metadata.save()
+        obj_metadata.validated_save()
 
         # Assign a disallowed value (invalidly formatted date) to obj_metadata
         with self.assertRaises(ValidationError) as context:
@@ -1504,6 +1533,64 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = 2
         self.assertIn("Value must be a date or str object.", str(context.exception))
+        # TODO add validation_minimum/validation_maximum tests
+        obj_metadata.delete()
+
+    def test_datetime_field_value(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        datetime_metadata_type = MetadataType.objects.filter(
+            data_type=MetadataTypeDataTypeChoices.TYPE_DATETIME
+        ).first()
+        datetime_metadata_type.content_types.add(obj_type)
+
+        # Create an ObjectMetadata
+        obj_metadata = ObjectMetadata.objects.create(
+            metadata_type=datetime_metadata_type,
+            value="2024-06-27T17:58:47-0500",
+            scoped_fields=["status", "parent"],
+            assigned_object_type=obj_type,
+            assigned_object_id=Location.objects.first().pk,
+        )
+        obj_metadata.validated_save()
+
+        # Test valid formats of datetime value
+        acceptable_datetime_formats = [
+            "YYYY-MM-DDTHH:MM:SS",
+            "YYYY-MM-DDTHH:MM:SS(+,-)zzzz",
+            "YYYY-MM-DDTHH:MM:SS(+,-)zz:zz",
+        ]
+        obj_metadata.value = "2024-06-27T17:58:47"
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, "2024-06-27T17:58:47+0000")
+        obj_metadata.value = "2024-06-27T17:58:47+0500"
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, "2024-06-27T17:58:47+0500")
+        obj_metadata.value = "2024-06-27T17:58:47+05:00"
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, "2024-06-27T17:58:47+05:00")
+        obj_metadata.value = datetime(2020, 11, 1, 1)
+        self.assertEqual(obj_metadata.value, "2020-11-01T01:00:00+00:00")
+        obj_metadata.value = datetime(2020, 11, 1, 1, 35, 22)
+        self.assertEqual(obj_metadata.value, "2020-11-01T01:35:22+00:00")
+        obj_metadata.value = datetime(2020, 11, 1, 1, 35, 22, tzinfo=ZoneInfo(key="Asia/Tokyo"))
+        self.assertEqual(obj_metadata.value, "2020-11-01T01:35:22+09:00")
+
+        error_message = f"Datetime values must be in the following formats {acceptable_datetime_formats}"
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = "01/01/1994"
+        self.assertIn(error_message, str(context.exception))
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = "2024-06-27 17:58:47+0000"
+        self.assertIn(error_message, str(context.exception))
+
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = "I am not an integer"
+        self.assertIn(error_message, str(context.exception))
+
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = 2
+        self.assertIn("Value must be a datetime or str object", str(context.exception))
+
         # TODO add validation_minimum/validation_maximum tests
         obj_metadata.delete()
 

@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -254,7 +254,11 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
         super().clean()
         value = self._value
         metadata_type_data_type = self.metadata_type.data_type
-        if isinstance(value, list) and self.metadata_type.data_type != MetadataTypeDataTypeChoices.TYPE_MULTISELECT:
+        if (
+            isinstance(value, list)
+            and len(value) == 1
+            and self.metadata_type.data_type != MetadataTypeDataTypeChoices.TYPE_MULTISELECT
+        ):
             value = value[0]
         # Validate the assigned_object_type is allowed in metadata_type's content_types
         if not self.metadata_type.content_types.filter(pk=self.assigned_object_type.id).exists():
@@ -335,7 +339,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
                 try:
                     value = float(value)
                 except ValueError:
-                    raise ValidationError("Value must be an float.")
+                    raise ValidationError("Value must be a float.")
             # Validate boolean
             elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:
                 try:
@@ -354,14 +358,31 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
                         raise ValidationError("Date values must be in the format YYYY-MM-DD.")
             # Validate datetime
             elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_DATETIME:
+                acceptable_datetime_formats = [
+                    "YYYY-MM-DDTHH:MM:SS",
+                    "YYYY-MM-DDTHH:MM:SS(+,-)zzzz",
+                    "YYYY-MM-DDTHH:MM:SS(+,-)zz:zz",
+                ]
                 if not isinstance(value, datetime):
                     try:
-                        datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+                        datetime.strptime(value, "%Y-%m-%dT%H:%M:%S%z")
+                    except ValueError:
+                        try:
+                            # No time zone info entered so assume UTC timezone
+                            datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")
+                            value += "+0000"
+                        except ValueError:
+                            raise ValidationError(
+                                f"Datetime values must be in the following formats {acceptable_datetime_formats}"
+                            )
                     except TypeError:
                         raise ValidationError("Value must be a datetime or str object.")
-                    except ValueError:
-                        raise ValidationError("Datetime values must be in the format YYYY-MM-DD HH:MM:SS.")
-
+                else:
+                    # if value is a datetime object
+                    # check if datetime object has tzinfo
+                    if value.tzinfo is None:
+                        value = value.replace(tzinfo=timezone.utc)
+                    value = value.replace(microsecond=0).isoformat()
             # Validate selected choice
             elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_SELECT:
                 if value not in self.metadata_type.choices.values_list("value", flat=True):
