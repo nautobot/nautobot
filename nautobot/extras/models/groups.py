@@ -13,7 +13,6 @@ from django.utils.functional import cached_property
 import django_filters
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
-from nautobot.core.filters import TagFilter
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import DynamicModelChoiceField
 from nautobot.core.forms.widgets import StaticSelect2
@@ -607,7 +606,7 @@ class DynamicGroup(OrganizationalModel):
             for v in value:
                 if filter_field.conjoined:
                     query &= models.Q(**filter_field.get_filter_predicate(v))
-                else: 
+                else:
                     query |= models.Q(**filter_field.get_filter_predicate(v))
 
         # The method `get_filter_predicate()` is only available on instances or subclasses
