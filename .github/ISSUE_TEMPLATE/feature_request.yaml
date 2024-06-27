@@ -25,7 +25,7 @@ body:
         - "Patti - Platform Admin"
         - "Isabella - Infrastructure Owner"
         - "Dan - Data Owner"
-        - "P.D. - Plugin Developer"
+        - "P.D. - Nautobot App Developer"
         - "Cora - Coder"
     validations:
       required: true
@@ -34,7 +34,7 @@ body:
     attributes:
       label: I want ...
       description: WHAT; Please enter the desired functionality to be implemented.
-      placeholder: To develop Nautobot plugins that can be inserted as a top-level item in the navigation bar
+      placeholder: To develop Nautobot Apps that can be inserted as a top-level item in the navigation bar
     validations:
       required: true
   - type: textarea
@@ -43,10 +43,9 @@ body:
       label: So that ...
       description: WHY; Please enter the reason or value for the desired functionality.
       placeholder: >
-        My plugin is seen as first-class citizen by my users and so that the
-        plugins drop-down menu isn't overloaded. When I use Nautobot as an App Platform,
-        it'll also provide more focus on the Plugins/Apps than core SoT drop-downs (for
-        users that aren't permitted to view those items)
+        My App is seen as first-class citizen by my users and so that the
+        Apps drop-down menu isn't overloaded. When I use Nautobot as an App Platform,
+        it'll also provide more focus on the Apps.
     validations:
       required: true
   - type: textarea
@@ -55,10 +54,10 @@ body:
       label: I know this is done when...
       description: HOW; The requirements/acceptance criteria (a list) as to how this functionality should be implemented.
       placeholder: |
-        - I create a Nautobot plugin and have the option to inject it in the Plugins
+        - I create a Nautobot App and have the option to inject it in the Apps
           dropdown menu or create a new dedicated dropdown in the navigation bar.
           
-        - When multiple plugins provide dedicated dropdowns, I can re-order the plugin
+        - When multiple Apps provide dedicated dropdowns, I can re-order the App
           dropdowns in the navbar.
     validations:
       required: true
@@ -74,7 +73,7 @@ body:
         - label: IPAM
         - label: Misc (including Data Sources)
         - label: Organization
-        - label: Plugins (and other Extensibility)
+        - label: Apps (and other Extensibility)
         - label: Security (Secrets, etc)
         - label: Image Management
         - label: UI/UX
