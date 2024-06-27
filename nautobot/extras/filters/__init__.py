@@ -989,10 +989,18 @@ class ObjectMetadataFilterSet(NautobotFilterSet):
             "team__name": "icontains",
         },
     )
+    value = django_filters.Filter(method="filter_value")
 
     class Meta:
         model = ObjectMetadata
         fields = "__all__"
+
+    def filter_value(self, queryset, name, value):
+        value = value.strip()
+        query = Q(_value__icontains=value)
+        if not value:
+            return queryset
+        return queryset.filter(query)
 
 
 #

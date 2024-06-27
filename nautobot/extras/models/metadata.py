@@ -254,6 +254,8 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
         super().clean()
         value = self._value
         metadata_type_data_type = self.metadata_type.data_type
+        if isinstance(value, list) and self.metadata_type.data_type != MetadataTypeDataTypeChoices.TYPE_MULTISELECT:
+            value = value[0]
         # Validate the assigned_object_type is allowed in metadata_type's content_types
         if not self.metadata_type.content_types.filter(pk=self.assigned_object_type.id).exists():
             raise ValidationError(

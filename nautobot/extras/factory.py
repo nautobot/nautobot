@@ -309,6 +309,9 @@ class ObjectMetadataFactory(BaseModelFactory):
             content_type = factory.random.randgen.choice(
                 ContentType.objects.filter(FeatureQuery("metadata").get_query(), pk__in=allowed_content_types)
             )
+            # It does not have a get_absolute_url attribute and is causing failure in API unittests
+            if content_type.app_label == "extras" and content_type.model == "taggeditem":
+                continue
             if content_type.model_class().objects.exists():
                 return content_type
 
