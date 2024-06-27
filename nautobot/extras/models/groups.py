@@ -13,6 +13,7 @@ from django.utils.functional import cached_property
 import django_filters
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.filters import TagFilter
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import DynamicModelChoiceField
 from nautobot.core.forms.widgets import StaticSelect2
@@ -597,10 +598,17 @@ class DynamicGroup(OrganizationalModel):
             query |= filter_field.generate_query(gq_value)
 
         # For vanilla multiple-choice filters, we want all values in a set union (boolean OR)
-        # because we want ANY of the filter values to match.
+        # because we want ANY of the filter values to match. Unless the filter field is explicitly
+        # conjoining the values, in which case we want a set intersection (boolean AND). We know this isn't right
+        # since the resulting query actually does tag.name == tag_1 AND tag.name == tag_2, but django_filter does
+        # not use Q evaluation for conjoined filters. This function is only used for the display, and the display
+        # is good enough to get the point across.
         elif isinstance(filter_field, django_filters.MultipleChoiceFilter):
             for v in value:
-                query |= models.Q(**filter_field.get_filter_predicate(v))
+                if filter_field.conjoined:
+                    query &= models.Q(**filter_field.get_filter_predicate(v))
+                else: 
+                    query |= models.Q(**filter_field.get_filter_predicate(v))
 
         # The method `get_filter_predicate()` is only available on instances or subclasses
         # of `MultipleChoiceFilter`, so we must construct a lookup if a filter is not
