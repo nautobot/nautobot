@@ -11,6 +11,8 @@ from nautobot.core.filters import (
     SearchFilter,
     TreeNodeMultipleChoiceFilter,
 )
+from nautobot.core.utils.data import is_uuid
+from nautobot.dcim.constants import MODULE_RECURSION_DEPTH_LIMIT
 from nautobot.dcim.models import (
     Cable,
     ConsolePort,
@@ -105,6 +107,36 @@ class ModularDeviceComponentModelFilterSetMixin(DeviceComponentModelFilterSetMix
         to_field_name="module_type__model",
         label="Module (model or ID)",
     )
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Device (name or ID)",
+        method="filter_device",
+    )
+
+    def _construct_device_filter_recursively(self, field_name, value):
+        recursion_depth = MODULE_RECURSION_DEPTH_LIMIT - 1
+        query = Q(**{f"device__{field_name}__in": value})
+        for level in range(recursion_depth):
+            recursive_query = "module__parent_module_bay__" + "parent_module__parent_module_bay__" * level
+            query = query | Q(**{f"{recursive_query}parent_device__{field_name}__in": value})
+        return query
+
+    def generate_query_filter_device(self, value):
+        if not hasattr(value, "__iter__") or isinstance(value, str):
+            value = [value]
+
+        device_ids = set(str(item) for item in value if is_uuid(item))
+        device_names = set(str(item) for item in value if not is_uuid(item))
+        query = self._construct_device_filter_recursively("name", device_names)
+        query |= self._construct_device_filter_recursively("id", device_ids)
+        return query
+
+    def filter_device(self, queryset, name, value):
+        if not value:
+            return queryset
+        params = self.generate_query_filter_device(value)
+        return queryset.filter(params)
 
 
 class LocatableModelFilterSetMixin(django_filters.FilterSet):

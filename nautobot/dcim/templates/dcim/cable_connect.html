@@ -182,6 +182,9 @@
                         {% if 'termination_b_device' in form.fields %}
                             {% render_field form.termination_b_device %}
                         {% endif %}
+                        {% if 'termination_b_module' in form.fields %}
+                            {% render_field form.termination_b_module %}
+                        {% endif %}
                         {% if 'termination_b_type' in form.fields %}
                             {% render_field form.termination_b_type %}
                         {% endif %}
@@ -227,6 +230,17 @@
             * (except the name/id drop-down) is changed.
             * */
             $('#id_termination_b_id').find("option").remove();
+        });
+    });
+
+    // clear the select2 widget for the module when a new device is selected
+    // jQuery required for select2
+    document.addEventListener("DOMContentLoaded", function() {
+        $('select#id_termination_b_device').select2();
+        $('select#id_termination_b_module').select2();
+
+        $('select#id_termination_b_device').on('change', function (e) {
+            $('select#id_termination_b_module').val(null).trigger('change');
         });
     });
 </script>
