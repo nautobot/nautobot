@@ -1,6 +1,7 @@
 from nautobot.core.forms import BootstrapMixin
 
 from .mixins import (
+    ContactTeamModelFilterFormMixin,
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelFilterFormMixin,
     CustomFieldModelFormMixin,
@@ -38,11 +39,16 @@ class NautobotModelForm(
     """
 
 
-class NautobotFilterForm(BootstrapMixin, CustomFieldModelFilterFormMixin, RelationshipModelFilterFormMixin):
+class NautobotFilterForm(
+    ContactTeamModelFilterFormMixin,
+    BootstrapMixin,
+    CustomFieldModelFilterFormMixin,  # currently must come *after* BootstrapMixin to get proper CSS classes applied
+    RelationshipModelFilterFormMixin,
+):
     """
     This class exists to combine common functionality and is used to inherit from throughout the
-    codebase where all three of BootstrapMixin, CustomFieldModelFilterFormMixin and RelationshipModelFilterFormMixin are
-    needed.
+    codebase where all of ContactTeamModelFilterFormMixin, CustomFieldModelFilterFormMixin, and
+    RelationshipModelFilterFormMixin are needed.
     """
 
 
