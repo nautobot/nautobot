@@ -400,7 +400,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
             duplicate_scoped_fields_list |= set(self.scoped_fields).intersection(scoped_fields)
             # if self.scoped_fields or scoped_fields are [] which means all fields are scoped
             # That means any fields in self.scoped_fields or scoped_fields are considered overlapped
-            if self.scoped_fields == [] or scoped_fields == []:
+            if not self.scoped_fields or not scoped_fields:
                 raise ValidationError(
                     {
                         "scoped_fields": f"There are other Object Metadata instances of metadata type {self.metadata_type} scoping all the fields for {self.assigned_object}"
