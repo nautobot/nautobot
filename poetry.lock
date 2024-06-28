@@ -1036,17 +1036,17 @@ tablib = ["tablib"]
 
 [[package]]
 name = "django-taggit"
-version = "4.0.0"
+version = "5.0.1"
 description = "django-taggit is a reusable Django application for simple tagging."
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.8"
 files = [
-    {file = "django-taggit-4.0.0.tar.gz", hash = "sha256:4d52de9d37245a9b9f98c0ec71fdccf1d2283e38e8866d40a7ae6a3b6787a161"},
-    {file = "django_taggit-4.0.0-py3-none-any.whl", hash = "sha256:eb800dabef5f0a4e047ab0751f82cf805bc4a9e972037ef12bf519f52cd92480"},
+    {file = "django-taggit-5.0.1.tar.gz", hash = "sha256:edcd7db1e0f35c304e082a2f631ddac2e16ef5296029524eb792af7430cab4cc"},
+    {file = "django_taggit-5.0.1-py3-none-any.whl", hash = "sha256:a0ca8a28b03c4b26c2630fd762cb76ec39b5e41abf727a7b66f897a625c5e647"},
 ]
 
 [package.dependencies]
-Django = ">=3.2"
+Django = ">=4.1"
 
 [[package]]
 name = "django-timezone-field"
@@ -2311,14 +2311,17 @@ six = "*"
 
 [[package]]
 name = "netaddr"
-version = "0.10.1"
+version = "1.3.0"
 description = "A network address manipulation library for Python"
 optional = false
-python-versions = "*"
+python-versions = ">=3.7"
 files = [
-    {file = "netaddr-0.10.1-py2.py3-none-any.whl", hash = "sha256:9822305b42ea1020d54fee322d43cee5622b044c07a1f0130b459bb467efcf88"},
-    {file = "netaddr-0.10.1.tar.gz", hash = "sha256:f4da4222ca8c3f43c8e18a8263e5426c750a3a837fdfeccf74c68d0408eaa3bf"},
+    {file = "netaddr-1.3.0-py3-none-any.whl", hash = "sha256:c2c6a8ebe5554ce33b7d5b3a306b71bbb373e000bbbf2350dd5213cc56e3dbbe"},
+    {file = "netaddr-1.3.0.tar.gz", hash = "sha256:5c3c3d9895b551b763779ba7db7a03487dc1f8e3b385af819af341ae9ef6e48a"},
 ]
+
+[package.extras]
+nicer-shell = ["ipython"]
 
 [[package]]
 name = "netmiko"
@@ -4226,4 +4229,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.13"
-content-hash = "6f7bf747177e9b2f7443171ac407731afe0021d9150303fe9d43a81b060b6644"
+content-hash = "78eb95a5ce32e90aff139b4d481cef91e0dbad8f7a98871c4f8ad2b9664cb712"
