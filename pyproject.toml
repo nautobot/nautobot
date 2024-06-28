@@ -36,7 +36,7 @@ exclude = [
 [tool.poetry.dependencies]
 python = ">=3.8,<3.13"
 # Background task processing
-celery = "~5.4.0"
+celery = "~5.3.6"
 # Fundamental web framework for Nautobot
 Django = "~4.2.13"
 # Adds AJAX capabilities to django-tables2
@@ -96,7 +96,7 @@ GitPython = "~3.1.43"
 graphene-django = "~2.16.0"
 # Graphene Optimizer
 # NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
-graphene-django-optimizer = "~0.10.0"
+graphene-django-optimizer = "~0.8.0"
 # Template rendering engine
 Jinja2 = "~3.1.4"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
