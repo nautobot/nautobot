@@ -1,2 +1,0 @@
-Added missing static-groups tab to SoftwareImageFile detail view.
-Fixed permissions enforcement on StaticGroup member object lists.

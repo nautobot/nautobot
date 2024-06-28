@@ -30,6 +30,7 @@ router.register("custom-links", views.CustomLinkViewSet)
 # Dynamic Groups
 router.register("dynamic-groups", views.DynamicGroupViewSet)
 router.register("dynamic-group-memberships", views.DynamicGroupMembershipViewSet)
+router.register("static-group-associations", views.StaticGroupAssociationViewSet)
 
 # Export templates
 router.register("export-templates", views.ExportTemplateViewSet)
@@ -89,10 +90,6 @@ router.register("roles", views.RoleViewSet)
 router.register("secrets", views.SecretsViewSet)
 router.register("secrets-groups", views.SecretsGroupViewSet)
 router.register("secrets-groups-associations", views.SecretsGroupAssociationViewSet)
-
-# Static groups
-router.register("static-groups", views.StaticGroupViewSet)
-router.register("static-group-associations", views.StaticGroupAssociationViewSet)
 
 # Statuses
 router.register("statuses", views.StatusViewSet)

@@ -158,7 +158,15 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
 
 
 class DynamicGroupQuerySet(RestrictedQuerySet):
-    """Queryset for `DynamicGroup` objects that provides a `get_for_object` method."""
+    """Queryset for `DynamicGroup` objects that provides `get_for_object` and `get_for_model` methods."""
+
+    def get_for_model(self, model):
+        """
+        Return all DynamicGroups assignable to the given model class.
+        """
+        concrete_model = model._meta.concrete_model
+        content_type = ContentType.objects.get_for_model(concrete_model)
+        return self.filter(content_type=content_type)
 
     def get_list_for_object(self, obj, use_cache=False):
         """
@@ -188,7 +196,7 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
         return self.filter(
             content_type__app_label=obj._meta.app_label,
             content_type__model=obj._meta.model_name,
-            _backing_group__static_group_associations__associated_object_id=obj.id,
+            static_group_associations__associated_object_id=obj.id,
         )
 
     def get_by_natural_key(self, slug):

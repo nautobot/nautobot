@@ -84,7 +84,6 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
-    StaticGroup,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -581,8 +580,11 @@ class CustomLinkFilterSet(BaseFilterSet):
 # Dynamic Groups
 #
 
+# Must be imported **after* NautobotFilterSet class is defined to avoid a circular import loop.
+from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin  # noqa: E402
 
-class DynamicGroupFilterSet(NautobotFilterSet):
+
+class DynamicGroupFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -592,10 +594,14 @@ class DynamicGroupFilterSet(NautobotFilterSet):
         },
     )
     content_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("dynamic_groups").get_choices, conjoined=False)
+    member_id = MultiValueUUIDFilter(
+        field_name="static_group_associations__associated_object_id",
+        label="Group member ID",
+    )
 
     class Meta:
         model = DynamicGroup
-        fields = ("id", "name", "description")
+        fields = ("id", "name", "description", "group_type", "tags")
 
 
 class DynamicGroupMembershipFilterSet(NautobotFilterSet):
@@ -620,6 +626,30 @@ class DynamicGroupMembershipFilterSet(NautobotFilterSet):
     class Meta:
         model = DynamicGroupMembership
         fields = ("id", "group", "parent_group", "operator", "weight")
+
+
+class StaticGroupAssociationFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "dynamic_group__name": "icontains",
+            "dynamic_group__description": "icontains",
+            "associated_object_type__app_label": "icontains",
+            "associated_object_type__model": "icontains",
+        }
+    )
+
+    dynamic_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DynamicGroup.objects.all(),
+        to_field_name="name",
+        label="Dynamic group (name or ID)",
+    )
+    associated_object_type = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("dynamic_groups").get_choices, conjoined=False
+    )
+
+    class Meta:
+        model = StaticGroupAssociation
+        fields = "__all__"
 
 
 #
@@ -1178,59 +1208,6 @@ class SecretsGroupAssociationFilterSet(BaseFilterSet):
     class Meta:
         model = SecretsGroupAssociation
         fields = ("id",)
-
-
-#
-# StaticGroups
-#
-
-# Must be imported **after* NautobotFilterSet class is defined to avoid a circular import loop.
-from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin  # noqa: E402
-
-
-class StaticGroupFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
-    q = SearchFilter(
-        filter_predicates={
-            "name": "icontains",
-            "description": "icontains",
-            "content_type__app_label": "icontains",
-            "content_type__model": "icontains",
-        },
-    )
-    content_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("static_groups").get_choices, conjoined=False)
-    member_id = MultiValueUUIDFilter(
-        field_name="static_group_associations__associated_object_id",
-        label="Group member ID",
-    )
-
-    class Meta:
-        model = StaticGroup
-        fields = "__all__"
-
-
-class StaticGroupAssociationFilterSet(NautobotFilterSet):
-    q = SearchFilter(
-        filter_predicates={
-            "static_group__name": "icontains",
-            "static_group__description": "icontains",
-            "associated_object_type__app_label": "icontains",
-            "associated_object_type__model": "icontains",
-        }
-    )
-
-    static_group = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=StaticGroup.objects.all(),
-        to_field_name="name",
-        label="Static group (name or ID)",
-    )
-    associated_object_type = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("static_groups").get_choices, conjoined=False
-    )
-    hidden = django_filters.BooleanFilter(field_name="static_group__hidden")
-
-    class Meta:
-        model = StaticGroupAssociation
-        fields = "__all__"
 
 
 #

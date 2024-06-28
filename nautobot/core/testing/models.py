@@ -3,7 +3,7 @@ from django.test import tag, TestCase
 
 from nautobot.core.templatetags.helpers import get_docs_url
 from nautobot.core.testing.mixins import NautobotTestCaseMixin
-from nautobot.extras.models import StaticGroup, StaticGroupAssociation
+from nautobot.extras.models import DynamicGroup, StaticGroupAssociation
 
 
 @tag("unit")
@@ -44,19 +44,22 @@ class ModelTestCases:
             """Check that `get_docs_url()` returns a valid static file path for this model."""
             self.assertIsNotNone(get_docs_url(self.model))
 
-        def test_static_group_api(self):
-            """For static-group capable models, check that they work as intended."""
-            if getattr(self.model, "is_static_group_associable_model", False):
-                self.assertTrue(hasattr(self.model, "associated_static_groups"))
-                self.assertIsInstance(self.model.objects.first().associated_static_groups.all(), QuerySet)
+        def test_dynamic_group_api(self):
+            """For dynamic-group capable models, check that they work as intended."""
+            if not getattr(self.model, "is_dynamic_group_associable_model", False):
+                self.skipTest("Not a dynamic group associable model.")
+
+            self.assertTrue(hasattr(self.model, "dynamic_groups"))
+            self.assertIsInstance(self.model.objects.first().dynamic_groups, QuerySet)
+            self.assertEqual(self.model.objects.first().dynamic_groups.model, DynamicGroup)
+
+            if DynamicGroup.objects.get_for_model(self.model).exists():
+                dg = DynamicGroup.objects.get_for_model(self.model).first()
+                self.assertEqual(dg.members.model, self.model)
+
+            # Models using DynamicGroupMixin w/o DynamicGroupsModelMixin will not have static_group_association_set
+            if hasattr(self.model, "static_group_association_set"):
+                self.assertIsInstance(self.model.objects.first().static_group_association_set.all(), QuerySet)
                 self.assertEqual(
-                    self.model.objects.first().associated_static_groups.all().model, StaticGroupAssociation
+                    self.model.objects.first().static_group_association_set.all().model, StaticGroupAssociation
                 )
-
-                self.assertTrue(hasattr(self.model, "static_groups"))
-                self.assertIsInstance(self.model.objects.first().static_groups, QuerySet)
-                self.assertEqual(self.model.objects.first().static_groups.model, StaticGroup)
-
-                if StaticGroup.objects.get_for_model(self.model).exists():
-                    sg = StaticGroup.objects.get_for_model(self.model).first()
-                    self.assertEqual(sg.members.model, self.model)

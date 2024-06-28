@@ -12,8 +12,8 @@ from nautobot.extras.forms import (
     NautobotBulkEditForm,
     NautobotFilterForm,
     NautobotModelForm,
-    TagsBulkEditFormMixin,
 )
+from nautobot.extras.forms.mixins import TagsBulkEditFormMixin
 
 from .models import Tenant, TenantGroup
 

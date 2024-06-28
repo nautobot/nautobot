@@ -18,7 +18,6 @@ class ExtrasConfig(NautobotConfig):
         "dynamicgroup",
         "externalintegration",
         "gitrepository",
-        "staticgroup",
         "team",
     ]
 

@@ -7,9 +7,11 @@ from nautobot.tenancy.tables import TenantGroupTable
 
 
 class TableTestCase(TestCase):
+    maxDiff = None
+
     def _validate_sorted_tree_queryset_same_with_table_queryset(self, queryset, table_class, field_name):
         with self.subTest(f"Assert sorting {table_class.__name__} on '{field_name}'"):
-            table = table_class(queryset, order_by=field_name)
+            table = table_class(queryset.with_tree_fields(), order_by=field_name)
             table_queryset_data = table.data.data.values_list("pk", flat=True)
             sorted_queryset = queryset.with_tree_fields().extra(order_by=[field_name]).values_list("pk", flat=True)
             self.assertEqual(list(table_queryset_data), list(sorted_queryset))

@@ -53,18 +53,6 @@ menu_items = (
                             ),
                         ),
                     ),
-                    NavMenuItem(
-                        link="extras:staticgroup_list",
-                        name="Static Groups",
-                        weight=200,
-                        permissions=["extras.view_staticgroup"],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="extras:staticgroup_add",
-                                permissions=["extras.add_staticgroup"],
-                            ),
-                        ),
-                    ),
                 ),
             ),
             NavMenuGroup(

@@ -38,6 +38,7 @@ from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
+    DynamicGroupTypeChoices,
     JobExecutionType,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
@@ -75,7 +76,6 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
-    StaticGroup,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -88,6 +88,7 @@ from nautobot.extras.utils import (
     RoleModelsQuery,
     TaggableClassesQuery,
 )
+from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 
@@ -120,6 +121,7 @@ __all__ = (
     "CustomFieldChoiceFormSet",
     "CustomLinkForm",
     "CustomLinkFilterForm",
+    "DynamicGroupBulkAssignForm",
     "DynamicGroupForm",
     "DynamicGroupFilterForm",
     "DynamicGroupMembershipFormSet",
@@ -168,10 +170,6 @@ __all__ = (
     "SecretsGroupForm",
     "SecretsGroupFilterForm",
     "SecretsGroupAssociationFormSet",
-    "StaticGroupBulkAssignForm",
-    "StaticGroupBulkEditForm",
-    "StaticGroupFilterForm",
-    "StaticGroupForm",
     "StaticGroupAssociationFilterForm",
     "StatusForm",
     "StatusFilterForm",
@@ -519,13 +517,14 @@ class CustomLinkFilterForm(BootstrapMixin, forms.Form):
 #
 
 
-class DynamicGroupForm(NautobotModelForm):
+class DynamicGroupForm(TenancyForm, NautobotModelForm):
     """DynamicGroup model form."""
 
     content_type = CSVContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
         label="Content Type",
     )
+    group_type = forms.ChoiceField(choices=DynamicGroupTypeChoices, widget=StaticSelect2())
 
     class Meta:
         model = DynamicGroup
@@ -533,6 +532,9 @@ class DynamicGroupForm(NautobotModelForm):
             "name",
             "description",
             "content_type",
+            "group_type",
+            "tenant",
+            "tags",
         ]
 
 
@@ -540,8 +542,13 @@ class DynamicGroupMembershipFormSetForm(forms.ModelForm):
     """DynamicGroupMembership model form for use inline on DynamicGroupFormSet."""
 
     group = DynamicModelChoiceField(
-        queryset=DynamicGroup.objects.all(),
-        query_params={"content_type": "$content_type"},
+        queryset=DynamicGroup.objects.filter(
+            group_type__in=[DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER, DynamicGroupTypeChoices.TYPE_DYNAMIC_SET]
+        ),
+        query_params={
+            "content_type": "$content_type",
+            "group_type": [DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER, DynamicGroupTypeChoices.TYPE_DYNAMIC_SET],
+        },
     )
 
     class Meta:
@@ -571,12 +578,76 @@ class DynamicGroupMembershipFormSet(BaseDynamicGroupMembershipFormSet):
     """
 
 
-class DynamicGroupFilterForm(BootstrapMixin, forms.Form):
+class DynamicGroupFilterForm(TenancyFilterForm, NautobotFilterForm):
     """DynamicGroup filter form."""
 
     model = DynamicGroup
     q = forms.CharField(required=False, label="Search")
-    content_type = MultipleContentTypeField(feature="dynamic_groups", choices_as_strings=True, label="Content Type")
+    content_type = MultipleContentTypeField(
+        feature="dynamic_groups", choices_as_strings=True, label="Content Type", required=False
+    )
+    tags = TagFilterField(model)
+
+
+class DynamicGroupBulkAssignForm(BootstrapMixin, BulkEditForm):
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
+        widget=forms.HiddenInput(),
+    )
+    create_and_assign_to_new_group_name = forms.CharField(
+        required=False,
+        label="Create a new group",
+        help_text="Create a new group with this name and assign the selected objects to it.",
+    )
+
+    def __init__(self, model, *args, **kwargs):
+        super().__init__(model, *args, **kwargs)
+        self.fields["content_type"].initial = ContentType.objects.get_for_model(model)
+        self.fields["pk"] = forms.ModelMultipleChoiceField(
+            queryset=model.objects.all(),
+            widget=forms.MultipleHiddenInput(),
+            required=False,
+        )
+        self.fields["add_to_groups"] = DynamicModelMultipleChoiceField(
+            queryset=DynamicGroup.objects.filter(group_type=DynamicGroupTypeChoices.TYPE_STATIC),
+            required=False,
+            query_params={
+                "group_type": "static",
+                "content_type": model._meta.label_lower,
+            },
+            label="Add to existing group(s)",
+        )
+        self.fields["remove_from_groups"] = DynamicModelMultipleChoiceField(
+            queryset=DynamicGroup.objects.filter(group_type=DynamicGroupTypeChoices.TYPE_STATIC),
+            required=False,
+            query_params={
+                "group_type": "static",
+                "content_type": model._meta.label_lower,
+            },
+            label="Remove from group(s)",
+        )
+
+    class Meta:
+        nullable_fields = []
+
+    def clean(self):
+        data = super().clean()
+
+        if "add_to_groups" in data and "remove_from_groups" in data:
+            if data["add_to_groups"].filter(pk__in=data["remove_from_groups"].values_list("pk", flat=True)).exists():
+                raise ValidationError("Same group specified for both addition and removal")
+
+        return data
+
+
+class StaticGroupAssociationFilterForm(NautobotFilterForm):
+    model = StaticGroupAssociation
+    q = forms.CharField(required=False, label="Search")
+    dynamic_group = DynamicModelMultipleChoiceField(queryset=DynamicGroup.objects.all(), required=False)
+    assigned_object_type = CSVContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
+        required=False,
+    )
 
 
 #
@@ -1627,111 +1698,6 @@ class SecretsGroupForm(NautobotModelForm):
 class SecretsGroupFilterForm(NautobotFilterForm):
     model = SecretsGroup
     q = forms.CharField(required=False, label="Search")
-
-
-#
-# Static Groups
-#
-
-
-class StaticGroupForm(NautobotModelForm):
-    """Generic create/update form for `StaticGroup` objects."""
-
-    content_type = DynamicModelChoiceField(
-        queryset=ContentType.objects.all(),
-        query_params={"feature": "static_groups"},
-    )
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-
-    class Meta:
-        model = StaticGroup
-        fields = (
-            "name",
-            "content_type",
-            "description",
-            "tenant",
-            "tags",
-        )
-
-
-class StaticGroupFilterForm(NautobotFilterForm):
-    model = StaticGroup
-    q = forms.CharField(required=False, label="Search")
-    content_type = CSVContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
-        required=False,
-    )
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    hidden = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
-    tags = TagFilterField(model)
-
-
-class StaticGroupBulkEditForm(NautobotBulkEditForm):
-    pk = forms.ModelMultipleChoiceField(
-        queryset=StaticGroup.objects.all(),
-        widget=forms.MultipleHiddenInput(),
-    )
-    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-
-    class Meta:
-        nullable_fields = ["tenant"]
-
-
-class StaticGroupBulkAssignForm(BootstrapMixin, BulkEditForm):
-    content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
-        widget=forms.HiddenInput(),
-    )
-    create_and_assign_to_new_group_name = forms.CharField(
-        required=False,
-        label="Create a new group",
-        help_text="Create a new group with this name and assign the selected objects to it.",
-    )
-
-    def __init__(self, model, *args, **kwargs):
-        super().__init__(model, *args, **kwargs)
-        self.fields["content_type"].initial = ContentType.objects.get_for_model(model)
-        self.fields["pk"] = forms.ModelMultipleChoiceField(
-            queryset=model.objects.all(),
-            widget=forms.MultipleHiddenInput(),
-            required=False,
-        )
-        self.fields["add_to_groups"] = DynamicModelMultipleChoiceField(
-            queryset=StaticGroup.objects.all(),
-            required=False,
-            query_params={"content_type": model._meta.label_lower},
-            label="Add to existing group(s)",
-        )
-        self.fields["remove_from_groups"] = DynamicModelMultipleChoiceField(
-            queryset=StaticGroup.objects.all(),
-            required=False,
-            query_params={"content_type": model._meta.label_lower},
-            label="Remove from group(s)",
-        )
-
-    class Meta:
-        nullable_fields = []
-
-    def clean(self):
-        data = super().clean()
-
-        if "add_to_groups" in data and "remove_from_groups" in data:
-            if data["add_to_groups"].filter(pk__in=data["remove_from_groups"].values_list("pk", flat=True)).exists():
-                raise ValidationError("Same group specified for both addition and removal")
-
-        return data
-
-
-class StaticGroupAssociationFilterForm(NautobotFilterForm):
-    model = StaticGroupAssociation
-    q = forms.CharField(required=False, label="Search")
-    static_group = DynamicModelMultipleChoiceField(queryset=StaticGroup.objects.all(), required=False)
-    assigned_object_type = CSVContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
-        required=False,
-    )
-    hidden = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
 
 
 #

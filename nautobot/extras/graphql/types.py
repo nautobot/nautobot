@@ -2,11 +2,10 @@ from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.extras.filters import (
     ContactAssociationFilterSet,
     DynamicGroupFilterSet,
-    StaticGroupFilterSet,
     StatusFilterSet,
     TagFilterSet,
 )
-from nautobot.extras.models import ContactAssociation, DynamicGroup, StaticGroup, Status, Tag
+from nautobot.extras.models import ContactAssociation, DynamicGroup, Status, Tag
 
 
 class ContactAssociationType(OptimizedNautobotObjectType):
@@ -23,14 +22,6 @@ class DynamicGroupType(OptimizedNautobotObjectType):
     class Meta:
         model = DynamicGroup
         filterset_class = DynamicGroupFilterSet
-
-
-class StaticGroupType(OptimizedNautobotObjectType):
-    """GraphQL Type object for `StaticGroup` model."""
-
-    class Meta:
-        model = StaticGroup
-        filterset_class = StaticGroupFilterSet
 
 
 class StatusType(OptimizedNautobotObjectType):

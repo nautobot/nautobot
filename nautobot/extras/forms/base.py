@@ -5,12 +5,12 @@ from .mixins import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelFilterFormMixin,
     CustomFieldModelFormMixin,
+    DynamicGroupModelFormMixin,
     NoteModelBulkEditFormMixin,
     NoteModelFormMixin,
     RelationshipModelBulkEditFormMixin,
     RelationshipModelFilterFormMixin,
     RelationshipModelFormMixin,
-    StaticGroupModelFormMixin,
 )
 
 __all__ = (
@@ -27,9 +27,9 @@ __all__ = (
 
 class NautobotModelForm(
     CustomFieldModelFormMixin,
+    DynamicGroupModelFormMixin,
     NoteModelFormMixin,
     RelationshipModelFormMixin,
-    StaticGroupModelFormMixin,
     BootstrapMixin,
 ):
     """

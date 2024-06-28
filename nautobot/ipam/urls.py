@@ -147,7 +147,7 @@ urlpatterns = [
         name="prefix_changelog",
         kwargs={"model": Prefix},
     ),
-    path(
+    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
         "prefixes/<uuid:pk>/dynamic-groups/",
         ObjectDynamicGroupsView.as_view(),
         name="prefix_dynamicgroups",
@@ -203,7 +203,7 @@ urlpatterns = [
         name="ipaddress_changelog",
         kwargs={"model": IPAddress},
     ),
-    path(
+    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
         "ip-addresses/<uuid:pk>/dynamic-groups/",
         ObjectDynamicGroupsView.as_view(),
         name="ipaddress_dynamicgroups",

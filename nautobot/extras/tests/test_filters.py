@@ -21,6 +21,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
+    DynamicGroupTypeChoices,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
@@ -56,7 +57,6 @@ from nautobot.extras.filters import (
     SecretsGroupAssociationFilterSet,
     SecretsGroupFilterSet,
     StaticGroupAssociationFilterSet,
-    StaticGroupFilterSet,
     StatusFilterSet,
     TagFilterSet,
     TeamFilterSet,
@@ -70,6 +70,7 @@ from nautobot.extras.models import (
     CustomField,
     CustomFieldChoice,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     ExternalIntegration,
     FileProxy,
@@ -90,7 +91,6 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
-    StaticGroup,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -992,17 +992,17 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
         location_ct = ContentType.objects.get(app_label="dcim", model="location")
         rack_ct = ContentType.objects.get(app_label="dcim", model="rack")
 
-        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
+        cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
         rack_status = Status.objects.get_for_model(Rack).first()
         racks = (
-            Rack.objects.create(name="Rack 1", location=locations[0], status=rack_status),
-            Rack.objects.create(name="Rack 2", location=locations[1], status=rack_status),
+            Rack.objects.create(name="Rack 1", location=cls.locations[0], status=rack_status),
+            Rack.objects.create(name="Rack 2", location=cls.locations[1], status=rack_status),
         )
 
         ImageAttachment.objects.create(
             content_type=location_ct,
-            object_id=locations[0].pk,
+            object_id=cls.locations[0].pk,
             name="Image Attachment 1",
             image="http://example.com/image1.png",
             image_height=100,
@@ -1010,7 +1010,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
         )
         ImageAttachment.objects.create(
             content_type=location_ct,
-            object_id=locations[1].pk,
+            object_id=cls.locations[1].pk,
             name="Image Attachment 2",
             image="http://example.com/image2.png",
             image_height=100,
@@ -1044,7 +1044,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
     def test_content_type_id_and_object_id(self):
         params = {
             "content_type_id": ContentType.objects.get(app_label="dcim", model="location").pk,
-            "object_id": [Location.objects.first().pk],
+            "object_id": [self.locations[0].pk],
         }
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
@@ -1908,78 +1908,30 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-class StaticGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
-    queryset = StaticGroup.objects.all()
-    filterset = StaticGroupFilterSet
-
-    generic_filter_tests = (
-        ["description"],
-        ["name"],
-        ["member_id", "static_group_associations__associated_object_id"],
-        ["tenant", "tenant__id"],
-        ["tenant", "tenant__name"],
-    )
-
-    @classmethod
-    def setUpTestData(cls):
-        StaticGroup.all_objects.create(
-            name="Hidden group", content_type=ContentType.objects.get_for_model(Location), hidden=True
-        )
-
-    def test_content_type(self):
-        ct = StaticGroup.objects.first().content_type
-        params = {"content_type": [ct.model_class()._meta.label_lower]}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, StaticGroup.objects.filter(content_type=ct)
-        )
-
-    def test_hidden(self):
-        params = {"hidden": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, StaticGroup.all_objects.all()).qs, StaticGroup.all_objects.filter(hidden=True)
-        )
-        params = {"hidden": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, StaticGroup.all_objects.all()).qs, StaticGroup.all_objects.filter(hidden=False)
-        )
-
-
 class StaticGroupAssociationTestCase(FilterTestCases.FilterTestCase):
     queryset = StaticGroupAssociation.objects.all()
     filterset = StaticGroupAssociationFilterSet
 
     generic_filter_tests = (
-        ["static_group", "static_group__id"],
-        ["static_group", "static_group__name"],
+        ["dynamic_group", "dynamic_group__id"],
+        ["dynamic_group", "dynamic_group__name"],
         ["associated_object_id"],
     )
 
-    @classmethod
-    def setUpTestData(cls):
-        sg = StaticGroup.all_objects.create(
-            name="Hidden group", content_type=ContentType.objects.get_for_model(Location), hidden=True
-        )
-        sg.add_members(Location.objects.all())
-
     def test_associated_object_type(self):
-        ct = StaticGroup.objects.filter(static_group_associations__isnull=False).first().content_type
+        ct = (
+            DynamicGroup.objects.filter(
+                static_group_associations__isnull=False,
+                group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+            )
+            .first()
+            .content_type
+        )
         params = {"associated_object_type": [ct.model_class()._meta.label_lower]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             StaticGroupAssociation.objects.filter(associated_object_type=ct),
             ordered=False,
-        )
-
-    def test_hidden(self):
-        params = {"hidden": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, StaticGroupAssociation.all_objects.all()).qs,
-            StaticGroupAssociation.all_objects.filter(static_group__hidden=True),
-        )
-        params = {"hidden": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, StaticGroupAssociation.all_objects.all()).qs,
-            StaticGroupAssociation.all_objects.filter(static_group__hidden=False),
         )
 
 

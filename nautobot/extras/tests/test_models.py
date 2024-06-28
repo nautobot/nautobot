@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db.models import ProtectedError, QuerySet
+from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import override_settings
 from django.test.utils import isolate_apps
@@ -63,7 +63,6 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
-    StaticGroup,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -72,8 +71,7 @@ from nautobot.extras.models import (
 from nautobot.extras.models.statuses import StatusModel
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
-from nautobot.ipam.models import IPAddress, Prefix
-from nautobot.ipam.querysets import PrefixQuerySet
+from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import (
     Cluster,
@@ -1727,117 +1725,8 @@ class SecretsGroupTest(ModelTestCases.BaseModelTestCase):
         )
 
 
-class StaticGroupTest(ModelTestCases.BaseModelTestCase):
-    model = StaticGroup
-
-    @classmethod
-    def setUpTestData(cls):
-        StaticGroup.all_objects.create(
-            name="Hidden Group", content_type=ContentType.objects.get_for_model(Prefix), hidden=True
-        )
-
-    def test_managers(self):
-        self.assertQuerysetEqualAndNotEmpty(StaticGroup.objects.all(), StaticGroup.all_objects.filter(hidden=False))
-        self.assertTrue(StaticGroup.all_objects.filter(hidden=True).exists())
-        self.assertFalse(StaticGroup.objects.filter(hidden=True).exists())
-
-    def test_member_operations(self):
-        sg = StaticGroup.objects.create(name="All Prefixes", content_type=ContentType.objects.get_for_model(Prefix))
-        self.assertIsInstance(sg.members, PrefixQuerySet)
-        self.assertEqual(sg.members.count(), 0)
-        # test type validation
-        with self.assertRaises(TypeError):
-            sg.add_members([IPAddress.objects.first()])
-        # test bulk addition
-        sg.add_members(Prefix.objects.filter(ip_version=4))
-        self.assertIsInstance(sg.members, PrefixQuerySet)
-        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=4))
-        # test duplicate objects aren't re-added
-        sg.add_members(Prefix.objects.all())
-        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.all())
-        self.assertEqual(sg.static_group_associations.count(), Prefix.objects.all().count())
-        # test idempotence and alternate code path
-        sg.add_members(list(Prefix.objects.all()))
-        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.all())
-        self.assertEqual(sg.static_group_associations.count(), Prefix.objects.all().count())
-
-        # test bulk removal
-        sg.remove_members(Prefix.objects.filter(ip_version=4))
-        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))
-        self.assertEqual(sg.static_group_associations.count(), Prefix.objects.filter(ip_version=6).count())
-        # test idempotence and alternate code path
-        sg.remove_members(list(Prefix.objects.filter(ip_version=4)))
-        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))
-        self.assertEqual(sg.static_group_associations.count(), Prefix.objects.filter(ip_version=6).count())
-
-        # test property setter
-        sg.members = Prefix.objects.filter(ip_version=4)
-        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=4))
-        sg.members = list(Prefix.objects.filter(ip_version=6))
-        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))
-
-        self.assertIsInstance(Prefix.objects.filter(ip_version=6).first().static_groups, QuerySet)
-        self.assertIn(sg, list(Prefix.objects.filter(ip_version=6).first().static_groups))
-
-    def test_hidden_groups(self):
-        sg1 = StaticGroup.objects.create(name="Prefixes", content_type=ContentType.objects.get_for_model(Prefix))
-        sg2 = StaticGroup.objects.create(
-            name="Prefixes Hidden", content_type=ContentType.objects.get_for_model(Prefix), hidden=True
-        )
-
-        self.assertIn(sg1, StaticGroup.objects.all())
-        self.assertNotIn(sg2, StaticGroup.objects.all())
-
-        self.assertIn(sg1, StaticGroup.all_objects.all())
-        self.assertIn(sg2, StaticGroup.all_objects.all())
-
-        pfx = Prefix.objects.first()
-        sg1.add_members([pfx])
-        self.assertIn(pfx, sg1.members)
-        self.assertTrue(sg1.static_group_associations.exists())
-        sg2.add_members([pfx])
-        self.assertIn(pfx, sg2.members)
-        self.assertFalse(sg2.static_group_associations.exists())
-        self.assertTrue(sg2.static_group_associations(manager="all_objects").exists())
-
-        # hidden groups don't appear in `associated_static_groups` or `static_groups`
-        self.assertEqual(pfx.associated_static_groups.filter(static_group__in=[sg1, sg2]).count(), 1)
-        self.assertIn(sg1, pfx.static_groups)
-        self.assertNotIn(sg2, pfx.static_groups)
-
-        # can query explicitly to include hidden groups
-        self.assertIn(
-            sg1,
-            StaticGroup.all_objects.filter(
-                static_group_associations__associated_object_type=ContentType.objects.get_for_model(Prefix),
-                static_group_associations__associated_object_id=pfx.id,
-            ),
-        )
-        self.assertIn(
-            sg2,
-            StaticGroup.all_objects.filter(
-                static_group_associations__associated_object_type=ContentType.objects.get_for_model(Prefix),
-                static_group_associations__associated_object_id=pfx.id,
-            ),
-        )
-
-
 class StaticGroupAssociationTest(ModelTestCases.BaseModelTestCase):
     model = StaticGroupAssociation
-
-    @classmethod
-    def setUpTestData(cls):
-        sg = StaticGroup.all_objects.create(
-            name="Hidden Group", content_type=ContentType.objects.get_for_model(Prefix), hidden=True
-        )
-        sg.add_members(Prefix.objects.all())
-
-    def test_managers(self):
-        self.assertQuerysetEqualAndNotEmpty(
-            StaticGroupAssociation.objects.all(), StaticGroupAssociation.all_objects.filter(static_group__hidden=False)
-        )
-        self.assertTrue(StaticGroupAssociation.all_objects.filter(static_group__hidden=True).exists())
-        self.assertFalse(StaticGroupAssociation.objects.filter(static_group__hidden=True).exists())
 
 
 class StatusTest(ModelTestCases.BaseModelTestCase):

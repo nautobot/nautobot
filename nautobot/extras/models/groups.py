@@ -1,12 +1,11 @@
-"""Dynamic and Static Groups Models."""
+"""Dynamic Groups Models."""
 
 import logging
 
 from django import forms
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.core.cache import cache
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.utils.functional import cached_property
@@ -19,41 +18,16 @@ from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.deprecation import method_deprecated, method_deprecated_in_favor_of
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
-from nautobot.extras.choices import DynamicGroupOperatorChoices
+from nautobot.extras.choices import DynamicGroupOperatorChoices, DynamicGroupTypeChoices
 from nautobot.extras.querysets import DynamicGroupMembershipQuerySet, DynamicGroupQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery
 
 logger = logging.getLogger(__name__)
 
 
-class StaticGroupManager(BaseManager.from_queryset(RestrictedQuerySet)):
-    use_in_migrations = True
-
-    def get_for_model(self, model):
-        """
-        Return all StaticGroups assignable to the given model class.
-        """
-        concrete_model = model._meta.concrete_model
-        cache_key = f"{self.get_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}"
-        queryset = cache.get(cache_key)
-        if queryset is None:
-            content_type = ContentType.objects.get_for_model(concrete_model)
-            queryset = self.get_queryset().filter(content_type=content_type)
-            cache.set(cache_key, queryset)
-        return queryset
-
-    get_for_model.cache_key_prefix = "nautobot.extras.staticgroup.get_for_model"
-
-
-class StaticGroupDefaultManager(StaticGroupManager):
-    """Subclass of StaticGroupManager that automatically filters out hidden groups."""
-
-    def get_queryset(self):
-        return super().get_queryset().exclude(hidden=True)
-
-
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -61,260 +35,47 @@ class StaticGroupDefaultManager(StaticGroupManager):
     "graphql",
     "webhooks",
 )
-class StaticGroup(PrimaryModel):
-    """A statically defined (as opposed to dynamically calculated) group of objects sharing a common content-type."""
+class DynamicGroup(PrimaryModel):
+    """A group of related objects sharing a common content-type."""
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
-    content_type = models.ForeignKey(
-        to=ContentType,
-        on_delete=models.CASCADE,
-        related_name="static_groups_set",
-        limit_choices_to=FeatureQuery("static_groups"),
-        help_text="The type of object contained in this Static Group.",
+    group_type = models.CharField(
+        choices=DynamicGroupTypeChoices.CHOICES, max_length=16, default=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER
     )
-    tenant = models.ForeignKey(
-        to="tenancy.Tenant",
-        on_delete=models.PROTECT,
-        related_name="managed_static_groups",  # "static_groups" clash with StaticGroupMixin.static_groups property
-        blank=True,
-        null=True,
-    )
-    hidden = models.BooleanField(
-        default=False,
-        db_index=True,
-        help_text="Set to True to hide this group from the UI and API and disable change-logging of its associations",
-    )
-    _dynamic_group = models.OneToOneField(
-        to="extras.dynamicgroup",
-        blank=True,
-        null=True,
-        on_delete=models.CASCADE,
-        related_name="_backing_group",
-    )
-
-    objects = StaticGroupDefaultManager()
-    all_objects = StaticGroupManager()
-
-    clone_fields = ["content_type", "tenant"]
-    is_static_group_associable_model = False
-
-    class Meta:
-        ordering = ["name"]
-
-    def __str__(self):
-        return self.name
-
-    def to_objectchange(self, *args, **kwargs):
-        if self.hidden:
-            return None
-        return super().to_objectchange(*args, **kwargs)
-
-    @property
-    def model(self):
-        """
-        Access to the underlying Model class for this group's `content_type`.
-
-        This class object is cached on the instance after the first time it is accessed.
-        """
-        if getattr(self, "_model", None) is None:
-            try:
-                self._model = self.content_type.model_class()
-            except models.ObjectDoesNotExist:
-                self._model = None
-        return self._model
-
-    @property
-    def members(self):
-        """Return the member objects for this group."""
-        # Since associated_object is a GenericForeignKey, we can't just do:
-        #     return self.static_group_associations.values_list("associated_object", flat=True)
-        return self.model.objects.filter(
-            pk__in=self.static_group_associations(manager="all_objects").values_list("associated_object_id", flat=True)
-        )
-
-    @members.setter
-    def members(self, value):
-        """Set the member objects (QuerySet or list of records) for this group."""
-        if isinstance(value, models.QuerySet):
-            if value.model != self.model:
-                raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
-            to_remove = self.members.exclude(pk__in=value.values_list("pk", flat=True))
-            self.remove_members(to_remove)
-            to_add = value.exclude(pk__in=self.members.values_list("pk", flat=True))
-            self.add_members(to_add)
-        else:
-            for obj in value:
-                if not isinstance(obj, self.model):
-                    raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
-            to_remove = []
-            for member in self.members:
-                if member not in value:
-                    to_remove.append(member)
-            self.remove_members(to_remove)
-            to_add = []
-            members = self.members
-            for candidate in value:
-                if candidate not in members:
-                    to_add.append(candidate)
-            self.add_members(to_add)
-
-    @property
-    def count(self):
-        """Return the number of member objects in this group."""
-        return self.members.count()
-
-    def clean(self):
-        super().clean()
-
-        if self.present_in_database:
-            # Check immutable fields
-            database_object = self.__class__.all_objects.get(pk=self.pk)
-
-            if self.content_type != database_object.content_type:
-                raise ValidationError({"content_type": "ContentType cannot be changed once created"})
-
-    def add_members(self, objects_to_add):
-        """Add the given list or QuerySet of objects to this Static Group."""
-        if isinstance(objects_to_add, models.QuerySet):
-            if objects_to_add.model != self.model:
-                raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
-        else:
-            for obj in objects_to_add:
-                if not isinstance(obj, self.model):
-                    raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
-
-        for obj in objects_to_add:
-            # We don't use `.bulk_create()` currently because we want change logging for these creates.
-            # Might be a good future performance improvement though.
-            StaticGroupAssociation.all_objects.get_or_create(
-                static_group=self, associated_object_type=self.content_type, associated_object_id=obj.pk
-            )
-
-    def remove_members(self, objects_to_remove):
-        """Remove the given list or QuerySet of objects from this Static Group."""
-        if isinstance(objects_to_remove, models.QuerySet):
-            if objects_to_remove.model != self.model:
-                raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
-            StaticGroupAssociation.all_objects.filter(
-                static_group=self,
-                associated_object_type=self.content_type,
-                associated_object_id__in=objects_to_remove.values_list("pk", flat=True),
-            ).delete()
-        else:
-            pks_to_remove = set()
-            for obj in objects_to_remove:
-                if not isinstance(obj, self.model):
-                    raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
-                pks_to_remove.add(obj.pk)
-
-            StaticGroupAssociation.all_objects.filter(
-                static_group=self, associated_object_type=self.content_type, associated_object_id__in=pks_to_remove
-            ).delete()
-
-
-class StaticGroupAssociationManager(BaseManager.from_queryset(RestrictedQuerySet)):
-    use_in_migrations = True
-
-
-class StaticGroupAssociationDefaultManager(StaticGroupAssociationManager):
-    """Subclass of StaticGroupAssociationManager that automatically filters out associations of hidden groups."""
-
-    def get_queryset(self):
-        return super().get_queryset().exclude(static_group__hidden=True)
-
-
-@extras_features(
-    "custom_validators",
-    "export_templates",
-    "graphql",
-    "webhooks",
-)
-class StaticGroupAssociation(OrganizationalModel):
-    """Intermediary model for associating an object to a StaticGroup."""
-
-    static_group = models.ForeignKey(to=StaticGroup, on_delete=models.CASCADE, related_name="static_group_associations")
-    associated_object_type = models.ForeignKey(
-        to=ContentType,
-        on_delete=models.CASCADE,
-        related_name="static_group_associations",
-        limit_choices_to=FeatureQuery("static_groups"),
-    )
-    associated_object_id = models.UUIDField(db_index=True)
-    associated_object = GenericForeignKey(ct_field="associated_object_type", fk_field="associated_object_id")
-
-    objects = StaticGroupAssociationDefaultManager()
-    all_objects = StaticGroupAssociationManager()
-
-    is_contact_associable_model = False
-    is_static_group_associable_model = False
-    is_saved_view_model = False
-
-    class Meta:
-        unique_together = [["static_group", "associated_object_type", "associated_object_id"]]
-        ordering = ["static_group", "associated_object_type", "associated_object_id"]
-        indexes = [
-            models.Index(
-                name="extras_sga_double",
-                fields=["static_group", "associated_object_id"],
-            ),
-            models.Index(
-                name="extras_sga_associated_object",
-                fields=["associated_object_type_id", "associated_object_id"],
-            ),
-        ]
-
-    def __str__(self):
-        return f"{self.associated_object} as a member of {self.static_group}"
-
-    def clean(self):
-        super().clean()
-
-        if self.associated_object_type != self.static_group.content_type:
-            raise ValidationError({"associated_object_type": "Must match the static_group.content_type"})
-
-    def to_objectchange(self, *args, **kwargs):
-        if self.static_group.hidden:
-            return None
-        return super().to_objectchange(*args, **kwargs)
-
-
-@extras_features(
-    "custom_links",
-    "custom_validators",
-    "export_templates",
-    "graphql",
-    "webhooks",
-)
-class DynamicGroup(OrganizationalModel):
-    """Dynamic Group Model."""
-
-    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True, help_text="Dynamic Group name")
-    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
         verbose_name="Object Type",
-        help_text="The type of object for this Dynamic Group.",
+        help_text="The type of object contained in this group.",
         related_name="dynamic_groups",
+        limit_choices_to=FeatureQuery("dynamic_groups"),
+    )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="managed_dynamic_groups",  # "dynamic_groups" clash with Tenant.dynamic_groups property
+        blank=True,
+        null=True,
     )
     filter = models.JSONField(
         encoder=DjangoJSONEncoder,
         editable=False,
         default=dict,
-        help_text="A JSON-encoded dictionary of filter parameters for group membership",
+        help_text="A JSON-encoded dictionary of filter parameters defining membership of this group",
     )
     children = models.ManyToManyField(
         "extras.DynamicGroup",
-        help_text="Child DynamicGroups of filter parameters for group membership",
+        help_text='"Child" groups that are combined together to define membership of this group',
         through="extras.DynamicGroupMembership",
         through_fields=("parent_group", "group"),
         related_name="parents",
     )
 
     objects = BaseManager.from_queryset(DynamicGroupQuerySet)()
+    is_dynamic_group_associable_model = False
 
-    clone_fields = ["content_type", "filter"]
+    clone_fields = ["content_type", "group_type", "filter", "tenant"]
 
     # This is used as a `startswith` check on field names, so these can be explicit fields or just
     # substrings.
@@ -528,31 +289,6 @@ class DynamicGroup(OrganizationalModel):
 
         return self._map_filter_fields
 
-    def get_queryset(self):
-        """
-        Return a queryset for the `content_type` model of this group.
-
-        The queryset is generated based on the `filterset_class` for the Model.
-        """
-
-        model = self.model
-
-        if model is None:
-            raise RuntimeError(f"Could not determine queryset for model '{model}'")
-
-        filterset = self.filterset_class(self.filter, model.objects.all())
-        if not filterset.is_valid():
-            logger.warning('Filter for DynamicGroup "%s" is not valid', self)
-            return model.objects.none()
-
-        qs = filterset.qs
-
-        # Make sure that this instance can't be a member of its own group.
-        if self.present_in_database and model == self.__class__:
-            qs = qs.exclude(pk=self.pk)
-
-        return qs
-
     @property
     def members(self):
         """
@@ -560,13 +296,112 @@ class DynamicGroup(OrganizationalModel):
 
         If up-to-the-minute accuracy is needed, call `update_cached_members()` instead.
         """
-        try:
-            return self._backing_group.members
-        except ObjectDoesNotExist:
-            return self.update_cached_members()
+        # Since associated_object is a GenericForeignKey, we can't just do:
+        #     return self.static_group_associations.values_list("associated_object", flat=True)
+        return self.model.objects.filter(
+            pk__in=self.static_group_associations(manager="all_objects").values_list("associated_object_id", flat=True)
+        )
+
+    @members.setter
+    def members(self, value):
+        """Set the member objects (QuerySet or list of records) for this staticly defined group."""
+        if self.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+            raise ValidationError(
+                f"Group {self} is not staticly defined, setting its members directly is not permitted."
+            )
+        return self._set_members(value)
+
+    def _set_members(self, value):
+        """Internal API for updating the static/cached members of this group."""
+        if isinstance(value, models.QuerySet):
+            if value.model != self.model:
+                raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
+            to_remove = self.members.exclude(pk__in=value.values_list("pk", flat=True))
+            self._remove_members(to_remove)
+            to_add = value.exclude(pk__in=self.members.values_list("pk", flat=True))
+            self._add_members(to_add)
+        else:
+            for obj in value:
+                if not isinstance(obj, self.model):
+                    raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
+            to_remove = []
+            for member in self.members:
+                if member not in value:
+                    to_remove.append(member)
+            self._remove_members(to_remove)
+            to_add = []
+            members = self.members
+            for candidate in value:
+                if candidate not in members:
+                    to_add.append(candidate)
+            self._add_members(to_add)
+
+        return self.members
+
+    def add_members(self, objects_to_add):
+        """Add the given list or QuerySet of objects to this staticly defined group."""
+        if self.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+            raise ValidationError(f"Group {self} is not staticly defined, adding members directly is not permitted.")
+        return self._add_members(objects_to_add)
+
+    def _add_members(self, objects_to_add):
+        """Internal API for adding the given list or QuerySet of objects to the cached/static members of this group."""
+        if isinstance(objects_to_add, models.QuerySet):
+            if objects_to_add.model != self.model:
+                raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
+        else:
+            for obj in objects_to_add:
+                if not isinstance(obj, self.model):
+                    raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
+
+        if self.group_type == DynamicGroupTypeChoices.TYPE_STATIC:
+            for obj in objects_to_add:
+                # We don't use `.bulk_create()` currently because we want change logging for these creates.
+                # Might be a good future performance improvement though.
+                StaticGroupAssociation.all_objects.get_or_create(
+                    dynamic_group=self, associated_object_type=self.content_type, associated_object_id=obj.pk
+                )
+        else:
+            # Cached/hidden static group associations, so we can use bulk-create to bypass change logging.
+            existing_members = self.members
+            sgas = [
+                StaticGroupAssociation(
+                    dynamic_group=self, associated_object_type=self.content_type, associated_object_id=obj.pk
+                )
+                for obj in objects_to_add
+                if obj not in existing_members
+            ]
+            StaticGroupAssociation.all_objects.bulk_create(sgas)
+
+    def remove_members(self, objects_to_remove):
+        """Remove the given list or QuerySet of objects from this staticly defined group."""
+        if self.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+            raise ValidationError(f"Group {self} is not staticly defined, removing members directly is not permitted.")
+        return self._remove_members(objects_to_remove)
+
+    def _remove_members(self, objects_to_remove):
+        """Internal API for removing the given list or QuerySet from the cached/static members of this Group."""
+        if isinstance(objects_to_remove, models.QuerySet):
+            if objects_to_remove.model != self.model:
+                raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
+            StaticGroupAssociation.all_objects.filter(
+                dynamic_group=self,
+                associated_object_type=self.content_type,
+                associated_object_id__in=objects_to_remove.values_list("pk", flat=True),
+            ).delete()
+        else:
+            pks_to_remove = set()
+            for obj in objects_to_remove:
+                if not isinstance(obj, self.model):
+                    raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
+                pks_to_remove.add(obj.pk)
+
+            StaticGroupAssociation.all_objects.filter(
+                dynamic_group=self, associated_object_type=self.content_type, associated_object_id__in=pks_to_remove
+            ).delete()
 
     @property
-    @method_deprecated("Members are now cached in the database as a Static Group rather than in Redis.")
+    @method_deprecated("Members are now cached in the database via StaticGroupAssociations rather than in Redis.")
     def members_cache_key(self):
         """Obsolete cache key for this group's members."""
         return f"nautobot.extras.dynamicgroup.{self.id}.members_cached"
@@ -582,27 +417,20 @@ class DynamicGroup(OrganizationalModel):
         Update the cached members of this group and return the resulting members.
         """
         if members is None:
-            # If there are child groups, return the generated group queryset, otherwise use this group's
-            # `filter` directly.
-            if self.children.exists():
-                members = self.get_group_queryset()
+            if self.group_type in (
+                DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+                DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+            ):
+                members = self._get_group_queryset()
+            elif self.group_type == DynamicGroupTypeChoices.TYPE_STATIC:
+                return self.members  # nothing to do
             else:
-                members = self.get_queryset()
+                raise RuntimeError(f"Unknown/invalid group_type {self.group_type}")
 
-        try:
-            self._backing_group.members = members
-        except ObjectDoesNotExist:
-            StaticGroup.all_objects.create(
-                name=f"_{self.name}"[:CHARFIELD_MAX_LENGTH],
-                description=f"Backing static group for dynamic group {self.name}"[:CHARFIELD_MAX_LENGTH],
-                hidden=True,
-                content_type=self.content_type,
-                _dynamic_group=self,
-            )
-            self._backing_group.members = members
-        logger.debug("Refreshed cache for %s, now with %d members", self, self._backing_group.count)
+        self._set_members(members)
+        logger.debug("Refreshed cache for %s, now with %d members", self, self.count)
 
-        return self._backing_group.members
+        return members
 
     def has_member(self, obj, use_cache=False):
         """
@@ -645,9 +473,12 @@ class DynamicGroup(OrganizationalModel):
         """
         Set all desired fields from `form_data` into `filter` dict.
 
-        :param form_data:
-            Dict of filter parameters, generally from a filter form's `cleaned_data`
+        Args:
+            form_data (dict): Dict of filter parameters, generally from a filter form's `cleaned_data`
         """
+        if self.group_type != DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+            raise ValidationError(f"Group {self} is not a filter-defined group (instead, group_type {self.group_type})")
+
         # Get the authoritative source of filter fields we want to keep.
         filter_fields = self.get_filter_fields()
 
@@ -712,7 +543,7 @@ class DynamicGroup(OrganizationalModel):
 
     def get_initial(self):
         """
-        Return an form-friendly version of `self.filter` for initial form data.
+        Return a form-friendly version of `self.filter` for initial form data.
 
         This is intended for use to populate the dynamically-generated filter form created by
         `generate_filter_form()`.
@@ -755,11 +586,17 @@ class DynamicGroup(OrganizationalModel):
         # Accessing `self.model` will determine if the `content_type` is not correctly set, blocking validation.
         if self.model is None:
             raise ValidationError({"filter": "Filter requires a `content_type` to be set"})
+        if self.filterset_class is None:
+            raise ValidationError({"filter": "Unable to locate the FilterSet class for this model."})
 
-        # Validate against the filterset's internal form validation.
-        filterset = self.filterset_class(self.filter)
-        if not filterset.is_valid():
-            raise ValidationError(filterset.errors)
+        if self.group_type != DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+            if self.filter:
+                raise ValidationError({"filter": "Filter can only be set for groups of type `dynamic-filter`."})
+        else:
+            # Validate against the filterset's internal form validation.
+            filterset = self.filterset_class(self.filter)
+            if not filterset.is_valid():
+                raise ValidationError(filterset.errors)
 
     def delete(self, *args, **kwargs):
         """Check if we're a child and attempt to block delete if we are."""
@@ -789,14 +626,17 @@ class DynamicGroup(OrganizationalModel):
             if self.content_type != database_object.content_type:
                 raise ValidationError({"content_type": "ContentType cannot be changed once created"})
 
-    def generate_query_for_filter(self, filter_field, value):
+            # TODO limit most changes to self.group_type as well.
+
+    def _generate_query_for_filter(self, filter_field, value):
         """
         Return a `Q` object generated from a `filter_field` and `value`.
 
-        :param filter_field:
-            Filter instance
-        :param value:
-            Value passed to the filter
+        Helper to `_generate_filter_based_query()`.
+
+        Args:
+            filter_field (Filter): filterset filter field instance
+            value (Any): value passed to the filter
         """
         query = models.Q()
         if filter_field is None:
@@ -828,7 +668,7 @@ class DynamicGroup(OrganizationalModel):
             # pass it to `generate_query` to get a correct Q object back out. When values are being
             # reconstructed from saved filters, lists of names are common e.g. (`{"location": ["ams01",
             # "ams02"]}`, the value being a list of location names (`["ams01", "ams02"]`).
-            if value and isinstance(value, list) and isinstance(value[0], str):
+            if value and isinstance(value, list) and isinstance(value[0], str) and not is_uuid(value[0]):
                 model_field = django_filters.utils.get_model_field(self._model, filter_field.field_name)
                 related_model = model_field.related_model
                 lookup_kwargs = {f"{to_field_name}__in": value}
@@ -852,35 +692,39 @@ class DynamicGroup(OrganizationalModel):
 
         return query
 
-    def generate_query_for_group(self, group):
+    def _generate_filter_based_query(self):
         """
-        Return a `Q` object generated from all filters for a `group`.
+        Return a `Q` object generated from this group's filters.
 
-        :param group:
-            DynamicGroup instance
+        Helper to `generate_query()`.
         """
-        fs = group.filterset_class(group.filter, group.get_queryset())
+        if self.group_type != DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+            raise RuntimeError(f"{self} is not a dynamic-filter group")
+
+        filterset = self.filterset_class(self.filter, self.model.objects.all())
         query = models.Q()
 
         # In this case we want all filters for a group's filter dict in a set intersection (boolean
         # AND) because ALL filter conditions must match for the filter parameters to be valid.
-        for field_name, value in fs.data.items():
-            filter_field = fs.filters.get(field_name)
-            query &= self.generate_query_for_filter(filter_field, value)
+        for field_name, value in filterset.data.items():
+            filter_field = filterset.filters.get(field_name)
+            query &= self._generate_query_for_filter(filter_field, value)
 
         return query
 
-    def perform_membership_set_operation(self, operator, query, next_set):
+    def _perform_membership_set_operation(self, operator, query, next_set):
         """
-        Perform set operation for a group membership. The `operator` and `next_set` are used to
-        decide the appropriate action to take on the `query`. The updated `Q` object is returned.
+        Perform set operation for a group membership.
 
-        :param operator:
-            DynamicGroupOperatorChoices choice (str)
-        :param query:
-            Q instance
-        :param next_set:
-            Q instance
+        The `operator` and `next_set` are used to decide the appropriate action to take on the `query`.
+
+        Args:
+            operator (str): DynamicGroupOperatorChoices choice
+            query (Q): Query so far
+            next_set (Q): Additional query to apply based on the operator.
+
+        Returns:
+            Q: updated query object
         """
         if operator == "union":
             query |= next_set
@@ -891,74 +735,71 @@ class DynamicGroup(OrganizationalModel):
 
         return query
 
-    def generate_members_query(self):
-        """
-        Return a `Q` object generated from all direct members or from self if `filter` is set.
-        """
-        if self.filter:
-            return self.generate_query_for_group(self)
-
-        query = models.Q()
-        for membership in self.dynamic_group_memberships.all():
-            group = membership.group
-            operator = membership.operator
-            next_set = self.generate_query_for_group(group)
-            query = self.perform_membership_set_operation(operator, query, next_set)
-
-        return query
-
     def generate_query(self):
         """
-        Return a `Q` object generated recursively from all nested filters for this dynamic group.
+        Return a `Q` object generated recursively from this dynamic group.
         """
-        query = models.Q()
-        memberships = self.dynamic_group_memberships.all()
+        if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+            return self._generate_filter_based_query()
 
-        # If this group has no children, just return a single query.
-        if not memberships.exists():
-            return self.generate_members_query()
+        if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_SET:
+            query = models.Q()
+            memberships = self.dynamic_group_memberships.all()
+            # Enumerate the filters for each child group, trusting that they handle their own children.
+            for membership in memberships:
+                group = membership.group
+                operator = membership.operator
+                logger.debug("Processing group %s...", group)
 
-        # Enumerate the filters for each child group, trusting that they handle their own children.
-        for membership in memberships:
-            group = membership.group
-            operator = membership.operator
-            logger.debug("Processing group %s...", group)
+                if group.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+                    logger.debug("Query: %s -> %s -> %s", group, group.filter, operator)
 
-            if group.filter:
-                logger.debug("Query: %s -> %s -> %s", group, group.filter, operator)
+                next_set = group.generate_query()
+                query = self._perform_membership_set_operation(operator, query, next_set)
 
-            next_set = group.generate_members_query()
-            query = self.perform_membership_set_operation(operator, query, next_set)
+            return query
 
-        return query
+        # TODO? if self.group_type == DynamicGroupTypeChoices.TYPE_STATIC:
 
-    def get_group_queryset(self):
-        """Return a filtered queryset of all descendant groups."""
+        raise RuntimeError(f"generate_query not implemented for group_type {self.group_type}")
+
+    def _get_group_queryset(self):
+        """Construct the queryset representing dynamic membership of this group."""
         query = self.generate_query()
-        qs = self.get_queryset()
-        return qs.filter(query)
+        return self.model.objects.filter(query)
 
+    # TODO: unused in core
     def add_child(self, child, operator, weight):
         """
         Add a child group including `operator` and `weight`.
 
-        :param child:
-            DynamicGroup instance
-        :param operator:
-            DynamicGroupOperatorChoices choice value used to dictate filtering behavior
-        :param weight:
-            Integer weight used to order filtering
+        Args:
+            child (DynamicGroup): child group to add
+            operator (str): DynamicGroupOperatorChoices choice value used to dictate filtering behavior
+            weight (int): Integer weight used to order filtering
         """
+        if self.group_type != DynamicGroupTypeChoices.TYPE_DYNAMIC_SET:
+            if self.filter or self.group_type != DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+                raise ValidationError(f"{self} is not a dynamic-set group.")
+            else:
+                # For backwards compatibility
+                self.group_type = DynamicGroupTypeChoices.TYPE_DYNAMIC_SET
+                self.validated_save()
+
         instance = self.children.through(parent_group=self, group=child, operator=operator, weight=weight)
         return instance.validated_save()
 
+    # TODO: unused in core
     def remove_child(self, child):
         """
         Remove a child group.
 
-        :param child:
-            DynamicGroup instance
+        Args:
+            child (DynamicGroup): child group to remove
         """
+        if self.group_type != DynamicGroupTypeChoices.TYPE_DYNAMIC_SET:
+            raise ValidationError(f"{self} is not a dynamic-set group.")
+
         instance = self.children.through.objects.get(parent_group=self, group=child)
         return instance.delete()
 
@@ -966,8 +807,8 @@ class DynamicGroup(OrganizationalModel):
         """
         Recursively return a list of the children of all child groups.
 
-        :param group:
-            DynamicGroup from which to traverse. If not set, this group is used.
+        Args:
+            group (DynamicGroup): parent group to traverse from. If not set, this group (self) is used.
         """
         if group is None:
             group = self
@@ -977,7 +818,7 @@ class DynamicGroup(OrganizationalModel):
             logger.debug("Processing group %s...", child_group)
             descendants.append(child_group)
             if child_group.children.exists():
-                descendants.extend(self.get_descendants(child_group))
+                descendants.extend(child_group.get_descendants())
 
         return descendants
 
@@ -985,8 +826,8 @@ class DynamicGroup(OrganizationalModel):
         """
         Recursively return a list of the parents of all parent groups.
 
-        :param group:
-            DynamicGroup from which to traverse. If not set, this group is used.
+        Args:
+            group (DynamicGroup): child group to traverse from. If not set, this group (self) is used.
         """
         if group is None:
             group = self
@@ -996,10 +837,11 @@ class DynamicGroup(OrganizationalModel):
             logger.debug("Processing group %s...", parent_group)
             ancestors.append(parent_group)
             if parent_group.parents.exists():
-                ancestors.extend(self.get_ancestors(parent_group))
+                ancestors.extend(parent_group.get_ancestors())
 
         return ancestors
 
+    # TODO: unused in core
     def get_siblings(self, include_self=False):
         """Return groups that share the same parents."""
         siblings = DynamicGroup.objects.filter(parents__in=self.parents.all())
@@ -1008,19 +850,25 @@ class DynamicGroup(OrganizationalModel):
 
         return siblings.exclude(pk=self.pk)
 
+    # TODO: this is an interesting definition of "root node", as a node with no children has is_root() = False??
+    # TODO: unused in core
     def is_root(self):
         """Return whether this is a root node (has children, but no parents)."""
         return self.children.exists() and not self.parents.exists()
 
+    # TODO: this is an interesting definition of "leaf node", as a node with no parents has is_leaf() = False??
+    # TODO: unused in core
     def is_leaf(self):
         """Return whether this is a leaf node (has parents, but no children)."""
         return self.parents.exists() and not self.children.exists()
 
+    # TODO: unused in core
     def get_ancestors_queryset(self):
         """Return a queryset of all ancestors."""
         pks = [obj.pk for obj in self.get_ancestors()]
         return self.ordered_queryset_from_pks(pks)
 
+    # TODO: unused in core
     def get_descendants_queryset(self):
         """Return a queryset of all descendants."""
         pks = [obj.pk for obj in self.get_descendants()]
@@ -1053,14 +901,15 @@ class DynamicGroup(OrganizationalModel):
 
     def flatten_ancestors_tree(self, tree):
         """
-        Recursively flatten a tree mapping of ancestors to a list, adding a `depth attribute to each
+        Recursively flatten a tree mapping of ancestors to a list, adding a `depth` attribute to each
         instance in the list that can be used for visualizing tree depth.
 
-        :param tree:
-            Output from `ancestors_tree()`
+        Args:
+            tree (dict): Output from `ancestors_tree()`
         """
-        return self._flatten_tree(tree, descending=False)
+        return self._flatten_tree(tree)
 
+    # TODO: unused in core
     def descendants_tree(self):
         """
         Return a nested mapping of descendants with the following structure:
@@ -1085,44 +934,35 @@ class DynamicGroup(OrganizationalModel):
 
         return tree
 
+    # TODO: unused in core
     def flatten_descendants_tree(self, tree):
         """
         Recursively flatten a tree mapping of descendants to a list, adding a `depth` attribute to each
         instance in the list that can be used for visualizing tree depth.
 
-        :param tree:
-            Output from `descendats_tree()`
+        Args:
+            tree (dict): Output from `descendants_tree()`
         """
-        return self._flatten_tree(tree, descending=True)
+        return self._flatten_tree(tree)
 
-    def _flatten_tree(self, tree, descending=True, nodes=None, depth=1):
+    def _flatten_tree(self, tree, nodes=None, depth=1):
         """
         Recursively flatten a tree mapping to a list, adding a `depth` attribute to each instance in
         the list that can be used for visualizing tree depth.
 
-        :param tree:
-            A nested dictionary tree
-        :param descending:
-            Whether to traverse descendants or ancestors. If not set, defaults to descending.
-        :param nodes:
-            An ordered list used to hold the flattened nodes
-        :param depth:
-            The tree traversal depth
+        Args:
+            tree (dict): Output from `ancestors_tree()` or `descendants_tree()`
+            nodes (list): Used in recursion, will contain the flattened nodes.
+            depth (int): Used in recursion, the tree traversal depth.
         """
 
         if nodes is None:
             nodes = []
 
-        if descending:
-            method = "get_descendants"
-        else:
-            method = "get_ancestors"
-
         for item in tree:
             item.depth = depth
             nodes.append(item)
-            branches = getattr(item, method)()
-            self._flatten_tree(branches, nodes=nodes, descending=descending, depth=depth + 1)
+            self._flatten_tree(tree[item], nodes=nodes, depth=depth + 1)
 
         return nodes
 
@@ -1141,6 +981,7 @@ class DynamicGroup(OrganizationalModel):
 
         return tree
 
+    # TODO: unused in core
     def _ordered_filter(self, queryset, field_names, values):
         """
         Filters the provided `queryset` using `{field_name}__in` expressions for each field_name in the
@@ -1177,6 +1018,7 @@ class DynamicGroup(OrganizationalModel):
 
         return queryset.filter(**filter_condition).order_by(order_by)
 
+    # TODO: unused in core
     def ordered_queryset_from_pks(self, pk_list):
         """
         Generates a queryset ordered by the provided list of primary keys.
@@ -1218,11 +1060,13 @@ class DynamicGroupMembership(BaseModel):
         """Return the group filter."""
         return self.group.filter
 
+    # TODO: unused in core
     @property
     def members(self):
         """Return the group members."""
         return self.group.members
 
+    # TODO: unused in core
     @property
     def count(self):
         """Return the group count."""
@@ -1235,10 +1079,12 @@ class DynamicGroupMembership(BaseModel):
             return self.group.get_absolute_url(api=api)
         return super().get_absolute_url(api=api)
 
+    # TODO: unused in core
     def get_group_members_url(self):
         """Return the group members URL."""
         return self.group.get_group_members_url()
 
+    # TODO: unused in core
     def get_siblings(self, include_self=False):
         """Return group memberships that share the same parent group."""
         siblings = DynamicGroupMembership.objects.filter(parent_group=self.parent_group)
@@ -1247,19 +1093,19 @@ class DynamicGroupMembership(BaseModel):
 
         return siblings.exclude(pk=self.pk)
 
+    # TODO: unused in core
     def generate_query(self):
         return self.group.generate_query()
 
     def clean(self):
         super().clean()
 
-        # Enforce mutual exclusivity between filter & children.
-        if self.parent_group.filter:
-            raise ValidationError(
-                {
-                    "parent_group": "A parent group may have either a filter or child groups, but not both. Clear the parent filter and try again."
-                }
-            )
+        # Enforce group types
+        if self.parent_group.group_type != DynamicGroupTypeChoices.TYPE_DYNAMIC_SET and self.parent_group.filter:
+            raise ValidationError({"parent_group": 'A parent group must be of `group_type` `"dynamic-set"`.'})
+
+        if self.group.group_type == DynamicGroupTypeChoices.TYPE_STATIC:
+            raise ValidationError({"group": 'Groups of `group_type` `"static"` may not be child groups at this time.'})
 
         # Enforce matching content_type
         if self.parent_group.content_type != self.group.content_type:
@@ -1271,3 +1117,79 @@ class DynamicGroupMembership(BaseModel):
 
         if self.group in self.parent_group.get_ancestors():
             raise ValidationError({"group": "Cannot add ancestor as a child"})
+
+    def save(self, *args, **kwargs):
+        # For backwards compatibility
+        if self.parent_group.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER and not self.parent_group.filter:
+            self.parent_group.group_type = DynamicGroupTypeChoices.TYPE_DYNAMIC_SET
+            self.parent_group.save()
+        return super().save(*args, **kwargs)
+
+
+class StaticGroupAssociationManager(BaseManager.from_queryset(RestrictedQuerySet)):
+    use_in_migrations = True
+
+
+class StaticGroupAssociationDefaultManager(StaticGroupAssociationManager):
+    """Subclass of StaticGroupAssociationManager that automatically filters out cached/hidden associations."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC)
+
+
+@extras_features(
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class StaticGroupAssociation(OrganizationalModel):
+    """Intermediary model for associating an object statically to a DynamicGroup of group_type `static`."""
+
+    dynamic_group = models.ForeignKey(
+        to=DynamicGroup, on_delete=models.CASCADE, related_name="static_group_associations"
+    )
+    associated_object_type = models.ForeignKey(
+        to=ContentType,
+        on_delete=models.CASCADE,
+        related_name="static_group_associations",
+        limit_choices_to=FeatureQuery("dynamic_groups"),
+    )
+    associated_object_id = models.UUIDField(db_index=True)
+    associated_object = GenericForeignKey(ct_field="associated_object_type", fk_field="associated_object_id")
+
+    objects = StaticGroupAssociationDefaultManager()
+    all_objects = StaticGroupAssociationManager()
+
+    is_contact_associable_model = False
+    is_dynamic_group_associable_model = False
+    is_saved_view_model = False
+
+    class Meta:
+        unique_together = [["dynamic_group", "associated_object_type", "associated_object_id"]]
+        ordering = ["dynamic_group", "associated_object_type", "associated_object_id"]
+        indexes = [
+            models.Index(
+                name="extras_sga_double",
+                fields=["dynamic_group", "associated_object_id"],
+            ),
+            models.Index(
+                name="extras_sga_associated_object",
+                fields=["associated_object_type_id", "associated_object_id"],
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.associated_object} as a member of {self.dynamic_group}"
+
+    def clean(self):
+        super().clean()
+
+        if self.associated_object_type != self.dynamic_group.content_type:
+            raise ValidationError({"associated_object_type": "Must match the dynamic_group.content_type"})
+
+    def to_objectchange(self, *args, **kwargs):
+        """Change log StaticGroupAssociations belonging to a "static" group; all others are an implementation detail."""
+        if self.dynamic_group.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+            return None
+        return super().to_objectchange(*args, **kwargs)

@@ -29,6 +29,14 @@ class ContactMixin(models.Model):
 
 class DynamicGroupMixin:
     """
+    DEPRECATED - use DynamicGroupsModelMixin instead if you need to mark a model as supporting Dynamic Groups.
+
+    This is necessary because DynamicGroupMixin was incorrectly not implemented as a subclass of models.Model,
+    and so it cannot properly implement Model behaviors like the `static_group_association_set` ReverseRelation.
+    However, adding this inheritance to DynamicGroupMixin itself would negatively impact existing migrations.
+    So unfortunately our best option is to deprecate this class and gradually convert core and app models alike
+    to the new DynamicGroupsModelMixin in its place.
+
     Adds `dynamic_groups` property to a model to facilitate reversing (cached) DynamicGroup membership.
 
     If up-to-the-minute accuracy is necessary for your use case, it's up to you to call the
@@ -36,6 +44,8 @@ class DynamicGroupMixin:
 
     Other related properties added by this mixin should be considered obsolete.
     """
+
+    is_dynamic_group_associable_model = True
 
     @property
     def dynamic_groups(self):
@@ -64,6 +74,7 @@ class DynamicGroupMixin:
         """Deprecated - use `list(self.dynamic_groups)` instead."""
         return self.dynamic_groups_list
 
+    # TODO may be able to remove this entirely???
     def get_dynamic_groups_url(self):
         """Return the dynamic groups URL for a given instance."""
         route = get_route_for_model(self, "dynamicgroups")
@@ -80,6 +91,23 @@ class DynamicGroupMixin:
                 continue
 
         return None
+
+
+class DynamicGroupsModelMixin(DynamicGroupMixin, models.Model):
+    """
+    Add this to models to make them fully support Dynamic Groups.
+    """
+
+    class Meta:
+        abstract = True
+
+    # Reverse relation so that deleting a DynamicGroupMixin automatically deletes any related StaticGroupAssociations
+    static_group_association_set = GenericRelation(  # not "static_group_associations" as that'd collide on DynamicGroup
+        "extras.StaticGroupAssociation",
+        content_type_field="associated_object_type",
+        object_id_field="associated_object_id",
+        related_query_name="static_group_association_set_%(app_label)s_%(class)s",
+    )
 
 
 class NotesMixin:
@@ -114,29 +142,3 @@ class NotesMixin:
                 continue
 
         return None
-
-
-class StaticGroupMixin(models.Model):
-    """Abstract mixin for enabling StaticGroup association to a given model class."""
-
-    class Meta:
-        abstract = True
-
-    is_static_group_associable_model = True
-
-    # Reverse relation so that deleting a StaticGroupMixin automatically deletes any related StaticGroupAssociations
-    associated_static_groups = GenericRelation(
-        "extras.StaticGroupAssociation",
-        content_type_field="associated_object_type",
-        object_id_field="associated_object_id",
-        related_query_name="associated_static_groups_%(app_label)s_%(class)s",  # 'associated_static_groups_dcim_device'
-    )
-
-    @property
-    def static_groups(self):
-        """
-        Returns a QuerySet of StaticGroups that have this object as a member. Does not include hidden groups.
-        """
-        from nautobot.extras.models.groups import StaticGroup
-
-        return StaticGroup.objects.filter(pk__in=self.associated_static_groups.values_list("static_group", flat=True))

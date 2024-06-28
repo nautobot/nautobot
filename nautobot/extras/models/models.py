@@ -31,7 +31,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import ContactMixin, NotesMixin, StaticGroupMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
@@ -73,9 +73,9 @@ class ConfigContext(
     ChangeLoggedModel,
     ConfigContextSchemaValidationMixin,
     ContactMixin,
+    # DynamicGroupsModelMixin,  # TODO: conflicts with "dynamic_groups" M2M field on this model
     NotesMixin,
     SavedViewMixin,
-    StaticGroupMixin,
     BaseModel,
 ):
     """
@@ -309,9 +309,9 @@ class ConfigContextSchema(OrganizationalModel):
 class CustomLink(
     ChangeLoggedModel,
     ContactMixin,
+    DynamicGroupsModelMixin,
     NotesMixin,
     SavedViewMixin,
-    StaticGroupMixin,
     BaseModel,
 ):
     """
@@ -371,10 +371,10 @@ class CustomLink(
 class ExportTemplate(
     ChangeLoggedModel,
     ContactMixin,
+    DynamicGroupsModelMixin,
     RelationshipModel,
     NotesMixin,
     SavedViewMixin,
-    StaticGroupMixin,
     BaseModel,
 ):
     # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
@@ -672,9 +672,9 @@ class FileProxy(BaseModel):
 class GraphQLQuery(
     ChangeLoggedModel,
     ContactMixin,
+    DynamicGroupsModelMixin,
     NotesMixin,
     SavedViewMixin,
-    StaticGroupMixin,
     BaseModel,
 ):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
@@ -842,9 +842,9 @@ class Note(ChangeLoggedModel, BaseModel):
 class Webhook(
     ChangeLoggedModel,
     ContactMixin,
+    DynamicGroupsModelMixin,
     NotesMixin,
     SavedViewMixin,
-    StaticGroupMixin,
     BaseModel,
 ):
     """

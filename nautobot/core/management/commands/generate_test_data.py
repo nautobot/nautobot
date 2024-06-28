@@ -101,6 +101,7 @@ class Command(BaseCommand):
             from nautobot.extras.choices import MetadataTypeDataTypeChoices
             from nautobot.extras.factory import (
                 ContactFactory,
+                DynamicGroupFactory,
                 ExternalIntegrationFactory,
                 JobLogEntryFactory,
                 JobResultFactory,
@@ -108,7 +109,6 @@ class Command(BaseCommand):
                 MetadataTypeFactory,
                 ObjectChangeFactory,
                 RoleFactory,
-                StaticGroupFactory,
                 StatusFactory,
                 TagFactory,
                 TeamFactory,
@@ -278,7 +278,7 @@ class Command(BaseCommand):
         # _create_batch(ClusterFactory, 10)
         # _create_batch(VirtualMachineFactory, 10)
         # We need to remove them from there and enable them here instead, but that will require many test updates.
-        _create_batch(StaticGroupFactory, 20)
+        _create_batch(DynamicGroupFactory, 20, description="and StaticGroupAssociations")
         _create_batch(
             MetadataTypeFactory,
             len(MetadataTypeDataTypeChoices.CHOICES),

@@ -32,6 +32,7 @@ from nautobot.dcim.tests import test_views
 from nautobot.extras.api.serializers import ConfigContextSerializer, JobResultSerializer
 from nautobot.extras.choices import (
     DynamicGroupOperatorChoices,
+    DynamicGroupTypeChoices,
     JobExecutionType,
     JobResultStatusChoices,
     MetadataTypeDataTypeChoices,
@@ -73,7 +74,6 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
-    StaticGroup,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -87,7 +87,6 @@ from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.virtualization.models import VirtualMachine
 
 User = get_user_model()
 
@@ -797,29 +796,56 @@ class DynamicGroupTestMixin:
 
 class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     model = DynamicGroup
-    choices_fields = ["content_type"]
-    create_data = [
-        {
-            "name": "API DynamicGroup 4",
-            "content_type": "dcim.device",
-            "filter": {"location": ["Location 1"]},
-        },
-        {
-            "name": "API DynamicGroup 5",
-            "content_type": "dcim.device",
-            "filter": {"has_interfaces": False},
-        },
-        {
-            "name": "API DynamicGroup 6",
-            "content_type": "dcim.device",
-            "filter": {"location": ["Location 2"]},
-        },
-    ]
+    choices_fields = ["content_type", "group_type"]
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        cls.create_data = [
+            {
+                "name": "API DynamicGroup 4",
+                "content_type": "dcim.device",
+                "filter": {"location": ["Location 1"]},
+                "tags": [tag.pk for tag in Tag.objects.get_for_model(DynamicGroup)],
+                "tenant": Tenant.objects.first().pk,
+            },
+            {
+                "name": "API DynamicGroup 5",
+                "content_type": "dcim.device",
+                "group_type": "dynamic-filter",
+                "filter": {"has_interfaces": False},
+            },
+            {
+                "name": "API DynamicGroup 6",
+                "content_type": "dcim.device",
+                "filter": {"location": ["Location 2"]},
+            },
+            {
+                "name": "API DynamicGroup 7",
+                "content_type": "dcim.device",
+                "group_type": "static",
+            },
+        ]
+        cls.update_data = {
+            "name": "A new name",
+            "tags": [],
+            "tenant": Tenant.objects.last().pk,
+            "description": "a new description",
+        }
+
+    def test_changing_content_type_not_allowed(self):
+        self.add_permissions("extras.change_dynamicgroup")
+        data = {
+            "content_type": "circuits.circuittermination",
+        }
+        response = self.client.patch(self._get_detail_url(self.groups[0]), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
     def test_get_members(self):
         """Test that the `/members/` API endpoint returns what is expected."""
         self.add_permissions("extras.view_dynamicgroup")
-        instance = self.groups[0]
+        instance = DynamicGroup.objects.filter(static_group_associations__isnull=False).distinct().first()
         self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"))
         member_count = instance.members.count()
         url = reverse("extras-api:dynamicgroup-members", kwargs={"pk": instance.pk})
@@ -830,7 +856,7 @@ class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     def test_get_members_with_constrained_permission(self):
         """Test that the `/members/` API endpoint enforces permissions on the member model."""
         self.add_permissions("extras.view_dynamicgroup")
-        instance = self.groups[0]
+        instance = DynamicGroup.objects.filter(static_group_associations__isnull=False).distinct().first()
         obj1 = instance.members.first()
         obj_perm = ObjectPermission(
             name="Test permission",
@@ -844,7 +870,7 @@ class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
         url = reverse("extras-api:dynamicgroup-members", kwargs={"pk": instance.pk})
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(len(response.json()["results"]), 1)
+        self.assertEqual(response.json()["count"], 1)
         self.assertEqual(response.json()["results"][0]["id"], str(obj1.pk))
 
 
@@ -3591,188 +3617,6 @@ class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
-class StaticGroupTest(APIViewTestCases.APIViewTestCase):
-    model = StaticGroup
-    choices_fields = ["content_type"]
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.sg1 = StaticGroup.objects.create(
-            name="Locations",
-            description="Static group of Locations",
-            content_type=ContentType.objects.get_for_model(Location),
-        )
-        cls.sg2 = StaticGroup.objects.create(
-            name="IPAddresses",
-            description="Static group of IPAddresses",
-            content_type=ContentType.objects.get_for_model(IPAddress),
-        )
-        cls.sg3 = StaticGroup.all_objects.create(
-            name="VirtualMachines",
-            description="Static group of VirtualMachines",
-            content_type=ContentType.objects.get_for_model(VirtualMachine),
-            hidden=True,
-        )
-        cls.create_data = [
-            {
-                "name": "Group of Locations",
-                "description": "A group containing dcim.location objects",
-                "content_type": "dcim.location",
-                "tags": [tag.pk for tag in Tag.objects.get_for_model(StaticGroup)],
-                "tenant": Tenant.objects.first().pk,
-            },
-            {
-                "name": "Group of Devices",
-                "content_type": "dcim.device",
-            },
-            {
-                "name": "Group of Circuits",
-                "content_type": "circuits.circuit",
-                "tags": [],
-            },
-        ]
-        cls.update_data = {
-            "name": "Group of something unknown",
-            "description": "It is a mystery",
-        }
-        cls.bulk_update_data = {
-            "description": "New description",
-            "tenant": Tenant.objects.last().pk,
-        }
-
-    def test_changing_content_type_not_allowed(self):
-        self.add_permissions("extras.change_staticgroup")
-        data = {
-            "content_type": "circuits.circuittermination",
-        }
-        response = self.client.patch(self._get_detail_url(self.sg1), data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-
-    def test_get_members(self):
-        """Test that the `/members/` API endpoint returns what is expected."""
-        self.add_permissions("extras.view_staticgroup")
-        instance = StaticGroup.objects.filter(static_group_associations__isnull=False).distinct().first()
-        self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"))
-        self.assertIsNotNone(instance)
-        member_count = instance.members.count()
-        url = reverse("extras-api:staticgroup-members", kwargs={"pk": instance.pk})
-        response = self.client.get(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(member_count, response.json()["count"])
-        # TODO: assert that members are serialized correctly?
-
-    def test_get_members_with_constrained_permission(self):
-        """Test that the `/members/` API endpoint enforces permissions on the member model."""
-        self.add_permissions("extras.view_staticgroup")
-        instance = StaticGroup.objects.filter(static_group_associations__isnull=False).distinct().first()
-        obj1 = instance.members.first()
-        obj_perm = ObjectPermission(
-            name="Test permission",
-            constraints={"pk__in": [obj1.pk]},
-            actions=["view"],
-        )
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(instance.content_type)
-
-        url = reverse("extras-api:staticgroup-members", kwargs={"pk": instance.pk})
-        response = self.client.get(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(response.json()["count"], 1)
-        self.assertEqual(response.json()["results"][0]["id"], str(obj1.pk))
-
-    def test_list_omits_hidden_by_default(self):
-        """Test that the list view defaults to omitting hidden groups."""
-        sg1 = StaticGroup.all_objects.filter(hidden=False).first()
-        self.assertIsNotNone(sg1)
-        sg2 = StaticGroup.all_objects.filter(hidden=True).first()
-        self.assertIsNotNone(sg2)
-
-        self.add_permissions("extras.view_staticgroup")
-        response = self.client.get(self._get_list_url(), **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertIsInstance(response.data, dict)
-        self.assertIn("results", response.data)
-        found_sg1 = False
-        found_sg2 = False
-        for record in response.data["results"]:
-            if record["id"] == str(sg1.id):
-                found_sg1 = True
-            elif record["id"] == str(sg2.id):
-                found_sg2 = True
-        self.assertTrue(found_sg1)
-        self.assertFalse(found_sg2)
-
-    def test_list_hidden_filter(self):
-        """Test that the list view can show hidden groups with the appropriate filter."""
-        sg1 = StaticGroup.all_objects.filter(hidden=False).first()
-        self.assertIsNotNone(sg1)
-        sg2 = StaticGroup.all_objects.filter(hidden=True).first()
-        self.assertIsNotNone(sg2)
-
-        self.add_permissions("extras.view_staticgroup")
-        response = self.client.get(f"{self._get_list_url()}?hidden=True", **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertIsInstance(response.data, dict)
-        self.assertIn("results", response.data)
-        found_sg1 = False
-        found_sg2 = False
-        for record in response.data["results"]:
-            if record["id"] == str(sg1.id):
-                found_sg1 = True
-            elif record["id"] == str(sg2.id):
-                found_sg2 = True
-        self.assertFalse(found_sg1)
-        self.assertTrue(found_sg2)
-
-    def test_changes_to_hidden_groups_not_permitted(self):
-        """Test that the REST API cannot create/update/delete hidden groups."""
-        self.add_permissions(
-            "extras.view_staticgroup",
-            "extras.add_staticgroup",
-            "extras.delete_staticgroup",
-            "extras.change_staticgroup",
-        )
-
-        with self.subTest("create hidden group"):
-            create_data = self.create_data[0].copy()
-            create_data["hidden"] = True
-            # hidden flag is read-only so DRF just silently ignores it
-            response = self.client.post(self._get_list_url(), create_data, format="json", **self.header)
-            self.assertHttpStatus(response, status.HTTP_201_CREATED)
-            sg = StaticGroup.all_objects.get(name=create_data["name"])
-            self.assertFalse(sg.hidden)
-
-        with self.subTest("update hidden group"):
-            sg = StaticGroup.all_objects.filter(hidden=True).first()
-            self.assertIsNotNone(sg)
-            url = self._get_detail_url(sg) + "?hidden=True"
-            update_data = {"name": "Changed the name"}
-            response = self.client.patch(url, update_data, format="json", **self.header)
-            self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
-            sg.refresh_from_db()
-            self.assertNotEqual(sg.name, "Changed the name")
-
-        with self.subTest("update non-hidden group to hidden"):
-            sg = StaticGroup.all_objects.filter(hidden=False).first()
-            self.assertIsNotNone(sg)
-            url = self._get_detail_url(sg) + "?hidden="
-            update_data = {"hidden": True}
-            # hidden flag is read-only so DRF just silently ignores it
-            response = self.client.patch(url, update_data, format="json", **self.header)
-            self.assertHttpStatus(response, status.HTTP_200_OK)
-            sg.refresh_from_db()
-            self.assertFalse(sg.hidden)
-
-        with self.subTest("delete hidden group"):
-            sg = StaticGroup.all_objects.filter(hidden=True).first()
-            self.assertIsNotNone(sg)
-            url = self._get_detail_url(sg) + "?hidden=True"
-            response = self.client.delete(url, **self.header)
-            self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
-            self.assertTrue(StaticGroup.all_objects.filter(pk=sg.pk).exists())
-
-
 class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
     model = StaticGroupAssociation
     choices_fields = ["associated_object_type"]
@@ -3783,55 +3627,57 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.sg1 = StaticGroup.objects.create(name="Locations", content_type=ContentType.objects.get_for_model(Location))
-        cls.sg2 = StaticGroup.objects.create(name="Devices", content_type=ContentType.objects.get_for_model(Device))
-        cls.sg3 = StaticGroup.objects.create(name="VLANs", content_type=ContentType.objects.get_for_model(VLAN))
-        cls.sg4 = StaticGroup.all_objects.create(
-            name="Hidden Devices",
+        cls.dg1 = DynamicGroup.objects.create(
+            name="Locations",
+            content_type=ContentType.objects.get_for_model(Location),
+            group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+        )
+        cls.dg2 = DynamicGroup.objects.create(
+            name="Devices",
             content_type=ContentType.objects.get_for_model(Device),
-            hidden=True,
+            group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+        )
+        cls.dg3 = DynamicGroup.objects.create(
+            name="VLANs",
+            content_type=ContentType.objects.get_for_model(VLAN),
+            group_type=DynamicGroupTypeChoices.TYPE_STATIC,
         )
         location_pks = list(Location.objects.values_list("pk", flat=True)[:4])
         device_pks = list(Device.objects.values_list("pk", flat=True)[:4])
         StaticGroupAssociation.objects.create(
-            static_group=cls.sg1,
+            dynamic_group=cls.dg1,
             associated_object_type=ContentType.objects.get_for_model(Location),
             associated_object_id=location_pks[0],
         )
         StaticGroupAssociation.objects.create(
-            static_group=cls.sg1,
+            dynamic_group=cls.dg1,
             associated_object_type=ContentType.objects.get_for_model(Location),
             associated_object_id=location_pks[1],
         )
         StaticGroupAssociation.objects.create(
-            static_group=cls.sg2,
+            dynamic_group=cls.dg2,
             associated_object_type=ContentType.objects.get_for_model(Device),
             associated_object_id=device_pks[0],
-        )
-        StaticGroupAssociation.objects.create(
-            static_group=cls.sg4,
-            associated_object_type=ContentType.objects.get_for_model(Device),
-            associated_object_id=device_pks[1],
         )
 
         cls.create_data = [
             {
-                "static_group": cls.sg1.pk,
+                "dynamic_group": cls.dg1.pk,
                 "associated_object_type": "dcim.location",
                 "associated_object_id": location_pks[2],
             },
             {
-                "static_group": cls.sg1.pk,
+                "dynamic_group": cls.dg1.pk,
                 "associated_object_type": "dcim.location",
                 "associated_object_id": location_pks[3],
             },
             {
-                "static_group": cls.sg2.pk,
+                "dynamic_group": cls.dg2.pk,
                 "associated_object_type": "dcim.device",
                 "associated_object_id": device_pks[2],
             },
             {
-                "static_group": cls.sg2.pk,
+                "dynamic_group": cls.dg2.pk,
                 "associated_object_type": "dcim.device",
                 "associated_object_id": device_pks[3],
             },
@@ -3839,14 +3685,14 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
         # TODO: this isn't really valid since we're changing the associated_object_type but not the associated_object_id
         # Should we disallow bulk-updates of StaticGroupAssociation? Or maybe skip the bulk-update tests at least?
         cls.bulk_update_data = {
-            "static_group": cls.sg3.pk,
+            "dynamic_group": cls.dg3.pk,
             "associated_object_type": "ipam.vlan",
         }
 
     def test_content_type_mismatch(self):
         self.add_permissions("extras.add_staticgroupassociation")
         data = {
-            "static_group": self.sg1.pk,
+            "dynamic_group": self.dg1.pk,
             "associated_object_type": "ipam.ipaddress",
             "associated_object_id": IPAddress.objects.first().pk,
         }
@@ -3854,10 +3700,14 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
     def test_list_omits_hidden_by_default(self):
-        """Test that the list view defaults to omitting associations of hidden groups."""
-        sga1 = StaticGroupAssociation.all_objects.filter(static_group__hidden=False).first()
+        """Test that the list view defaults to omitting associations of non-static groups."""
+        sga1 = StaticGroupAssociation.all_objects.filter(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
         self.assertIsNotNone(sga1)
-        sga2 = StaticGroupAssociation.all_objects.filter(static_group__hidden=True).first()
+        sga2 = StaticGroupAssociation.all_objects.exclude(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
         self.assertIsNotNone(sga2)
 
         self.add_permissions("extras.view_staticgroupassociation")
@@ -3875,30 +3725,26 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
         self.assertTrue(found_sga1)
         self.assertFalse(found_sga2)
 
-    def test_list_hidden_filter(self):
-        """Test that the list view can show hidden groups' associations with the appropriate filter."""
-        sga1 = StaticGroupAssociation.all_objects.filter(static_group__hidden=False).first()
+    def test_list_hidden_with_filter(self):
+        """Test that the list view can show hidden associations with the appropriate filter."""
+        sga1 = StaticGroupAssociation.all_objects.exclude(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
         self.assertIsNotNone(sga1)
-        sga2 = StaticGroupAssociation.all_objects.filter(static_group__hidden=True).first()
-        self.assertIsNotNone(sga2)
 
         self.add_permissions("extras.view_staticgroupassociation")
-        response = self.client.get(f"{self._get_list_url()}?hidden=True", **self.header)
+        response = self.client.get(f"{self._get_list_url()}?dynamic_group={sga1.dynamic_group.pk}", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsInstance(response.data, dict)
         self.assertIn("results", response.data)
         found_sga1 = False
-        found_sga2 = False
         for record in response.data["results"]:
             if record["id"] == str(sga1.id):
                 found_sga1 = True
-            elif record["id"] == str(sga2.id):
-                found_sga2 = True
-        self.assertFalse(found_sga1)
-        self.assertTrue(found_sga2)
+        self.assertTrue(found_sga1)
 
     def test_changes_to_hidden_groups_not_permitted(self):
-        """Test that the REST API cannot create/update/delete associations for hidden groups."""
+        """Test that the REST API cannot create/update/delete hidden associations."""
         self.add_permissions(
             "extras.view_staticgroupassociation",
             "extras.add_staticgroupassociation",
@@ -3907,22 +3753,24 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
         )
 
         with self.subTest("create hidden association"):
-            sg = StaticGroup.all_objects.filter(hidden=True).first()
-            self.assertIsNotNone(sg)
+            dg = DynamicGroup.objects.exclude(group_type=DynamicGroupTypeChoices.TYPE_STATIC).first()
+            self.assertIsNotNone(dg)
             create_data = {
-                "static_group": str(sg.pk),
-                "associated_object_type": f"{sg.content_type.app_label}.{sg.content_type.model}",
+                "dynamic_group": str(dg.pk),
+                "associated_object_type": f"{dg.content_type.app_label}.{dg.content_type.model}",
                 "associated_object_id": "00000000-0000-0000-0000-000000000000",
             }
             response = self.client.post(
-                f"{self._get_list_url()}?hidden=True", create_data, format="json", **self.header
+                f"{self._get_list_url()}?dynamic_group={dg.pk}", create_data, format="json", **self.header
             )
-            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertHttpStatus(response, [status.HTTP_400_BAD_REQUEST, status.HTTP_403_FORBIDDEN])
 
         with self.subTest("update hidden association"):
-            sga = StaticGroupAssociation.all_objects.filter(static_group__hidden=True).first()
+            sga = StaticGroupAssociation.all_objects.exclude(
+                dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+            ).first()
             self.assertIsNotNone(sga)
-            url = self._get_detail_url(sga) + "?hidden=True"
+            url = self._get_detail_url(sga) + f"?dynamic_group={sga.dynamic_group.pk}"
             update_data = {"associated_object_id": "00000000-0000-0000-0000-000000000000"}
             response = self.client.patch(url, update_data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
@@ -3930,9 +3778,11 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
             self.assertNotEqual(sga.associated_object_id, "00000000-0000-0000-0000-000000000000")
 
         with self.subTest("delete hidden association"):
-            sga = StaticGroupAssociation.all_objects.filter(static_group__hidden=True).first()
+            sga = StaticGroupAssociation.all_objects.exclude(
+                dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+            ).first()
             self.assertIsNotNone(sga)
-            url = self._get_detail_url(sga) + "?hidden=True"
+            url = self._get_detail_url(sga) + f"?dynamic_group={sga.dynamic_group.pk}"
             response = self.client.delete(url, **self.header)
             self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
             self.assertTrue(StaticGroupAssociation.all_objects.filter(pk=sga.pk).exists())

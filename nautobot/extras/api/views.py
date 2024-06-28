@@ -67,7 +67,6 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
-    StaticGroup,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -327,6 +326,26 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
     queryset = DynamicGroupMembership.objects.select_related("group", "parent_group")
     serializer_class = serializers.DynamicGroupMembershipSerializer
     filterset_class = filters.DynamicGroupMembershipFilterSet
+
+
+class StaticGroupAssociationViewSet(NautobotModelViewSet):
+    """
+    Manage Static Group Associations through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = StaticGroupAssociation.objects.select_related("associated_object_type", "dynamic_group")
+    serializer_class = serializers.StaticGroupAssociationSerializer
+    filterset_class = filters.StaticGroupAssociationFilterSet
+
+    def get_queryset(self):
+        if (
+            hasattr(self, "request")
+            and self.request is not None
+            and "dynamic_group" in self.request.GET
+            and self.action in ["list", "retrieve"]
+        ):
+            self.queryset = StaticGroupAssociation.all_objects.select_related("associated_object_type", "dynamic_group")
+        return super().get_queryset()
 
 
 #
@@ -1121,63 +1140,6 @@ class SecretsGroupAssociationViewSet(ModelViewSet):
     queryset = SecretsGroupAssociation.objects.all()
     serializer_class = serializers.SecretsGroupAssociationSerializer
     filterset_class = filters.SecretsGroupAssociationFilterSet
-
-
-#
-# Static groups
-#
-
-
-class StaticGroupViewSet(NautobotModelViewSet):
-    """
-    Manage Static Groups through DELETE, GET, POST, PUT, and PATCH requests.
-    """
-
-    queryset = StaticGroup.objects.select_related("content_type")
-    serializer_class = serializers.StaticGroupSerializer
-    filterset_class = filters.StaticGroupFilterSet
-
-    def get_queryset(self):
-        if (
-            hasattr(self, "request")
-            and self.request is not None
-            and "hidden" in self.request.GET
-            and self.action in ["list", "retrieve", "members"]
-        ):
-            self.queryset = StaticGroup.all_objects.select_related("content_type")
-        return super().get_queryset()
-
-    @action(detail=True, methods=["get"])
-    def members(self, request, pk, *args, **kwargs):
-        """List member objects of this static group."""
-        instance = get_object_or_404(self.queryset, pk=pk)
-
-        # Retrieve the serializer for the content_type and paginate the results
-        member_model_class = instance.content_type.model_class()
-        member_serializer_class = get_serializer_for_model(member_model_class)
-        members = self.paginate_queryset(instance.members.restrict(request.user, "view"))
-        member_serializer = member_serializer_class(members, many=True, context={"request": request})
-        return self.get_paginated_response(member_serializer.data)
-
-
-class StaticGroupAssociationViewSet(NautobotModelViewSet):
-    """
-    Manage Static Group Associations through DELETE, GET, POST, PUT, and PATCH requests.
-    """
-
-    queryset = StaticGroupAssociation.objects.select_related("associated_object_type", "static_group")
-    serializer_class = serializers.StaticGroupAssociationSerializer
-    filterset_class = filters.StaticGroupAssociationFilterSet
-
-    def get_queryset(self):
-        if (
-            hasattr(self, "request")
-            and self.request is not None
-            and "hidden" in self.request.GET
-            and self.action in ["list", "retrieve"]
-        ):
-            self.queryset = StaticGroupAssociation.all_objects.select_related("associated_object_type", "static_group")
-        return super().get_queryset()
 
 
 #
