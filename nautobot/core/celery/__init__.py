@@ -109,7 +109,7 @@ def _import_jobs_from_git_repositories():
             and not GitRepository.objects.filter(slug=filename).exists()
         ):
             logger.warning("Deleting unmanaged (leftover?) Git repository clone at %s", filepath)
-            shutil.rmtree(filepath)
+            shutil.rmtree(filepath, ignore_errors=True)
 
     # Make sure all GitRepository records that include Jobs have up-to-date git clones, and load their jobs
     for repo in GitRepository.objects.filter(provided_contents__contains="extras.job"):
