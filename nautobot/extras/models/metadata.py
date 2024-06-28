@@ -187,7 +187,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
         ),
         help_text="List of scoped fields, only direct fields on the model",
     )
-    _value = models.JSONField(
+    value = models.JSONField(
         blank=True,
         null=True,
         help_text="Relevant data value to an object field or a set of object fields",
@@ -218,24 +218,6 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
             ),
         ]
 
-    @property
-    def value(self):
-        if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
-            return None
-        else:
-            return self._value
-
-    @value.setter
-    def value(self, v):
-        if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
-            if v is not None:
-                raise ValidationError(
-                    f"{v} is an invalid value for metadata type data type {self.metadata_type.data_type}"
-                )
-        else:
-            self._value = v
-        self.clean()
-
     def __str__(self):
         if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
             return f"{self.metadata_type} - {self.assigned_object} - {self.contact or self.team}"
@@ -248,7 +230,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
         Returns the value, possibly cleaned up
         """
         super().clean()
-        value = self._value
+        value = self.value
         metadata_type_data_type = self.metadata_type.data_type
         # This is in place for the csv create case.
         # Since the value field is a JSONField on the serializer, when you pass a float/str, etc, the value field will cast them into a list.
@@ -403,7 +385,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
                     raise ValidationError(
                         f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.metadata_type.choices.values_list('value', flat=True))}"
                     )
-            self._value = value
+            self.value = value
 
         # Check if there is any intersections of scoped_fields of ObjectMetadata instances in the database.
         object_metadata_scoped_fields = (

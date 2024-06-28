@@ -274,7 +274,7 @@ class ObjectMetadataFactory(BaseModelFactory):
         return None
 
     @factory.lazy_attribute
-    def _value(self):
+    def value(self):
         metadata_type_data_type = self.metadata_type.data_type
         if metadata_type_data_type in (
             MetadataTypeDataTypeChoices.TYPE_TEXT,
