@@ -254,6 +254,11 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
         super().clean()
         value = self._value
         metadata_type_data_type = self.metadata_type.data_type
+        # This is in place for the csv create case.
+        # Since the value field is a JSONField on the serializer, when you pass a float/str, etc, the value field will cast them into a list.
+        # Declaring it as a CharField solves it for the float/str case but will be invalid for the other types
+        # I wonder if a custom SerializerMethodField will solve it.
+        # TODO investigate the ObjectMetaDataSerializer value field to eliminate this edge case.
         if (
             isinstance(value, list)
             and len(value) == 1
