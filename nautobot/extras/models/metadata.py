@@ -223,11 +223,11 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
             return f"{self.metadata_type} - {self.assigned_object} - {self.contact or self.team}"
         return f"{self.metadata_type} - {self.assigned_object} - {self.value}"
 
-    def validated_save(self):
+    def validated_save(self, *args, **kwargs):
         # call clean() first so that the data type-conversion is done first
         # so that clean_fields() would not raise any errors
         self.clean()
-        return super().validated_save()
+        return super().validated_save(*args, **kwargs)
 
     def clean(self):
         """
