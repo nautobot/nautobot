@@ -3774,9 +3774,6 @@ class InventoryItemFilterForm(DeviceComponentFilterForm):
 #
 
 
-# TODO 5790: Cable connection forms need to support components within Modules
-# While it allows connecting components from within Modules, you cannot
-# filter by modules.
 class ConnectCableToDeviceForm(ConnectCableExcludeIDMixin, NautobotModelForm):
     """
     Base form for connecting a Cable to a Device component

@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
@@ -920,6 +922,9 @@ class ModularDeviceComponentTestMixin(DeviceComponentTestMixin):
                 [top_level_component, second_level_component, third_level_component],
                 ordered=False,
             )
+
+        with self.subTest("device filter (pk) with an invalid uuid"):
+            self.assertFalse(self.filterset({"device": [uuid.uuid4()]}, self.queryset).is_valid())
 
 
 class ModuleDeviceCommonTestsMixin:
@@ -2629,6 +2634,12 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
                 ordered=False,
             )
 
+        with self.subTest("device_id filter with an invalid uuid"):
+            self.assertFalse(self.filterset({"device_id": [uuid.uuid4()]}, self.queryset).is_valid())
+
+        with self.subTest("device (pk) filter with an invalid uuid"):
+            self.assertFalse(self.filterset({"device": [uuid.uuid4()]}, self.queryset).is_valid())
+
     def test_kind(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
         # 2.0 TODO: Support filtering for multiple values
@@ -3409,6 +3420,9 @@ class CableTestCase(FilterTestCases.FilterTestCase):
                 [top_level_cable, third_level_cable],
                 ordered=False,
             )
+
+        with self.subTest("device_id filter with an invalid uuid"):
+            self.assertFalse(self.filterset({"device_id": [uuid.uuid4()]}, self.queryset).is_valid())
 
     def test_rack(self):
         # TODO: Not a generic_filter_test because this is a method filter.

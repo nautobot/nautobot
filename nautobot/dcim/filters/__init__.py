@@ -1023,10 +1023,12 @@ class InterfaceFilterSet(
         label="Device (name or ID)",
         method="filter_device",
     )
-    device_id = MultiValueUUIDFilter(
+    # TODO 3.0: Remove this filter. Deprecated in favor of above NaturalKeyOrPKMultipleChoiceFilter `device`
+    device_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Device.objects.all(),
         method="filter_device_id",
-        field_name="pk",
-        label="Device (ID)",
+        field_name="device",
+        label='Device (ID)  (deprecated, use "device" filter instead)',
     )
     device_with_common_vc = django_filters.UUIDFilter(
         method="filter_device_common_vc_id",
@@ -1137,7 +1139,6 @@ class InterfaceFilterSet(
         return Q(pk__in=all_interface_ids)
 
     def filter_device(self, queryset, name, value):
-        # Include interfaces belonging to virtual chassis members
         if not value:
             return queryset
         params = self.generate_query_filter_device(value)
@@ -1147,14 +1148,14 @@ class InterfaceFilterSet(
         if not hasattr(value, "__iter__") or isinstance(value, str):
             value = [value]
 
-        devices = Device.objects.filter(id__in=value)
         all_interface_ids = []
-        for device in devices:
+        for device in value:
             all_interface_ids.extend(device.vc_interfaces.values_list("id", flat=True))
         return Q(pk__in=all_interface_ids)
 
     def filter_device_id(self, queryset, name, value):
-        # Include interfaces belonging to virtual chassis members
+        if not value:
+            return queryset
         params = self.generate_query_filter_device_id(value)
         return queryset.filter(params)
 
@@ -1363,7 +1364,12 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     q = SearchFilter(filter_predicates={"label": "icontains"})
     type = django_filters.MultipleChoiceFilter(choices=CableTypeChoices)
     color = MultiValueCharFilter()
-    device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
+    device_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        method="filter_device_id",
+        field_name="device",
+        label="Device (ID)",
+    )
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
     rack_id = MultiValueUUIDFilter(method="filter_device", field_name="device__rack_id", label="Rack (ID)")
     rack = MultiValueCharFilter(method="filter_device", field_name="device__rack__name", label="Rack (name)")
@@ -1407,6 +1413,17 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
             Q(**{f"_termination_a_{name}__in": value}) | Q(**{f"_termination_b_{name}__in": value})
         )
         return queryset
+
+    def generate_query_filter_device_id(self, value):
+        if not hasattr(value, "__iter__") or isinstance(value, str):
+            value = [value]
+        return Q(_termination_a_device_id__in=value) | Q(_termination_b_device_id__in=value)
+
+    def filter_device_id(self, queryset, name, value):
+        if not value:
+            return queryset
+        params = self.generate_query_filter_device_id(value)
+        return queryset.filter(params)
 
     def generate_query__termination_type(self, value):
         a_type_q = Q()
