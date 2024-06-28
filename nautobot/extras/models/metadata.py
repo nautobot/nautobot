@@ -385,7 +385,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
                     raise ValidationError(
                         f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.metadata_type.choices.values_list('value', flat=True))}"
                     )
-            self.value = value
+        self.value = value
 
         # Check if there is any intersections of scoped_fields of ObjectMetadata instances in the database.
         object_metadata_scoped_fields = (
