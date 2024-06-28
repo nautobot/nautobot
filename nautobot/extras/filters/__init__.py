@@ -1027,7 +1027,7 @@ class ObjectMetadataFilterSet(NautobotFilterSet):
 
     def filter_value(self, queryset, name, value):
         value = value.strip()
-        query = Q(_value__icontains=value)
+        query = Q(value__icontains=value)
         if not value:
             return queryset
         return queryset.filter(query)
