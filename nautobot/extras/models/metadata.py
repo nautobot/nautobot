@@ -221,20 +221,14 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
     @property
     def value(self):
         if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
-            return self.contact or self.team
+            return None
         else:
             return self._value
 
     @value.setter
     def value(self, v):
         if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
-            if isinstance(v, Contact):
-                self.contact = v
-                self.team = None
-            elif isinstance(v, Team):
-                self.team = v
-                self.contact = None
-            else:
+            if v is not None:
                 raise ValidationError(
                     f"{v} is an invalid value for metadata type data type {self.metadata_type.data_type}"
                 )
@@ -243,6 +237,8 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
         self.clean()
 
     def __str__(self):
+        if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
+            return f"{self.metadata_type} - {self.assigned_object} - {self.contact or self.team}"
         return f"{self.metadata_type} - {self.assigned_object} - {self.value}"
 
     def clean(self):

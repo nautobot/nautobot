@@ -800,7 +800,7 @@ class ObjectMetadataSerializer(ValidatedModelSerializer):
         queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
     )
     assigned_object = serializers.SerializerMethodField()
-    value = serializers.JSONField(required=False)
+    value = serializers.JSONField(allow_null=True, required=False)
 
     class Meta:
         model = ObjectMetadata
