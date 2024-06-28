@@ -70,6 +70,7 @@ from nautobot.extras.models import (
     MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -792,6 +793,37 @@ class MetadataChoiceSerializer(ValidatedModelSerializer):
     class Meta:
         model = MetadataChoice
         fields = "__all__"
+
+
+class ObjectMetadataSerializer(ValidatedModelSerializer):
+    assigned_object_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
+    )
+    assigned_object = serializers.SerializerMethodField()
+    value = serializers.JSONField(required=False)
+
+    class Meta:
+        model = ObjectMetadata
+        fields = "__all__"
+
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="ObjectMetadataAssignedObject",
+            resource_type_field_name="object_type",
+            serializers=lambda: nested_serializers_for_models(FeatureQuery("metadata").list_subclasses()),
+            allow_null=True,
+        )
+    )
+    def get_assigned_object(self, obj):
+        if obj.assigned_object is None:
+            return None
+        try:
+            depth = get_nested_serializer_depth(self)
+            return return_nested_serializer_data_based_on_depth(
+                self, depth, obj, obj.assigned_object, "assigned_object"
+            )
+        except SerializerNotFound:
+            return None
 
 
 #

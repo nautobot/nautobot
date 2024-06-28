@@ -67,6 +67,7 @@ from nautobot.extras.models import (
     MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -2554,6 +2555,19 @@ class MetadataTypeTest(APIViewTestCases.APIViewTestCase):
         "content_types": ["dcim.interface", "ipam.vrf"],
     }
 
+    def get_deletable_object(self):
+        return MetadataType.objects.create(name="Delete Me", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT)
+
+    def get_deletable_object_pks(self):
+        mdts = [
+            MetadataType.objects.create(name="SoR", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT),
+            MetadataType.objects.create(name="Colors", data_type=MetadataTypeDataTypeChoices.TYPE_MULTISELECT),
+            MetadataType.objects.create(
+                name="Location Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT
+            ),
+        ]
+        return [mdt.pk for mdt in mdts]
+
 
 class MetadataChoiceTest(APIViewTestCases.APIViewTestCase):
     model = MetadataChoice
@@ -2591,6 +2605,78 @@ class MetadataChoiceTest(APIViewTestCases.APIViewTestCase):
                 "weight": 250,
             },
         ]
+
+
+class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
+    model = ObjectMetadata
+    choices_fields = ["assigned_object_type"]
+
+    @classmethod
+    def setUpTestData(cls):
+        mdts = [
+            MetadataType.objects.create(name="Location Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT),
+            MetadataType.objects.create(name="Device Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT),
+            MetadataType.objects.create(
+                name="Contact/Team Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
+            ),
+        ]
+        mdts[0].content_types.set(list(ContentType.objects.values_list("pk", flat=True)))
+        mdts[1].content_types.set(list(ContentType.objects.values_list("pk", flat=True)))
+        mdts[2].content_types.set(list(ContentType.objects.values_list("pk", flat=True)))
+        ObjectMetadata.objects.create(
+            metadata_type=mdts[0],
+            value="Hey",
+            scoped_fields=["parent", "status"],
+            assigned_object_type=ContentType.objects.get_for_model(IPAddress),
+            assigned_object_id=IPAddress.objects.first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=mdts[0],
+            value="Hello",
+            scoped_fields=["namespace"],
+            assigned_object_type=ContentType.objects.get_for_model(Prefix),
+            assigned_object_id=Prefix.objects.first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=mdts[2],
+            contact=Contact.objects.first(),
+            scoped_fields=["status"],
+            assigned_object_type=ContentType.objects.get_for_model(Prefix),
+            assigned_object_id=Prefix.objects.last().pk,
+        )
+        cls.create_data = [
+            {
+                "metadata_type": mdts[0].pk,
+                "scoped_fields": ["location_type"],
+                "value": "random words",
+                "assigned_object_type": "dcim.location",
+                "assigned_object_id": Location.objects.first().pk,
+            },
+            {
+                "metadata_type": mdts[1].pk,
+                "scoped_fields": ["name"],
+                "value": "random words",
+                "assigned_object_type": "dcim.location",
+                "assigned_object_id": Location.objects.first().pk,
+            },
+            {
+                "metadata_type": mdts[2].pk,
+                "scoped_fields": ["device_type"],
+                "contact": Contact.objects.first().pk,
+                "assigned_object_type": "dcim.device",
+                "assigned_object_id": Device.objects.first().pk,
+            },
+            {
+                "metadata_type": mdts[2].pk,
+                "scoped_fields": ["interfaces"],
+                "team": Team.objects.first().pk,
+                "assigned_object_type": "dcim.device",
+                "assigned_object_id": Device.objects.first().pk,
+            },
+        ]
+        cls.update_data = {
+            "scoped_fields": ["pk"],
+        }
 
 
 class NoteTest(APIViewTestCases.APIViewTestCase):
