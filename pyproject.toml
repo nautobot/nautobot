@@ -74,7 +74,7 @@ django-structlog = {version = "^8.1.0", extras = ["all"]}
 # Advanced HTML tables
 django-tables2 = "~2.7.0"
 # Tags
-django-taggit = "~4.0.0"
+django-taggit = "~5.0.0"
 # Represent time zones in Django
 django-timezone-field = "~6.1.0"
 # Tree database structures based on Common Table Expressions
@@ -110,7 +110,7 @@ mysqlclient = {version = "~2.2.3", optional = true}
 # NAPALM automation library
 napalm = {version = ">=4.1.0,<6.0.0", optional = true}
 # IP prefix and address handling
-netaddr = "~0.10.1"
+netaddr = "~1.3.0"
 # Library of network related utilities including network driver mappings and Jinja Filters
 # Note: netutils is limited in scope, dependencies, and observes semver, as such
 #       we permit a looser (^) version constraint here.
