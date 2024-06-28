@@ -108,6 +108,7 @@ class Command(BaseCommand):
                 MetadataChoiceFactory,
                 MetadataTypeFactory,
                 ObjectChangeFactory,
+                ObjectMetadataFactory,
                 RoleFactory,
                 StatusFactory,
                 TagFactory,
@@ -290,8 +291,9 @@ class Command(BaseCommand):
             2 * len(MetadataTypeDataTypeChoices.CHOICES),
             description="on various content-types",
         )
-        _create_batch(MetadataChoiceFactory, 20)
+        _create_batch(MetadataChoiceFactory, 100)
         _create_batch(ObjectChangeFactory, 100)
+        _create_batch(ObjectMetadataFactory, 100)
         _create_batch(JobResultFactory, 20)
         _create_batch(JobLogEntryFactory, 100)
 

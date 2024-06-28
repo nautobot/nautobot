@@ -60,6 +60,7 @@ from nautobot.extras.models import (
     MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -1022,6 +1023,12 @@ class MetadataChoiceViewSet(ModelViewSet):
     queryset = MetadataChoice.objects.select_related("metadata_type")
     serializer_class = serializers.MetadataChoiceSerializer
     filterset_class = filters.MetadataChoiceFilterSet
+
+
+class ObjectMetadataViewSet(NautobotModelViewSet):
+    queryset = ObjectMetadata.objects.all()
+    serializer_class = serializers.ObjectMetadataSerializer
+    filterset_class = filters.ObjectMetadataFilterSet
 
 
 #

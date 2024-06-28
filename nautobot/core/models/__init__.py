@@ -1,6 +1,7 @@
 import uuid
 
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import FieldDoesNotExist
@@ -51,6 +52,13 @@ class BaseModel(models.Model):
     is_metadata_associable_model = True
     is_saved_view_model = False  # SavedViewMixin overrides this to default True
     is_cloud_type_model = False  # CloudTypeMixin overrides this to default True
+
+    associated_object_metadatas = GenericRelation(
+        "extras.ObjectMetadata",
+        content_type_field="assigned_object_type",
+        object_id_field="assigned_object_id",
+        related_query_name="associated_object_metadatas_%(app_label)s_%(class)s",  # e.g. 'associated_object_metadatas_dcim_device'
+    )
 
     class Meta:
         abstract = True
