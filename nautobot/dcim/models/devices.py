@@ -917,7 +917,7 @@ class Device(PrimaryModel, ConfigContextModel):
         qs = self.all_interfaces
         if self.virtual_chassis and self.virtual_chassis.master == self:
             for member in self.virtual_chassis.members.exclude(id=self.id):
-                qs |= member.all_interfaces
+                qs |= member.all_interfaces.filter(mgmt_only=False)
         return qs
 
     @property
