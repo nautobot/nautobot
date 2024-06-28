@@ -57,7 +57,7 @@ from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 
 from . import filters, forms, tables
 from .api import serializers
-from .choices import JobExecutionType, JobResultStatusChoices, LogLevelChoices
+from .choices import DynamicGroupTypeChoices, JobExecutionType, JobResultStatusChoices, LogLevelChoices
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
     enqueue_pull_git_repository_and_refresh_data,
@@ -93,7 +93,6 @@ from .models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
-    StaticGroup,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -709,11 +708,15 @@ class DynamicGroupView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-        model = instance.content_type.model_class()
+        model = instance.model
         table_class = get_table_for_model(model)
 
-        # Ensure that members cache is up-to-date for this specific group
-        members = instance.update_cached_members()
+        if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+            # Ensure that members cache is up-to-date for this specific group
+            members = instance.update_cached_members()
+            messages.success(request, f"Refreshed cached members list for {instance}")
+        else:
+            members = instance.members
 
         if table_class is not None:
             # Members table (for display on Members nav tab)
@@ -737,7 +740,16 @@ class DynamicGroupView(generic.ObjectView):
             ancestors_table = tables.NestedDynamicGroupAncestorsTable(ancestors, orderable=False)
             ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
 
-            context["raw_query"] = pretty_print_query(instance.generate_query())
+            if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+                context["raw_query"] = pretty_print_query(instance.generate_query())
+                context["members_list_url"] = None
+            else:
+                context["raw_query"] = None
+                try:
+                    context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
+                except NoReverseMatch:
+                    context["members_list_url"] = None
+            context["members_verbose_name_plural"] = instance.model._meta.verbose_name_plural
             context["members_table"] = members_table
             context["ancestors_table"] = ancestors_table
             context["ancestors_tree"] = ancestors_tree
@@ -789,13 +801,14 @@ class DynamicGroupEditView(generic.ObjectEditView):
                     # Obtain the instance, but do not yet `save()` it to the database.
                     obj = form.save(commit=False)
 
-                    # Process the filter form and save the query filters to `obj.filter`.
                     ctx = self.get_extra_context(request, obj)
-                    filter_form = ctx["filter_form"]
-                    if filter_form.is_valid():
-                        obj.set_filter(filter_form.cleaned_data)
-                    else:
-                        raise RuntimeError(filter_form.errors)
+                    if obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+                        # Process the filter form and save the query filters to `obj.filter`.
+                        filter_form = ctx["filter_form"]
+                        if filter_form.is_valid():
+                            obj.set_filter(filter_form.cleaned_data)
+                        else:
+                            raise RuntimeError(filter_form.errors)
 
                     # After filters have been set, now we save the object to the database.
                     obj.save()
@@ -881,6 +894,7 @@ class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
     filterset = filters.DynamicGroupFilterSet
 
 
+# 3.0 TODO: remove, deprecated since 2.3 (#5845)
 class ObjectDynamicGroupsView(generic.GenericView):
     """
     Present a list of dynamic groups associated to a particular object.
@@ -902,7 +916,6 @@ class ObjectDynamicGroupsView(generic.GenericView):
         )
         dynamicgroups_table.columns.hide("content_type")
         dynamicgroups_table.columns.hide("members")
-        dynamicgroups_table.columns.hide("static_group_count")
 
         # Apply the request context
         paginate = {
@@ -2393,46 +2406,6 @@ class SecretsGroupBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class StaticGroupUIViewSet(NautobotUIViewSet):
-    bulk_update_form_class = forms.StaticGroupBulkEditForm
-    filterset_class = filters.StaticGroupFilterSet
-    filterset_form_class = forms.StaticGroupFilterForm
-    form_class = forms.StaticGroupForm
-    queryset = StaticGroup.all_objects.annotate(
-        members_count=count_related(StaticGroupAssociation, "static_group", manager_name="all_objects")
-    )
-    serializer_class = serializers.StaticGroupSerializer
-    table_class = tables.StaticGroupTable
-
-    def alter_queryset(self, request):
-        queryset = super().alter_queryset(request)
-        if request is None or "hidden" not in request.GET:
-            queryset = queryset.filter(hidden=False)
-        return queryset
-
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            members_table_class = get_table_for_model(instance.model)
-            members_table = members_table_class(instance.members.restrict(request.user, "view"), orderable=False)
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(members_table)
-            members_table.columns.hide("pk")
-            if "actions" in members_table.columns:
-                members_table.columns.hide("actions")
-            context["members_table"] = members_table
-            try:
-                context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
-            except NoReverseMatch:
-                context["members_list_url"] = None
-            context["members_verbose_name_plural"] = instance.model._meta.verbose_name_plural
-
-        return context
-
-
 class StaticGroupAssociationUIViewSet(
     ObjectBulkDestroyViewMixin,
     ObjectChangeLogViewMixin,
@@ -2450,15 +2423,15 @@ class StaticGroupAssociationUIViewSet(
 
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
-        if request is None or "hidden" not in request.GET:
-            queryset = queryset.filter(static_group__hidden=False)
+        # Default to only showing associations for static-type groups:
+        if request is None or "dynamic_group" not in request.GET:
+            queryset = queryset.filter(dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC)
         return queryset
 
 
-class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
+class DynamicGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     queryset = StaticGroupAssociation.objects.all()
-    form_class = forms.StaticGroupBulkAssignForm
-    template_name = "extras/staticgroup_bulk_assign.html"
+    form_class = forms.DynamicGroupBulkAssignForm
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "add")
@@ -2497,16 +2470,20 @@ class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin
                     add_to_groups = list(form.cleaned_data["add_to_groups"])
                     new_group_name = form.cleaned_data["create_and_assign_to_new_group_name"]
                     if new_group_name:
-                        if not request.user.has_perm("extras.add_staticgroup"):
-                            raise StaticGroup.DoesNotExist
+                        if not request.user.has_perm("extras.add_dynamicgroup"):
+                            raise DynamicGroup.DoesNotExist
                         else:
-                            new_group = StaticGroup(name=new_group_name, content_type=content_type)
+                            new_group = DynamicGroup(
+                                name=new_group_name,
+                                content_type=content_type,
+                                group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+                            )
                             new_group.validated_save()
                             # Check permissions
-                            StaticGroup.objects.restrict(request.user, "add").get(pk=new_group.pk)
+                            DynamicGroup.objects.restrict(request.user, "add").get(pk=new_group.pk)
 
                             add_to_groups.append(new_group)
-                            msg = "Created static group"
+                            msg = "Created dynamic group"
                             logger.info(f"{msg} {new_group} (PK: {new_group.pk})")
                             msg = format_html('{} <a href="{}">{}</a>', msg, new_group.get_absolute_url(), new_group)
                             messages.success(self.request, msg)
@@ -2514,10 +2491,10 @@ class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin
                     with deferred_change_logging_for_bulk_operation():
                         associations = []
                         for pk in pk_list:
-                            for static_group in add_to_groups:
+                            for dynamic_group in add_to_groups:
                                 association, created = StaticGroupAssociation.objects.get_or_create(
-                                    static_group=static_group,
-                                    associated_object_type=content_type,
+                                    dynamic_group=dynamic_group,
+                                    associated_object_type_id=content_type.id,
                                     associated_object_id=pk,
                                 )
                                 association.validated_save()
@@ -2534,17 +2511,17 @@ class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin
                     if associations:
                         msg = (
                             f"Added {len(pk_list)} {model._meta.verbose_name_plural} "
-                            f"to {len(add_to_groups)} static group(s)."
+                            f"to {len(add_to_groups)} dynamic group(s)."
                         )
                         logger.info(msg)
                         messages.success(self.request, msg)
 
                     if form.cleaned_data["remove_from_groups"]:
-                        for static_group in form.cleaned_data["remove_from_groups"]:
+                        for dynamic_group in form.cleaned_data["remove_from_groups"]:
                             (
                                 StaticGroupAssociation.objects.restrict(request.user, "delete")
                                 .filter(
-                                    static_group=static_group,
+                                    dynamic_group=dynamic_group,
                                     associated_object_type=content_type,
                                     associated_object_id__in=pk_list,
                                 )
@@ -2553,7 +2530,7 @@ class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin
 
                         msg = (
                             f"Removed {len(pk_list)} {model._meta.verbose_name_plural} from "
-                            f"{len(form.cleaned_data['remove_from_groups'])} static group(s)."
+                            f"{len(form.cleaned_data['remove_from_groups'])} dynamic group(s)."
                         )
                         logger.info(msg)
                         messages.success(self.request, msg)

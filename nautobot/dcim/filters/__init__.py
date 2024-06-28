@@ -338,8 +338,10 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
     @extend_schema_field({"type": "string"})
     def _subtree(self, queryset, name, value):
         """FilterSet method for getting Locations that are or are descended from a given Location(s)."""
-        params = self.generate_query__subtree(value)
-        return queryset.filter(params)
+        if value:
+            params = self.generate_query__subtree(value)
+            return queryset.with_tree_fields().filter(params)
+        return queryset
 
 
 class RackGroupFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet, NameSearchFilterSet):
@@ -1119,21 +1121,21 @@ class InterfaceFilterSet(
     def filter_device(self, queryset, name, value):
         try:
             devices = Device.objects.filter(**{f"{name}__in": value})
-            vc_interface_ids = []
+            all_interface_ids = []
             for device in devices:
-                vc_interface_ids.extend(device.vc_interfaces.values_list("id", flat=True))
-            return queryset.filter(pk__in=vc_interface_ids)
+                all_interface_ids.extend(device.all_interfaces.values_list("id", flat=True))
+            return queryset.filter(pk__in=all_interface_ids)
         except Device.DoesNotExist:
             return queryset.none()
 
     def filter_device_id(self, queryset, name, id_list):
         # Include interfaces belonging to peer virtual chassis members
-        vc_interface_ids = []
+        all_interface_ids = []
         try:
             devices = Device.objects.filter(pk__in=id_list)
             for device in devices:
-                vc_interface_ids += device.vc_interfaces.values_list("id", flat=True)
-            return queryset.filter(pk__in=vc_interface_ids)
+                all_interface_ids += device.all_interfaces.values_list("id", flat=True)
+            return queryset.filter(pk__in=all_interface_ids)
         except Device.DoesNotExist:
             return queryset.none()
 

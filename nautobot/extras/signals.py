@@ -35,7 +35,6 @@ from nautobot.extras.models import (
     MetadataType,
     ObjectChange,
     Relationship,
-    StaticGroup,
 )
 from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
@@ -70,19 +69,16 @@ def get_user_if_authenticated(user, instance):
 @receiver(post_save, sender=CustomField.content_types.through)
 @receiver(post_save, sender=MetadataType)
 @receiver(post_save, sender=MetadataType.content_types.through)
-@receiver(post_save, sender=StaticGroup)
 @receiver(m2m_changed, sender=ComputedField)
 @receiver(m2m_changed, sender=CustomField)
 @receiver(m2m_changed, sender=CustomField.content_types.through)
 @receiver(m2m_changed, sender=MetadataType)
 @receiver(m2m_changed, sender=MetadataType.content_types.through)
-@receiver(m2m_changed, sender=StaticGroup)
 @receiver(post_delete, sender=ComputedField)
 @receiver(post_delete, sender=CustomField)
 @receiver(post_delete, sender=CustomField.content_types.through)
 @receiver(post_delete, sender=MetadataType)
 @receiver(post_delete, sender=MetadataType.content_types.through)
-@receiver(post_delete, sender=StaticGroup)
 def invalidate_models_cache(sender, **kwargs):
     """Invalidate the related-models cache for ComputedFields and CustomFields."""
     if sender is CustomField.content_types.through:

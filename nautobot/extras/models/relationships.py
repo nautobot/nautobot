@@ -25,7 +25,7 @@ from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import ContactMixin, NotesMixin, StaticGroupMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin
 from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
 from nautobot.users.models import SavedViewMixin
 
@@ -408,9 +408,9 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
 class Relationship(
     ChangeLoggedModel,
     ContactMixin,
+    DynamicGroupsModelMixin,
     NotesMixin,
     SavedViewMixin,
-    StaticGroupMixin,
     BaseModel,
 ):
     label = models.CharField(

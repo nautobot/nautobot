@@ -1,4 +1,3 @@
-Added StaticGroup `hidden` flag in support of the creation of non-user-serviceable StaticGroups. By default, hidden StaticGroups are not shown in the UI or the REST API.
-Changed object "detail" views to only show `Dynamic Groups` and `Static Groups` tabs if the object belongs to at least one such group.
-Replaced Redis implementation of Dynamic Group membership caches with a database cache implementation using hidden Static Groups.
+Changed object "detail" views to only show `Dynamic Groups` tab if the object belongs to at least one such group.
+Replaced Redis implementation of Dynamic Group membership caches with a database cache implementation using the StaticGroupAssociation model.
 Changed `DynamicGroup.members`, `DynamicGroup.has_member()`, and `DynamicGroupMixin.dynamic_groups` APIs to always use the database cache.

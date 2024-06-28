@@ -5,12 +5,12 @@ A tenant represents a discrete grouping of resources used for administrative pur
 * Circuits
 * Clusters
 * Devices
+* Dynamic Groups
 * IP addresses
 * Locations
 * Prefixes
 * Racks
 * Rack reservations
-* Static groups
 * Virtual machines
 * VLANs
 * VRFs

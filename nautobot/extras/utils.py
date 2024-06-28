@@ -146,8 +146,11 @@ class FeatureQuery:
         populate_model_features_registry()
         try:
             query = Q()
-            for app_label, models in self.as_dict():
-                query |= Q(app_label=app_label, model__in=models)
+            if not self.as_dict():  # no registered models??
+                raise KeyError
+            else:
+                for app_label, models in self.as_dict():
+                    query |= Q(app_label=app_label, model__in=models)
         except KeyError:
             query = Q(pk__in=[])
 
@@ -297,9 +300,10 @@ def populate_model_features_registry(refresh=False):
             "additional_constraints": {"is_saved_view_model": True},
         },
         {
-            "feature_name": "static_groups",
-            "field_names": ["associated_static_groups"],
-            "additional_constraints": {"is_static_group_associable_model": True},
+            "feature_name": "dynamic_groups",
+            # models using DynamicGroupMixin but not DynamicGroupsModelMixin will lack a static_group_association_set
+            "field_names": [],
+            "additional_constraints": {"is_dynamic_group_associable_model": True},
         },
     ]
 

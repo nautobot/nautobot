@@ -142,6 +142,7 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
                 self.child_location_2ab,
                 self.child_location_same_name_2,
             ],
+            ordered=False,
         )
 
     def test_filter_null(self):
@@ -212,6 +213,7 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
                 self.child_location_2ab,
                 self.child_location_same_name_2,
             ],
+            ordered=False,
         )
 
     def test_filter_combined_name_exclude(self):

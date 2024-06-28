@@ -3361,6 +3361,10 @@ class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
                 "weight": 200,
             },
         ]
+        # changing controller is error-prone since a child group must have the same controller as its parent
+        cls.update_data = {
+            "weight": 300,
+        }
         cls.bulk_update_data = {
             "weight": 300,
         }

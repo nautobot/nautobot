@@ -826,13 +826,13 @@ def saved_view_modal(
     }
 
 
-@register.inclusion_tag("utilities/templatetags/static_group_assignment_modal.html")
-def static_group_assignment_modal(request, content_type):
-    from nautobot.extras.forms import StaticGroupBulkAssignForm
+@register.inclusion_tag("utilities/templatetags/dynamic_group_assignment_modal.html")
+def dynamic_group_assignment_modal(request, content_type):
+    from nautobot.extras.forms import DynamicGroupBulkAssignForm
 
     return {
         "request": request,
-        "form": StaticGroupBulkAssignForm(model=content_type.model_class()),
+        "form": DynamicGroupBulkAssignForm(model=content_type.model_class()),
     }
 
 

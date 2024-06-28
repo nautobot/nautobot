@@ -15,7 +15,6 @@ from django.utils.html import format_html
 from nautobot.circuits.models import Circuit
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
-from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import extract_form_failures, extract_page_body, TestCase, ViewTestCases
 from nautobot.core.testing.utils import disable_warnings, post_data
@@ -33,6 +32,7 @@ from nautobot.dcim.models import (
 from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
+    DynamicGroupTypeChoices,
     JobExecutionType,
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
@@ -69,7 +69,6 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
-    StaticGroup,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -795,12 +794,17 @@ class DynamicGroupTestCase(
             "name": "new_dynamic_group",
             "description": "I am a new dynamic group object.",
             "content_type": content_type.pk,
+            "group_type": DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            "tenant": Tenant.objects.first().pk,
             # Management form fields required for the dynamic formset
             "dynamic_group_memberships-TOTAL_FORMS": "0",
             "dynamic_group_memberships-INITIAL_FORMS": "1",
             "dynamic_group_memberships-MIN_NUM_FORMS": "0",
             "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
         }
+
+    def _get_queryset(self):
+        return super()._get_queryset().filter(group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER)  # TODO
 
     def test_get_object_with_permission(self):
         instance = self._get_queryset().first()
@@ -886,6 +890,16 @@ class DynamicGroupTestCase(
         response = self.client.get(url)
         self.assertHttpStatus(response, 404)
 
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
+        super().test_edit_object_with_permission()
+
+    def test_edit_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
+        super().test_edit_object_with_constrained_permission()
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_edit_saved_filter(self):
         """Test that editing a filter works using the edit view."""
@@ -921,6 +935,80 @@ class DynamicGroupTestCase(
         path = self._get_url("list")
         response = self.client.get(path + "?content_type=dcim.device")
         self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_assign_successful(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+        group_1 = DynamicGroup.objects.create(
+            content_type=location_ct, name="Group 1", group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        )
+        group_2 = DynamicGroup.objects.create(
+            content_type=location_ct, name="Group 2", group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        )
+        group_2.add_members(Location.objects.filter(name__startswith="Root"))
+
+        self.add_permissions(
+            "extras.add_staticgroupassociation", "extras.delete_staticgroupassociation", "extras.add_dynamicgroup"
+        )
+
+        url = reverse("extras:dynamicgroup_bulk_assign")
+        request = {
+            "path": url,
+            "data": post_data(
+                {
+                    "content_type": location_ct.pk,
+                    "pk": list(Location.objects.filter(parent__isnull=True).values_list("pk", flat=True)),
+                    "create_and_assign_to_new_group_name": "Root Locations",
+                    "add_to_groups": [group_1.pk],
+                    "remove_from_groups": [group_2.pk],
+                }
+            ),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        new_group = DynamicGroup.objects.get(name="Root Locations")
+        self.assertEqual(new_group.content_type, location_ct)
+        self.assertEqual(new_group.group_type, DynamicGroupTypeChoices.TYPE_STATIC)
+        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), new_group.members)
+        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), group_1.members)
+        self.assertQuerysetEqualAndNotEmpty(
+            Location.objects.filter(name__startswith="Root").exclude(parent__isnull=True), group_2.members
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_assign_non_static_groups_forbidden(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+        group_1 = DynamicGroup.objects.create(content_type=location_ct, name="Group 1")
+        group_2 = DynamicGroup.objects.create(
+            content_type=location_ct, name="Group 2", group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET
+        )
+
+        self.add_permissions(
+            "extras.add_staticgroupassociation", "extras.delete_staticgroupassociation", "extras.add_dynamicgroup"
+        )
+
+        url = reverse("extras:dynamicgroup_bulk_assign")
+        request = {
+            "path": url,
+            "data": post_data(
+                {
+                    "content_type": location_ct.pk,
+                    "pk": list(Location.objects.filter(parent__isnull=True).distinct().values_list("pk", flat=True)),
+                    "add_to_groups": [group_1.pk],
+                },
+            ),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        # TODO check for specific form validation error?
+
+        del request["data"]["add_to_groups"]
+        request["data"]["remove_from_groups"] = [group_2.pk]
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        # TODO check for specific form validation error?
+
+    # TODO: negative tests for bulk assign - global and object-level permission violations, invalid data, etc.
 
 
 class ExportTemplateTestCase(
@@ -2861,198 +2949,6 @@ class RelationshipAssociationTestCase(
         self.assertNotIn(instance2.destination.name, content, msg=content)
 
 
-class StaticGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
-    model = StaticGroup
-
-    @classmethod
-    def setUpTestData(cls):
-        content_type = ContentType.objects.get_for_model(Device)
-
-        cls.form_data = {
-            "name": "The Best Devices",
-            "description": "No really!",
-            "content_type": content_type.pk,
-            "tenant": Tenant.objects.first().pk,
-        }
-
-        cls.bulk_edit_data = {
-            "description": "Is anyone there?",
-            "tenant": Tenant.objects.last().pk,
-        }
-
-        StaticGroup.all_objects.create(name="Hidden Group", content_type=content_type, hidden=True)
-
-    def _get_queryset(self):
-        queryset = super()._get_queryset()
-        # We want .first() to pick groups with members
-        return queryset.annotate(members_count=count_related(StaticGroupAssociation, "static_group")).order_by(
-            "-members_count", "name"
-        )
-
-    def test_get_object_with_permission(self):
-        instance = self._get_queryset().first()
-        # Add view permissions for the group's members:
-        self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"))
-
-        response = super().test_get_object_with_permission()
-
-        response_body = extract_page_body(response.content.decode(response.charset))
-        # Check that the "members" table in the detail view includes all appropriate member objects
-        for member in instance.members:
-            self.assertIn(str(member.pk), response_body)
-
-    def test_get_object_with_constrained_permission(self):
-        instance = self._get_queryset().first()
-        # Add permission for one of the group's members but not the others:
-        member1, member2 = instance.members[:2]
-        obj_perm = ObjectPermission(
-            name="Members permission",
-            constraints={"pk": member1.pk},
-            actions=["view"],
-        )
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(instance.content_type)
-
-        response = super().test_get_object_with_constrained_permission()
-
-        response_body = extract_page_body(response.content.decode(response.charset))
-        # Check that the "members" table in the detail view includes all permitted member objects
-        self.assertIn(str(member1.pk), response_body)
-        self.assertNotIn(str(member2.pk), response_body)
-
-    def test_get_object_static_groups_with_constrained_permission(self):
-        instance1 = self._get_queryset().first()
-        member = instance1.members.first()
-        self.add_permissions(get_permission_for_model(member, "view"))
-        instance2 = StaticGroup.objects.create(name="Forbidden group", content_type=instance1.content_type)
-        instance2.add_members([member])
-        obj_perm = ObjectPermission(
-            name="Groups permission",
-            constraints={"pk": instance1.pk},
-            actions=["view"],
-        )
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(StaticGroup))
-
-        url = member.get_absolute_url()
-        response = self.client.get(url)
-        self.assertHttpStatus(response, 200)
-        response_body = response.content.decode(response.charset)
-        self.assertIn(str(instance1.pk), response_body)
-        self.assertNotIn(str(instance2.pk), response_body)
-
-    def test_edit_object_with_permission(self):
-        instance = self._get_queryset().first()
-        self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
-        super().test_edit_object_with_permission()
-
-    def test_edit_object_with_constrained_permission(self):
-        instance = self._get_queryset().first()
-        self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
-        super().test_edit_object_with_constrained_permission()
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_bulk_assign_successful(self):
-        location_ct = ContentType.objects.get_for_model(Location)
-        group_1 = StaticGroup.objects.create(content_type=location_ct, name="Group 1")
-        group_2 = StaticGroup.objects.create(content_type=location_ct, name="Group 2")
-        group_2.add_members(Location.objects.filter(name__startswith="Root"))
-
-        self.add_permissions(
-            "extras.add_staticgroupassociation", "extras.delete_staticgroupassociation", "extras.add_staticgroup"
-        )
-
-        url = reverse("extras:staticgroup_bulk_assign")
-        request = {
-            "path": url,
-            "data": post_data(
-                {
-                    "content_type": location_ct.pk,
-                    "pk": list(Location.objects.filter(parent__isnull=True).values_list("pk", flat=True)),
-                    "create_and_assign_to_new_group_name": "Root Locations",
-                    "add_to_groups": [group_1.pk],
-                    "remove_from_groups": [group_2.pk],
-                }
-            ),
-        }
-        response = self.client.post(**request, follow=True)
-        self.assertHttpStatus(response, 200)
-        new_group = StaticGroup.objects.get(name="Root Locations")
-        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), new_group.members)
-        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), group_1.members)
-        self.assertQuerysetEqualAndNotEmpty(
-            Location.objects.filter(name__startswith="Root").exclude(parent__isnull=True), group_2.members
-        )
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_bulk_assign_hidden_groups_forbidden(self):
-        location_ct = ContentType.objects.get_for_model(Location)
-        group_1 = StaticGroup.all_objects.create(content_type=location_ct, name="Group 1", hidden=True)
-        group_2 = StaticGroup.all_objects.create(content_type=location_ct, name="Group 2", hidden=True)
-        group_2.add_members(Location.objects.filter(name__startswith="Root"))
-
-        self.add_permissions(
-            "extras.add_staticgroupassociation", "extras.delete_staticgroupassociation", "extras.add_staticgroup"
-        )
-
-        url = reverse("extras:staticgroup_bulk_assign")
-        request = {
-            "path": url,
-            "data": post_data(
-                {
-                    "content_type": location_ct.pk,
-                    "pk": list(Location.objects.filter(parent__isnull=True).values_list("pk", flat=True)),
-                    "add_to_groups": [group_1.pk],
-                },
-            ),
-        }
-        response = self.client.post(**request, follow=True)
-        self.assertHttpStatus(response, 200)
-        # TODO check for specific form validation error?
-        self.assertQuerysetEqual(group_1.members, [])
-
-        del request["data"]["add_to_groups"]
-        request["data"]["remove_from_groups"] = [group_2.pk]
-        response = self.client.post(**request, follow=True)
-        self.assertHttpStatus(response, 200)
-        # TODO check for specific form validation error?
-        self.assertQuerysetEqual(group_2.members, Location.objects.filter(name__startswith="Root"))
-
-    # TODO: negative tests for bulk assign - global and object-level permission violations, invalid data, etc.
-
-    def test_list_objects_omits_hidden_by_default(self):
-        """The list view should not by default include any hidden groups."""
-        sg1 = StaticGroup.all_objects.filter(hidden=False).first()
-        self.assertIsNotNone(sg1)
-        sg2 = StaticGroup.all_objects.filter(hidden=True).first()
-        self.assertIsNotNone(sg2)
-
-        self.add_permissions("extras.view_staticgroup")
-        response = self.client.get(self._get_url("list"))
-        self.assertHttpStatus(response, 200)
-        content = extract_page_body(response.content.decode(response.charset))
-
-        self.assertIn(sg1.get_absolute_url(), content, msg=content)
-        self.assertNotIn(sg2.get_absolute_url(), content, msg=content)
-
-    def test_list_objects_can_explicitly_include_hidden(self):
-        """The list view can include hidden groups with the correct query parameter."""
-        sg1 = StaticGroup.all_objects.filter(hidden=False).first()
-        self.assertIsNotNone(sg1)
-        sg2 = StaticGroup.all_objects.filter(hidden=True).first()
-        self.assertIsNotNone(sg2)
-
-        self.add_permissions("extras.view_staticgroup")
-        response = self.client.get(f"{self._get_url('list')}?hidden=True")
-        self.assertHttpStatus(response, 200)
-        content = extract_page_body(response.content.decode(response.charset))
-
-        self.assertNotIn(sg1.get_absolute_url(), content, msg=content)
-        self.assertIn(sg2.get_absolute_url(), content, msg=content)
-
-
 class StaticGroupAssociationTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
@@ -3062,18 +2958,15 @@ class StaticGroupAssociationTestCase(
 ):
     model = StaticGroupAssociation
 
-    @classmethod
-    def setUpTestData(cls):
-        sg = StaticGroup.all_objects.create(
-            name="Hidden Group", content_type=ContentType.objects.get_for_model(Device), hidden=True
-        )
-        sg.add_members(Device.objects.all())
-
     def test_list_objects_omits_hidden_by_default(self):
         """The list view should not by default include associations for hidden groups."""
-        sga1 = StaticGroupAssociation.all_objects.filter(static_group__hidden=False).first()
+        sga1 = StaticGroupAssociation.all_objects.filter(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
         self.assertIsNotNone(sga1)
-        sga2 = StaticGroupAssociation.all_objects.filter(static_group__hidden=True).first()
+        sga2 = StaticGroupAssociation.all_objects.exclude(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
         self.assertIsNotNone(sga2)
 
         self.add_permissions("extras.view_staticgroupassociation")
@@ -3086,18 +2979,17 @@ class StaticGroupAssociationTestCase(
 
     def test_list_objects_can_explicitly_include_hidden(self):
         """The list view can include hidden groups' associations with the correct query parameter."""
-        sga1 = StaticGroupAssociation.all_objects.filter(static_group__hidden=False).first()
+        sga1 = StaticGroupAssociation.all_objects.exclude(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
         self.assertIsNotNone(sga1)
-        sga2 = StaticGroupAssociation.all_objects.filter(static_group__hidden=True).first()
-        self.assertIsNotNone(sga2)
 
         self.add_permissions("extras.view_staticgroupassociation")
-        response = self.client.get(f"{self._get_url('list')}?hidden=True")
+        response = self.client.get(f"{self._get_url('list')}?dynamic_group={sga1.dynamic_group.pk}")
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
 
-        self.assertNotIn(sga1.get_absolute_url(), content, msg=content)
-        self.assertIn(sga2.get_absolute_url(), content, msg=content)
+        self.assertIn(sga1.get_absolute_url(), content, msg=content)
 
 
 class StatusTestCase(
