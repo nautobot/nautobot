@@ -36,7 +36,7 @@ exclude = [
 [tool.poetry.dependencies]
 python = ">=3.8,<3.13"
 # Background task processing
-celery = "~5.3.1"
+celery = "~5.3.6"
 # Fundamental web framework for Nautobot
 Django = "~4.2.13"
 # Adds AJAX capabilities to django-tables2
@@ -50,7 +50,7 @@ django-celery-results = "~2.5.1"
 # Management of app configuration via the Django admin UI
 django-constance = "~3.1.0"
 # Permit cross-domain API requests
-django-cors-headers = "~4.3.1"
+django-cors-headers = "~4.4.0"
 # Store files in the database for background tasks
 django-db-file-storage = "~0.5.6.1"
 # AutoSlugField and shell_plus
@@ -58,7 +58,7 @@ django-extensions = "~3.2.3"
 # Advanced query filters
 django-filter = "~23.5"
 # Health check endpoint
-django-health-check = "~3.18.1"
+django-health-check = "~3.18.3"
 # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
 django-jinja = "~2.11.0"
 # Prometheus metrics for Django
@@ -70,7 +70,7 @@ django-silk = "~5.1.0"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.14.2", optional = true}
 # Structured logging for Django
-django-structlog = {extras = ["all"], version = "^8.0.0"}
+django-structlog = {version = "^8.1.0", extras = ["all"]}
 # Advanced HTML tables
 django-tables2 = "~2.7.0"
 # Tags
@@ -82,11 +82,11 @@ django-tree-queries = "~0.19.0"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework
-djangorestframework = "~3.15.1"
+djangorestframework = "~3.15.2"
 # Adds JSON schema support to API endpoints for rendering JSON schema forms.
 drf-react-template-framework = "^0.0.17"
 # OpenAPI 3.0 schema generation for the REST API
-drf-spectacular = {version = "~0.26.5", extras = ["sidecar"]}
+drf-spectacular = {version = "~0.27.2", extras = ["sidecar"]}
 # Emoji terminal output for Python.
 emoji = "~2.12.1"
 # Git integrations for Python
@@ -153,7 +153,7 @@ sso = ["social-auth-core"]
 
 [tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
-django-debug-toolbar = "~4.3.0"
+django-debug-toolbar = "~4.4.0"
 # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
 django-slowtests = "^1.1.1"
 # Nautobot example App used for testing
@@ -188,23 +188,23 @@ mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see optional-settings.md and required-settings.md
 mkdocs-macros-plugin = "~1.0.5"
 # Material for mkdocs theme
-mkdocs-material = "~9.5.25"
+mkdocs-material = "~9.5.27"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.1"
 # Automatically handle index pages for docs sections
-mkdocs-section-index = "~0.3.8"
+mkdocs-section-index = "~0.3.9"
 # Automatic documentation from sources, for MkDocs
 mkdocstrings = "~0.25.1"
 # Python-specific extension to mkdocstrings
-mkdocstrings-python = "~1.10.2"
+mkdocstrings-python = "~1.10.5"
 
 [tool.poetry.group.linting.dependencies]
 # Code static analysis
-pylint = "~3.2.0"
+pylint = "~3.2.5"
 # Pylint extensions for Django
 pylint-django = "~2.5.3"
 # Combination linter and code formatter
-ruff = "~0.4.0"
+ruff = "~0.5.0"
 # YAML linting
 yamllint = "~1.35.1"
 
@@ -216,7 +216,7 @@ django-slowtests = "^1.1.1"
 # Integration Tests
 requests = "~2.32.2"
 # Selenium web drivers for live integration testing
-selenium = "~4.21.0"
+selenium = "~4.22.0"
 # Abstraction layer for working with Selenium
 splinter = "~0.21.0"
 # Serialization of tracebacks - used when running unittest with --parallel flag

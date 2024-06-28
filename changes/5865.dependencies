@@ -1,0 +1,5 @@
+Updated `celery` to `~5.3.6`.
+Updated `django-cors-headers` to `~4.4.0`.
+Updated `django-health-check` to `~3.18.3`.
+Updated `django-structlog` to `^8.1.0`.
+Updated `djangorestframework` to `~3.15.2`.
