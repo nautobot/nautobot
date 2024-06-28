@@ -56,7 +56,7 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
             return call_map[version](search)
 
         except netaddr.core.AddrFormatError:
-            ver_map = {4: "0/32", 6: "::/128"}
+            ver_map = {4: "0.0.0.0/32", 6: "::/128"}
             return netaddr.IPNetwork(ver_map[version])
 
     def _check_and_prep_ipv6(self, search):
