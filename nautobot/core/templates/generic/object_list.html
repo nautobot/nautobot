@@ -186,16 +186,16 @@
                                 </label>
                             </div>
                             <div class="pull-right">
-                                {% if content_type.model_class.is_static_group_associable_model and perms.extras.add_staticgroupassociation %}
+                                {% if content_type.model_class.is_dynamic_group_associable_model and perms.extras.add_staticgroupassociation %}
                                     <button type="button"
-                                            id="update_static_groups_for_all"
+                                            id="update_dynamic_groups_for_all"
                                             data-toggle="modal"
-                                            data-target="#static_group_assignment_modal"
+                                            data-target="#dynamic_group_assignment_modal"
                                             data-objects="all"
                                             class="btn btn-primary btn-sm"
                                             disabled="disabled">
                                         <span class="mdi mdi-group" aria-hidden="true"></span>
-                                        Update Static Groups for All
+                                        Update Group Assignment for All
                                     </button>
                                 {% endif %}
                                 {% if bulk_edit_url and permissions.change %}
@@ -216,14 +216,14 @@
                 {% include table_template|default:'panel_table.html' %}
                 <div class="pull-left noprint">
                     {% block bulk_buttons %}{% endblock %}
-                    {% if content_type.model_class.is_static_group_associable_model and perms.extras.add_staticgroupassociation %}
+                    {% if content_type.model_class.is_dynamic_group_associable_model and perms.extras.add_staticgroupassociation %}
                         <button type="button"
-                                id="update_static_groups_for_selected"
+                                id="update_dynamic_groups_for_selected"
                                 data-toggle="modal"
-                                data-target="#static_group_assignment_modal"
+                                data-target="#dynamic_group_assignment_modal"
                                 data-objects="selected"
                                 class="btn btn-primary btn-sm">
-                            <span class="mdi mdi-group" aria-hidden="true"></span> Update Static Groups
+                            <span class="mdi mdi-group" aria-hidden="true"></span> Update Group Assignment
                         </button>
                     {% endif %}
                     {% if bulk_edit_url and permissions.change %}
@@ -252,7 +252,7 @@
 {% if model.is_saved_view_model %}
     {% saved_view_modal request.GET.urlencode list_url model request %}
 {% endif %}
-{% static_group_assignment_modal request=request content_type=content_type %}
+{% dynamic_group_assignment_modal request=request content_type=content_type %}
 {% endblock %}
 
 {% block javascript %}
@@ -276,16 +276,16 @@
         removed: (row) => { row.remove(); }
     });
 
-    // TODO: move this to a JS file that is auto-included by static_group_assignment_modal templatetag
-    $("#static_group_assignment_modal").on("show.bs.modal", function (event) {
+    // TODO: move this to a JS file that is auto-included by dynamic_group_assignment_modal templatetag
+    $("#dynamic_group_assignment_modal").on("show.bs.modal", function (event) {
         const button = $(event.relatedTarget);
         const selected_or_all = button.data("objects");
-        const pks_target = document.getElementById("static_group_assignment_pks");
+        const pks_target = document.getElementById("dynamic_group_assignment_pks");
         pks_target.replaceChildren();
         if (selected_or_all == "all") {
-            document.getElementById("static_group_assignment_all").value = true;
+            document.getElementById("dynamic_group_assignment_all").value = true;
         } else {
-            document.getElementById("static_group_assignment_all").value = "";
+            document.getElementById("dynamic_group_assignment_all").value = "";
             const formData = new FormData(document.getElementById("object_list_form"));
             for (let pk of formData.getAll("pk")) {
                 let input = document.createElement("input");
@@ -297,11 +297,11 @@
         }
     });
 
-    document.getElementById("static_group_assignment_cancel").addEventListener("click", (e) => {
+    document.getElementById("dynamic_group_assignment_cancel").addEventListener("click", (e) => {
         // Clear form data on cancel, but not on "close" "x" button
-        $("#static_group_assignment_modal").modal("hide");
-        document.getElementById("static_group_assignment_all").value = "";
-        document.getElementById("static_group_assignment_pks").replaceChildren();
+        $("#dynamic_group_assignment_modal").modal("hide");
+        document.getElementById("dynamic_group_assignment_all").value = "";
+        document.getElementById("dynamic_group_assignment_pks").replaceChildren();
         document.getElementById("id_create_and_assign_to_new_group_name").value = "";
         $("#id_add_to_groups").val(null).trigger("change");
         $("#id_remove_from_groups").val(null).trigger("change");

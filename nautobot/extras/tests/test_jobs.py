@@ -1082,7 +1082,8 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         with web_request_context(user=self.user):
             status = models.Status.objects.get_for_model(Location).first()
             Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type, status=status)
-        job_result = models.JobResult.objects.get(job_model=self.job_model)
+        job_result = models.JobResult.objects.filter(job_model=self.job_model).first()
+        self.assertIsNotNone(job_result)
         expected_log_messages = [
             ("info", "Running job"),
             ("info", f"change: dcim | location Test Job Hook Location 1 created by {self.user.username}"),
@@ -1107,7 +1108,8 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         tag.content_types.add(ContentType.objects.get_for_model(Location))
         with web_request_context(user=self.user):
             loc.tags.add(tag)
-        job_result = models.JobResult.objects.get(job_model=self.job_model)
+        job_result = models.JobResult.objects.filter(job_model=self.job_model).first()
+        self.assertIsNotNone(job_result)
         expected_log_messages = [
             ("info", "Running job"),
             ("info", f"change: dcim | location Test Job Hook Location 1 updated by {self.user.username}"),

@@ -17,7 +17,7 @@ from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_filter_field_label
 from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model, get_form_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.extras.tables import AssociatedContactsTable, StaticGroupTable
+from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable
 
 
 def check_filter_for_display(filters, field_name, values):
@@ -347,14 +347,15 @@ def common_detail_view_context(request, instance):
     else:
         context["associated_contacts_table"] = None
 
-    if instance.is_static_group_associable_model:
+    if instance.is_dynamic_group_associable_model:
         paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        static_groups = instance.static_groups.restrict(request.user, "view")
-        static_groups_table = StaticGroupTable(static_groups, orderable=False)
-        RequestConfig(request, paginate).configure(static_groups_table)
-        # static_groups_table.columns.show("pk")  # we don't have any supported bulk ops here presently
-        context["associated_static_groups_table"] = static_groups_table
+        dynamic_groups = instance.dynamic_groups.restrict(request.user, "view")
+        dynamic_groups_table = DynamicGroupTable(dynamic_groups, orderable=False)
+        dynamic_groups_table.columns.hide("content_type")
+        RequestConfig(request, paginate).configure(dynamic_groups_table)
+        # dynamic_groups_table.columns.show("pk")  # we don't have any supported bulk ops here presently
+        context["associated_dynamic_groups_table"] = dynamic_groups_table
     else:
-        context["associated_static_groups_table"] = None
+        context["associated_dynamic_groups_table"] = None
 
     return context

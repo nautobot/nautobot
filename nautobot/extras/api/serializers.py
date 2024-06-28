@@ -77,7 +77,6 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
-    StaticGroup,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -331,7 +330,7 @@ class DynamicGroupMembershipSerializer(ValidatedModelSerializer):
         fields = "__all__"
 
 
-class DynamicGroupSerializer(NautobotModelSerializer):
+class DynamicGroupSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
     )
@@ -341,8 +340,37 @@ class DynamicGroupSerializer(NautobotModelSerializer):
         fields = "__all__"
         extra_kwargs = {
             "children": {"source": "dynamic_group_memberships", "read_only": True},
-            "filter": {"read_only": False},
+            "filter": {"read_only": False, "required": False},
         }
+
+
+class StaticGroupAssociationSerializer(NautobotModelSerializer):
+    associated_object_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
+    )
+    associated_object = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = StaticGroupAssociation
+        fields = "__all__"
+
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="DynamicGroupAssociatedObject",
+            resource_type_field_name="object_type",
+            serializers=lambda: nested_serializers_for_models(FeatureQuery("dynamic_groups").list_subclasses()),
+        )
+    )
+    def get_associated_object(self, obj):
+        if obj.associated_object is None:
+            return None
+        try:
+            depth = get_nested_serializer_depth(self)
+            return return_nested_serializer_data_based_on_depth(
+                self, depth, obj, obj.associated_object, "associated_object"
+            )
+        except SerializerNotFound:
+            return None
 
 
 #
@@ -930,53 +958,6 @@ class SecretsGroupSerializer(NautobotModelSerializer):
         extra_kwargs = {
             "secrets": {"source": "secrets_group_associations", "read_only": True},
         }
-
-
-#
-# StaticGroup
-#
-
-
-class StaticGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    content_type = ContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
-    )
-
-    class Meta:
-        model = StaticGroup
-        fields = "__all__"
-        extra_kwargs = {
-            "hidden": {"read_only": True},
-        }
-
-
-class StaticGroupAssociationSerializer(NautobotModelSerializer):
-    associated_object_type = ContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
-    )
-    associated_object = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = StaticGroupAssociation
-        fields = "__all__"
-
-    @extend_schema_field(
-        PolymorphicProxySerializer(
-            component_name="StaticGroupAssociatedObject",
-            resource_type_field_name="object_type",
-            serializers=lambda: nested_serializers_for_models(FeatureQuery("static_groups").list_subclasses()),
-        )
-    )
-    def get_associated_object(self, obj):
-        if obj.associated_object is None:
-            return None
-        try:
-            depth = get_nested_serializer_depth(self)
-            return return_nested_serializer_data_based_on_depth(
-                self, depth, obj, obj.associated_object, "associated_object"
-            )
-        except SerializerNotFound:
-            return None
 
 
 #

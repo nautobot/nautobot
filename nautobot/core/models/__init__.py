@@ -47,9 +47,9 @@ class BaseModel(models.Model):
 
     objects = BaseManager.from_queryset(RestrictedQuerySet)()
     is_contact_associable_model = False  # ContactMixin overrides this to default True
+    is_dynamic_group_associable_model = False  # DynamicGroupMixin overrides this to default True
     is_metadata_associable_model = True
     is_saved_view_model = False  # SavedViewMixin overrides this to default True
-    is_static_group_associable_model = False  # StaticGroupMixin overrides this to default True
     is_cloud_type_model = False  # CloudTypeMixin overrides this to default True
 
     class Meta:

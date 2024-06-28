@@ -199,7 +199,7 @@ class BaseDeviceComponentTemplatesBulkRenameView(generic.BulkRenameView):
 
 
 class LocationTypeListView(generic.ObjectListView):
-    queryset = LocationType.objects.with_tree_fields()
+    queryset = LocationType.objects.all()
     filterset = filters.LocationTypeFilterSet
     filterset_form = forms.LocationTypeFilterForm
     table = tables.LocationTypeTable
@@ -2098,7 +2098,7 @@ class DeviceChangeLogView(ObjectChangeLogView):
     base_template = "dcim/device/base.html"
 
 
-class DeviceDynamicGroupsView(ObjectDynamicGroupsView):
+class DeviceDynamicGroupsView(ObjectDynamicGroupsView):  # 3.0 TODO: remove, deprecated in 2.3
     base_template = "dcim/device/base.html"
 
 

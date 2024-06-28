@@ -2969,7 +2969,7 @@ class InventoryItemTestCase(DeviceComponentTestMixin, FilterTestCases.FilterTest
             Device.objects.get(name="Device 3"),
         )
 
-        software_versions = SoftwareVersion.objects.filter(software_image_files__isnull=False)[:3]
+        software_versions = SoftwareVersion.objects.filter(software_image_files__isnull=False).distinct()[:3]
 
         inventory_items = (
             InventoryItem.objects.create(
@@ -3734,7 +3734,7 @@ class InterfaceRedundancyGroupAssociationTestCase(FilterTestCases.FilterTestCase
 
         statuses = Status.objects.get_for_model(InterfaceRedundancyGroup)
         cls.ips = IPAddress.objects.all()
-        cls.interfaces = Interface.objects.all()[:4]
+        cls.interfaces = Interface.objects.all()[:8]
 
         interface_redundancy_groups = (
             InterfaceRedundancyGroup(
@@ -3782,8 +3782,9 @@ class InterfaceRedundancyGroupAssociationTestCase(FilterTestCases.FilterTestCase
         interface_redundancy_groups[1].secrets_group = secrets_groups[1]
         interface_redundancy_groups[1].validated_save()
 
-        for i, interface in enumerate(cls.interfaces):
-            interface_redundancy_groups[i].add_interface(interface, 100 * i)
+        for i, group in enumerate(interface_redundancy_groups):
+            group.add_interface(cls.interfaces[i], 100 * i)
+            group.add_interface(cls.interfaces[i + 4], 100 * (i + 4))
 
 
 class SoftwareImageFileFilterSetTestCase(FilterTestCases.FilterTestCase):

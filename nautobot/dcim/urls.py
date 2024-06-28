@@ -214,7 +214,7 @@ urlpatterns = [
         name="rack_notes",
         kwargs={"model": Rack},
     ),
-    path(
+    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
         "racks/<uuid:pk>/dynamic-groups/",
         ObjectDynamicGroupsView.as_view(),
         name="rack_dynamicgroups",
@@ -679,7 +679,7 @@ urlpatterns = [
         name="device_notes",
         kwargs={"model": Device},
     ),
-    path(
+    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
         "devices/<uuid:pk>/dynamic-groups/",
         views.DeviceDynamicGroupsView.as_view(),
         name="device_dynamicgroups",

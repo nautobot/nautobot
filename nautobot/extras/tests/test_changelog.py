@@ -12,8 +12,13 @@ from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras import context_managers
-from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
-from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, StaticGroup, Status, Tag
+from nautobot.extras.choices import (
+    CustomFieldTypeChoices,
+    DynamicGroupTypeChoices,
+    ObjectChangeActionChoices,
+    ObjectChangeEventContextChoices,
+)
+from nautobot.extras.models import CustomField, CustomFieldChoice, DynamicGroup, ObjectChange, Status, Tag
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
@@ -506,27 +511,15 @@ class ObjectChangeModelTest(TestCase):  # TODO: change to BaseModelTestCase once
         cls.location_status = Status.objects.get_for_model(Location).first()
 
     def test_opt_out(self):
-        """Hidden static groups can "opt out" of change logging."""
-        with context_managers.web_request_context(self.user):
-            sg = StaticGroup(
-                name="Hidden group",
-                content_type=ContentType.objects.get_for_model(Location),
-                hidden=True,
-            )
-            sg.validated_save()
+        """Hidden static group associations can "opt out" of change logging."""
+        dg = DynamicGroup.objects.exclude(group_type=DynamicGroupTypeChoices.TYPE_STATIC).first()
+        # Force reassignment of all cached memberships:
+        members = list(dg.members)
+        dg._set_members([])
+        dg._set_members(members)
 
-        self.assertIsNone(get_changes_for_model(sg).first())
-
-        with context_managers.web_request_context(self.user):
-            sg.description = "A hidden group of Locations"
-            sg.validated_save()
-
-        self.assertIsNone(get_changes_for_model(sg).first())
-
-        with context_managers.web_request_context(self.user):
-            sg.delete()
-
-        self.assertIsNone(get_changes_for_model(sg).first())
+        for sga in dg.static_group_associations(manager="all_objects").all():
+            self.assertIsNone(get_changes_for_model(sga).first())
 
     def test_get_snapshots(self):
         with context_managers.web_request_context(self.user):

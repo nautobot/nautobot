@@ -780,17 +780,25 @@ class BaseFilterSet(django_filters.FilterSet):
                     label="Teams (name or ID)",
                 )
 
-        if "static_groups" not in filters and getattr(cls._meta.model, "is_static_group_associable_model", False):
-            # Add "static_groups" field as the last key
-            from nautobot.extras.models import StaticGroup
+        if "dynamic_groups" not in filters and getattr(cls._meta.model, "is_dynamic_group_associable_model", False):
+            if not hasattr(cls._meta.model, "static_group_association_set"):
+                logger.warning(
+                    "Model %s has 'is_dynamic_group_associable_model = True' but lacks "
+                    "a 'static_group_association_set' attribute. Perhaps this is due to it inheriting from "
+                    "the deprecated DynamicGroupMixin class instead of the preferred DynamicGroupsModelMixin?",
+                    cls._meta.model,
+                )
+            else:
+                # Add "dynamic_groups" field as the last key
+                from nautobot.extras.models import DynamicGroup
 
-            filters["static_groups"] = NaturalKeyOrPKMultipleChoiceFilter(
-                queryset=StaticGroup.objects.all(),
-                field_name="associated_static_groups__static_group",
-                to_field_name="name",
-                query_params={"content_type": cls._meta.model._meta.label_lower},
-                label="Static groups (name or ID)",
-            )
+                filters["dynamic_groups"] = NaturalKeyOrPKMultipleChoiceFilter(
+                    queryset=DynamicGroup.objects.all(),
+                    field_name="static_group_association_set__dynamic_group",
+                    to_field_name="name",
+                    query_params={"content_type": cls._meta.model._meta.label_lower},
+                    label="Dynamic groups (name or ID)",
+                )
 
         # django-filters has no concept of "abstract" filtersets, so we have to fake it
         if cls._meta.model is not None:

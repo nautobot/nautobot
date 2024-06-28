@@ -22,6 +22,7 @@ from nautobot.extras.models import (
     ContactMixin,
     CustomField,
     CustomFieldModel,
+    DynamicGroupsModelMixin,
     RelationshipModel,
     Status,
 )
@@ -55,6 +56,7 @@ __all__ = (
 # TODO: Changing ComponentTemplateModel to an OrganizationalModel would just involve adding Notes support...
 class ComponentTemplateModel(
     ContactMixin,
+    DynamicGroupsModelMixin,
     ChangeLoggedModel,
     CustomFieldModel,
     RelationshipModel,

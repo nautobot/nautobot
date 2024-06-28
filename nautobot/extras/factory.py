@@ -18,6 +18,7 @@ from nautobot.core.factory import (
 )
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.extras.choices import (
+    DynamicGroupTypeChoices,
     JobResultStatusChoices,
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
@@ -28,6 +29,7 @@ from nautobot.extras.choices import (
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, CHANGELOG_MAX_OBJECT_REPR
 from nautobot.extras.models import (
     Contact,
+    DynamicGroup,
     ExternalIntegration,
     Job,
     JobLogEntry,
@@ -36,7 +38,6 @@ from nautobot.extras.models import (
     MetadataType,
     ObjectChange,
     Role,
-    StaticGroup,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -352,11 +353,15 @@ class RoleFactory(OrganizationalModelFactory):
                 self.content_types.set(get_random_instances(lambda: RoleModelsQuery().as_queryset(), minimum=1))
 
 
-class StaticGroupFactory(PrimaryModelFactory):
-    """StaticGroup model factory."""
+class DynamicGroupFactory(PrimaryModelFactory):
+    """
+    DynamicGroup model factory.
+
+    Currently only creates "static" and "dynamic-filter" DynamicGroups, no "dynamic-set" ones yet.
+    """
 
     class Meta:
-        model = StaticGroup
+        model = DynamicGroup
         exclude = ("color", "has_description", "has_tenant")
 
     color = UniqueFaker("color_name")
@@ -367,6 +372,7 @@ class StaticGroupFactory(PrimaryModelFactory):
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
     has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
+    group_type = factory.Iterator([DynamicGroupTypeChoices.TYPE_STATIC, DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER])
 
     @factory.post_generation
     def members(self, created, extracted, **kwargs):
@@ -374,14 +380,16 @@ class StaticGroupFactory(PrimaryModelFactory):
             return
         if not created:
             return
+        if self.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+            return
         for member in get_random_instances(self.content_type.model_class().objects.all()):
-            StaticGroupAssociationFactory.create(static_group=self, associated_object_id=member.pk)
+            StaticGroupAssociationFactory.create(dynamic_group=self, associated_object_id=member.pk)
 
     @factory.lazy_attribute
     def content_type(self):
         while True:
             content_type = factory.random.randgen.choice(
-                ContentType.objects.filter(FeatureQuery("static_groups").get_query())
+                ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query())
             )
             if content_type.model_class().objects.exists():
                 return content_type
@@ -393,8 +401,8 @@ class StaticGroupAssociationFactory(OrganizationalModelFactory):
     class Meta:
         model = StaticGroupAssociation
 
-    static_group = random_instance(StaticGroup, allow_null=False)
-    associated_object_type = factory.LazyAttribute(lambda o: o.static_group.content_type)
+    dynamic_group = random_instance(DynamicGroup, allow_null=False)
+    associated_object_type = factory.LazyAttribute(lambda o: o.dynamic_group.content_type)
 
     @factory.lazy_attribute
     def associated_object_id(self):
