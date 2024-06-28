@@ -1343,13 +1343,14 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
         )
         type_location.content_types.add(ContentType.objects.get_for_model(Location))
         with self.assertRaises(ValidationError):
-            ObjectMetadata.objects.create(
+            obj_metadata = ObjectMetadata.objects.create(
                 metadata_type=type_location,
                 value="Invalid assigned object type",
                 scoped_fields=["status"],
                 assigned_object_type=ContentType.objects.get_for_model(IPAddress),
                 assigned_object_id=Contact.objects.first().pk,
             )
+            obj_metadata.validated_save()
 
     def test_contact_team_mutual_exclusive(self):
         type_contact_team = MetadataType.objects.create(
@@ -1389,6 +1390,7 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError):
             instance3.value = "Value should be empty"
+            instance3.validated_save()
 
     def test_text_field_value(self):
         obj_type = ContentType.objects.get_for_model(Location)
@@ -1408,16 +1410,19 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
         # Assign a disallowed value (list) to obj_metadata
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = ["I", "am", "a", "list"]
+            obj_metadata.validated_save()
         self.assertIn("Value must be a string", str(context.exception))
 
         # Assign another disallowed value (int) to the first Location
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = 2
+            obj_metadata.validated_save()
         self.assertIn("Value must be a string", str(context.exception))
 
         # Assign another disallowed value (bool) to the first Location
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = True
+            obj_metadata.validated_save()
         self.assertIn("Value must be a string", str(context.exception))
         obj_metadata.delete()
 
@@ -1438,21 +1443,28 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
         # Assign another disallowed value (str) to the first Location
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = "I am not an integer"
+            obj_metadata.validated_save()
         self.assertIn("Value must be an integer", str(context.exception))
         # Assign another disallowed value (str of a float) to the first Location
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = "2.0"
+            obj_metadata.validated_save()
         self.assertIn("Value must be an integer", str(context.exception))
 
         obj_metadata.value = 2.0
+        obj_metadata.validated_save()
         self.assertEqual(obj_metadata.value, 2)
         obj_metadata.value = 15.0
+        obj_metadata.validated_save()
         self.assertEqual(obj_metadata.value, 15)
         obj_metadata.value = 15.2
+        obj_metadata.validated_save()
         self.assertEqual(obj_metadata.value, 15)
         obj_metadata.value = 15
+        obj_metadata.validated_save()
         self.assertEqual(obj_metadata.value, 15)
         obj_metadata.value = "15"
+        obj_metadata.validated_save()
         self.assertEqual(obj_metadata.value, 15)
 
         # TODO add validation_minimum/validation_maximum tests
@@ -1475,18 +1487,24 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
         # Assign another disallowed value (str) to the first Location
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = "I am not a float"
+            obj_metadata.validated_save()
         self.assertIn("Value must be a float", str(context.exception))
 
         # Assign another disallowed value (int) to the first Location
         obj_metadata.value = 2
+        obj_metadata.validated_save()
         self.assertEqual(obj_metadata.value, 2.0)
         obj_metadata.value = 15
+        obj_metadata.validated_save()
         self.assertEqual(obj_metadata.value, 15.0)
         obj_metadata.value = 15.2
+        obj_metadata.validated_save()
         self.assertEqual(obj_metadata.value, 15.2)
         obj_metadata.value = "3"
+        obj_metadata.validated_save()
         self.assertEqual(obj_metadata.value, 3.0)
         obj_metadata.value = "15.2"
+        obj_metadata.validated_save()
         self.assertEqual(obj_metadata.value, 15.2)
 
         # TODO add validation_minimum/validation_maximum tests
@@ -1510,16 +1528,19 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
         # Assign a disallowed value (list) to obj_metadata
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = ["I", "am", "a", "list"]
+            obj_metadata.validated_save()
         self.assertIn("Value must be true or false.", str(context.exception))
 
         # Assign another disallowed value (str) to the first Location
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = "I am not an integer"
+            obj_metadata.validated_save()
         self.assertIn("Value must be true or false.", str(context.exception))
 
         # Assign another disallowed value (int) to the first Location
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = 2
+            obj_metadata.validated_save()
         self.assertIn("Value must be true or false.", str(context.exception))
         obj_metadata.delete()
 
@@ -1541,16 +1562,19 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
         # Assign a disallowed value (invalidly formatted date) to obj_metadata
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = "01/01/1994"
+            obj_metadata.validated_save()
         self.assertIn("Date values must be in the format YYYY-MM-DD.", str(context.exception))
 
         # Assign another disallowed value (str) to the first Location
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = "I am not an integer"
+            obj_metadata.validated_save()
         self.assertIn("Date values must be in the format YYYY-MM-DD.", str(context.exception))
 
         # Assign another disallowed value (int) to the first Location
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = 2
+            obj_metadata.validated_save()
         self.assertIn("Value must be a date or str object.", str(context.exception))
         # TODO add validation_minimum/validation_maximum tests
         obj_metadata.delete()
@@ -1588,26 +1612,33 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
         obj_metadata.validated_save()
         self.assertEqual(obj_metadata.value, "2024-06-27T17:58:47+05:00")
         obj_metadata.value = datetime(2020, 11, 1, 1)
+        obj_metadata.validated_save()
         self.assertEqual(obj_metadata.value, "2020-11-01T01:00:00+00:00")
         obj_metadata.value = datetime(2020, 11, 1, 1, 35, 22)
+        obj_metadata.validated_save()
         self.assertEqual(obj_metadata.value, "2020-11-01T01:35:22+00:00")
         obj_metadata.value = datetime(2020, 11, 1, 1, 35, 22, tzinfo=timezone(timedelta(hours=3)))
+        obj_metadata.validated_save()
         self.assertEqual(obj_metadata.value, "2020-11-01T01:35:22+03:00")
 
         error_message = f"Datetime values must be in the following formats {acceptable_datetime_formats}"
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = "01/01/1994"
+            obj_metadata.validated_save()
         self.assertIn(error_message, str(context.exception))
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = "2024-06-27 17:58:47+0000"
+            obj_metadata.validated_save()
         self.assertIn(error_message, str(context.exception))
 
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = "I am not an integer"
+            obj_metadata.validated_save()
         self.assertIn(error_message, str(context.exception))
 
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = 2
+            obj_metadata.validated_save()
         self.assertIn("Value must be a datetime or str object", str(context.exception))
 
         # TODO add validation_minimum/validation_maximum tests
@@ -1634,6 +1665,7 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = "Not valid option"
+            obj_metadata.validated_save()
         self.assertIn("Invalid choice (Not valid option)", str(context.exception))
 
     def test_multi_select_field(self):
@@ -1660,6 +1692,7 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
         invalid_options = ["Not A valid option", "NOT A VALID OPTION"]
         with self.assertRaises(ValidationError) as context:
             obj_metadata.value = invalid_options
+            obj_metadata.validated_save()
         self.assertIn(f"Invalid choice(s) ({invalid_options})", str(context.exception))
 
     def test_no_scoped_fields_overlap(self):
