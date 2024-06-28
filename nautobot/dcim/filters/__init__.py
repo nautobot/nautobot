@@ -1367,7 +1367,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     device_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Device.objects.all(),
         method="filter_device_id",
-        field_name="device",
+        field_name="_termination_a_device_id",
         label="Device (ID)",
     )
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
