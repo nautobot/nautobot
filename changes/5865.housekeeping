@@ -1,0 +1,8 @@
+Updated `django-debug-toolbar` development dependency to `~4.4.0`.
+Updated `mkdocs-include-markdown-plugin` documentation dependency to `6.2.1`.
+Updated `mkdocs-material` documentation dependency to `9.5.27`.
+Updated `mkdocs-section-index` documentation dependency to `0.3.9`.
+Updated `mkdocstrings-python` documentation dependency to `1.10.5`.
+Updated `pylint` development dependency to `~3.2.5`.
+Updated `ruff` development dependency to `~0.5.0`.
+Updated `selenium` development dependency to `~4.22.0`.

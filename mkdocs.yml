@@ -309,6 +309,7 @@ plugins:
         "models/cloud/cloudtype.md": "user-guide/core-data-model/cloud/cloudtype.md"
         "models/extras/metadatachoice.md": "user-guide/platform-functionality/metadata.md"
         "models/extras/metadatatype.md": "user-guide/platform-functionality/metadata.md"
+        "models/extras/objectmetadata.md": "user-guide/platform-functionality/metadata.md"
         "user-guide/administration/installation/docker.md": "user-guide/administration/installation-extras/docker.md"
         "user-guide/administration/installation/health-checks.md": "user-guide/administration/installation-extras/health-checks.md"
         "user-guide/administration/installation/selinux-troubleshooting.md": "user-guide/administration/installation-extras/selinux-troubleshooting.md"

@@ -77,6 +77,7 @@ from nautobot.extras.models import (
     MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -1007,6 +1008,29 @@ class MetadataChoiceFilterSet(BaseFilterSet):
     class Meta:
         model = MetadataChoice
         fields = "__all__"
+
+
+class ObjectMetadataFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "value": "icontains",
+            "metadata_type__name": "icontains",
+            "contact__name": "icontains",
+            "team__name": "icontains",
+        },
+    )
+    value = django_filters.Filter(field_name="_value", method="filter_value")
+
+    class Meta:
+        model = ObjectMetadata
+        fields = "__all__"
+
+    def filter_value(self, queryset, name, value):
+        value = value.strip()
+        query = Q(_value__icontains=value)
+        if not value:
+            return queryset
+        return queryset.filter(query)
 
 
 #

@@ -161,6 +161,7 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
     "modulebaytemplate",
     "note",
     "objectchange",
+    "objectmetadata",
     "platform",
     "poweroutlet",
     "poweroutlettemplate",

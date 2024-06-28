@@ -37,6 +37,7 @@ from nautobot.extras.models import (
     MetadataChoice,
     MetadataType,
     ObjectChange,
+    ObjectMetadata,
     Role,
     StaticGroupAssociation,
     Status,
@@ -232,11 +233,93 @@ class MetadataTypeFactory(PrimaryModelFactory):
             if extracted:
                 self.content_types.set(extracted)
             else:
+                existing_content_type_pks = []
+                for content_type in ContentType.objects.all():
+                    if content_type.model_class().objects.exists():
+                        existing_content_type_pks.append(content_type.id)
                 self.content_types.set(
                     get_random_instances(
-                        lambda: ContentType.objects.filter(FeatureQuery("metadata").get_query()), minimum=1
+                        lambda: ContentType.objects.filter(
+                            FeatureQuery("metadata").get_query(), pk__in=existing_content_type_pks
+                        ),
+                        minimum=1,
                     )
                 )
+
+
+class ObjectMetadataFactory(BaseModelFactory):
+    """ObjectMetadata model factory"""
+
+    class Meta:
+        model = ObjectMetadata
+        exclude = ("has_contact",)
+
+    has_contact = NautobotBoolIterator()
+    metadata_type = random_instance(
+        MetadataType.objects.all(),
+        allow_null=False,
+    )
+    scoped_fields = factory.Faker("pylist", allowed_types=[str])
+
+    @factory.lazy_attribute
+    def contact(self):
+        if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM and self.has_contact:
+            return factory.random.randgen.choice(Contact.objects.all())
+        return None
+
+    @factory.lazy_attribute
+    def team(self):
+        if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM and not self.has_contact:
+            return factory.random.randgen.choice(Team.objects.all())
+        return None
+
+    @factory.lazy_attribute
+    def _value(self):
+        metadata_type_data_type = self.metadata_type.data_type
+        if metadata_type_data_type in (
+            MetadataTypeDataTypeChoices.TYPE_TEXT,
+            MetadataTypeDataTypeChoices.TYPE_URL,
+            MetadataTypeDataTypeChoices.TYPE_MARKDOWN,
+        ):
+            return faker.Faker().pystr()
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_JSON:
+            return faker.Faker().pydict(allowed_types=[str])
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_INTEGER:
+            return faker.Faker().pyint()
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:
+            return faker.Faker().pybool()
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_FLOAT:
+            return faker.Faker().pyfloat()
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_DATE:
+            return str(faker.Faker().date())
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_DATETIME:
+            return str(faker.Faker().date()) + "T" + str(faker.Faker().time())
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_SELECT:
+            return factory.random.randgen.choice(self.metadata_type.choices.values_list("value", flat=True))
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_MULTISELECT:
+            return [factory.random.randgen.choice(self.metadata_type.choices.values_list("value", flat=True))]
+        elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
+            return None
+        else:
+            raise RuntimeError(f"Unsupported metadatatype datatype {metadata_type_data_type}")
+
+    @factory.lazy_attribute
+    def assigned_object_type(self):
+        while True:
+            allowed_content_types = list(self.metadata_type.content_types.values_list("pk", flat=True))
+            content_type = factory.random.randgen.choice(
+                ContentType.objects.filter(FeatureQuery("metadata").get_query(), pk__in=allowed_content_types)
+            )
+            # It does not have a get_absolute_url attribute and is causing failure in API unittests
+            if content_type.app_label == "extras" and content_type.model == "taggeditem":
+                continue
+            if content_type.model_class().objects.exists():
+                return content_type
+
+    @factory.lazy_attribute
+    def assigned_object_id(self):
+        queryset = self.assigned_object_type.model_class().objects.all()
+        return factory.random.randgen.choice(queryset).pk
 
 
 class ObjectChangeFactory(BaseModelFactory):

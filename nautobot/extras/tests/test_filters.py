@@ -85,6 +85,7 @@ from nautobot.extras.models import (
     MetadataChoice,
     MetadataType,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -473,6 +474,7 @@ class ContactAndTeamFilterSetTestCaseMixin:
     def test_similar_to_location_data(self):
         """Complex test to test the complex `similar_to_location_data` method filter."""
         ContactAssociation.objects.all().delete()
+        ObjectMetadata.objects.all().delete()
         self.queryset.delete()
         location_type = LocationType.objects.filter(parent__isnull=True).first()
         location_status = Status.objects.get_for_model(Location).first()
