@@ -221,20 +221,14 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
     @property
     def value(self):
         if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
-            return self.contact or self.team
+            return None
         else:
             return self._value
 
     @value.setter
     def value(self, v):
         if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
-            if isinstance(v, Contact):
-                self.contact = v
-                self.team = None
-            elif isinstance(v, Team):
-                self.team = v
-                self.contact = None
-            else:
+            if v is not None:
                 raise ValidationError(
                     f"{v} is an invalid value for metadata type data type {self.metadata_type.data_type}"
                 )
@@ -243,7 +237,15 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
         self.clean()
 
     def __str__(self):
+        if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
+            return f"{self.metadata_type} - {self.assigned_object} - {self.contact or self.team}"
         return f"{self.metadata_type} - {self.assigned_object} - {self.value}"
+
+    def validated_save(self, *args, **kwargs):
+        # call clean() first so that the data type-conversion is done first
+        # so that clean_fields() would not raise any errors
+        self.clean()
+        return super().validated_save(*args, **kwargs)
 
     def clean(self):
         """
@@ -252,19 +254,8 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
         Returns the value, possibly cleaned up
         """
         super().clean()
-        value = self._value
+        value = self.value
         metadata_type_data_type = self.metadata_type.data_type
-        # This is in place for the csv create case.
-        # Since the value field is a JSONField on the serializer, when you pass a float/str, etc, the value field will cast them into a list.
-        # Declaring it as a CharField solves it for the float/str case but will be invalid for the other types
-        # I wonder if a custom SerializerMethodField will solve it.
-        # TODO investigate the ObjectMetaDataSerializer value field to eliminate this edge case.
-        if (
-            isinstance(value, list)
-            and len(value) == 1
-            and self.metadata_type.data_type != MetadataTypeDataTypeChoices.TYPE_MULTISELECT
-        ):
-            value = value[0]
         if self.present_in_database:
             # Check immutable fields
             database_object = self.__class__.objects.get(pk=self.pk)
@@ -407,7 +398,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
                     raise ValidationError(
                         f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.metadata_type.choices.values_list('value', flat=True))}"
                     )
-            self._value = value
+        self._value = value
 
         # Check if there is any intersections of scoped_fields of ObjectMetadata instances in the database.
         object_metadata_scoped_fields = (
