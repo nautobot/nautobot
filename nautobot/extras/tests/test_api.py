@@ -2610,6 +2610,9 @@ class MetadataChoiceTest(APIViewTestCases.APIViewTestCase):
 class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
     model = ObjectMetadata
     choices_fields = ["assigned_object_type"]
+    # ObjectMetadata records created for SoftwareImageFile records will contain a `hashing_algorithm` key;
+    # presence of strings like "md5" and "sha256" in the API response for ObjectMetadatas is therefore *not* a failure
+    VERBOTEN_STRINGS = ("password",)
 
     @classmethod
     def setUpTestData(cls):

@@ -795,12 +795,16 @@ class MetadataChoiceSerializer(ValidatedModelSerializer):
         fields = "__all__"
 
 
+class ObjectMetadataValueJSONField(serializers.JSONField):
+    """Special class to discern between itself and serializers.JSONField in NautobotCSVParser"""
+
+
 class ObjectMetadataSerializer(ValidatedModelSerializer):
     assigned_object_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
     )
     assigned_object = serializers.SerializerMethodField()
-    value = serializers.JSONField(required=False)
+    value = ObjectMetadataValueJSONField(allow_null=True, required=False)
 
     class Meta:
         model = ObjectMetadata
