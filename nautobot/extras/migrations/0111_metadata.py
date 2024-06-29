@@ -74,7 +74,7 @@ class Migration(migrations.Migration):
                     "scoped_fields",
                     nautobot.core.models.fields.JSONArrayField(base_field=models.CharField(max_length=255)),
                 ),
-                ("value", models.JSONField(blank=True, null=True)),
+                ("_value", models.JSONField(blank=True, null=True)),
                 ("assigned_object_id", models.UUIDField(db_index=True)),
                 (
                     "assigned_object_type",

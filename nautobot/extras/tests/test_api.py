@@ -2610,6 +2610,17 @@ class MetadataChoiceTest(APIViewTestCases.APIViewTestCase):
 class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
     model = ObjectMetadata
     choices_fields = ["assigned_object_type"]
+    VERBOTEN_STRINGS = (
+        "password",
+        # https://docs.djangoproject.com/en/3.2/topics/auth/passwords/#included-hashers
+        "argon2",
+        "bcrypt",
+        "crypt",
+        "md5",
+        "pbkdf2",
+        "scrypt",
+        # There is a chance that sha1, sha256, and sha512 hashing algorithms might appear with SoftwareImageFileHashingAlgorithmChoices in the response
+    )
 
     @classmethod
     def setUpTestData(cls):
