@@ -2,7 +2,7 @@
 
 The documentation assumes that you are running one of the following:
 
-- Ubuntu 20.04 - 22.04 
+- Ubuntu 20.04 - 22.04
 - Debian 11+
 - RHEL/CentOS 8.2+
     - Delimited by `RHEL8` tabs in the docs, but also includes other derivatives of RHEL such as RockyLinux or AlmaLinux
