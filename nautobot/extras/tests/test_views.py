@@ -1178,6 +1178,19 @@ class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "choices-MAX_NUM_FORMS": "1000",
         }
 
+    def get_deletable_object(self):
+        return MetadataType.objects.create(name="Delete Me", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT)
+
+    def get_deletable_object_pks(self):
+        mdts = [
+            MetadataType.objects.create(name="SoR", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT),
+            MetadataType.objects.create(name="Colors", data_type=MetadataTypeDataTypeChoices.TYPE_MULTISELECT),
+            MetadataType.objects.create(
+                name="Location Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT
+            ),
+        ]
+        return [mdt.pk for mdt in mdts]
+
     def test_edit_object_with_constrained_permission(self):
         # Can't change data_type once set
         self.form_data["data_type"] = self.model.objects.first().data_type
