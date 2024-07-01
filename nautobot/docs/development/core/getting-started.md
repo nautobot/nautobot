@@ -668,10 +668,9 @@ invoke unittest --cache-test-fixtures --keepdb --parallel --skip-docs-build
 invoke unittest --cache-test-fixtures --keepdb --parallel --skip-docs-build --label nautobot.core.tests
 ```
 
-When switching between significantly different branches of the code base (e.g. `main` vs `develop` vs `next`), you'll need to remove the cached test factory data, and for once omit the `--keepdb` option so that the test database can be destroyed and recreated appropriately:
+When switching between significantly different branches of the code base (e.g. `main` vs `develop` vs `next`), you'll need to for once omit the `--keepdb` option so that the test database can be destroyed and recreated appropriately:
 
 ```no-highlight
-rm development/factory_dump.json
 invoke unittest --cache-test-fixtures --parallel
 ```
 
