@@ -129,6 +129,8 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
     generic_filter_tests = (
         ["circuit", "circuit__cid"],
         ["circuit", "circuit__id"],
+        ["cloud_network", "cloud_network__name"],
+        ["cloud_network", "cloud_network__id"],
         ["description"],
         ["port_speed"],
         ["pp_info"],
