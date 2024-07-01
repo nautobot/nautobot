@@ -1931,6 +1931,7 @@ class DeviceInterfacesView(DeviceComponentTabView):
                 "tags",
             )
             .select_related("lag", "cable")
+            .order_by("_name")
         )
         interface_table = tables.DeviceModuleInterfaceTable(data=interfaces, user=request.user, orderable=False)
         if VirtualChassis.objects.filter(master=instance).exists():
