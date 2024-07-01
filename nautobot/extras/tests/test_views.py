@@ -1177,7 +1177,7 @@ class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "choices-MIN_NUM_FORMS": "0",
             "choices-MAX_NUM_FORMS": "1000",
         }
-    
+
     def get_deletable_object(self):
         return MetadataType.objects.create(name="Delete Me", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT)
 
