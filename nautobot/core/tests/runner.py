@@ -117,11 +117,11 @@ class NautobotTestRunner(DiscoverRunner):
                             command += ["--cache-test-fixtures"]
                             # Use the list of applied migrations as a unique hash to keep fixtures from differing
                             # branches/releases of Nautobot in separate files.
-                            hexdigest = hashlib.sha1(
-                                ","
-                                .join(sorted(f"{m.app}.{m.name}" for m in MigrationRecorder.Migration.objects.all()))
-                                .encode("utf-8")
-                            ).hexdigest()
+                            hexdigest = hashlib.shake_128(
+                                ",".join(
+                                    sorted(f"{m.app}.{m.name}" for m in MigrationRecorder.Migration.objects.all())
+                                ).encode("utf-8")
+                            ).hexdigest(10)
                             command += ["--fixture-file", f"development/factory_dump.{hexdigest}.json"]
                         with time_keeper.timed(f'  Pre-populating test database "{alias}" with factory data...'):
                             db_command = [*command, "--database", alias]
