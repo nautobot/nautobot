@@ -118,7 +118,7 @@
                 {% if om_count %}
                     <li role="presentation"{% if request.GET.tab == 'object_metadatas' %} class="active"{% endif %}>
                         <a href="{{ object.get_absolute_url }}#object_metadatas" onclick="switch_tab(this.href)" aria-controls="object_metadatas" role="tab" data-toggle="tab">
-                            Object Metadatas {% badge om_count %}
+                            Object Metadata {% badge om_count %}
                         </a>
                     </li>
                 {% endif %}
@@ -261,7 +261,7 @@
                             {% csrf_token %}
                             <div class="panel panel-default">
                                 <div class="panel-heading">
-                                    <strong>Object Metadatas</strong>
+                                    <strong>Object Metadata</strong>
                                     <div class="pull-right noprint">
                                         <!-- Insert table config button here -->
                                     </div>

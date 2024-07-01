@@ -1406,13 +1406,15 @@ class ObjectMetadataFilterForm(BootstrapMixin, forms.Form):
         queryset=Team.objects.all(),
         required=False,
     )
-    assigned_object_type = DynamicModelMultipleChoiceField(
-        queryset=ContentType.objects.all(),
+    assigned_object_type = MultipleContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
+        choices_as_strings=True,
         required=False,
-        label="Object Type",
-        widget=APISelectMultiple(
-            api_url="/api/extras/content-types/",
-        ),
+        label="Content Type(s)",
+    )
+    metadata_type = DynamicModelMultipleChoiceField(
+        queryset=MetadataType.objects.all(),
+        required=False,
     )
 
 

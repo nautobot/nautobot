@@ -58,11 +58,8 @@ from .models import (
 from .registry import registry
 
 ASSIGNED_OBJECT = """
-{% if record.assigned_object and record.assigned_object.get_absolute_url %}
-    <a href="{{ record.assigned_object.get_absolute_url }}">{{ record.assigned_object }}</a>
-{% elif record.assigned_object %}
-    {{ record.assigned_object }}
-{% endif %}
+{% load helpers %}
+{{ record.assigned_object|hyperlinked_object }}
 """
 
 CONTACT_OR_TEAM_ICON = """
@@ -960,11 +957,11 @@ class ObjectMetadataTable(BaseTable):
         return render_json(record.scoped_fields, pretty_print=True)
 
     def render_value(self, record):
-        if record.value and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_JSON:
+        if record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_JSON:
             return render_json(record.value, pretty_print=True)
-        elif record.value and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_MARKDOWN:
+        elif record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_MARKDOWN:
             return render_markdown(record.value)
-        elif record.value and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:
+        elif record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:
             return render_boolean(record.value)
         elif record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
             if record.contact:
