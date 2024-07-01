@@ -105,9 +105,18 @@ Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/tes
 
 +++ 1.5.11
 
-To reduce the time taken between multiple test runs, a new argument has been added to the `nautobot-server test`, `invoke unittest` and `invoke integration-test` commands: `--cache-test-fixtures`. When running one of these commands with `--cache-test-fixtures` for the first time, after the factory data has been generated it will be saved to a `factory_dump.json` file in the `development` directory. On subsequent runs of unit or integration tests, the factory data will be loaded from the file instead of being generated again. This can significantly reduce the time taken to run tests. It's a good idea to let this file be regenerated after pulling new code from the repository, as the factory data may have changed.
+To reduce the time taken between multiple test runs, a new argument has been added to the `nautobot-server test`, `invoke unittest` and `invoke integration-test` commands: `--cache-test-fixtures`. When running one of these commands with `--cache-test-fixtures` for the first time, after the factory data has been generated it will be saved to a `factory_dump.json` file in the `development` directory. On subsequent runs of unit or integration tests, the factory data will be loaded from the file instead of being generated again. This can significantly reduce the time taken to run tests.
 
 Factory caching is disabled by default. When using the `invoke` commands to run tests, caching can be enabled by default for your development environment by setting the `cache_test_fixtures` key to `True` in the `invoke.yml` file.
+
++/- 2.2.7 "Hashing of migrations in the factory dump"
+    The test runner now calculates a hash of applied database migrations and uses that as a key when creating/locating the factory data file. This serves as a way to avoid inadvertently using cached test data from the wrong branch or wrong set of migrations, and reduces the frequency with which you might need to manually delete the fixture file. For example, the set of migrations present in `develop` might result in a `factory_dump.966e2e1ed4ae5f924d54.json`, while those in `next` might result in `factory_dump.72b71317c5f5c047493e.json` - both files can coexist, and when you switch between branches during development, the correct one will automatically be selected.
+
+!!! tip
+    Although changes to the set of migrations defined will automatically invalidate an existing factory dump, there are two other cases where you will currently need to manually remove the file in order to force regeneration of the factory data:
+
+    1. When the contents of an existing migration file are modified (the hashing implementation currently can't detect this change).
+    2. When the definition of a factory is changed or a new factory is added.
 
 ## Performance Tests
 
