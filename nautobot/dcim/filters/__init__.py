@@ -27,7 +27,12 @@ from nautobot.dcim.choices import (
     RackTypeChoices,
     RackWidthChoices,
 )
-from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES, VIRTUAL_IFACE_TYPES, WIRELESS_IFACE_TYPES
+from nautobot.dcim.constants import (
+    MODULE_RECURSION_DEPTH_LIMIT,
+    NONCONNECTABLE_IFACE_TYPES,
+    VIRTUAL_IFACE_TYPES,
+    WIRELESS_IFACE_TYPES,
+)
 from nautobot.dcim.filters.mixins import (
     CableTerminationModelFilterSetMixin,
     DeviceComponentModelFilterSetMixin,
@@ -1010,17 +1015,20 @@ class InterfaceFilterSet(
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
 ):
-    # Override device and device_id filters from DeviceComponentModelFilterSetMixin to
+    # Override device and device_id filters from ModularDeviceComponentModelFilterSetMixin to
     # match against any peer virtual chassis members
-    device = MultiValueCharFilter(
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Device (name or ID)",
         method="filter_device",
-        field_name="name",
-        label="Device (name)",
     )
-    device_id = MultiValueUUIDFilter(
+    # TODO 3.0: Remove this filter. Deprecated in favor of above NaturalKeyOrPKMultipleChoiceFilter `device`
+    device_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Device.objects.all(),
         method="filter_device_id",
-        field_name="pk",
-        label="Device (ID)",
+        field_name="device",
+        label='Device (ID)  (deprecated, use "device" filter instead)',
     )
     device_with_common_vc = django_filters.UUIDFilter(
         method="filter_device_common_vc_id",
@@ -1118,26 +1126,38 @@ class InterfaceFilterSet(
             "interface_redundancy_groups",
         ]
 
-    def filter_device(self, queryset, name, value):
-        try:
-            devices = Device.objects.filter(**{f"{name}__in": value})
-            all_interface_ids = []
-            for device in devices:
-                all_interface_ids.extend(device.all_interfaces.values_list("id", flat=True))
-            return queryset.filter(pk__in=all_interface_ids)
-        except Device.DoesNotExist:
-            return queryset.none()
+    def generate_query_filter_device(self, value):
+        if not hasattr(value, "__iter__") or isinstance(value, str):
+            value = [value]
 
-    def filter_device_id(self, queryset, name, id_list):
-        # Include interfaces belonging to peer virtual chassis members
+        device_ids = set(str(item) for item in value if is_uuid(item))
+        device_names = set(str(item) for item in value if not is_uuid(item))
+        devices = Device.objects.filter(Q(name__in=device_names) | Q(pk__in=device_ids))
         all_interface_ids = []
-        try:
-            devices = Device.objects.filter(pk__in=id_list)
-            for device in devices:
-                all_interface_ids += device.all_interfaces.values_list("id", flat=True)
-            return queryset.filter(pk__in=all_interface_ids)
-        except Device.DoesNotExist:
-            return queryset.none()
+        for device in devices:
+            all_interface_ids.extend(device.vc_interfaces.values_list("id", flat=True))
+        return Q(pk__in=all_interface_ids)
+
+    def filter_device(self, queryset, name, value):
+        if not value:
+            return queryset
+        params = self.generate_query_filter_device(value)
+        return queryset.filter(params)
+
+    def generate_query_filter_device_id(self, value):
+        if not hasattr(value, "__iter__") or isinstance(value, str):
+            value = [value]
+
+        all_interface_ids = []
+        for device in value:
+            all_interface_ids.extend(device.vc_interfaces.values_list("id", flat=True))
+        return Q(pk__in=all_interface_ids)
+
+    def filter_device_id(self, queryset, name, value):
+        if not value:
+            return queryset
+        params = self.generate_query_filter_device_id(value)
+        return queryset.filter(params)
 
     def filter_device_common_vc_id(self, queryset, name, value):
         # Include interfaces that share common virtual chassis
@@ -1344,7 +1364,12 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     q = SearchFilter(filter_predicates={"label": "icontains"})
     type = django_filters.MultipleChoiceFilter(choices=CableTypeChoices)
     color = MultiValueCharFilter()
-    device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
+    device_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        method="filter_device_id",
+        field_name="_termination_a_device_id",
+        label="Device (ID)",
+    )
     device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
     rack_id = MultiValueUUIDFilter(method="filter_device", field_name="device__rack_id", label="Rack (ID)")
     rack = MultiValueCharFilter(method="filter_device", field_name="device__rack__name", label="Rack (name)")
@@ -1388,6 +1413,17 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
             Q(**{f"_termination_a_{name}__in": value}) | Q(**{f"_termination_b_{name}__in": value})
         )
         return queryset
+
+    def generate_query_filter_device_id(self, value):
+        if not hasattr(value, "__iter__") or isinstance(value, str):
+            value = [value]
+        return Q(_termination_a_device_id__in=value) | Q(_termination_b_device_id__in=value)
+
+    def filter_device_id(self, queryset, name, value):
+        if not value:
+            return queryset
+        params = self.generate_query_filter_device_id(value)
+        return queryset.filter(params)
 
     def generate_query__termination_type(self, value):
         a_type_q = Q()
@@ -1876,6 +1912,36 @@ class ModuleFilterSet(
         queryset=ModuleBay.objects.all(),
         label="Parent Module Bay",
     )
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Device (name or ID)",
+        method="filter_device",
+    )
+
+    def _construct_device_filter_recursively(self, field_name, value):
+        recursion_depth = MODULE_RECURSION_DEPTH_LIMIT
+        query = Q()
+        for level in range(recursion_depth):
+            recursive_query = "parent_module_bay__parent_module__" * level
+            query = query | Q(**{f"{recursive_query}parent_module_bay__parent_device__{field_name}__in": value})
+        return query
+
+    def generate_query_filter_device(self, value):
+        if not hasattr(value, "__iter__") or isinstance(value, str):
+            value = [value]
+
+        device_ids = set(str(item) for item in value if is_uuid(item))
+        device_names = set(str(item) for item in value if not is_uuid(item))
+        query = self._construct_device_filter_recursively("name", device_names)
+        query |= self._construct_device_filter_recursively("id", device_ids)
+        return query
+
+    def filter_device(self, queryset, name, value):
+        if not value:
+            return queryset
+        params = self.generate_query_filter_device(value)
+        return queryset.filter(params)
 
     class Meta:
         model = Module

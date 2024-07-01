@@ -24,6 +24,7 @@ from nautobot.dcim.choices import (
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
+from nautobot.dcim.constants import MODULE_RECURSION_DEPTH_LIMIT
 from nautobot.dcim.utils import get_all_network_driver_mappings
 from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
 from nautobot.extras.querysets import ConfigContextModelQuerySet
@@ -913,10 +914,11 @@ class Device(PrimaryModel, ConfigContextModel):
         Return a QuerySet matching all Interfaces assigned to this Device or, if this Device is a VC master, to another
         Device belonging to the same VirtualChassis.
         """
-        filter_q = Q(device=self)
+        qs = self.all_interfaces
         if self.virtual_chassis and self.virtual_chassis.master == self:
-            filter_q |= Q(device__virtual_chassis=self.virtual_chassis, mgmt_only=False)
-        return Interface.objects.filter(filter_q)
+            for member in self.virtual_chassis.members.exclude(id=self.id):
+                qs |= member.all_interfaces.filter(mgmt_only=False)
+        return qs
 
     @property
     def common_vc_interfaces(self):
@@ -965,12 +967,12 @@ class Device(PrimaryModel, ConfigContextModel):
         # Supports Device->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module
         # This query looks for modules that are installed in a module_bay and attached to this device
         # We artificially limit the recursion to 4 levels or we would be stuck in an infinite loop.
-        recursion_depth = 4
+        recursion_depth = MODULE_RECURSION_DEPTH_LIMIT
         qs = Module.objects.all()
-        query = models.Q()
+        query = Q()
         for level in range(recursion_depth):
             recursive_query = "parent_module_bay__parent_module__" * level
-            query = query | models.Q(**{f"{recursive_query}parent_module_bay__parent_device": self})
+            query = query | Q(**{f"{recursive_query}parent_module_bay__parent_device": self})
         return qs.filter(query)
 
     @property
@@ -979,56 +981,56 @@ class Device(PrimaryModel, ConfigContextModel):
         Return all Console Ports that are installed in the device or in modules that are installed in the device.
         """
         # TODO: These could probably be optimized to reduce the number of joins
-        return ConsolePort.objects.filter(models.Q(device=self) | models.Q(module__in=self.all_modules))
+        return ConsolePort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
 
     @property
     def all_console_server_ports(self):
         """
         Return all Console Server Ports that are installed in the device or in modules that are installed in the device.
         """
-        return ConsoleServerPort.objects.filter(models.Q(device=self) | models.Q(module__in=self.all_modules))
+        return ConsoleServerPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
 
     @property
     def all_front_ports(self):
         """
         Return all Front Ports that are installed in the device or in modules that are installed in the device.
         """
-        return FrontPort.objects.filter(models.Q(device=self) | models.Q(module__in=self.all_modules))
+        return FrontPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
 
     @property
     def all_interfaces(self):
         """
         Return all Interfaces that are installed in the device or in modules that are installed in the device.
         """
-        return self.vc_interfaces | Interface.objects.filter(module__in=self.all_modules)
+        return Interface.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
 
     @property
     def all_module_bays(self):
         """
         Return all Module Bays that are installed in the device or in modules that are installed in the device.
         """
-        return ModuleBay.objects.filter(models.Q(parent_device=self) | models.Q(parent_module__in=self.all_modules))
+        return ModuleBay.objects.filter(Q(parent_device=self) | Q(parent_module__in=self.all_modules))
 
     @property
     def all_power_ports(self):
         """
         Return all Power Ports that are installed in the device or in modules that are installed in the device.
         """
-        return PowerPort.objects.filter(models.Q(device=self) | models.Q(module__in=self.all_modules))
+        return PowerPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
 
     @property
     def all_power_outlets(self):
         """
         Return all Power Outlets that are installed in the device or in modules that are installed in the device.
         """
-        return PowerOutlet.objects.filter(models.Q(device=self) | models.Q(module__in=self.all_modules))
+        return PowerOutlet.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
 
     @property
     def all_rear_ports(self):
         """
         Return all Rear Ports that are installed in the device or in modules that are installed in the device.
         """
-        return RearPort.objects.filter(models.Q(device=self) | models.Q(module__in=self.all_modules))
+        return RearPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
 
 
 #
