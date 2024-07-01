@@ -1,6 +1,5 @@
 {% extends 'dcim/module/base.html' %}
 {% load helpers %}
-{% load render_table from django_tables2 %}
 {% load static %}
 
 {% block content %}
@@ -15,7 +14,7 @@
                     {% endif %}
                 </div>
             </div>
-            {% render_table powerport_table 'inc/table.html' %}
+            {% include 'responsive_table.html' with table=powerport_table %}
             <div class="panel-footer noprint">
                 {% if perms.dcim.change_powerport %}
                     <button type="submit" name="_rename" formaction="{% url 'dcim:powerport_bulk_rename' %}?return_url={% url 'dcim:module_powerports' pk=object.pk %}" class="btn btn-warning btn-xs">

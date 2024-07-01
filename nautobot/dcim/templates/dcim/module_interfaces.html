@@ -1,6 +1,5 @@
 {% extends 'dcim/module/base.html' %}
 {% load helpers %}
-{% load render_table from django_tables2 %}
 {% load static %}
 
 {% block content %}
@@ -18,7 +17,7 @@
                     <input class="form-control interface-filter" type="text" placeholder="Filter" title="Filter text (regular expressions supported)" style="height: 23px" />
                 </div>
             </div>
-            {% render_table interface_table 'inc/table.html' %}
+            {% include 'responsive_table.html' with table=interface_table %}
             <div class="panel-footer noprint">
                 {% if perms.dcim.change_interface %}
                     <button type="submit" name="_rename" formaction="{% url 'dcim:interface_bulk_rename' %}?return_url={% url 'dcim:module_interfaces' pk=object.pk %}" class="btn btn-warning btn-xs">

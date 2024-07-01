@@ -1,6 +1,5 @@
 {% extends 'dcim/device/base.html' %}
 {% load helpers %}
-{% load render_table from django_tables2 %}
 {% load static %}
 
 {% block content %}
@@ -15,7 +14,7 @@
                     {% endif %}
                 </div>
             </div>
-            {% render_table modulebay_table 'inc/table.html' %}
+            {% include 'responsive_table.html' with table=modulebay_table %}
             <div class="panel-footer noprint">
                 {% if perms.dcim.change_modulebay %}
                     <button type="submit" name="_rename" formaction="{% url 'dcim:modulebay_bulk_rename' %}?return_url={{ request.path }}" class="btn btn-warning btn-xs">
