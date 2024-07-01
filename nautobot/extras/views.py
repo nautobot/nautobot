@@ -1976,13 +1976,17 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
 
         return obj
 
-class ObjectMetadataUIViewSet(ObjectListViewMixin, ObjectBulkDestroyViewMixin):
+
+class ObjectMetadataUIViewSet(
+    ObjectBulkDestroyViewMixin, ObjectChangeLogViewMixin, ObjectDestroyViewMixin, ObjectListViewMixin
+):
     filterset_class = filters.ObjectMetadataFilterSet
     filterset_form_class = forms.ObjectMetadataFilterForm
-    queryset = ObjectMetadata.objects.all()
+    queryset = ObjectMetadata.objects.all().order_by("assigned_object_type", "scoped_fields")
     serializer_class = serializers.ObjectMetadataSerializer
     table_class = tables.ObjectMetadataTable
     action_buttons = ("export",)
+
 
 #
 # Notes

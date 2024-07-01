@@ -57,7 +57,7 @@ from .models import (
 )
 from .registry import registry
 
-ASSIGNED_OBJECT =  """
+ASSIGNED_OBJECT = """
 {% if record.assigned_object and record.assigned_object.get_absolute_url %}
     <a href="{{ record.assigned_object.get_absolute_url }}">{{ record.assigned_object }}</a>
 {% elif record.assigned_object %}
@@ -924,13 +924,18 @@ class MetadataTypeTable(BaseTable):
             "actions",
         )
 
+
 class ObjectMetadataTable(BaseTable):
     pk = ToggleColumn()
     metadata_type = tables.Column(linkify=True)
-    contact = tables.Column(linkify=True)
-    team = tables.Column(linkify=True)
-    assigned_object = tables.TemplateColumn(template_code=ASSIGNED_OBJECT)
-    actions = ButtonsColumn(ObjectMetadata)
+    assigned_object = tables.TemplateColumn(template_code=ASSIGNED_OBJECT, orderable=False)
+    actions = ButtonsColumn(
+        ObjectMetadata,
+        buttons=("delete"),
+    )
+    # This is needed so that render_value method below does not skip itself
+    # when metadata_type.data_type is TYPE_CONTACT_TEAM and we need it to display either contact or team
+    value = tables.Column(empty_values=[])
 
     class Meta(BaseTable.Meta):
         model = ObjectMetadata
@@ -939,16 +944,16 @@ class ObjectMetadataTable(BaseTable):
             "assigned_object",
             "scoped_fields",
             "value",
-            "contact",
-            "team",
+            "metadata_type",
+            "actions",
         )
         default_columns = (
             "pk",
             "assigned_object",
             "scoped_fields",
             "value",
-            "contact",
-            "team",
+            "metadata_type",
+            "actions",
         )
 
     def render_scoped_fields(self, record):
@@ -961,7 +966,13 @@ class ObjectMetadataTable(BaseTable):
             return render_markdown(record.value)
         elif record.value and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:
             return render_boolean(record.value)
+        elif record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
+            if record.contact:
+                return format_html('<a href="{}">{}</a>', record.contact.get_absolute_url(), record.contact)
+            else:
+                return format_html('<a href="{}">{}</a>', record.team.get_absolute_url(), record.team)
         return record.value
+
 
 #
 # Notes

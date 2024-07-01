@@ -360,13 +360,12 @@ def common_detail_view_context(request, instance):
 
     if instance.is_metadata_associable_model:
         paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-        object_metadatas = instance.associated_object_metadatas.restrict(request.user, "view")
+        object_metadatas = instance.associated_object_metadatas.restrict(request.user, "view").order_by("scoped_fields")
         object_metadatas_table = ObjectMetadataTable(object_metadatas, orderable=False)
         object_metadatas_table.columns.hide("assigned_object")
         RequestConfig(request, paginate).configure(object_metadatas_table)
         context["associated_object_metadatas_table"] = object_metadatas_table
     else:
         context["associated_object_metadatas_table"] = None
-
 
     return context

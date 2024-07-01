@@ -1394,6 +1394,7 @@ class MetadataTypeBulkEditForm(NautobotBulkEditForm):
             "description",
         ]
 
+
 class ObjectMetadataFilterForm(BootstrapMixin, forms.Form):
     model = ObjectMetadata
     q = forms.CharField(required=False, label="Search")
@@ -1405,7 +1406,7 @@ class ObjectMetadataFilterForm(BootstrapMixin, forms.Form):
         queryset=Team.objects.all(),
         required=False,
     )
-    assigned_object_type_id = DynamicModelMultipleChoiceField(
+    assigned_object_type = DynamicModelMultipleChoiceField(
         queryset=ContentType.objects.all(),
         required=False,
         label="Object Type",
