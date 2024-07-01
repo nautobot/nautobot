@@ -255,8 +255,20 @@ class Cable(PrimaryModel):
         # Store the parent Device for the A and B terminations (if applicable) to enable filtering
         if hasattr(self.termination_a, "device"):
             self._termination_a_device = self.termination_a.device
+        if (
+            not self._termination_a_device
+            and hasattr(self.termination_a, "module")
+            and self.termination_a.module.device
+        ):
+            self._termination_a_device = self.termination_a.module.device
         if hasattr(self.termination_b, "device"):
             self._termination_b_device = self.termination_b.device
+        if (
+            not self._termination_b_device
+            and hasattr(self.termination_b, "module")
+            and self.termination_b.module.device
+        ):
+            self._termination_b_device = self.termination_b.module.device
 
         super().save(*args, **kwargs)
 
