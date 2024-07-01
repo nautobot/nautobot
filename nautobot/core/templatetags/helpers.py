@@ -623,12 +623,12 @@ def querystring(request, **kwargs):
 def table_config_button(table, table_name=None, extra_classes=""):
     if table_name is None:
         table_name = table.__class__.__name__
-    table_config_button = (
+    html_template = (
         '<button type="button" class="btn btn-default {}'
         '" data-toggle="modal" data-target="#{}_config" title="Configure table">'
         '<i class="mdi mdi-cog"></i> Configure</button>'
     )
-    return format_html(table_config_button, extra_classes, table_name)
+    return format_html(html_template, extra_classes, table_name)
 
 
 @register.simple_tag()
