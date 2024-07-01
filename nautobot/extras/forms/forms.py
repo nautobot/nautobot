@@ -51,6 +51,7 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
     CustomField,
     CustomFieldChoice,
     CustomLink,
@@ -69,6 +70,7 @@ from nautobot.extras.models import (
     MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -79,6 +81,7 @@ from nautobot.extras.models import (
     StaticGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
 from nautobot.extras.registry import registry
@@ -157,6 +160,7 @@ __all__ = (
     "NoteForm",
     "NoteFilterForm",
     "ObjectChangeFilterForm",
+    "ObjectMetadataFilterForm",
     "PasswordInputWithPlaceholder",
     "RelationshipForm",
     "RelationshipFilterForm",
@@ -1389,6 +1393,26 @@ class MetadataTypeBulkEditForm(NautobotBulkEditForm):
         nullable_fields = [
             "description",
         ]
+
+class ObjectMetadataFilterForm(BootstrapMixin, forms.Form):
+    model = ObjectMetadata
+    q = forms.CharField(required=False, label="Search")
+    contact = DynamicModelMultipleChoiceField(
+        queryset=Contact.objects.all(),
+        required=False,
+    )
+    team = DynamicModelMultipleChoiceField(
+        queryset=Team.objects.all(),
+        required=False,
+    )
+    assigned_object_type_id = DynamicModelMultipleChoiceField(
+        queryset=ContentType.objects.all(),
+        required=False,
+        label="Object Type",
+        widget=APISelectMultiple(
+            api_url="/api/extras/content-types/",
+        ),
+    )
 
 
 #

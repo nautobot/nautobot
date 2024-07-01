@@ -15,9 +15,10 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.core.templatetags.helpers import render_boolean, render_markdown
+from nautobot.core.templatetags.helpers import render_boolean, render_json, render_markdown
 from nautobot.tenancy.tables import TenantColumn
 
+from .choices import MetadataTypeDataTypeChoices
 from .models import (
     ComputedField,
     ConfigContext,
@@ -40,6 +41,7 @@ from .models import (
     MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -54,6 +56,14 @@ from .models import (
     Webhook,
 )
 from .registry import registry
+
+ASSIGNED_OBJECT =  """
+{% if record.assigned_object and record.assigned_object.get_absolute_url %}
+    <a href="{{ record.assigned_object.get_absolute_url }}">{{ record.assigned_object }}</a>
+{% elif record.assigned_object %}
+    {{ record.assigned_object }}
+{% endif %}
+"""
 
 CONTACT_OR_TEAM_ICON = """
 {% if record.contact %}
@@ -914,6 +924,44 @@ class MetadataTypeTable(BaseTable):
             "actions",
         )
 
+class ObjectMetadataTable(BaseTable):
+    pk = ToggleColumn()
+    metadata_type = tables.Column(linkify=True)
+    contact = tables.Column(linkify=True)
+    team = tables.Column(linkify=True)
+    assigned_object = tables.TemplateColumn(template_code=ASSIGNED_OBJECT)
+    actions = ButtonsColumn(ObjectMetadata)
+
+    class Meta(BaseTable.Meta):
+        model = ObjectMetadata
+        fields = (
+            "pk",
+            "assigned_object",
+            "scoped_fields",
+            "value",
+            "contact",
+            "team",
+        )
+        default_columns = (
+            "pk",
+            "assigned_object",
+            "scoped_fields",
+            "value",
+            "contact",
+            "team",
+        )
+
+    def render_scoped_fields(self, record):
+        return render_json(record.scoped_fields, pretty_print=True)
+
+    def render_value(self, record):
+        if record.value and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_JSON:
+            return render_json(record.value, pretty_print=True)
+        elif record.value and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_MARKDOWN:
+            return render_markdown(record.value)
+        elif record.value and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:
+            return render_boolean(record.value)
+        return record.value
 
 #
 # Notes

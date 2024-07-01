@@ -86,6 +86,7 @@ from .models import (
     MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -1975,6 +1976,13 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
 
         return obj
 
+class ObjectMetadataUIViewSet(ObjectListViewMixin, ObjectBulkDestroyViewMixin):
+    filterset_class = filters.ObjectMetadataFilterSet
+    filterset_form_class = forms.ObjectMetadataFilterForm
+    queryset = ObjectMetadata.objects.all()
+    serializer_class = serializers.ObjectMetadataSerializer
+    table_class = tables.ObjectMetadataTable
+    action_buttons = ("export",)
 
 #
 # Notes
