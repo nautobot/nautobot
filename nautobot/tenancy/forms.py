@@ -5,7 +5,6 @@ from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     StaticSelect2,
-    TagFilterField,
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.extras.forms import (
@@ -80,7 +79,6 @@ class TenantFilterForm(NautobotFilterForm):
         required=False,
         null_option="None",
     )
-    tags = TagFilterField(model)
 
 
 #

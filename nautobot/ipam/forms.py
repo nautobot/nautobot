@@ -15,7 +15,6 @@ from nautobot.core.forms import (
     ReturnURLForm,
     StaticSelect2,
     StaticSelect2Multiple,
-    TagFilterField,
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.dcim.form_mixins import (
@@ -172,7 +171,6 @@ class VRFFilterForm(NautobotFilterForm, TenancyFilterForm):
     export_targets = DynamicModelMultipleChoiceField(
         queryset=RouteTarget.objects.all(), to_field_name="name", required=False
     )
-    tags = TagFilterField(model)
 
 
 #
@@ -221,7 +219,6 @@ class RouteTargetFilterForm(NautobotFilterForm, TenancyFilterForm):
     exporting_vrfs = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(), required=False, label="Exported by VRF(s)"
     )
-    tags = TagFilterField(model)
 
 
 #
@@ -457,7 +454,6 @@ class PrefixFilterForm(
         widget=StaticSelect2Multiple(),
     )
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
-    tags = TagFilterField(model)
 
 
 #
@@ -701,7 +697,6 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         choices=add_blank_choice(IPAddressTypeChoices),
         widget=StaticSelect2(),
     )
-    tags = TagFilterField(model)
     nat_inside = DynamicModelChoiceField(queryset=IPAddress.objects.all(), required=False, label="NAT Inside Address")
     has_nat_inside = forms.NullBooleanField(
         required=False,
@@ -844,7 +839,6 @@ class VLANFilterForm(
         label="VLAN group",
         null_option="None",
     )
-    tags = TagFilterField(model)
 
 
 #
@@ -916,7 +910,6 @@ class ServiceFilterForm(NautobotFilterForm):
     ports = forms.IntegerField(
         required=False,
     )
-    tags = TagFilterField(model)
 
 
 class ServiceBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):

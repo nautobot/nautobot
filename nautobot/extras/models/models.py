@@ -671,7 +671,17 @@ class GraphQLQuery(BaseModel, ChangeLoggedModel, NotesMixin):
         ]
         for definition in definitions:
             for variable_definition in definition.variable_definitions:
-                default = variable_definition.default_value.value if variable_definition.default_value else ""
+                print(dir(variable_definition.default_value))
+                if variable_definition.default_value and hasattr(
+                    variable_definition.default_value, "value"
+                ):
+                    default = variable_definition.default_value.value
+                elif variable_definition.default_value and hasattr(
+                    variable_definition.default_value, "values"
+                ):
+                    default = [value.value for value in variable_definition.default_value.values]
+                else:
+                    default = ""
                 variables[variable_definition.variable.name.value] = default
 
         self.variables = variables

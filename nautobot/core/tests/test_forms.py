@@ -642,6 +642,7 @@ class DynamicFilterFormTest(TestCase):
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
+                    ('tags_or', 'Tags OR')
                 ],
             )
             self.assertEqual(
@@ -687,6 +688,7 @@ class DynamicFilterFormTest(TestCase):
                     ("status", "Status (name or ID)"),
                     ("vlans", "Tagged VLANs (VID or ID)"),
                     ("tags", "Tags"),
+                    ("tags_or", "Tags OR"),
                     ("tenant_id", 'Tenant (ID) (deprecated, use "tenant" filter instead)'),
                     ("tenant", "Tenant (name or ID)"),
                     ("tenant_group", "Tenant Group (name or ID)"),
@@ -728,6 +730,7 @@ class DynamicFilterFormTest(TestCase):
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
+                    ('tags_or', 'Tags OR')
                 ],
             )
             self.assertEqual(

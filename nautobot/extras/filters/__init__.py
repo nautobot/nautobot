@@ -49,6 +49,7 @@ from nautobot.extras.filters.mixins import (
     RoleModelFilterSetMixin,
     StatusFilter,
     StatusModelFilterSetMixin,
+    TagORFilterSetMixin,
 )
 from nautobot.extras.models import (
     ComputedField,
@@ -139,6 +140,7 @@ __all__ = (
     "StatusFilterSet",
     "StatusModelFilterSetMixin",
     "TagFilterSet",
+    "TagORFilterSetMixin",
     "TeamFilterSet",
     "WebhookFilterSet",
 )
@@ -438,6 +440,7 @@ class NautobotFilterSet(
     CreatedUpdatedModelFilterSetMixin,
     RelationshipModelFilterSetMixin,
     CustomFieldModelFilterSetMixin,
+    TagORFilterSetMixin,
 ):
     """
     This class exists to combine common functionality and is used as a base class throughout the codebase where all of
@@ -751,7 +754,7 @@ class ImageAttachmentFilterSet(BaseFilterSet, NameSearchFilterSet):
 #
 
 
-class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
+class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin, TagORFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",

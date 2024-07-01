@@ -36,6 +36,7 @@ from nautobot.extras.models import (
     RelationshipAssociation,
     Role,
     Status,
+    Tag,
 )
 from nautobot.virtualization.models import VirtualMachine
 
@@ -323,3 +324,12 @@ class StatusModelFilterSetMixin(django_filters.FilterSet):
     """
 
     status = StatusFilter()
+
+
+class TagORFilterSetMixin(django_filters.FilterSet):
+    tags_or = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="tags",
+        queryset=Tag.objects.all(),
+        to_field_name="name",
+        label="Tags OR",
+    )

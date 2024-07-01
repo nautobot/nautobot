@@ -7,7 +7,6 @@ from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     SmallTextarea,
-    TagFilterField,
 )
 from nautobot.dcim.form_mixins import (
     LocatableModelFilterFormMixin,
@@ -84,7 +83,6 @@ class ProviderFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
     field_order = ["q"]
     q = forms.CharField(required=False, label="Search")
     asn = forms.IntegerField(required=False, label="ASN")
-    tags = TagFilterField(model)
 
 
 #
@@ -128,7 +126,6 @@ class ProviderNetworkFilterForm(NautobotFilterForm):
     provider = DynamicModelMultipleChoiceField(
         queryset=Provider.objects.all(), required=False, label="Provider", to_field_name="name"
     )
-    tags = TagFilterField(model)
 
 
 #
@@ -234,7 +231,6 @@ class CircuitFilterForm(
         label="Provider Network",
     )
     commit_rate = forms.IntegerField(required=False, min_value=0, label="Commit rate (Kbps)")
-    tags = TagFilterField(model)
 
 
 #

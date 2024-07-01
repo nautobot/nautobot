@@ -29,7 +29,6 @@ from nautobot.core.forms import (
     SmallTextarea,
     StaticSelect2,
     StaticSelect2Multiple,
-    TagFilterField,
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.dcim.form_mixins import (
@@ -52,6 +51,7 @@ from nautobot.extras.forms import (
     StatusModelBulkEditFormMixin,
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
+    TagsModelFilterFormMixin,
 )
 from nautobot.extras.models import Contact, ContactAssociation, ExternalIntegration, Role, SecretsGroup, Status, Team
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
@@ -369,7 +369,6 @@ class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Tenancy
     )
     parent = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     subtree = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
-    tags = TagFilterField(model)
 
 
 class LocationMigrateDataToContactForm(NautobotModelForm):
@@ -605,7 +604,6 @@ class RackFilterForm(
     )
     type = forms.MultipleChoiceField(choices=RackTypeChoices, required=False, widget=StaticSelect2Multiple())
     width = forms.MultipleChoiceField(choices=RackWidthChoices, required=False, widget=StaticSelect2Multiple())
-    tags = TagFilterField(model)
 
 
 #
@@ -711,7 +709,6 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
             api_url="/api/users/users/",
         ),
     )
-    tags = TagFilterField(model)
 
 
 #
@@ -757,7 +754,6 @@ class DeviceFamilyFilterForm(NautobotFilterForm):
     device_types = DynamicModelMultipleChoiceField(
         queryset=DeviceType.objects.all(), to_field_name="model", required=False
     )
-    tags = TagFilterField(model)
 
 
 class DeviceFamilyBulkEditForm(NautobotBulkEditForm, TagsBulkEditFormMixin):
@@ -894,7 +890,6 @@ class DeviceTypeFilterForm(NautobotFilterForm):
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
-    tags = TagFilterField(model)
 
 
 #
@@ -1997,7 +1992,6 @@ class DeviceFilterForm(
         label="Has rear ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    tags = TagFilterField(model)
 
 
 #
@@ -2047,7 +2041,6 @@ class DeviceBulkAddComponentForm(ComponentForm, CustomFieldModelBulkEditFormMixi
 class ConsolePortFilterForm(DeviceComponentFilterForm):
     model = ConsolePort
     type = forms.MultipleChoiceField(choices=ConsolePortTypeChoices, required=False, widget=StaticSelect2Multiple())
-    tags = TagFilterField(model)
 
 
 class ConsolePortForm(ComponentEditForm):
@@ -2102,7 +2095,6 @@ class ConsolePortBulkEditForm(
 class ConsoleServerPortFilterForm(DeviceComponentFilterForm):
     model = ConsoleServerPort
     type = forms.MultipleChoiceField(choices=ConsolePortTypeChoices, required=False, widget=StaticSelect2Multiple())
-    tags = TagFilterField(model)
 
 
 class ConsoleServerPortForm(ComponentEditForm):
@@ -2157,7 +2149,6 @@ class ConsoleServerPortBulkEditForm(
 class PowerPortFilterForm(DeviceComponentFilterForm):
     model = PowerPort
     type = forms.MultipleChoiceField(choices=PowerPortTypeChoices, required=False, widget=StaticSelect2Multiple())
-    tags = TagFilterField(model)
 
 
 class PowerPortForm(ComponentEditForm):
@@ -2229,7 +2220,6 @@ class PowerPortBulkEditForm(
 class PowerOutletFilterForm(DeviceComponentFilterForm):
     model = PowerOutlet
     type = forms.MultipleChoiceField(choices=PowerOutletTypeChoices, required=False, widget=StaticSelect2Multiple())
-    tags = TagFilterField(model)
 
 
 class PowerOutletForm(ComponentEditForm):
@@ -2327,7 +2317,6 @@ class InterfaceFilterForm(DeviceComponentFilterForm, StatusModelFilterFormMixin)
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     mgmt_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     mac_address = forms.CharField(required=False, label="MAC address")
-    tags = TagFilterField(model)
 
 
 class InterfaceForm(InterfaceCommonForm, ComponentEditForm):
@@ -2673,7 +2662,6 @@ class InterfaceBulkEditForm(
 class FrontPortFilterForm(DeviceComponentFilterForm):
     model = FrontPort
     type = forms.MultipleChoiceField(choices=PortTypeChoices, required=False, widget=StaticSelect2Multiple())
-    tags = TagFilterField(model)
 
 
 class FrontPortForm(ComponentEditForm):
@@ -2797,7 +2785,6 @@ class FrontPortBulkEditForm(
 class RearPortFilterForm(DeviceComponentFilterForm):
     model = RearPort
     type = forms.MultipleChoiceField(choices=PortTypeChoices, required=False, widget=StaticSelect2Multiple())
-    tags = TagFilterField(model)
 
 
 class RearPortForm(ComponentEditForm):
@@ -2868,7 +2855,6 @@ class RearPortBulkEditForm(
 
 class DeviceBayFilterForm(DeviceComponentFilterForm):
     model = DeviceBay
-    tags = TagFilterField(model)
 
 
 class DeviceBayForm(ComponentEditForm):
@@ -3067,7 +3053,6 @@ class InventoryItemFilterForm(DeviceComponentFilterForm):
         label="Has software version",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    tags = TagFilterField(model)
 
 
 #
@@ -3343,7 +3328,7 @@ class CableBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, Nau
             raise forms.ValidationError({"length_unit": "Must specify a unit when setting length"})
 
 
-class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
+class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, TagsModelFilterFormMixin, forms.Form):
     model = Cable
     q = forms.CharField(required=False, label="Search")
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
@@ -3371,7 +3356,6 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
             "rack": "$rack",
         },
     )
-    tags = TagFilterField(model)
 
 
 #
@@ -3592,7 +3576,6 @@ class VirtualChassisFilterForm(NautobotFilterForm):
         null_option="None",
         query_params={"tenant_group": "$tenant_group"},
     )
-    tags = TagFilterField(model)
 
 
 #
@@ -3644,7 +3627,6 @@ class PowerPanelFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
         null_option="None",
         query_params={"location": "$location"},
     )
-    tags = TagFilterField(model)
 
 
 #
@@ -3759,7 +3741,6 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
     voltage = forms.IntegerField(required=False)
     amperage = forms.IntegerField(required=False)
     max_utilization = forms.IntegerField(required=False)
-    tags = TagFilterField(model)
 
 
 class DeviceRedundancyGroupForm(NautobotModelForm):
@@ -3784,8 +3765,6 @@ class DeviceRedundancyGroupFilterForm(NautobotFilterForm, StatusModelFilterFormM
     secrets_group = DynamicModelMultipleChoiceField(
         queryset=SecretsGroup.objects.all(), to_field_name="name", required=False
     )
-
-    tags = TagFilterField(model)
 
 
 class DeviceRedundancyGroupBulkEditForm(
@@ -4027,7 +4006,6 @@ class SoftwareImageFileFilterForm(NautobotFilterForm, StatusModelFilterFormMixin
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
 
-    tags = TagFilterField(model)
 
     field_order = [
         "q",
@@ -4160,7 +4138,6 @@ class SoftwareVersionFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
         label="Has virtual machines",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    tags = TagFilterField(model)
 
     field_order = [
         "q",
@@ -4275,7 +4252,6 @@ class ControllerFilterForm(
         required=False,
         label="Controller device redundancy group",
     )
-    tags = TagFilterField(model)
     field_order = (
         "q",
         "name",
@@ -4394,7 +4370,6 @@ class ControllerManagedDeviceGroupFilterForm(NautobotFilterForm):
         to_field_name="name",
         required=False,
     )
-    tags = TagFilterField(model)
     field_order = (
         "q",
         "name",

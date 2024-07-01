@@ -71,6 +71,11 @@ class DynamicGroupTestBase(TestCase):
         cls.status_2 = statuses[1]
         cls.status_3 = statuses[2]
 
+        tag_1 = Tag.objects.create(name="tag_1")
+        tag_1.content_types.add(cls.device_ct)
+        tag_2 = Tag.objects.create(name="tag_2")
+        tag_2.content_types.add(cls.device_ct)
+
         cls.devices = [
             Device.objects.create(
                 name="device-location-1",
@@ -102,6 +107,9 @@ class DynamicGroupTestBase(TestCase):
                 location=cls.locations[3],
             ),
         ]
+        cls.devices[0].tags.add(tag_1)
+        cls.devices[1].tags.add(tag_2)
+        cls.devices[2].tags.add(tag_1, tag_2)
 
         cls.groups = [
             DynamicGroup.objects.create(
@@ -665,6 +673,12 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         # is good enough to get the point across.
         tags_query = group.generate_query_for_filter(filter_field=fs.filters["tags"], value=["tag_1", "tag_2"])
         self.assertEqual(str(tags_query), "(AND: ('tags__name', 'tag_1'), ('tags__name', 'tag_2'))")
+
+        # Test TagORFilterSetMixin
+        tags_query = group.generate_query_for_filter(filter_field=fs.filters["tags_or"], value=["tag_1", "tag_2"])
+        tags_qs = queryset.filter(tags_query)
+        self.assertEqual(tags_qs.count(), 3)
+        self.assertEqual(str(tags_query), "(OR: ('tags__name', 'tag_1'), ('tags__name', 'tag_2'))")
 
         # Test that a nested field_name w/ `generate_query` works as expected. This is explicitly to
         # test a regression w/ nested name-related values such as `DeviceFilterSet.manufacturer` which

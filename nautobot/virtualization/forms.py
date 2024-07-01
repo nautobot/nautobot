@@ -15,7 +15,6 @@ from nautobot.core.forms import (
     form_from_model,
     SmallTextarea,
     StaticSelect2,
-    TagFilterField,
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.dcim.choices import InterfaceModeChoices
@@ -145,7 +144,6 @@ class ClusterFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, Tenan
         required=False,
         null_option="None",
     )
-    tags = TagFilterField(model)
 
 
 class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
@@ -411,7 +409,6 @@ class VirtualMachineFilterForm(
         label="Has software version",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    tags = TagFilterField(model)
 
 
 #
@@ -663,7 +660,6 @@ class VMInterfaceFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
         query_params={"cluster_id": "$cluster_id"},
     )
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
-    tags = TagFilterField(model)
 
 
 #

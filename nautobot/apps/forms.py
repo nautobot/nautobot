@@ -79,6 +79,7 @@ from nautobot.extras.forms import (
     RelationshipModelFormMixin,
     StatusModelBulkEditFormMixin,
     TagsBulkEditFormMixin,
+    TagsModelFilterFormMixin,
 )
 from nautobot.extras.forms.base import NautobotFilterForm
 from nautobot.extras.forms.forms import (
@@ -178,5 +179,6 @@ __all__ = (
     "TableConfigForm",
     "TagFilterField",
     "TagsBulkEditFormMixin",
+    "TagsModelFilterFormMixin",
     "TimePicker",
 )

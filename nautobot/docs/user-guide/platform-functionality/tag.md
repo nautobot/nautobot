@@ -10,13 +10,19 @@ Each tag has a name, label, color, and permitted content-types. Each tag can als
 Objects can be filtered by the tags they have applied. For example, the following API request will retrieve all devices tagged as "monitored":
 
 ```no-highlight
-GET /api/dcim/devices/?tag=monitored
+GET /api/dcim/devices/?tags=monitored
 ```
 
-The `tag` filter can be specified multiple times to match only objects which have _all_ of the specified tags assigned:
+The `tags` filter can be specified multiple times to match only objects which have _all_ of the specified tags assigned:
 
 ```no-highlight
-GET /api/dcim/devices/?tag=monitored&tag=deprecated
+GET /api/dcim/devices/?tags=monitored&tags=deprecated
+```
+
+Alternatively, the `tags_or` filter can be used to specify multiple tags to match objects that contain _any_ of the specified tags assigned:
+
+```no-highlight
+GET /api/dcim/devices/?tags_or=monitored&tags_or=deprecated
 ```
 
 Tags can also be created in the ORM or REST API of Nautobot. The following HEX color values in the table below correspond to the dropdown selection when building tags using the UI. Any HEX color value can be used with the ORM or REST API, but a non-standard color will cause some inconsistency when editing the tag via the UI.

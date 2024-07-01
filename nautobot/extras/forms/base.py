@@ -9,6 +9,7 @@ from .mixins import (
     RelationshipModelBulkEditFormMixin,
     RelationshipModelFilterFormMixin,
     RelationshipModelFormMixin,
+    TagsModelFilterFormMixin,
 )
 
 __all__ = (
@@ -31,7 +32,7 @@ class NautobotModelForm(BootstrapMixin, CustomFieldModelFormMixin, RelationshipM
     """
 
 
-class NautobotFilterForm(BootstrapMixin, CustomFieldModelFilterFormMixin, RelationshipModelFilterFormMixin):
+class NautobotFilterForm(BootstrapMixin, CustomFieldModelFilterFormMixin, RelationshipModelFilterFormMixin, TagsModelFilterFormMixin):
     """
     This class exists to combine common functionality and is used to inherit from throughout the
     codebase where all three of BootstrapMixin, CustomFieldModelFilterFormMixin and RelationshipModelFilterFormMixin are

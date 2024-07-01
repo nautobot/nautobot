@@ -20,6 +20,7 @@ from nautobot.core import choices as core_choices, forms
 from nautobot.core.forms import widgets
 from nautobot.core.models import validators
 from nautobot.core.utils import data as data_utils, lookup
+from nautobot.core.utils.deprecation import class_deprecated
 
 __all__ = (
     "CommentField",
@@ -777,6 +778,9 @@ class MultiMatchModelMultipleChoiceField(DynamicModelChoiceMixin, django_filters
         return result
 
 
+# TODO Discuss and possibly remove in 3.X, this does have undocumented query_params and
+# queryset args that could possibly be used by Apps.
+@class_deprecated("Inherit from NautobotFilterForm or TagsModelFilterFormMixin instead.")
 class TagFilterField(DynamicModelMultipleChoiceField):
     """
     A filter field for the tags of a model. Only the tags used by a model are displayed.

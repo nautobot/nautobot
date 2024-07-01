@@ -32,7 +32,6 @@ from nautobot.core.forms import (
     SlugField,
     StaticSelect2,
     StaticSelect2Multiple,
-    TagFilterField,
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
@@ -92,6 +91,7 @@ from .mixins import (
     CustomFieldModelFormMixin,
     NoteModelBulkEditFormMixin,
     NoteModelFormMixin,
+    TagsModelFilterFormMixin,
 )
 
 __all__ = (
@@ -976,7 +976,7 @@ class JobBulkEditForm(NautobotBulkEditForm):
         model = Job
 
 
-class JobFilterForm(BootstrapMixin, forms.Form):
+class JobFilterForm(BootstrapMixin, TagsModelFilterFormMixin, forms.Form):
     model = Job
     q = forms.CharField(required=False, label="Search")
     installed = forms.NullBooleanField(
@@ -1006,7 +1006,6 @@ class JobFilterForm(BootstrapMixin, forms.Form):
         required=False,
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    tags = TagFilterField(model)
 
 
 class JobHookForm(BootstrapMixin, forms.ModelForm):
@@ -1512,7 +1511,6 @@ class SecretFilterForm(NautobotFilterForm):
     provider = forms.MultipleChoiceField(
         choices=provider_choices_with_blank, widget=StaticSelect2Multiple(), required=False
     )
-    tags = TagFilterField(model)
 
 
 # Inline formset for use with providing dynamic rows when creating/editing assignments of Secrets to SecretsGroups.
