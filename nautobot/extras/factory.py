@@ -1,4 +1,5 @@
 from datetime import timedelta, timezone
+import json
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -283,7 +284,7 @@ class ObjectMetadataFactory(BaseModelFactory):
         ):
             return faker.Faker().pystr()
         elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_JSON:
-            return faker.Faker().pydict(allowed_types=[str])
+            return json.dumps(faker.Faker().pydict(allowed_types=[str]))
         elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_INTEGER:
             return faker.Faker().pyint()
         elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:

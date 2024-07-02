@@ -50,6 +50,7 @@ from nautobot.extras.filters import (
     MetadataChoiceFilterSet,
     MetadataTypeFilterSet,
     ObjectChangeFilterSet,
+    ObjectMetadataFilterSet,
     RelationshipAssociationFilterSet,
     RelationshipFilterSet,
     RoleFilterSet,
@@ -1478,6 +1479,30 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+
+class ObjectMetadataTestCase(FilterTestCases.FilterTestCase):
+    queryset = ObjectMetadata.objects.all()
+    filterset = ObjectMetadataFilterSet
+    generic_filter_tests = (
+        ["contact", "contact__name"],
+        ["contact", "contact__id"],
+        ["team", "team__name"],
+        ["team", "team__id"],
+        ["metadata_type", "metadata_type__name"],
+        ["metadata_type", "metadata_type__id"],
+    )
+
+    def test_assigned_object_type(self):
+        ct_1_pk, ct_2_pk = self.queryset.values_list("assigned_object_type", flat=True)[:2]
+        ct_1 = ContentType.objects.get(pk=ct_1_pk)
+        ct_2 = ContentType.objects.get(pk=ct_2_pk)
+        oms = self.queryset.filter(assigned_object_type=ct_1_pk).distinct()
+        params = {"assigned_object_type": [f"{ct_1.app_label}.{ct_1.model}"]}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, oms)
+        oms = self.queryset.filter(assigned_object_type=ct_2_pk).distinct()
+        params = {"assigned_object_type": [f"{ct_2.app_label}.{ct_2.model}"]}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, oms)
 
 
 class RelationshipTestCase(FilterTestCases.FilterTestCase):
