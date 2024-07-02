@@ -1494,13 +1494,14 @@ class ObjectMetadataTestCase(FilterTestCases.FilterTestCase):
     )
 
     def test_assigned_object_type(self):
-        device_ct = ContentType.objects.get_for_model(Device)
-        location_ct = ContentType.objects.get_for_model(Location)
-        oms = self.queryset.filter(assigned_object_type=device_ct).distinct()
-        params = {"assigned_object_type": ["dcim.device"]}
+        ct_1_pk, ct_2_pk = self.queryset.values_list("assigned_object_type", flat=True)[:2]
+        ct_1 = ContentType.objects.get(pk=ct_1_pk)
+        ct_2 = ContentType.objects.get(pk=ct_2_pk)
+        oms = self.queryset.filter(assigned_object_type=ct_1_pk).distinct()
+        params = {"assigned_object_type": [f"{ct_1.app_label}.{ct_1.model}"]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, oms)
-        oms = self.queryset.filter(assigned_object_type=location_ct).distinct()
-        params = {"assigned_object_type": ["dcim.location"]}
+        oms = self.queryset.filter(assigned_object_type=ct_2_pk).distinct()
+        params = {"assigned_object_type": [f"{ct_2.app_label}.{ct_2.model}"]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, oms)
 
 
