@@ -153,3 +153,62 @@ class CloudNetworkPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
                 "prefix": prefixes[2].pk,
             },
         ]
+
+
+class CloudServiceTest(APIViewTestCases.APIViewTestCase):
+    model = models.CloudService
+
+    @classmethod
+    def setUpTestData(cls):
+        cloud_accounts = models.CloudAccount.objects.all()
+        cloud_networks = models.CloudNetwork.objects.all()
+        cloud_types = models.CloudType.objects.all()
+
+        models.CloudService.objects.create(
+            name="Deletable Service 1",
+            cloud_account=cloud_accounts[0],
+            cloud_network=cloud_networks[0],
+            cloud_type=cloud_types[0],
+        )
+        models.CloudService.objects.create(
+            name="Deletable Service 2",
+            cloud_network=cloud_networks[1],
+            cloud_type=cloud_types[1],
+        )
+        models.CloudService.objects.create(
+            name="Deletable Service 3",
+            cloud_network=cloud_networks[2],
+            cloud_type=cloud_types[2],
+        )
+        cls.create_data = [
+            {
+                "name": "Cloud Service 1",
+                "cloud_account": cloud_accounts[0].pk,
+                "cloud_network": cloud_networks[0].pk,
+                "cloud_type": cloud_types[0].pk,
+                "extra_config": {"status": "hey"},
+            },
+            {
+                "name": "Cloud Service 2",
+                "cloud_account": cloud_accounts[1].pk,
+                "cloud_network": cloud_networks[1].pk,
+                "cloud_type": cloud_types[1].pk,
+                "extra_config": {"status": "hello"},
+            },
+            {
+                "name": "Cloud Service 3",
+                "cloud_account": cloud_accounts[2].pk,
+                "cloud_network": cloud_networks[2].pk,
+                "cloud_type": cloud_types[2].pk,
+                "extra_config": {"status": "greetings", "role": 1},
+            },
+            {
+                "name": "Cloud Service 4",
+                "cloud_network": cloud_networks[0].pk,
+                "cloud_type": cloud_types[0].pk,
+            },
+        ]
+        cls.bulk_update_data = {
+            "cloud_network": cloud_networks[4].pk,
+            "cloud_type": cloud_types[1].pk,
+        }

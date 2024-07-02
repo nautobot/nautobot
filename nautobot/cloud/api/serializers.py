@@ -40,3 +40,9 @@ class CloudNetworkPrefixAssignmentSerializer(ValidatedModelSerializer):
     class Meta:
         model = models.CloudNetworkPrefixAssignment
         fields = "__all__"
+
+
+class CloudServiceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    class Meta:
+        model = models.CloudService
+        fields = "__all__"

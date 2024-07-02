@@ -78,3 +78,16 @@ class CloudNetworkFactory(PrimaryModelFactory):
                 self.prefixes.set(extracted)
             else:
                 self.prefixes.set(get_random_instances(Prefix))
+
+
+class CloudServiceFactory(PrimaryModelFactory):
+    class Meta:
+        model = models.CloudService
+        exclude = ("has_cloudaccount",)
+
+    name = factory.LazyAttributeSequence(lambda o, n: f"CloudService {n + 1}")
+    has_cloudaccount = NautobotBoolIterator()
+    cloud_account = factory.Maybe("has_cloudaccount", random_instance(models.CloudAccount, allow_null=False), None)
+    cloud_network = random_instance(models.CloudNetwork, allow_null=False)
+    cloud_type = random_instance(models.CloudType, allow_null=False)
+    extra_config = factory.Faker("pydict", value_types=[str, bool, int])
