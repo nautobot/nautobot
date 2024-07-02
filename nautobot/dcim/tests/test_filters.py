@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
@@ -703,11 +705,11 @@ def common_test_data(cls):
         )
 
     module_roles = Role.objects.get_for_model(Module)
-    module_statuses = Status.objects.get_for_model(Module)
+    cls.module_statuses = Status.objects.get_for_model(Module)
     cls.modules = (
         Module.objects.create(
             module_type=module_types[0],
-            status=module_statuses[0],
+            status=cls.module_statuses[0],
             asset_tag="Test Filter Asset Tag Module1",
             serial="Test Filter Serial Module1",
             role=module_roles[0],
@@ -716,7 +718,7 @@ def common_test_data(cls):
         ),
         Module.objects.create(
             module_type=module_types[1],
-            status=module_statuses[0],
+            status=cls.module_statuses[0],
             asset_tag="Test Filter Asset Tag Module2",
             serial="Test Filter Serial Module2",
             role=module_roles[0],
@@ -725,7 +727,7 @@ def common_test_data(cls):
         ),
         Module.objects.create(
             module_type=module_types[2],
-            status=module_statuses[0],
+            status=cls.module_statuses[0],
             asset_tag="Test Filter Asset Tag Module3",
             serial="Test Filter Serial Module3",
             role=module_roles[1],
@@ -738,7 +740,7 @@ def common_test_data(cls):
 
     Module.objects.create(
         module_type=module_types[0],
-        status=module_statuses[1],
+        status=cls.module_statuses[1],
         asset_tag="Test Filter Asset Tag Module4",
         serial="Test Filter Serial Module4",
         role=module_roles[1],
@@ -747,7 +749,7 @@ def common_test_data(cls):
     )
     Module.objects.create(
         module_type=module_types[1],
-        status=module_statuses[1],
+        status=cls.module_statuses[1],
         asset_tag="Test Filter Asset Tag Module5",
         serial="Test Filter Serial Module5",
         tenant=tenants[1],
@@ -755,7 +757,7 @@ def common_test_data(cls):
     )
     Module.objects.create(
         module_type=module_types[2],
-        status=module_statuses[1],
+        status=cls.module_statuses[1],
         asset_tag="Test Filter Asset Tag Module6",
         serial="Test Filter Serial Module6",
         tenant=tenants[2],
@@ -873,10 +875,56 @@ class DeviceComponentTestMixin:
 
 class ModularDeviceComponentTestMixin(DeviceComponentTestMixin):
     generic_filter_tests = [
-        *DeviceComponentTestMixin.generic_filter_tests,
+        ("description",),
+        ("label",),
+        ("name",),
         ("module", "module__id"),
         ("module", "module__module_type__model"),
     ]
+
+    def test_device(self):
+        """Test that the device filter returns all components for a device and its modules."""
+        model = self.queryset.model._meta.model_name
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(
+            manufacturer=manufacturer, model=f"Test Device Filter for {model} Device Type"
+        )
+        device = Device.objects.create(
+            device_type=device_type,
+            name=f"Test Device Filter for {model} Device",
+            location=self.loc0,
+            role=self.device_roles[0],
+            status=Status.objects.get_for_model(Device).first(),
+        )
+        parent_module_bay = ModuleBay.objects.create(name="Parent module bay", position="1", parent_device=device)
+        module_type = ModuleType.objects.create(
+            manufacturer=manufacturer, model=f"Test Device Filter for {model} Module Type"
+        )
+        module = Module.objects.create(
+            module_type=module_type, parent_module_bay=parent_module_bay, status=self.module_statuses[0]
+        )
+        child_module_bay = ModuleBay.objects.create(name="Child module bay", position="1", parent_module=module)
+        child_module = Module.objects.create(
+            module_type=module_type, parent_module_bay=child_module_bay, status=self.module_statuses[0]
+        )
+        top_level_component = self.queryset.create(device=device, name=f"Top level {model}")
+        second_level_component = self.queryset.create(module=module, name=f"Second level {model}")
+        third_level_component = self.queryset.create(module=child_module, name=f"Third level {model}")
+        with self.subTest("device filter (pk)"):
+            self.assertQuerySetEqual(
+                self.filterset({"device": [device.pk]}, self.queryset).qs,
+                [top_level_component, second_level_component, third_level_component],
+                ordered=False,
+            )
+        with self.subTest("device filter (name)"):
+            self.assertQuerySetEqual(
+                self.filterset({"device": [device.name]}, self.queryset).qs,
+                [top_level_component, second_level_component, third_level_component],
+                ordered=False,
+            )
+
+        with self.subTest("device filter (pk) with an invalid uuid"):
+            self.assertFalse(self.filterset({"device": [uuid.uuid4()]}, self.queryset).is_valid())
 
 
 class ModuleDeviceCommonTestsMixin:
@@ -2452,20 +2500,145 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         with self.subTest():
             self.assertFalse(queryset.filter(name="int4").exists())
 
-    def test_device_name(self):
-        """Assert only interfaces belonging to devices and it's modules are returned"""
+    def test_device(self):
+        """
+        Test that the device filter returns all components for a device and its
+        modules, including virtual chassis member devices and their modules.
+        """
+        status = Status.objects.get_for_model(Interface).first()
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(
+            manufacturer=manufacturer, model="Test Device Filter for Interface Device Type"
+        )
+        device_vc_master = Device.objects.create(
+            device_type=device_type,
+            name="Test Device Filter for Interface Device VC Master",
+            location=self.loc0,
+            role=self.device_roles[0],
+            status=Status.objects.get_for_model(Device).first(),
+        )
+        vc = VirtualChassis.objects.create(
+            name="Test Device Filter for Interface Virtual Chassis", master=device_vc_master
+        )
+        device_vc_master.virtual_chassis = vc
+        device_vc_master.save()
+        parent_module_bay = ModuleBay.objects.create(
+            name="Parent module bay", position="1", parent_device=device_vc_master
+        )
+        module_type = ModuleType.objects.create(
+            manufacturer=manufacturer, model="Test Device Filter for Interface Module Type"
+        )
+        module = Module.objects.create(
+            module_type=module_type, parent_module_bay=parent_module_bay, status=self.module_statuses[0]
+        )
+        child_module_bay = ModuleBay.objects.create(name="Child module bay", position="1", parent_module=module)
+        child_module = Module.objects.create(
+            module_type=module_type, parent_module_bay=child_module_bay, status=self.module_statuses[0]
+        )
+        top_level_interface = self.queryset.create(
+            device=device_vc_master,
+            name="Top level Interface VC Master",
+            type=InterfaceTypeChoices.TYPE_1GE_SFP,
+            status=status,
+        )
+        second_level_interface = self.queryset.create(
+            module=module,
+            name="Second level Interface VC Master",
+            type=InterfaceTypeChoices.TYPE_1GE_SFP,
+            status=status,
+        )
+        third_level_interface = self.queryset.create(
+            module=child_module,
+            name="Third level Interface VC Master",
+            type=InterfaceTypeChoices.TYPE_1GE_SFP,
+            status=status,
+        )
+        device_vc_member = Device.objects.create(
+            device_type=device_type,
+            name="Test Device Filter for Interface Device VC Member",
+            location=self.loc0,
+            role=self.device_roles[0],
+            status=Status.objects.get_for_model(Device).first(),
+            virtual_chassis=vc,
+        )
+        parent_module_bay_vc_member = ModuleBay.objects.create(
+            name="Parent module bay", position="1", parent_device=device_vc_member
+        )
+        module_vc_member = Module.objects.create(
+            module_type=module_type, parent_module_bay=parent_module_bay_vc_member, status=self.module_statuses[0]
+        )
+        child_module_bay_vc_member = ModuleBay.objects.create(
+            name="Child module bay", position="1", parent_module=module_vc_member
+        )
+        child_module_vc_member = Module.objects.create(
+            module_type=module_type, parent_module_bay=child_module_bay_vc_member, status=self.module_statuses[0]
+        )
+        top_level_interface_vc_member = self.queryset.create(
+            device=device_vc_member,
+            name="Top level Interface VC Member",
+            type=InterfaceTypeChoices.TYPE_1GE_SFP,
+            status=status,
+        )
+        second_level_interface_vc_member = self.queryset.create(
+            module=module_vc_member,
+            name="Second level Interface VC Member",
+            type=InterfaceTypeChoices.TYPE_1GE_SFP,
+            status=status,
+        )
+        third_level_interface_vc_member = self.queryset.create(
+            module=child_module_vc_member,
+            name="Third level Interface VC Member",
+            type=InterfaceTypeChoices.TYPE_1GE_SFP,
+            status=status,
+        )
 
-        params = {"device": self.devices[0].name}
-        queryset = self.filterset(params, self.queryset).qs
-
-        # Capture the first device so that we can use it in the next test.
-        device = Device.objects.get(pk=self.devices[0].pk)
-
-        with self.subTest():
-            self.assertQuerysetEqual(
-                queryset,
-                self.queryset.filter(pk__in=device.all_interfaces.values_list("pk", flat=True)),
+        with self.subTest("device filter on pk"):
+            self.assertQuerySetEqual(
+                self.filterset({"device": [device_vc_master.pk]}, self.queryset).qs,
+                [
+                    top_level_interface,
+                    second_level_interface,
+                    third_level_interface,
+                    top_level_interface_vc_member,
+                    second_level_interface_vc_member,
+                    third_level_interface_vc_member,
+                ],
+                ordered=False,
             )
+
+        with self.subTest("device filter on name"):
+            self.assertQuerySetEqual(
+                self.filterset({"device": [device_vc_master.name]}, self.queryset).qs,
+                [
+                    top_level_interface,
+                    second_level_interface,
+                    third_level_interface,
+                    top_level_interface_vc_member,
+                    second_level_interface_vc_member,
+                    third_level_interface_vc_member,
+                ],
+                ordered=False,
+            )
+
+        with self.subTest("device_id filter"):
+            self.assertQuerySetEqual(
+                self.filterset({"device_id": [device_vc_master.pk]}, self.queryset).qs,
+                [
+                    top_level_interface,
+                    second_level_interface,
+                    third_level_interface,
+                    top_level_interface_vc_member,
+                    second_level_interface_vc_member,
+                    third_level_interface_vc_member,
+                ],
+                ordered=False,
+            )
+
+        with self.subTest("device_id filter with an invalid uuid"):
+            self.assertFalse(self.filterset({"device_id": [uuid.uuid4()]}, self.queryset).is_valid())
+
+        with self.subTest("device (pk) filter with an invalid uuid"):
+            self.assertFalse(self.filterset({"device": [uuid.uuid4()]}, self.queryset).is_valid())
 
     def test_kind(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
@@ -2583,6 +2756,77 @@ class FrontPortTestCase(ModularDeviceComponentTestMixin, FilterTestCases.FilterT
             status=status_connected,
         )
         # Third port is not connected
+
+    def test_device(self):
+        """Test that the device filter returns all components for a device and its modules."""
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(
+            manufacturer=manufacturer, model="Test Device Filter for FrontPort Device Type"
+        )
+        device = Device.objects.create(
+            device_type=device_type,
+            name="Test Device Filter for FrontPort Device",
+            location=self.loc0,
+            role=self.device_roles[0],
+            status=Status.objects.get_for_model(Device).first(),
+        )
+        parent_module_bay = ModuleBay.objects.create(name="Parent module bay", position="1", parent_device=device)
+        module_type = ModuleType.objects.create(
+            manufacturer=manufacturer, model="Test Device Filter for FrontPort Module Type"
+        )
+        module = Module.objects.create(
+            module_type=module_type, parent_module_bay=parent_module_bay, status=self.module_statuses[0]
+        )
+        child_module_bay = ModuleBay.objects.create(name="Child module bay", position="1", parent_module=module)
+        child_module = Module.objects.create(
+            module_type=module_type, parent_module_bay=child_module_bay, status=self.module_statuses[0]
+        )
+        top_level_rearport = RearPort.objects.create(
+            device=device,
+            name="Top level Rear Port",
+            type=PortTypeChoices.TYPE_8P8C,
+            positions=6,
+        )
+        second_level_rearport = RearPort.objects.create(
+            module=module,
+            name="Second level Rear Port",
+            type=PortTypeChoices.TYPE_8P8C,
+            positions=6,
+        )
+        third_level_rearport = RearPort.objects.create(
+            module=child_module,
+            name="Third level Rear Port",
+            type=PortTypeChoices.TYPE_8P8C,
+            positions=6,
+        )
+        top_level_frontport = self.queryset.create(
+            device=device,
+            name="Top level Front Port",
+            rear_port=top_level_rearport,
+            rear_port_position=1,
+        )
+        second_level_frontport = self.queryset.create(
+            module=module,
+            name="Second level Front Port",
+            rear_port=second_level_rearport,
+            rear_port_position=1,
+        )
+        third_level_frontport = self.queryset.create(
+            module=child_module,
+            name="Third level Front Port",
+            rear_port=third_level_rearport,
+            rear_port_position=1,
+        )
+        self.assertQuerySetEqual(
+            self.filterset({"device": [device.pk]}, self.queryset).qs,
+            [top_level_frontport, second_level_frontport, third_level_frontport],
+            ordered=False,
+        )
+        self.assertQuerySetEqual(
+            self.filterset({"device": [device.name]}, self.queryset).qs,
+            [top_level_frontport, second_level_frontport, third_level_frontport],
+            ordered=False,
+        )
 
 
 class RearPortTestCase(ModularDeviceComponentTestMixin, FilterTestCases.FilterTestCase):
@@ -3098,17 +3342,87 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
     def test_device(self):
-        # TODO: Not a generic_filter_test because this is a method filter.
-        devices = [
-            Device.objects.get(name="Device 1"),
-            Device.objects.get(name="Device 2"),
-        ]
-        with self.subTest():
-            params = {"device_id": [devices[0].pk, devices[1].pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-        with self.subTest():
-            params = {"device": [devices[0].name, devices[1].name]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        """Test that the device filter returns all cables for a device and its modules."""
+        interfaces = Interface.objects.filter(cable__isnull=True)[:3]
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(
+            manufacturer=manufacturer, model="Test Device Filter for Cable Device Type"
+        )
+        device = Device.objects.create(
+            device_type=device_type,
+            name="Test Device Filter for Cable Device",
+            location=self.loc0,
+            role=self.device_roles[0],
+            status=Status.objects.get_for_model(Device).first(),
+        )
+        parent_module_bay = ModuleBay.objects.create(name="Parent module bay", position="1", parent_device=device)
+        module_type = ModuleType.objects.create(
+            manufacturer=manufacturer, model="Test Device Filter for Cable Module Type"
+        )
+        module = Module.objects.create(
+            module_type=module_type, parent_module_bay=parent_module_bay, status=self.module_statuses[0]
+        )
+        child_module_bay = ModuleBay.objects.create(name="Child module bay", position="1", parent_module=module)
+        child_module = Module.objects.create(
+            module_type=module_type, parent_module_bay=child_module_bay, status=self.module_statuses[0]
+        )
+        interface_status = Status.objects.get_for_model(Interface).first()
+        top_level_interface = Interface.objects.create(
+            device=device,
+            name="Top level Interface",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            status=interface_status,
+        )
+        Interface.objects.create(
+            module=module,
+            name="Second level Interface",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            status=interface_status,
+        )
+        third_level_interface = Interface.objects.create(
+            module=child_module,
+            name="Third level Interface",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            status=interface_status,
+        )
+
+        top_level_cable = Cable.objects.create(
+            termination_a=top_level_interface,
+            termination_b=interfaces[0],
+            label="Test Device Filter Cable 1",
+            type=CableTypeChoices.TYPE_CAT5E,
+            status=self.status_connected,
+            color="f44336",
+            length=30,
+            length_unit=CableLengthUnitChoices.UNIT_FOOT,
+        )
+        third_level_cable = Cable.objects.create(
+            termination_a=interfaces[1],
+            termination_b=third_level_interface,
+            label="Test Device Filter Cable 2",
+            type=CableTypeChoices.TYPE_CAT5E,
+            status=self.status_connected,
+            color="f44336",
+            length=30,
+            length_unit=CableLengthUnitChoices.UNIT_FOOT,
+        )
+
+        with self.subTest("device_id filter"):
+            self.assertQuerySetEqual(
+                self.filterset({"device_id": [device.pk]}, self.queryset).qs,
+                [top_level_cable, third_level_cable],
+                ordered=False,
+            )
+
+        with self.subTest("device filter"):
+            self.assertQuerySetEqual(
+                self.filterset({"device": [device.name]}, self.queryset).qs,
+                [top_level_cable, third_level_cable],
+                ordered=False,
+            )
+
+        with self.subTest("device_id filter with an invalid uuid"):
+            self.assertFalse(self.filterset({"device_id": [uuid.uuid4()]}, self.queryset).is_valid())
 
     def test_rack(self):
         # TODO: Not a generic_filter_test because this is a method filter.

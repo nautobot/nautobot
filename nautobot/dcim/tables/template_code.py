@@ -41,6 +41,8 @@ CABLE_TERMINATION_PARENT = """
     <a href="{{ value.circuit.get_absolute_url }}">{{ value.circuit }}</a>
 {% elif value.power_panel %}
     <a href="{{ value.power_panel.get_absolute_url }}">{{ value.power_panel }}</a>
+{% elif value.module and value.module.device %}
+    <a href="{{ value.module.device.get_absolute_url }}">{{ value.module.device }}</a>
 {% endif %}
 """
 
