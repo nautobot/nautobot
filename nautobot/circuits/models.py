@@ -205,6 +205,13 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
         blank=True,
         null=True,
     )
+    cloud_network = models.ForeignKey(
+        to="cloud.CloudNetwork",
+        on_delete=models.PROTECT,
+        related_name="circuit_terminations",
+        blank=True,
+        null=True,
+    )
     port_speed = models.PositiveIntegerField(verbose_name="Port speed (Kbps)", blank=True, null=True)
     upstream_speed = models.PositiveIntegerField(
         blank=True,
@@ -215,13 +222,6 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
     xconnect_id = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, verbose_name="Cross-connect ID")
     pp_info = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, verbose_name="Patch panel/port(s)")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
-    cloud_network = models.ForeignKey(
-        to="cloud.CloudNetwork",
-        on_delete=models.PROTECT,
-        related_name="circuit_terminations",
-        blank=True,
-        null=True,
-    )
 
     class Meta:
         ordering = ["circuit", "term_side"]
