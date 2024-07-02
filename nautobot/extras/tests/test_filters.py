@@ -23,6 +23,7 @@ from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     DynamicGroupTypeChoices,
     JobResultStatusChoices,
+    MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -1492,6 +1493,57 @@ class ObjectMetadataTestCase(FilterTestCases.FilterTestCase):
         ["metadata_type", "metadata_type__name"],
         ["metadata_type", "metadata_type__id"],
     )
+
+    @classmethod
+    def setUpTestData(cls):
+        mdt = MetadataType.objects.create(
+            name="Contact/Team Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
+        )
+        contacts = Contact.objects.all()
+        teams = Team.objects.all()
+        mdt.content_types.set(list(ContentType.objects.values_list("pk", flat=True)))
+        ObjectMetadata.objects.create(
+            metadata_type=mdt,
+            contact=contacts[0],
+            scoped_fields=["parent"],
+            assigned_object_type=ContentType.objects.get_for_model(IPAddress),
+            assigned_object_id=IPAddress.objects.first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=mdt,
+            contact=contacts[1],
+            scoped_fields=["status"],
+            assigned_object_type=ContentType.objects.get_for_model(IPAddress),
+            assigned_object_id=IPAddress.objects.first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=mdt,
+            contact=contacts[2],
+            scoped_fields=["namespace"],
+            assigned_object_type=ContentType.objects.get_for_model(IPAddress),
+            assigned_object_id=IPAddress.objects.first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=mdt,
+            team=teams[0],
+            scoped_fields=["device_type"],
+            assigned_object_type=ContentType.objects.get_for_model(Device),
+            assigned_object_id=Device.objects.first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=mdt,
+            team=teams[1],
+            scoped_fields=["status"],
+            assigned_object_type=ContentType.objects.get_for_model(Device),
+            assigned_object_id=Device.objects.first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=mdt,
+            team=teams[2],
+            scoped_fields=["name"],
+            assigned_object_type=ContentType.objects.get_for_model(Device),
+            assigned_object_id=Device.objects.first().pk,
+        )
 
     def test_assigned_object_type(self):
         ct_1_pk, ct_2_pk = self.queryset.values_list("assigned_object_type", flat=True)[:2]
