@@ -939,9 +939,9 @@ class ObjectMetadataTable(BaseTable):
         fields = (
             "pk",
             "assigned_object",
+            "metadata_type",
             "scoped_fields",
             "value",
-            "metadata_type",
             "actions",
         )
         default_columns = (
