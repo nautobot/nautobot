@@ -117,6 +117,7 @@ class CloudNetworkPrefixAssignmentFilterSet(BaseFilterSet):
 class CloudServiceFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
+            "name": "icontains",
             "cloud_account__name": "icontains",
             "cloud_account__description": "icontains",
             "cloud_network__name": "icontains",
