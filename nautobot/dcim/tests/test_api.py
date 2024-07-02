@@ -972,14 +972,14 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
     }
 
     def get_deletable_object(self):
-        mf = Manufacturer.objects.create(name="Deletable Manfacturer")
+        mf = Manufacturer.objects.create(name="Deletable Manufacturer")
         return mf
 
     def get_deletable_object_pks(self):
         mfs = [
-            Manufacturer.objects.create(name="Deletable Manfacturer 1"),
-            Manufacturer.objects.create(name="Deletable Manfacturer 2"),
-            Manufacturer.objects.create(name="Deletable Manfacturer 3"),
+            Manufacturer.objects.create(name="Deletable Manufacturer 1"),
+            Manufacturer.objects.create(name="Deletable Manufacturer 2"),
+            Manufacturer.objects.create(name="Deletable Manufacturer 3"),
         ]
         return [mf.pk for mf in mfs]
 
