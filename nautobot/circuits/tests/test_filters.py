@@ -89,6 +89,8 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         ["provider", "provider__name"],
         ["provider_network", "circuit_terminations__provider_network__id"],
         ["provider_network", "circuit_terminations__provider_network__name"],
+        ["cloud_network", "circuit_terminations__cloud_network__id"],
+        ["cloud_network", "circuit_terminations__cloud_network__name"],
         ["circuit_type", "circuit_type__id"],
         ["circuit_type", "circuit_type__name"],
         ["status", "status__id"],
@@ -129,6 +131,8 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
     generic_filter_tests = (
         ["circuit", "circuit__cid"],
         ["circuit", "circuit__id"],
+        ["cloud_network", "cloud_network__name"],
+        ["cloud_network", "cloud_network__id"],
         ["description"],
         ["port_speed"],
         ["pp_info"],

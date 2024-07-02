@@ -1,5 +1,6 @@
 import django_filters
 
+from nautobot.cloud.models import CloudNetwork
 from nautobot.core.filters import (
     BaseFilterSet,
     NameSearchFilterSet,
@@ -158,6 +159,13 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
         label="Termination Z (ID)",
     )
 
+    cloud_network = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="circuit_terminations__cloud_network",
+        queryset=CloudNetwork.objects.all(),
+        to_field_name="name",
+        label="Cloud Network (name or ID)",
+    )
+
     class Meta:
         model = Circuit
         fields = [
@@ -195,6 +203,9 @@ class CircuitTerminationFilterSet(
         queryset=ProviderNetwork.objects.all(),
         to_field_name="name",
         label="Provider Network (name or ID)",
+    )
+    cloud_network = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=CloudNetwork.objects.all(), to_field_name="name", label="Cloud Network (name or ID)"
     )
 
     class Meta:

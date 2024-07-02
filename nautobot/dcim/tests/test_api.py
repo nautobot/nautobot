@@ -9,6 +9,7 @@ from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
+from nautobot.circuits.models import CircuitTermination
 from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudType
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
@@ -983,6 +984,7 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
         Module.objects.all().delete()
         ModuleType.objects.all().delete()
         Platform.objects.all().delete()
+        CircuitTermination.objects.filter(cloud_network__isnull=False).delete()
         CloudNetwork.objects.all().delete()
         CloudAccount.objects.all().delete()
         CloudType.objects.all().delete()

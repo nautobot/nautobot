@@ -2,7 +2,7 @@
 
 The association of a circuit with a particular location and/or device is modeled separately as a circuit termination. A circuit may have up to two terminations, labeled A and Z. A single-termination circuit can be used when you don't know (or care) about the far end of a circuit (for example, an Internet access circuit which connects to a transit provider). A dual-termination circuit is useful for tracking circuits which connect two locations.
 
-Each circuit termination is attached to either a location or a provider network. Location terminations may optionally be connected via a cable to a specific device interface or port within that location. Each termination must be assigned a port speed, and can optionally be assigned an upstream speed if it differs from the downstream speed (a common scenario with e.g. DOCSIS cable modems). Fields are also available to track cross-connect and patch panel details.
+Each circuit termination is attached to a location, a provider network or a cloud network. Location terminations may optionally be connected via a cable to a specific device interface or port within that location. Each termination must be assigned a port speed, and can optionally be assigned an upstream speed if it differs from the downstream speed (a common scenario with e.g. DOCSIS cable modems). Fields are also available to track cross-connect and patch panel details.
 
 In adherence with Nautobot's philosophy of closely modeling the real world, a circuit may be connected only to a physical interface. For example, circuits may not terminate to LAG interfaces, which are virtual in nature. In such cases, a separate physical circuit is associated with each LAG member interface and each needs to be modeled discretely.
 

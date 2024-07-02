@@ -1,5 +1,6 @@
 from django import forms
 
+from nautobot.cloud.models import CloudNetwork
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     CommentField,
@@ -215,6 +216,7 @@ class CircuitFilterForm(
         "circuit_type",
         "provider",
         "provider_network",
+        "cloud_network",
         "status",
         "location",
         "tenant_group",
@@ -232,6 +234,12 @@ class CircuitFilterForm(
         query_params={"provider": "$provider"},
         to_field_name="name",
         label="Provider Network",
+    )
+    cloud_network = DynamicModelMultipleChoiceField(
+        queryset=CloudNetwork.objects.all(),
+        required=False,
+        to_field_name="name",
+        label="Cloud Network",
     )
     commit_rate = forms.IntegerField(required=False, min_value=0, label="Commit rate (Kbps)")
     tags = TagFilterField(model)
