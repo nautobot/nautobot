@@ -140,4 +140,4 @@ class CloudServiceFilterSet(NautobotFilterSet):
 
     class Meta:
         model = models.CloudService
-        fields = ["id", "name", "cloud_account", "cloud_network", "cloud_type"]
+        fields = ["id", "name", "cloud_account", "cloud_network", "cloud_type", "tags"]
