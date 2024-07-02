@@ -2715,6 +2715,23 @@ class ObjectMetadataTestCase(
 ):
     model = ObjectMetadata
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_value_column_in_list_view_rendered_correctly(self):
+        """
+        GET a list of objects as an authenticated user with permission to view the objects.
+        """
+        instance1 = self._get_queryset().filter(contact__isnull=False).first()
+        instance2 = self._get_queryset().filter(team__isnull=False).first()
+
+        # Try GET to permitted objects
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # Check if the contact or team absolute url is rendered in the ObjectListView table
+        self.assertIn(instance1.contact.get_absolute_url(), content, msg=content)
+        self.assertIn(instance2.team.get_absolute_url(), content, msg=content)
+        # TODO check if other types of values are rendered correctly
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_objects_with_constrained_permission(self):
         instance1 = self._get_queryset().first()
