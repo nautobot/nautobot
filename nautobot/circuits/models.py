@@ -236,7 +236,7 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
         # Must define either location *or* provider network
         if self.location is None and self.provider_network is None and self.cloud_network is None:
             raise ValidationError(
-                "A circuit termination must attach to one of a location, a provider network or a cloud network."
+                "A circuit termination must attach to a location, a provider network or a cloud network."
             )
         if self.location and self.provider_network:
             raise ValidationError("A circuit termination cannot attach to both a location and a provider network.")

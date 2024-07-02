@@ -41,7 +41,7 @@ class CircuitTerminationModelTestCase(ModelTestCases.BaseModelTestCase):
         ct = CircuitTermination(circuit=self.circuit, term_side=CircuitTerminationSideChoices.SIDE_A)
         with self.assertRaises(ValidationError) as cm:
             ct.validated_save()
-        self.assertIn("must attach to one of a location, a provider network or a cloud network", str(cm.exception))
+        self.assertIn("must attach to a location, a provider network or a cloud network", str(cm.exception))
 
     def test_location_and_provider_network_mutually_exclusive(self):
         ct = CircuitTermination(
