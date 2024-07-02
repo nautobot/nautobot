@@ -179,7 +179,7 @@ class ModularComponentModel(ComponentModel):
             if self.name != name:
                 self.name = name
                 if save:
-                    self.save(update_fields=["name"])
+                    self.save(update_fields=["_name", "name"])
 
     def to_objectchange(self, action, **kwargs):
         """

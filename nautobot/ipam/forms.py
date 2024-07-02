@@ -580,10 +580,14 @@ class IPAddressForm(IPAddressFormMixin, ReturnURLForm):
                 if nat_inside_parent.count() == 1:
                     nat_inside_parent = nat_inside_parent.first()
                     if nat_inside_parent.interface is not None:
-                        initial["nat_location"] = nat_inside_parent.interface.device.location.pk
-                        if nat_inside_parent.interface.device.rack:
-                            initial["nat_rack"] = nat_inside_parent.interface.device.rack.pk
-                        initial["nat_device"] = nat_inside_parent.interface.device.pk
+                        parent_device = nat_inside_parent.interface.device
+                        if parent_device is None and nat_inside_parent.interface.module is not None:
+                            parent_device = nat_inside_parent.interface.module.device
+                        if parent_device:
+                            initial["nat_location"] = parent_device.location.pk
+                            if parent_device.rack:
+                                initial["nat_rack"] = parent_device.rack.pk
+                            initial["nat_device"] = parent_device.pk
                     elif nat_inside_parent.vm_interface is not None:
                         initial["nat_cluster"] = nat_inside_parent.vm_interface.virtual_machine.cluster.pk
                         initial["nat_virtual_machine"] = nat_inside_parent.vm_interface.virtual_machine.pk
