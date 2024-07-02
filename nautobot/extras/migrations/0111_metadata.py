@@ -116,6 +116,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "ordering": ["metadata_type"],
+                "verbose_name_plural": "object metadata",
                 "indexes": [
                     models.Index(fields=["assigned_object_type", "assigned_object_id"], name="assigned_object"),
                     models.Index(

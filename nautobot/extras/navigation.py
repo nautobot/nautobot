@@ -468,6 +468,15 @@ menu_items = (
                             ),
                         ),
                     ),
+                    NavMenuItem(
+                        link="extras:objectmetadata_list",
+                        name="Object Metadata",
+                        weight=200,
+                        permissions=[
+                            "extras.view_objectmetadata",
+                        ],
+                        buttons=(),
+                    ),
                 ),
             ),
         ),

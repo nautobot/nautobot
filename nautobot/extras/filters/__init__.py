@@ -1013,11 +1013,28 @@ class MetadataChoiceFilterSet(BaseFilterSet):
 class ObjectMetadataFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
-            "value": "icontains",
+            "_value": "icontains",
             "metadata_type__name": "icontains",
             "contact__name": "icontains",
             "team__name": "icontains",
         },
+    )
+    contact = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Contact.objects.all(),
+        to_field_name="name",
+        label="Contact (name or ID)",
+    )
+    team = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Team.objects.all(),
+        to_field_name="name",
+        label="Team (name or ID)",
+    )
+    metadata_type = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=MetadataType.objects.all(),
+        label="Metadata type (name or ID)",
+    )
+    assigned_object_type = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("metadata").get_choices,
     )
     value = django_filters.Filter(field_name="_value", method="filter_value")
 
