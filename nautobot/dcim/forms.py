@@ -3774,9 +3774,6 @@ class InventoryItemFilterForm(DeviceComponentFilterForm):
 #
 
 
-# TODO 5790: Cable connection forms need to support components within Modules
-# While it allows connecting components from within Modules, you cannot
-# filter by modules.
 class ConnectCableToDeviceForm(ConnectCableExcludeIDMixin, NautobotModelForm):
     """
     Base form for connecting a Cable to a Device component
@@ -3801,6 +3798,14 @@ class ConnectCableToDeviceForm(ConnectCableExcludeIDMixin, NautobotModelForm):
         query_params={
             "location": "$termination_b_location",
             "rack": "$termination_b_rack",
+        },
+    )
+    termination_b_module = DynamicModelChoiceField(
+        queryset=Module.objects.all(),
+        label="Module",
+        required=False,
+        query_params={
+            "device": "$termination_b_device",
         },
     )
 
@@ -3837,7 +3842,7 @@ class ConnectCableToConsolePortForm(ConnectCableToDeviceForm):
         queryset=ConsolePort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device": "$termination_b_device"},
+        query_params={"device": "$termination_b_device", "module": "$termination_b_module"},
     )
 
 
@@ -3846,7 +3851,7 @@ class ConnectCableToConsoleServerPortForm(ConnectCableToDeviceForm):
         queryset=ConsoleServerPort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device": "$termination_b_device"},
+        query_params={"device": "$termination_b_device", "module": "$termination_b_module"},
     )
 
 
@@ -3855,7 +3860,7 @@ class ConnectCableToPowerPortForm(ConnectCableToDeviceForm):
         queryset=PowerPort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device": "$termination_b_device"},
+        query_params={"device": "$termination_b_device", "module": "$termination_b_module"},
     )
 
 
@@ -3864,7 +3869,7 @@ class ConnectCableToPowerOutletForm(ConnectCableToDeviceForm):
         queryset=PowerOutlet.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device": "$termination_b_device"},
+        query_params={"device": "$termination_b_device", "module": "$termination_b_module"},
     )
 
 
@@ -3875,6 +3880,7 @@ class ConnectCableToInterfaceForm(ConnectCableToDeviceForm):
         disabled_indicator="cable",
         query_params={
             "device_id": "$termination_b_device",
+            "module": "$termination_b_module",
             "kind": "physical",
         },
     )
@@ -3885,7 +3891,7 @@ class ConnectCableToFrontPortForm(ConnectCableToDeviceForm):
         queryset=FrontPort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device": "$termination_b_device"},
+        query_params={"device": "$termination_b_device", "module": "$termination_b_module"},
     )
 
 
@@ -3894,7 +3900,7 @@ class ConnectCableToRearPortForm(ConnectCableToDeviceForm):
         queryset=RearPort.objects.all(),
         label="Name",
         disabled_indicator="cable",
-        query_params={"device": "$termination_b_device"},
+        query_params={"device": "$termination_b_device", "module": "$termination_b_module"},
     )
 
 
