@@ -619,6 +619,23 @@ def querystring(request, **kwargs):
         return ""
 
 
+@register.simple_tag()
+def table_config_button(table, table_name=None, extra_classes=""):
+    if table_name is None:
+        table_name = table.__class__.__name__
+    html_template = (
+        '<button type="button" class="btn btn-default {}'
+        '" data-toggle="modal" data-target="#{}_config" title="Configure table">'
+        '<i class="mdi mdi-cog"></i> Configure</button>'
+    )
+    return format_html(html_template, extra_classes, table_name)
+
+
+@register.simple_tag()
+def table_config_button_small(table, table_name=None):
+    return table_config_button(table, table_name, "btn-xs")
+
+
 @register.inclusion_tag("utilities/templatetags/utilization_graph.html")
 def utilization_graph(utilization_data, warning_threshold=75, danger_threshold=90):
     """Wrapper for a horizontal bar graph indicating a percentage of utilization from a tuple of data.
