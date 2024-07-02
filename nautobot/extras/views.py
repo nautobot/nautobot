@@ -1978,7 +1978,11 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
 
 
 class ObjectMetadataUIViewSet(
-    ObjectBulkDestroyViewMixin, ObjectChangeLogViewMixin, ObjectDestroyViewMixin, ObjectListViewMixin
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
 ):
     filterset_class = filters.ObjectMetadataFilterSet
     filterset_form_class = forms.ObjectMetadataFilterForm

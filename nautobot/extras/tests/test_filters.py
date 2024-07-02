@@ -50,6 +50,7 @@ from nautobot.extras.filters import (
     MetadataChoiceFilterSet,
     MetadataTypeFilterSet,
     ObjectChangeFilterSet,
+    ObjectMetadataFilterSet,
     RelationshipAssociationFilterSet,
     RelationshipFilterSet,
     RoleFilterSet,
@@ -1478,6 +1479,29 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+
+class ObjectMetadataTestCase(FilterTestCases.FilterTestCase):
+    queryset = ObjectMetadata.objects.all()
+    filterset = ObjectMetadataFilterSet
+    generic_filter_tests = (
+        ["contact", "contact__name"],
+        ["contact", "contact__id"],
+        ["team", "team__name"],
+        ["team", "team__id"],
+        ["metadata_type", "metadata_type__name"],
+        ["metadata_type", "metadata_type__id"],
+    )
+
+    def test_assigned_object_type(self):
+        device_ct = ContentType.objects.get_for_model(Device)
+        location_ct = ContentType.objects.get_for_model(Location)
+        oms = self.queryset.filter(assigned_object_type=device_ct).distinct()
+        params = {"assigned_object_type": ["dcim.device"]}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, oms)
+        oms = self.queryset.filter(assigned_object_type=location_ct).distinct()
+        params = {"assigned_object_type": ["dcim.location"]}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, oms)
 
 
 class RelationshipTestCase(FilterTestCases.FilterTestCase):

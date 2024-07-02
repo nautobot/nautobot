@@ -7,6 +7,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -62,6 +63,7 @@ from nautobot.extras.models import (
     MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -2703,6 +2705,40 @@ class ObjectChangeTestCase(TestCase):
         objectchange = ObjectChange.objects.first()
         response = self.client.get(objectchange.get_absolute_url())
         self.assertHttpStatus(response, 200)
+
+
+class ObjectMetadataTestCase(
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = ObjectMetadata
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_objects_with_constrained_permission(self):
+        instance1 = self._get_queryset().first()
+        instance2 = self._get_queryset().filter(~Q(assigned_object_id=instance1.assigned_object_id)).first()
+        self._get_queryset().filter(~Q(pk=instance1.pk) & ~Q(pk=instance2.pk)).delete()
+
+        # Add object-level permission
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance1.pk},
+            actions=["view", "add"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with object-level permission
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # Since we do not render the absolute url in ObjectListView of ObjectMetadata, we need to check assigned_object
+        # fields and if they are rendered.
+        self.assertIn(instance1.assigned_object.get_absolute_url(), content, msg=content)
+        self.assertNotIn(instance2.assigned_object.get_absolute_url(), content, msg=content)
 
 
 class RelationshipTestCase(
