@@ -235,6 +235,28 @@
                 </div>
             </div>
         {% endif %}
+        {% if object.is_metadata_associable_model and perms.extras.view_objectmetadata %}
+            <div id="object_metadatas" role="tabpanel" class="tab-pane {% if request.GET.tab == 'object_metadatas' %}active{% else %}fade{% endif %}">
+                <div class="row">
+                    <div class="col-md-12">
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <strong>Object Metadata</strong>
+                                    <div class="pull-right noprint">
+                                        <!-- Insert table config button here -->
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    {% render_table associated_object_metadatas_table 'inc/table.html' %}
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
         {% block extra_tab_content %}{% endblock extra_tab_content %}
     </div>
 {% endblock content %}
