@@ -202,6 +202,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
 
     class Meta:
         ordering = ["metadata_type"]
+        verbose_name_plural = "object metadata"
 
         indexes = [
             models.Index(
