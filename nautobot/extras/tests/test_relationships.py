@@ -15,9 +15,11 @@ from nautobot.core.tables import RelationshipColumn
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.dcim.forms import DeviceForm
 from nautobot.dcim.models import (
     Controller,
     Device,
+    DeviceType,
     DeviceTypeToSoftwareImageFile,
     Location,
     LocationType,
@@ -27,7 +29,7 @@ from nautobot.dcim.models import (
 from nautobot.dcim.tables import LocationTable
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
-from nautobot.extras.models import Relationship, RelationshipAssociation, Status
+from nautobot.extras.models import Relationship, RelationshipAssociation, Role, Status
 from nautobot.ipam.models import VLAN, VLANGroup
 
 
@@ -485,6 +487,56 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
                     manager_method(Location)
                 with self.assertNumQueries(0):
                     manager_method(Location)
+
+    def test_required_related_object_errors(self):
+        """
+        Confirm that the fix in https://github.com/nautobot/nautobot/pull/5570 is working as expected
+        """
+        device_ct = ContentType.objects.get_for_model(Device)
+        status = Status.objects.get_for_model(Device).first()
+        device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
+        # Create a Device with role Role 1
+        role_1 = Role.objects.create(name="Role 1")
+        role_1.content_types.add(ContentType.objects.get_for_model(Device))
+        Device.objects.create(
+            device_type=device_type, role=role_1, name="Device 1", location=self.locations[0], status=status
+        )
+        # Create a Device with role Role 2
+        role_2 = Role.objects.create(name="Role 2")
+        role_2.content_types.add(ContentType.objects.get_for_model(Device))
+        Device.objects.create(
+            device_type=device_type, role=role_2, name="Device 2", location=self.locations[0], status=status
+        )
+        # Create a Device with role Role 3
+        role_3 = Role.objects.create(name="Role 3")
+        role_3.content_types.add(ContentType.objects.get_for_model(Device))
+        device_3 = Device.objects.create(
+            device_type=device_type, role=role_3, name="Device 3", location=self.locations[0], status=status
+        )
+        # Create a one-to-many relationship with destination required, source filter: {"role": ["Role 1"]}
+        # and destination filter {"role": ["Role 2"]}
+        Relationship.objects.create(
+            label="Device to Devices",
+            key="device_to_devices",
+            source_type=ContentType.objects.get_for_model(Device),
+            source_filter={"role": ["Role 1"]},
+            destination_type=device_ct,
+            destination_filter={"role": ["Role 2"]},
+            type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+            required_on="destination",
+        )
+        # Attempt to update device_3 which will not be in the queryset filtered by the destination filter
+        # Assert that the form is valid and no ValueError is raised.
+        update_status = Status.objects.get_for_model(Device).last()
+        update_data_for_device_3 = {
+            "location": device_3.location.pk,
+            "device_type": device_3.device_type.pk,
+            "role": device_3.role.pk,
+            "name": device_3.name,
+            "status": update_status.pk,
+        }
+        form = DeviceForm(data=update_data_for_device_3)
+        form.is_valid()
 
 
 class RelationshipAssociationTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
