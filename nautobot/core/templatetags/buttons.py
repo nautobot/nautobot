@@ -124,6 +124,73 @@ def job_import_url(content_type):
     return import_url
 
 
+def convert_button_attrs_to_string(buttons_to_display):
+    """Converts the button attributes from a dictionary to a string format suitable for HTML rendering."""
+    return_values = []
+    for button in buttons_to_display:
+        button_attributes = ' '.join([f'{key}="{value}"' for key, value in button["button_attributes"].items()])
+        return_values.append({**button, "button_attributes": button_attributes})
+    return return_values
+
+@register.inclusion_tag("buttons/consolidated_bulk_action_buttons.html")
+def consolidate_bulk_action_buttons(request, content_type, perms, bulk_edit_url, bulk_delete_url, permissions):
+    """
+    Generates a list of action buttons for bulk operations (edit, update group assignment, delete) based on the
+    provided permissions and URLs.
+
+    Args:
+        request (HttpRequest): The HTTP request object.
+        content_type (ContentType): The content type for the model being acted upon.
+        perms (dict): A dictionary of permissions for the current user.
+        bulk_edit_url (str): The URL for the bulk edit action.
+        bulk_delete_url (str): The URL for the bulk delete action.
+        permissions (dict): A dictionary of specific permissions for the actions.
+    """
+    buttons_to_display = []
+
+    if bulk_edit_url and permissions["change"]:
+        buttons_to_display.append({
+            "label": "Edit Selected",
+            "button_attributes": {
+                "type": "submit",
+                "name": "_edit",
+                "formaction": reverse(bulk_edit_url) + (request.GET.urlencode if request.GET else "" ),
+            },
+            "color": "warning",
+            "icon": "mdi mdi-pencil"
+        })
+    if content_type.model_class().is_dynamic_group_associable_model and perms["extras"]["add_staticgroupassociation"]:
+        buttons_to_display.append({
+            "label": "Update Group Assignment",
+            "button_attributes": {
+                "id":"update_dynamic_groups_for_selected",
+                "data-toggle":"modal",
+                "data-target": "#dynamic_group_assignment_modal",
+                "data-objects": "selected",
+                "type": "button"
+            },
+            "color": "primary",
+            "icon": "mdi mdi-group"
+        })
+    if bulk_delete_url and permissions["delete"]:
+        buttons_to_display.append({
+            "label": "Delete Selected",
+            "button_attributes": {
+                "type": "submit",
+                "name": "_delete",
+                "formaction": reverse(bulk_delete_url) + (request.GET.urlencode if request.GET else "" )
+            },
+            "color": "danger",
+            "icon": "mdi mdi-trash-can-outline"
+        })
+
+    buttons_to_display = convert_button_attrs_to_string(buttons_to_display)
+
+    return {
+        "buttons_to_display": buttons_to_display
+    }
+
+
 @register.inclusion_tag("buttons/job_import.html")
 def job_import_button(content_type):
     return {"import_url": job_import_url(content_type)}
