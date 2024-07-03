@@ -116,7 +116,7 @@
                 Actions <span class="caret"></span>
             </button>
         {% endif %}
-        <ul class="dropdown-menu" role="menu">
+        <ul class="dropdown-menu pull-right" role="menu">
             {% if permissions.add and 'import' in action_buttons %}
                 {% block import_list_element %}
                     {% job_import_button content_type list_element=True%}
