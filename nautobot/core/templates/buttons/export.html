@@ -8,7 +8,7 @@
                     <input type="hidden" name="query_string" value="{{ query_string }}">
                     <input type="hidden" name="_schedule_type" value="immediately">
                     <input type="hidden" name="export_format" value="yaml">
-                    <button type="submit" class="btn btn-link">
+                    <button type="submit">
                         <span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> YAML format
                     </button>
                 </form>
@@ -21,7 +21,7 @@
                 <input type="hidden" name="query_string" value="{{ query_string }}">
                 <input type="hidden" name="_schedule_type" value="immediately">
                 <input type="hidden" name="export_format" value="csv">
-                <button type="submit" class="btn btn-link">
+                <button type="submit">
                     <span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> CSV format
                 </button>
             </form>
@@ -35,7 +35,7 @@
                         <input type="hidden" name="export_template" value="{{ et.pk }}">
                         <input type="hidden" name="query_string" value="{{ query_string }}">
                         <input type="hidden" name="_schedule_type" value="immediately">
-                        <button type="submit" class="btn btn-link"
+                        <button type="submit"
                             {% if et.description %}title="{{ et.description }}"{% endif %}
                         ><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> {{ et.name }}</button>
                     </form>

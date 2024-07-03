@@ -117,9 +117,6 @@
             </button>
         {% endif %}
         <ul class="dropdown-menu" role="menu">
-            {% if permissions.add and 'add' in action_buttons %}
-                {% add_button content_type.model_class|validated_viewname:"add" list_element=True %}
-            {% endif %}
             {% if permissions.add and 'import' in action_buttons %}
                 {% block import_list_element %}
                     {% job_import_button content_type list_element=True%}
@@ -140,7 +137,6 @@
     {% endif %}
     {% if 'export' in action_buttons %}
         {% block export_button %}
-            {% export_button content_type %}
         {% endblock export_button %}
     {% endif %}
 </div>
