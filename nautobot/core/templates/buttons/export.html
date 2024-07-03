@@ -1,5 +1,8 @@
 {% if export_url %}
     {% if list_element %}
+        {% if export_templates %}
+            <li class="text-center">Export Templates</li>
+        {% endif %}
         {% if include_yaml_option %}
             <li>
                 <form action="{{ export_url }}" method="post">
@@ -9,7 +12,7 @@
                     <input type="hidden" name="_schedule_type" value="immediately">
                     <input type="hidden" name="export_format" value="yaml">
                     <button type="submit">
-                        <span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> YAML format
+                        <span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> YAML export
                     </button>
                 </form>
             </li>
@@ -22,7 +25,7 @@
                 <input type="hidden" name="_schedule_type" value="immediately">
                 <input type="hidden" name="export_format" value="csv">
                 <button type="submit">
-                    <span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> CSV format
+                    <span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> CSV export
                 </button>
             </form>
         </li>
