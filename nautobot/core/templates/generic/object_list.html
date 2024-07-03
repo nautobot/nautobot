@@ -107,13 +107,15 @@
     <div class="btn-group">
         {% if permissions.add and 'add' in action_buttons %}
             {% add_button content_type.model_class|validated_viewname:"add" %}
+            <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
+                <span class="caret"></span>
+                <span class="sr-only">Toggle Dropdown</span>
+            </button>
         {% else %}
-            <button type="button" class="btn btn-primary" disabled="disabled">Add</button>
+            <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
+                Actions <span class="caret"></span>
+            </button>
         {% endif %}
-        <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
-            <span class="caret"></span>
-            <span class="sr-only">Toggle Dropdown</span>
-        </button>
         <ul class="dropdown-menu" role="menu">
             {% if permissions.add and 'add' in action_buttons %}
                 {% add_button content_type.model_class|validated_viewname:"add" list_element=True %}
