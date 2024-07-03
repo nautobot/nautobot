@@ -9,8 +9,6 @@ from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
-from nautobot.circuits.models import CircuitTermination
-from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudType
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
 from nautobot.dcim.choices import (
@@ -973,21 +971,17 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
 
-    @classmethod
-    def setUpTestData(cls):
-        # FIXME: This has to be replaced with# `get_deletable_object` and
-        # `get_deletable_object_pks` but this is a workaround just so all of these objects are
-        # deletable for now.
-        Controller.objects.filter(controller_device__isnull=False).delete()
-        Device.objects.all().delete()
-        DeviceType.objects.all().delete()
-        Module.objects.all().delete()
-        ModuleType.objects.all().delete()
-        Platform.objects.all().delete()
-        CircuitTermination.objects.filter(cloud_network__isnull=False).delete()
-        CloudNetwork.objects.all().delete()
-        CloudAccount.objects.all().delete()
-        CloudType.objects.all().delete()
+    def get_deletable_object(self):
+        mf = Manufacturer.objects.create(name="Deletable Manufacturer")
+        return mf
+
+    def get_deletable_object_pks(self):
+        mfs = [
+            Manufacturer.objects.create(name="Deletable Manufacturer 1"),
+            Manufacturer.objects.create(name="Deletable Manufacturer 2"),
+            Manufacturer.objects.create(name="Deletable Manufacturer 3"),
+        ]
+        return [mf.pk for mf in mfs]
 
 
 class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases.APIViewTestCase):

@@ -73,3 +73,17 @@ class CloudNetworkPrefixAssignmentTestCase(FilterTestCases.FilterTestCase):
         ("cloud_network", "cloud_network__name"),
         ("prefix", "prefix__id"),
     ]
+
+
+class CloudServiceTestCase(FilterTestCases.NameOnlyFilterTestCase):
+    queryset = models.CloudService.objects.all()
+    filterset = filters.CloudServiceFilterSet
+    generic_filter_tests = [
+        ("cloud_account", "cloud_account__id"),
+        ("cloud_account", "cloud_account__name"),
+        ("cloud_network", "cloud_network__id"),
+        ("cloud_network", "cloud_network__name"),
+        ("cloud_type", "cloud_type__id"),
+        ("cloud_type", "cloud_type__name"),
+        ("name",),
+    ]

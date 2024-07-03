@@ -17,7 +17,6 @@ except ImportError:  # python 3.8
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
-from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudType
 from nautobot.core.templatetags.buttons import job_export_url, job_import_url
 from nautobot.core.testing import (
     extract_page_body,
@@ -760,24 +759,22 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
-        # `get_deletable_object_pks` but this is a workaround just so all of these objects are
-        # deletable for now.
-        Controller.objects.filter(controller_device__isnull=False).delete()
-        Device.objects.all().delete()
-        DeviceType.objects.all().delete()
-        Platform.objects.all().delete()
-        Module.objects.all().delete()
-        ModuleType.objects.all().delete()
-        CircuitTermination.objects.filter(cloud_network__isnull=False).delete()
-        CloudNetwork.objects.all().delete()
-        CloudAccount.objects.all().delete()
-        CloudType.objects.all().delete()
-
         cls.form_data = {
             "name": "Manufacturer X",
             "description": "A new manufacturer",
         }
+
+    def get_deletable_object(self):
+        mf = Manufacturer.objects.create(name="Deletable Manufacturer")
+        return mf
+
+    def get_deletable_object_pks(self):
+        mfs = [
+            Manufacturer.objects.create(name="Deletable Manufacturer 1"),
+            Manufacturer.objects.create(name="Deletable Manufacturer 2"),
+            Manufacturer.objects.create(name="Deletable Manufacturer 3"),
+        ]
+        return [mf.pk for mf in mfs]
 
 
 # TODO: Change base class to PrimaryObjectViewTestCase
