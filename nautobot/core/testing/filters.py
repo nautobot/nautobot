@@ -198,7 +198,7 @@ class FilterTestCases:
             filterset_result = self.filterset(params, self.queryset).qs
             # Tags is an AND filter not an OR filter
             qs_result = self.queryset.filter(tags=tags[0]).filter(tags=tags[1]).distinct()
-            self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result, ordered=False)
+            self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
         def test_q_filter_exists(self):
             """Test the `q` filter exists on a filterset, does not validate the filter works as expected."""

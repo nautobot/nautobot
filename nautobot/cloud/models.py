@@ -189,5 +189,8 @@ class CloudService(PrimaryModel):
     is_saved_view_model = False  # TODO: remove this when adding a UI for this model
     is_metadata_associable_model = False  # TODO: remove this when adding a UI for this model
 
+    class Meta:
+        ordering = ["name"]
+
     def __str__(self):
         return self.name

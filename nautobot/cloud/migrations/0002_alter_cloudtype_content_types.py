@@ -73,6 +73,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "abstract": False,
+                "ordering": ["name"],
             },
             bases=(
                 nautobot.extras.models.mixins.DynamicGroupMixin,
