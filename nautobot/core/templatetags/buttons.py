@@ -90,14 +90,15 @@ def delete_button(instance, use_pk=False, key="slug"):
 
 
 @register.inclusion_tag("buttons/add.html")
-def add_button(url):
+def add_button(url, list_element=False):
     try:
         url = reverse(url)
     except NoReverseMatch:
-        return {"add_url": None}
+        return {"add_url": None, "list_element": list_element}
 
     return {
         "add_url": url,
+        "list_element": list_element,
     }
 
 
@@ -125,8 +126,8 @@ def job_import_url(content_type):
 
 
 @register.inclusion_tag("buttons/job_import.html")
-def job_import_button(content_type):
-    return {"import_url": job_import_url(content_type)}
+def job_import_button(content_type, list_element=False):
+    return {"import_url": job_import_url(content_type), "list_element": list_element}
 
 
 @register.simple_tag
@@ -146,7 +147,7 @@ def job_export_url():
 
 
 @register.inclusion_tag("buttons/export.html", takes_context=True)
-def export_button(context, content_type=None):
+def export_button(context, content_type=None, list_element=False):
     if content_type is not None:
         user = context["request"].user
         export_templates = models.ExportTemplate.objects.restrict(user, "view").filter(content_type=content_type)
@@ -163,4 +164,5 @@ def export_button(context, content_type=None):
         "content_type": content_type,
         "export_templates": export_templates,
         "include_yaml_option": include_yaml_option,
+        "list_element": list_element,
     }
