@@ -17,7 +17,7 @@ from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_filter_field_label
 from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model, get_form_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable
+from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
 
 
 def check_filter_for_display(filters, field_name, values):
@@ -357,5 +357,15 @@ def common_detail_view_context(request, instance):
         context["associated_dynamic_groups_table"] = dynamic_groups_table
     else:
         context["associated_dynamic_groups_table"] = None
+
+    if instance.is_metadata_associable_model:
+        paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        object_metadatas = instance.associated_object_metadatas.restrict(request.user, "view").order_by("scoped_fields")
+        object_metadatas_table = ObjectMetadataTable(object_metadatas, orderable=False)
+        object_metadatas_table.columns.hide("assigned_object")
+        RequestConfig(request, paginate).configure(object_metadatas_table)
+        context["associated_object_metadatas_table"] = object_metadatas_table
+    else:
+        context["associated_object_metadatas_table"] = None
 
     return context

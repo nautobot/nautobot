@@ -72,6 +72,7 @@ class Command(BaseCommand):
             from nautobot.cloud.factory import (
                 CloudAccountFactory,
                 CloudNetworkFactory,
+                CloudServiceFactory,
                 CloudTypeFactory,
             )
             from nautobot.dcim.factory import (
@@ -221,6 +222,7 @@ class Command(BaseCommand):
         _create_batch(CloudAccountFactory, 10)
         _create_batch(CloudTypeFactory, 20)
         _create_batch(CloudNetworkFactory, 20)
+        _create_batch(CloudServiceFactory, 20)
         _create_batch(CircuitTypeFactory, 40)
         _create_batch(ProviderFactory, 20, description="to be usable by Circuits")
         _create_batch(ProviderNetworkFactory, 20)
@@ -245,6 +247,22 @@ class Command(BaseCommand):
             2,
             description="without a location, for side Z",
             has_location=False,
+            term_side="Z",
+        )
+        _create_batch(
+            CircuitTerminationFactory,
+            2,
+            description="with a cloud network, for side A",
+            has_location=False,
+            has_cloud_network=True,
+            term_side="A",
+        )
+        _create_batch(
+            CircuitTerminationFactory,
+            2,
+            description="with a cloud network, for side Z",
+            has_location=False,
+            has_cloud_network=True,
             term_side="Z",
         )
         _create_batch(

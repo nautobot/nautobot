@@ -15,9 +15,10 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.core.templatetags.helpers import render_boolean, render_markdown
+from nautobot.core.templatetags.helpers import render_boolean, render_json, render_markdown
 from nautobot.tenancy.tables import TenantColumn
 
+from .choices import MetadataTypeDataTypeChoices
 from .models import (
     ComputedField,
     ConfigContext,
@@ -40,6 +41,7 @@ from .models import (
     MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -54,6 +56,11 @@ from .models import (
     Webhook,
 )
 from .registry import registry
+
+ASSIGNED_OBJECT = """
+{% load helpers %}
+{{ record.assigned_object|hyperlinked_object }}
+"""
 
 CONTACT_OR_TEAM_ICON = """
 {% if record.contact %}
@@ -913,6 +920,55 @@ class MetadataTypeTable(BaseTable):
             "data_type",
             "actions",
         )
+
+
+class ObjectMetadataTable(BaseTable):
+    pk = ToggleColumn()
+    metadata_type = tables.Column(linkify=True)
+    assigned_object = tables.TemplateColumn(template_code=ASSIGNED_OBJECT, orderable=False)
+    actions = ButtonsColumn(
+        ObjectMetadata,
+        buttons=("delete"),
+    )
+    # This is needed so that render_value method below does not skip itself
+    # when metadata_type.data_type is TYPE_CONTACT_TEAM and we need it to display either contact or team
+    value = tables.Column(empty_values=[])
+
+    class Meta(BaseTable.Meta):
+        model = ObjectMetadata
+        fields = (
+            "pk",
+            "assigned_object",
+            "metadata_type",
+            "scoped_fields",
+            "value",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "assigned_object",
+            "scoped_fields",
+            "value",
+            "metadata_type",
+            "actions",
+        )
+
+    def render_scoped_fields(self, record):
+        return render_json(record.scoped_fields, pretty_print=True)
+
+    def render_value(self, record):
+        if record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_JSON:
+            return render_json(record.value, pretty_print=True)
+        elif record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_MARKDOWN:
+            return render_markdown(record.value)
+        elif record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:
+            return render_boolean(record.value)
+        elif record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
+            if record.contact:
+                return format_html('<a href="{}">{}</a>', record.contact.get_absolute_url(), record.contact)
+            else:
+                return format_html('<a href="{}">{}</a>', record.team.get_absolute_url(), record.team)
+        return record.value
 
 
 #

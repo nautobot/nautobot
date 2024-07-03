@@ -112,3 +112,33 @@ class CloudNetworkPrefixAssignmentFilterSet(BaseFilterSet):
     class Meta:
         model = models.CloudNetworkPrefixAssignment
         fields = ["id"]
+
+
+class CloudServiceFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "cloud_account__name": "icontains",
+            "cloud_account__description": "icontains",
+            "cloud_network__name": "icontains",
+            "cloud_network__description": "icontains",
+            "cloud_type__name": "icontains",
+            "cloud_type__description": "icontains",
+        }
+    )
+    cloud_account = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.CloudAccount.objects.all(),
+        label="Cloud account (name or ID)",
+    )
+    cloud_network = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.CloudNetwork.objects.all(),
+        label="Cloud network (name or ID)",
+    )
+    cloud_type = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.CloudType.objects.all(),
+        label="Cloud type (name or ID)",
+    )
+
+    class Meta:
+        model = models.CloudService
+        fields = ["id", "name", "cloud_account", "cloud_network", "cloud_type", "tags"]
