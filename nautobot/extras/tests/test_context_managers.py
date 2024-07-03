@@ -5,13 +5,23 @@ from django.test import TestCase
 from nautobot.core.celery import app
 from nautobot.core.testing import TransactionTestCase
 from nautobot.core.utils.lookup import get_changes_for_model
-from nautobot.dcim.models import Location, LocationType
+from nautobot.dcim.models import (
+    DeviceType,
+    DeviceTypeToSoftwareImageFile,
+    Location,
+    LocationType,
+    Manufacturer,
+    Platform,
+    SoftwareImageFile,
+    SoftwareVersion,
+)
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import (
     deferred_change_logging_for_bulk_operation,
     web_request_context,
 )
 from nautobot.extras.models import Status, Webhook
+from nautobot.extras.utils import bulk_delete_with_bulk_change_logging
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -231,6 +241,23 @@ class BulkEditDeleteChangeLogging(TestCase):
                     location.save()
                     location.delete()
 
+    def test_bulk_delete_has_user_in_change_log(self):
+        """Test that the bulk delete operation adds the user to the change log"""
+        location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
+        with web_request_context(self.user):
+            location = Location(name="Test Location 1", location_type=location_type, status=location_status)
+            location.save()
+            location_pk = location.pk
+            location_qs = Location.objects.filter(pk=location_pk)
+            bulk_delete_with_bulk_change_logging(location_qs)
+
+        oc_list = get_changes_for_model(location)
+        self.assertEqual(len(oc_list), 2)
+        self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_DELETE)
+        self.assertEqual(oc_list[0].user, self.user)
+        self.assertEqual(oc_list[0].user_name, self.user.username)
+
     def test_create_then_update(self):
         """Test that a create followed by an update is logged as a single create"""
         location_type = LocationType.objects.get(name="Campus")
@@ -275,6 +302,29 @@ class BulkEditDeleteChangeLogging(TestCase):
             self.assertIsNotNone(snapshots["postchange"])
             self.assertIsNone(snapshots["differences"]["removed"])
             self.assertEqual(snapshots["differences"]["added"]["description"], "changed")
+
+    def test_bulk_edit_device_type_software_image_file(self):
+        """Test that bulk edits to null does not cause integrity error"""
+        manufacturer = Manufacturer.objects.create(name="Test")
+        platform = Platform.objects.create(name="Test")
+        software_status = Status.objects.get_for_model(SoftwareVersion).first()
+        software_version = SoftwareVersion.objects.create(version="1.0.0", platform=platform, status=software_status)
+        software_image_file = SoftwareImageFile.objects.create(
+            image_file_name="test.iso", software_version=software_version, status=software_status
+        )
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="test123")
+        device_type.software_image_files.set([software_image_file])
+        with web_request_context(self.user):
+            with deferred_change_logging_for_bulk_operation():
+                device_type.software_image_files.set([])
+                device_type.save()
+
+        oc_list = get_changes_for_model(DeviceTypeToSoftwareImageFile)
+        self.assertEqual(len(oc_list), 1)
+        self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_DELETE)
+        self.assertIsNotNone(oc_list[0].changed_object_id)
+        self.assertEqual(oc_list[0].user, self.user)
+        self.assertEqual(oc_list[0].user_name, self.user.username)
 
     def test_change_log_context(self):
         location_type = LocationType.objects.get(name="Campus")

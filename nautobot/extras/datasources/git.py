@@ -136,7 +136,7 @@ def get_repo_from_url_to_path_and_from_branch(repository_record):
 
 def ensure_git_repository(repository_record, logger=None, head=None):  # pylint: disable=redefined-outer-name
     """Ensure that the given Git repo is present, up-to-date, and has the correct branch selected.
-    Note that this function may be called independently of the `GitRepositoryiSync` job,
+    Note that this function may be called independently of the `GitRepositorySync` job,
     such as to ensure that different Nautobot instances and/or worker instances all have a local copy of the same HEAD.
     Args:
       repository_record (GitRepository): Repository to ensure the state of.
@@ -224,126 +224,127 @@ def refresh_git_config_contexts(repository_record, job_result, delete=False):
 def update_git_config_contexts(repository_record, job_result):
     """Refresh any config contexts provided by this Git repository."""
     config_context_path = os.path.join(repository_record.filesystem_path, "config_contexts")
-    if not os.path.isdir(config_context_path):
-        return
-
     managed_config_contexts = set()
     managed_local_config_contexts = defaultdict(set)
 
-    # First, handle the "flat file" case - data files in the root config_context_path,
-    # whose metadata is expressed purely within the contents of the file:
-    for file_name in os.listdir(config_context_path):
-        if not os.path.isfile(os.path.join(config_context_path, file_name)):
-            continue
-        msg = f"Loading config context from `{file_name}`"
-        logger.info(msg)
-        job_result.log(msg, grouping="config contexts")
-        try:
-            with open(os.path.join(config_context_path, file_name), "r") as fd:
-                # The data file can be either JSON or YAML; since YAML is a superset of JSON, we can load it regardless
-                context_data = yaml.safe_load(fd)
-
-            # A file can contain one config context dict or a list thereof
-            if isinstance(context_data, dict):
-                context_name = import_config_context(context_data, repository_record, job_result)
-                managed_config_contexts.add(context_name)
-            elif isinstance(context_data, list):
-                for context_data_entry in context_data:
-                    context_name = import_config_context(context_data_entry, repository_record, job_result)
-                    managed_config_contexts.add(context_name)
-            else:
-                raise RuntimeError("data must be a dict or list of dicts")
-
-        except Exception as exc:
-            msg = f"Error in loading config context data from `{file_name}`: {exc}"
-            logger.error(msg)
-            job_result.log(msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="config contexts")
-
-    # Next, handle the "filter/name" directory structure case - files in <filter_type>/<name>.(json|yaml)
-    for filter_type in (
-        "locations",
-        "device_types",
-        "roles",
-        "platforms",
-        "cluster_groups",
-        "clusters",
-        "tenant_groups",
-        "tenants",
-        "tags",
-        "dynamic_groups",
-        "device_redundancy_groups",
-    ):
-        if os.path.isdir(os.path.join(repository_record.filesystem_path, filter_type)):
-            msg = (
-                f'Found "{filter_type}" directory in the repository root. If this is meant to contain config contexts, '
-                "it should be moved into a `config_contexts/` subdirectory."
-            )
-            logger.warning(msg)
-            job_result.log(msg, level_choice=LogLevelChoices.LOG_WARNING, grouping="config contexts")
-
-        dir_path = os.path.join(config_context_path, filter_type)
-        if not os.path.isdir(dir_path):
-            continue
-
-        for file_name in os.listdir(dir_path):
-            name = os.path.splitext(file_name)[0]
-            msg = f'Loading config context, filter `{filter_type} = [name: "{name}"]`, from `{filter_type}/{file_name}`'
+    if os.path.isdir(config_context_path):
+        # First, handle the "flat file" case - data files in the root config_context_path,
+        # whose metadata is expressed purely within the contents of the file:
+        for file_name in os.listdir(config_context_path):
+            if not os.path.isfile(os.path.join(config_context_path, file_name)):
+                continue
+            msg = f"Loading config context from `{file_name}`"
             logger.info(msg)
             job_result.log(msg, grouping="config contexts")
             try:
-                with open(os.path.join(dir_path, file_name), "r") as fd:
-                    # Data file can be either JSON or YAML; since YAML is a superset of JSON, we can load it regardless
+                with open(os.path.join(config_context_path, file_name), "r") as fd:
+                    # The data file can be either JSON or YAML; since YAML is a superset of JSON, we load it regardless
                     context_data = yaml.safe_load(fd)
 
-                # Unlike the above case, these files always contain just a single config context record
-
-                # Add the implied filter to the context metadata
-                if filter_type == "device_types":
-                    context_data.setdefault("_metadata", {}).setdefault(filter_type, []).append({"model": name})
+                # A file can contain one config context dict or a list thereof
+                if isinstance(context_data, dict):
+                    context_name = import_config_context(context_data, repository_record, job_result)
+                    managed_config_contexts.add(context_name)
+                elif isinstance(context_data, list):
+                    for context_data_entry in context_data:
+                        context_name = import_config_context(context_data_entry, repository_record, job_result)
+                        managed_config_contexts.add(context_name)
                 else:
-                    context_data.setdefault("_metadata", {}).setdefault(filter_type, []).append({"name": name})
+                    raise RuntimeError("data must be a dict or list of dicts")
 
-                context_name = import_config_context(context_data, repository_record, job_result)
-                managed_config_contexts.add(context_name)
             except Exception as exc:
                 msg = f"Error in loading config context data from `{file_name}`: {exc}"
                 logger.error(msg)
                 job_result.log(msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="config contexts")
 
-    # Finally, handle device- and virtual-machine-specific "local" context in (devices|virtual_machines)/<name>.(json|yaml)
-    for local_type in ("devices", "virtual_machines"):
-        if os.path.isdir(os.path.join(repository_record.filesystem_path, local_type)):
-            msg = (
-                f'Found "{local_type}" directory in the repository root. If this is meant to contain config contexts, '
-                "it should be moved into a `config_contexts/` subdirectory."
-            )
-            logger.warning(msg)
-            job_result.log(msg, level_choice=LogLevelChoices.LOG_WARNING, grouping="config contexts")
-
-        dir_path = os.path.join(config_context_path, local_type)
-        if not os.path.isdir(dir_path):
-            continue
-
-        for file_name in os.listdir(dir_path):
-            device_name = os.path.splitext(file_name)[0]
-            msg = f"Loading local config context for `{device_name}` from `{local_type}/{file_name}`"
-            logger.info(msg)
-            job_result.log(msg, grouping="local config contexts")
-            try:
-                with open(os.path.join(dir_path, file_name), "r") as fd:
-                    context_data = yaml.safe_load(fd)
-
-                import_local_config_context(
-                    local_type,
-                    device_name,
-                    context_data,
-                    repository_record,
+        # Next, handle the "filter/name" directory structure case - files in <filter_type>/<name>.(json|yaml)
+        for filter_type in (
+            "locations",
+            "device_types",
+            "roles",
+            "platforms",
+            "cluster_groups",
+            "clusters",
+            "tenant_groups",
+            "tenants",
+            "tags",
+            "dynamic_groups",
+            "device_redundancy_groups",
+        ):
+            if os.path.isdir(os.path.join(repository_record.filesystem_path, filter_type)):
+                msg = (
+                    f'Found "{filter_type}" directory in the repository root. If this is meant to contain config contexts, '
+                    "it should be moved into a `config_contexts/` subdirectory."
                 )
-                managed_local_config_contexts[local_type].add(device_name)
-            except Exception as exc:
-                msg = f"Error in loading local config context from `{local_type}/{file_name}`: {exc}"
-                logger.error(msg)
-                job_result.log(msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="local config contexts")
+                logger.warning(msg)
+                job_result.log(msg, level_choice=LogLevelChoices.LOG_WARNING, grouping="config contexts")
+
+            dir_path = os.path.join(config_context_path, filter_type)
+            if not os.path.isdir(dir_path):
+                continue
+
+            for file_name in os.listdir(dir_path):
+                name = os.path.splitext(file_name)[0]
+                msg = (
+                    f'Loading config context, filter `{filter_type} = [name: "{name}"]`, '
+                    f"from `{filter_type}/{file_name}`"
+                )
+                logger.info(msg)
+                job_result.log(msg, grouping="config contexts")
+                try:
+                    with open(os.path.join(dir_path, file_name), "r") as fd:
+                        # Data file can be either JSON or YAML; since YAML is a superset of JSON, we load it regardless
+                        context_data = yaml.safe_load(fd)
+
+                    # Unlike the above case, these files always contain just a single config context record
+
+                    # Add the implied filter to the context metadata
+                    if filter_type == "device_types":
+                        context_data.setdefault("_metadata", {}).setdefault(filter_type, []).append({"model": name})
+                    else:
+                        context_data.setdefault("_metadata", {}).setdefault(filter_type, []).append({"name": name})
+
+                    context_name = import_config_context(context_data, repository_record, job_result)
+                    managed_config_contexts.add(context_name)
+                except Exception as exc:
+                    msg = f"Error in loading config context data from `{file_name}`: {exc}"
+                    logger.error(msg)
+                    job_result.log(msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="config contexts")
+
+        # Finally, handle device- and VM-specific "local" context in (devices|virtual_machines)/<name>.(json|yaml)
+        for local_type in ("devices", "virtual_machines"):
+            if os.path.isdir(os.path.join(repository_record.filesystem_path, local_type)):
+                msg = (
+                    f'Found "{local_type}" directory in the repository root. If this is meant to contain '
+                    "config contexts, it should be moved into a `config_contexts/` subdirectory."
+                )
+                logger.warning(msg)
+                job_result.log(msg, level_choice=LogLevelChoices.LOG_WARNING, grouping="config contexts")
+
+            dir_path = os.path.join(config_context_path, local_type)
+            if not os.path.isdir(dir_path):
+                continue
+
+            for file_name in os.listdir(dir_path):
+                device_name = os.path.splitext(file_name)[0]
+                msg = f"Loading local config context for `{device_name}` from `{local_type}/{file_name}`"
+                logger.info(msg)
+                job_result.log(msg, grouping="local config contexts")
+                try:
+                    with open(os.path.join(dir_path, file_name), "r") as fd:
+                        context_data = yaml.safe_load(fd)
+
+                    import_local_config_context(
+                        local_type,
+                        device_name,
+                        context_data,
+                        repository_record,
+                    )
+                    managed_local_config_contexts[local_type].add(device_name)
+                except Exception as exc:
+                    msg = f"Error in loading local config context from `{local_type}/{file_name}`: {exc}"
+                    logger.error(msg)
+                    job_result.log(msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="local config contexts")
 
     # Delete any prior contexts that are owned by this repository but were not created/updated above
     delete_git_config_contexts(
@@ -599,39 +600,38 @@ def refresh_git_config_context_schemas(repository_record, job_result, delete=Fal
 def update_git_config_context_schemas(repository_record, job_result):
     """Refresh any config context schemas provided by this Git repository."""
     config_context_schema_path = os.path.join(repository_record.filesystem_path, "config_context_schemas")
-    if not os.path.isdir(config_context_schema_path):
-        return
 
     managed_config_context_schemas = set()
 
-    for file_name in os.listdir(config_context_schema_path):
-        if not os.path.isfile(os.path.join(config_context_schema_path, file_name)):
-            continue
-        msg = (f"Loading config context schema from `{file_name}`",)
-        logger.info(msg)
-        job_result.log(msg, grouping="config context schemas")
-        try:
-            with open(os.path.join(config_context_schema_path, file_name), "r") as fd:
-                # The data file can be either JSON or YAML; since YAML is a superset of JSON, we can load it regardless
-                context_schema_data = yaml.safe_load(fd)
+    if os.path.isdir(config_context_schema_path):
+        for file_name in os.listdir(config_context_schema_path):
+            if not os.path.isfile(os.path.join(config_context_schema_path, file_name)):
+                continue
+            msg = (f"Loading config context schema from `{file_name}`",)
+            logger.info(msg)
+            job_result.log(msg, grouping="config context schemas")
+            try:
+                with open(os.path.join(config_context_schema_path, file_name), "r") as fd:
+                    # The data file can be either JSON or YAML; since YAML is a superset of JSON, we load it regardless
+                    context_schema_data = yaml.safe_load(fd)
 
-            # A file can contain one config context dict or a list thereof
-            if isinstance(context_schema_data, dict):
-                context_name = import_config_context_schema(context_schema_data, repository_record, job_result)
-                managed_config_context_schemas.add(context_name)
-            elif isinstance(context_schema_data, list):
-                for context_schema in context_schema_data:
-                    if isinstance(context_schema, dict):
-                        context_name = import_config_context_schema(context_schema, repository_record, job_result)
-                        managed_config_context_schemas.add(context_name)
-                    else:
-                        raise RuntimeError("each item in list data must be a dict")
-            else:
-                raise RuntimeError("data must be a dict or a list of dicts")
-        except Exception as exc:
-            msg = f"Error in loading config context schema data from `{file_name}`: {exc}"
-            logger.error(msg)
-            job_result.log(msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="config context schemas")
+                # A file can contain one config context dict or a list thereof
+                if isinstance(context_schema_data, dict):
+                    context_name = import_config_context_schema(context_schema_data, repository_record, job_result)
+                    managed_config_context_schemas.add(context_name)
+                elif isinstance(context_schema_data, list):
+                    for context_schema in context_schema_data:
+                        if isinstance(context_schema, dict):
+                            context_name = import_config_context_schema(context_schema, repository_record, job_result)
+                            managed_config_context_schemas.add(context_name)
+                        else:
+                            raise RuntimeError("each item in list data must be a dict")
+                else:
+                    raise RuntimeError("data must be a dict or a list of dicts")
+            except Exception as exc:
+                msg = f"Error in loading config context schema data from `{file_name}`: {exc}"
+                logger.error(msg)
+                job_result.log(msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="config context schemas")
 
     # Delete any prior contexts that are owned by this repository but were not created/updated above
     delete_git_config_context_schemas(
@@ -835,12 +835,10 @@ def update_git_export_templates(repository_record, job_result):
             job_result.log(msg, level_choice=LogLevelChoices.LOG_WARNING, grouping="export templates")
 
     export_template_path = os.path.join(repository_record.filesystem_path, "export_templates")
-    if not os.path.isdir(export_template_path):
-        return
+    managed_export_templates = {}
 
     git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
 
-    managed_export_templates = {}
     for model_content_type, file_path in files_from_contenttype_directories(
         export_template_path, job_result, "export templates"
     ):

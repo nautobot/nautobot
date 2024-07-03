@@ -1,0 +1,1 @@
+Fixed blank page redirect when syncing or running a dry run on a GIT Repo with no workers available; now redirects to the GIT Repo Detail page with an error message.

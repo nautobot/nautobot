@@ -34,6 +34,9 @@
     <link rel="stylesheet" id="base-theme"
           href="{% versioned_static 'css/base.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
+    {% if settings.BRANDING_FILEPATHS.css %}
+    <link rel="stylesheet" id="custom-css" href="{% custom_branding_or_static 'css' None %}">
+    {% endif %}
     <link rel="apple-touch-icon" sizes="180x180" href="{% custom_branding_or_static 'icon_180' 'img/nautobot_icon_180x180.png' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% custom_branding_or_static 'icon_32' 'img/nautobot_icon_32x32.png' %}">
     <link rel="icon" type="image/png" sizes="16x16" href="{% custom_branding_or_static 'icon_16' 'img/nautobot_icon_16x16.png' %}">

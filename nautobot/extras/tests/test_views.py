@@ -17,6 +17,7 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.testing import extract_form_failures, extract_page_body, TestCase, ViewTestCases
 from nautobot.core.testing.utils import disable_warnings, post_data
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
     ConsolePort,
     Controller,
@@ -777,9 +778,11 @@ class DynamicGroupTestCase(
         content_type = ContentType.objects.get_for_model(Device)
 
         # DynamicGroup objects to test.
-        DynamicGroup.objects.create(name="DG 1", content_type=content_type)
-        DynamicGroup.objects.create(name="DG 2", content_type=content_type)
-        DynamicGroup.objects.create(name="DG 3", content_type=content_type)
+        cls.dynamic_groups = [
+            DynamicGroup.objects.create(name="DG 1", content_type=content_type),
+            DynamicGroup.objects.create(name="DG 2", content_type=content_type),
+            DynamicGroup.objects.create(name="DG 3", content_type=content_type),
+        ]
 
         cls.form_data = {
             "name": "new_dynamic_group",
@@ -791,6 +794,38 @@ class DynamicGroupTestCase(
             "dynamic_group_memberships-MIN_NUM_FORMS": "0",
             "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
         }
+
+    def test_get_object_with_permission(self):
+        instance = self._get_queryset().first()
+        # Add view permissions for the group's members:
+        self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"))
+
+        response = super().test_get_object_with_permission()
+
+        response_body = extract_page_body(response.content.decode(response.charset))
+        # Check that the "members" table in the detail view includes all appropriate member objects
+        for member in instance.members:
+            self.assertIn(str(member.pk), response_body)
+
+    def test_get_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        # Add view permission for one of the group's members but not the others:
+        member1, member2 = instance.members[:2]
+        obj_perm = ObjectPermission(
+            name="Members permission",
+            constraints={"pk": member1.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(instance.content_type)
+
+        response = super().test_get_object_with_constrained_permission()
+
+        response_body = extract_page_body(response.content.decode(response.charset))
+        # Check that the "members" table in the detail view includes all permitted member objects
+        self.assertIn(str(member1.pk), response_body)
+        self.assertNotIn(str(member2.pk), response_body)
 
     def test_get_object_dynamic_groups_anonymous(self):
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
@@ -815,7 +850,6 @@ class DynamicGroupTestCase(
         self.assertIn("DG 3", response_body, msg=response_body)
 
     def test_get_object_dynamic_groups_with_constrained_permission(self):
-        self.add_permissions("extras.view_dynamicgroup")
         obj_perm = ObjectPermission(
             name="View a device",
             constraints={"pk": Device.objects.first().pk},
@@ -824,12 +858,22 @@ class DynamicGroupTestCase(
         obj_perm.save()
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Device))
+        obj_perm_2 = ObjectPermission(
+            name="View a Dynamic Group",
+            constraints={"pk": self.dynamic_groups[0].pk},
+            actions=["view"],
+        )
+        obj_perm_2.save()
+        obj_perm_2.users.add(self.user)
+        obj_perm_2.object_types.add(ContentType.objects.get_for_model(DynamicGroup))
 
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
         response_body = response.content.decode(response.charset)
         self.assertIn("DG 1", response_body, msg=response_body)
+        self.assertNotIn("DG 2", response_body, msg=response_body)
+        self.assertNotIn("DG 3", response_body, msg=response_body)
 
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.last().pk})
         response = self.client.get(url)
@@ -952,7 +996,7 @@ class GitRepositoryTestCase(
         # Create four GitRepository records
         repos = (
             GitRepository(name="Repo 1", slug="repo_1", remote_url="https://example.com/repo1.git"),
-            GitRepository(name="Repo 2", slug="repo_2", remote_url="https://example.com/repo2.git"),
+            GitRepository(name="Repo 2", slug="repo_2", remote_url="https://some-local-host/repo2.git"),
             GitRepository(name="Repo 3", slug="repo_3", remote_url="https://example.com/repo3.git"),
             GitRepository(name="Repo 4", remote_url="https://example.com/repo4.git", secrets_group=secrets_groups[0]),
         )
@@ -962,7 +1006,7 @@ class GitRepositoryTestCase(
         cls.form_data = {
             "name": "A new Git repository",
             "slug": "a_new_git_repository",
-            "remote_url": "http://example.com/a_new_git_repository.git",
+            "remote_url": "http://another-local-host/a_new_git_repository.git",
             "branch": "develop",
             "_token": "1234567890abcdef1234567890abcdef",
             "secrets_group": secrets_groups[1].pk,
@@ -2285,23 +2329,30 @@ class JobButtonTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        jbr_simple = Job.objects.get(job_class_name="TestJobButtonReceiverSimple")
+        jbr_simple.enabled = True
+        jbr_simple.save()
+        jbr_complex = Job.objects.get(job_class_name="TestJobButtonReceiverComplex")
+        jbr_complex.enabled = True
+        jbr_complex.save()
+
         job_buttons = (
             JobButton.objects.create(
                 name="JobButton1",
                 text="JobButton1",
-                job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+                job=jbr_simple,
                 confirmation=True,
             ),
             JobButton.objects.create(
                 name="JobButton2",
                 text="JobButton2",
-                job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+                job=jbr_simple,
                 confirmation=False,
             ),
             JobButton.objects.create(
                 name="JobButton3",
                 text="JobButton3",
-                job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+                job=jbr_complex,
                 confirmation=True,
                 weight=50,
             ),
@@ -2315,7 +2366,7 @@ class JobButtonTestCase(
             "content_types": [location_ct.pk],
             "name": "jobbutton-4",
             "text": "jobbutton text 4",
-            "job": Job.objects.get(job_class_name="TestJobButtonReceiverComplex").pk,
+            "job": jbr_complex.pk,
             "weight": 100,
             "button_class": "default",
             "confirmation": False,
@@ -2330,6 +2381,9 @@ class JobButtonRenderingTestCase(TestCase):
     def setUp(self):
         super().setUp()
         self.job = Job.objects.get(job_class_name="TestJobButtonReceiverSimple")
+        self.job.enabled = True
+        self.job.save()
+
         self.job_button_1 = JobButton(
             name="JobButton 1",
             text="JobButton {{ obj.name }}",
@@ -2339,10 +2393,14 @@ class JobButtonRenderingTestCase(TestCase):
         self.job_button_1.validated_save()
         self.job_button_1.content_types.add(ContentType.objects.get_for_model(LocationType))
 
+        job_2 = Job.objects.get(job_class_name="TestJobButtonReceiverComplex")
+        job_2.enabled = True
+        job_2.save()
+
         self.job_button_2 = JobButton(
             name="JobButton 2",
             text="Click me!",
-            job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+            job=job_2,
             confirmation=False,
         )
         self.job_button_2.validated_save()

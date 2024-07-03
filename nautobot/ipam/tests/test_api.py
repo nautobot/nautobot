@@ -454,7 +454,6 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         for i in range(4):
             data = {
                 "prefix_length": child_prefix_length,
-                "namespace": self.namespace.pk,
                 "status": self.status.pk,
                 "description": f"Test Prefix {i + 1}",
             }
@@ -464,13 +463,18 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             self.assertEqual(str(response.data["namespace"]["url"]), self.absolute_api_url(prefix.namespace))
             self.assertEqual(response.data["description"], data["description"])
 
-        # Try to create one more prefix
-        response = self.client.post(url, {"prefix_length": child_prefix_length}, format="json", **self.header)
+        # Try to create one more prefix, and expect a HTTP 204 response.
+        # This feels wrong to me (shouldn't it be a 4xx or 5xx?) but it's how the API has historically behaved.
+        response = self.client.post(
+            url, {"prefix_length": child_prefix_length, "status": self.status.pk}, format="json", **self.header
+        )
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
         self.assertIn("detail", response.data)
 
-        # Try to create invalid prefix type
-        response = self.client.post(url, {"prefix_length": str(child_prefix_length)}, format="json", **self.header)
+        # Invalid data does trigger a HTTP 400 response.
+        response = self.client.post(
+            url, {"prefix_length": "hello", "status": self.status.pk}, format="json", **self.header
+        )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertIn("prefix_length", response.data[0])
 
@@ -495,35 +499,31 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             {
                 "prefix_length": child_prefix_length,
                 "description": "Test Prefix 1",
-                "namespace": self.namespace.pk,
                 "status": self.status.pk,
             },
             {
                 "prefix_length": child_prefix_length,
                 "description": "Test Prefix 2",
-                "namespace": self.namespace.pk,
                 "status": self.status.pk,
             },
             {
                 "prefix_length": child_prefix_length,
                 "description": "Test Prefix 3",
-                "namespace": self.namespace.pk,
                 "status": self.status.pk,
             },
             {
                 "prefix_length": child_prefix_length,
                 "description": "Test Prefix 4",
-                "namespace": self.namespace.pk,
                 "status": self.status.pk,
             },
             {
                 "prefix_length": child_prefix_length,
                 "description": "Test Prefix 5",
-                "namespace": self.namespace.pk,
                 "status": self.status.pk,
             },
         ]
         response = self.client.post(url, data, format="json", **self.header)
+        # This feels wrong to me (shouldn't it be a 4xx or 5xx?) but it's how the API has historically behaved.
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
         self.assertIn("detail", response.data)
 
@@ -577,7 +577,6 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         for i in range(1, 7):
             data = {
                 "description": f"Test IP {i}",
-                "namespace": self.namespace.pk,
                 "status": self.status.pk,
             }
             response = self.client.post(url, data, format="json", **self.header)
@@ -586,7 +585,8 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             self.assertEqual(response.data["description"], data["description"])
 
         # Try to create one more IP
-        response = self.client.post(url, {}, format="json", **self.header)
+        response = self.client.post(url, {"status": self.status.pk}, format="json", **self.header)
+        # This feels wrong to me (shouldn't it be a 4xx or 5xx?) but it's how the API has historically behaved.
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
         self.assertIn("detail", response.data)
 
@@ -604,19 +604,14 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "extras.view_status")
 
         # Try to create seven IPs (only six are available)
-        data = [
-            {"description": f"Test IP {i}", "namespace": self.namespace.pk, "status": self.status.pk}
-            for i in range(1, 8)
-        ]  # 7 IPs
+        data = [{"description": f"Test IP {i}", "status": self.status.pk} for i in range(1, 8)]  # 7 IPs
         response = self.client.post(url, data, format="json", **self.header)
+        # This feels wrong to me (shouldn't it be a 4xx or 5xx?) but it's how the API has historically behaved.
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
         self.assertIn("detail", response.data)
 
         # Create all six available IPs in a single request
-        data = [
-            {"description": f"Test IP {i}", "namespace": self.namespace.pk, "status": self.status.pk}
-            for i in range(1, 7)
-        ]  # 6 IPs
+        data = [{"description": f"Test IP {i}", "status": self.status.pk} for i in range(1, 7)]  # 6 IPs
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(len(response.data), 6)

@@ -56,8 +56,6 @@ from .datasources import (
     enqueue_pull_git_repository_and_refresh_data,
     get_datasource_contents,
 )
-from .filters import RoleFilterSet
-from .forms import RoleBulkEditForm, RoleForm
 from .jobs import get_job
 from .models import (
     ComputedField,
@@ -94,7 +92,6 @@ from .models import (
     Webhook,
 )
 from .registry import registry
-from .tables import AssociatedContactsTable, RoleTable
 
 logger = logging.getLogger(__name__)
 
@@ -152,19 +149,18 @@ class ConfigContextView(generic.ObjectView):
     queryset = ConfigContext.objects.all()
 
     def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
         # Determine user's preferred output format
         if request.GET.get("format") in ["json", "yaml"]:
-            format_ = request.GET.get("format")
+            context["format"] = request.GET.get("format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontext.format", format_, commit=True)
+                request.user.set_config("extras.configcontext.format", context["format"], commit=True)
         elif request.user.is_authenticated:
-            format_ = request.user.get_config("extras.configcontext.format", "json")
+            context["format"] = request.user.get_config("extras.configcontext.format", "json")
         else:
-            format_ = "json"
+            context["format"] = "json"
 
-        return {
-            "format": format_,
-        }
+        return context
 
 
 class ConfigContextEditView(generic.ObjectEditView):
@@ -236,19 +232,18 @@ class ConfigContextSchemaView(generic.ObjectView):
     queryset = ConfigContextSchema.objects.all()
 
     def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
         # Determine user's preferred output format
         if request.GET.get("format") in ["json", "yaml"]:
-            format_ = request.GET.get("format")
+            context["format"] = request.GET.get("format")
             if request.user.is_authenticated:
-                request.user.set_config("extras.configcontextschema.format", format_, commit=True)
+                request.user.set_config("extras.configcontextschema.format", context["format"], commit=True)
         elif request.user.is_authenticated:
-            format_ = request.user.get_config("extras.configcontextschema.format", "json")
+            context["format"] = request.user.get_config("extras.configcontextschema.format", "json")
         else:
-            format_ = "json"
+            context["format"] = "json"
 
-        return {
-            "format": format_,
-        }
+        return context
 
 
 class ConfigContextSchemaObjectValidationView(generic.ObjectView):
@@ -400,7 +395,7 @@ class ContactAssociationUIViewSet(
     filterset_class = filters.ContactAssociationFilterSet
     queryset = ContactAssociation.objects.all()
     serializer_class = serializers.ContactAssociationSerializer
-    table_class = AssociatedContactsTable
+    table_class = tables.AssociatedContactsTable
     non_filter_params = ("export", "page", "per_page", "sort")
 
 
@@ -508,6 +503,7 @@ class CustomFieldListView(generic.ObjectListView):
     queryset = CustomField.objects.all()
     table = tables.CustomFieldTable
     filterset = filters.CustomFieldFilterSet
+    filterset_form = forms.CustomFieldFilterForm
     action_buttons = ("add",)
 
 
@@ -708,7 +704,7 @@ class DynamicGroupView(generic.ObjectView):
 
         if table_class is not None:
             # Members table (for display on Members nav tab)
-            members_table = table_class(instance.members, orderable=False)
+            members_table = table_class(instance.members.restrict(request.user, "view"), orderable=False)
             paginate = {
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request),
@@ -888,7 +884,9 @@ class ObjectDynamicGroupsView(generic.GenericView):
             obj = get_object_or_404(model, **kwargs)
 
         # Gather all dynamic groups for this object (and its related objects)
-        dynamicsgroups_table = tables.DynamicGroupTable(data=obj.dynamic_groups_cached, orderable=False)
+        dynamicsgroups_table = tables.DynamicGroupTable(
+            data=obj.dynamic_groups_cached.restrict(request.user, "view"), orderable=False
+        )
 
         # Apply the request context
         paginate = {
@@ -952,6 +950,7 @@ class ExportTemplateBulkDeleteView(generic.BulkDeleteView):
 class ExternalIntegrationUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.ExternalIntegrationBulkEditForm
     filterset_class = filters.ExternalIntegrationFilterSet
+    filterset_form_class = forms.ExternalIntegrationFilterForm
     form_class = forms.ExternalIntegrationForm
     queryset = ExternalIntegration.objects.select_related("secrets_group")
     serializer_class = serializers.ExternalIntegrationSerializer
@@ -994,6 +993,7 @@ class GitRepositoryView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         return {
             "datasource_contents": get_datasource_contents("extras.gitrepository"),
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -1069,7 +1069,7 @@ def check_and_call_git_repository_function(request, pk, func):
     # Allow execution only if a worker process is running.
     if not get_worker_count():
         messages.error(request, "Unable to run job: Celery worker process not running.")
-        return redirect(request.get_full_path(), permanent=False)
+        return redirect(reverse("extras:gitrepository", args=(pk,)), permanent=False)
     else:
         repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
         job_result = func(repository, request.user)
@@ -1520,9 +1520,7 @@ class JobApprovalRequestView(generic.ObjectView):
         else:
             job_form = None
 
-        return {
-            "job_form": job_form,
-        }
+        return {"job_form": job_form, **super().get_extra_context(request, instance)}
 
     def post(self, request, pk):
         """
@@ -1652,7 +1650,11 @@ class ScheduledJobView(generic.ObjectView):
                     labels[name] = field.label
                 else:
                     labels[name] = pretty_name(name)
-        return {"labels": labels, "job_class_found": (job_class is not None)}
+        return {
+            "labels": labels,
+            "job_class_found": (job_class is not None),
+            **super().get_extra_context(request, instance),
+        }
 
 
 class ScheduledJobDeleteView(generic.ObjectDeleteView):
@@ -1676,7 +1678,10 @@ class JobHookView(generic.ObjectView):
     queryset = JobHook.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"content_types": instance.content_types.order_by("app_label", "model")}
+        return {
+            "content_types": instance.content_types.order_by("app_label", "model"),
+            **super().get_extra_context(request, instance),
+        }
 
 
 class JobHookEditView(generic.ObjectEditView):
@@ -1761,6 +1766,7 @@ class JobResultView(generic.ObjectView):
             "job": job_class,
             "associated_record": associated_record,
             "result": instance,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -1848,6 +1854,7 @@ class ObjectChangeView(generic.ObjectView):
             "prev_change": instance.get_prev_change(request.user),
             "related_changes_table": related_changes_table,
             "related_changes_count": related_changes.count(),
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -2042,11 +2049,12 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
     """`Roles` UIViewSet."""
 
     queryset = Role.objects.all()
-    bulk_update_form_class = RoleBulkEditForm
-    filterset_class = RoleFilterSet
-    form_class = RoleForm
+    bulk_update_form_class = forms.RoleBulkEditForm
+    filterset_class = filters.RoleFilterSet
+    filterset_form_class = forms.RoleFilterForm
+    form_class = forms.RoleForm
     serializer_class = serializers.RoleSerializer
-    table_class = RoleTable
+    table_class = tables.RoleTable
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -2192,6 +2200,7 @@ class SecretView(generic.ObjectView):
             "format": format_,
             "provider_name": provider.name if provider else instance.provider,
             "groups_table": groups_table,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -2407,7 +2416,10 @@ class StatusView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         """Return ordered content types."""
-        return {"content_types": instance.content_types.order_by("app_label", "model")}
+        return {
+            "content_types": instance.content_types.order_by("app_label", "model"),
+            **super().get_extra_context(request, instance),
+        }
 
 
 #
@@ -2442,6 +2454,7 @@ class TagView(generic.ObjectView):
             "items_count": tagged_items.count(),
             "items_table": items_table,
             "content_types": instance.content_types.order_by("app_label", "model"),
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -2522,7 +2535,10 @@ class WebhookView(generic.ObjectView):
     queryset = Webhook.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"content_types": instance.content_types.order_by("app_label", "model")}
+        return {
+            "content_types": instance.content_types.order_by("app_label", "model"),
+            **super().get_extra_context(request, instance),
+        }
 
 
 class WebhookEditView(generic.ObjectEditView):

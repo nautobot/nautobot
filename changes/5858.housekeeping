@@ -1,0 +1,1 @@
+Enhanced the test runner to include a hash of applied database migrations as part of the factory dump filename, reducing the likelihood of using the wrong cached data for a given branch.

@@ -318,6 +318,25 @@ class Job(PrimaryModel):
                 {"approval_required": "A job that may have sensitive variables cannot be marked as requiring approval"}
             )
 
+    def save(self, *args, **kwargs):
+        """When a Job is uninstalled, auto-disable all associated JobButtons, JobHooks, and ScheduledJobs."""
+        super().save(*args, **kwargs)
+        if not self.installed:
+            if self.is_job_button_receiver:
+                for jb in JobButton.objects.filter(job=self, enabled=True):
+                    logger.info("Disabling JobButton %s derived from %s", jb, self)
+                    jb.enabled = False
+                    jb.save()
+            if self.is_job_hook_receiver:
+                for jh in JobHook.objects.filter(job=self, enabled=True):
+                    logger.info("Disabling JobHook %s derived from %s", jh, self)
+                    jh.enabled = False
+                    jh.save()
+            for sj in ScheduledJob.objects.filter(job_model=self, enabled=True):
+                logger.info("Disabling ScheduledJob %s derived from %s", sj, self)
+                sj.enabled = False
+                sj.save()
+
 
 @extras_features("graphql")
 class JobHook(OrganizationalModel):
@@ -363,6 +382,9 @@ class JobHook(OrganizationalModel):
         if not self.type_create and not self.type_delete and not self.type_update:
             raise ValidationError("You must select at least one type: create, update, and/or delete.")
 
+        if self.enabled and not (self.job.installed and self.job.enabled):
+            raise ValidationError({"enabled": "The selected Job is not installed and enabled"})
+
     @classmethod
     def check_for_conflicts(
         cls, instance=None, content_types=None, job=None, type_create=None, type_update=None, type_delete=None
@@ -375,6 +397,7 @@ class JobHook(OrganizationalModel):
         """
 
         conflicts = {}
+
         job_hook_error_msg = "A job hook already exists for {action} on {content_type} to job {job}"
 
         if instance is not None and instance.present_in_database:
@@ -783,6 +806,7 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
         help_text="The object type(s) to which this job button applies.",
     )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    enabled = models.BooleanField(default=True)
     text = models.CharField(
         max_length=500,
         help_text="Jinja2 template code for button text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.name }}</code>. Buttons which render as empty text will not be displayed.",
@@ -816,6 +840,12 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        super().clean()
+
+        if self.enabled and not (self.job.installed and self.job.enabled):
+            raise ValidationError({"enabled": "The selected Job is not installed and enabled"})
 
 
 class ScheduledJobs(models.Model):
