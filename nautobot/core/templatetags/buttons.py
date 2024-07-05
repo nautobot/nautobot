@@ -1,5 +1,7 @@
 from django import template
 from django.urls import NoReverseMatch, reverse
+from django.utils.html import format_html, format_html_join
+from django.utils.safestring import mark_safe
 
 from nautobot.core.utils import lookup
 from nautobot.core.views import utils as views_utils
@@ -124,13 +126,10 @@ def job_import_url(content_type):
     return import_url
 
 
-def convert_button_attrs_to_string(buttons_to_display):
-    """Converts the button attributes from a dictionary to a string format suitable for HTML rendering."""
-    return_values = []
-    for button in buttons_to_display:
-        button_attributes = ' '.join([f'{key}="{value}"' for key, value in button["button_attributes"].items()])
-        return_values.append({**button, "button_attributes": button_attributes})
-    return return_values
+def render_tag_attrs(attrs_dict):
+    """Converts tag attributes from a dictionary to a string format suitable for HTML rendering."""
+    return format_html_join(" ", '{}="{}"', [(key, value) for key, value in attrs_dict.items()])
+
 
 @register.inclusion_tag("buttons/consolidated_bulk_action_buttons.html")
 def consolidate_bulk_action_buttons(request, content_type, perms, bulk_edit_url, bulk_delete_url, permissions):
@@ -146,48 +145,119 @@ def consolidate_bulk_action_buttons(request, content_type, perms, bulk_edit_url,
         bulk_delete_url (str): The URL for the bulk delete action.
         permissions (dict): A dictionary of specific permissions for the actions.
     """
-    buttons_to_display = []
 
-    if bulk_edit_url and permissions["change"]:
-        buttons_to_display.append({
-            "label": "Edit Selected",
-            "button_attributes": {
-                "type": "submit",
-                "name": "_edit",
-                "formaction": reverse(bulk_edit_url) + (request.GET.urlencode if request.GET else "" ),
-            },
-            "color": "warning",
-            "icon": "mdi mdi-pencil"
-        })
-    if content_type.model_class().is_dynamic_group_associable_model and perms["extras"]["add_staticgroupassociation"]:
-        buttons_to_display.append({
-            "label": "Update Group Assignment",
-            "button_attributes": {
-                "id":"update_dynamic_groups_for_selected",
-                "data-toggle":"modal",
-                "data-target": "#dynamic_group_assignment_modal",
-                "data-objects": "selected",
-                "type": "button"
-            },
-            "color": "primary",
-            "icon": "mdi mdi-group"
-        })
-    if bulk_delete_url and permissions["delete"]:
-        buttons_to_display.append({
-            "label": "Delete Selected",
-            "button_attributes": {
-                "type": "submit",
-                "name": "_delete",
-                "formaction": reverse(bulk_delete_url) + (request.GET.urlencode if request.GET else "" )
-            },
-            "color": "danger",
-            "icon": "mdi mdi-trash-can-outline"
-        })
+    bulk_action_buttons = []
 
-    buttons_to_display = convert_button_attrs_to_string(buttons_to_display)
+    render_edit_button = bool(bulk_edit_url and permissions["change"])
+    render_static_group_assign_button = bool(
+        content_type.model_class().is_dynamic_group_associable_model and perms["extras"]["add_staticgroupassociation"]
+    )
+    render_delete_button = bool(bulk_delete_url and permissions["delete"])
+    bulk_action_button_count = sum([render_edit_button, render_static_group_assign_button, render_delete_button])
+
+    if bulk_action_button_count == 0:
+        return {
+            "bulk_action_buttons": bulk_action_buttons,
+        }
+
+    params = ("?" + request.GET.urlencode()) if request.GET else ""
+
+    primary_button_fragment = child_button_fragment = """
+        <button {attrs}>
+            <span class="{icon}" aria-hidden="true"></span> {label}
+        </button>
+    """
+
+    edit_button_classes = "btn btn-sm btn-warning"
+    delete_button_classes = "btn btn-sm btn-danger"
+    static_group_button_classes = "btn btn-sm btn-primary"
+    static_group_icon = "mdi mdi-group"
+
+    if bulk_action_button_count > 1:
+        child_button_fragment = f"<li>{primary_button_fragment}</li>"
+        edit_button_classes += " navbar-btn"
+        delete_button_classes = "text-danger"
+        static_group_button_classes = "text"
+        static_group_icon += " text-muted"
+
+    if render_edit_button:
+        bulk_action_buttons.append(
+            format_html(
+                primary_button_fragment,
+                label="Edit Selected",
+                attrs=render_tag_attrs(
+                    {
+                        "class": edit_button_classes,
+                        "formaction": reverse(bulk_edit_url) + params,
+                        "type": "submit",
+                    }
+                ),
+                icon="mdi mdi-pencil",
+            ),
+        )
+        if bulk_action_button_count > 1:
+            bulk_action_buttons[0] += mark_safe(  # noqa: S308 -- suspicious-mark-safe-usage
+                f"""
+                <button type="button" data-toggle="dropdown" class="{edit_button_classes} dropdown-toggle" aria-haspopup="true">
+                    <span class="caret"></span>
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                """
+            )
+
+    # Render a generic "Bulk Actions" dropup button if the edit button is not present
+    elif bulk_action_button_count > 1:
+        bulk_action_buttons.append(
+            mark_safe(  # noqa: S308 -- suspicious-mark-safe-usage
+                """
+                <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true">
+                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Bulk Actions <span class="caret"></span>
+                </button>
+                """
+            )
+        )
+
+    if render_delete_button:
+        bulk_action_buttons.append(
+            format_html(
+                child_button_fragment,
+                label="Delete Selected",
+                attrs=render_tag_attrs(
+                    {
+                        "class": delete_button_classes,
+                        "type": "submit",
+                        "name": "_delete",
+                        "formaction": reverse(bulk_delete_url) + params,
+                    }
+                ),
+                icon="mdi mdi-trash-can-outline",
+            )
+        )
+
+    if render_delete_button and render_static_group_assign_button:
+        bulk_action_buttons.append(mark_safe('<li role="separator" class="divider"></li>'))  # noqa: S308 -- suspicious-mark-safe-usage
+
+    if render_static_group_assign_button:
+        bulk_action_buttons.append(
+            format_html(
+                child_button_fragment,
+                label="Update Group Assignment",
+                attrs=render_tag_attrs(
+                    {
+                        "class": static_group_button_classes,
+                        "id": "update_dynamic_groups_for_selected",
+                        "data-toggle": "modal",
+                        "data-target": "#dynamic_group_assignment_modal",
+                        "data-objects": "selected",
+                        "type": "button",
+                    }
+                ),
+                icon=static_group_icon,
+            )
+        )
 
     return {
-        "buttons_to_display": buttons_to_display
+        "bulk_action_buttons": bulk_action_buttons,
     }
 
 

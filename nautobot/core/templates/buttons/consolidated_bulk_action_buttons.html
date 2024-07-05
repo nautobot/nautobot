@@ -1,46 +1,13 @@
-<style>
-    .dropdown-menu button {
-        background: none;
-        border: none;
-        display: block;
-        width: 100%;
-        text-align: left;
-        padding: 3px 20px;
-        cursor: pointer;
-        text-wrap: nowrap;
-    }
-    .dropdown-menu button:hover {
-        background-color: #f5f5f5;
-    }
-</style>
-
-{% if buttons_to_display|length > 0 %}
-<div class="btn-group">
-    <button {{ buttons_to_display.2.button_attributes|safe }}  class="btn btn-{{ buttons_to_display.0.color }} navbar-btn">
-        <span class="{{ buttons_to_display.0.icon }}" aria-hidden="true"></span> {{ buttons_to_display.0.label }}
-    </button>
-    {% if buttons_to_display|length > 1 %}
-    <button type="button" data-toggle="dropdown" class="btn btn-{{ buttons_to_display.0.color }} navbar-btn dropdown-toggle"
-            aria-haspopup="true" aria-expanded="false">
-        <span class="caret"></span>
-        <span class="sr-only">Toggle Dropdown</span>
-    </button>
-    
+{% if bulk_action_buttons|length > 1 %}
+<div class="btn-group dropup">
+    {% for button in bulk_action_buttons %}
+        {{ button }}
+        {% if forloop.first %}
     <ul class="dropdown-menu">
-        <li>
-            <button {{ buttons_to_display.1.button_attributes|safe }} class="text-{{ buttons_to_display.1.color }}">
-                <span class="{{ buttons_to_display.1.icon }}" aria-hidden="true"></span> {{ buttons_to_display.1.label }}
-            </button>
-        </li>
-        {% if buttons_to_display|length == 3 %}
-        <li role="separator" class="divider"></li>
-        <li>
-            <button {{ buttons_to_display.2.button_attributes|safe }} class="text-{{ buttons_to_display.2.color }}">
-                <span class="{{ buttons_to_display.2.icon }}" aria-hidden="true"></span> {{ buttons_to_display.2.label }}
-            </button>
-        </li>
         {% endif %}
+    {% endfor %}
     </ul>
-    {% endif %}
 </div>
+{% elif bulk_action_buttons|length == 1 %}
+    {{ bulk_action_buttons|first }}
 {% endif %}
