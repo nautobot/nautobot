@@ -498,13 +498,13 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
         # Create a Device with role Role 1
         role_1 = Role.objects.create(name="Role 1")
         role_1.content_types.add(ContentType.objects.get_for_model(Device))
-        Device.objects.create(
+        device_1 = Device.objects.create(
             device_type=device_type, role=role_1, name="Device 1", location=self.locations[0], status=status
         )
         # Create a Device with role Role 2
         role_2 = Role.objects.create(name="Role 2")
         role_2.content_types.add(ContentType.objects.get_for_model(Device))
-        Device.objects.create(
+        device_2 = Device.objects.create(
             device_type=device_type, role=role_2, name="Device 2", location=self.locations[0], status=status
         )
         # Create a Device with role Role 3
@@ -518,7 +518,7 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
         Relationship.objects.create(
             label="Device to Devices",
             key="device_to_devices",
-            source_type=ContentType.objects.get_for_model(Device),
+            source_type=device_ct,
             source_filter={"role": ["Role 1"]},
             destination_type=device_ct,
             destination_filter={"role": ["Role 2"]},
@@ -536,6 +536,17 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
             "status": update_status.pk,
         }
         form = DeviceForm(data=update_data_for_device_3)
+        form.is_valid()
+        # Attempt to update device_1 which will not be in the destination filter,
+        # but is in the source filter.
+        update_data_for_device_1 = {
+            "location": device_1.location.pk,
+            "device_type": device_1.device_type.pk,
+            "role": device_1.role.pk,
+            "name": device_1.name,
+            "status": update_status.pk,
+        }
+        form = DeviceForm(data=update_data_for_device_1)
         form.is_valid()
 
 
