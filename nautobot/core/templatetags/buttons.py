@@ -175,7 +175,6 @@ def consolidate_bulk_action_buttons(request, content_type, perms, bulk_edit_url,
 
     if bulk_action_button_count > 1:
         child_button_fragment = f"<li>{primary_button_fragment}</li>"
-        edit_button_classes += " navbar-btn"
         delete_button_classes = "text-danger"
         static_group_button_classes = "text"
         static_group_icon += " text-muted"
