@@ -128,7 +128,7 @@ def job_import_url(content_type):
 
 def render_tag_attrs(attrs_dict):
     """Converts tag attributes from a dictionary to a string format suitable for HTML rendering."""
-    return format_html_join(" ", '{}="{}"', [(key, value) for key, value in attrs_dict.items()])
+    return format_html_join(" ", '{}="{}"', list(attrs_dict.items()))
 
 
 @register.inclusion_tag("buttons/consolidated_bulk_action_buttons.html")
