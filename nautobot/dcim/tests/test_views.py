@@ -830,11 +830,11 @@ class DeviceTypeTestCase(
         csv_import_url = job_import_url(ContentType.objects.get_for_model(DeviceType))
         # Dropdown provides both YAML/JSON and CSV import as options
         self.assertInHTML(
-            f'<a href="{yaml_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> JSON/YAML format (single record)</a>',
+            f'<a href="{yaml_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
             content,
         )
         self.assertInHTML(
-            f'<a href="{csv_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> CSV format (multiple records)</a>',
+            f'<a href="{csv_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
             content,
         )
 
@@ -1232,11 +1232,11 @@ class ModuleTypeTestCase(
         csv_import_url = job_import_url(ContentType.objects.get_for_model(ModuleType))
         # Dropdown provides both YAML/JSON and CSV import as options
         self.assertInHTML(
-            f'<a href="{yaml_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> JSON/YAML format (single record)</a>',
+            f'<a href="{yaml_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
             content,
         )
         self.assertInHTML(
-            f'<a href="{csv_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> CSV format (multiple records)</a>',
+            f'<a href="{csv_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
             content,
         )
 
