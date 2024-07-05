@@ -162,3 +162,35 @@ class CloudNetworkPrefixAssignment(BaseModel):
 
     def __str__(self):
         return f"{self.cloud_network}: {self.prefix}"
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class CloudService(PrimaryModel):
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    cloud_account = models.ForeignKey(
+        to=CloudAccount,
+        related_name="cloud_services",
+        on_delete=models.SET_NULL,
+        default=None,
+        blank=True,
+        null=True,
+    )
+    cloud_network = models.ForeignKey(to=CloudNetwork, on_delete=models.PROTECT, related_name="cloud_services")
+    cloud_type = models.ForeignKey(to=CloudType, on_delete=models.PROTECT, related_name="cloud_services")
+    extra_config = models.JSONField(null=True, blank=True)
+
+    is_dynamic_group_associable_model = False  # TODO: remove this when adding a UI for this model
+    is_saved_view_model = False  # TODO: remove this when adding a UI for this model
+    is_metadata_associable_model = False  # TODO: remove this when adding a UI for this model
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name

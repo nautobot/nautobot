@@ -678,7 +678,7 @@ class SoftwareImageFileFactory(PrimaryModelFactory):
         allow_null=False,
     )
     software_version = random_instance(SoftwareVersion, allow_null=False)
-    image_file_name = factory.Faker("file_name", extension="bin")
+    image_file_name = UniqueFaker("file_name", extension="bin")
     image_file_checksum = factory.Maybe("has_image_file_checksum", factory.Faker("md5"), "")
     hashing_algorithm = factory.Maybe(
         "has_hashing_algorithm",
