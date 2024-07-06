@@ -566,7 +566,7 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
             "role": device_1.role.pk,
             "name": device_1.name,
             "status": update_status.pk,
-            "cr_device_to_devices__destination": [device_2.pk]
+            "cr_device_to_devices__destination": [device_2.pk],
         }
         form4 = DeviceForm(instance=device_1, data=update_data_for_device_1)
         self.assertTrue(form4.is_valid())
@@ -602,7 +602,9 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
             "role": device_1.role.pk,
             "name": "Device 1",
             "status": update_status.pk,
-            "cr_device_to_devices__destination": [device_3.pk,],
+            "cr_device_to_devices__destination": [
+                device_3.pk,
+            ],
         }
         form6 = DeviceForm(instance=device_1, data=update_data_for_device_1)
         with self.assertRaises(ValidationError):
@@ -659,7 +661,7 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
             "role": device_1.role.pk,
             "name": device_1.name,
             "status": update_status.pk,
-            "cr_device_to_devices__destination": [device_2.pk]
+            "cr_device_to_devices__destination": [device_2.pk],
         }
         form4 = DeviceForm(instance=device_1, data=update_data_for_device_1)
         self.assertTrue(form4.is_valid())
@@ -695,11 +697,14 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
             "role": device_1.role.pk,
             "name": "Device 1",
             "status": update_status.pk,
-            "cr_device_to_devices__destination": [device_3.pk,],
+            "cr_device_to_devices__destination": [
+                device_3.pk,
+            ],
         }
         form6 = DeviceForm(instance=device_1, data=update_data_for_device_1)
         with self.assertRaises(ValidationError):
             form6.save()
+
 
 class RelationshipAssociationTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
     model = RelationshipAssociation
