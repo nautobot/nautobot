@@ -66,6 +66,30 @@ The CSV import functionality for all models has been changed from a synchronous 
 Model CharFields' `max_length` attributes have been standardized globally to have at least 255 characters except where a shorter `max_length` is explicitly justified.
 
 <!-- towncrier release notes start -->
+## v2.2.7 (2024-07-08)
+
+### Security
+
+- [#5891](https://github.com/nautobot/nautobot/issues/5891) - Updated `certifi` to `2024.7.4` to address `CVE-2024-39689`. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+### Fixed
+
+- [#4237](https://github.com/nautobot/nautobot/issues/4237) - Fixed display issue with multiple tags filter on dynamic groups. Multiple Tags are now correctly displayed with an AND.
+- [#5093](https://github.com/nautobot/nautobot/issues/5093) - Fixed blank page redirect when syncing or running a dry run on a GIT Repo with no workers available; now redirects to the GIT Repo Detail page with an error message.
+- [#5804](https://github.com/nautobot/nautobot/issues/5804) - Fixed operation of "Mark planned"/"Mark installed" button in Device component table views.
+- [#5832](https://github.com/nautobot/nautobot/issues/5832) - Fixed lack of API versioning of responses to a POST to `/api/ipam/prefixes/<id>/available-prefixes/` to allocate child prefixes of a prefix.
+- [#5832](https://github.com/nautobot/nautobot/issues/5832) - Fixed incorrect OpenAPI schema for `/api/ipam/prefixes/<id>/available-prefixes/` and `/api/ipam/prefixes/<id>/available-ips/`.
+
+### Dependencies
+
+- [#5518](https://github.com/nautobot/nautobot/issues/5518) - Updated `drf-spectacular` to version `0.27.2`.
+- [#5896](https://github.com/nautobot/nautobot/pull/5896) - Pinned dev dependency `faker` to `>=0.7.0,<26.0.0` to work around breaking change in v26.0.0 ([faker/#2070](https://github.com/joke2k/faker/issues/2070)).
+
+### Housekeeping
+
+- [#5847](https://github.com/nautobot/nautobot/issues/5847) - Updated the term plugin to app within the GitHub templates.
+- [#5858](https://github.com/nautobot/nautobot/issues/5858) - Enhanced the test runner to include a hash of applied database migrations as part of the factory dump filename, reducing the likelihood of using the wrong cached data for a given branch.
+
 ## v2.2.6 (2024-06-24)
 
 ### Security

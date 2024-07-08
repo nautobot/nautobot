@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.2.6"
+version = "2.2.7"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -83,7 +83,7 @@ djangorestframework = "~3.15.1"
 # Adds JSON schema support to API endpoints for rendering JSON schema forms.
 drf-react-template-framework = "^0.0.17"
 # OpenAPI 3.0 schema generation for the REST API
-drf-spectacular = {version = "~0.26.5", extras = ["sidecar"]}
+drf-spectacular = {version = "~0.27.2", extras = ["sidecar"]}
 # Emoji terminal output for Python.
 emoji = "~2.11.0"
 # Git integrations for Python
@@ -159,6 +159,8 @@ example-app = {path = "examples/example_app", develop = true}
 example-app-with-view-override = {path = "examples/example_app_with_view_override", develop = true}
 # Random data generation
 factory-boy = "~3.3.0"
+# Factory Boy dependency. Don't upgrade to v26.x until breaking change is fixed https://github.com/joke2k/faker/issues/2070
+faker = ">=0.7.0,<26.0.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
