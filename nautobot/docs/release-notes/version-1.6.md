@@ -84,6 +84,10 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 
 - [#5821](https://github.com/nautobot/nautobot/issues/5821) - Updated `urllib3` to 2.2.2 due to CVE-2024-37891. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
 
+### Dependencies
+
+- [#5897](https://github.com/nautobot/nautobot/pull/5897) - Pinned dev dependency `faker` to `>=0.7.0,<26.0.0` to work around breaking change in v26.0.0 ([faker/#2070](https://github.com/joke2k/faker/issues/2070)).
+
 ### Housekeeping
 
 - [#5754](https://github.com/nautobot/nautobot/issues/5754) - Updated development dependency `requests` to `~2.32.2`.
