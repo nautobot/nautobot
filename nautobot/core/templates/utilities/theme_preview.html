@@ -41,9 +41,28 @@
 <div class="pull-right noprint">
     <button type="button" class="btn btn-default"><i class="mdi mdi-cog"></i> Configure</button>
     <button type="button" class="btn btn-default"><i class="mdi mdi-filter"></i> Filter</button>
-    {% add_button content_type.model_class|validated_viewname:"add" %}
-    {% job_import_button content_type %}
-    {% export_button content_type %}
+    <div class="btn-group">
+        {% add_button content_type.model_class|validated_viewname:"add" %}
+        <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
+            <span class="caret"></span>
+            <span class="sr-only">Toggle Dropdown</span>
+        </button>
+        <ul class="dropdown-menu pull-right" role="menu">
+            {% job_import_button content_type list_element=True%}
+            <li class="divider"></li>
+            {% export_button content_type list_element=True %}
+        </ul>
+    </div>
+    <div class="btn-group">
+        <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
+            Actions <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu pull-right" role="menu">
+            {% job_import_button content_type list_element=True%}
+            <li class="divider"></li>
+            {% export_button content_type list_element=True %}
+        </ul>
+    </div>
 </div>
 <h1>Object Listing</h1>
 <div class="row">
