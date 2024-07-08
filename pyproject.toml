@@ -167,6 +167,8 @@ example-plugin = {path = "examples/example_plugin", develop = true}
 example-plugin-with-view-override = { path = "examples/example_plugin_with_view_override", develop = true }
 # Random data generation
 factory-boy = "~3.2.1"
+# Factory Boy dependency. Don't upgrade to v26.x until breaking change is fixed https://github.com/joke2k/faker/issues/2070
+faker = ">=0.7.0,<26.0.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
@@ -175,8 +177,6 @@ rich = "~13.4.2"
 towncrier = "~23.6.0"
 # Watch files for celery and mkdocs reload
 watchdog = "~3.0.0"
-# Factory Boy dependency. Don't upgrade to v26.x until breaking change is fixed https://github.com/joke2k/faker/issues/2070
-faker = ">=0.7.0,<26.0.0"
 
 [tool.poetry.group.docs.dependencies]
 # Helper for parsing docstrings
