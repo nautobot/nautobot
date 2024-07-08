@@ -106,7 +106,7 @@
     {% endif %}
     <div class="btn-group">
         {% if permissions.add and 'add' in action_buttons %}
-            {% add_button content_type.model_class|validated_viewname:"add" %}
+            {% add_button content_type.model_class|validated_viewname:"add" verbose_name=model|meta:"verbose_name"|bettertitle %}
             <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
                 <span class="caret"></span>
                 <span class="sr-only">Toggle Dropdown</span>
