@@ -83,7 +83,7 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 ### Dependencies
 
 - [#5518](https://github.com/nautobot/nautobot/issues/5518) - Updated `drf-spectacular` to version `0.27.2`.
-- [#5896](https://github.com/nautobot/nautobot/pull/5896) - Pinned dev dependency `faker` to `>=0.7.0,<26.0.0` to work around breaking change in v26.0.0 (https://github.com/joke2k/faker/issues/2070).
+- [#5896](https://github.com/nautobot/nautobot/pull/5896) - Pinned dev dependency `faker` to `>=0.7.0,<26.0.0` to work around breaking change in v26.0.0 ([faker/#2070](https://github.com/joke2k/faker/issues/2070)).
 
 ### Housekeeping
 
