@@ -828,15 +828,15 @@ class DeviceTypeTestCase(
 
         yaml_import_url = reverse("dcim:devicetype_import")
         csv_import_url = job_import_url(ContentType.objects.get_for_model(DeviceType))
-        # Main import button links to YAML/JSON import
+        # Dropdown provides both YAML/JSON and CSV import as options
         self.assertInHTML(
-            f'<a id="import-button" type="button" class="btn btn-info" href="{yaml_import_url}">'
-            '<span class="mdi mdi-database-import" aria-hidden="true"></span> Import</a>',
+            f'<a href="{yaml_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
             content,
         )
-        # Dropdown provides both YAML/JSON and CSV import as options
-        self.assertInHTML(f'<a href="{yaml_import_url}">JSON/YAML format (single record)</a>', content)
-        self.assertInHTML(f'<a href="{csv_import_url}">CSV format (multiple records)</a>', content)
+        self.assertInHTML(
+            f'<a href="{csv_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
+            content,
+        )
 
         export_url = job_export_url()
         # Export is a little trickier to check since it's done as a form submission rather than an <a> element.
@@ -847,10 +847,13 @@ class DeviceTypeTestCase(
         )
         self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
         self.assertInHTML(
-            '<button type="submit" class="btn btn-link" form="export_default">YAML format</button>',
+            '<button type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as YAML</button>',
             content,
         )
-        self.assertInHTML('<button type="submit" class="btn btn-link">CSV format</button>', content)
+        self.assertInHTML(
+            '<button type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as CSV</button>',
+            content,
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_import_objects(self):
@@ -1227,15 +1230,15 @@ class ModuleTypeTestCase(
 
         yaml_import_url = reverse("dcim:moduletype_import")
         csv_import_url = job_import_url(ContentType.objects.get_for_model(ModuleType))
-        # Main import button links to YAML/JSON import
+        # Dropdown provides both YAML/JSON and CSV import as options
         self.assertInHTML(
-            f'<a id="import-button" type="button" class="btn btn-info" href="{yaml_import_url}">'
-            '<span class="mdi mdi-database-import" aria-hidden="true"></span> Import</a>',
+            f'<a href="{yaml_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
             content,
         )
-        # Dropdown provides both YAML/JSON and CSV import as options
-        self.assertInHTML(f'<a href="{yaml_import_url}">JSON/YAML format (single record)</a>', content)
-        self.assertInHTML(f'<a href="{csv_import_url}">CSV format (multiple records)</a>', content)
+        self.assertInHTML(
+            f'<a href="{csv_import_url}"><span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
+            content,
+        )
 
         export_url = job_export_url()
         # Export is a little trickier to check since it's done as a form submission rather than an <a> element.
@@ -1246,10 +1249,13 @@ class ModuleTypeTestCase(
         )
         self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
         self.assertInHTML(
-            '<button type="submit" class="btn btn-link" form="export_default">YAML format</button>',
+            '<button type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as YAML</button>',
             content,
         )
-        self.assertInHTML('<button type="submit" class="btn btn-link">CSV format</button>', content)
+        self.assertInHTML(
+            '<button type="submit"><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as CSV</button>',
+            content,
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_import_objects(self):

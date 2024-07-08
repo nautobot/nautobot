@@ -104,17 +104,39 @@
             </ul>
         </div>
     {% endif %}
-    {% if permissions.add and 'add' in action_buttons %}
-        {% add_button content_type.model_class|validated_viewname:"add" %}
-    {% endif %}
+    <div class="btn-group">
+        {% if permissions.add and 'add' in action_buttons %}
+            {% add_button content_type.model_class|validated_viewname:"add" verbose_name=model|meta:"verbose_name"|bettertitle %}
+            <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
+                <span class="caret"></span>
+                <span class="sr-only">Toggle Dropdown</span>
+            </button>
+        {% else %}
+            <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
+                Actions <span class="caret"></span>
+            </button>
+        {% endif %}
+        <ul class="dropdown-menu pull-right" role="menu">
+            {% if permissions.add and 'import' in action_buttons %}
+                {% block import_list_element %}
+                    {% job_import_button content_type list_element=True%}
+                {% endblock import_list_element %}
+            {% endif %}
+            <li class="divider"></li>
+            {% if 'export' in action_buttons %}
+                {% block export_list_element %}
+                    {% export_button content_type list_element=True %}
+                {% endblock export_list_element %}
+            {% endif %}
+        </ul>
+    </div>
+    {% comment %} TODO: 3.0 Remove legacy import_button and export button {% endcomment %}
     {% if permissions.add and 'import' in action_buttons %}
         {% block import_button %}
-            {% job_import_button content_type %}
         {% endblock import_button %}
     {% endif %}
     {% if 'export' in action_buttons %}
         {% block export_button %}
-            {% export_button content_type %}
         {% endblock export_button %}
     {% endif %}
 </div>

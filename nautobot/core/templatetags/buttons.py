@@ -90,14 +90,24 @@ def delete_button(instance, use_pk=False, key="slug"):
 
 
 @register.inclusion_tag("buttons/add.html")
-def add_button(url):
+def add_button(url, verbose_name=None, list_element=False):
+    """Display an Add Button/List Element on the page.
+
+    This allows an Add Button to either be displayed on a page or within a Button Group.
+    Args:
+        url (str): URL for the object's create page.
+        verbose_name (str, optional): Append the verbose_name to the button text.
+        list_element (bool, optional): Render as a <li> element instead of a button. Defaults to False.
+    """
     try:
         url = reverse(url)
     except NoReverseMatch:
-        return {"add_url": None}
+        return {"add_url": None, "list_element": list_element, "verbose_name": verbose_name}
 
     return {
         "add_url": url,
+        "list_element": list_element,
+        "verbose_name": verbose_name,
     }
 
 
@@ -125,8 +135,15 @@ def job_import_url(content_type):
 
 
 @register.inclusion_tag("buttons/job_import.html")
-def job_import_button(content_type):
-    return {"import_url": job_import_url(content_type)}
+def job_import_button(content_type, list_element=False):
+    """Display an Import Button/List Element on the page.
+
+    This allows an Import Button to either be displayed on a page or within a Button Group.
+    Args:
+        content_type (str): Django.contrib.ContentType for the model.
+        list_element (bool, optional): Render as a <li> element instead of a button. Defaults to False.
+    """
+    return {"import_url": job_import_url(content_type), "list_element": list_element}
 
 
 @register.simple_tag
@@ -146,7 +163,14 @@ def job_export_url():
 
 
 @register.inclusion_tag("buttons/export.html", takes_context=True)
-def export_button(context, content_type=None):
+def export_button(context, content_type=None, list_element=False):
+    """Display an Export Button/List Element on the page.
+
+    Args:
+        context (dict): current Django Template context
+        content_type (content_type, optional): Django Content Type for the model. Defaults to None.
+        list_element (bool, optional): Render as a <li> element instead of a button. Defaults to False.
+    """
     if content_type is not None:
         user = context["request"].user
         export_templates = models.ExportTemplate.objects.restrict(user, "view").filter(content_type=content_type)
@@ -163,4 +187,5 @@ def export_button(context, content_type=None):
         "content_type": content_type,
         "export_templates": export_templates,
         "include_yaml_option": include_yaml_option,
+        "list_element": list_element,
     }
