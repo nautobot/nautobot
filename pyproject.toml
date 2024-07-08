@@ -159,6 +159,8 @@ example-app = {path = "examples/example_app", develop = true}
 example-app-with-view-override = {path = "examples/example_app_with_view_override", develop = true}
 # Random data generation
 factory-boy = "~3.3.0"
+# Factory Boy dependency. Don't upgrade to v26.x until breaking change is fixed https://github.com/joke2k/faker/issues/2070
+faker = ">=0.7.0,<26.0.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
@@ -167,8 +169,6 @@ rich = "~13.7.1"
 towncrier = "~23.11.0"
 # Watch files for celery and mkdocs reload
 watchdog = "~4.0.1"
-# Factory Boy dependency. Don't upgrade to v26.x until breaking change is fixed https://github.com/joke2k/faker/issues/2070
-faker = ">=0.7.0,<26.0.0"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
