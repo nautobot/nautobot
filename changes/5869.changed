@@ -1,1 +1,1 @@
-Replaced hardcoded bulk action buttons in the list view with dynamically generated split button dropdowns using the `consolidate_bulk_action_buttons` inclusion template tag.
+Combined bulk-edit/bulk-delete/bulk-group-update buttons into a single button with a pop-up menu when appropriate.

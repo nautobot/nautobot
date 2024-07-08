@@ -1,7 +1,6 @@
 from django import template
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
-from django.utils.safestring import mark_safe
 
 from nautobot.core.utils import lookup
 from nautobot.core.views import utils as views_utils
@@ -205,7 +204,7 @@ def consolidate_bulk_action_buttons(request, content_type, perms, bulk_edit_url,
             ),
         )
         if bulk_action_button_count > 1:
-            bulk_action_buttons[0] += mark_safe(  # noqa: S308 -- suspicious-mark-safe-usage
+            bulk_action_buttons[0] += format_html(
                 f"""
                 <button type="button" data-toggle="dropdown" class="{edit_button_classes} dropdown-toggle" aria-haspopup="true">
                     <span class="caret"></span>
@@ -217,10 +216,10 @@ def consolidate_bulk_action_buttons(request, content_type, perms, bulk_edit_url,
     # Render a generic "Bulk Actions" dropup button if the edit button is not present
     elif bulk_action_button_count > 1:
         bulk_action_buttons.append(
-            mark_safe(  # noqa: S308 -- suspicious-mark-safe-usage
+            format_html(
                 """
                 <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true">
-                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Bulk Actions <span class="caret"></span>
+                    Bulk Actions <span class="caret"></span>
                 </button>
                 """
             )
@@ -244,7 +243,7 @@ def consolidate_bulk_action_buttons(request, content_type, perms, bulk_edit_url,
         )
 
     if render_delete_button and render_static_group_assign_button:
-        bulk_action_buttons.append(mark_safe('<li role="separator" class="divider"></li>'))  # noqa: S308 -- suspicious-mark-safe-usage
+        bulk_action_buttons.append(format_html('<li role="separator" class="divider"></li>'))
 
     if render_static_group_assign_button:
         bulk_action_buttons.append(
