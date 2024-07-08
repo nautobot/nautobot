@@ -613,7 +613,8 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
         relationship.required_on = "source"
         relationship.save()
         # Attempt to update device_3 which will not be in the queryset filtered by the destination filter
-        # Assert that the form is valid and no ValueError is raised.
+        # Assert that the form is valid and no ValueError is raised. This ensures that an object that
+        # does not take part in any relationships can still be updated, addressing issue #5569.
         update_status = Status.objects.get_for_model(Device).last()
         update_data_for_device_3 = {
             "location": device_3.location.pk,

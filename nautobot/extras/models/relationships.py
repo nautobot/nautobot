@@ -248,6 +248,11 @@ class RelationshipModel(models.Model):
                 filterset = get_filterset_for_model(cls)
                 if filterset:
                     filter_params = getattr(relation, f"{relation.required_on}_filter")
+                    # If the relationship is required on the model, but the object is not in the filter,
+                    # we should allow the object to be saved, as the object is not part of the relationship.
+                    # Example: We want a Device with a Role of Switch to be required to have a relationship
+                    # with a Device that has a Role of Router. A Device with a Role of Printer should
+                    # be exempt from the requirement.
                     if not filterset(filter_params, cls.objects.filter(id=instance.id)).qs.exists():
                         continue
 
