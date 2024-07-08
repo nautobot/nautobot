@@ -167,6 +167,8 @@ rich = "~13.7.1"
 towncrier = "~23.11.0"
 # Watch files for celery and mkdocs reload
 watchdog = "~4.0.1"
+# Factory Boy dependency. Don't upgrade to v26.x until breaking change is fixed https://github.com/joke2k/faker/issues/2070
+faker = ">=0.7.0,<26.0.0"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
