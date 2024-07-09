@@ -1,0 +1,46 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block extra_breadcrumbs %}
+    {% if object.parent %}
+        <li>{{ object.parent|hyperlinked_object:"name" }}</li>
+    {% endif %}
+{% endblock extra_breadcrumbs %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Cloud Network</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Name</td>
+                    <td>
+                        {{ object.name }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Cloud Type</td>
+                    <td>{{ object.cloud_type|hyperlinked_object }}</td>
+                </tr>
+                <tr>
+                    <td>Cloud Account</td>
+                    <td>{{ object.cloud_account|hyperlinked_object }}</td>
+                </tr>
+                <tr>
+                    <td>Description</td>
+                    <td>{{ object.description|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Prefixes</td>
+                    <td>
+                        <a href="{% url 'ipam:prefix_list' %}?cloud_networks={{ object.pk }}">{{ prefix_count }}</a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+	{% include 'panel_table.html' with table=prefix_table heading="Assigned Prefixes" %}
+{% endblock content_right_page %}

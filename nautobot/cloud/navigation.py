@@ -46,6 +46,22 @@ menu_items = (
                             ),
                         ),
                     ),
+                    NavMenuItem(
+                        link="cloud:cloudnetwork_list",
+                        name="Cloud Networks",
+                        weight=100,
+                        permissions=[
+                            "cloud.view_cloudnetwork",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="cloud:cloudnetwork_add",
+                                permissions=[
+                                    "cloud.add_cloudnetwork",
+                                ],
+                            ),
+                        ),
+                    ),
                 ),
             ),
         ),

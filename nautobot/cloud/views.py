@@ -1,16 +1,20 @@
-from nautobot.cloud.api.serializers import CloudAccountSerializer, CloudTypeSerializer
-from nautobot.cloud.filters import CloudAccountFilterSet, CloudTypeFilterSet
+from nautobot.cloud.api.serializers import CloudAccountSerializer, CloudNetworkSerializer, CloudTypeSerializer
+from nautobot.cloud.filters import CloudAccountFilterSet, CloudNetworkFilterSet, CloudTypeFilterSet
 from nautobot.cloud.forms import (
     CloudAccountBulkEditForm,
     CloudAccountFilterForm,
     CloudAccountForm,
+    CloudNetworkBulkEditForm,
+    CloudNetworkFilterForm,
+    CloudNetworkForm,
     CloudTypeBulkEditForm,
     CloudTypeFilterForm,
     CloudTypeForm,
 )
-from nautobot.cloud.models import CloudAccount, CloudType
-from nautobot.cloud.tables import CloudAccountTable, CloudTypeTable
+from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudType
+from nautobot.cloud.tables import CloudAccountTable, CloudNetworkTable, CloudTypeTable
 from nautobot.core.views.viewsets import NautobotUIViewSet
+from nautobot.ipam.tables import PrefixTable
 
 
 class CloudAccountUIViewSet(NautobotUIViewSet):
@@ -22,6 +26,37 @@ class CloudAccountUIViewSet(NautobotUIViewSet):
     table_class = CloudAccountTable
     form_class = CloudAccountForm
 
+
+class CloudNetworkUIViewSet(NautobotUIViewSet):
+    queryset = CloudNetwork.objects.all()
+    filterset_class = CloudNetworkFilterSet
+    filterset_form_class = CloudNetworkFilterForm
+    serializer_class = CloudNetworkSerializer
+    table_class = CloudNetworkTable
+    form_class = CloudNetworkForm
+    bulk_update_form_class = CloudNetworkBulkEditForm
+
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            prefixes = instance.prefixes.restrict(request.user, "view")
+            prefix_count = prefixes.count()
+            prefix_table = PrefixTable(prefixes.select_related("namespace"))
+
+            context.update(
+                {
+                    "prefix_count": prefix_count,
+                    "prefix_table": prefix_table,
+                }
+            )
+
+        return context
+
+    def extra_post_save_action(self, obj, form):
+        if form.cleaned_data.get("add_prefixes", None):
+            obj.prefixes.add(*form.cleaned_data["add_prefixes"])
+        if form.cleaned_data.get("remove_prefixes", None):
+            obj.prefixes.remove(*form.cleaned_data["remove_prefixes"])
 
 class CloudTypeUIViewSet(NautobotUIViewSet):
     queryset = CloudType.objects.all()
