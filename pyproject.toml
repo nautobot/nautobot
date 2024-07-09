@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.2.7b1"
+version = "2.2.8b1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -159,6 +159,8 @@ example-app = {path = "examples/example_app", develop = true}
 example-app-with-view-override = {path = "examples/example_app_with_view_override", develop = true}
 # Random data generation
 factory-boy = "~3.3.0"
+# Factory Boy dependency. Don't upgrade to v26.x until breaking change is fixed https://github.com/joke2k/faker/issues/2070
+faker = ">=0.7.0,<26.0.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
