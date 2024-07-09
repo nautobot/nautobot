@@ -66,10 +66,12 @@ class CloudTypeTable(BaseTable):
             "actions",
         )
 
+
 class CloudServiceTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     cloud_account = tables.Column(linkify=True)
+    # TODO(timizuo): Uncomment after CloudNetwork UI is implemented
     # cloud_network = tables.Column(linkify=True)
     cloud_type = tables.Column(linkify=True)
     actions = ButtonsColumn(CloudType)

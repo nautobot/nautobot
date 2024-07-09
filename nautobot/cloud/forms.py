@@ -138,7 +138,6 @@ class CloudTypeFilterForm(NautobotFilterForm):
     tags = TagFilterField(model)
 
 
-
 #
 # Cloud Service
 #
@@ -147,15 +146,12 @@ class CloudTypeFilterForm(NautobotFilterForm):
 class CloudServiceForm(NautobotModelForm):
     cloud_account = DynamicModelChoiceField(
         queryset=CloudAccount.objects.all(),
-        help_text="Manufacturers are the recommended model to represent cloud providers.",
     )
     cloud_network = DynamicModelChoiceField(
         queryset=CloudNetwork.objects.all(),
-        help_text="Manufacturers are the recommended model to represent cloud providers.",
     )
     cloud_type = DynamicModelChoiceField(
         queryset=CloudType.objects.all(),
-        help_text="Manufacturers are the recommended model to represent cloud providers.",
     )
 
     class Meta:
@@ -171,10 +167,13 @@ class CloudServiceForm(NautobotModelForm):
 
 
 class CloudServiceBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
-    pk = forms.ModelMultipleChoiceField(queryset=CloudType.objects.all(), widget=forms.MultipleHiddenInput)
+    pk = forms.ModelMultipleChoiceField(queryset=CloudService.objects.all(), widget=forms.MultipleHiddenInput)
     cloud_account = DynamicModelChoiceField(queryset=CloudAccount.objects.all(), required=False)
     cloud_network = DynamicModelChoiceField(queryset=CloudNetwork.objects.all(), required=False)
     cloud_type = DynamicModelChoiceField(queryset=CloudType.objects.all(), required=False)
+
+    class Meta:
+        nullable_fields = ["cloud_account"]
 
 
 class CloudServiceFilterForm(NautobotFilterForm):
@@ -195,7 +194,5 @@ class CloudServiceFilterForm(NautobotFilterForm):
     cloud_network = DynamicModelMultipleChoiceField(
         queryset=CloudNetwork.objects.all(), to_field_name="name", required=False
     )
-    cloud_type = DynamicModelMultipleChoiceField(
-        queryset=CloudType.objects.all(), to_field_name="name", required=False
-    )
+    cloud_type = DynamicModelMultipleChoiceField(queryset=CloudType.objects.all(), to_field_name="name", required=False)
     tags = TagFilterField(model)

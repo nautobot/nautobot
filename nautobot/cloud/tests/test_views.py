@@ -73,18 +73,23 @@ class CloudServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
         cloud_types = CloudType.objects.all()
         cloud_networks = CloudNetwork.objects.all()
-        cloud_accounts = CloudNetwork.objects.all()
-        CloudService.objects.create(name="Deletable Cloud Service 1", cloud_type=cloud_types[0], cloud_network=cloud_networks[0])
-        CloudService.objects.create(name="Deletable Cloud Service 2", cloud_type=cloud_types[0], cloud_network=cloud_networks[0])
-        CloudService.objects.create(name="Deletable Cloud Service 3", cloud_type=cloud_types[0], cloud_network=cloud_networks[0])
-
+        cloud_accounts = CloudAccount.objects.all()
+        CloudService.objects.create(
+            name="Deletable Cloud Service 1", cloud_type=cloud_types[0], cloud_network=cloud_networks[0]
+        )
+        CloudService.objects.create(
+            name="Deletable Cloud Service 2", cloud_type=cloud_types[1], cloud_network=cloud_networks[1]
+        )
+        CloudService.objects.create(
+            name="Deletable Cloud Service 3", cloud_type=cloud_types[2], cloud_network=cloud_networks[2]
+        )
 
         cls.form_data = {
             "name": "New Cloud Service",
             "cloud_type": cloud_types[1].pk,
             "cloud_network": cloud_networks[1].pk,
             "cloud_account": cloud_accounts[1].pk,
-            "extra_config": {},
+            # "extra_config": {"status": "greetings", "role": 1},
             "tags": [t.pk for t in Tag.objects.get_for_model(CloudService)],
         }
 
