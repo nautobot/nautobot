@@ -708,7 +708,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         # since the resulting query actually does tag.name == tag_1 AND tag.name == tag_2, but django_filter does
         # not use Q evaluation for conjoined filters. This function is only used for the display, and the display
         # is good enough to get the point across.
-        tags_query = group.generate_query_for_filter(filter_field=fs.filters["tags"], value=["tag_1", "tag_2"])
+        tags_query = group._generate_query_for_filter(filter_field=fs.filters["tags"], value=["tag_1", "tag_2"])
         self.assertEqual(str(tags_query), "(AND: ('tags__name', 'tag_1'), ('tags__name', 'tag_2'))")
 
         # Test that a nested field_name w/ `generate_query` works as expected. This is explicitly to
