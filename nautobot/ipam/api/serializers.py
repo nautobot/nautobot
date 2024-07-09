@@ -321,27 +321,30 @@ class PrefixLocationAssignmentSerializer(ValidatedModelSerializer):
         fields = "__all__"
 
 
-class PrefixLengthSerializer(serializers.Serializer):
-    prefix_length = serializers.IntegerField()
+class PrefixLengthSerializer(PrefixLegacySerializer):
+    """
+    Input serializer for POST to /api/ipam/prefixes/<id>/available-prefixes/, i.e. allocating one or more sub-prefixes.
 
-    def to_internal_value(self, data):
-        requested_prefix = data.get("prefix_length")
-        if requested_prefix is None:
-            raise serializers.ValidationError({"prefix_length": "this field can not be missing"})
-        if not isinstance(requested_prefix, int):
-            raise serializers.ValidationError({"prefix_length": "this field must be int type"})
+    Since setting of multiple locations on create is not supported, this uses the legacy single-location option.
+    """
 
-        prefix = self.context.get("prefix")
-        if prefix.ip_version == 4 and requested_prefix > 32:
-            raise serializers.ValidationError({"prefix_length": f"Invalid prefix length ({requested_prefix}) for IPv4"})
-        elif prefix.ip_version == 6 and requested_prefix > 128:
-            raise serializers.ValidationError({"prefix_length": f"Invalid prefix length ({requested_prefix}) for IPv6"})
-        return data
+    prefix_length = serializers.IntegerField(required=True)
+
+    class Meta(PrefixLegacySerializer.Meta):
+        fields = PrefixLegacySerializer.Meta.fields.copy()
+        fields.remove("prefix")
+        fields.remove("network")
+        fields.remove("broadcast")
+        fields.remove("parent")
+        fields.remove("ip_version")
+        fields.remove("namespace")
 
 
 class AvailablePrefixSerializer(serializers.Serializer):
     """
     Representation of a prefix which does not exist in the database.
+
+    Response serializer for a GET to /api/ipam/prefixes/<id>/available-prefixes/.
     """
 
     ip_version = serializers.IntegerField(read_only=True)
@@ -437,6 +440,8 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 class AvailableIPSerializer(serializers.Serializer):
     """
     Representation of an IP address which does not exist in the database.
+
+    Response serializer for a GET to /api/ipam/prefixes/<id>/available-ips/.
     """
 
     ip_version = serializers.IntegerField(read_only=True)
@@ -449,6 +454,31 @@ class AvailableIPSerializer(serializers.Serializer):
                 ("address", f"{instance}/{self.context['prefix'].prefixlen}"),
             ]
         )
+
+
+class IPAllocationSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    """
+    Input serializer for POST to /api/ipam/prefixes/<id>/available-ips/, i.e. allocating addresses from a prefix.
+    """
+
+    class Meta:
+        model = IPAddress
+        fields = (
+            # not address/namespace/parent as those are implied by the selected prefix
+            "status",
+            "type",
+            "dns_name",
+            "description",
+            "role",
+            "tenant",
+            "nat_inside",
+            "tags",
+            "custom_fields",
+        )
+
+    def validate(self, data):
+        data["mask_length"] = self.context["prefix"].prefix_length
+        return super().validate(data)
 
 
 #
