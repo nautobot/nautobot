@@ -140,28 +140,29 @@ def render_tag_attrs(attrs_dict):
     return format_html_join(" ", '{}="{}"', list(attrs_dict.items()))
 
 
-@register.inclusion_tag("buttons/consolidated_bulk_action_buttons.html")
-def consolidate_bulk_action_buttons(request, content_type, perms, bulk_edit_url, bulk_delete_url, permissions):
+@register.inclusion_tag("buttons/consolidated_bulk_action_buttons.html", takes_context=True)
+def consolidate_bulk_action_buttons(context):
     """
     Generates a list of action buttons for bulk operations (edit, update group assignment, delete) based on the
-    provided permissions and URLs.
+    model capabilities and user permissions.
 
-    Args:
+    Context must include the following keys:
         request (HttpRequest): The HTTP request object.
-        content_type (ContentType): The content type for the model being acted upon.
-        perms (dict): A dictionary of permissions for the current user.
+        model (Model): The model class for the list view.
+        user (User): The current user.
         bulk_edit_url (str): The URL for the bulk edit action.
         bulk_delete_url (str): The URL for the bulk delete action.
-        permissions (dict): A dictionary of specific permissions for the actions.
+        permissions (dict): A dictionary of specific permissions for the view.
     """
 
     bulk_action_buttons = []
 
-    render_edit_button = bool(bulk_edit_url and permissions["change"])
+    render_edit_button = bool(context["bulk_edit_url"] and context["permissions"]["change"])
     render_static_group_assign_button = bool(
-        content_type.model_class().is_dynamic_group_associable_model and perms["extras"]["add_staticgroupassociation"]
+        context["model"].is_dynamic_group_associable_model
+        and context["user"].has_perms(["extras.add_staticgroupassociation"])
     )
-    render_delete_button = bool(bulk_delete_url and permissions["delete"])
+    render_delete_button = bool(context["bulk_delete_url"] and context["permissions"]["delete"])
     bulk_action_button_count = sum([render_edit_button, render_static_group_assign_button, render_delete_button])
 
     if bulk_action_button_count == 0:
@@ -169,7 +170,7 @@ def consolidate_bulk_action_buttons(request, content_type, perms, bulk_edit_url,
             "bulk_action_buttons": bulk_action_buttons,
         }
 
-    params = ("?" + request.GET.urlencode()) if request.GET else ""
+    params = ("?" + context["request"].GET.urlencode()) if context["request"].GET else ""
 
     primary_button_fragment = child_button_fragment = """
         <button {attrs}>
@@ -196,7 +197,7 @@ def consolidate_bulk_action_buttons(request, content_type, perms, bulk_edit_url,
                 attrs=render_tag_attrs(
                     {
                         "class": edit_button_classes,
-                        "formaction": reverse(bulk_edit_url) + params,
+                        "formaction": reverse(context["bulk_edit_url"]) + params,
                         "type": "submit",
                     }
                 ),
@@ -235,7 +236,7 @@ def consolidate_bulk_action_buttons(request, content_type, perms, bulk_edit_url,
                         "class": delete_button_classes,
                         "type": "submit",
                         "name": "_delete",
-                        "formaction": reverse(bulk_delete_url) + params,
+                        "formaction": reverse(context["bulk_delete_url"]) + params,
                     }
                 ),
                 icon="mdi mdi-trash-can-outline",

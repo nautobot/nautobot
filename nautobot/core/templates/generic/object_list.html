@@ -238,7 +238,7 @@
                 {% include table_template|default:'panel_table.html' %}
 
                 <div class="pull-left noprint">
-                    {% consolidate_bulk_action_buttons request content_type perms bulk_edit_url bulk_delete_url permissions %}
+                    {% consolidate_bulk_action_buttons %}
                     {% block bulk_buttons %}{% endblock %}
 
                 </div>
