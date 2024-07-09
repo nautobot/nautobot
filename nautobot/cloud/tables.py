@@ -7,7 +7,7 @@ from nautobot.core.tables import (
     ToggleColumn,
 )
 
-from .models import CloudAccount, CloudType
+from .models import CloudAccount, CloudService, CloudType
 
 
 class CloudAccountTable(BaseTable):
@@ -63,5 +63,33 @@ class CloudTypeTable(BaseTable):
             "provider",
             "config_schema",
             "content_types",
+            "actions",
+        )
+
+class CloudServiceTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    cloud_account = tables.Column(linkify=True)
+    # cloud_network = tables.Column(linkify=True)
+    cloud_type = tables.Column(linkify=True)
+    actions = ButtonsColumn(CloudType)
+
+    class Meta(BaseTable.Meta):
+        model = CloudService
+        fields = (
+            "pk",
+            "name",
+            "cloud_account",
+            "cloud_network",
+            "cloud_type",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "cloud_account",
+            "cloud_network",
+            "cloud_type",
             "actions",
         )

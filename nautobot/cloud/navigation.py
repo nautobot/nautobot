@@ -46,6 +46,22 @@ menu_items = (
                             ),
                         ),
                     ),
+                    NavMenuItem(
+                        link="cloud:cloudservice_list",
+                        name="Cloud Services",
+                        weight=200,
+                        permissions=[
+                            "cloud.view_cloudservice",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="cloud:cloudservice_add",
+                                permissions=[
+                                    "cloud.add_cloudservice",
+                                ],
+                            ),
+                        ),
+                    ),
                 ),
             ),
         ),
