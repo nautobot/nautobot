@@ -53,8 +53,8 @@
 <div class="row" style="margin-top: {% if 'BANNER_LOGIN'|settings_or_config %}100{% else %}150{% endif %}px;">
     <div class="col-sm-4 col-sm-offset-4">
         {% if "BANNER_LOGIN"|settings_or_config %}
-            <div style="margin-bottom: 25px">
-                {{ "BANNER_LOGIN"|settings_or_config|safe }}
+            <div class="alert alert-info text-center" role="alert">
+                {{ "BANNER_LOGIN"|settings_or_config|render_markdown }}
             </div>
         {% endif %}
         {% if form.non_field_errors %}

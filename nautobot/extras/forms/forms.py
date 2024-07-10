@@ -27,6 +27,7 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
     JSONArrayFormField,
     JSONField,
+    LaxURLField,
     MultipleContentTypeField,
     SlugField,
     StaticSelect2,
@@ -104,6 +105,7 @@ __all__ = (
     "ConfigContextSchemaBulkEditForm",
     "ConfigContextSchemaFilterForm",
     "CustomFieldForm",
+    "CustomFieldFilterForm",
     "CustomFieldModelCSVForm",
     "CustomFieldBulkCreateForm",  # 2.0 TODO remove this deprecated class
     "CustomFieldChoiceFormSet",
@@ -114,6 +116,7 @@ __all__ = (
     "DynamicGroupMembershipFormSet",
     "ExportTemplateForm",
     "ExportTemplateFilterForm",
+    "ExternalIntegrationFilterForm",
     "ExternalIntegrationForm",
     "ExternalIntegrationBulkEditForm",
     "GitRepositoryForm",
@@ -144,6 +147,7 @@ __all__ = (
     "RelationshipFilterForm",
     "RelationshipAssociationFilterForm",
     "RoleBulkEditForm",
+    "RoleFilterForm",
     "RoleForm",
     "ScheduledJobFilterForm",
     "SecretForm",
@@ -421,6 +425,17 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
             self.fields["key"].widget.attrs["readonly"] = True
 
 
+class CustomFieldFilterForm(NautobotFilterForm):
+    model = CustomField
+    q = forms.CharField(required=False, label="Search")
+    content_types = MultipleContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()),
+        choices_as_strings=True,
+        required=False,
+        label="Content Type(s)",
+    )
+
+
 class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
     """
     Base class for CSV/JSON/YAML import of models that support custom fields.
@@ -638,6 +653,14 @@ class ExternalIntegrationBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ["extra_config", "secrets_group", "headers"]
 
 
+class ExternalIntegrationFilterForm(NautobotFilterForm):
+    model = ExternalIntegration
+    q = forms.CharField(required=False, label="Search")
+    secrets_group = DynamicModelMultipleChoiceField(
+        queryset=SecretsGroup.objects.all(), to_field_name="name", required=False
+    )
+
+
 #
 # Git repositories and other data sources
 #
@@ -665,7 +688,7 @@ class PasswordInputWithPlaceholder(forms.PasswordInput):
 class GitRepositoryForm(NautobotModelForm):
     slug = SlugField(help_text="Filesystem-friendly unique shorthand")
 
-    remote_url = forms.URLField(
+    remote_url = LaxURLField(
         required=True,
         label="Remote URL",
         help_text="Only http:// and https:// URLs are presently supported",
@@ -716,7 +739,7 @@ class GitRepositoryBulkEditForm(NautobotBulkEditForm):
         queryset=GitRepository.objects.all(),
         widget=forms.MultipleHiddenInput(),
     )
-    remote_url = forms.CharField(
+    remote_url = LaxURLField(
         label="Remote URL",
         required=False,
     )
@@ -844,8 +867,10 @@ class JobEditForm(NautobotModelForm):
         """
         For all overridable fields, if they aren't marked as overridden, revert them to the underlying value if known.
         """
+        from nautobot.extras.jobs import get_job  # avoid circular import
+
         cleaned_data = super().clean() or self.cleaned_data
-        job_class = self.instance.job_class
+        job_class = get_job(self.instance.class_path, reload=True)
         if job_class is not None:
             for field_name in JOB_OVERRIDABLE_FIELDS:
                 if not cleaned_data.get(f"{field_name}_override", False):
@@ -987,6 +1012,10 @@ class JobFilterForm(BootstrapMixin, forms.Form):
 class JobHookForm(BootstrapMixin, forms.ModelForm):
     content_types = MultipleContentTypeField(
         queryset=ChangeLoggedModelsQuery().as_queryset(), required=True, label="Content Type(s)"
+    )
+    job = DynamicModelChoiceField(
+        queryset=Job.objects.filter(is_job_hook_receiver=True),
+        query_params={"is_job_hook_receiver": True},
     )
 
     class Meta:
@@ -1155,14 +1184,19 @@ class JobButtonForm(BootstrapMixin, forms.ModelForm):
             api_url="/api/extras/content-types/",
         ),
     )
+    job = DynamicModelChoiceField(
+        queryset=Job.objects.filter(is_job_button_receiver=True),
+        query_params={"is_job_button_receiver": True},
+    )
 
     class Meta:
         model = JobButton
         fields = (
             "content_types",
             "name",
-            "text",
             "job",
+            "enabled",
+            "text",
             "weight",
             "group_name",
             "button_class",
@@ -1181,6 +1215,9 @@ class JobButtonBulkEditForm(BootstrapMixin, BulkEditForm):
             api_url="/api/extras/content-types/",
         ),
         required=False,
+    )
+    enabled = forms.NullBooleanField(
+        required=False, widget=BulkEditNullBooleanSelect, help_text="Whether this job button appears in the UI"
     )
     weight = forms.IntegerField(required=False)
     group_name = forms.CharField(required=False)
@@ -1425,6 +1462,17 @@ class RoleBulkEditForm(NautobotBulkEditForm):
 
     class Meta:
         nullable_fields = ["weight"]
+
+
+class RoleFilterForm(NautobotFilterForm):
+    model = Role
+    q = forms.CharField(required=False, label="Search")
+    content_types = MultipleContentTypeField(
+        queryset=RoleModelsQuery().as_queryset(),
+        required=False,
+        choices_as_strings=True,
+        label="Content Type(s)",
+    )
 
 
 #

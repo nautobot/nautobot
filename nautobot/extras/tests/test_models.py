@@ -65,6 +65,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models.statuses import StatusModel
+from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant
@@ -253,7 +254,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             slug="test_git_repo",
             remote_url="http://localhost/git.git",
         )
-        repo.save()
+        repo.validated_save()
 
         with self.assertRaises(ValidationError):
             nonduplicate_context = ConfigContext(name="context 1", weight=300, data={"a": "22"}, owner=repo)
@@ -863,7 +864,7 @@ class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
             slug="test_git_repo",
             remote_url="http://localhost/git.git",
         )
-        repo.save()
+        repo.validated_save()
 
         with self.assertRaises(ValidationError):
             nonduplicate_template = ExportTemplate(
@@ -887,7 +888,7 @@ class ExternalIntegrationTest(ModelTestCases.BaseModelTestCase):
             )
             ei.validated_save()
 
-        ei.remote_url = "http://localhost"
+        ei.remote_url = "http://some-local-host"
         ei.validated_save()
 
     def test_timeout_validation(self):
@@ -1044,6 +1045,11 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
             repo.validated_save()
         self.assertIn("Please choose a different slug", str(handler.exception))
 
+    def test_remote_url_hostname(self):
+        """Confirm that a bare hostname (no domain name) can be used for a remote URL."""
+        self.repo.remote_url = "http://some-private-host/example.git"
+        self.repo.validated_save()
+
 
 class JobModelTest(ModelTestCases.BaseModelTestCase):
     """
@@ -1079,25 +1085,31 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
     def test_defaults(self):
         """Verify that defaults for discovered JobModel instances are as expected."""
         for job_model in JobModel.objects.all():
-            self.assertTrue(job_model.installed)
-            # System jobs should be enabled by default, all others are disabled by default
-            if job_model.module_name.startswith("nautobot."):
-                self.assertTrue(job_model.enabled)
-            else:
-                self.assertFalse(job_model.enabled)
-            for field_name in JOB_OVERRIDABLE_FIELDS:
-                if field_name == "name" and "duplicate_name" in job_model.job_class.__module__:
-                    pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
-                else:
-                    self.assertFalse(
-                        getattr(job_model, f"{field_name}_override"),
-                        (field_name, getattr(job_model, field_name), getattr(job_model.job_class, field_name)),
-                    )
-                    self.assertEqual(
-                        getattr(job_model, field_name),
-                        getattr(job_model.job_class, field_name),
-                        field_name,
-                    )
+            with self.subTest(class_path=job_model.class_path):
+                try:
+                    self.assertTrue(job_model.installed)
+                    # System jobs should be enabled by default, all others are disabled by default
+                    if job_model.module_name.startswith("nautobot."):
+                        self.assertTrue(job_model.enabled)
+                    else:
+                        self.assertFalse(job_model.enabled)
+                    for field_name in JOB_OVERRIDABLE_FIELDS:
+                        if field_name == "name" and "duplicate_name" in job_model.job_class.__module__:
+                            pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
+                        else:
+                            self.assertFalse(
+                                getattr(job_model, f"{field_name}_override"),
+                                (field_name, getattr(job_model, field_name), getattr(job_model.job_class, field_name)),
+                            )
+                            self.assertEqual(
+                                getattr(job_model, field_name),
+                                getattr(job_model.job_class, field_name),
+                                field_name,
+                            )
+                except AssertionError:
+                    print(list(JobModel.objects.all()))
+                    print(registry["jobs"])
+                    raise
 
     def test_duplicate_job_name(self):
         self.assertTrue(JobModel.objects.filter(name="TestDuplicateNameNoMeta").exists())

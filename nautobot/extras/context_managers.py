@@ -91,9 +91,12 @@ class ChangeContext:
                 for entry in self.deferred_object_changes[key]:
                     objectchange = entry["instance"].to_objectchange(entry["action"])
                     objectchange.user = entry["user"]
+                    objectchange.user_name = objectchange.user.username
                     objectchange.request_id = self.change_id
                     objectchange.change_context = self.context
                     objectchange.change_context_detail = self.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+                    if not objectchange.changed_object_id:
+                        objectchange.changed_object_id = entry.get("changed_object_id")
                     create_object_changes.append(objectchange)
                 self.deferred_object_changes.pop(key, None)
             ObjectChange.objects.bulk_create(create_object_changes, batch_size=batch_size)

@@ -203,7 +203,7 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 The `dcim.Region` and `dcim.Site` models have been removed and replaced by `dcim.Location` model. This means that any references to the removed models in the code now use the `dcim.Location` model instead with `LocationType` "Site" and "Region".
 
 !!! important
-    If you are a Nautobot App developer, or have any Apps installed that include data models that reference `Site` or `Region`, please review the [Region and Site Related Data Model Migration Guide](./region-and-site-data-migration-guide.md#region-and-site-related-data-model-migration-guide-for-existing-nautobot-app-installations) to learn how to migrate your apps and models from `Site` and `Region` to `Location`.
+    If you are a Nautobot App developer, or have any Apps installed that include data models that reference `Site` or `Region`, please review the [Region and Site Related Data Model Migration Guide](../../../../development/apps/migration/model-updates/dcim.md) to learn how to migrate your apps and models from `Site` and `Region` to `Location`.
 
 | Removed Model     | Replaced With  |
 |-------------------|----------------|
@@ -385,7 +385,7 @@ Below is a table documenting [corrected filter field changes](../../../../releas
 
 ### Removed Filter Fields
 
-Below is a table documenting [removed filter field changes](../../../../release-notes/version-2.0.md#removed-filter-fields-2804) in v2.x.
+Below is a table documenting [removed filter field changes](../../../../release-notes/version-2.0.md#redundant-filter-fields-2804) in v2.x.
 Most removed database fields in Nautobot 2.0 fall into the following general categories:
 
 1. Removal of `*_id=<uuid>` filters as they have have been merged into filters that support both uuid and name/slug (for example, instead of `/api/circuits/circuits/?provider_id=<UUID>`, use `/api/circuits/circuits/?provider=<uuid>`).
@@ -479,14 +479,15 @@ Therefore all code that is calling `JobResult.set_status()` (which has been remo
 
 ### Fundamental Changes
 
-The `BaseJob` class is now a subclass of Celery's `Task` class. Some fundamental changes to the job's methods and signatures were required to support this change:
++/- 2.2.3
+    In Nautobot 2.0.0 through 2.2.2, Nautobot's `BaseJob` class was made to be a subclass of Celery's `Task` class. The implications of this change are outside the scope of this document, but this change has been reverted in Nautobot 2.2.3 and later.
 
-- The `test_*` and `post_run` methods for backwards compatibility to NetBox scripts and reports were removed. Celery implements `before_start`, `on_success`, `on_retry`, `on_failure`, and `after_return` methods that can be used by job authors to perform similar functions.
+- The `test_*` and `post_run` methods for backwards compatibility to NetBox scripts and reports were removed. In their place, Nautobot Jobs now have `before_start`, `on_success`, `on_failure`, and `after_return` methods that can be used by job authors to perform similar functions.
 
 !!! important
     Be sure to call the `super()` method when overloading any of the job's `before_start`, `on_success`, `on_retry`, `on_failure`, or `after_return` methods
 
-- The run method signature is now customizable by the job author. This means that the `data` and `commit` arguments are no longer passed to the job by default and the job's run method signature should match the the job's input variables.
+- The `run` method signature now includes each of the input variables defined on the Job. This means that the `data` and `commit` arguments are no longer passed to the job by default and the job's run method signature should match the the job's input variables.
 
 !!! example
     ```py
@@ -496,7 +497,7 @@ The `BaseJob` class is now a subclass of Celery's `Task` class. Some fundamental
         var3 = BooleanVar()
         var4 = ObjectVar(model=Role)
 
-        def run(self, var1, var2, var3, var4):
+        def run(self, *, var1, var2, var3, var4):
             ...
     ```
 

@@ -94,6 +94,12 @@ class NamespaceBulkEditForm(
         ]
 
 
+class NamespaceFilterForm(LocatableModelFilterFormMixin, NautobotFilterForm):
+    model = Namespace
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False)
+
+
 #
 # VRFs
 #
@@ -142,6 +148,12 @@ class VRFBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    add_prefixes = DynamicModelMultipleChoiceField(
+        queryset=Prefix.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
+    remove_prefixes = DynamicModelMultipleChoiceField(
+        queryset=Prefix.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
 
     class Meta:
         nullable_fields = [
@@ -357,6 +369,12 @@ class PrefixBulkEditForm(
     )
     remove_locations = DynamicModelMultipleChoiceField(
         queryset=Location.objects.all(), required=False, query_params={"content_type": Prefix._meta.label_lower}
+    )
+    add_vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
+    remove_vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(), required=False, query_params={"namespace": "$namespace"}
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
@@ -646,6 +664,8 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         "role",
         "tenant_group",
         "tenant",
+        "nat_inside",
+        "has_nat_inside",
     ]
     q = forms.CharField(required=False, label="Search")
     parent = forms.CharField(
@@ -682,6 +702,12 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         widget=StaticSelect2(),
     )
     tags = TagFilterField(model)
+    nat_inside = DynamicModelChoiceField(queryset=IPAddress.objects.all(), required=False, label="NAT Inside Address")
+    has_nat_inside = forms.NullBooleanField(
+        required=False,
+        label="Has NAT Inside",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
 
 
 #

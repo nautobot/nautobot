@@ -1,8 +1,10 @@
 import copy
+import hashlib
 
 from django.conf import settings
 from django.core.management import call_command
 from django.db import connections
+from django.db.migrations.recorder import MigrationRecorder
 from django.test.runner import _init_worker, DiscoverRunner, ParallelTestSuite
 from django.test.utils import get_unique_databases_and_mirrors, NullTimeKeeper, override_settings
 import yaml
@@ -113,6 +115,14 @@ class NautobotTestRunner(DiscoverRunner):
                             command += ["--seed", settings.TEST_FACTORY_SEED]
                         if self.cache_test_fixtures:
                             command += ["--cache-test-fixtures"]
+                            # Use the list of applied migrations as a unique hash to keep fixtures from differing
+                            # branches/releases of Nautobot in separate files.
+                            hexdigest = hashlib.shake_128(
+                                ",".join(
+                                    sorted(f"{m.app}.{m.name}" for m in MigrationRecorder.Migration.objects.all())
+                                ).encode("utf-8")
+                            ).hexdigest(10)
+                            command += ["--fixture-file", f"development/factory_dump.{hexdigest}.json"]
                         with time_keeper.timed(f'  Pre-populating test database "{alias}" with factory data...'):
                             db_command = [*command, "--database", alias]
                             call_command(*db_command)

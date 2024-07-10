@@ -1854,12 +1854,14 @@ class SoftwareVersionTestCase(ModelTestCases.BaseModelTestCase):
 
         # Only return the device types with a direct m2m relationship to the version's software image files
         device_type = DeviceType.objects.filter(software_image_files__isnull=False).first()
+        self.assertIsNotNone(device_type)
         self.assertQuerysetEqualAndNotEmpty(
             qs.get_for_object(device_type), qs.filter(software_image_files__device_types=device_type)
         )
 
         # Only return the software version set on the device's software_version foreign key
         device = Device.objects.filter(software_version__isnull=False).first()
+        self.assertIsNotNone(device)
         self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(device), [device.software_version])
 
         # Only return the software version set on the inventory item's software_version foreign key

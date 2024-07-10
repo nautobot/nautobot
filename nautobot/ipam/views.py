@@ -80,6 +80,7 @@ class NamespaceUIViewSet(
     form_class = forms.NamespaceForm
     bulk_update_form_class = forms.NamespaceBulkEditForm
     filterset_class = filters.NamespaceFilterSet
+    filterset_form_class = forms.NamespaceFilterForm
     queryset = Namespace.objects.all()
     serializer_class = serializers.NamespaceSerializer
     table_class = tables.NamespaceTable
@@ -303,6 +304,12 @@ class VRFBulkEditView(generic.BulkEditView):
     table = tables.VRFTable
     form = forms.VRFBulkEditForm
 
+    def extra_post_save_action(self, obj, form):
+        if form.cleaned_data.get("add_prefixes", None):
+            obj.prefixes.add(*form.cleaned_data["add_prefixes"])
+        if form.cleaned_data.get("remove_prefixes", None):
+            obj.prefixes.remove(*form.cleaned_data["remove_prefixes"])
+
 
 class VRFBulkDeleteView(generic.BulkDeleteView):
     queryset = VRF.objects.select_related("tenant")
@@ -332,6 +339,7 @@ class RouteTargetView(generic.ObjectView):
         return {
             "importing_vrfs_table": importing_vrfs_table,
             "exporting_vrfs_table": exporting_vrfs_table,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -389,9 +397,7 @@ class RIRView(generic.ObjectView):
         }
         RequestConfig(request, paginate).configure(assigned_prefix_table)
 
-        return {
-            "assigned_prefix_table": assigned_prefix_table,
-        }
+        return {"assigned_prefix_table": assigned_prefix_table, **super().get_extra_context(request, instance)}
 
 
 class RIREditView(generic.ObjectEditView):
@@ -457,6 +463,7 @@ class PrefixView(generic.ObjectView):
         return {
             "vrf_table": vrf_table,
             "parent_prefix_table": parent_prefix_table,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -713,6 +720,10 @@ class PrefixBulkEditView(generic.BulkEditView):
             obj.locations.add(*form.cleaned_data["add_locations"])
         if form.cleaned_data.get("remove_locations", None):
             obj.locations.remove(*form.cleaned_data["remove_locations"])
+        if form.cleaned_data.get("add_vrfs", None):
+            obj.vrfs.add(*form.cleaned_data["add_vrfs"])
+        if form.cleaned_data.get("remove_vrfs", None):
+            obj.vrfs.remove(*form.cleaned_data["remove_vrfs"])
 
 
 class PrefixBulkDeleteView(generic.BulkDeleteView):
@@ -780,6 +791,7 @@ class IPAddressView(generic.ObjectView):
         return {
             "parent_prefixes_table": parent_prefixes_table,
             "related_ips_table": related_ips_table,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -1261,6 +1273,7 @@ class VLANGroupView(generic.ObjectView):
             "vlan_table": vlan_table,
             "permissions": permissions,
             "vlans_count": vlans_count,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -1317,9 +1330,7 @@ class VLANView(generic.ObjectView):
         prefix_table = tables.PrefixTable(list(prefixes))
         prefix_table.exclude = ("vlan",)
 
-        return {
-            "prefix_table": prefix_table,
-        }
+        return {"prefix_table": prefix_table, **super().get_extra_context(request, instance)}
 
 
 class VLANInterfacesView(generic.ObjectView):

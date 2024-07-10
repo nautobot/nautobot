@@ -53,7 +53,7 @@ from nautobot.extras.forms import (
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
-from nautobot.extras.models import ExternalIntegration, SecretsGroup, Status
+from nautobot.extras.models import Contact, ContactAssociation, ExternalIntegration, Role, SecretsGroup, Status, Team
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VLANLocationAssignment, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
@@ -69,6 +69,7 @@ from .choices import (
     InterfaceModeChoices,
     InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
+    LocationDataToContactActionChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
     PowerFeedSupplyChoices,
@@ -369,6 +370,55 @@ class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Tenancy
     parent = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     subtree = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     tags = TagFilterField(model)
+
+
+class LocationMigrateDataToContactForm(NautobotModelForm):
+    # Assign tab form fields
+    action = forms.ChoiceField(
+        choices=LocationDataToContactActionChoices,
+        required=True,
+        widget=StaticSelect2(),
+    )
+    location = DynamicModelChoiceField(queryset=Location.objects.all(), required=False, label="Source Location")
+    contact = DynamicModelChoiceField(
+        queryset=Contact.objects.all(),
+        required=False,
+        label="Available Contacts",
+        query_params={"similar_to_location_data": "$location"},
+    )
+    team = DynamicModelChoiceField(
+        queryset=Team.objects.all(),
+        required=False,
+        label="Available Teams",
+        query_params={"similar_to_location_data": "$location"},
+    )
+    role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        required=True,
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+    )
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        required=True,
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+    )
+    name = forms.CharField(required=False, label="Name")
+    phone = forms.CharField(required=False, label="Phone")
+    email = forms.CharField(required=False, label="Email")
+
+    class Meta:
+        model = ContactAssociation
+        fields = [
+            "action",
+            "location",
+            "contact",
+            "team",
+            "role",
+            "status",
+            "name",
+            "phone",
+            "email",
+        ]
 
 
 #
@@ -678,6 +728,15 @@ class ManufacturerForm(NautobotModelForm):
         ]
 
 
+class ManufacturerFilterForm(NautobotFilterForm):
+    model = Manufacturer
+    q = forms.CharField(required=False, label="Search")
+    device_types = DynamicModelMultipleChoiceField(
+        queryset=DeviceType.objects.all(), to_field_name="model", required=False
+    )
+    platforms = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="name", required=False)
+
+
 #
 # Device Family
 #
@@ -695,6 +754,9 @@ class DeviceFamilyForm(NautobotModelForm):
 class DeviceFamilyFilterForm(NautobotFilterForm):
     model = DeviceFamily
     q = forms.CharField(required=False, label="Search")
+    device_types = DynamicModelMultipleChoiceField(
+        queryset=DeviceType.objects.all(), to_field_name="model", required=False
+    )
     tags = TagFilterField(model)
 
 
@@ -1530,6 +1592,13 @@ class PlatformForm(NautobotModelForm):
         widgets = {
             "napalm_args": SmallTextarea(),
         }
+
+
+class PlatformFilterForm(NautobotFilterForm):
+    model = Platform
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False)
+    network_driver = forms.CharField(required=False)
 
 
 #
@@ -2517,14 +2586,14 @@ class InterfaceBulkEditForm(
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location": "null",
+            "locations": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location": "null",
+            "locations": "null",
         },
     )
     vrf = DynamicModelChoiceField(
@@ -2568,8 +2637,8 @@ class InterfaceBulkEditForm(
             # Limit VLAN choices by Location
             if locations.count() == 1:
                 location = locations.first()
-                self.fields["untagged_vlan"].widget.add_query_param("location", location.pk)
-                self.fields["tagged_vlans"].widget.add_query_param("location", location.pk)
+                self.fields["untagged_vlan"].widget.add_query_param("locations", location.pk)
+                self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
 
         # Restrict parent/bridge/LAG interface assignment by device (or VC master)
         if device_count == 1:
