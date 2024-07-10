@@ -961,6 +961,8 @@ code.hljs {
     display: flex;
     padding-top: 10px;
 }
+
+/* Buttons inside dropdown menus */
 .dropdown-menu button {
     background: none;
     border: none;
