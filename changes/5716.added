@@ -1,2 +1,4 @@
 Added CloudNetwork model and REST API.
 Added CloudNetwork to CircuitTermination model and REST API.
+Add CloudNetwork UI.
+Add CloudNetwork to Prefix View.
