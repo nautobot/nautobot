@@ -2,7 +2,7 @@
 {% load helpers %}
 
 {% block extra_breadcrumbs %}
-    <li><a href="{% url 'cloud:cloudservice_list' %}?cloud_network={{ object.cloud_network.pk }}">{{ object.cloud_network }}</a></li>
+    <li><a href="{% url 'cloud:cloudtype' pk=object.cloud_type.pk %}">{{ object.cloud_type }}</a></li>
 {% endblock extra_breadcrumbs %}
 
 {% block content_left_page %}
@@ -33,13 +33,13 @@
     </div>
 {% endblock content_left_page %}
 
-{% block content_full_width_page %}
+{% block content_right_page %}
     <div class="panel panel-default">
         <div class="panel-heading">
             <strong>Extra Config</strong>
         </div>
         <div class="panel-body">
-            <pre>{{ object.extra_config }}</pre>
+            <pre>{{ object.extra_config|render_json }}</pre>
         </div>
     </div>
-{% endblock content_full_width_page %}
+{% endblock content_right_page %}

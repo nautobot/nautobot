@@ -31,25 +31,9 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
-                        link="cloud:cloudtype_list",
-                        name="Cloud Types",
-                        weight=200,
-                        permissions=[
-                            "cloud.view_cloudtype",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="cloud:cloudtype_add",
-                                permissions=[
-                                    "cloud.add_cloudtype",
-                                ],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
                         link="cloud:cloudservice_list",
                         name="Cloud Services",
-                        weight=250,
+                        weight=200,
                         permissions=[
                             "cloud.view_cloudservice",
                         ],
@@ -58,6 +42,22 @@ menu_items = (
                                 link="cloud:cloudservice_add",
                                 permissions=[
                                     "cloud.add_cloudservice",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="cloud:cloudtype_list",
+                        name="Cloud Types",
+                        weight=250,
+                        permissions=[
+                            "cloud.view_cloudtype",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="cloud:cloudtype_add",
+                                permissions=[
+                                    "cloud.add_cloudtype",
                                 ],
                             ),
                         ),

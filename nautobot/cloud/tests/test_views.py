@@ -89,7 +89,7 @@ class CloudServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "cloud_type": cloud_types[1].pk,
             "cloud_network": cloud_networks[1].pk,
             "cloud_account": cloud_accounts[1].pk,
-            # "extra_config": {"status": "greetings", "role": 1},
+            "extra_config": '{"role": 1, "status": "greetings"}',
             "tags": [t.pk for t in Tag.objects.get_for_model(CloudService)],
         }
 
