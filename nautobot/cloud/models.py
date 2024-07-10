@@ -155,6 +155,7 @@ class CloudNetwork(CloudTypeMixin, PrimaryModel):
 class CloudNetworkPrefixAssignment(BaseModel):
     cloud_network = models.ForeignKey(CloudNetwork, on_delete=models.CASCADE, related_name="prefix_assignments")
     prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="cloud_network_assignments")
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = ["cloud_network", "prefix"]
