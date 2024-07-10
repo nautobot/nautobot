@@ -72,7 +72,7 @@ router.register("scheduled-jobs", views.ScheduledJobViewSet)
 # Metadata
 router.register("metadata-types", views.MetadataTypeViewSet)
 router.register("metadata-choices", views.MetadataChoiceViewSet)
-router.register("object-metadatas", views.ObjectMetadataViewSet)
+router.register("object-metadata", views.ObjectMetadataViewSet)
 
 # Notes
 router.register("notes", views.NoteViewSet)
