@@ -704,6 +704,13 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         interface_qs = Device.objects.filter(interfaces__isnull=True)
         self.assertQuerysetEqual(solo_qs, interface_qs, ordered=False)
 
+        # Tags are conjoined in the TagFilterSet, ensure that tags__name is using AND. We know this isn't right
+        # since the resulting query actually does tag.name == tag_1 AND tag.name == tag_2, but django_filter does
+        # not use Q evaluation for conjoined filters. This function is only used for the display, and the display
+        # is good enough to get the point across.
+        tags_query = group._generate_query_for_filter(filter_field=fs.filters["tags"], value=["tag_1", "tag_2"])
+        self.assertEqual(str(tags_query), "(AND: ('tags__name', 'tag_1'), ('tags__name', 'tag_2'))")
+
         # Test that a nested field_name w/ `generate_query` works as expected. This is explicitly to
         # test a regression w/ nested name-related values such as `DeviceFilterSet.manufacturer` which
         # filters on `device_type__manufacturer`.
