@@ -1049,6 +1049,7 @@ class DynamicGroupMembership(BaseModel):
     objects = BaseManager.from_queryset(DynamicGroupMembershipQuerySet)()
 
     documentation_static_path = "docs/user-guide/platform-functionality/dynamicgroup.html"
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = ["group", "parent_group", "operator", "weight"]
