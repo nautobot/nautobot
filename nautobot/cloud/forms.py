@@ -1,4 +1,5 @@
 import inspect
+
 from django import forms
 
 from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudType
@@ -75,19 +76,20 @@ class CloudAccountFilterForm(NautobotFilterForm):
 
 
 #
-# Cloud Account
+# Cloud Network
 #
 
 
 class CloudNetworkForm(NautobotModelForm):
     cloud_type = DynamicModelChoiceField(
-        queryset=CloudType.objects.all(), to_field_name="name",
+        queryset=CloudType.objects.all(),
     )
     cloud_account = DynamicModelChoiceField(
-        queryset=CloudAccount.objects.all(), to_field_name="name",
+        queryset=CloudAccount.objects.all(),
     )
     parent = DynamicModelChoiceField(
-        queryset=CloudNetwork.objects.all(), to_field_name="name", required=False,
+        queryset=CloudNetwork.objects.all(),
+        required=False,
     )
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
     prefixes = DynamicModelMultipleChoiceField(
@@ -96,10 +98,18 @@ class CloudNetworkForm(NautobotModelForm):
         query_params={"namespace": "$namespace"},
     )
 
-
     class Meta:
         model = CloudNetwork
-        fields = "__all__"
+        fields = [
+            "name",
+            "description",
+            "cloud_type",
+            "cloud_account",
+            "parent",
+            "prefixes",
+            "extra_config",
+            "tags",
+        ]
         EXTRA_CONFIG_HELP_TEXT = """
             Optional user-defined <a href="https://json.org/">JSON</a> data for this integration. Example:
             <pre><code class="language-json">{
@@ -113,6 +123,7 @@ class CloudNetworkForm(NautobotModelForm):
         help_texts = {
             "extra_config": inspect.cleandoc(EXTRA_CONFIG_HELP_TEXT),
         }
+
 
 class CloudNetworkBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=CloudNetwork.objects.all(), widget=forms.MultipleHiddenInput)
@@ -132,6 +143,7 @@ class CloudNetworkBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
             "description",
         ]
 
+
 class CloudNetworkFilterForm(NautobotFilterForm):
     model = CloudNetwork
     field_order = [
@@ -144,15 +156,11 @@ class CloudNetworkFilterForm(NautobotFilterForm):
     ]
     q = forms.CharField(required=False, label="Search")
     name = MultiValueCharField(required=False)
-    cloud_type = DynamicModelMultipleChoiceField(
-        queryset=CloudType.objects.all(), to_field_name="name", required=False
-    )
+    cloud_type = DynamicModelMultipleChoiceField(queryset=CloudType.objects.all(), to_field_name="name", required=False)
     cloud_account = DynamicModelMultipleChoiceField(
         queryset=CloudAccount.objects.all(), to_field_name="name", required=False
     )
-    parent = DynamicModelMultipleChoiceField(
-        queryset=CloudNetwork.objects.all(), to_field_name="name", required=False
-    )
+    parent = DynamicModelMultipleChoiceField(queryset=CloudNetwork.objects.all(), to_field_name="name", required=False)
     tags = TagFilterField(model)
 
 

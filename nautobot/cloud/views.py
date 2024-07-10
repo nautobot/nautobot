@@ -58,6 +58,7 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
         if form.cleaned_data.get("remove_prefixes", None):
             obj.prefixes.remove(*form.cleaned_data["remove_prefixes"])
 
+
 class CloudTypeUIViewSet(NautobotUIViewSet):
     queryset = CloudType.objects.all()
     filterset_class = CloudTypeFilterSet

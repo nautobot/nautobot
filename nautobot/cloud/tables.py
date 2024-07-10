@@ -47,7 +47,7 @@ class CloudNetworkTable(BaseTable):
     cloud_account = tables.Column(linkify=True)
     parent = tables.Column(linkify=True)
     actions = ButtonsColumn(CloudNetwork)
-    
+
     class Meta(BaseTable.Meta):
         model = CloudNetwork
         fields = (
@@ -73,7 +73,11 @@ class CloudNetworkTable(BaseTable):
 
 
 class CloudNetworkPrefixAssignmentTable(BaseTable):
-    cloud_network = tables.Column(verbose_name="Cloud Network", linkify=lambda record: record.cloud_network.get_absolute_url(), accessor="cloud_network.name")
+    cloud_network = tables.Column(
+        verbose_name="Cloud Network",
+        linkify=lambda record: record.cloud_network.get_absolute_url(),
+        accessor="cloud_network.name",
+    )
     prefix = tables.Column(linkify=True)
     rd = tables.Column(accessor="vrf.rd", verbose_name="RD")
     tenant = TenantColumn(accessor="vrf.tenant")

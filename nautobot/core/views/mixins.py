@@ -595,6 +595,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     def extra_post_save_action(self, obj, form):
         """Extra actions after a form is saved"""
 
+
 class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
     """
     UI mixin to retrieve a model instance.
