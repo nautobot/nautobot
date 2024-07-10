@@ -236,28 +236,11 @@
                 </div>
                 {% endif %}
                 {% include table_template|default:'panel_table.html' %}
+
                 <div class="pull-left noprint">
+                    {% consolidate_bulk_action_buttons %}
                     {% block bulk_buttons %}{% endblock %}
-                    {% if content_type.model_class.is_dynamic_group_associable_model and perms.extras.add_staticgroupassociation %}
-                        <button type="button"
-                                id="update_dynamic_groups_for_selected"
-                                data-toggle="modal"
-                                data-target="#dynamic_group_assignment_modal"
-                                data-objects="selected"
-                                class="btn btn-primary btn-sm">
-                            <span class="mdi mdi-group" aria-hidden="true"></span> Update Group Assignment
-                        </button>
-                    {% endif %}
-                    {% if bulk_edit_url and permissions.change %}
-                        <button type="submit" name="_edit" formaction="{% url bulk_edit_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-warning btn-sm">
-                            <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit Selected
-                        </button>
-                    {% endif %}
-                    {% if bulk_delete_url and permissions.delete %}
-                        <button type="submit" name="_delete" formaction="{% url bulk_delete_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-danger btn-sm">
-                            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete Selected
-                        </button>
-                    {% endif %}
+
                 </div>
             </form>
         {% else %}
