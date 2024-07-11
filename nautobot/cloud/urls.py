@@ -6,8 +6,8 @@ app_name = "cloud"
 router = NautobotUIViewSetRouter()
 
 router.register("cloud-accounts", views.CloudAccountUIViewSet)
-router.register("cloud-types", views.CloudTypeUIViewSet)
 router.register("cloud-services", views.CloudServiceUIViewSet)
+router.register("cloud-types", views.CloudTypeUIViewSet)
 
 urlpatterns = []
 urlpatterns += router.urls

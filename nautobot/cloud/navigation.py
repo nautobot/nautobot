@@ -15,22 +15,6 @@ menu_items = (
                 weight=100,
                 items=(
                     NavMenuItem(
-                        link="cloud:cloudaccount_list",
-                        name="Cloud Accounts",
-                        weight=100,
-                        permissions=[
-                            "cloud.view_cloudaccount",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="cloud:cloudaccount_add",
-                                permissions=[
-                                    "cloud.add_cloudaccount",
-                                ],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
                         link="cloud:cloudservice_list",
                         name="Cloud Services",
                         weight=200,
@@ -58,6 +42,22 @@ menu_items = (
                                 link="cloud:cloudtype_add",
                                 permissions=[
                                     "cloud.add_cloudtype",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="cloud:cloudaccount_list",
+                        name="Cloud Accounts",
+                        weight=100,
+                        permissions=[
+                            "cloud.view_cloudaccount",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="cloud:cloudaccount_add",
+                                permissions=[
+                                    "cloud.add_cloudaccount",
                                 ],
                             ),
                         ),
