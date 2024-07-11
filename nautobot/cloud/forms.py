@@ -1,6 +1,8 @@
+import inspect
+
 from django import forms
 
-from nautobot.cloud.models import CloudAccount, CloudType
+from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudType
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     DynamicModelChoiceField,
@@ -12,6 +14,7 @@ from nautobot.core.forms.fields import MultipleContentTypeField
 from nautobot.dcim.models import Manufacturer
 from nautobot.extras.forms import NautobotBulkEditForm, NautobotFilterForm, NautobotModelForm, TagsBulkEditFormMixin
 from nautobot.extras.models import SecretsGroup
+from nautobot.ipam.models import Namespace, Prefix
 
 #
 # Cloud Account
@@ -69,6 +72,95 @@ class CloudAccountFilterForm(NautobotFilterForm):
     provider = DynamicModelMultipleChoiceField(
         queryset=Manufacturer.objects.all(), to_field_name="name", required=False
     )
+    tags = TagFilterField(model)
+
+
+#
+# Cloud Network
+#
+
+
+class CloudNetworkForm(NautobotModelForm):
+    cloud_type = DynamicModelChoiceField(
+        queryset=CloudType.objects.all(),
+    )
+    cloud_account = DynamicModelChoiceField(
+        queryset=CloudAccount.objects.all(),
+    )
+    parent = DynamicModelChoiceField(
+        queryset=CloudNetwork.objects.all(),
+        required=False,
+    )
+    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
+    prefixes = DynamicModelMultipleChoiceField(
+        queryset=Prefix.objects.all(),
+        required=False,
+        query_params={"namespace": "$namespace"},
+    )
+
+    class Meta:
+        model = CloudNetwork
+        fields = [
+            "name",
+            "description",
+            "cloud_type",
+            "cloud_account",
+            "parent",
+            "prefixes",
+            "extra_config",
+            "tags",
+        ]
+        EXTRA_CONFIG_HELP_TEXT = """
+            Optional user-defined <a href="https://json.org/">JSON</a> data for this integration. Example:
+            <pre><code class="language-json">{
+                "key": "value",
+                "key2": [
+                    "value1",
+                    "value2"
+                ]
+            }</code></pre>
+        """
+        help_texts = {
+            "extra_config": inspect.cleandoc(EXTRA_CONFIG_HELP_TEXT),
+        }
+
+
+class CloudNetworkBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=CloudNetwork.objects.all(), widget=forms.MultipleHiddenInput)
+    cloud_type = DynamicModelChoiceField(queryset=CloudType.objects.all(), required=False)
+    cloud_account = DynamicModelChoiceField(queryset=CloudAccount.objects.all(), required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
+    add_prefixes = DynamicModelMultipleChoiceField(
+        queryset=Prefix.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
+    remove_prefixes = DynamicModelMultipleChoiceField(
+        queryset=Prefix.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
+
+    class Meta:
+        nullable_fields = [
+            "description",
+        ]
+
+
+class CloudNetworkFilterForm(NautobotFilterForm):
+    model = CloudNetwork
+    field_order = [
+        "q",
+        "name",
+        "cloud_type",
+        "cloud_account",
+        "parent",
+        "tags",
+    ]
+    q = forms.CharField(required=False, label="Search")
+    name = MultiValueCharField(required=False)
+    cloud_type = DynamicModelMultipleChoiceField(queryset=CloudType.objects.all(), to_field_name="name", required=False)
+    cloud_account = DynamicModelMultipleChoiceField(
+        queryset=CloudAccount.objects.all(), to_field_name="name", required=False
+    )
+    parent = DynamicModelMultipleChoiceField(queryset=CloudNetwork.objects.all(), to_field_name="name", required=False)
     tags = TagFilterField(model)
 
 
