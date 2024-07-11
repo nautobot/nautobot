@@ -60,7 +60,7 @@
 {% endblock content_right_page %}
 
 {% block content_full_width_page %}
-    {% if object.children.all %}
+    {% if object.children.exists %}
         <div class="panel panel-default">
             <div class="panel-heading">
                 <strong>Children</strong>

@@ -56,8 +56,6 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
                     Q(circuit_termination_a__cloud_network=instance.pk)
                     | Q(circuit_termination_z__cloud_network=instance.pk)
                 )
-                .select_related("circuit_type", "tenant")
-                .prefetch_related("circuit_terminations__location")
             )
 
             circuits_table = CircuitTable(circuits)
