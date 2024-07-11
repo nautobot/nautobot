@@ -1,3 +1,8 @@
+from django.db.models import Q
+from django_tables2 import RequestConfig
+
+from nautobot.circuits.models import Circuit
+from nautobot.circuits.tables import CircuitTable
 from nautobot.cloud.api.serializers import CloudAccountSerializer, CloudNetworkSerializer, CloudTypeSerializer
 from nautobot.cloud.filters import CloudAccountFilterSet, CloudNetworkFilterSet, CloudTypeFilterSet
 from nautobot.cloud.forms import (
@@ -13,6 +18,7 @@ from nautobot.cloud.forms import (
 )
 from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudType
 from nautobot.cloud.tables import CloudAccountTable, CloudNetworkTable, CloudTypeTable
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.ipam.tables import PrefixTable
 
@@ -42,11 +48,31 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
             prefixes = instance.prefixes.restrict(request.user, "view")
             prefix_count = prefixes.count()
             prefix_table = PrefixTable(prefixes.select_related("namespace"))
+            children_table = CloudNetworkTable(instance.children.all())
+
+            circuits = (
+                Circuit.objects.restrict(request.user, "view")
+                .filter(
+                    Q(circuit_termination_a__cloud_network=instance.pk)
+                    | Q(circuit_termination_z__cloud_network=instance.pk)
+                )
+                .select_related("circuit_type", "tenant")
+                .prefetch_related("circuit_terminations__location")
+            )
+
+            circuits_table = CircuitTable(circuits)
+            circuits_table.columns.hide("circuit_termination_a")
+            circuits_table.columns.hide("circuit_termination_z")
+
+            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            RequestConfig(request, paginate).configure(circuits_table)
 
             context.update(
                 {
                     "prefix_count": prefix_count,
                     "prefix_table": prefix_table,
+                    "children_table": children_table,
+                    "circuits_table": circuits_table,
                 }
             )
 

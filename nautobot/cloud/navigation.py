@@ -49,7 +49,7 @@ menu_items = (
                     NavMenuItem(
                         link="cloud:cloudnetwork_list",
                         name="Cloud Networks",
-                        weight=100,
+                        weight=300,
                         permissions=[
                             "cloud.view_cloudnetwork",
                         ],

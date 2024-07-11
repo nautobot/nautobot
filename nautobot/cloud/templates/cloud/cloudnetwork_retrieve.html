@@ -47,6 +47,10 @@
                         <a href="{% url 'ipam:prefix_list' %}?cloud_networks={{ object.pk }}">{{ prefix_count }}</a>
                     </td>
                 </tr>
+                <tr>
+                    <td>Extra Config</td>
+                    <td><pre>{{ object.extra_config | render_json }}</pre></td>
+                </tr>
             </table>
         </div>
 {% endblock content_left_page %}
@@ -54,3 +58,29 @@
 {% block content_right_page %}
 	{% include 'panel_table.html' with table=prefix_table heading="Assigned Prefixes" %}
 {% endblock content_right_page %}
+
+{% block content_full_width_page %}
+    {% if object.children.all %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Children</strong>
+            </div>
+            {% include 'inc/table.html' with table=children_table %}
+            {% if perms.cloud.add_cloudnetwork %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'cloud:cloudnetwork_add' %}?parent={{ object.pk }}" class="btn btn-xs btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add child
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        {% include 'inc/paginator.html' with paginator=children_table.paginator page=children_table.page %}
+    {% endif %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Circuits</strong>
+        </div>
+        {% include 'inc/table.html' with table=circuits_table %}
+    </div>
+    {% include 'inc/paginator.html' with paginator=circuits_table.paginator page=circuits_table.page %}
+{% endblock content_full_width_page %}
