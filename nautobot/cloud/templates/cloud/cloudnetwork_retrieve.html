@@ -7,6 +7,42 @@
     {% endif %}
 {% endblock extra_breadcrumbs %}
 
+
+{% block extra_nav_tabs %}
+    {% if object.parent is None %}
+            <li role="presentation"{% if request.GET.tab == 'children' %} class="active"{% endif %}>
+                <a href="{{ object.get_absolute_url }}#children" onclick="switch_tab(this.href, reload=false)" aria-controls="children" role="tab" data-toggle="tab">
+                    Children {% badge object.children.count %}
+                </a>
+            </li>
+    {% else %}
+        {{ block.super }}
+    {% endif %}
+{% endblock extra_nav_tabs %}
+
+{% block extra_tab_content %}
+{% if object.parent is None %}
+        <div id="children" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "children" %}active{% else %}fade{% endif %}">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Children</strong>
+                </div>
+                {% include 'inc/table.html' with table=children_table %}
+                {% if perms.cloud.add_cloudnetwork %}
+                    <div class="panel-footer text-right noprint">
+                        <a href="{% url 'cloud:cloudnetwork_add' %}?parent={{ object.pk }}" class="btn btn-xs btn-primary">
+                            <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add child
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            {% include 'inc/paginator.html' with paginator=children_table.paginator page=children_table.page %}
+        </div>
+    {% else %}
+        {{ block.super }}
+    {% endif %}
+{% endblock extra_tab_content %}
+
 {% block content_left_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
@@ -41,41 +77,25 @@
                     <td>Description</td>
                     <td>{{ object.description|placeholder }}</td>
                 </tr>
-                <tr>
-                    <td>Prefixes</td>
-                    <td>
-                        <a href="{% url 'ipam:prefix_list' %}?cloud_networks={{ object.pk }}">{{ prefix_count }}</a>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Extra Config</td>
-                    <td><pre>{{ object.extra_config | render_json }}</pre></td>
-                </tr>
             </table>
         </div>
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-	{% include 'panel_table.html' with table=prefix_table heading="Assigned Prefixes" %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Extra Config</strong>
+            {% include 'extras/inc/json_format.html' %}
+        </div>
+        <div class="panel-body">
+            {% include 'extras/inc/json_data.html' with data=object.extra_config format=format %}
+        </div>
+    </div>
+
 {% endblock content_right_page %}
 
 {% block content_full_width_page %}
-    {% if object.children.exists %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>Children</strong>
-            </div>
-            {% include 'inc/table.html' with table=children_table %}
-            {% if perms.cloud.add_cloudnetwork %}
-                <div class="panel-footer text-right noprint">
-                    <a href="{% url 'cloud:cloudnetwork_add' %}?parent={{ object.pk }}" class="btn btn-xs btn-primary">
-                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add child
-                    </a>
-                </div>
-            {% endif %}
-        </div>
-        {% include 'inc/paginator.html' with paginator=children_table.paginator page=children_table.page %}
-    {% endif %}
+    {% include 'panel_table.html' with table=prefix_table heading="Assigned Prefixes" %}
     <div class="panel panel-default">
         <div class="panel-heading">
             <strong>Circuits</strong>
