@@ -38,9 +38,11 @@ from rest_framework.response import Response
 from rest_framework.versioning import AcceptHeaderVersioning
 from rest_framework.views import APIView
 
+from nautobot.core.celery import app
 from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
+from nautobot.core.utils.data import str_removeprefix
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.extras.forms import GraphQLQueryForm
@@ -124,6 +126,47 @@ class HomeView(AccessMixin, TemplateView):
                                 )
 
         return self.render_to_response(context)
+
+
+class WorkerStatusView(LoginRequiredMixin, TemplateView):
+    template_name = "utilities/worker_status.html"
+
+    def get_context_data(self, **kwargs):
+        # Use a long timeout to retrieve the initial list of workers
+        celery_inspect = app.control.inspect(timeout=5.0)
+        worker_stats = celery_inspect.stats()
+        # Set explicit list of workers to speed up subsequent queries
+        celery_inspect = app.control.inspect(list(worker_stats.keys()), timeout=5.0)
+        active_tasks = celery_inspect.active()
+        reserved_tasks = celery_inspect.reserved()
+        active_queues = celery_inspect.active_queues()
+
+        workers = []
+        for worker_name, worker_details in worker_stats.items():
+            workers.append(
+                {
+                    "hostname": str_removeprefix(worker_name, "celery@"),
+                    "active_tasks": active_tasks[worker_name],
+                    "reserved_tasks": reserved_tasks[worker_name],
+                    "queues": [queue["name"] for queue in active_queues[worker_name]],
+                    "uptime": worker_details["uptime"],
+                }
+            )
+
+        queue_worker_count = {}
+        for task_queue_list in active_queues.values():
+            distinct_queues = {q["name"] for q in task_queue_list}
+            for queue in distinct_queues:
+                queue_worker_count.setdefault(queue, 0)
+                queue_worker_count[queue] += 1
+
+        return {
+            "worker_status": {
+                "default_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
+                "queue_worker_count": {queue: queue_worker_count[queue] for queue in sorted(queue_worker_count)},
+                "workers": workers,
+            },
+        }
 
 
 class ThemePreviewView(LoginRequiredMixin, TemplateView):

@@ -142,3 +142,13 @@ def to_meters(length, unit):
     if unit == choices.CableLengthUnitChoices.UNIT_INCH:
         return length * Decimal("0.3048") * 12
     raise ValueError(f"Unknown unit {unit}. Must be 'm', 'cm', 'ft', or 'in'.")
+
+
+def str_removeprefix(s, prefix):
+    """
+    Remove a prefix from a string if it exists.
+    Replace with `str.removeprefix()` when we drop Python 3.8 support.
+    """
+    if s.startswith(prefix):
+        return s[len(prefix) :]
+    return s

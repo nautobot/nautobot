@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load buttons %}
+{% load helpers %}
+
+{% block header %}
+<h1>
+    {% block title %}Nautobot Worker Status{% endblock %}
+</h1>
+{% endblock %}
+
+{% block content %}
+
+
+<div class="row">
+    <div class="col-md-6">
+        {% for worker in worker_status.workers %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>{{ worker.hostname }}</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Uptime</td>
+                    <td>{{ worker.uptime|format_uptime }}</td>
+                </tr>
+                <tr>
+                    <td>Queues</td>
+                    <td>
+                        {% comment %}
+                        <ul class="list-unstyled">
+                            {% for queue in worker.queues %}
+                            <li><code>{{ queue }}</code></li>
+                            {% endfor %}
+                        </ul>
+                        {% endcomment %}
+                        {% for queue in worker.queues %}
+                        <span class="label label-default">{{ queue }}</span>
+                        {% endfor %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Active Tasks</td>
+                    <td>
+                        <ul class="list-unstyled">
+                            {% for task in worker.active_tasks %}
+                            <li>{{ task|render_celery_task }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Reserved Tasks</td>
+                    <td>
+                        {% if worker.reserved_tasks %}
+                            <ul class="list-unstyled">
+                                {% for task in worker.reserved_tasks %}
+                                <li>{{ task|render_celery_task }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            {{ None|placeholder }}
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="col-md-6">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Active Queues</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                {% for name, worker_count in worker_status.queue_worker_count.items %}
+                <tr>
+                    <td>{{ name }}{% if name == worker_status.default_queue %} (default queue){% endif %}</td>
+                    <td>{{ worker_count }} worker{% if worker_count != 1 %}s{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

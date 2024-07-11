@@ -591,6 +591,55 @@ def slugify(value):
     return django_slugify(value)
 
 
+@library.filter()
+@register.filter()
+def format_uptime(seconds):
+    """Format a value in seconds to a human readable value.
+
+    Example:
+        >>> format_uptime(1024768)
+        "11 days 20 hours 39 minutes"
+    """
+    if isinstance(seconds, str) and seconds == "":
+        return placeholder(seconds)
+    delta = datetime.timedelta(seconds=int(seconds))
+    uptime_hours = int(delta.seconds / 3600)
+    uptime_minutes = int(delta.seconds / 60 % 60)
+    return format_html(
+        "{} {} {} {} {} {}",
+        delta.days,
+        "days" if delta.days != 1 else "day",
+        uptime_hours,
+        "hours" if uptime_hours != 1 else "hour",
+        uptime_minutes,
+        "minutes" if uptime_minutes != 1 else "minute",
+    )
+
+
+@library.filter()
+@register.filter()
+def render_celery_task(value):
+    """Input a celery task and return a job result hyperlink if one can be found, otherwise return the task name.
+
+    Example:
+        >>> render_celery_task({"name": "nautobot.extras.jobs.run_job", "id": "53b1f7e9-03ac-4077-9f0d-c7f738bd9a6e"})
+        '<a href="/extras/job-results/53b1f7e9-03ac-4077-9f0d-c7f738bd9a6e/">Example logging job. started at 2024-07-11 16:45:20.272438+00:00 (FAILURE)</a>'
+    """
+    from nautobot.extras.models import JobResult
+
+    if not value:
+        return placeholder(value)
+    if "id" in value and value["id"]:
+        try:
+            job_result = JobResult.objects.get(id=value["id"])
+            return hyperlinked_object(job_result)
+        except JobResult.DoesNotExist:
+            pass
+    if "name" in value:
+        return format_html('<span class="label label-default">{}</span>', value["name"])
+    return placeholder(value)
+
+
 #
 # Tags
 #
