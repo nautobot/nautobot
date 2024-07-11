@@ -265,6 +265,24 @@ class Command(BaseCommand):
             has_cloud_network=True,
             term_side="Z",
         )
+        (
+            _create_batch(
+                CircuitTerminationFactory,
+                2,
+                description="with a provider network, for side A",
+                has_location=False,
+                has_cloud_network=False,
+                term_side="A",
+            ),
+        )
+        _create_batch(
+            CircuitTerminationFactory,
+            2,
+            description="with a provider network, for side Z",
+            has_location=False,
+            has_cloud_network=False,
+            term_side="Z",
+        )
         _create_batch(
             CircuitTerminationFactory,
             2,
