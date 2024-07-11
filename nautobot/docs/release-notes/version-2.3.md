@@ -12,9 +12,9 @@ This document describes all new features and changes in Nautobot 2.3.
 
 Added an optional `role` field to Interface and VMInterface models to track common interface configurations. Now the users can create [Role](../user-guide/platform-functionality/role.md) instances that can be assigned to [interfaces](../user-guide/core-data-model/dcim/interface.md) and [vminterfaces](../user-guide/core-data-model/virtualization/vminterface.md).
 
-#### Cloud Models ([#5716](https://github.com/nautobot/nautobot/issues/5716), [#5719](https://github.com/nautobot/nautobot/issues/5719), [#5721](https://github.com/nautobot/nautobot/issues/5721))
+#### Cloud Models ([#5716](https://github.com/nautobot/nautobot/issues/5716), [#5719](https://github.com/nautobot/nautobot/issues/5719), [#5721](https://github.com/nautobot/nautobot/issues/5721), [#5872](https://github.com/nautobot/nautobot/issues/5872))
 
-Added the new models `CloudAccount`, `CloudType`, and `CloudNetwork` to support recording of cloud provider accounts and cloud network objects such as VPCs in Nautobot.
+Added the new models `CloudAccount`, `CloudNetwork`, `CloudService`, and `CloudType` to support recording of cloud provider accounts (AWS, Azure, GCP, DigitalOcean, etc.), cloud types (AWS EC2, Azure Virtual Machine Service, Google App Engine, etc.), cloud services (specific instances of services described by cloud types) and cloud network objects (such as VPCs) in Nautobot.
 
 #### Dynamic Group Enhancements
 
