@@ -112,10 +112,6 @@ class CloudNetwork(CloudTypeMixin, PrimaryModel):
     )
     extra_config = models.JSONField(null=True, blank=True)
 
-    is_dynamic_group_associable_model = False  # TODO: remove this when adding a UI for this model
-    is_saved_view_model = False  # TODO: remove this when adding a UI for this model
-    is_metadata_associable_model = False  # TODO: remove this when adding a UI for this model
-
     class Meta:
         ordering = ["name"]
 
