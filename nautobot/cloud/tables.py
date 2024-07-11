@@ -53,6 +53,12 @@ class CloudNetworkTable(BaseTable):
         url_params={"cloud_networks": "name"},
         verbose_name="Assigned Prefixes",
     )
+    circuit_count = LinkedCountColumn(
+        viewname="circuits:circuit_list",
+        url_params={"cloud_network": "name"},
+        verbose_name="Circuits",
+        reverse_lookup="circuit_terminations__cloud_network",
+    )
 
     class Meta(BaseTable.Meta):
         model = CloudNetwork
@@ -64,6 +70,7 @@ class CloudNetworkTable(BaseTable):
             "cloud_account",
             "parent",
             "assigned_prefix_count",
+            "circuit_count",
             "tags",
             "actions",
         )
@@ -74,6 +81,7 @@ class CloudNetworkTable(BaseTable):
             "cloud_type",
             "cloud_account",
             "assigned_prefix_count",
+            "circuit_count",
             "parent",
             "actions",
         )

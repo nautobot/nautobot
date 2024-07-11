@@ -43,6 +43,10 @@ class CloudAccount(PrimaryModel):
         blank=True,
         null=True,
     )
+    clone_fields = [
+        "provider",
+        "secrets_group",
+    ]
 
     class Meta:
         ordering = ["name"]
@@ -77,6 +81,10 @@ class CloudType(PrimaryModel):
         related_name="cloud_types",
         limit_choices_to=FeatureQuery("cloud_types"),
     )
+    clone_fields = [
+        "provider",
+        "content_types",
+    ]
 
     class Meta:
         ordering = ["name"]
@@ -111,6 +119,11 @@ class CloudNetwork(CloudTypeMixin, PrimaryModel):
         through="cloud.CloudNetworkPrefixAssignment",
     )
     extra_config = models.JSONField(null=True, blank=True)
+    clone_fields = [
+        "cloud_type",
+        "cloud_account",
+        "parent",
+    ]
 
     class Meta:
         ordering = ["name"]
@@ -181,6 +194,11 @@ class CloudService(PrimaryModel):
     cloud_network = models.ForeignKey(to=CloudNetwork, on_delete=models.PROTECT, related_name="cloud_services")
     cloud_type = models.ForeignKey(to=CloudType, on_delete=models.PROTECT, related_name="cloud_services")
     extra_config = models.JSONField(null=True, blank=True)
+    clone_fields = [
+        "cloud_account",
+        "cloud_network",
+        "cloud_type",
+    ]
 
     is_dynamic_group_associable_model = False  # TODO: remove this when adding a UI for this model
     is_saved_view_model = False  # TODO: remove this when adding a UI for this model
