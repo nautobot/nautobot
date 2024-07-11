@@ -53,12 +53,9 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
             children_table = CloudNetworkTable(instance.children.restrict(request.user, "view"))
             children_table.columns.hide("parent")
 
-            circuits = (
-                Circuit.objects.restrict(request.user, "view")
-                .filter(
-                    Q(circuit_termination_a__cloud_network=instance.pk)
-                    | Q(circuit_termination_z__cloud_network=instance.pk)
-                )
+            circuits = Circuit.objects.restrict(request.user, "view").filter(
+                Q(circuit_termination_a__cloud_network=instance.pk)
+                | Q(circuit_termination_z__cloud_network=instance.pk)
             )
 
             circuits_table = CircuitTable(circuits)
