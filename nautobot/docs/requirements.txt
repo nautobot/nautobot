@@ -11,3 +11,4 @@ mkdocs-redirects==1.2.1
 mkdocs-section-index==0.3.8
 mkdocstrings==0.24.1
 mkdocstrings-python==1.9.0
+zipp==3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
