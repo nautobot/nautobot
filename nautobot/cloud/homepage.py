@@ -12,7 +12,7 @@ layout = (
                 model=CloudAccount,
                 description="Account tracking for public and private cloud providers",
                 permissions=["cloud.view_cloudaccount"],
-                weight=100,
+                weight=400,
             ),
             HomePageItem(
                 name="Cloud Types",
@@ -20,7 +20,7 @@ layout = (
                 model=CloudType,
                 description="Types for public and private cloud providers",
                 permissions=["cloud.view_cloudtype"],
-                weight=200,
+                weight=300,
             ),
             HomePageItem(
                 name="Cloud Networks",
@@ -28,7 +28,7 @@ layout = (
                 model=CloudNetwork,
                 description="Networks for public and private cloud providers",
                 permissions=["cloud.view_cloudnetwork"],
-                weight=300,
+                weight=100,
             ),
         ),
     ),

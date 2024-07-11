@@ -3,6 +3,7 @@ import django_tables2 as tables
 from nautobot.core.tables import (
     BaseTable,
     ButtonsColumn,
+    LinkedCountColumn,
     TagColumn,
     ToggleColumn,
 )
@@ -47,6 +48,11 @@ class CloudNetworkTable(BaseTable):
     cloud_account = tables.Column(linkify=True)
     parent = tables.Column(linkify=True)
     actions = ButtonsColumn(CloudNetwork)
+    assigned_prefix_count = LinkedCountColumn(
+        viewname="ipam:prefix_list",
+        url_params={"cloud_networks": "name"},
+        verbose_name="Assigned Prefixes",
+    )
 
     class Meta(BaseTable.Meta):
         model = CloudNetwork
@@ -57,7 +63,7 @@ class CloudNetworkTable(BaseTable):
             "cloud_type",
             "cloud_account",
             "parent",
-            "prefixes",
+            "assigned_prefix_count",
             "tags",
             "actions",
         )
@@ -67,6 +73,7 @@ class CloudNetworkTable(BaseTable):
             "description",
             "cloud_type",
             "cloud_account",
+            "assigned_prefix_count",
             "parent",
             "actions",
         )

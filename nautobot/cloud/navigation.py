@@ -17,7 +17,7 @@ menu_items = (
                     NavMenuItem(
                         link="cloud:cloudaccount_list",
                         name="Cloud Accounts",
-                        weight=100,
+                        weight=400,
                         permissions=[
                             "cloud.view_cloudaccount",
                         ],
@@ -33,7 +33,7 @@ menu_items = (
                     NavMenuItem(
                         link="cloud:cloudtype_list",
                         name="Cloud Types",
-                        weight=200,
+                        weight=300,
                         permissions=[
                             "cloud.view_cloudtype",
                         ],
@@ -49,7 +49,7 @@ menu_items = (
                     NavMenuItem(
                         link="cloud:cloudnetwork_list",
                         name="Cloud Networks",
-                        weight=300,
+                        weight=100,
                         permissions=[
                             "cloud.view_cloudnetwork",
                         ],
