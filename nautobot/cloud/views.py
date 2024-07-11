@@ -48,7 +48,7 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
             prefixes = instance.prefixes.restrict(request.user, "view")
             prefix_count = prefixes.count()
             prefix_table = PrefixTable(prefixes.select_related("namespace"))
-            children_table = CloudNetworkTable(instance.children.all())
+            children_table = CloudNetworkTable(instance.children.restrict(request.user, "view"))
 
             circuits = (
                 Circuit.objects.restrict(request.user, "view")
