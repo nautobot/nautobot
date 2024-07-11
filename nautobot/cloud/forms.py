@@ -172,9 +172,10 @@ class CloudServiceBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     cloud_account = DynamicModelChoiceField(queryset=CloudAccount.objects.all(), required=False)
     cloud_network = DynamicModelChoiceField(queryset=CloudNetwork.objects.all(), required=False)
     cloud_type = DynamicModelChoiceField(queryset=CloudType.objects.all(), required=False)
+    extra_config = forms.JSONField(required=False)
 
     class Meta:
-        nullable_fields = ["cloud_account"]
+        nullable_fields = ["cloud_account", "extra_config"]
 
 
 class CloudServiceFilterForm(NautobotFilterForm):

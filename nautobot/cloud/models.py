@@ -155,7 +155,6 @@ class CloudNetwork(CloudTypeMixin, PrimaryModel):
 class CloudNetworkPrefixAssignment(BaseModel):
     cloud_network = models.ForeignKey(CloudNetwork, on_delete=models.CASCADE, related_name="prefix_assignments")
     prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="cloud_network_assignments")
-    is_metadata_associable_model = False
 
     class Meta:
         unique_together = ["cloud_network", "prefix"]
@@ -185,10 +184,6 @@ class CloudService(PrimaryModel):
     cloud_network = models.ForeignKey(to=CloudNetwork, on_delete=models.PROTECT, related_name="cloud_services")
     cloud_type = models.ForeignKey(to=CloudType, on_delete=models.PROTECT, related_name="cloud_services")
     extra_config = models.JSONField(null=True, blank=True)
-
-    is_dynamic_group_associable_model = False  # TODO: remove this when adding a UI for this model
-    is_saved_view_model = False  # TODO: remove this when adding a UI for this model
-    is_metadata_associable_model = False  # TODO: remove this when adding a UI for this model
 
     class Meta:
         ordering = ["name"]

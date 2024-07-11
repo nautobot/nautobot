@@ -81,7 +81,10 @@ class CloudServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             name="Deletable Cloud Service 2", cloud_type=cloud_types[1], cloud_network=cloud_networks[1]
         )
         CloudService.objects.create(
-            name="Deletable Cloud Service 3", cloud_type=cloud_types[2], cloud_network=cloud_networks[2], cloud_account=cloud_accounts[0],
+            name="Deletable Cloud Service 3",
+            cloud_type=cloud_types[2],
+            cloud_network=cloud_networks[2],
+            cloud_account=cloud_accounts[0],
         )
 
         cls.form_data = {
