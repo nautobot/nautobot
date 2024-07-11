@@ -254,9 +254,7 @@ class CircuitTerminationForm(LocatableModelFormMixin, NautobotModelForm):
     provider_network = DynamicModelChoiceField(
         queryset=ProviderNetwork.objects.all(), required=False, label="Provider Network"
     )
-    cloud_network = DynamicModelChoiceField(
-        queryset=CloudNetwork.objects.all(), required=False, label="Cloud Network"
-    )
+    cloud_network = DynamicModelChoiceField(queryset=CloudNetwork.objects.all(), required=False, label="Cloud Network")
 
     class Meta:
         model = CircuitTermination
