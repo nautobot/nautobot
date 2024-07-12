@@ -164,17 +164,17 @@ class WorkerStatusView(LoginRequiredMixin, TemplateView):
             reserved_task_job_results = JobResult.objects.filter(
                 id__in=[task["id"] for task in reserved_tasks[worker_name]]
             )
-            active_tasks_table = JobResultTable(
+            running_tasks_table = JobResultTable(
                 active_task_job_results, exclude=["actions", "job_model", "summary", "user", "status"]
             )
-            reserved_tasks_table = JobResultTable(
+            pending_tasks_table = JobResultTable(
                 reserved_task_job_results, exclude=["actions", "job_model", "summary", "user", "status"]
             )
             workers.append(
                 {
                     "hostname": worker_name,
-                    "active_tasks_table": active_tasks_table,
-                    "reserved_tasks_table": reserved_tasks_table,
+                    "running_tasks_table": running_tasks_table,
+                    "pending_tasks_table": pending_tasks_table,
                     "queues": [queue["name"] for queue in active_queues[worker_name]],
                     "uptime": worker_details["uptime"],
                 }

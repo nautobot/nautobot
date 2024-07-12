@@ -59,62 +59,62 @@
                         </td>
                     </tr>
                     <tr>
-                        <th colspan="{{ worker.active_tasks_table.columns|length }}">
+                        <th colspan="{{ worker.running_tasks_table.columns|length }}">
                             <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-right"
                                     name="running-tasks-{{ worker.hostname|slugify }}" data-toggle="collapse"
                                     data-target=".collapseme-running-tasks-{{ worker.hostname|slugify }}">
-                                Running Tasks {% badge worker.active_tasks_table.rows|length show_empty=True %}
+                                Running Tasks {% badge worker.running_tasks_table.rows|length show_empty=True %}
                             </button>
                         </th>
                     </tr>
                 </tbody>
                 <tbody class="collapseme-running-tasks-{{ worker.hostname|slugify }} collapse" data-parent="#accordion" aria-expanded="false">
-                <tr>
-                    {% for column in worker.active_tasks_table.columns %}
-                    <th {{ column.attrs.th.as_html }}>{{ column.header }}</th>
-                    {% endfor %}
-                </tr>
-                {% for row in worker.active_tasks_table.page.object_list|default:worker.active_tasks_table.rows %}
-                <tr {{ row.attrs.as_html }}>
-                    {% for column, cell in row.items %}
-                        <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
-                    {% endfor %}
-                </tr>
-                {% empty %}
-                    {% if worker.active_tasks_table.empty_text %}
-                <tr>
-                    <td colspan="{{ worker.active_tasks_table.columns|length }}" class="text-center text-muted">&mdash; {{ worker.reserved_tasks_table.empty_text }} &mdash;</td>
-                </tr>
-                    {% endif %}
-                {% endfor %}
-                </tbody>
-                <tbody>
                     <tr>
-                        <th colspan="{{ worker.reserved_tasks_table.columns|length }}">
-                            <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-right"
-                                    name="pending-tasks-{{ worker.hostname|slugify }}" data-toggle="collapse"
-                                    data-target=".collapseme-pending-tasks-{{ worker.hostname|slugify }}">
-                                Pending Tasks {% badge worker.reserved_tasks_table.rows|length show_empty=True %}
-                            </button>
-                        </th>
-                    </tr>
-                </tbody>
-                <tbody class="collapseme-pending-tasks-{{ worker.hostname|slugify }} collapse" data-parent="#accordion" aria-expanded="false">
-                    <tr>
-                        {% for column in worker.reserved_tasks_table.columns %}
-                        <th {{ column.attrs.th.as_html }}>{{ column.header }}</th>
+                        {% for column in worker.running_tasks_table.columns %}
+                            <th {{ column.attrs.th.as_html }}>{{ column.header }}</th>
                         {% endfor %}
                     </tr>
-                    {% for row in worker.reserved_tasks_table.page.object_list|default:worker.reserved_tasks_table.rows %}
+                    {% for row in worker.running_tasks_table.page.object_list|default:worker.running_tasks_table.rows %}
                         <tr {{ row.attrs.as_html }}>
                             {% for column, cell in row.items %}
                                 <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
                             {% endfor %}
                         </tr>
                     {% empty %}
-                        {% if worker.reserved_tasks_table.empty_text %}
+                        {% if worker.running_tasks_table.empty_text %}
                             <tr>
-                                <td colspan="{{ worker.reserved_tasks_table.columns|length }}" class="text-center text-muted">&mdash; {{ worker.reserved_tasks_table.empty_text }} &mdash;</td>
+                                <td colspan="{{ worker.running_tasks_table.columns|length }}" class="text-center text-muted">&mdash; {{ worker.running_tasks_table.empty_text }} &mdash;</td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+                <tbody>
+                    <tr>
+                        <th colspan="{{ worker.pending_tasks_table.columns|length }}">
+                            <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-right"
+                                    name="pending-tasks-{{ worker.hostname|slugify }}" data-toggle="collapse"
+                                    data-target=".collapseme-pending-tasks-{{ worker.hostname|slugify }}">
+                                Pending Tasks {% badge worker.pending_tasks_table.rows|length show_empty=True %}
+                            </button>
+                        </th>
+                    </tr>
+                </tbody>
+                <tbody class="collapseme-pending-tasks-{{ worker.hostname|slugify }} collapse" data-parent="#accordion" aria-expanded="false">
+                    <tr>
+                        {% for column in worker.pending_tasks_table.columns %}
+                            <th {{ column.attrs.th.as_html }}>{{ column.header }}</th>
+                        {% endfor %}
+                    </tr>
+                    {% for row in worker.pending_tasks_table.page.object_list|default:worker.pending_tasks_table.rows %}
+                        <tr {{ row.attrs.as_html }}>
+                            {% for column, cell in row.items %}
+                                <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% empty %}
+                        {% if worker.pending_tasks_table.empty_text %}
+                            <tr>
+                                <td colspan="{{ worker.pending_tasks_table.columns|length }}" class="text-center text-muted">&mdash; {{ worker.pending_tasks_table.empty_text }} &mdash;</td>
                             </tr>
                         {% endif %}
                     {% endfor %}
