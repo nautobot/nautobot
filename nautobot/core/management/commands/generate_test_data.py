@@ -116,6 +116,7 @@ class Command(BaseCommand):
                 TeamFactory,
             )
             from nautobot.extras.management import populate_role_choices, populate_status_choices
+            from nautobot.extras.models import MetadataType
             from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
             from nautobot.ipam.choices import PrefixTypeChoices
             from nautobot.ipam.factory import (
@@ -268,6 +269,22 @@ class Command(BaseCommand):
         _create_batch(
             CircuitTerminationFactory,
             2,
+            description="with a provider network, for side A",
+            has_location=False,
+            has_cloud_network=False,
+            term_side="A",
+        )
+        _create_batch(
+            CircuitTerminationFactory,
+            2,
+            description="with a provider network, for side Z",
+            has_location=False,
+            has_cloud_network=False,
+            term_side="Z",
+        )
+        _create_batch(
+            CircuitTerminationFactory,
+            2,
             description="with port_speed but without upstream_speed",
             has_port_speed=True,
             has_upstream_speed=False,
@@ -312,6 +329,20 @@ class Command(BaseCommand):
         _create_batch(MetadataChoiceFactory, 100)
         _create_batch(ObjectChangeFactory, 100)
         _create_batch(ObjectMetadataFactory, 100)
+        _create_batch(
+            ObjectMetadataFactory,
+            20,
+            metadata_type=MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM).first(),
+            has_contact=True,
+            description="with contacts",
+        )
+        _create_batch(
+            ObjectMetadataFactory,
+            20,
+            metadata_type=MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM).first(),
+            has_contact=False,
+            description="with teams",
+        )
         _create_batch(JobResultFactory, 20)
         _create_batch(JobLogEntryFactory, 100)
 

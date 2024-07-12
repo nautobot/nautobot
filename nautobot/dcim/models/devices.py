@@ -112,6 +112,7 @@ class DeviceTypeToSoftwareImageFile(BaseModel, ChangeLoggedModel):
     software_image_file = models.ForeignKey(
         "dcim.SoftwareImageFile", on_delete=models.PROTECT, related_name="device_type_mappings"
     )
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = [

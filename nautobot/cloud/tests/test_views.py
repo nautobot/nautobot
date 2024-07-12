@@ -1,6 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudType
+from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudService, CloudType
 from nautobot.core.testing import ViewTestCases
 from nautobot.dcim.models import Manufacturer
 from nautobot.extras.models import SecretsGroup, Tag
@@ -37,6 +37,47 @@ class CloudAccountTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
 
+class CloudNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = CloudNetwork
+
+    @classmethod
+    def setUpTestData(cls):
+        cloud_network_ct = ContentType.objects.get_for_model(CloudNetwork)
+
+        cloud_types = CloudType.objects.all()
+        cloud_accounts = CloudAccount.objects.all()
+        cloud_type_1 = cloud_types[0]
+        cloud_type_2 = cloud_types[1]
+
+        cloud_type_1.content_types.add(cloud_network_ct)
+        cloud_type_2.content_types.add(cloud_network_ct)
+
+        cn = CloudNetwork.objects.create(
+            name="Deletable Cloud Network 1", cloud_type=cloud_type_1, cloud_account=cloud_accounts[0]
+        )
+        CloudNetwork.objects.create(
+            name="Deletable Cloud Network 2", cloud_type=cloud_type_1, cloud_account=cloud_accounts[0]
+        )
+        CloudNetwork.objects.create(
+            name="Deletable Cloud Network 3", cloud_type=cloud_type_1, cloud_account=cloud_accounts[0], parent=cn
+        )
+
+        cls.form_data = {
+            "name": "New Cloud Network",
+            "description": "A new cloud network",
+            "cloud_type": cloud_type_2.pk,
+            "cloud_account": cloud_accounts[1].pk,
+            "parent": cn.pk,
+            "tags": [t.pk for t in Tag.objects.get_for_model(CloudNetwork)],
+        }
+
+        cls.bulk_edit_data = {
+            "description": "New description",
+            "cloud_type": cloud_types[1].pk,
+            "cloud_account": cloud_accounts[1].pk,
+        }
+
+
 class CloudTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = CloudType
 
@@ -63,4 +104,40 @@ class CloudTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "provider": providers[1].pk,
             "content_types": [cts[0].id],
             "description": "New description",
+        }
+
+
+class CloudServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = CloudService
+
+    @classmethod
+    def setUpTestData(cls):
+        cloud_types = CloudType.objects.all()
+        cloud_networks = CloudNetwork.objects.all()
+        cloud_accounts = CloudAccount.objects.all()
+        CloudService.objects.create(
+            name="Deletable Cloud Service 1", cloud_type=cloud_types[0], cloud_network=cloud_networks[0]
+        )
+        CloudService.objects.create(
+            name="Deletable Cloud Service 2", cloud_type=cloud_types[1], cloud_network=cloud_networks[1]
+        )
+        CloudService.objects.create(
+            name="Deletable Cloud Service 3",
+            cloud_type=cloud_types[2],
+            cloud_network=cloud_networks[2],
+            cloud_account=cloud_accounts[0],
+        )
+
+        cls.form_data = {
+            "name": "New Cloud Service",
+            "cloud_type": cloud_types[1].pk,
+            "cloud_network": cloud_networks[1].pk,
+            "cloud_account": cloud_accounts[1].pk,
+            "extra_config": '{"role": 1, "status": "greetings"}',
+            "tags": [t.pk for t in Tag.objects.get_for_model(CloudService)],
+        }
+
+        cls.bulk_edit_data = {
+            "cloud_network": cloud_networks[2].pk,
+            "cloud_account": cloud_accounts[2].pk,
         }
