@@ -9,7 +9,7 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
-from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin
+from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponseForbidden, HttpResponseServerError, JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -127,8 +127,11 @@ class HomeView(AccessMixin, TemplateView):
         return self.render_to_response(context)
 
 
-class WorkerStatusView(LoginRequiredMixin, TemplateView):
+class WorkerStatusView(UserPassesTestMixin, TemplateView):
     template_name = "utilities/worker_status.html"
+
+    def test_func(self):
+        return self.request.user.is_staff
 
     def get(self, request, *args, **kwargs):
         from nautobot.extras.models import JobResult
