@@ -19,6 +19,8 @@ CIRCUIT_TERMINATION_PARENT = """
 {{ value.provider_network|hyperlinked_object }}
 {% elif value.location %}
 {{ value.location|hyperlinked_object }}
+{% elif value.cloud_network %}
+{{ value.cloud_network|hyperlinked_object }}
 {% else %}
 {{ None|placeholder }}
 {% endif %}
@@ -164,6 +166,7 @@ class CircuitTerminationTable(BaseTable):
     term_side = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     provider_network = tables.Column(linkify=True)
+    cloud_network = tables.Column(linkify=True)
     cable = tables.Column(linkify=True)
 
     class Meta(BaseTable.Meta):
@@ -174,6 +177,7 @@ class CircuitTerminationTable(BaseTable):
             "term_side",
             "location",
             "provider_network",
+            "cloud_network",
             "cable",
             "port_speed",
             "upstream_speed",
@@ -188,4 +192,5 @@ class CircuitTerminationTable(BaseTable):
             "term_side",
             "location",
             "provider_network",
+            "cloud_network",
         )

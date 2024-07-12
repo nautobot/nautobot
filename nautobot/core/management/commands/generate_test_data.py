@@ -269,6 +269,22 @@ class Command(BaseCommand):
         _create_batch(
             CircuitTerminationFactory,
             2,
+            description="with a provider network, for side A",
+            has_location=False,
+            has_cloud_network=False,
+            term_side="A",
+        )
+        _create_batch(
+            CircuitTerminationFactory,
+            2,
+            description="with a provider network, for side Z",
+            has_location=False,
+            has_cloud_network=False,
+            term_side="Z",
+        )
+        _create_batch(
+            CircuitTerminationFactory,
+            2,
             description="with port_speed but without upstream_speed",
             has_port_speed=True,
             has_upstream_speed=False,

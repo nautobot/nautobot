@@ -254,6 +254,7 @@ class CircuitTerminationForm(LocatableModelFormMixin, NautobotModelForm):
     provider_network = DynamicModelChoiceField(
         queryset=ProviderNetwork.objects.all(), required=False, label="Provider Network"
     )
+    cloud_network = DynamicModelChoiceField(queryset=CloudNetwork.objects.all(), required=False, label="Cloud Network")
 
     class Meta:
         model = CircuitTermination
@@ -261,6 +262,7 @@ class CircuitTerminationForm(LocatableModelFormMixin, NautobotModelForm):
             "term_side",
             "location",
             "provider_network",
+            "cloud_network",
             "port_speed",
             "upstream_speed",
             "xconnect_id",
@@ -284,4 +286,7 @@ class CircuitTerminationFilterForm(LocatableModelFilterFormMixin, NautobotFilter
     circuit = DynamicModelMultipleChoiceField(queryset=Circuit.objects.all(), to_field_name="cid", required=False)
     provider_network = DynamicModelMultipleChoiceField(
         queryset=ProviderNetwork.objects.all(), to_field_name="name", required=False
+    )
+    cloud_network = DynamicModelMultipleChoiceField(
+        queryset=CloudNetwork.objects.all(), to_field_name="name", required=False
     )
