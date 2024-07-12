@@ -352,7 +352,7 @@ def consolidate_detail_view_action_buttons(context):
                 """
             )
 
-    # Render a generic "Bulk Actions" dropdown button if the edit button is not present
+    # Render a generic "Actions" dropdown button if the edit button is not present
     elif detail_view_action_button_count >= 1:
         detail_view_action_buttons.append(
             format_html(
