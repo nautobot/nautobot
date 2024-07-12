@@ -66,6 +66,7 @@ urlpatterns = [
         {"add_attachment_headers": True},
         name="db_file_storage.download_file",
     ),
+    # Celery worker status page
     path("worker-status/", WorkerStatusView.as_view(), name="worker_status"),
     # Templated css file
     path(
