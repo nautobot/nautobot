@@ -375,7 +375,7 @@ def consolidate_detail_view_action_buttons(context):
         detail_view_action_buttons.append(
             format_html(
                 child_button_fragment,
-                label=f"Clone {bettertitle(context["verbose_name"])}",
+                label=f"Clone {bettertitle(context['verbose_name'])}",
                 attrs=render_tag_attrs(
                     {
                         "class": clone_button_classes,
