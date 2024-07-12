@@ -195,8 +195,7 @@ class WorkerStatusView(LoginRequiredMixin, TemplateView):
 
         context = {
             "worker_status": {
-                "default_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
-                "queue_worker_count": {queue: queue_worker_count[queue] for queue in sorted(queue_worker_count)},
+                "queue_worker_count": queue_worker_count,
                 "workers": workers,
             },
         }
