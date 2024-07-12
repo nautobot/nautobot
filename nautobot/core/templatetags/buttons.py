@@ -320,26 +320,21 @@ def consolidate_detail_view_action_buttons(context):
     """
 
     edit_button_classes = "btn btn-warning"
-    delete_button_classes = "btn btn-danger"
-    clone_button_classes = "btn btn-primary"
-    clone_icon = "mdi mdi-plus-thick"
-
-    if detail_view_action_button_count > 1:
-        child_button_fragment = f"<li>{primary_button_fragment}</li>"
-        delete_button_fragment = f"<li>{delete_button_fragment}</li>"
-        delete_button_classes = "text-danger"
-        clone_button_classes = "text"
-        clone_icon += " text-muted"
+    delete_button_classes = "text-danger"
+    clone_button_classes = "text"
+    clone_icon = "mdi mdi-plus-thick text-muted"
+    child_button_fragment = f"<li>{primary_button_fragment}</li>"
+    delete_button_fragment = f"<li>{delete_button_fragment}</li>"
 
     if render_edit_button:
         detail_view_action_buttons.append(
             format_html(
                 primary_button_fragment,
-                label=f"Edit {bettertitle(context["verbose_name"])}",
+                label=f"Edit {bettertitle(context['verbose_name'])}",
                 attrs=render_tag_attrs(
                     {
-                        "class": edit_button_classes,
                         "id": "edit-button",
+                        "class": edit_button_classes,
                         "href": object_edit_url,
                     }
                 ),
@@ -358,11 +353,11 @@ def consolidate_detail_view_action_buttons(context):
             )
 
     # Render a generic "Bulk Actions" dropup button if the edit button is not present
-    elif detail_view_action_button_count > 1:
+    elif detail_view_action_button_count >= 1:
         detail_view_action_buttons.append(
             format_html(
                 """
-                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                <button type="button" class="btn btn-warning dropdown-toggle" data-toggle="dropdown">
                     Actions <span class="caret"></span>
                 </button>
                 """
@@ -378,8 +373,8 @@ def consolidate_detail_view_action_buttons(context):
                 label=f"Clone {bettertitle(context['verbose_name'])}",
                 attrs=render_tag_attrs(
                     {
-                        "class": clone_button_classes,
                         "id": "clone-button",
+                        "class": clone_button_classes,
                         "href": object_clone_url,
                     }
                 ),
@@ -392,11 +387,11 @@ def consolidate_detail_view_action_buttons(context):
         detail_view_action_buttons.append(
             format_html(
                 delete_button_fragment,
-                label=f"Delete {bettertitle(context["verbose_name"])}",
+                label=f"Delete {bettertitle(context['verbose_name'])}",
                 attrs=render_tag_attrs(
                     {
-                        "class": delete_button_classes,
                         "id": "delete-button",
+                        "class": delete_button_classes,
                         "href": object_delete_url,
                     }
                 ),
