@@ -16,8 +16,6 @@
 {% endblock %}
 
 {% block content %}
-
-
 <div class="row">
     <div class="col-md-12">
         <div class="panel panel-default">
@@ -39,92 +37,91 @@
         </div>
     </div>
     {% for worker in worker_status.workers %}
-    <div class="col-md-6">
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>{{ worker.hostname }}</strong>
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>{{ worker.hostname }}</strong>
+                </div>
+                <table id="accordion" class="table table-hover panel-body attr-table">
+                    <tbody>
+                        <tr>
+                            <td>Uptime</td>
+                            <td colspan="2">{{ worker.uptime|format_uptime }}</td>
+                        </tr>
+                        <tr>
+                            <td>Queues</td>
+                            <td colspan="2">
+                                {% for queue in worker.queues %}
+                                <span class="label label-default">{{ queue }}</span>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th colspan="{{ worker.running_tasks_table.columns|length }}">
+                                <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-right"
+                                        name="running-tasks-{{ worker.hostname|slugify }}" data-toggle="collapse"
+                                        data-target=".collapseme-running-tasks-{{ worker.hostname|slugify }}">
+                                    Running Tasks {% badge worker.running_tasks_table.rows|length show_empty=True %}
+                                </button>
+                            </th>
+                        </tr>
+                    </tbody>
+                    <tbody class="collapseme-running-tasks-{{ worker.hostname|slugify }} collapse" data-parent="#accordion" aria-expanded="false">
+                        <tr>
+                            {% for column in worker.running_tasks_table.columns %}
+                                <th {{ column.attrs.th.as_html }}>{{ column.header }}</th>
+                            {% endfor %}
+                        </tr>
+                        {% for row in worker.running_tasks_table.page.object_list|default:worker.running_tasks_table.rows %}
+                            <tr {{ row.attrs.as_html }}>
+                                {% for column, cell in row.items %}
+                                    <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% empty %}
+                            {% if worker.running_tasks_table.empty_text %}
+                                <tr>
+                                    <td colspan="{{ worker.running_tasks_table.columns|length }}" class="text-center text-muted">&mdash; {{ worker.running_tasks_table.empty_text }} &mdash;</td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                    <tbody>
+                        <tr>
+                            <th colspan="{{ worker.pending_tasks_table.columns|length }}">
+                                <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-right"
+                                        name="pending-tasks-{{ worker.hostname|slugify }}" data-toggle="collapse"
+                                        data-target=".collapseme-pending-tasks-{{ worker.hostname|slugify }}">
+                                    Pending Tasks {% badge worker.pending_tasks_table.rows|length show_empty=True %}
+                                </button>
+                            </th>
+                        </tr>
+                    </tbody>
+                    <tbody class="collapseme-pending-tasks-{{ worker.hostname|slugify }} collapse" data-parent="#accordion" aria-expanded="false">
+                        <tr>
+                            {% for column in worker.pending_tasks_table.columns %}
+                                <th {{ column.attrs.th.as_html }}>{{ column.header }}</th>
+                            {% endfor %}
+                        </tr>
+                        {% for row in worker.pending_tasks_table.page.object_list|default:worker.pending_tasks_table.rows %}
+                            <tr {{ row.attrs.as_html }}>
+                                {% for column, cell in row.items %}
+                                    <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% empty %}
+                            {% if worker.pending_tasks_table.empty_text %}
+                                <tr>
+                                    <td colspan="{{ worker.pending_tasks_table.columns|length }}" class="text-center text-muted">&mdash; {{ worker.pending_tasks_table.empty_text }} &mdash;</td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            <table id="accordion" class="table table-hover panel-body attr-table">
-                <tbody>
-                    <tr>
-                        <td>Uptime</td>
-                        <td colspan="2">{{ worker.uptime|format_uptime }}</td>
-                    </tr>
-                    <tr>
-                        <td>Queues</td>
-                        <td colspan="2">
-                            {% for queue in worker.queues %}
-                            <span class="label label-default">{{ queue }}</span>
-                            {% endfor %}
-                        </td>
-                    </tr>
-                    <tr>
-                        <th colspan="{{ worker.running_tasks_table.columns|length }}">
-                            <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-right"
-                                    name="running-tasks-{{ worker.hostname|slugify }}" data-toggle="collapse"
-                                    data-target=".collapseme-running-tasks-{{ worker.hostname|slugify }}">
-                                Running Tasks {% badge worker.running_tasks_table.rows|length show_empty=True %}
-                            </button>
-                        </th>
-                    </tr>
-                </tbody>
-                <tbody class="collapseme-running-tasks-{{ worker.hostname|slugify }} collapse" data-parent="#accordion" aria-expanded="false">
-                    <tr>
-                        {% for column in worker.running_tasks_table.columns %}
-                            <th {{ column.attrs.th.as_html }}>{{ column.header }}</th>
-                        {% endfor %}
-                    </tr>
-                    {% for row in worker.running_tasks_table.page.object_list|default:worker.running_tasks_table.rows %}
-                        <tr {{ row.attrs.as_html }}>
-                            {% for column, cell in row.items %}
-                                <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
-                            {% endfor %}
-                        </tr>
-                    {% empty %}
-                        {% if worker.running_tasks_table.empty_text %}
-                            <tr>
-                                <td colspan="{{ worker.running_tasks_table.columns|length }}" class="text-center text-muted">&mdash; {{ worker.running_tasks_table.empty_text }} &mdash;</td>
-                            </tr>
-                        {% endif %}
-                    {% endfor %}
-                </tbody>
-                <tbody>
-                    <tr>
-                        <th colspan="{{ worker.pending_tasks_table.columns|length }}">
-                            <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-right"
-                                    name="pending-tasks-{{ worker.hostname|slugify }}" data-toggle="collapse"
-                                    data-target=".collapseme-pending-tasks-{{ worker.hostname|slugify }}">
-                                Pending Tasks {% badge worker.pending_tasks_table.rows|length show_empty=True %}
-                            </button>
-                        </th>
-                    </tr>
-                </tbody>
-                <tbody class="collapseme-pending-tasks-{{ worker.hostname|slugify }} collapse" data-parent="#accordion" aria-expanded="false">
-                    <tr>
-                        {% for column in worker.pending_tasks_table.columns %}
-                            <th {{ column.attrs.th.as_html }}>{{ column.header }}</th>
-                        {% endfor %}
-                    </tr>
-                    {% for row in worker.pending_tasks_table.page.object_list|default:worker.pending_tasks_table.rows %}
-                        <tr {{ row.attrs.as_html }}>
-                            {% for column, cell in row.items %}
-                                <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
-                            {% endfor %}
-                        </tr>
-                    {% empty %}
-                        {% if worker.pending_tasks_table.empty_text %}
-                            <tr>
-                                <td colspan="{{ worker.pending_tasks_table.columns|length }}" class="text-center text-muted">&mdash; {{ worker.pending_tasks_table.empty_text }} &mdash;</td>
-                            </tr>
-                        {% endif %}
-                    {% endfor %}
-                </tbody>
-            </table>
         </div>
-    </div>
     {% endfor %}
 </div>
-
 {% endblock %}
 
 {% block javascript %}
