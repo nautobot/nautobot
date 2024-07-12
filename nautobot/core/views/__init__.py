@@ -148,13 +148,13 @@ class WorkerStatusView(UserPassesTestMixin, TemplateView):
             celery_inspect = app.control.inspect(list(worker_stats.keys()), timeout=5.0)
 
             # active() returns a dict of {worker_name: [task_dict, task_dict, ...]}
-            active_tasks = celery_inspect.active()
+            active_tasks = celery_inspect.active() or {}
 
             # reserved() returns a dict of {worker_name: [task_dict, task_dict, ...]}
-            reserved_tasks = celery_inspect.reserved()
+            reserved_tasks = celery_inspect.reserved() or {}
 
             # active_queues() returns a dict of {worker_name: [queue_dict, queue_dict, ...]}
-            active_queues = celery_inspect.active_queues()
+            active_queues = celery_inspect.active_queues() or {}
         else:
             # No workers were found, default to empty dicts for all commands
             worker_stats = active_tasks = reserved_tasks = active_queues = {}
@@ -162,10 +162,10 @@ class WorkerStatusView(UserPassesTestMixin, TemplateView):
         workers = []
         for worker_name, worker_details in worker_stats.items():
             active_task_job_results = JobResult.objects.filter(
-                id__in=[task["id"] for task in active_tasks[worker_name]]
+                id__in=[task["id"] for task in active_tasks.get(worker_name, [])]
             )
             reserved_task_job_results = JobResult.objects.filter(
-                id__in=[task["id"] for task in reserved_tasks[worker_name]]
+                id__in=[task["id"] for task in reserved_tasks.get(worker_name, [])]
             )
             running_tasks_table = JobResultTable(
                 active_task_job_results, exclude=["actions", "job_model", "summary", "user", "status"]
@@ -178,7 +178,7 @@ class WorkerStatusView(UserPassesTestMixin, TemplateView):
                     "hostname": worker_name,
                     "running_tasks_table": running_tasks_table,
                     "pending_tasks_table": pending_tasks_table,
-                    "queues": [queue["name"] for queue in active_queues[worker_name]],
+                    "queues": [queue["name"] for queue in active_queues.get(worker_name, [])],
                     "uptime": worker_details["uptime"],
                 }
             )
