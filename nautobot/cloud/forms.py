@@ -2,7 +2,7 @@ import inspect
 
 from django import forms
 
-from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudType
+from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudService, CloudType
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     DynamicModelChoiceField,
@@ -227,4 +227,66 @@ class CloudTypeFilterForm(NautobotFilterForm):
         choices_as_strings=True,
         label="Content Type(s)",
     )
+    tags = TagFilterField(model)
+
+
+#
+# Cloud Service
+#
+
+
+class CloudServiceForm(NautobotModelForm):
+    cloud_account = DynamicModelChoiceField(
+        queryset=CloudAccount.objects.all(),
+        required=False,
+    )
+    cloud_network = DynamicModelChoiceField(
+        queryset=CloudNetwork.objects.all(),
+    )
+    cloud_type = DynamicModelChoiceField(
+        queryset=CloudType.objects.all(),
+    )
+
+    class Meta:
+        model = CloudService
+        fields = [
+            "name",
+            "cloud_account",
+            "cloud_network",
+            "cloud_type",
+            "extra_config",
+            "tags",
+        ]
+
+
+class CloudServiceBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=CloudService.objects.all(), widget=forms.MultipleHiddenInput)
+    cloud_account = DynamicModelChoiceField(queryset=CloudAccount.objects.all(), required=False)
+    cloud_network = DynamicModelChoiceField(queryset=CloudNetwork.objects.all(), required=False)
+    cloud_type = DynamicModelChoiceField(queryset=CloudType.objects.all(), required=False)
+    extra_config = forms.JSONField(required=False)
+
+    class Meta:
+        nullable_fields = ["cloud_account", "extra_config"]
+
+
+class CloudServiceFilterForm(NautobotFilterForm):
+    model = CloudService
+    field_order = [
+        "q",
+        "name",
+        "cloud_account",
+        "cloud_network",
+        "cloud_type",
+        "tags",
+    ]
+    q = forms.CharField(required=False, label="Search")
+    name = MultiValueCharField(required=False)
+    cloud_account = DynamicModelMultipleChoiceField(
+        queryset=CloudAccount.objects.all(), to_field_name="name", required=False
+    )
+    cloud_network = DynamicModelMultipleChoiceField(
+        queryset=CloudNetwork.objects.all(), to_field_name="name", required=False
+    )
+    cloud_type = DynamicModelMultipleChoiceField(queryset=CloudType.objects.all(), to_field_name="name", required=False)
     tags = TagFilterField(model)

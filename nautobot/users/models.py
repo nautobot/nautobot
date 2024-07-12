@@ -298,6 +298,7 @@ class ObjectPermission(BaseModel, ChangeLoggedModel):
     )
 
     documentation_static_path = "docs/user-guide/platform-functionality/users/objectpermission.html"
+    is_metadata_associable_model = False
 
     class Meta:
         ordering = ["name"]
@@ -350,6 +351,7 @@ class SavedView(BaseModel, ChangeLoggedModel):
     is_shared = models.BooleanField(default=True)
 
     documentation_static_path = "docs/user-guide/platform-functionality/savedview.html"
+    is_metadata_associable_model = False
 
     class Meta:
         ordering = ["owner", "view", "name"]
