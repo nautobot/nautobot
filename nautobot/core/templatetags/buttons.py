@@ -383,7 +383,8 @@ def consolidate_detail_view_action_buttons(context):
             )
         )
     if render_delete_button:
-        detail_view_action_buttons.append(format_html('<li role="separator" class="divider"></li>'))
+        if render_clone_button:
+            detail_view_action_buttons.append(format_html('<li role="separator" class="divider"></li>'))
         detail_view_action_buttons.append(
             format_html(
                 delete_button_fragment,
