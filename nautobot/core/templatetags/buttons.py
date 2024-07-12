@@ -284,7 +284,7 @@ def consolidate_detail_view_action_buttons(context):
 
     Context must include the following keys:
         request (HttpRequest): The HTTP request object.
-        object (Model Instance): The object in the detail view.
+        object (Model): The object in the detail view.
         user (User): The current user.
     """
     instance = context["object"]
@@ -352,12 +352,12 @@ def consolidate_detail_view_action_buttons(context):
                 """
             )
 
-    # Render a generic "Bulk Actions" dropup button if the edit button is not present
+    # Render a generic "Bulk Actions" dropdown button if the edit button is not present
     elif detail_view_action_button_count >= 1:
         detail_view_action_buttons.append(
             format_html(
                 """
-                <button type="button" class="btn btn-warning dropdown-toggle" data-toggle="dropdown">
+                <button type="button" id="actions-dropdown" class="btn btn-warning dropdown-toggle" data-toggle="dropdown">
                     Actions <span class="caret"></span>
                 </button>
                 """
