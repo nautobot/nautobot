@@ -2,6 +2,14 @@
 {% load buttons %}
 {% load helpers %}
 
+{% block extra_styles %}
+<style type="text/css">
+    .panel.panel-default {
+        overflow: hidden
+    }
+</style>
+{% endblock %}
+
 {% block header %}
 <h1>
     {% block title %}Nautobot Worker Status{% endblock %}
@@ -12,75 +20,120 @@
 
 
 <div class="row">
-    <div class="col-md-6">
-        {% for worker in worker_status.workers %}
+    <div class="col-md-12">
         <div class="panel panel-default">
             <div class="panel-heading">
-                <strong>{{ worker.hostname }}</strong>
+                <strong>Worker Queues</strong>
             </div>
             <table class="table table-hover panel-body attr-table">
+                {% for queue_name, workers in worker_status.queue_worker_count.items %}
                 <tr>
-                    <td>Uptime</td>
-                    <td>{{ worker.uptime|format_uptime }}</td>
-                </tr>
-                <tr>
-                    <td>Queues</td>
+                    <td><span class="label label-default">{{ queue_name }}</span></td>
                     <td>
-                        {% comment %}
-                        <ul class="list-unstyled">
-                            {% for queue in worker.queues %}
-                            <li><code>{{ queue }}</code></li>
-                            {% endfor %}
-                        </ul>
-                        {% endcomment %}
-                        {% for queue in worker.queues %}
-                        <span class="label label-default">{{ queue }}</span>
+                        {% for worker in workers %}
+                        <span class="label label-default">{{ worker }}</span>
                         {% endfor %}
                     </td>
-                </tr>
-                <tr>
-                    <td>Active Tasks</td>
-                    <td>
-                        <ul class="list-unstyled">
-                            {% for task in worker.active_tasks %}
-                            <li>{{ task|render_celery_task }}</li>
-                            {% endfor %}
-                        </ul>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Reserved Tasks</td>
-                    <td>
-                        {% if worker.reserved_tasks %}
-                            <ul class="list-unstyled">
-                                {% for task in worker.reserved_tasks %}
-                                <li>{{ task|render_celery_task }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% else %}
-                            {{ None|placeholder }}
-                        {% endif %}
-                    </td>
-                </tr>
-            </table>
-        </div>
-        {% endfor %}
-    </div>
-    <div class="col-md-6">
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>Active Queues</strong>
-            </div>
-            <table class="table table-hover panel-body attr-table">
-                {% for name, worker_count in worker_status.queue_worker_count.items %}
-                <tr>
-                    <td>{{ name }}{% if name == worker_status.default_queue %} (default queue){% endif %}</td>
-                    <td>{{ worker_count }} worker{% if worker_count != 1 %}s{% endif %}</td>
                 </tr>
                 {% endfor %}
             </table>
         </div>
     </div>
+    {% for worker in worker_status.workers %}
+    <div class="col-md-6">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>{{ worker.hostname }}</strong>
+            </div>
+            <table id="accordion" class="table table-hover panel-body attr-table">
+                <tbody>
+                    <tr>
+                        <td>Uptime</td>
+                        <td colspan="2">{{ worker.uptime|format_uptime }}</td>
+                    </tr>
+                    <tr>
+                        <td>Queues</td>
+                        <td colspan="2">
+                            {% for queue in worker.queues %}
+                            <span class="label label-default">{{ queue }}</span>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th colspan="{{ worker.active_tasks_table.columns|length }}">
+                            <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-right"
+                                    name="running-tasks-{{ worker.hostname|slugify }}" data-toggle="collapse"
+                                    data-target=".collapseme-running-tasks-{{ worker.hostname|slugify }}">
+                                Running Tasks {% badge worker.active_tasks_table.rows|length show_empty=True %}
+                            </button>
+                        </th>
+                    </tr>
+                </tbody>
+                <tbody class="collapseme-running-tasks-{{ worker.hostname|slugify }} collapse" data-parent="#accordion" aria-expanded="false">
+                <tr>
+                    {% for column in worker.active_tasks_table.columns %}
+                    <th {{ column.attrs.th.as_html }}>{{ column.header }}</th>
+                    {% endfor %}
+                </tr>
+                {% for row in worker.active_tasks_table.page.object_list|default:worker.active_tasks_table.rows %}
+                <tr {{ row.attrs.as_html }}>
+                    {% for column, cell in row.items %}
+                        <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
+                    {% endfor %}
+                </tr>
+                {% empty %}
+                    {% if worker.active_tasks_table.empty_text %}
+                <tr>
+                    <td colspan="{{ worker.active_tasks_table.columns|length }}" class="text-center text-muted">&mdash; {{ worker.reserved_tasks_table.empty_text }} &mdash;</td>
+                </tr>
+                    {% endif %}
+                {% endfor %}
+                </tbody>
+                <tbody>
+                    <tr>
+                        <th colspan="{{ worker.reserved_tasks_table.columns|length }}">
+                            <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-right"
+                                    name="pending-tasks-{{ worker.hostname|slugify }}" data-toggle="collapse"
+                                    data-target=".collapseme-pending-tasks-{{ worker.hostname|slugify }}">
+                                Pending Tasks {% badge worker.reserved_tasks_table.rows|length show_empty=True %}
+                            </button>
+                        </th>
+                    </tr>
+                </tbody>
+                <tbody class="collapseme-pending-tasks-{{ worker.hostname|slugify }} collapse" data-parent="#accordion" aria-expanded="false">
+                    <tr>
+                        {% for column in worker.reserved_tasks_table.columns %}
+                        <th {{ column.attrs.th.as_html }}>{{ column.header }}</th>
+                        {% endfor %}
+                    </tr>
+                    {% for row in worker.reserved_tasks_table.page.object_list|default:worker.reserved_tasks_table.rows %}
+                        <tr {{ row.attrs.as_html }}>
+                            {% for column, cell in row.items %}
+                                <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% empty %}
+                        {% if worker.reserved_tasks_table.empty_text %}
+                            <tr>
+                                <td colspan="{{ worker.reserved_tasks_table.columns|length }}" class="text-center text-muted">&mdash; {{ worker.reserved_tasks_table.empty_text }} &mdash;</td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 
+{% endblock %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script>
+        // Toggle v -. >
+        $("#accordion .accordion-toggle").click(function() {
+            $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
+        });
+     </script>
 {% endblock %}

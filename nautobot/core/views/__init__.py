@@ -42,7 +42,6 @@ from nautobot.core.celery import app
 from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
-from nautobot.core.utils.data import str_removeprefix
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.extras.forms import GraphQLQueryForm
@@ -128,45 +127,546 @@ class HomeView(AccessMixin, TemplateView):
         return self.render_to_response(context)
 
 
+fake_data = {
+    "active": {
+        "celery@76d71c1936b4": [
+            {
+                "acknowledged": True,
+                "args": ["example_app.jobs.ExampleLoggingJob"],
+                "delivery_info": {"exchange": "", "priority": 0, "redelivered": False, "routing_key": "default"},
+                "hostname": "celery@76d71c1936b4",
+                "id": "1470a93e-fdf0-44f0-a613-778cee034799",
+                "kwargs": {"interval": 300},
+                "name": "nautobot.extras.jobs.run_job",
+                "time_start": 1720716320.3085527,
+                "type": "nautobot.extras.jobs.run_job",
+                "worker_pid": 8,
+            },
+            {
+                "acknowledged": True,
+                "args": ["example_app.jobs.ExampleLoggingJob"],
+                "delivery_info": {"exchange": "", "priority": 0, "redelivered": False, "routing_key": "default"},
+                "hostname": "celery@76d71c1936b4",
+                "id": "a9bbd213-fe77-4735-b8e9-a17323f58ea6",
+                "kwargs": {"interval": 300},
+                "name": "nautobot.extras.jobs.run_job",
+                "time_start": 1720716328.5849855,
+                "type": "nautobot.extras.jobs.run_job",
+                "worker_pid": 6,
+            },
+            {
+                "acknowledged": True,
+                "args": ["example_app.jobs.ExampleLoggingJob"],
+                "delivery_info": {"exchange": "", "priority": 0, "redelivered": False, "routing_key": "default"},
+                "hostname": "celery@76d71c1936b4",
+                "id": "8964653b-f960-45c8-b135-7ef990f3cbc5",
+                "kwargs": {"interval": 300},
+                "name": "nautobot.extras.jobs.run_job",
+                "time_start": 1720716332.51895,
+                "type": "nautobot.extras.jobs.run_job",
+                "worker_pid": 9,
+            },
+            {
+                "acknowledged": True,
+                "args": ["example_app.jobs.ExampleLoggingJob"],
+                "delivery_info": {"exchange": "", "priority": 0, "redelivered": False, "routing_key": "default"},
+                "hostname": "celery@76d71c1936b4",
+                "id": "5703c390-13fa-4d72-b6e2-8951ae5b7290",
+                "kwargs": {"interval": 300},
+                "name": "nautobot.extras.jobs.run_job",
+                "time_start": 1720716315.772605,
+                "type": "nautobot.extras.jobs.run_job",
+                "worker_pid": 7,
+            },
+        ],
+        "celery@e12e372a43dc": [
+            {
+                "acknowledged": True,
+                "args": ["example_app.jobs.ExampleLoggingJob"],
+                "delivery_info": {"exchange": "", "priority": 0, "redelivered": False, "routing_key": "default"},
+                "hostname": "celery@e12e372a43dc",
+                "id": "1991f427-e741-43e9-a32a-f7bd337d9c45",
+                "kwargs": {"interval": 300},
+                "name": "nautobot.extras.jobs.run_job",
+                "time_start": 1720716336.6033106,
+                "type": "nautobot.extras.jobs.run_job",
+                "worker_pid": 11,
+            },
+            {
+                "acknowledged": True,
+                "args": ["example_app.jobs.ExampleLoggingJob"],
+                "delivery_info": {"exchange": "", "priority": 0, "redelivered": False, "routing_key": "default"},
+                "hostname": "celery@e12e372a43dc",
+                "id": "a47ecf55-ff9a-4f36-8ca5-7e5c58c4f802",
+                "kwargs": {"interval": 300},
+                "name": "nautobot.extras.jobs.run_job",
+                "time_start": 1720716324.4168036,
+                "type": "nautobot.extras.jobs.run_job",
+                "worker_pid": 10,
+            },
+        ],
+        "celery2@e12e372a43dc": [
+            {
+                "acknowledged": True,
+                "args": ["example_app.jobs.ExampleLoggingJob"],
+                "delivery_info": {"exchange": "", "priority": 0, "redelivered": False, "routing_key": "default"},
+                "hostname": "celery@e12e372a43dc",
+                "id": "1991f427-e741-43e9-a32a-f7bd337d9c45",
+                "kwargs": {"interval": 300},
+                "name": "nautobot.extras.jobs.run_job",
+                "time_start": 1720716336.6033106,
+                "type": "nautobot.extras.jobs.run_job",
+                "worker_pid": 11,
+            },
+            {
+                "acknowledged": True,
+                "args": ["example_app.jobs.ExampleLoggingJob"],
+                "delivery_info": {"exchange": "", "priority": 0, "redelivered": False, "routing_key": "default"},
+                "hostname": "celery@e12e372a43dc",
+                "id": "a47ecf55-ff9a-4f36-8ca5-7e5c58c4f802",
+                "kwargs": {"interval": 300},
+                "name": "nautobot.extras.jobs.run_job",
+                "time_start": 1720716324.4168036,
+                "type": "nautobot.extras.jobs.run_job",
+                "worker_pid": 10,
+            },
+        ],
+    },
+    "reserved": {
+        "celery@76d71c1936b4": [
+            {
+                "acknowledged": False,
+                "args": ["example_app.jobs.ExampleLoggingJob"],
+                "delivery_info": {"exchange": "", "priority": 0, "redelivered": False, "routing_key": "default"},
+                "hostname": "celery@76d71c1936b4",
+                "id": "8adc731c-ecd0-4ffa-add8-0711ec691ba1",
+                "kwargs": {"interval": 300},
+                "name": "nautobot.extras.tasks.update_custom_field_choice_data",
+                "time_start": None,
+                "type": "nautobot.extras.tasks.update_custom_field_choice_data",
+                "worker_pid": None,
+            },
+            {
+                "acknowledged": False,
+                "args": ["example_app.jobs.ExampleLoggingJob"],
+                "delivery_info": {"exchange": "", "priority": 0, "redelivered": False, "routing_key": "default"},
+                "hostname": "celery@76d71c1936b4",
+                "id": "27966180-b6a8-4332-883a-2f620fdfba7f",
+                "kwargs": {"interval": 300},
+                "name": "nautobot.extras.jobs.run_job",
+                "time_start": None,
+                "type": "nautobot.extras.jobs.run_job",
+                "worker_pid": None,
+            },
+            {
+                "acknowledged": False,
+                "args": ["example_app.jobs.ExampleLoggingJob"],
+                "delivery_info": {"exchange": "", "priority": 0, "redelivered": False, "routing_key": "default"},
+                "hostname": "celery@76d71c1936b4",
+                "id": "1aa3bdec-b221-4c6a-906f-51a2e3bd1c27",
+                "kwargs": {"interval": 300},
+                "name": "nautobot.extras.jobs.run_job",
+                "time_start": None,
+                "type": "nautobot.extras.jobs.run_job",
+                "worker_pid": None,
+            },
+            {
+                "acknowledged": False,
+                "args": ["example_app.jobs.ExampleLoggingJob"],
+                "delivery_info": {"exchange": "", "priority": 0, "redelivered": False, "routing_key": "default"},
+                "hostname": "celery@76d71c1936b4",
+                "id": "70305089-b044-4cf4-bc26-e0ff377a66be",
+                "kwargs": {"interval": 300},
+                "name": "nautobot.extras.jobs.run_job",
+                "time_start": None,
+                "type": "nautobot.extras.jobs.run_job",
+                "worker_pid": None,
+            },
+            {
+                "acknowledged": False,
+                "args": ["example_app.jobs.ExampleLoggingJob"],
+                "delivery_info": {"exchange": "", "priority": 0, "redelivered": False, "routing_key": "default"},
+                "hostname": "celery@76d71c1936b4",
+                "id": "fac5eb80-831c-4de0-a38c-820695c319a7",
+                "kwargs": {"interval": 300},
+                "name": "nautobot.extras.jobs.run_job",
+                "time_start": None,
+                "type": "nautobot.extras.jobs.run_job",
+                "worker_pid": None,
+            },
+            {
+                "acknowledged": False,
+                "args": ["example_app.jobs.ExampleLoggingJob"],
+                "delivery_info": {"exchange": "", "priority": 0, "redelivered": False, "routing_key": "default"},
+                "hostname": "celery@76d71c1936b4",
+                "id": "b1d89890-afd1-4091-9f0f-b46caf921870",
+                "kwargs": {"interval": 300},
+                "name": "nautobot.extras.jobs.run_job",
+                "time_start": None,
+                "type": "nautobot.extras.jobs.run_job",
+                "worker_pid": None,
+            },
+        ],
+        "celery@e12e372a43dc": [],
+        "celery2@e12e372a43dc": [],
+    },
+    "active_queues": {
+        "celery@76d71c1936b4": [
+            {
+                "alias": None,
+                "auto_delete": False,
+                "binding_arguments": None,
+                "bindings": [],
+                "consumer_arguments": None,
+                "durable": True,
+                "exchange": {
+                    "arguments": None,
+                    "auto_delete": False,
+                    "delivery_mode": None,
+                    "durable": True,
+                    "name": "default",
+                    "no_declare": False,
+                    "passive": False,
+                    "type": "direct",
+                },
+                "exclusive": False,
+                "expires": None,
+                "max_length": None,
+                "max_length_bytes": None,
+                "max_priority": None,
+                "message_ttl": None,
+                "name": "default",
+                "no_ack": False,
+                "no_declare": None,
+                "queue_arguments": None,
+                "routing_key": "default",
+            },
+            {"name": "test2"},
+            {"name": "test3"},
+        ],
+        "celery@e12e372a43dc": [
+            {
+                "alias": None,
+                "auto_delete": False,
+                "binding_arguments": None,
+                "bindings": [],
+                "consumer_arguments": None,
+                "durable": True,
+                "exchange": {
+                    "arguments": None,
+                    "auto_delete": False,
+                    "delivery_mode": None,
+                    "durable": True,
+                    "name": "default",
+                    "no_declare": False,
+                    "passive": False,
+                    "type": "direct",
+                },
+                "exclusive": False,
+                "expires": None,
+                "max_length": None,
+                "max_length_bytes": None,
+                "max_priority": None,
+                "message_ttl": None,
+                "name": "default",
+                "no_ack": False,
+                "no_declare": None,
+                "queue_arguments": None,
+                "routing_key": "default",
+            }
+        ],
+        "celery2@e12e372a43dc": [
+            {
+                "alias": None,
+                "auto_delete": False,
+                "binding_arguments": None,
+                "bindings": [],
+                "consumer_arguments": None,
+                "durable": True,
+                "exchange": {
+                    "arguments": None,
+                    "auto_delete": False,
+                    "delivery_mode": None,
+                    "durable": True,
+                    "name": "default",
+                    "no_declare": False,
+                    "passive": False,
+                    "type": "direct",
+                },
+                "exclusive": False,
+                "expires": None,
+                "max_length": None,
+                "max_length_bytes": None,
+                "max_priority": None,
+                "message_ttl": None,
+                "name": "default",
+                "no_ack": False,
+                "no_declare": None,
+                "queue_arguments": None,
+                "routing_key": "default",
+            }
+        ],
+    },
+    "stats": {
+        "celery@76d71c1936b4": {
+            "broker": {
+                "alternates": [],
+                "connect_timeout": 4,
+                "failover_strategy": "round-robin",
+                "heartbeat": 120.0,
+                "hostname": "redis",
+                "insist": False,
+                "login_method": None,
+                "port": 6379,
+                "ssl": False,
+                "transport": "redis",
+                "transport_options": {},
+                "uri_prefix": None,
+                "userid": None,
+                "virtual_host": "0",
+            },
+            "clock": "9657",
+            "pid": 1,
+            "pool": {
+                "implementation": "celery.concurrency.prefork:TaskPool",
+                "max-concurrency": 4,
+                "max-tasks-per-child": "N/A",
+                "processes": [6, 7, 8, 9],
+                "put-guarded-by-semaphore": False,
+                "timeouts": [300, 600],
+                "writes": {
+                    "all": "0.25, 0.25, 0.25, 0.25",
+                    "avg": "0.25",
+                    "inqueues": {"active": 0, "total": 4},
+                    "raw": "1, 1, 1, 1",
+                    "strategy": "fair",
+                    "total": 4,
+                },
+            },
+            "prefetch_count": 16,
+            "rusage": {
+                "idrss": 0,
+                "inblock": 0,
+                "isrss": 0,
+                "ixrss": 0,
+                "majflt": 0,
+                "maxrss": 178500,
+                "minflt": 111693,
+                "msgrcv": 0,
+                "msgsnd": 0,
+                "nivcsw": 5868,
+                "nsignals": 0,
+                "nswap": 0,
+                "nvcsw": 25868,
+                "oublock": 64,
+                "stime": 2.3153449999999998,
+                "utime": 15.180383,
+            },
+            "total": {"nautobot.extras.jobs.run_job": 4},
+            "uptime": 5575,
+        },
+        "celery@e12e372a43dc": {
+            "broker": {
+                "alternates": [],
+                "connect_timeout": 4,
+                "failover_strategy": "round-robin",
+                "heartbeat": 120.0,
+                "hostname": "redis",
+                "insist": False,
+                "login_method": None,
+                "port": 6379,
+                "ssl": False,
+                "transport": "redis",
+                "transport_options": {},
+                "uri_prefix": None,
+                "userid": None,
+                "virtual_host": "0",
+            },
+            "clock": "9657",
+            "pid": 1,
+            "pool": {
+                "implementation": "celery.concurrency.prefork:TaskPool",
+                "max-concurrency": 4,
+                "max-tasks-per-child": "N/A",
+                "processes": [9, 10, 11, 12],
+                "put-guarded-by-semaphore": False,
+                "timeouts": [300, 600],
+                "writes": {
+                    "all": "0.50, 0.50",
+                    "avg": "0.50",
+                    "inqueues": {"active": 0, "total": 4},
+                    "raw": "1, 1",
+                    "strategy": "fair",
+                    "total": 2,
+                },
+            },
+            "prefetch_count": 16,
+            "rusage": {
+                "idrss": 0,
+                "inblock": 0,
+                "isrss": 0,
+                "ixrss": 0,
+                "majflt": 0,
+                "maxrss": 178716,
+                "minflt": 111684,
+                "msgrcv": 0,
+                "msgsnd": 0,
+                "nivcsw": 5329,
+                "nsignals": 0,
+                "nswap": 0,
+                "nvcsw": 25782,
+                "oublock": 80,
+                "stime": 2.230848,
+                "utime": 15.343323,
+            },
+            "total": {"nautobot.extras.jobs.run_job": 2},
+            "uptime": 1024768,
+        },
+        "celery2@e12e372a43dc": {
+            "broker": {
+                "alternates": [],
+                "connect_timeout": 4,
+                "failover_strategy": "round-robin",
+                "heartbeat": 120.0,
+                "hostname": "redis",
+                "insist": False,
+                "login_method": None,
+                "port": 6379,
+                "ssl": False,
+                "transport": "redis",
+                "transport_options": {},
+                "uri_prefix": None,
+                "userid": None,
+                "virtual_host": "0",
+            },
+            "clock": "9657",
+            "pid": 1,
+            "pool": {
+                "implementation": "celery.concurrency.prefork:TaskPool",
+                "max-concurrency": 4,
+                "max-tasks-per-child": "N/A",
+                "processes": [9, 10, 11, 12],
+                "put-guarded-by-semaphore": False,
+                "timeouts": [300, 600],
+                "writes": {
+                    "all": "0.50, 0.50",
+                    "avg": "0.50",
+                    "inqueues": {"active": 0, "total": 4},
+                    "raw": "1, 1",
+                    "strategy": "fair",
+                    "total": 2,
+                },
+            },
+            "prefetch_count": 16,
+            "rusage": {
+                "idrss": 0,
+                "inblock": 0,
+                "isrss": 0,
+                "ixrss": 0,
+                "majflt": 0,
+                "maxrss": 178716,
+                "minflt": 111684,
+                "msgrcv": 0,
+                "msgsnd": 0,
+                "nivcsw": 5329,
+                "nsignals": 0,
+                "nswap": 0,
+                "nvcsw": 25782,
+                "oublock": 80,
+                "stime": 2.230848,
+                "utime": 15.343323,
+            },
+            "total": {"nautobot.extras.jobs.run_job": 2},
+            "uptime": 1024768,
+        },
+    },
+}
+
+
 class WorkerStatusView(LoginRequiredMixin, TemplateView):
     template_name = "utilities/worker_status.html"
 
-    def get_context_data(self, **kwargs):
-        # Use a long timeout to retrieve the initial list of workers
-        celery_inspect = app.control.inspect(timeout=5.0)
-        worker_stats = celery_inspect.stats()
-        # Set explicit list of workers to speed up subsequent queries
-        celery_inspect = app.control.inspect(list(worker_stats.keys()), timeout=5.0)
-        active_tasks = celery_inspect.active()
-        reserved_tasks = celery_inspect.reserved()
-        active_queues = celery_inspect.active_queues()
+    def get(self, request, *args, **kwargs):
+        from nautobot.extras.models import JobResult
+        from nautobot.extras.tables import JobResultTable
+
+        worker_stats = fake_data["stats"]
+        active_tasks = fake_data["active"]
+        reserved_tasks = fake_data["reserved"]
+        active_queues = fake_data["active_queues"]
+
+        # # Use a long timeout to retrieve the initial list of workers
+        # celery_inspect = app.control.inspect(timeout=5.0)
+
+        # # stats() returns a dict of {worker_name: stats_dict}
+        # worker_stats = celery_inspect.stats()
+
+        # if worker_stats:
+        #     # Set explicit list of workers to speed up subsequent queries
+        #     celery_inspect = app.control.inspect(list(worker_stats.keys()), timeout=5.0)
+
+        #     # active() returns a dict of {worker_name: [task_dict, task_dict, ...]}
+        #     active_tasks = celery_inspect.active()
+
+        #     # reserved() returns a dict of {worker_name: [task_dict, task_dict, ...]}
+        #     reserved_tasks = celery_inspect.reserved()
+
+        #     # active_queues() returns a dict of {worker_name: [queue_dict, queue_dict, ...]}
+        #     active_queues = celery_inspect.active_queues()
+        # else:
+        #     # No workers were found, default to empty dicts for all commands
+        #     worker_stats = active_tasks = reserved_tasks = active_queues = {}
 
         workers = []
         for worker_name, worker_details in worker_stats.items():
+            active_task_job_results = JobResult.objects.filter(
+                id__in=[task["id"] for task in active_tasks[worker_name]]
+            )
+            reserved_task_job_results = JobResult.objects.filter(
+                id__in=[task["id"] for task in reserved_tasks[worker_name]]
+            )
+            active_tasks_table = JobResultTable(
+                active_task_job_results, exclude=["actions", "job_model", "summary", "user", "status"]
+            )
+            reserved_tasks_table = JobResultTable(
+                reserved_task_job_results, exclude=["actions", "job_model", "summary", "user", "status"]
+            )
             workers.append(
                 {
-                    "hostname": str_removeprefix(worker_name, "celery@"),
-                    "active_tasks": active_tasks[worker_name],
-                    "reserved_tasks": reserved_tasks[worker_name],
+                    "hostname": worker_name,
+                    "active_tasks_table": active_tasks_table,
+                    "reserved_tasks_table": reserved_tasks_table,
                     "queues": [queue["name"] for queue in active_queues[worker_name]],
                     "uptime": worker_details["uptime"],
                 }
             )
 
         queue_worker_count = {}
-        for task_queue_list in active_queues.values():
+        # TODO: always show default queue, even if no workers are using it
+        # Make the queues a full width page and put the workers below and use both sides, similar to the homepage
+        # Make the Running Tasks and Pending Tasks collapsible, like the jobs list view. Add a badge for number of tasks.
+        # Active queues should list workers, not just show number of workers
+        for worker_name, task_queue_list in active_queues.items():
             distinct_queues = {q["name"] for q in task_queue_list}
             for queue in distinct_queues:
-                queue_worker_count.setdefault(queue, 0)
-                queue_worker_count[queue] += 1
+                queue_worker_count.setdefault(queue, set())
+                queue_worker_count[queue].add(worker_name)
 
-        return {
+        # Force default queue to be the first entry in queue_worker_count dict
+        queue_worker_count = {
+            settings.CELERY_TASK_DEFAULT_QUEUE: queue_worker_count.pop(settings.CELERY_TASK_DEFAULT_QUEUE, set()),
+            **queue_worker_count,
+        }
+
+        context = {
             "worker_status": {
                 "default_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
                 "queue_worker_count": {queue: queue_worker_count[queue] for queue in sorted(queue_worker_count)},
                 "workers": workers,
             },
         }
+
+        return self.render_to_response(context)
 
 
 class ThemePreviewView(LoginRequiredMixin, TemplateView):
