@@ -3,8 +3,18 @@ from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
-from nautobot.cloud.api.serializers import CloudAccountSerializer, CloudNetworkSerializer, CloudTypeSerializer
-from nautobot.cloud.filters import CloudAccountFilterSet, CloudNetworkFilterSet, CloudTypeFilterSet
+from nautobot.cloud.api.serializers import (
+    CloudAccountSerializer,
+    CloudNetworkSerializer,
+    CloudServiceSerializer,
+    CloudTypeSerializer,
+)
+from nautobot.cloud.filters import (
+    CloudAccountFilterSet,
+    CloudNetworkFilterSet,
+    CloudServiceFilterSet,
+    CloudTypeFilterSet,
+)
 from nautobot.cloud.forms import (
     CloudAccountBulkEditForm,
     CloudAccountFilterForm,
@@ -12,12 +22,15 @@ from nautobot.cloud.forms import (
     CloudNetworkBulkEditForm,
     CloudNetworkFilterForm,
     CloudNetworkForm,
+    CloudServiceBulkEditForm,
+    CloudServiceFilterForm,
+    CloudServiceForm,
     CloudTypeBulkEditForm,
     CloudTypeFilterForm,
     CloudTypeForm,
 )
-from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudType
-from nautobot.cloud.tables import CloudAccountTable, CloudNetworkTable, CloudTypeTable
+from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudService, CloudType
+from nautobot.cloud.tables import CloudAccountTable, CloudNetworkTable, CloudServiceTable, CloudTypeTable
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.ipam.tables import PrefixTable
@@ -91,3 +104,13 @@ class CloudTypeUIViewSet(NautobotUIViewSet):
     table_class = CloudTypeTable
     form_class = CloudTypeForm
     bulk_update_form_class = CloudTypeBulkEditForm
+
+
+class CloudServiceUIViewSet(NautobotUIViewSet):
+    queryset = CloudService.objects.all()
+    filterset_class = CloudServiceFilterSet
+    filterset_form_class = CloudServiceFilterForm
+    serializer_class = CloudServiceSerializer
+    table_class = CloudServiceTable
+    form_class = CloudServiceForm
+    bulk_update_form_class = CloudServiceBulkEditForm

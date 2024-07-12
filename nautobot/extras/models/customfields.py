@@ -775,6 +775,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
     weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")
 
     documentation_static_path = "docs/user-guide/platform-functionality/customfield.html"
+    is_metadata_associable_model = False
 
     class Meta:
         ordering = ["custom_field", "weight", "value"]

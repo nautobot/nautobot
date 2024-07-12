@@ -1,0 +1,45 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block extra_breadcrumbs %}
+    <li><a href="{% url 'cloud:cloudtype' pk=object.cloud_type.pk %}">{{ object.cloud_type }}</a></li>
+{% endblock extra_breadcrumbs %}
+
+{% block content_left_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Cloud Service</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Name</td>
+                <td>
+                    {{ object.name }}
+                </td>
+            </tr>
+            <tr>
+                <td>Cloud Account</td>
+                <td>{{ object.cloud_account|hyperlinked_object }}</td>
+            </tr>
+            <tr>
+                <td>Cloud Network</td>
+                <td>{{ object.cloud_network|hyperlinked_object }}</td>
+            </tr>
+            <tr>
+                <td>Cloud Type</td>
+                <td>{{ object.cloud_type|hyperlinked_object }}</td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Extra Config</strong>
+        </div>
+        <div class="panel-body">
+            <pre>{{ object.extra_config|render_json }}</pre>
+        </div>
+    </div>
+{% endblock content_right_page %}

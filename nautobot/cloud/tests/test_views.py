@@ -1,6 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudType
+from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudService, CloudType
 from nautobot.core.testing import ViewTestCases
 from nautobot.dcim.models import Manufacturer
 from nautobot.extras.models import SecretsGroup, Tag
@@ -104,4 +104,40 @@ class CloudTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "provider": providers[1].pk,
             "content_types": [cts[0].id],
             "description": "New description",
+        }
+
+
+class CloudServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = CloudService
+
+    @classmethod
+    def setUpTestData(cls):
+        cloud_types = CloudType.objects.all()
+        cloud_networks = CloudNetwork.objects.all()
+        cloud_accounts = CloudAccount.objects.all()
+        CloudService.objects.create(
+            name="Deletable Cloud Service 1", cloud_type=cloud_types[0], cloud_network=cloud_networks[0]
+        )
+        CloudService.objects.create(
+            name="Deletable Cloud Service 2", cloud_type=cloud_types[1], cloud_network=cloud_networks[1]
+        )
+        CloudService.objects.create(
+            name="Deletable Cloud Service 3",
+            cloud_type=cloud_types[2],
+            cloud_network=cloud_networks[2],
+            cloud_account=cloud_accounts[0],
+        )
+
+        cls.form_data = {
+            "name": "New Cloud Service",
+            "cloud_type": cloud_types[1].pk,
+            "cloud_network": cloud_networks[1].pk,
+            "cloud_account": cloud_accounts[1].pk,
+            "extra_config": '{"role": 1, "status": "greetings"}',
+            "tags": [t.pk for t in Tag.objects.get_for_model(CloudService)],
+        }
+
+        cls.bulk_edit_data = {
+            "cloud_network": cloud_networks[2].pk,
+            "cloud_account": cloud_accounts[2].pk,
         }
