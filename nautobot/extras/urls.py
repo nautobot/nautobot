@@ -33,6 +33,7 @@ router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("metadata-types", views.MetadataTypeUIViewSet)
 router.register("object-metadata", views.ObjectMetadataUIViewSet)
 router.register("roles", views.RoleUIViewSet)
+router.register("saved-views", views.SavedViewUIViewSet)
 router.register("static-group-associations", views.StaticGroupAssociationUIViewSet)
 router.register("teams", views.TeamUIViewSet)
 

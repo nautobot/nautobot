@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("users", "0010_savedview"),
+        ("users", "0009_update_all_charfields_max_length_to_255"),
     ]
 
     operations = [

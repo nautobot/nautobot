@@ -81,6 +81,7 @@ from nautobot.extras.models import (
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -89,6 +90,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
     Team,
+    UserSavedViewAssociation,
     Webhook,
 )
 from nautobot.extras.utils import (
@@ -627,6 +629,43 @@ class DynamicGroupMembershipFilterSet(NautobotFilterSet):
     class Meta:
         model = DynamicGroupMembership
         fields = ("id", "group", "parent_group", "operator", "weight")
+
+
+class SavedViewFilterSet(BaseFilterSet):
+    q = SearchFilter(filter_predicates={"name": "icontains", "owner__username": "icontains"})
+    owner = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="username",
+        queryset=get_user_model().objects.all(),
+        label="Owner (ID or name)",
+    )
+
+    class Meta:
+        model = SavedView
+        fields = [
+            "id",
+            "owner",
+            "name",
+            "view",
+            "is_global_default",
+            "is_shared",
+        ]
+
+
+class UserSavedViewAssociationFilterSet(NautobotFilterSet):
+    saved_view = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SavedView.objects.all(),
+        to_field_name="name",
+        label="Saved View (ID or name)",
+    )
+    user = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="username",
+        queryset=get_user_model().objects.all(),
+        label="User (ID or username)",
+    )
+
+    class Meta:
+        model = UserSavedViewAssociation
+        fields = ["id", "saved_view", "user", "view_name"]
 
 
 class StaticGroupAssociationFilterSet(NautobotFilterSet):

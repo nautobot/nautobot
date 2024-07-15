@@ -48,10 +48,9 @@ from nautobot.core.views.utils import (
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.forms import NoteForm
-from nautobot.extras.models import ExportTemplate
+from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template, remove_prefix_from_cf_key
-from nautobot.users.models import SavedView, UserSavedViewAssociation
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",

@@ -28,8 +28,8 @@ from nautobot.core.views.utils import (
     get_csv_form_fields_from_serializer_class,
     view_changes_not_saved,
 )
+from nautobot.extras.models import SavedView
 from nautobot.extras.models.change_logging import ObjectChange
-from nautobot.users.models import SavedView
 
 
 class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):

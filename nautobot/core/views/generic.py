@@ -58,9 +58,8 @@ from nautobot.core.views.utils import (
     view_changes_not_saved,
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
-from nautobot.extras.models import ExportTemplate
+from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
-from nautobot.users.models import SavedView, UserSavedViewAssociation
 
 
 class GenericView(LoginRequiredMixin, View):
