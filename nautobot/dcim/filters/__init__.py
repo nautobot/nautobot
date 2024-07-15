@@ -1356,7 +1356,7 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Master (name or ID)",
     )
-    #TODO Check this filter as it is not using TreeNode...
+    # TODO Check this filter as it is not using TreeNode...
     location = NaturalKeyOrPKMultipleChoiceFilter(
         prefers_pk=True,
         field_name="master__location",

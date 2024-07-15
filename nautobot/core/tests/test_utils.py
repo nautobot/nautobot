@@ -561,6 +561,10 @@ class LookupRelatedFunctionTest(TestCase):
                 form_field.queryset, extras_utils.ChangeLoggedModelsQuery().as_queryset()
             )
 
+        with self.subTest("Test prefers_pk"):
+            form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, "location")
+            self.assertEqual("id", form_field.to_field_name)
+
     def test_convert_querydict_to_factory_formset_dict(self):
         location_filter_set = dcim_filters.LocationFilterSet()
 
