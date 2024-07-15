@@ -133,6 +133,8 @@ class ThemePreviewView(LoginRequiredMixin, TemplateView):
         return {
             "content_type": ContentType.objects.get_for_model(Status),
             "object": Status.objects.first(),
+            "verbose_name": Status.objects.all().model._meta.verbose_name,
+            "verbose_name_plural": Status.objects.all().model._meta.verbose_name_plural,
         }
 
 

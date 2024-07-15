@@ -167,6 +167,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
     filterset = PrefixFilterSet
     tenancy_related_name = "prefixes"
     generic_filter_tests = (
+        ["cloud_networks", "cloud_networks__name"],
         ["date_allocated"],
         ["prefix_length"],
         ["rir", "rir__id"],

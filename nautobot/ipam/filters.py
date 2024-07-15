@@ -5,6 +5,7 @@ from django.db.models import Q
 import django_filters
 import netaddr
 
+from nautobot.cloud.models import CloudNetwork
 from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueNumberFilter,
@@ -265,6 +266,11 @@ class PrefixFilterSet(
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Locations (name or ID)",
+    )
+    cloud_networks = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=CloudNetwork.objects.all(),
+        to_field_name="name",
+        label="Cloud Network (name or ID)",
     )
 
     class Meta:

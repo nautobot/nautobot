@@ -306,6 +306,7 @@ plugins:
         "models/cloud/cloudaccount.md": "user-guide/core-data-model/cloud/cloudaccount.md"
         "models/cloud/cloudnetwork.md": "user-guide/core-data-model/cloud/cloudnetwork.md"
         "models/cloud/cloudnetworkprefixassignment.md": "user-guide/core-data-model/cloud/cloudnetworkprefixassignment.md"
+        "models/cloud/cloudservice.md": "user-guide/core-data-model/cloud/cloudservice.md"
         "models/cloud/cloudtype.md": "user-guide/core-data-model/cloud/cloudtype.md"
         "models/extras/metadatachoice.md": "user-guide/platform-functionality/metadata.md"
         "models/extras/metadatatype.md": "user-guide/platform-functionality/metadata.md"
@@ -401,6 +402,7 @@ nav:
               - Cloud Account: "user-guide/core-data-model/cloud/cloudaccount.md"
               - Cloud Network: "user-guide/core-data-model/cloud/cloudnetwork.md"
               - Cloud Network Prefix Assignment: "user-guide/core-data-model/cloud/cloudnetworkprefixassignment.md"
+              - Cloud Service: "user-guide/core-data-model/cloud/cloudservice.md"
               - Cloud Type: "user-guide/core-data-model/cloud/cloudtype.md"
           - DCIM:
               - Location Type: "user-guide/core-data-model/dcim/locationtype.md"

@@ -591,6 +591,9 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         queryset = self.get_queryset()
         return queryset.all()
 
+    def extra_post_save_action(self, obj, form):
+        """Extra actions after a form is saved"""
+
 
 class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
     """
@@ -1093,6 +1096,8 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
 
                 if hasattr(form, "save_note") and callable(form.save_note):
                     form.save_note(instance=obj, user=request.user)
+
+                self.extra_post_save_action(obj, form)
 
             # Enforce object-level permissions
             if queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(updated_objects):
