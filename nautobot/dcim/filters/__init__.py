@@ -409,6 +409,7 @@ class RackFilterSet(
         },
     )
     rack_group = TreeNodeMultipleChoiceFilter(
+        prefers_pk=True,
         queryset=RackGroup.objects.all(),
         field_name="rack_group",
         to_field_name="name",
