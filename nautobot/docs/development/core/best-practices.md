@@ -270,6 +270,7 @@ class UserFilter(NautobotFilterSet):
     - Otherwise, the field **must** be shadowed with a Nautobot `NaturalKeyOrPKMultipleChoiceFilter` which will automatically try to lookup by UUID or `name` depending on the value of the incoming argument (e.g. UUID string vs. name string).
         - This provides an advantage over the default `django_filters.ModelMultipleChoiceFilter` which only supports a UUID (`pk`) value as an input.
     - Fields that use `slug` or some other natural key field instead of `name` can set the `to_field_name` argument on `NaturalKeyOrPKMultipleChoiceFilter` accordingly.
+    - If you use `NaturalKeyOrPKMultipleChoiceFilter` for a non-unique field, you can pass in `prefers_pk=True` to prefer the PK in the Filter Forms over the `to_field_name`, while still allowing the `to_field_name` to be used as a query parameter. Example: `locations/?vlans=2538` will give all locations that have any VLAN name with the VID of 2538.
 
 ```python
 # Typical usage

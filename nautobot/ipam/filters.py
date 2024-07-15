@@ -257,6 +257,7 @@ class PrefixFilterSet(
     )
     ip_version = django_filters.NumberFilter()
     location = TreeNodeMultipleChoiceFilter(
+        prefers_pk=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         field_name="locations",
@@ -340,6 +341,7 @@ class PrefixLocationAssignmentFilterSet(NautobotFilterSet):
         label="Prefix",
     )
     location = TreeNodeMultipleChoiceFilter(
+        prefers_pk=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Locations (name or ID)",
@@ -565,6 +567,7 @@ class VLANFilterSet(
         label="VLAN Group (name or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
+        prefers_pk=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         field_name="locations",
@@ -599,11 +602,13 @@ class VLANLocationAssignmentFilterSet(NautobotFilterSet):
         },
     )
     vlan = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_pk=True,
         to_field_name="vid",
         queryset=VLAN.objects.all(),
         label="VLAN (VID or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
+        prefers_pk=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Locations (name or ID)",
