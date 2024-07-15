@@ -1288,7 +1288,7 @@ class SavedViewTest(ModelViewTestCase):
         elif action == "edit":
             url = saved_view.get_absolute_url() + "update-config/"
         else:
-            url = reverse("users:savedview_add")
+            url = reverse("extras:savedview_add")
 
         return url
 
@@ -1413,7 +1413,7 @@ class SavedViewTest(ModelViewTestCase):
             "table_config": {"LocationTable": {"columns": ["name", "status", "location_type", "tags"]}},
         }
         instance.validated_save()
-        delete_url = reverse("users:savedview_delete", kwargs={"pk": instance.pk})
+        delete_url = reverse("extras:savedview_delete", kwargs={"pk": instance.pk})
         different_user = User.objects.create(username="User 2", is_active=True)
         # Try delete the saved view with a different user from the owner of the saved view
         self.client.force_login(different_user)
@@ -1437,7 +1437,7 @@ class SavedViewTest(ModelViewTestCase):
             "table_config": {"LocationTable": {"columns": ["name", "status", "location_type", "tags"]}},
         }
         instance.validated_save()
-        delete_url = reverse("users:savedview_delete", kwargs={"pk": instance.pk})
+        delete_url = reverse("extras:savedview_delete", kwargs={"pk": instance.pk})
         # Delete functionality should work even without "users.delete_savedview" permissions
         # if the saved view belongs to the user.
         instance.owner.is_active = True

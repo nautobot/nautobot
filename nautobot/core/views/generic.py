@@ -222,7 +222,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                         Q(pk=user_default_saved_view_pk),
                         Q(owner=user) | Q(is_shared=True),
                     )
-                    sv_url = reverse("users:savedview", kwargs={"pk": user_default_saved_view_pk})
+                    sv_url = reverse("extras:savedview", kwargs={"pk": user_default_saved_view_pk})
                     return redirect(sv_url)
                 except ObjectDoesNotExist:
                     pass
@@ -230,7 +230,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             # Check if there is a global default for this view
             try:
                 global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
-                return redirect(reverse("users:savedview", kwargs={"pk": global_saved_view.pk}))
+                return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
             except ObjectDoesNotExist:
                 pass
 

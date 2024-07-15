@@ -259,7 +259,7 @@ class ObjectPermission(BaseModel, ChangeLoggedModel):
             )
             | Q(app_label="admin", model__in=["logentry"])
             | Q(app_label="auth", model__in=["group"])
-            | Q(app_label="users", model__in=["objectpermission", "token", "user", "savedview"])
+            | Q(app_label="users", model__in=["objectpermission", "token", "user"])
         ),
         related_name="object_permissions",
     )
