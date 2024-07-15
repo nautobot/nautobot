@@ -2,6 +2,8 @@ from django import template
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
 
+from nautobot.core.templatetags.helpers import bettertitle
+from nautobot.core.templatetags.perms import can_add, can_change, can_delete
 from nautobot.core.utils import lookup
 from nautobot.core.views import utils as views_utils
 from nautobot.extras import models
@@ -14,11 +16,43 @@ register = template.Library()
 #
 
 
+@register.simple_tag()
+def action_url(instance, action):
+    """
+    URL to the <action> view for the instance.
+
+    Helper to `edit_button`, `delete_button` and `consolidated_detail_view_action_buttons` tags,
+    but can be used separately if needed.
+
+    Args:
+        instance (BaseModel): Model record.
+        action (str): Action (add/edit/delete) to link to.
+    """
+    viewname = lookup.get_route_for_model(instance, action)
+    if action == "add":
+        try:
+            return reverse(viewname)
+        except NoReverseMatch:
+            return None
+
+    # We try different lookups to get a valid reverse url
+    lookup_keys = ["pk", "slug", "key"]
+
+    for lookup_key in lookup_keys:
+        if hasattr(instance, lookup_key):
+            kwargs = {lookup_key: getattr(instance, lookup_key)}
+            try:
+                return reverse(viewname, kwargs=kwargs)
+            except NoReverseMatch:
+                continue
+
+    return None
+
+
 @register.inclusion_tag("buttons/clone.html")
 def clone_button(instance):
-    try:
-        url = reverse(lookup.get_route_for_model(instance, "add"))
-    except NoReverseMatch:
+    url = action_url(instance, "add")
+    if not url:
         return {"url": None}
 
     # Populate cloned field values
@@ -41,21 +75,7 @@ def edit_button(instance, use_pk=False, key="slug"):
         use_pk (bool): Used for backwards compatibility, no-op in this function.
         key (str): Used for backwards compatibility, no-op in this function.
     """
-    viewname = lookup.get_route_for_model(instance, "edit")
-
-    # We try different lookups to get a valid reverse url
-    lookup_keys = ["pk", "slug", "key"]
-
-    for lookup_key in lookup_keys:
-        if hasattr(instance, lookup_key):
-            kwargs = {lookup_key: getattr(instance, lookup_key)}
-            try:
-                url = reverse(viewname, kwargs=kwargs)
-                return {"url": url}
-            except NoReverseMatch:
-                continue
-
-    return {"url": None}
+    return {"url": action_url(instance, "edit")}
 
 
 @register.inclusion_tag("buttons/delete.html")
@@ -68,21 +88,7 @@ def delete_button(instance, use_pk=False, key="slug"):
         use_pk (bool): Used for backwards compatibility, no-op in this function.
         key (str): Used for backwards compatibility, no-op in this function.
     """
-    viewname = lookup.get_route_for_model(instance, "delete")
-
-    # We try different lookups to get a valid reverse url
-    lookup_keys = ["pk", "slug", "key"]
-
-    for lookup_key in lookup_keys:
-        if hasattr(instance, lookup_key):
-            kwargs = {lookup_key: getattr(instance, lookup_key)}
-            try:
-                url = reverse(viewname, kwargs=kwargs)
-                return {"url": url}
-            except NoReverseMatch:
-                continue
-
-    return {"url": None}
+    return {"url": action_url(instance, "delete")}
 
 
 #
@@ -267,6 +273,136 @@ def consolidate_bulk_action_buttons(context):
 
     return {
         "bulk_action_buttons": bulk_action_buttons,
+    }
+
+
+@register.inclusion_tag("buttons/consolidated_detail_view_action_buttons.html", takes_context=True)
+def consolidate_detail_view_action_buttons(context):
+    """
+    Generates a list of action buttons for detail view operations (edit, clone, delete) based on the
+    model capabilities and user permissions.
+
+    Context must include the following keys:
+        request (HttpRequest): The HTTP request object.
+        object (Model): The object in the detail view.
+        user (User): The current user.
+    """
+    instance = context["object"]
+    detail_view_action_buttons = []
+    object_edit_url = action_url(instance, "edit")
+    object_delete_url = action_url(instance, "delete")
+    object_clone_url = action_url(instance, "add")
+    render_edit_button = bool(object_edit_url and can_change(context["user"], instance))
+    render_delete_button = bool(object_delete_url and can_delete(context["user"], instance))
+    render_clone_button = bool(
+        hasattr(instance, "clone_fields") and object_clone_url and can_add(context["user"], instance)
+    )
+
+    detail_view_action_button_count = sum([render_edit_button, render_delete_button, render_clone_button])
+
+    if detail_view_action_button_count == 0:
+        return {
+            "detail_view_action_buttons": detail_view_action_buttons,
+        }
+
+    child_button_fragment = primary_button_fragment = """
+        <a {attrs}>
+            <span class="{icon}" aria-hidden="true"></span> {label}
+        </a>
+    """
+
+    delete_button_fragment = """
+        <button class="{button_class}">
+            <a {attrs}>
+                <span class="{icon}" aria-hidden="true"></span> {label}
+            </a>
+        </button>
+    """
+
+    edit_button_classes = "btn btn-warning"
+    delete_button_classes = "text-danger"
+    clone_button_classes = "text"
+    clone_icon = "mdi mdi-plus-thick text-muted"
+    child_button_fragment = f"<li>{primary_button_fragment}</li>"
+    delete_button_fragment = f"<li>{delete_button_fragment}</li>"
+
+    if render_edit_button:
+        detail_view_action_buttons.append(
+            format_html(
+                primary_button_fragment,
+                label=f"Edit {bettertitle(context['verbose_name'])}",
+                attrs=render_tag_attrs(
+                    {
+                        "id": "edit-button",
+                        "class": edit_button_classes,
+                        "href": object_edit_url,
+                    }
+                ),
+                button_class=edit_button_classes,
+                icon="mdi mdi-pencil",
+            ),
+        )
+        if detail_view_action_button_count > 1:
+            detail_view_action_buttons[0] += format_html(
+                f"""
+                <button type="button" id="actions-dropdown" data-toggle="dropdown" class="{edit_button_classes} dropdown-toggle">
+                    <span class="caret"></span>
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                """
+            )
+
+    # Render a generic "Actions" dropdown button if the edit button is not present
+    elif detail_view_action_button_count >= 1:
+        detail_view_action_buttons.append(
+            format_html(
+                """
+                <button type="button" id="actions-dropdown" class="btn btn-warning dropdown-toggle" data-toggle="dropdown">
+                    Actions <span class="caret"></span>
+                </button>
+                """
+            )
+        )
+    if render_clone_button:
+        param_string = views_utils.prepare_cloned_fields(instance)
+        if param_string:
+            object_clone_url = f"{object_clone_url}?{param_string}"
+        detail_view_action_buttons.append(
+            format_html(
+                child_button_fragment,
+                label=f"Clone {bettertitle(context['verbose_name'])}",
+                attrs=render_tag_attrs(
+                    {
+                        "id": "clone-button",
+                        "class": clone_button_classes,
+                        "href": object_clone_url,
+                    }
+                ),
+                icon=clone_icon,
+                button_class=clone_button_classes,
+            )
+        )
+    if render_delete_button:
+        if render_clone_button:
+            detail_view_action_buttons.append(format_html('<li role="separator" class="divider"></li>'))
+        detail_view_action_buttons.append(
+            format_html(
+                delete_button_fragment,
+                label=f"Delete {bettertitle(context['verbose_name'])}",
+                attrs=render_tag_attrs(
+                    {
+                        "id": "delete-button",
+                        "class": delete_button_classes,
+                        "href": object_delete_url,
+                    }
+                ),
+                icon="mdi mdi-trash-can-outline",
+                button_class=delete_button_classes,
+            )
+        )
+
+    return {
+        "detail_view_action_buttons": detail_view_action_buttons,
     }
 
 
