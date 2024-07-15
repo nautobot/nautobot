@@ -593,18 +593,18 @@ def slugify(value):
 
 @library.filter()
 @register.filter()
-def format_uptime(seconds):
+def render_uptime(seconds):
     """Format a value in seconds to a human readable value.
 
     Example:
-        >>> format_uptime(1024768)
+        >>> render_uptime(1024768)
         "11 days 20 hours 39 minutes"
     """
     if isinstance(seconds, str) and seconds == "":
         return placeholder(seconds)
     delta = datetime.timedelta(seconds=int(seconds))
-    uptime_hours = int(delta.seconds / 3600)
-    uptime_minutes = int(delta.seconds / 60 % 60)
+    uptime_hours = delta.seconds // 3600
+    uptime_minutes = delta.seconds // 60 % 60
     return format_html(
         "{} {} {} {} {} {}",
         delta.days,

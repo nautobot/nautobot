@@ -25,10 +25,12 @@
             <table class="table table-hover panel-body attr-table">
                 {% for queue_name, workers in worker_status.queue_worker_count.items %}
                     <tr>
-                        <td><span class="label label-default">{{ queue_name }}</span></td>
+                        <td><span class="label label-primary">{{ queue_name }}</span></td>
                         <td>
                             {% for worker in workers %}
                                 <span class="label label-default">{{ worker }}</span>
+                            {% empty %}
+                                No workers found.
                             {% endfor %}
                         </td>
                     </tr>
@@ -46,13 +48,13 @@
                     <tbody>
                         <tr>
                             <td>Uptime</td>
-                            <td colspan="2">{{ worker.uptime|format_uptime }}</td>
+                            <td colspan="2">{{ worker.uptime|render_uptime }}</td>
                         </tr>
                         <tr>
                             <td>Queues</td>
                             <td colspan="2">
                                 {% for queue in worker.queues %}
-                                    <span class="label label-default">{{ queue }}</span>
+                                    <span class="label label-primary">{{ queue }}</span>
                                 {% endfor %}
                             </td>
                         </tr>
@@ -124,6 +126,17 @@
                 </table>
             </div>
         </div>
+    {% empty %}
+        </div>
+        <div class="alert alert-warning">
+            {% with increased_timeout=worker_status.timeout|add:5 %}
+                <strong>Warning:</strong> No workers responded within the {{ worker_status.timeout }} second timeout.
+                {% if increased_timeout <= worker_status.max_timeout %}
+                    <a href="{{ request.path }}?timeout={{ increased_timeout }}">Retry with a {{ increased_timeout }} second timeout</a>.
+                {% else %}
+                    <a href="{{ request.get_full_path }}">Retry</a>.
+                {% endif %}
+            {% endwith %}
     {% endfor %}
 </div>
 {% endblock %}
