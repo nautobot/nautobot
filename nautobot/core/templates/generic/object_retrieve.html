@@ -46,15 +46,7 @@
     {% block buttons %}
         {% plugin_buttons object %}
         {% block extra_buttons %}{% endblock extra_buttons %}
-        {% if object.clone_fields and user|can_add:object %}
-            {% clone_button object %}
-        {% endif %}
-        {% if user|can_change:object %}
-            {% edit_button object %}
-        {% endif %}
-        {% if user|can_delete:object %}
-            {% delete_button object %}
-        {% endif %}
+        {% consolidate_detail_view_action_buttons %}
     {% endblock buttons %}
     </div>
 
