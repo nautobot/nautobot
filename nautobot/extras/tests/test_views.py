@@ -798,6 +798,7 @@ class DynamicGroupTestCase(
             "content_type": content_type.pk,
             "group_type": DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
             "tenant": Tenant.objects.first().pk,
+            "tags": [t.pk for t in Tag.objects.get_for_model(DynamicGroup)],
             # Management form fields required for the dynamic formset
             "dynamic_group_memberships-TOTAL_FORMS": "0",
             "dynamic_group_memberships-INITIAL_FORMS": "1",
