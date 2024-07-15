@@ -8,7 +8,7 @@
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 <h4 class="modal-title">New Saved View</h4>
             </div>
-            <form action="{% url 'user:savedview_add' %}" method="post">
+            <form action="{% url 'extras:savedview_add' %}" method="post">
                 <div class="modal-body">
                     {% csrf_token %}
                     <div class="form-group">
