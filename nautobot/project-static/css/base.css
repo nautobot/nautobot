@@ -320,6 +320,9 @@ table.report th a {
     border-bottom-left-radius: 9px;
     border-bottom-right-radius: 9px;
 }
+.panel {
+    overflow: hidden  /* Fix for panel overflow issues */
+}
 ul.nav-tabs, ul.nav-pills {
     margin-bottom: 20px;
 }
