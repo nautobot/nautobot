@@ -600,9 +600,11 @@ def render_uptime(seconds):
         >>> render_uptime(1024768)
         "11 days 20 hours 39 minutes"
     """
-    if isinstance(seconds, str) and seconds == "":
+    try:
+        seconds = int(seconds)
+    except ValueError:
         return placeholder(seconds)
-    delta = datetime.timedelta(seconds=int(seconds))
+    delta = datetime.timedelta(seconds=seconds)
     uptime_hours = delta.seconds // 3600
     uptime_minutes = delta.seconds // 60 % 60
     return format_html(
