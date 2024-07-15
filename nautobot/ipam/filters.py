@@ -264,6 +264,7 @@ class PrefixFilterSet(
         label='Location (name or ID) (deprecated, use "locations" filter instead)',
     )
     locations = TreeNodeMultipleChoiceFilter(
+        prefers_pk=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Locations (name or ID)",
@@ -574,6 +575,7 @@ class VLANFilterSet(
         label='Location (name or ID) (deprecated, use "locations" filter instead)',
     )
     locations = TreeNodeMultipleChoiceFilter(
+        prefers_pk=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Locations (name or ID)",

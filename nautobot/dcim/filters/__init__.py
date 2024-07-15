@@ -468,6 +468,7 @@ class RackReservationFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
         },
     )
     rack_group = TreeNodeMultipleChoiceFilter(
+        prefers_pk=True,
         queryset=RackGroup.objects.all(),
         field_name="rack__rack_group",
         to_field_name="name",
@@ -819,6 +820,7 @@ class DeviceFilterSet(
         queryset=Platform.objects.all(), to_field_name="name", label="Platform (name or ID)"
     )
     rack_group = TreeNodeMultipleChoiceFilter(
+        prefers_pk=True,
         queryset=RackGroup.objects.all(),
         field_name="rack__rack_group",
         to_field_name="name",
@@ -1524,6 +1526,7 @@ class InterfaceConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
 class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):
     q = SearchFilter(filter_predicates={"name": "icontains"})
     rack_group = TreeNodeMultipleChoiceFilter(
+        prefers_pk=True,
         queryset=RackGroup.objects.all(),
         to_field_name="name",
         label="Rack group (name or ID)",
