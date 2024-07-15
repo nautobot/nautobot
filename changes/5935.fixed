@@ -1,0 +1,1 @@
+Fixed issue in which a save() could be called unnecessarily on child devices.

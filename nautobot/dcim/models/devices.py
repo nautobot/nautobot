@@ -832,9 +832,16 @@ class Device(PrimaryModel, ConfigContextModel):
         # Update Location and Rack assignment for any child Devices
         devices = Device.objects.filter(parent_bay__device=self)
         for device in devices:
-            device.location = self.location
-            device.rack = self.rack
-            device.save()
+            save_child_devices = False
+            if device.location != self.location:
+                device.location = self.location
+                save_child_devices = True
+            if device.rack != self.rack:
+                device.rack = self.rack
+                save_child_devices = True
+
+            if save_child_devices:
+                device.save()
 
     def create_components(self):
         """Create device components from the device type definition."""
