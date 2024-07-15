@@ -14,6 +14,7 @@ from nautobot.dcim.choices import (
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerOutletFeedLegChoices,
+    SubdeviceRoleChoices,
 )
 from nautobot.dcim.models import (
     Cable,
@@ -925,6 +926,14 @@ class DeviceTestCase(TestCase):
             manufacturer=manufacturer,
             model="Test Device Type 1",
             slug="test-device-type-1",
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT,
+        )
+        self.child_devicetype = DeviceType.objects.create(
+            model="Child Device Type 1",
+            slug="child-device-type-1",
+            manufacturer=manufacturer,
+            subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+            u_height=0,
         )
         self.device_role = DeviceRole.objects.create(
             name="Test Device Role 1", slug="test-device-role-1", color="ff0000"
@@ -1163,6 +1172,71 @@ class DeviceTestCase(TestCase):
             ValidationError, "Must assign a redundancy group when defining a redundancy group priority."
         ):
             d1.validated_save()
+
+    def test_child_devices_are_not_saved_when_unnecessary(self):
+        parent_device = Device.objects.create(
+            name="Parent Device 1",
+            site=self.site,
+            device_type=self.device_type,
+            device_role=self.device_role,
+            status=self.device_status,
+        )
+        parent_device.validated_save()
+
+        child_device = Device.objects.create(
+            name="Child Device 1",
+            site=parent_device.site,
+            device_type=self.child_devicetype,
+            device_role=parent_device.device_role,
+            status=self.device_status,
+        )
+        child_device.validated_save()
+        child_mtime_before_parent_saved = str(child_device.last_updated)
+
+        devicebay = DeviceBay.objects.get(device=parent_device, name="Device Bay 1")
+        devicebay.installed_device = child_device
+        devicebay.validated_save()
+
+        #
+        # Tests
+        #
+
+        #
+        # On a NOOP save, the child device shouldn't be updated
+        parent_device.save()
+
+        child_mtime_after_parent_noop_save = str(Device.objects.get(name="Child Device 1").last_updated)
+
+        self.assertEqual(child_mtime_before_parent_saved, child_mtime_after_parent_noop_save)
+
+        #
+        # On a serial number update, the child device shouldn't be updated
+        parent_device.serial = "12345"
+        parent_device.save()
+
+        child_mtime_after_parent_serial_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
+
+        self.assertEqual(child_mtime_before_parent_saved, child_mtime_after_parent_serial_update_save)
+
+        #
+        # If the parent rack updates, the child mtime should update.
+        rack = Rack.objects.create(name="Rack 1", site=parent_device.site)
+        parent_device.rack = rack
+        parent_device.save()
+
+        child_mtime_after_parent_rack_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
+
+        self.assertNotEqual(child_mtime_after_parent_noop_save, child_mtime_after_parent_rack_update_save)
+
+        #
+        # If the parent site updates, the child mtime should update
+        site = Site.objects.create(name="New Site 1")
+        parent_device.site = site
+        parent_device.save()
+
+        child_mtime_after_parent_site_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
+
+        self.assertNotEqual(child_mtime_after_parent_rack_update_save, child_mtime_after_parent_site_update_save)
 
 
 class CableTestCase(TestCase):
