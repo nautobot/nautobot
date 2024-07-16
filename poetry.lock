@@ -961,13 +961,13 @@ django = ">=1.6"
 
 [[package]]
 name = "django-storages"
-version = "1.14.3"
+version = "1.14.4"
 description = "Support for many storage backends in Django"
 optional = true
 python-versions = ">=3.7"
 files = [
-    {file = "django-storages-1.14.3.tar.gz", hash = "sha256:95a12836cd998d4c7a4512347322331c662d9114c4344f932f5e9c0fce000608"},
-    {file = "django_storages-1.14.3-py3-none-any.whl", hash = "sha256:31f263389e95ce3a1b902fb5f739a7ed32895f7d8b80179fe7453ecc0dfe102e"},
+    {file = "django-storages-1.14.4.tar.gz", hash = "sha256:69aca94d26e6714d14ad63f33d13619e697508ee33ede184e462ed766dc2a73f"},
+    {file = "django_storages-1.14.4-py3-none-any.whl", hash = "sha256:d61930acb4a25e3aebebc6addaf946a3b1df31c803a6bf1af2f31c9047febaa3"},
 ]
 
 [package.dependencies]
@@ -2094,13 +2094,13 @@ test = ["mkdocs-include-markdown-plugin", "mkdocs-macros-test", "mkdocs-material
 
 [[package]]
 name = "mkdocs-material"
-version = "9.5.28"
+version = "9.5.29"
 description = "Documentation that simply works"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "mkdocs_material-9.5.28-py3-none-any.whl", hash = "sha256:ff48b11b2a9f705dd210409ec3b418ab443dd36d96915bcba45a41f10ea27bfd"},
-    {file = "mkdocs_material-9.5.28.tar.gz", hash = "sha256:9cba305283ad1600e3d0a67abe72d7a058b54793b47be39930911a588fe0336b"},
+    {file = "mkdocs_material-9.5.29-py3-none-any.whl", hash = "sha256:afc1f508e2662ded95f0a35a329e8a5acd73ee88ca07ba73836eb6fcdae5d8b4"},
+    {file = "mkdocs_material-9.5.29.tar.gz", hash = "sha256:3e977598ec15a4ddad5c4dfc9e08edab6023edb51e88f0729bd27be77e3d322a"},
 ]
 
 [package.dependencies]
@@ -2140,6 +2140,7 @@ optional = false
 python-versions = ">=3.6"
 files = [
     {file = "mkdocs-redirects-1.2.1.tar.gz", hash = "sha256:9420066d70e2a6bb357adf86e67023dcdca1857f97f07c7fe450f8f1fb42f861"},
+    {file = "mkdocs_redirects-1.2.1-py3-none-any.whl", hash = "sha256:497089f9e0219e7389304cffefccdfa1cac5ff9509f2cb706f4c9b221726dffb"},
 ]
 
 [package.dependencies]
@@ -3575,13 +3576,13 @@ files = [
 
 [[package]]
 name = "social-auth-app-django"
-version = "5.4.1"
+version = "5.4.2"
 description = "Python Social Authentication, Django integration."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "social-auth-app-django-5.4.1.tar.gz", hash = "sha256:2a43cde559dd34fdc7132417b6c52c780fa99ec2332dee9f405b4763f371c367"},
-    {file = "social_auth_app_django-5.4.1-py3-none-any.whl", hash = "sha256:7519f186c63c50f2d364457b236f051338d194bcface55e318a6a705c5213477"},
+    {file = "social-auth-app-django-5.4.2.tar.gz", hash = "sha256:c8832c6cf13da6ad76f5613bcda2647d89ae7cfbc5217fadd13477a3406feaa8"},
+    {file = "social_auth_app_django-5.4.2-py3-none-any.whl", hash = "sha256:0c041a31707921aef9a930f143183c65d8c7b364381364a50f3f7c6fcc9d62f6"},
 ]
 
 [package.dependencies]
