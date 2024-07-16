@@ -36,6 +36,9 @@ nautobot-server celery --help
 
 You may want to deploy multiple workers and/or multiple queues. For more information see the [task queues](../guides/celery-queues.md) documentation.
 
++/- 2.3.0
+    In Nautobot 2.3.0, `staff` accounts can access a new worker status page at `/worker-status/` to view the status of the Celery worker(s) and the configured queues. The link to this page appears in the "User" dropdown at the bottom of the navigation menu, under the link to the "Profile" page. Use this page with caution as it runs a live query against the Celery worker(s) and may impact performance of your web service.
+
 ## Configuration
 
 As the `nautobot` user, copy and paste the following into the file:

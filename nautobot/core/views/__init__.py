@@ -9,7 +9,7 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
-from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin
+from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponseForbidden, HttpResponseServerError, JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -38,6 +38,7 @@ from rest_framework.response import Response
 from rest_framework.versioning import AcceptHeaderVersioning
 from rest_framework.views import APIView
 
+from nautobot.core.celery import app
 from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
@@ -122,6 +123,112 @@ class HomeView(AccessMixin, TemplateView):
                                 group_item_details["count"] = (
                                     group_item_details["model"].objects.restrict(request.user, "view").count()
                                 )
+
+        return self.render_to_response(context)
+
+
+class WorkerStatusView(UserPassesTestMixin, TemplateView):
+    template_name = "utilities/worker_status.html"
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def get(self, request, *args, **kwargs):
+        from nautobot.extras.models import JobResult
+        from nautobot.extras.tables import JobResultTable
+
+        # Sort queues but move the default queue to the front so that it appears first
+        def sort_queues(queue):
+            return (queue != settings.CELERY_TASK_DEFAULT_QUEUE, queue)  # False sorts before true in Python sorted
+
+        # Sort workers on hostname first, then worker name -- celery worker names are in the form name@hostname (celery@worker.example.com)
+        def sort_workers(worker):
+            return list(reversed(worker.split("@")))
+
+        # Use a long timeout to retrieve the initial list of workers
+        max_timeout = 60
+        timeout = request.GET.get("timeout", "5")
+        if not timeout.isdigit():
+            timeout = 5
+        elif int(timeout) > max_timeout:
+            timeout = max_timeout
+        else:
+            timeout = int(timeout)
+        celery_inspect = app.control.inspect(timeout=timeout)
+
+        # stats() returns a dict of {worker_name: stats_dict}
+        worker_stats = celery_inspect.stats()
+
+        if worker_stats:
+            # Set explicit list of workers to speed up subsequent queries
+            celery_inspect = app.control.inspect(list(worker_stats.keys()), timeout=5.0)
+
+            # active() returns a dict of {worker_name: [task_dict, task_dict, ...]}
+            active_tasks = celery_inspect.active() or {}
+
+            # reserved() returns a dict of {worker_name: [task_dict, task_dict, ...]}
+            reserved_tasks = celery_inspect.reserved() or {}
+
+            # active_queues() returns a dict of {worker_name: [queue_dict, queue_dict, ...]}
+            active_queues = celery_inspect.active_queues() or {}
+        else:
+            # No workers were found, default to empty dicts for all commands
+            worker_stats = active_tasks = reserved_tasks = active_queues = {}
+
+        workers = []
+        for worker_name in sorted(worker_stats, key=sort_workers):
+            worker_details = worker_stats[worker_name]
+            active_task_job_results = JobResult.objects.filter(
+                id__in=[task["id"] for task in active_tasks.get(worker_name, [])]
+            ).only("name", "date_created")
+            reserved_task_job_results = JobResult.objects.filter(
+                id__in=[task["id"] for task in reserved_tasks.get(worker_name, [])]
+            ).only("name", "date_created")
+            running_tasks_table = JobResultTable(
+                active_task_job_results, exclude=["actions", "job_model", "summary", "user", "status"]
+            )
+            pending_tasks_table = JobResultTable(
+                reserved_task_job_results, exclude=["actions", "job_model", "summary", "user", "status"]
+            )
+
+            # Sort the worker's queue list
+            queues = sorted([queue["name"] for queue in active_queues.get(worker_name, [])], key=sort_queues)
+
+            workers.append(
+                {
+                    "hostname": worker_name,
+                    "running_tasks_table": running_tasks_table,
+                    "pending_tasks_table": pending_tasks_table,
+                    "queues": queues,
+                    "uptime": worker_details["uptime"],
+                }
+            )
+
+        # Count the number of workers per queue
+        queue_worker_count = {
+            settings.CELERY_TASK_DEFAULT_QUEUE: set(),
+        }
+        for worker_name, task_queue_list in active_queues.items():
+            distinct_queues = {q["name"] for q in task_queue_list}
+            for queue in distinct_queues:
+                queue_worker_count.setdefault(queue, set())
+                queue_worker_count[queue].add(worker_name)
+
+        # Sort the queue_worker_count dictionary by queue name, then by worker hostname/name
+        # Then make the default queue the first entry
+        queue_worker_count = {
+            queue_name: sorted(queue_worker_count[queue_name], key=sort_workers)
+            for queue_name in sorted(queue_worker_count, key=sort_queues)
+        }
+
+        context = {
+            "worker_status": {
+                "max_timeout": max_timeout,
+                "queue_worker_count": queue_worker_count,
+                "timeout": timeout,
+                "workers": workers,
+            },
+        }
 
         return self.render_to_response(context)
 
