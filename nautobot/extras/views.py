@@ -1371,6 +1371,10 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                         schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
 
                 celery_kwargs = {"nautobot_job_profile": profile, "queue": task_queue}
+                if job_model.soft_time_limit > 0:
+                    celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
+                if job_model.time_limit > 0:
+                    celery_kwargs["time_limit"] = job_model.time_limit
                 scheduled_job = ScheduledJob(
                     name=schedule_name,
                     task=job_model.class_path,
