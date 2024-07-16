@@ -38,7 +38,7 @@ python = ">=3.8,<3.13"
 # Background task processing
 celery = "~5.3.6"
 # Fundamental web framework for Nautobot
-Django = "~4.2.13"
+Django = "~5.0.0"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -93,7 +93,7 @@ emoji = "~2.12.1"
 GitPython = "~3.1.43"
 # GraphQL support
 # NOTE: graphene-django 3.x is available but includes breaking changes. Will address in a future release.
-graphene-django = "~2.16.0"
+graphene-django = "~3.2.0"
 # Graphene Optimizer
 # NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
 graphene-django-optimizer = "~0.8.0"
@@ -163,7 +163,7 @@ example-app-with-view-override = {path = "examples/example_app_with_view_overrid
 # Random data generation
 factory-boy = "~3.3.0"
 # Factory Boy dependency. Don't upgrade to v26.x until breaking change is fixed https://github.com/joke2k/faker/issues/2070
-faker = ">=0.7.0,<26.0.0"
+faker = ">=26.0.0,<26.1.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
