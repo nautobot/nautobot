@@ -1,20 +1,15 @@
 document.addEventListener("DOMContentLoaded", function() {
     // Select all header elements with the class "orderable" containing links
     const headers = document.querySelectorAll(".orderable a");
-    const clickCounts = {};
 
     headers.forEach(header => {
         // Get the column name from the data attribute
         const columnName = header.dataset.columnName;
-        clickCounts[columnName] = 0;
 
         // Add a click event listener to each header
         header.addEventListener("click", function(event) {
             // Prevent the default link behavior
             event.preventDefault();
-
-            // Increment the click count for the column
-            clickCounts[columnName] += 1;
 
             // Get the current URL and its search parameters
             const currentUrl = new URL(window.location.href);
@@ -42,10 +37,10 @@ document.addEventListener("DOMContentLoaded", function() {
         const sortParam = new URLSearchParams(window.location.search).get("sort");
         if (sortParam === columnName) {
             // If sorted in ascending order, add an up arrow
-            header.innerHTML += " &#8593;";
+            header.innerHTML += " ↑";
         } else if (sortParam === "-" + columnName) {
             // If sorted in descending order, add a down arrow
-            header.innerHTML += " &#8595;";
+            header.innerHTML += " ↓";
         }
     });
 });
