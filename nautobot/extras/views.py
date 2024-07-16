@@ -813,6 +813,8 @@ class DynamicGroupEditView(generic.ObjectEditView):
 
                     # After filters have been set, now we save the object to the database.
                     obj.save()
+                    # Save m2m fields, such as Tags https://docs.djangoproject.com/en/3.2/topics/forms/modelforms/#the-save-method
+                    form.save_m2m()
                     # Check that the new object conforms with any assigned object-level permissions
                     self.queryset.get(pk=obj.pk)
 
