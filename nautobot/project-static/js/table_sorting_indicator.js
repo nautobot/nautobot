@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
             // Get the current URL and its search parameters
             const currentUrl = new URL(window.location.href);
-            const searchParams = new URLSearchParams(currentUrl.search);
+            const searchParams = currentUrl.searchParams;
             let sortParam = searchParams.get("sort");
 
             if (sortParam === columnName) {
@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", function() {
             } else if (sortParam === "-" + columnName) {
                 // If the column is already sorted in descending order, reset to default
                 searchParams.delete("sort");
-                window.location.href = window.location.pathname; // Reload the page with the default view
+                window.location.replace(window.location.pathname); // Reload the page with the default view without adding a new entry to history
                 return;
             } else {
                 // If no sort or default state, set to ascending
@@ -30,17 +30,17 @@ document.addEventListener("DOMContentLoaded", function() {
             }
 
             // Update the URL with the new sort parameter
-            window.location.search = searchParams.toString();
+            window.location.replace(window.location.pathname + "?" + searchParams.toString());
         });
 
         // Initialize the header with the appropriate sort state indicator
         const sortParam = new URLSearchParams(window.location.search).get("sort");
         if (sortParam === columnName) {
-            // If sorted in ascending order, add an up arrow
-            header.innerHTML += " ↑";
-        } else if (sortParam === "-" + columnName) {
-            // If sorted in descending order, add a down arrow
-            header.innerHTML += " ↓";
+            // If sorted in ascending order, add an up arrow icon
+            header.innerHTML += ' <i class="mdi mdi-arrow-up-thin"></i>';
+        } else if (sortParam === `-${columnName}`) {
+            // If sorted in descending order, add a down arrow icon
+            header.innerHTML += ' <i class="mdi mdi-arrow-down-thin"></i>';
         }
     });
 });
