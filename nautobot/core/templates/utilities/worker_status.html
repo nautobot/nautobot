@@ -1,6 +1,14 @@
 {% extends 'base.html' %}
 {% load helpers %}
 
+{% block extra_styles %}
+<style>
+    .panel {
+        overflow: hidden  /* Fix for panel overflow issues */
+    }
+</style>
+{% endblock %}
+
 {% block header %}
 <h1>
     {% block title %}Nautobot Worker Status{% endblock %}
