@@ -2401,7 +2401,7 @@ class UserSavedViewAssociationTest(APIViewTestCases.APIViewTestCase):
             "saved_view": saved_view.pk,
             "view_name": duplicate_view_name,
         }
-        self.add_permissions("users.add_usersavedviewassociation")
+        self.add_permissions("extras.add_usersavedviewassociation")
         response = self.client.post(
             self._get_list_url(), duplicate_user_to_savedview_create_data, format="json", **self.header
         )
