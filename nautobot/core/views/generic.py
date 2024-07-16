@@ -305,7 +305,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         list_url = validated_viewname(model, "list")
         # We are not using .restrict(request.user, "view") here
         # User should be able to see any saved view that he has the list view access to.
-        if user.has_perms(["users.view_savedview"]):
+        if user.has_perms(["extras.view_savedview"]):
             saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
         else:
             shared_saved_views = (

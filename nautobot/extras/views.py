@@ -1679,12 +1679,12 @@ class SavedViewUIViewSet(
     def alter_queryset(self, request):
         """
         Two scenarios we need to handle here:
-        1. User can view all saved views with users.view_savedview permission.
+        1. User can view all saved views with extras.view_savedview permission.
         2. User without the permission can only view shared savedviews and his/her own saved views.
         """
         queryset = super().alter_queryset(request)
         user = request.user
-        if user.has_perms(["users.view_savedview"]):
+        if user.has_perms(["extras.view_savedview"]):
             saved_views = queryset.restrict(user, "view")
         else:
             shared_saved_views = queryset.filter(is_shared=True)
@@ -1726,7 +1726,7 @@ class SavedViewUIViewSet(
         return message
 
     def list(self, request, *args, **kwargs):
-        if not request.user.has_perms(["users.view_savedview"]):
+        if not request.user.has_perms(["extras.view_savedview"]):
             return self.handle_no_permission()
         return super().list(request, *args, **kwargs)
 
@@ -1759,7 +1759,7 @@ class SavedViewUIViewSet(
         Extract filter_params, pagination and sort_order from request.GET and apply it to the SavedView specified
         """
         sv = SavedView.objects.get(pk=kwargs.get("pk", None))
-        if sv.owner == request.user or request.user.has_perms(["users.change_savedview"]):
+        if sv.owner == request.user or request.user.has_perms(["extras.change_savedview"]):
             pass
         else:
             messages.error(

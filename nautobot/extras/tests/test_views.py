@@ -1323,7 +1323,7 @@ class SavedViewTest(ModelViewTestCase):
         app_label = view.split(":")[0]
         model_name = view.split(":")[1].split("_")[0]
         # Add model-level permission
-        self.add_permissions("users.view_savedview")
+        self.add_permissions("extras.view_savedview")
         self.add_permissions(f"{app_label}.view_{model_name}")
 
         # Try GET with model-level permission
