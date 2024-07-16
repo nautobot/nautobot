@@ -114,6 +114,13 @@ class NautobotTemplatetagsHelperTest(TestCase):
         )
         self.assertEqual('"I am UTF-8! 😀"', helpers.render_json("I am UTF-8! 😀", False))
 
+    def test_render_uptime(self):
+        self.assertEqual(helpers.render_uptime(1024768), "11 days 20 hours 39 minutes")
+        self.assertEqual(helpers.render_uptime(""), helpers.placeholder(""))
+        self.assertEqual(helpers.render_uptime("123456"), "1 day 10 hours 17 minutes")
+        self.assertEqual(helpers.render_uptime(0), "0 days 0 hours 0 minutes")
+        self.assertEqual(helpers.render_uptime("foo bar"), helpers.placeholder("foo bar"))
+
     def test_render_yaml(self):
         self.assertEqual(
             helpers.render_yaml({"syntax": "highlight"}), '<code class="language-yaml">syntax: highlight\n</code>'
