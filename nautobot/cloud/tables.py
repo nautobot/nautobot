@@ -136,7 +136,7 @@ class CloudServiceTable(BaseTable):
     cloud_account = tables.Column(linkify=True)
     cloud_network = tables.Column(linkify=True)
     cloud_type = tables.Column(linkify=True)
-    actions = ButtonsColumn(CloudType)
+    actions = ButtonsColumn(CloudService)
 
     class Meta(BaseTable.Meta):
         model = CloudService
