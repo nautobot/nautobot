@@ -475,6 +475,10 @@ def _create_schedule(serializer, data, job_model, user, approval_required, task_
         "nautobot_job_profile": False,
         "queue": task_queue,
     }
+    if job_model.soft_time_limit > 0:
+        celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
+    if job_model.time_limit > 0:
+        celery_kwargs["time_limit"] = job_model.time_limit
 
     # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
     #
