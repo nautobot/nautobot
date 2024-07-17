@@ -195,6 +195,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         label="Location type (name or ID)",
     )
     parent = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_pk=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Parent location (name or ID)",
@@ -221,6 +222,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         label="Has circuit terminations",
     )
     devices = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_pk=True,
         queryset=Device.objects.all(),
         to_field_name="name",
         label="Devices (name or ID)",
@@ -239,6 +241,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         label="Has power panels",
     )
     rack_groups = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_pk=True,
         queryset=RackGroup.objects.all(),
         to_field_name="name",
         label="Rack groups (name or ID)",
