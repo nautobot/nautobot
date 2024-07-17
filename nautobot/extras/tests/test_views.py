@@ -1439,7 +1439,7 @@ class SavedViewTest(ModelViewTestCase):
         }
         instance.validated_save()
         delete_url = reverse("extras:savedview_delete", kwargs={"pk": instance.pk})
-        # Delete functionality should work even without "users.delete_savedview" permissions
+        # Delete functionality should work even without "extras.delete_savedview" permissions
         # if the saved view belongs to the user.
         instance.owner.is_active = True
         instance.owner.save()
@@ -1457,7 +1457,7 @@ class SavedViewTest(ModelViewTestCase):
     def test_create_saved_view(self):
         instance = self._get_queryset().first()
         # User should be able to create saved view with only "{app_label}.view_{model_name}" permission
-        # self.add_permissions("users.add_savedview")
+        # self.add_permissions("extras.add_savedview")
         view = instance.view
         app_label = view.split(":")[0]
         model_name = view.split(":")[1].split("_")[0]

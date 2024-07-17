@@ -1893,7 +1893,7 @@ class SavedViewUIViewSet(
         Override to add more variables to Response
         """
         sv = SavedView.objects.get(pk=kwargs.get("pk", None))
-        if sv.owner == request.user or request.user.has_perms(["users.delete_savedview"]):
+        if sv.owner == request.user or request.user.has_perms(["extras.delete_savedview"]):
             pass
         else:
             messages.error(
