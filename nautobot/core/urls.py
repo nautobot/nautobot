@@ -12,6 +12,7 @@ from nautobot.core.views import (
     SearchView,
     StaticMediaFailureView,
     ThemePreviewView,
+    WorkerStatusView,
 )
 from nautobot.extras.plugins.urls import (
     apps_patterns,
@@ -65,6 +66,8 @@ urlpatterns = [
         {"add_attachment_headers": True},
         name="db_file_storage.download_file",
     ),
+    # Celery worker status page
+    path("worker-status/", WorkerStatusView.as_view(), name="worker_status"),
     # Templated css file
     path(
         "template.css", TemplateView.as_view(template_name="template.css", content_type="text/css"), name="template_css"

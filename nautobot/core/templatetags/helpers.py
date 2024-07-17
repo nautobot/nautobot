@@ -591,6 +591,33 @@ def slugify(value):
     return django_slugify(value)
 
 
+@library.filter()
+@register.filter()
+def render_uptime(seconds):
+    """Format a value in seconds to a human readable value.
+
+    Example:
+        >>> render_uptime(1024768)
+        "11 days 20 hours 39 minutes"
+    """
+    try:
+        seconds = int(seconds)
+    except ValueError:
+        return placeholder(seconds)
+    delta = datetime.timedelta(seconds=seconds)
+    uptime_hours = delta.seconds // 3600
+    uptime_minutes = delta.seconds // 60 % 60
+    return format_html(
+        "{} {} {} {} {} {}",
+        delta.days,
+        "days" if delta.days != 1 else "day",
+        uptime_hours,
+        "hours" if uptime_hours != 1 else "hour",
+        uptime_minutes,
+        "minutes" if uptime_minutes != 1 else "minute",
+    )
+
+
 #
 # Tags
 #
