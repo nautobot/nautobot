@@ -7,7 +7,7 @@ from django.contrib.auth.forms import (
 from nautobot.core.forms import BootstrapMixin, DateTimePicker
 from nautobot.core.utils.config import get_settings_or_config
 
-from .models import SavedView, Token
+from .models import Token
 
 
 class LoginForm(BootstrapMixin, AuthenticationForm):
@@ -20,35 +20,6 @@ class LoginForm(BootstrapMixin, AuthenticationForm):
 
 class PasswordChangeForm(BootstrapMixin, DjangoPasswordChangeForm):
     pass
-
-
-class SavedViewForm(BootstrapMixin, forms.ModelForm):
-    is_global_default = forms.BooleanField(
-        label="Is global default",
-        required=False,
-        help_text="If checked, this saved view will be used globally as the default saved view for this particular view",
-    )
-    is_shared = forms.BooleanField(
-        label="Is shared",
-        required=False,
-        help_text="If checked, all users will be able to see this saved view",
-    )
-
-    class Meta:
-        model = SavedView
-        fields = ["name", "is_global_default", "is_shared"]
-
-
-class SavedViewModalForm(BootstrapMixin, forms.ModelForm):
-    is_shared = forms.BooleanField(
-        label="Is shared",
-        required=False,
-        help_text="If checked, all users will be able to see this saved view",
-    )
-
-    class Meta:
-        model = SavedView
-        fields = ["name", "config", "is_shared"]
 
 
 class TokenForm(BootstrapMixin, forms.ModelForm):

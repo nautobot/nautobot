@@ -11,13 +11,13 @@ from django.db.models import Q
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.html import format_html
+from django.utils.html import escape, format_html
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.templatetags.helpers import bettertitle
-from nautobot.core.testing import extract_form_failures, extract_page_body, TestCase, ViewTestCases
+from nautobot.core.testing import extract_form_failures, extract_page_body, ModelViewTestCase, TestCase, ViewTestCases
 from nautobot.core.testing.utils import disable_warnings, post_data
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
@@ -67,6 +67,7 @@ from nautobot.extras.models import (
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -75,6 +76,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
     Team,
+    UserSavedViewAssociation,
     Webhook,
 )
 from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
@@ -1265,6 +1267,319 @@ class NoteTestCase(
         self.add_permissions("dcim.change_location")
         response = self.client.post(reverse("dcim:location_bulk_edit"), data={"pk": self.location.pk})
         self.assertNotContains(response, self.expected_object_note, html=True)
+
+
+class SavedViewTest(ModelViewTestCase):
+    """
+    Tests for Saved Views
+    """
+
+    model = SavedView
+
+    def get_view_url_for_saved_view(self, saved_view, action="detail"):
+        """
+        Since saved view detail url redirects, we need to manually construct its detail url
+        to test the content of its response.
+        """
+        view = saved_view.view
+        pk = saved_view.pk
+
+        if action == "detail":
+            url = reverse(view) + f"?saved_view={pk}"
+        elif action == "edit":
+            url = saved_view.get_absolute_url() + "update-config/"
+        else:
+            url = reverse("extras:savedview_add")
+
+        return url
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_get_object_anonymous(self):
+        # Make the request as an unauthenticated user
+        self.client.logout()
+        instance = self._get_queryset().first()
+        response = self.client.get(instance.get_absolute_url(), follow=True)
+        self.assertHttpStatus(response, 200)
+        # This view should redirect to /login/?next={saved_view's absolute url}
+        self.assertRedirects(response, f"/login/?next={instance.get_absolute_url()}")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_object_without_permission(self):
+        instance = self._get_queryset().first()
+        view = instance.view
+        app_label = view.split(":")[0]
+        model_name = view.split(":")[1].split("_")[0]
+        # SavedView detail view should only require the model's view permission
+        self.add_permissions(f"{app_label}.view_{model_name}")
+
+        # Try GET with model-level permission
+        response = self.client.get(instance.get_absolute_url(), follow=True)
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_object_with_permission(self):
+        instance = self._get_queryset().first()
+        view = instance.view
+        app_label = view.split(":")[0]
+        model_name = view.split(":")[1].split("_")[0]
+        # Add model-level permission
+        self.add_permissions("extras.view_savedview")
+        self.add_permissions(f"{app_label}.view_{model_name}")
+
+        # Try GET with model-level permission
+        # SavedView detail view should redirect to the View from which it is derived
+        response = self.client.get(instance.get_absolute_url(), follow=True)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(escape(instance.name), response_body, msg=response_body)
+
+        query_strings = ["&table_changes_pending=true", "&per_page=1234", "&status=active", "&sort=name"]
+        for string in query_strings:
+            view_url = self.get_view_url_for_saved_view(instance) + string
+            response = self.client.get(view_url)
+            self.assertHttpStatus(response, 200)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            # Assert that the star sign is rendered on the page since there are unsaved changes
+            self.assertIn('<i title="Pending changes not saved">', response_body, msg=response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_object_with_constrained_permission(self):
+        instance1, instance2 = self._get_queryset().all()[:2]
+
+        # Add object-level permission
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance1.pk},
+            actions=["view", "add", "change", "delete"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+        app_label = instance1.view.split(":")[0]
+        model_name = instance1.view.split(":")[1].split("_")[0]
+        self.add_permissions(f"{app_label}.view_{model_name}")
+
+        # Try GET to permitted object
+        self.assertHttpStatus(self.client.get(instance1.get_absolute_url()), 302)
+
+        # Try GET to non-permitted object
+        # Should be able to get to any SavedView instance as long as the user has "{app_label}.view_{model_name}" permission
+        app_label = instance2.view.split(":")[0]
+        model_name = instance2.view.split(":")[1].split("_")[0]
+        self.add_permissions(f"{app_label}.view_{model_name}")
+        self.assertHttpStatus(self.client.get(instance2.get_absolute_url()), 302)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_saved_view_as_different_user(self):
+        instance = self._get_queryset().first()
+        update_query_strings = ["per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
+        update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
+        different_user = User.objects.create(username="User 1", is_active=True)
+        # Try update the saved view with a different user from the owner of the saved view
+        self.client.force_login(different_user)
+        response = self.client.get(update_url, follow=True)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            f"You do not have the required permission to modify this Saved View owned by {instance.owner}",
+            response_body,
+            msg=response_body,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_saved_view_as_owner(self):
+        instance = self._get_queryset().first()
+        update_query_strings = ["per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
+        update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
+        # Try update the saved view with the same user as the owner of the saved view
+        instance.owner.is_active = True
+        instance.owner.save()
+        self.client.force_login(instance.owner)
+        response = self.client.get(update_url)
+        self.assertHttpStatus(response, 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.config["pagination_count"], 12)
+        self.assertEqual(instance.config["filter_params"]["status"], ["active"])
+        self.assertEqual(instance.config["filter_params"]["name"], ["new_name_filter"])
+        self.assertEqual(instance.config["sort_order"], ["name"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_delete_saved_view_as_different_user(self):
+        instance = self._get_queryset().first()
+        instance.config = {
+            "filter_params": {
+                "location_type": ["Campus", "Building", "Floor", "Elevator"],
+                "tenant": ["Krause, Welch and Fuentes"],
+            },
+            "table_config": {"LocationTable": {"columns": ["name", "status", "location_type", "tags"]}},
+        }
+        instance.validated_save()
+        delete_url = reverse("extras:savedview_delete", kwargs={"pk": instance.pk})
+        different_user = User.objects.create(username="User 2", is_active=True)
+        # Try delete the saved view with a different user from the owner of the saved view
+        self.client.force_login(different_user)
+        response = self.client.post(delete_url, follow=True)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            f"You do not have the required permission to delete this Saved View owned by {instance.owner}",
+            response_body,
+            msg=response_body,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_delete_saved_view_as_owner(self):
+        instance = self._get_queryset().first()
+        instance.config = {
+            "filter_params": {
+                "location_type": ["Campus", "Building", "Floor", "Elevator"],
+                "tenant": ["Krause, Welch and Fuentes"],
+            },
+            "table_config": {"LocationTable": {"columns": ["name", "status", "location_type", "tags"]}},
+        }
+        instance.validated_save()
+        delete_url = reverse("extras:savedview_delete", kwargs={"pk": instance.pk})
+        # Delete functionality should work even without "extras.delete_savedview" permissions
+        # if the saved view belongs to the user.
+        instance.owner.is_active = True
+        instance.owner.save()
+        self.client.force_login(instance.owner)
+        response = self.client.post(delete_url, follow=True)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            "Are you sure you want to delete saved view",
+            response_body,
+            msg=response_body,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_saved_view(self):
+        instance = self._get_queryset().first()
+        # User should be able to create saved view with only "{app_label}.view_{model_name}" permission
+        # self.add_permissions("extras.add_savedview")
+        view = instance.view
+        app_label = view.split(":")[0]
+        model_name = view.split(":")[1].split("_")[0]
+        self.add_permissions(f"{app_label}.view_{model_name}")
+        create_query_strings = [
+            f"saved_view={instance.pk}",
+            "&per_page=12",
+            "&status=active",
+            "&name=new_name_filter",
+            "&sort=name",
+        ]
+        create_url = self.get_view_url_for_saved_view(instance, "create")
+        request = {
+            "path": create_url,
+            "data": post_data(
+                {"name": "New Test View", "view": f"{instance.view}", "params": "".join(create_query_strings)}
+            ),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        instance = SavedView.objects.get(name="New Test View")
+        self.assertEqual(instance.config["pagination_count"], 12)
+        self.assertEqual(instance.config["filter_params"]["status"], ["active"])
+        self.assertEqual(instance.config["filter_params"]["name"], ["new_name_filter"])
+        self.assertEqual(instance.config["sort_order"], ["name"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_is_global_default(self):
+        view_name = "dcim:location_list"
+        SavedView.objects.create(
+            name="Global Location Default View",
+            owner=self.user,
+            view=view_name,
+            is_global_default=True,
+        )
+        response = self.client.get(reverse(view_name), follow=True)
+        # Assert that Location List View got redirected to Saved View set as global default
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(
+            """
+            <strong>
+                Global Location Default View
+            </strong>
+            """,
+            response_body,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_user_default(self):
+        view_name = "dcim:location_list"
+        sv = SavedView.objects.create(
+            name="User Location Default View",
+            owner=self.user,
+            view=view_name,
+            is_global_default=True,
+        )
+        UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
+        response = self.client.get(reverse(view_name), follow=True)
+        # Assert that Location List View got redirected to Saved View set as user default
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(
+            """
+            <strong>
+                User Location Default View
+            </strong>
+            """,
+            response_body,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_user_default_precedes_global_default(self):
+        view_name = "dcim:location_list"
+        SavedView.objects.create(
+            name="Global Location Default View",
+            owner=self.user,
+            view=view_name,
+            is_global_default=True,
+        )
+        sv = SavedView.objects.create(
+            name="User Location Default View",
+            owner=self.user,
+            view=view_name,
+        )
+        UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
+        response = self.client.get(reverse(view_name), follow=True)
+        # Assert that Location List View got redirected to Saved View set as user default
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(
+            """
+            <strong>
+                User Location Default View
+            </strong>
+            """,
+            response_body,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_is_shared(self):
+        view_name = "dcim:location_list"
+        new_user = User.objects.create(username="Different User", is_active=True)
+        sv_shared = SavedView.objects.create(
+            name="Shared Location Saved View",
+            owner=new_user,
+            view=view_name,
+        )
+        sv_not_shared = SavedView.objects.create(
+            name="Private Location Saved View",
+            owner=new_user,
+            view=view_name,
+            is_shared=False,
+        )
+        app_label = view_name.split(":")[0]
+        model_name = view_name.split(":")[1].split("_")[0]
+        self.add_permissions(f"{app_label}.view_{model_name}")
+        response = self.client.get(reverse(view_name), follow=True)
+        # Assert that Location List View got redirected to Saved View set as user default
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(str(sv_shared.pk), response_body, msg=response_body)
+        self.assertNotIn(str(sv_not_shared.pk), response_body, msg=response_body)
 
 
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets

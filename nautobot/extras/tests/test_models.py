@@ -6,6 +6,7 @@ import uuid
 import warnings
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -63,6 +64,7 @@ from nautobot.extras.models import (
     ObjectChange,
     ObjectMetadata,
     Role,
+    SavedView,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
@@ -85,6 +87,8 @@ from nautobot.virtualization.models import (
 )
 
 from example_app.jobs import ExampleJob
+
+User = get_user_model()
 
 
 class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
@@ -1738,6 +1742,50 @@ class RoleTest(ModelTestCases.BaseModelTestCase):
 
         roles = Role.objects.filter(content_types__in=[device_ct, ipaddress_ct])
         self.assertQuerysetEqualAndNotEmpty(Role.objects.get_for_models([Device, IPAddress]), roles)
+
+
+class SavedViewTest(ModelTestCases.BaseModelTestCase):
+    model = SavedView
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="Saved View test user")
+        self.sv = SavedView.objects.create(name="Saved View", owner=self.user, view="dcim:location_list")
+
+    def test_is_global_default_saved_view_is_shared_automatically(self):
+        self.sv.is_global_default = True
+        self.sv.save()
+        self.assertEqual(self.sv.is_shared, True)
+
+    def test_setting_new_global_default_saved_view_unset_old_global_default_saved_view(self):
+        self.old_global_sv = SavedView.objects.create(
+            name="Old Global Saved View", owner=self.user, view="dcim:location_list", is_global_default=True
+        )
+
+        self.new_global_sv = SavedView.objects.create(
+            name="New Global Saved View", owner=self.user, view="dcim:location_list"
+        )
+        self.new_global_sv.is_global_default = True
+        self.new_global_sv.save()
+        self.old_global_sv.refresh_from_db()
+        self.assertEqual(self.new_global_sv.is_shared, True)
+        self.assertEqual(self.old_global_sv.is_global_default, False)
+
+    def test_multiple_global_default_saved_views_can_exist_for_different_views(self):
+        self.device_global_sv = SavedView.objects.create(
+            name="Device Global Saved View", owner=self.user, view="dcim:device_list", is_global_default=True
+        )
+        self.device_global_sv.save()
+        self.location_global_sv = SavedView.objects.create(
+            name="Location Global Saved View", owner=self.user, view="dcim:location_list", is_global_default=True
+        )
+        self.location_global_sv.save()
+        self.ipaddress_global_sv = SavedView.objects.create(
+            name="IP Address Global Saved View", owner=self.user, view="ipam:ipaddress_list", is_global_default=True
+        )
+        self.ipaddress_global_sv.save()
+        self.assertEqual(self.device_global_sv.is_shared, True)
+        self.assertEqual(self.location_global_sv.is_shared, True)
+        self.assertEqual(self.ipaddress_global_sv.is_shared, True)
 
 
 class SecretTest(ModelTestCases.BaseModelTestCase):

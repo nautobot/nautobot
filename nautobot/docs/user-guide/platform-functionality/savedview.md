@@ -113,13 +113,13 @@ There are several ways you can navigate Saved Views. As we've already seen, any 
 
 ![Current Saved View](../feature-guides/images/saved-views/current-saved-view-drop-down-menu.png)
 
-Additionally, if you have the `users:view_savedview` object permission (or are a superuser), you can view a table of all Saved Views created by any user for any list view, accessible from the navigation menu under "Extensibility -> Saved Views":
+Additionally, if you have the `extras:view_savedview` object permission (or are a superuser), you can view a table of all Saved Views created by any user for any list view, accessible from the navigation menu under "Extensibility -> Saved Views":
 
 ![Navigation Menu](../feature-guides/images/saved-views/navigation-menu.png)
 
 ### How to set a Saved View as global default for all users
 
-Users with the `users:view_savedview` and `users:change_savedview` object permissions can set a Saved View as the default for all users for any given object list view. There can only be one global default for each object list view.
+Users with the `extras:view_savedview` and `extras:change_savedview` object permissions can set a Saved View as the default for all users for any given object list view. There can only be one global default for each object list view.
 
 ![Saved View Table Edit Button](../feature-guides/images/saved-views/saved-view-admin-edit-buttons.png)
 

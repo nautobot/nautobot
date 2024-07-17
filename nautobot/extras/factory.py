@@ -40,6 +40,7 @@ from nautobot.extras.models import (
     ObjectChange,
     ObjectMetadata,
     Role,
+    SavedView,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -52,6 +53,8 @@ from nautobot.extras.utils import (
     TaggableClassesQuery,
 )
 from nautobot.tenancy.models import Tenant
+
+User = get_user_model()
 
 
 class ContactFactory(PrimaryModelFactory):
@@ -477,6 +480,20 @@ class DynamicGroupFactory(PrimaryModelFactory):
             )
             if content_type.model_class().objects.exists():
                 return content_type
+
+
+class SavedViewFactory(BaseModelFactory):
+    class Meta:
+        model = SavedView
+        exclude = ("ct",)
+
+    name = factory.LazyAttributeSequence(lambda o, n: f"Sample {o.view} Saved View - {n + 1}")
+    owner = random_instance(User, allow_null=False)
+    ct = random_instance(lambda: ContentType.objects.filter(FeatureQuery("saved_views").get_query()), allow_null=False)
+    view = factory.LazyAttribute(lambda o: f"{o.ct.app_label}:{o.ct.model}_list")
+    config = factory.Faker("pydict")
+    is_shared = NautobotBoolIterator()
+    # is_global_default currently just defaults to False for all randomly generated saved views
 
 
 class StaticGroupAssociationFactory(OrganizationalModelFactory):

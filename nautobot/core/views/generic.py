@@ -58,9 +58,8 @@ from nautobot.core.views.utils import (
     view_changes_not_saved,
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
-from nautobot.extras.models import ExportTemplate
+from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
-from nautobot.users.models import SavedView, UserSavedViewAssociation
 
 
 class GenericView(LoginRequiredMixin, View):
@@ -223,7 +222,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                         Q(pk=user_default_saved_view_pk),
                         Q(owner=user) | Q(is_shared=True),
                     )
-                    sv_url = reverse("users:savedview", kwargs={"pk": user_default_saved_view_pk})
+                    sv_url = reverse("extras:savedview", kwargs={"pk": user_default_saved_view_pk})
                     return redirect(sv_url)
                 except ObjectDoesNotExist:
                     pass
@@ -231,7 +230,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             # Check if there is a global default for this view
             try:
                 global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
-                return redirect(reverse("users:savedview", kwargs={"pk": global_saved_view.pk}))
+                return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
             except ObjectDoesNotExist:
                 pass
 
@@ -306,7 +305,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         list_url = validated_viewname(model, "list")
         # We are not using .restrict(request.user, "view") here
         # User should be able to see any saved view that he has the list view access to.
-        if user.has_perms(["users.view_savedview"]):
+        if user.has_perms(["extras.view_savedview"]):
             saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
         else:
             shared_saved_views = (

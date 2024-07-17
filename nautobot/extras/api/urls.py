@@ -30,6 +30,12 @@ router.register("custom-links", views.CustomLinkViewSet)
 # Dynamic Groups
 router.register("dynamic-groups", views.DynamicGroupViewSet)
 router.register("dynamic-group-memberships", views.DynamicGroupMembershipViewSet)
+
+# Saved Views
+router.register("saved-views", views.SavedViewViewSet)
+router.register("user-saved-view-associations", views.UserSavedViewAssociationViewSet)
+
+# Static Groups
 router.register("static-group-associations", views.StaticGroupAssociationViewSet)
 
 # Export templates

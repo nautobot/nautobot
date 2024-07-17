@@ -4,6 +4,7 @@ import json
 from db_file_storage.model_utils import delete_file, delete_file_if_needed
 from db_file_storage.storage import DatabaseFileStorage
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -31,15 +32,15 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
-from nautobot.users.models import SavedViewMixin
 
 # Avoid breaking backward compatibility on anything that might expect these to still be defined here:
 from .jobs import Job, JOB_LOGS, JobLogEntry, JobResult, ScheduledJob, ScheduledJobs  # noqa: F401  # unused-import
 
+User = get_user_model()
 #
 # Config contexts
 #
@@ -832,6 +833,72 @@ class Note(ChangeLoggedModel, BaseModel):
         # Record the user's name as static strings
         self.user_name = self.user.username if self.user else "Undefined"
         return super().save(*args, **kwargs)
+
+
+#
+# SavedView
+#
+
+
+@extras_features(
+    "custom_validators",
+)
+class SavedView(BaseModel, ChangeLoggedModel):
+    owner = models.ForeignKey(
+        to=User, blank=False, null=False, on_delete=models.CASCADE, help_text="The user that created this view"
+    )
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=False, null=False, help_text="The name of this view")
+    view = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=False,
+        null=False,
+        help_text="The name of the list view that the saved view is derived from, e.g. dcim:device_list",
+    )
+    config = models.JSONField(
+        encoder=DjangoJSONEncoder, blank=True, default=dict, help_text="Saved Configuration on this view"
+    )
+    is_global_default = models.BooleanField(default=False)
+    is_shared = models.BooleanField(default=True)
+
+    documentation_static_path = "docs/user-guide/platform-functionality/savedview.html"
+
+    class Meta:
+        ordering = ["owner", "view", "name"]
+        unique_together = [["owner", "name", "view"]]
+        verbose_name = "saved view"
+        verbose_name_plural = "saved views"
+
+    def __str__(self):
+        return f"{self.owner.username} - {self.view} - {self.name}"
+
+    def save(self, *args, **kwargs):
+        # If this SavedView is set to a global default, all other saved views related to this view name should not be the global default.
+        if self.is_global_default:
+            SavedView.objects.filter(view=self.view, is_global_default=True).exclude(pk=self.pk).update(
+                is_global_default=False
+            )
+            # If the view is set to Global default, is_shared should be true regardless
+            self.is_shared = True
+
+        super().save(*args, **kwargs)
+
+
+@extras_features("graphql")
+class UserSavedViewAssociation(BaseModel):
+    saved_view = models.ForeignKey("extras.SavedView", on_delete=models.CASCADE, related_name="user_assignments")
+    user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="saved_view_assignments")
+    view_name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    is_metadata_associable_model = False
+
+    class Meta:
+        unique_together = [["user", "view_name"]]
+
+    def __str__(self):
+        return f"{self.user}: {self.saved_view} - {self.view_name}"
+
+    def clean(self):
+        super().clean()
+        self.view_name = self.saved_view.view
 
 
 #
