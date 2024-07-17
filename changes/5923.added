@@ -1,1 +1,1 @@
-Added `prefers_pk` to allow NaturalKeyOrPKFilterMultipleChoiceFilter to have the filter prefer the object ID in the Filter Forms over the `to_field_name`.
+Added `prefers_pk` keyword argument to NaturalKeyOrPKMultipleChoiceFilter initialization to use the object ID instead of the `to_field_name` when automatically generating a form field for the filter.
