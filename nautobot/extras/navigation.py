@@ -241,6 +241,20 @@ menu_items = (
                 ),
             ),
             NavMenuGroup(
+                name="Users",
+                weight=150,
+                items=(
+                    NavMenuItem(
+                        link="extras:savedview_list",
+                        name="Saved Views",
+                        weight=100,
+                        permissions=[
+                            "extras.view_savedview",
+                        ],
+                    ),
+                ),
+            ),
+            NavMenuGroup(
                 name="Data Sources",
                 weight=200,
                 items=(
@@ -741,6 +755,18 @@ navigation = (
                         # However `extras:note_list` is not a reverse url lookup that does not exist.
                         link="extras:note_list",
                         permissions=["extras.view_note"],
+                    ),
+                ),
+            ),
+            NavGrouping(
+                name="Users",
+                weight=500,
+                items=(
+                    NavItem(
+                        link="extras:savedview_list",
+                        name="Saved Views",
+                        weight=100,
+                        permissions=["extras.view_savedviews"],
                     ),
                 ),
             ),

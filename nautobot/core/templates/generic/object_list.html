@@ -75,13 +75,13 @@
                 {% endif %}
                 {% if current_saved_view %}
                     <li>
-                        <a href="{% url 'user:savedview_update_config' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                        <a href="{% url 'extras:savedview_update_config' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
                             <i class="mdi mdi-content-save-outline text-muted" aria-hidden="true"></i>
                             <span>Update Current Saved View</span>
                         </a>
                     </li>
                     <li>
-                        <a href="{% url 'user:savedview_set_default' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                        <a href="{% url 'extras:savedview_set_default' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
                             <i class="mdi mdi-star text-muted" aria-hidden="true"></i>
                             <span>Set As My Default</span>
                         </a>
@@ -95,7 +95,7 @@
                 </li>
                 {% if current_saved_view %}
                     <li>
-                        <a href="{% url 'user:savedview_delete' pk=request.GET.saved_view %}">
+                        <a href="{% url 'extras:savedview_delete' pk=request.GET.saved_view %}">
                             <i class="mdi mdi-trash-can-outline text-danger" aria-hidden="true"></i>
                             <span class="text-danger">Delete Current Saved View</span>
                         </a>

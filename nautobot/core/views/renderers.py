@@ -28,8 +28,8 @@ from nautobot.core.views.utils import (
     get_csv_form_fields_from_serializer_class,
     view_changes_not_saved,
 )
+from nautobot.extras.models import SavedView
 from nautobot.extras.models.change_logging import ObjectChange
-from nautobot.users.models import SavedView
 
 
 class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
@@ -300,7 +300,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             if model.is_saved_view_model:
                 # We are not using .restrict(request.user, "view") here
                 # User should be able to see any saved view that he has the list view access to.
-                if request.user.has_perms(["users.view_savedview"]):
+                if request.user.has_perms(["extras.view_savedview"]):
                     saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
                 else:
                     shared_saved_views = (
