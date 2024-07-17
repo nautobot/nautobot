@@ -15,7 +15,6 @@ from nautobot.extras.utils import extras_features, FeatureQuery
     "custom_links",
     "custom_validators",
     "export_templates",
-    "graphql",
     "webhooks",
 )
 class Status(NameColorContentTypesModel):

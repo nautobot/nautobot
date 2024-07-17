@@ -1,0 +1,1 @@
+Added support for more "extras features" (custom links, custom validators, export templates, GraphQL, webhooks) to many of the models under `extras`.

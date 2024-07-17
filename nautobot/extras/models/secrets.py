@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 @extras_features(
     "custom_links",
     "custom_validators",
+    "export_templates",
     "graphql",
     "webhooks",
 )
@@ -86,6 +87,7 @@ class Secret(PrimaryModel):
 @extras_features(
     "custom_links",
     "custom_validators",
+    "export_templates",
     "graphql",
     "webhooks",
 )

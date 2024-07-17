@@ -32,7 +32,6 @@ logger = logging.getLogger(__name__)
     "custom_links",
     "custom_validators",
     "export_templates",
-    "graphql",
     "webhooks",
 )
 class DynamicGroup(PrimaryModel):

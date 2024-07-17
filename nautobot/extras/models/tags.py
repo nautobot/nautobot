@@ -33,7 +33,10 @@ class TagQuerySet(RestrictedQuerySet):
 
 # Tag *should* be a `NameColorContentTypesModel` but that way lies circular import purgatory. Sigh.
 @extras_features(
+    "custom_links",
     "custom_validators",
+    "export_templates",
+    "webhooks",
 )
 class Tag(
     ChangeLoggedModel,

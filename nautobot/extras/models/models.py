@@ -68,7 +68,13 @@ def limit_dynamic_group_choices():
     )
 
 
-@extras_features("graphql")
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
 class ConfigContext(
     ChangeLoggedModel,
     ConfigContextSchemaValidationMixin,
@@ -240,8 +246,11 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
 
 
 @extras_features(
+    "custom_links",
     "custom_validators",
+    "export_templates",
     "graphql",
+    "webhooks",
 )
 class ConfigContextSchema(OrganizationalModel):
     """
@@ -305,7 +314,12 @@ class ConfigContextSchema(OrganizationalModel):
 #
 
 
-@extras_features("graphql")
+@extras_features(
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
 class CustomLink(
     ChangeLoggedModel,
     ContactMixin,
@@ -366,7 +380,10 @@ class CustomLink(
 
 
 @extras_features(
+    "custom_links",
+    "custom_validators",
     "graphql",
+    "webhooks",
 )
 class ExportTemplate(
     ChangeLoggedModel,
@@ -462,6 +479,13 @@ class ExportTemplate(
 #
 
 
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
 class ExternalIntegration(PrimaryModel):
     """Model for tracking integrations with external applications."""
 
@@ -668,7 +692,13 @@ class FileProxy(BaseModel):
 #
 
 
-@extras_features("graphql")
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
 class GraphQLQuery(
     ChangeLoggedModel,
     ContactMixin,
@@ -800,7 +830,12 @@ class ImageAttachment(BaseModel):
 #
 
 
-@extras_features("graphql", "webhooks")
+@extras_features(
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
 class Note(ChangeLoggedModel, BaseModel):
     """
     Notes allow anyone with proper permissions to add a note to an object.
@@ -839,7 +874,12 @@ class Note(ChangeLoggedModel, BaseModel):
 #
 
 
-@extras_features("graphql")
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+)
 class Webhook(
     ChangeLoggedModel,
     ContactMixin,

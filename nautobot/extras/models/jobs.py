@@ -889,6 +889,13 @@ class ScheduledJobs(models.Model):
             return None
 
 
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
 class ScheduledJob(BaseModel):
     """Model representing a periodic task."""
 

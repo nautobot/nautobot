@@ -417,6 +417,13 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
         )
 
 
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
 class Relationship(
     ChangeLoggedModel,
     ContactMixin,
@@ -770,7 +777,12 @@ class Relationship(
         return False
 
 
-@extras_features("custom_validators")
+@extras_features(
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
 class RelationshipAssociation(BaseModel):
     relationship = models.ForeignKey(
         to="extras.Relationship", on_delete=models.CASCADE, related_name="relationship_associations"

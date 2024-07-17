@@ -65,7 +65,13 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     get_for_model.cache_key_prefix = "nautobot.extras.computedfield.get_for_model"
 
 
-@extras_features("graphql")
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
 class ComputedField(
     ContactMixin,
     ChangeLoggedModel,
@@ -339,7 +345,13 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     get_for_model.cache_key_prefix = "nautobot.extras.customfield.get_for_model"
 
 
-@extras_features("webhooks")
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
 class CustomField(
     ContactMixin,
     ChangeLoggedModel,
@@ -755,6 +767,7 @@ class CustomField(
 
 
 @extras_features(
+    "custom_validators",
     "graphql",
     "webhooks",
 )
