@@ -569,7 +569,6 @@ class LookupRelatedFunctionTest(TestCase):
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, "racks")
             self.assertEqual("name", form_field.to_field_name)
 
-
     def test_convert_querydict_to_factory_formset_dict(self):
         location_filter_set = dcim_filters.LocationFilterSet()
 
