@@ -126,7 +126,7 @@
                     {% job_import_button content_type list_element=True%}
                 {% endblock import_list_element %}
             {% endif %}
-            {% if permmisisons.add and 'import' in action_buttons and 'export' in action_buttons %}
+            {% if permissions.add and 'import' in action_buttons and 'export' in action_buttons %}
                 <li class="divider"></li>
             {% endif %}
             {% if 'export' in action_buttons %}
