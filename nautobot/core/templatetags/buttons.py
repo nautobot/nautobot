@@ -225,7 +225,7 @@ def consolidate_bulk_action_buttons(context):
         bulk_action_buttons.append(
             format_html(
                 """
-                <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true">
+                <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true">
                     Bulk Actions <span class="caret"></span>
                 </button>
                 """
