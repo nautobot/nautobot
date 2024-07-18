@@ -566,6 +566,7 @@ class LookupRelatedFunctionTest(TestCase):
             self.assertEqual("id", form_field.to_field_name)
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, "vlans")
             self.assertEqual("id", form_field.to_field_name)
+            # Test prefers_pk=False (default)
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, "racks")
             self.assertEqual("name", form_field.to_field_name)
 
