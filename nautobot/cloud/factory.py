@@ -10,6 +10,7 @@ from nautobot.core.factory import (
     UniqueFaker,
 )
 from nautobot.dcim.models import Manufacturer
+from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import Prefix
 
 
@@ -30,13 +31,13 @@ class CloudAccountFactory(PrimaryModelFactory):
     # )
 
 
-class CloudTypeFactory(PrimaryModelFactory):
+class CloudResourceTypeFactory(PrimaryModelFactory):
     class Meta:
-        model = models.CloudType
+        model = models.CloudResourceType
         exclude = ("has_description",)
 
     provider = random_instance(Manufacturer)
-    name = factory.LazyAttributeSequence(lambda o, n: f"{o.provider.name} CloudType {n + 1}")
+    name = factory.LazyAttributeSequence(lambda o, n: f"{o.provider.name} CloudResourceType {n + 1}")
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
@@ -46,7 +47,11 @@ class CloudTypeFactory(PrimaryModelFactory):
             if extracted:
                 self.content_types.set(extracted)
             else:
-                self.content_types.add(ContentType.objects.get_for_model(models.CloudNetwork))
+                self.content_types.set(
+                    get_random_instances(
+                        lambda: ContentType.objects.filter(FeatureQuery("cloud_resource_types").get_query()), minimum=1
+                    )
+                )
 
 
 class CloudNetworkFactory(PrimaryModelFactory):
@@ -57,7 +62,9 @@ class CloudNetworkFactory(PrimaryModelFactory):
     name = factory.LazyAttributeSequence(lambda o, n: f"CloudNetwork {n + 1}")
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
-    cloud_type = random_instance(models.CloudType, allow_null=False)
+    cloud_resource_type = random_instance(
+        lambda: models.CloudResourceType.objects.get_for_model(models.CloudNetwork), allow_null=False
+    )
     cloud_account = random_instance(models.CloudAccount, allow_null=False)
     has_parent = NautobotBoolIterator()
     extra_config = factory.Faker("pydict", value_types=[str, bool, int])
@@ -89,5 +96,7 @@ class CloudServiceFactory(PrimaryModelFactory):
     has_cloudaccount = NautobotBoolIterator()
     cloud_account = factory.Maybe("has_cloudaccount", random_instance(models.CloudAccount, allow_null=False), None)
     cloud_network = random_instance(models.CloudNetwork, allow_null=False)
-    cloud_type = random_instance(models.CloudType, allow_null=False)
+    cloud_resource_type = random_instance(
+        lambda: models.CloudResourceType.objects.get_for_model(models.CloudService), allow_null=False
+    )
     extra_config = factory.Faker("pydict", value_types=[str, bool, int])

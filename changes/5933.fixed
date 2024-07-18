@@ -1,0 +1,2 @@
+Fixed missing `cloud.cloudservice` content-type option on `CloudResourceType` model.
+Fixed incorrect submenu heading in `Cloud` navigation menu.

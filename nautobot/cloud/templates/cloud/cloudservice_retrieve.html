@@ -2,7 +2,7 @@
 {% load helpers %}
 
 {% block extra_breadcrumbs %}
-    <li><a href="{% url 'cloud:cloudtype' pk=object.cloud_type.pk %}">{{ object.cloud_type }}</a></li>
+    <li><a href="{% url 'cloud:cloudresourcetype' pk=object.cloud_resource_type.pk %}">{{ object.cloud_resource_type }}</a></li>
 {% endblock extra_breadcrumbs %}
 
 {% block content_left_page %}
@@ -26,8 +26,8 @@
                 <td>{{ object.cloud_network|hyperlinked_object }}</td>
             </tr>
             <tr>
-                <td>Cloud Type</td>
-                <td>{{ object.cloud_type|hyperlinked_object }}</td>
+                <td>Cloud Resource Type</td>
+                <td>{{ object.cloud_resource_type|hyperlinked_object }}</td>
             </tr>
         </table>
     </div>

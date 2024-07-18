@@ -19,6 +19,7 @@ __all__ = (
     "BaseManager",
     "BaseModel",
     "CompositeKeyQuerySetMixin",
+    "ContentTypeRelatedQuerySet",
     "RestrictedQuerySet",
     "construct_composite_key",
     "construct_natural_slug",
@@ -51,7 +52,7 @@ class BaseModel(models.Model):
     is_dynamic_group_associable_model = False  # DynamicGroupMixin overrides this to default True
     is_metadata_associable_model = True
     is_saved_view_model = False  # SavedViewMixin overrides this to default True
-    is_cloud_type_model = False  # CloudTypeMixin overrides this to default True
+    is_cloud_resource_type_model = False  # CloudResourceTypeMixin overrides this to default True
 
     associated_object_metadatas = GenericRelation(
         "extras.ObjectMetadata",
@@ -298,3 +299,24 @@ class BaseModel(models.Model):
                 f"expected no more than {len(natural_key_field_lookups)} but got {len(args)}."
             )
         return dict(zip(natural_key_field_lookups, args))
+
+
+class ContentTypeRelatedQuerySet(RestrictedQuerySet):
+    def get_for_model(self, model):
+        """
+        Return all `self.model` instances assigned to the given model.
+        """
+        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
+        return self.filter(content_types=content_type)
+
+    # TODO(timizuo): Merge into get_for_model; Cant do this now cause it would require alot
+    #  of refactoring
+    def get_for_models(self, models_):
+        """
+        Return all `self.model` instances assigned to the given `_models`.
+        """
+        q = models.Q()
+        for model in models_:
+            q |= models.Q(app_label=model._meta.app_label, model=model._meta.model_name)
+        content_types = ContentType.objects.filter(q)
+        return self.filter(content_types__in=content_types)

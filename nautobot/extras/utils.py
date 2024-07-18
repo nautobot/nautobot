@@ -271,9 +271,9 @@ def populate_model_features_registry(refresh=False):
 
     lookup_confs = [
         {
-            "feature_name": "cloud_types",
+            "feature_name": "cloud_resource_types",
             "field_names": [],
-            "additional_constraints": {"is_cloud_type_model": True},
+            "additional_constraints": {"is_cloud_resource_type_model": True},
         },
         {
             "feature_name": "contacts",
