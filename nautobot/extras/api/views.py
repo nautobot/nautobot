@@ -1,4 +1,3 @@
-from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -72,7 +71,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.secrets.exceptions import SecretError
-from nautobot.extras.utils import get_worker_count
+from nautobot.extras.utils import create_schedule, get_worker_count
 
 from . import serializers
 
@@ -449,63 +448,6 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 
 
-def _create_schedule(serializer, data, job_model, user, approval_required, task_queue=None):
-    """
-    This is an internal function to create a scheduled job from API data.
-    It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
-    jobs.
-    """
-    type_ = serializer["interval"]
-    if type_ == JobExecutionType.TYPE_IMMEDIATELY:
-        time = timezone.now()
-        name = serializer.get("name") or f"{job_model.name} - {time}"
-    elif type_ == JobExecutionType.TYPE_CUSTOM:
-        time = serializer.get("start_time")  # doing .get("key", "default") returns None instead of "default"
-        if time is None:
-            # "start_time" is checked against models.ScheduledJob.earliest_possible_time()
-            # which returns timezone.now() + timedelta(seconds=15)
-            time = timezone.now() + timedelta(seconds=20)
-        name = serializer["name"]
-    else:
-        time = serializer["start_time"]
-        name = serializer["name"]
-    crontab = serializer.get("crontab", "")
-
-    celery_kwargs = {
-        "nautobot_job_profile": False,
-        "queue": task_queue,
-    }
-    if job_model.soft_time_limit > 0:
-        celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
-    if job_model.time_limit > 0:
-        celery_kwargs["time_limit"] = job_model.time_limit
-
-    # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
-    #
-    # We pass in task and job_model here partly for forward/backward compatibility logic, and
-    # part fallback safety. It's mildly useful to store both the task module/class name and the JobModel
-    # FK on the ScheduledJob, as in the case where the JobModel gets deleted (and the FK becomes
-    # null) you still have a bit of context on the ScheduledJob as to what it was originally
-    # scheduled for.
-    scheduled_job = ScheduledJob(
-        name=name,
-        task=job_model.class_path,
-        job_model=job_model,
-        start_time=time,
-        description=f"Nautobot job {name} scheduled by {user} for {time}",
-        kwargs=data,
-        celery_kwargs=celery_kwargs,
-        interval=type_,
-        one_off=(type_ == JobExecutionType.TYPE_FUTURE),
-        user=user,
-        approval_required=approval_required,
-        crontab=crontab,
-        queue=task_queue,
-    )
-    scheduled_job.validated_save()
-    return scheduled_job
-
-
 class JobViewSetBase(
     NautobotAPIVersionMixin,
     # note no CreateModelMixin
@@ -705,7 +647,7 @@ class JobViewSetBase(
 
         # Try to create a ScheduledJob, or...
         if schedule_data:
-            schedule = _create_schedule(
+            schedule = create_schedule(
                 schedule_data,
                 job_class.serialize_data(cleaned_data),
                 job_model,

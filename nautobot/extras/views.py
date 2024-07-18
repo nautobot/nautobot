@@ -1,4 +1,3 @@
-from datetime import timedelta
 import logging
 
 from celery import chain
@@ -42,7 +41,7 @@ from nautobot.dcim.tables import ControllerTable, DeviceTable, RackTable
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.signals import change_context_state
 from nautobot.extras.tasks import delete_custom_field_data
-from nautobot.extras.utils import get_base_template, get_worker_count
+from nautobot.extras.utils import create_schedule, get_base_template, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -1345,59 +1344,29 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
             if (not dryrun and job_model.approval_required) or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
-                crontab = ""
+                schedule_data = {
+                    "interval": schedule_type,
+                    "start_time": schedule_form.cleaned_data.get("_schedule_start_time"),
+                    "crontab": schedule_form.cleaned_data.get("_recurrence_custom_time"),
+                    "name": schedule_form.cleaned_data.get("_schedule_name"),
+                    "profile": profile,
+                }
 
-                if schedule_type == JobExecutionType.TYPE_IMMEDIATELY:
-                    # The job must be approved.
-                    # If the schedule_type is immediate, we still create the task, but mark it for approval
-                    # as a once in the future task with the due date set to the current time. This means
-                    # when approval is granted, the task is immediately due for execution.
-                    schedule_type = JobExecutionType.TYPE_FUTURE
-                    schedule_datetime = timezone.now()
-                    schedule_name = f"{job_model} - {schedule_datetime}"
-
-                else:
-                    schedule_name = schedule_form.cleaned_data["_schedule_name"]
-
-                    if schedule_type == JobExecutionType.TYPE_CUSTOM:
-                        crontab = schedule_form.cleaned_data["_recurrence_custom_time"]
-                        # doing .get("key", "default") returns None instead of "default" here for some reason
-                        schedule_datetime = schedule_form.cleaned_data.get("_schedule_start_time")
-                        if schedule_datetime is None:
-                            # "_schedule_start_time" is checked against ScheduledJob.earliest_possible_time()
-                            # which returns timezone.now() + timedelta(seconds=15)
-                            schedule_datetime = timezone.now() + timedelta(seconds=20)
-                    else:
-                        schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
-
-                celery_kwargs = {"nautobot_job_profile": profile, "queue": task_queue}
-                if job_model.soft_time_limit > 0:
-                    celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
-                if job_model.time_limit > 0:
-                    celery_kwargs["time_limit"] = job_model.time_limit
-                scheduled_job = ScheduledJob(
-                    name=schedule_name,
-                    task=job_model.class_path,
+                scheduled_job = create_schedule(
+                    schedule_data=schedule_data,
+                    job_kwargs=job_class.serialize_data(job_form.cleaned_data),
                     job_model=job_model,
-                    start_time=schedule_datetime,
-                    description=f"Nautobot job {schedule_name} scheduled by {request.user} for {schedule_datetime}",
-                    kwargs=job_class.serialize_data(job_form.cleaned_data),
-                    celery_kwargs=celery_kwargs,
-                    interval=schedule_type,
-                    one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
-                    queue=task_queue,
                     user=request.user,
                     approval_required=job_model.approval_required,
-                    crontab=crontab,
+                    task_queue=task_queue,
                 )
-                scheduled_job.validated_save()
 
                 if job_model.approval_required:
-                    messages.success(request, f"Job {schedule_name} successfully submitted for approval")
-                    return redirect(return_url if return_url else "extras:scheduledjob_approval_queue_list")
+                    messages.success(request, f"Job {scheduled_job.name} successfully submitted for approval")
+                    return redirect(return_url or "extras:scheduledjob_approval_queue_list")
                 else:
-                    messages.success(request, f"Job {schedule_name} successfully scheduled")
-                    return redirect(return_url if return_url else "extras:scheduledjob_list")
+                    messages.success(request, f"Job {scheduled_job.name} successfully scheduled")
+                    return redirect(return_url or "extras:scheduledjob_list")
 
             else:
                 # Enqueue job for immediate execution

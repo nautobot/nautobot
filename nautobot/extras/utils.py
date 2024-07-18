@@ -1,4 +1,5 @@
 import collections
+from datetime import timedelta
 import hashlib
 import hmac
 import logging
@@ -13,13 +14,14 @@ from django.core.validators import ValidationError
 from django.db import transaction
 from django.db.models import Q
 from django.template.loader import get_template, TemplateDoesNotExist
+from django.utils import timezone
 from django.utils.deconstruct import deconstructible
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
-from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.choices import JobExecutionType, ObjectChangeActionChoices
 from nautobot.extras.constants import (
     CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL,
     EXTRAS_FEATURES,
@@ -648,3 +650,62 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
         finally:
             change_context.defer_object_changes = False
             change_context.reset_deferred_object_changes()
+
+
+def create_schedule(schedule_data, job_kwargs, job_model, user, approval_required, task_queue=None):
+    """
+    This is an internal function to create a scheduled job from API data.
+    It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
+    jobs.
+    """
+    from nautobot.extras.models.jobs import ScheduledJob  # avoid circular import
+
+    type_ = schedule_data["interval"]
+    if type_ == JobExecutionType.TYPE_IMMEDIATELY:
+        time = timezone.now()
+        name = schedule_data.get("name") or f"{job_model.name} - {time}"
+    elif type_ == JobExecutionType.TYPE_CUSTOM:
+        time = schedule_data.get("start_time")  # doing .get("key", "default") returns None instead of "default"
+        if time is None:
+            # "start_time" is checked against models.ScheduledJob.earliest_possible_time()
+            # which returns timezone.now() + timedelta(seconds=15)
+            time = timezone.now() + timedelta(seconds=20)
+        name = schedule_data["name"]
+    else:
+        time = schedule_data["start_time"]
+        name = schedule_data["name"]
+    crontab = schedule_data.get("crontab", "")
+
+    celery_kwargs = {
+        "nautobot_job_profile": schedule_data.get("profile", False),
+        "queue": task_queue,
+    }
+    if job_model.soft_time_limit > 0:
+        celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
+    if job_model.time_limit > 0:
+        celery_kwargs["time_limit"] = job_model.time_limit
+
+    # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
+    #
+    # We pass in task and job_model here partly for forward/backward compatibility logic, and
+    # part fallback safety. It's mildly useful to store both the task module/class name and the JobModel
+    # FK on the ScheduledJob, as in the case where the JobModel gets deleted (and the FK becomes
+    # null) you still have a bit of context on the ScheduledJob as to what it was originally
+    # scheduled for.
+    scheduled_job = ScheduledJob(
+        name=name,
+        task=job_model.class_path,
+        job_model=job_model,
+        start_time=time,
+        description=f"Nautobot job {name} scheduled by {user} for {time}",
+        kwargs=job_kwargs,
+        celery_kwargs=celery_kwargs,
+        interval=type_,
+        one_off=(type_ == JobExecutionType.TYPE_FUTURE),
+        user=user,
+        approval_required=approval_required,
+        crontab=crontab,
+        queue=task_queue,
+    )
+    scheduled_job.validated_save()
+    return scheduled_job
