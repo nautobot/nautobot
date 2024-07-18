@@ -82,7 +82,7 @@ class CloudAccountFilterForm(NautobotFilterForm):
 
 class CloudNetworkForm(NautobotModelForm):
     cloud_resource_type = DynamicModelChoiceField(
-        queryset=CloudResourceType.objects.get_for_model(CloudNetwork),
+        queryset=CloudResourceType.objects.all(),
         query_params={"content_types": [CloudNetwork._meta.label_lower]},
     )
     cloud_account = DynamicModelChoiceField(
@@ -129,7 +129,7 @@ class CloudNetworkForm(NautobotModelForm):
 class CloudNetworkBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=CloudNetwork.objects.all(), widget=forms.MultipleHiddenInput)
     cloud_resource_type = DynamicModelChoiceField(
-        queryset=CloudResourceType.objects.get_for_model(CloudNetwork),
+        queryset=CloudResourceType.objects.all(),
         query_params={"content_types": [CloudNetwork._meta.label_lower]},
         required=False,
     )
@@ -162,7 +162,7 @@ class CloudNetworkFilterForm(NautobotFilterForm):
     q = forms.CharField(required=False, label="Search")
     name = MultiValueCharField(required=False)
     cloud_resource_type = DynamicModelMultipleChoiceField(
-        queryset=CloudResourceType.objects.get_for_model(CloudNetwork),
+        queryset=CloudResourceType.objects.all(),
         query_params={"content_types": [CloudNetwork._meta.label_lower]},
         to_field_name="name",
         required=False,
@@ -254,7 +254,7 @@ class CloudServiceForm(NautobotModelForm):
         queryset=CloudNetwork.objects.all(),
     )
     cloud_resource_type = DynamicModelChoiceField(
-        queryset=CloudResourceType.objects.get_for_model(CloudService),
+        queryset=CloudResourceType.objects.all(),
         query_params={"content_types": [CloudService._meta.label_lower]},
     )
 
@@ -304,7 +304,7 @@ class CloudServiceFilterForm(NautobotFilterForm):
         queryset=CloudNetwork.objects.all(), to_field_name="name", required=False
     )
     cloud_resource_type = DynamicModelMultipleChoiceField(
-        queryset=CloudResourceType.objects.get_for_model(CloudService),
+        queryset=CloudResourceType.objects.all(),
         query_params={"content_types": [CloudService._meta.label_lower]},
         to_field_name="name",
         required=False,
