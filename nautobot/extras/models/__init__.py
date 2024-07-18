@@ -13,7 +13,7 @@ from .jobs import (
     ScheduledJobs,
 )
 from .metadata import MetadataChoice, MetadataType, ObjectMetadata
-from .mixins import ContactMixin, DynamicGroupMixin, DynamicGroupsModelMixin
+from .mixins import ContactMixin, DynamicGroupMixin, DynamicGroupsModelMixin, SavedViewMixin
 from .models import (
     ConfigContext,
     ConfigContextModel,
@@ -27,6 +27,8 @@ from .models import (
     HealthCheckTestModel,
     ImageAttachment,
     Note,
+    SavedView,
+    UserSavedViewAssociation,
     Webhook,
 )
 from .relationships import Relationship, RelationshipAssociation, RelationshipModel
@@ -75,6 +77,8 @@ __all__ = (
     "RelationshipAssociation",
     "Role",
     "RoleField",
+    "SavedView",
+    "SavedViewMixin",
     "ScheduledJob",
     "ScheduledJobs",
     "Secret",
@@ -87,5 +91,6 @@ __all__ = (
     "Tag",
     "TaggedItem",
     "Team",
+    "UserSavedViewAssociation",
     "Webhook",
 )

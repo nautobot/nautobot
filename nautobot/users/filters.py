@@ -10,14 +10,12 @@ from nautobot.core.filters import (
     SearchFilter,
 )
 from nautobot.dcim.models import RackReservation
-from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import ObjectChange
-from nautobot.users.models import ObjectPermission, SavedView, Token, UserSavedViewAssociation
+from nautobot.users.models import ObjectPermission, Token
 
 __all__ = (
     "GroupFilterSet",
     "ObjectPermissionFilterSet",
-    "SavedViewFilterSet",
     "UserFilterSet",
 )
 
@@ -28,26 +26,6 @@ class GroupFilterSet(BaseFilterSet):
     class Meta:
         model = Group
         fields = ["id", "name"]
-
-
-class SavedViewFilterSet(BaseFilterSet):
-    q = SearchFilter(filter_predicates={"name": "icontains", "owner__username": "icontains"})
-    owner = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="username",
-        queryset=get_user_model().objects.all(),
-        label="Owner (ID or name)",
-    )
-
-    class Meta:
-        model = SavedView
-        fields = [
-            "id",
-            "owner",
-            "name",
-            "view",
-            "is_global_default",
-            "is_shared",
-        ]
 
 
 class UserFilterSet(BaseFilterSet):
@@ -112,23 +90,6 @@ class UserFilterSet(BaseFilterSet):
             "is_staff",
             "is_active",
         ]
-
-
-class UserSavedViewAssociationFilterSet(NautobotFilterSet):
-    saved_view = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=SavedView.objects.all(),
-        to_field_name="name",
-        label="Saved View (ID or name)",
-    )
-    user = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="username",
-        queryset=get_user_model().objects.all(),
-        label="User (ID or username)",
-    )
-
-    class Meta:
-        model = UserSavedViewAssociation
-        fields = ["id", "saved_view", "user", "view_name"]
 
 
 class TokenFilterSet(BaseFilterSet):

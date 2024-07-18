@@ -48,10 +48,9 @@ from nautobot.core.views.utils import (
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.forms import NoteForm
-from nautobot.extras.models import ExportTemplate
+from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template, remove_prefix_from_cf_key
-from nautobot.users.models import SavedView, UserSavedViewAssociation
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -718,7 +717,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
                         Q(pk=user_default_saved_view_pk),
                         Q(owner=user) | Q(is_shared=True),
                     )
-                    sv_url = reverse("users:savedview", kwargs={"pk": user_default_saved_view_pk})
+                    sv_url = reverse("extras:savedview", kwargs={"pk": user_default_saved_view_pk})
                     return redirect(sv_url)
                 except ObjectDoesNotExist:
                     pass
@@ -726,7 +725,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             # Check if there is a global default for this view
             try:
                 global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
-                return redirect(reverse("users:savedview", kwargs={"pk": global_saved_view.pk}))
+                return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
             except ObjectDoesNotExist:
                 pass
 

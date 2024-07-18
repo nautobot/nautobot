@@ -142,3 +142,12 @@ class NotesMixin:
                 continue
 
         return None
+
+
+class SavedViewMixin(models.Model):
+    """Abstract mixin for enabling Saved View functionality to a given model class."""
+
+    class Meta:
+        abstract = True
+
+    is_saved_view_model = True
