@@ -55,6 +55,7 @@ from nautobot.extras.filters import (
     RelationshipAssociationFilterSet,
     RelationshipFilterSet,
     RoleFilterSet,
+    SavedViewFilterSet,
     SecretFilterSet,
     SecretsGroupAssociationFilterSet,
     SecretsGroupFilterSet,
@@ -91,6 +92,7 @@ from nautobot.extras.models import (
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
@@ -1857,6 +1859,37 @@ class RelationshipAssociationFilterSetTestCase(FilterTestCases.FilterTestCase):
                 self.queryset,
             ).qs.count(),
             2,
+        )
+
+
+class SavedViewTestCase(FilterTestCases.FilterTestCase):
+    queryset = SavedView.objects.all()
+    filterset = SavedViewFilterSet
+
+    generic_filter_tests = (
+        ["owner", "owner__id"],
+        ["owner", "owner__username"],
+        ["name"],
+        ["view"],
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        user = User.objects.create(username="User1", is_active=True)
+        SavedView.objects.create(
+            name="Global default View", owner=user, view="dcim:location_list", is_global_default=True
+        )
+
+    def test_is_shared(self):
+        params = {"is_shared": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(is_shared=True)
+        )
+
+    def test_is_global_default(self):
+        params = {"is_global_default": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(is_global_default=True)
         )
 
 

@@ -9,7 +9,7 @@ from nautobot.core.api import (
     ContentTypeField,
     ValidatedModelSerializer,
 )
-from nautobot.users.models import ObjectPermission, SavedView, Token, UserSavedViewAssociation
+from nautobot.users.models import ObjectPermission, Token
 
 
 class UserSerializer(ValidatedModelSerializer):
@@ -58,13 +58,6 @@ class UserSerializer(ValidatedModelSerializer):
         return instance
 
 
-class UserSavedViewAssociationSerializer(ValidatedModelSerializer):
-    class Meta:
-        model = UserSavedViewAssociation
-        fields = "__all__"
-        validators = []
-
-
 class GroupSerializer(ValidatedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="users-api:group-detail")
     user_count = serializers.IntegerField(read_only=True)
@@ -72,12 +65,6 @@ class GroupSerializer(ValidatedModelSerializer):
     class Meta:
         model = Group
         exclude = ["permissions"]
-
-
-class SavedViewSerializer(ValidatedModelSerializer):
-    class Meta:
-        model = SavedView
-        fields = "__all__"
 
 
 class TokenSerializer(ValidatedModelSerializer):

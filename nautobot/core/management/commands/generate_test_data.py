@@ -111,6 +111,7 @@ class Command(BaseCommand):
                 ObjectChangeFactory,
                 ObjectMetadataFactory,
                 RoleFactory,
+                SavedViewFactory,
                 StatusFactory,
                 TagFactory,
                 TeamFactory,
@@ -129,7 +130,7 @@ class Command(BaseCommand):
                 VRFFactory,
             )
             from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
-            from nautobot.users.factory import SavedViewFactory, UserFactory
+            from nautobot.users.factory import UserFactory
         except ImportError as err:
             raise CommandError('Unable to load data factories. Is the "factory-boy" package installed?') from err
 

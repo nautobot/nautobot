@@ -44,13 +44,18 @@ from nautobot.extras.models import (
     StatusField,
     StatusModel,
 )
-from nautobot.extras.models.mixins import ContactMixin, DynamicGroupMixin, DynamicGroupsModelMixin, NotesMixin
+from nautobot.extras.models.mixins import (
+    ContactMixin,
+    DynamicGroupMixin,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+)
 from nautobot.extras.models.models import ConfigContextSchemaValidationMixin
 from nautobot.extras.plugins import CustomValidator
 from nautobot.extras.utils import extras_features
 from nautobot.ipam.fields import VarbinaryIPField
 from nautobot.ipam.models import get_default_namespace, get_default_namespace_pk
-from nautobot.users.models import SavedViewMixin
 
 __all__ = (
     "array_to_string",

@@ -64,6 +64,7 @@ from nautobot.extras.models import (
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -73,6 +74,7 @@ from nautobot.extras.models import (
     Tag,
     TaggedItem,
     Team,
+    UserSavedViewAssociation,
     Webhook,
 )
 from nautobot.extras.secrets.exceptions import SecretError
@@ -327,6 +329,23 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
     queryset = DynamicGroupMembership.objects.select_related("group", "parent_group")
     serializer_class = serializers.DynamicGroupMembershipSerializer
     filterset_class = filters.DynamicGroupMembershipFilterSet
+
+
+#
+# Saved Views
+#
+
+
+class SavedViewViewSet(ModelViewSet):
+    queryset = SavedView.objects.select_related("owner")
+    serializer_class = serializers.SavedViewSerializer
+    filterset_class = filters.SavedViewFilterSet
+
+
+class UserSavedViewAssociationViewSet(ModelViewSet):
+    queryset = UserSavedViewAssociation.objects.select_related("user", "saved_view")
+    serializer_class = serializers.UserSavedViewAssociationSerializer
+    filterset_class = filters.UserSavedViewAssociationFilterSet
 
 
 class StaticGroupAssociationViewSet(NautobotModelViewSet):

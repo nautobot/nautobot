@@ -74,6 +74,7 @@ from nautobot.extras.models import (
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -82,6 +83,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
     Team,
+    UserSavedViewAssociation,
     Webhook,
 )
 from nautobot.extras.models.mixins import NotesMixin
@@ -343,6 +345,19 @@ class DynamicGroupSerializer(TaggedModelSerializerMixin, NautobotModelSerializer
             "children": {"source": "dynamic_group_memberships", "read_only": True},
             "filter": {"read_only": False, "required": False},
         }
+
+
+class SavedViewSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = SavedView
+        fields = "__all__"
+
+
+class UserSavedViewAssociationSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = UserSavedViewAssociation
+        fields = "__all__"
+        validators = []
 
 
 class StaticGroupAssociationSerializer(NautobotModelSerializer):
