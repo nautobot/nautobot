@@ -471,7 +471,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelA
         # Attempt to create new location with blank time_zone attr.
         response = self.client.post(url, **self.header, data=location, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json()["time_zone"], ["A valid timezone is required."])
+        self.assertEqual(response.json()["time_zone"], ["This field may not be blank."])
 
     def test_time_zone_field_post_valid(self):
         """
