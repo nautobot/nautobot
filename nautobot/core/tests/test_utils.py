@@ -561,7 +561,7 @@ class LookupRelatedFunctionTest(TestCase):
                 form_field.queryset, extras_utils.ChangeLoggedModelsQuery().as_queryset()
             )
 
-        with self.subTest("Test prefers_pk"):
+        with self.subTest("Test prefers_id"):
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, "location")
             self.assertEqual("id", form_field.to_field_name)
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, "vlans")

@@ -438,14 +438,14 @@ class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilte
 
     field_class = forms.MultiMatchModelMultipleChoiceField
 
-    def __init__(self, *args, prefers_pk=False, **kwargs):
+    def __init__(self, *args, prefers_id=False, **kwargs):
         """Initialize the NaturalKeyOrPKMultipleChoiceFilter.
 
         Args:
-            prefers_pk (bool, optional): Prefer PK (ID) over the 'to_field_name'. Defaults to False.
+            prefers_id (bool, optional): Prefer PK (ID) over the 'to_field_name'. Defaults to False.
         """
         self.natural_key = kwargs.setdefault("to_field_name", "name")
-        self.prefers_pk = prefers_pk
+        self.prefers_id = prefers_id
         super().__init__(*args, **kwargs)
 
     def get_filter_predicate(self, v):

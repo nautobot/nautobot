@@ -114,7 +114,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     elif isinstance(field, NumberFilter):
         form_field = forms.IntegerField()
     elif isinstance(field, ModelMultipleChoiceFilter):
-        if getattr(field, "prefers_pk", False):
+        if getattr(field, "prefers_id", False):
             to_field_name = "id"
         else:
             to_field_name = field.extra.get("to_field_name", "id")

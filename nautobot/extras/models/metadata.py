@@ -104,6 +104,7 @@ class MetadataChoice(ChangeLoggedModel, BaseModel):
     )
     value = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")
+    is_metadata_associable_model = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/metadata.html"
 

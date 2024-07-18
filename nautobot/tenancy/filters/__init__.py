@@ -103,7 +103,7 @@ class TenantFilterSet(NautobotFilterSet):
         label="Has IP addresses",
     )
     locations = TreeNodeMultipleChoiceFilter(
-        prefers_pk=True,
+        prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Locations (names and/or IDs)",
