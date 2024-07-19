@@ -798,11 +798,13 @@ class NewBranch(Job):
         description="Access switch model", model=DeviceType, query_params={"manufacturer_id": "$manufacturer"}
     )
 
-    def run(self, location_name, switch_count, switch_model, manufacturer):
+    def run(self, *, location_name, switch_count, switch_model, manufacturer=None):
         STATUS_PLANNED = Status.objects.get(name="Planned")
 
         # Create the new location
         root_type, lt_created = LocationType.objects.get_or_create(name="Campus")
+        device_ct = ContentType.objects.get_for_model(Device)
+        root_type.content_types.add(device_ct)
         location = Location(
             name=location_name,
             location_type=root_type,
@@ -812,7 +814,6 @@ class NewBranch(Job):
         self.logger.info("Created new location", extra={"object": location})
 
         # Create access switches
-        device_ct = ContentType.objects.get_for_model(Device)
         switch_role, r_created = Role.objects.get_or_create(name="Access Switch")
         switch_role.content_types.add(device_ct)
         for i in range(1, switch_count + 1):
