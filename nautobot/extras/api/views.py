@@ -70,7 +70,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.secrets.exceptions import SecretError
-from nautobot.extras.utils import create_schedule, get_worker_count
+from nautobot.extras.utils import get_worker_count
 
 from . import serializers
 
@@ -646,13 +646,16 @@ class JobViewSetBase(
 
         # Try to create a ScheduledJob, or...
         if schedule_data:
-            schedule = create_schedule(
-                schedule_data,
-                job_class.serialize_data(cleaned_data),
+            schedule = ScheduledJob.create_schedule(
                 job_model,
                 request.user,
-                approval_required,
+                name=schedule_data.get("name"),
+                start_time=schedule_data.get("start_time"),
+                interval=schedule_data.get("interval"),
+                crontab=schedule_data.get("crontab"),
+                approval_required=approval_required,
                 task_queue=input_serializer.validated_data.get("task_queue", None),
+                **job_class.serialize_data(cleaned_data),
             )
         else:
             schedule = None

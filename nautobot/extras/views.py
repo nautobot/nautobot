@@ -41,7 +41,7 @@ from nautobot.dcim.tables import ControllerTable, DeviceTable, RackTable
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.signals import change_context_state
 from nautobot.extras.tasks import delete_custom_field_data
-from nautobot.extras.utils import create_schedule, get_base_template, get_worker_count
+from nautobot.extras.utils import get_base_template, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -1344,21 +1344,17 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
             if (not dryrun and job_model.approval_required) or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
-                schedule_data = {
-                    "interval": schedule_type,
-                    "start_time": schedule_form.cleaned_data.get("_schedule_start_time"),
-                    "crontab": schedule_form.cleaned_data.get("_recurrence_custom_time"),
-                    "name": schedule_form.cleaned_data.get("_schedule_name"),
-                    "profile": profile,
-                }
-
-                scheduled_job = create_schedule(
-                    schedule_data=schedule_data,
-                    job_kwargs=job_class.serialize_data(job_form.cleaned_data),
-                    job_model=job_model,
-                    user=request.user,
+                scheduled_job = ScheduledJob.create_schedule(
+                    job_model,
+                    request.user,
+                    name=schedule_form.cleaned_data.get("_schedule_name"),
+                    start_time=schedule_form.cleaned_data.get("_schedule_start_time"),
+                    interval=schedule_type,
+                    crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
                     approval_required=job_model.approval_required,
                     task_queue=task_queue,
+                    profile=profile,
+                    **job_class.serialize_data(job_form.cleaned_data),
                 )
 
                 if job_model.approval_required:
