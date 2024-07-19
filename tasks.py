@@ -73,6 +73,7 @@ namespace.configure(
                 "docker-compose.yml",
                 "docker-compose.postgres.yml",
                 "docker-compose.dev.yml",
+                "docker-compose.receptor_mesh.yml",
             ],
             # Image names to use when building from "main" branch
             "docker_image_names_main": [

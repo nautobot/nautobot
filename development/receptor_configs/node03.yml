@@ -1,0 +1,22 @@
+---
+- node:
+    id: executor01
+
+- log-level:
+    level: debug
+
+- tcp-peer:
+    address: node02.example.internal:7323
+
+- control-service:
+    service: control
+
+- work-command:
+    worktype: gather-hostname
+    command: cat
+    params: /etc/hostname
+
+- work-command:
+    worktype: hello-world
+    command: python3
+    params: /etc/receptor/examples/example_python.py

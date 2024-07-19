@@ -1,0 +1,9 @@
+---
+- node:
+    id: relayer01
+
+- log-level:
+    level: debug
+
+- tcp-listener:
+    port: 7323

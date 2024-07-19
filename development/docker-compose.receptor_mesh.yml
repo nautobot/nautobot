@@ -1,0 +1,28 @@
+services:
+  node01:
+    image: quay.io/ansible/receptor:latest
+    container_name: node01
+    hostname: node01.example.internal
+    command: "receptor -c /etc/receptor/receptor.conf"
+    volumes:
+      - "./receptor_configs/node01.yml:/etc/receptor/receptor.conf"
+      - "./receptor_examples/example_python.py:/etc/receptor/examples/example_python.py"
+    ports:
+      - "1234:1234"
+
+  node02:
+    image: quay.io/ansible/receptor:latest
+    container_name: node02
+    hostname: node02.example.internal
+    command: "receptor -c /etc/receptor/receptor.conf"
+    volumes:
+      - "./receptor_configs/node02.yml:/etc/receptor/receptor.conf"
+
+  node03:
+    image: quay.io/ansible/receptor:latest
+    container_name: node03
+    hostname: node03.example.internal
+    command: "receptor -c /etc/receptor/receptor.conf"
+    volumes:
+      - "./receptor_configs/node03.yml:/etc/receptor/receptor.conf"
+      - "./receptor_examples/example_python.py:/etc/receptor/examples/example_python.py"
