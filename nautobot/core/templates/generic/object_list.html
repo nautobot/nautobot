@@ -111,7 +111,11 @@
                 <span class="caret"></span>
                 <span class="sr-only">Toggle Dropdown</span>
             </button>
-        {% else %}
+        {% elif permissions.add and 'import' in action_buttons %}
+            <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
+                Actions <span class="caret"></span>
+            </button>
+        {% elif 'export' in action_buttons %}
             <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
                 Actions <span class="caret"></span>
             </button>
@@ -122,7 +126,9 @@
                     {% job_import_button content_type list_element=True%}
                 {% endblock import_list_element %}
             {% endif %}
-            <li class="divider"></li>
+            {% if permissions.add and 'import' in action_buttons and 'export' in action_buttons %}
+                <li class="divider"></li>
+            {% endif %}
             {% if 'export' in action_buttons %}
                 {% block export_list_element %}
                     {% export_button content_type list_element=True %}
