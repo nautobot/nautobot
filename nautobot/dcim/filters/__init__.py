@@ -195,6 +195,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         label="Location type (name or ID)",
     )
     parent = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Parent location (name or ID)",
@@ -221,6 +222,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         label="Has circuit terminations",
     )
     devices = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Device.objects.all(),
         to_field_name="name",
         label="Devices (name or ID)",
@@ -239,6 +241,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         label="Has power panels",
     )
     rack_groups = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=RackGroup.objects.all(),
         to_field_name="name",
         label="Rack groups (name or ID)",
@@ -273,8 +276,8 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         field_name="vlans",
         label="Has VLANs",
     )
-    # FIXME (timizuo): LocationFilterSet vlans field currently only filters with vid and not pk(throws an error when pk is provided)
     vlans = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="vid",
         queryset=VLAN.objects.all(),
         label="Tagged VLANs (VID or ID)",
@@ -366,6 +369,7 @@ class RackGroupFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet, NameSe
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_panels = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         field_name="power_panels",
         to_field_name="name",
         queryset=PowerPanel.objects.all(),
@@ -408,6 +412,7 @@ class RackFilterSet(
         },
     )
     rack_group = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=RackGroup.objects.all(),
         field_name="rack_group",
         to_field_name="name",
@@ -422,6 +427,7 @@ class RackFilterSet(
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_feeds = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         field_name="power_feeds",
         to_field_name="name",
         queryset=PowerFeed.objects.all(),
@@ -465,6 +471,7 @@ class RackReservationFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
         },
     )
     rack_group = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=RackGroup.objects.all(),
         field_name="rack__rack_group",
         to_field_name="name",
@@ -477,6 +484,7 @@ class RackReservationFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     rack = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Rack.objects.all(),
         to_field_name="name",
         label="Rack (name or ID)",
@@ -490,6 +498,7 @@ class RackReservationFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
 class ManufacturerFilterSet(NautobotFilterSet, NameSearchFilterSet):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     inventory_items = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=InventoryItem.objects.all(),
         to_field_name="name",
         label="Inventory items (name or ID)",
@@ -585,6 +594,7 @@ class DeviceTypeFilterSet(DeviceTypeModuleTypeCommonFiltersMixin, NautobotFilter
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     device_bay_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="name",
         queryset=DeviceBayTemplate.objects.all(),
         label="Device bay templates (name or ID)",
@@ -659,6 +669,7 @@ class ConsoleServerPortTemplateFilterSet(ModularDeviceComponentTemplateModelFilt
 class PowerPortTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMixin, BaseFilterSet):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_outlet_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="name",
         queryset=PowerOutletTemplate.objects.all(),
         label="Power outlet templates (name or ID)",
@@ -680,6 +691,7 @@ class PowerPortTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMix
 class PowerOutletTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMixin, BaseFilterSet):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_port_template = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="name",
         queryset=PowerPortTemplate.objects.all(),
         label="Power port template (name or ID)",
@@ -811,6 +823,7 @@ class DeviceFilterSet(
         queryset=Platform.objects.all(), to_field_name="name", label="Platform (name or ID)"
     )
     rack_group = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=RackGroup.objects.all(),
         field_name="rack__rack_group",
         to_field_name="name",
@@ -818,11 +831,11 @@ class DeviceFilterSet(
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     rack = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Rack.objects.all(),
         to_field_name="name",
         label="Rack (name or ID)",
     )
-    # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     cluster = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Cluster.objects.all(),
         to_field_name="name",
@@ -842,7 +855,6 @@ class DeviceFilterSet(
         to_field_name="name",
         label="Secrets group (name or ID)",
     )
-    # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     virtual_chassis = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualChassis.objects.all(),
         to_field_name="name",
@@ -975,6 +987,7 @@ class PowerPortFilterSet(
     type = django_filters.MultipleChoiceFilter(choices=PowerPortTypeChoices, null_value=None)
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_outlets = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         field_name="power_outlets",
         to_field_name="name",
         queryset=PowerOutlet.objects.all(),
@@ -1041,28 +1054,33 @@ class InterfaceFilterSet(
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     parent_interface = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Interface.objects.all(),
         to_field_name="name",
         label="Parent interface (name or ID)",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     bridge = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Interface.objects.all(),
         to_field_name="name",
         label="Bridge interface (name or ID)",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     lag = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="name",
         queryset=Interface.objects.filter(type=InterfaceTypeChoices.TYPE_LAG),
         label="LAG interface (name or ID)",
     )
     untagged_vlan = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="vid",
         queryset=VLAN.objects.all(),
         label="Untagged VLAN (VID or ID)",
     )
     tagged_vlans = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="vid",
         queryset=VLAN.objects.all(),
         label="Tagged VLANs (VID or ID)",
@@ -1073,6 +1091,7 @@ class InterfaceFilterSet(
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     child_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Interface.objects.all(),
         to_field_name="name",
         label="Child interfaces (name or ID)",
@@ -1083,6 +1102,7 @@ class InterfaceFilterSet(
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     bridged_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="name",
         queryset=Interface.objects.all(),
         label="Bridged interfaces (name or ID)",
@@ -1093,6 +1113,7 @@ class InterfaceFilterSet(
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     member_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="name",
         queryset=Interface.objects.all(),
         label="Member interfaces (name or ID)",
@@ -1191,6 +1212,7 @@ class InterfaceFilterSet(
 class FrontPortFilterSet(ModularDeviceComponentModelFilterSetMixin, CableTerminationModelFilterSetMixin, BaseFilterSet):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     rear_port = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="name",
         queryset=RearPort.objects.all(),
         label="Rear port (name or ID)",
@@ -1220,6 +1242,7 @@ class RearPortFilterSet(ModularDeviceComponentModelFilterSetMixin, CableTerminat
 class DeviceBayFilterSet(DeviceComponentModelFilterSetMixin, BaseFilterSet):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     installed_device = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         field_name="installed_device",
         to_field_name="name",
         queryset=Device.objects.all(),
@@ -1255,12 +1278,14 @@ class InventoryItemFilterSet(DeviceComponentModelFilterSetMixin, BaseFilterSet):
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     device = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Device.objects.all(),
         to_field_name="name",
         label="Device (name or ID)",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     parent = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=InventoryItem.objects.all(),
         to_field_name="name",
         label="Parent items (name or ID)",
@@ -1272,6 +1297,7 @@ class InventoryItemFilterSet(DeviceComponentModelFilterSetMixin, BaseFilterSet):
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     children = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=InventoryItem.objects.all(),
         to_field_name="name",
         label="Child items (name or ID)",
@@ -1328,11 +1354,14 @@ class VirtualChassisFilterSet(NautobotFilterSet):
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     master = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Device.objects.all(),
         to_field_name="name",
         label="Master (name or ID)",
     )
+    # TODO Check this filter as it is not using TreeNode...
     location = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         field_name="master__location",
         queryset=Location.objects.all(),
         to_field_name="name",
@@ -1346,6 +1375,7 @@ class VirtualChassisFilterSet(NautobotFilterSet):
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     members = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="name",
         queryset=Device.objects.all(),
         label="Device members (name or ID)",
@@ -1499,12 +1529,14 @@ class InterfaceConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
 class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):
     q = SearchFilter(filter_predicates={"name": "icontains"})
     rack_group = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=RackGroup.objects.all(),
         to_field_name="name",
         label="Rack group (name or ID)",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_feeds = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="name",
         queryset=PowerFeed.objects.all(),
         label="Power feeds (name or ID)",
@@ -1526,7 +1558,9 @@ class PowerFeedFilterSet(
     StatusModelFilterSetMixin,
 ):
     q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
+    # TODO: Why is this not using TreeNodeMultiple...
     location = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         field_name="power_panel__location",
         queryset=Location.objects.all(),
         to_field_name="name",
@@ -1534,12 +1568,14 @@ class PowerFeedFilterSet(
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_panel = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=PowerPanel.objects.all(),
         to_field_name="name",
         label="Power panel (name or ID)",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     rack = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Rack.objects.all(),
         to_field_name="name",
         label="Rack (name or ID)",

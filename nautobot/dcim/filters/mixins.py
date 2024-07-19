@@ -146,6 +146,7 @@ class LocatableModelFilterSetMixin(django_filters.FilterSet):
     """
 
     location = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Location (name or ID)",
@@ -269,6 +270,7 @@ class DeviceTypeModuleTypeCommonFiltersMixin(django_filters.FilterSet):
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     console_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="name",
         queryset=ConsolePortTemplate.objects.all(),
         label="Console port templates (name or ID)",
@@ -279,6 +281,7 @@ class DeviceTypeModuleTypeCommonFiltersMixin(django_filters.FilterSet):
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     console_server_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="name",
         queryset=ConsoleServerPortTemplate.objects.all(),
         label="Console server port templates (name or ID)",
@@ -289,6 +292,7 @@ class DeviceTypeModuleTypeCommonFiltersMixin(django_filters.FilterSet):
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="name",
         queryset=PowerPortTemplate.objects.all(),
         label="Power port templates (name or ID)",
@@ -299,6 +303,7 @@ class DeviceTypeModuleTypeCommonFiltersMixin(django_filters.FilterSet):
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_outlet_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="name",
         queryset=PowerOutletTemplate.objects.all(),
         label="Power outlet templates (name or ID)",
@@ -309,6 +314,7 @@ class DeviceTypeModuleTypeCommonFiltersMixin(django_filters.FilterSet):
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     interface_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="name",
         queryset=InterfaceTemplate.objects.all(),
         label="Interface templates (name or ID)",
@@ -319,6 +325,7 @@ class DeviceTypeModuleTypeCommonFiltersMixin(django_filters.FilterSet):
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     front_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="name",
         queryset=FrontPortTemplate.objects.all(),
         label="Front port templates (name or ID)",
@@ -329,6 +336,7 @@ class DeviceTypeModuleTypeCommonFiltersMixin(django_filters.FilterSet):
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     rear_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="name",
         queryset=RearPortTemplate.objects.all(),
         label="Rear port templates (name or ID)",

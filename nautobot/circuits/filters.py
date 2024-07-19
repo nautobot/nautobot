@@ -58,6 +58,7 @@ class ProviderFilterSet(NautobotFilterSet):
         label="Has provider networks",
     )
     location = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         field_name="circuits__circuit_terminations__location",
         queryset=Location.objects.all(),
         to_field_name="name",
@@ -141,6 +142,7 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
         label="Circuit type (name or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         field_name="circuit_terminations__location",
         queryset=Location.objects.all(),
         to_field_name="name",

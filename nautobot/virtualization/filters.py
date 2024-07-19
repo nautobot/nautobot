@@ -156,6 +156,7 @@ class VirtualMachineFilterSet(
         label="Cluster (ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         field_name="cluster__location",
         to_field_name="name",
@@ -320,6 +321,7 @@ class VMInterfaceFilterSet(
         label="MAC address",
     )
     tagged_vlans = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="vid",
         queryset=VLAN.objects.all(),
         label="Tagged VLANs (VID or ID)",
@@ -329,6 +331,7 @@ class VMInterfaceFilterSet(
         label="Has Tagged VLANs",
     )
     untagged_vlan = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="vid",
         queryset=VLAN.objects.all(),
         label="Untagged VLAN (VID or ID)",
