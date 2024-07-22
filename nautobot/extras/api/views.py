@@ -652,7 +652,7 @@ class JobViewSetBase(
                 name=schedule_data.get("name"),
                 start_time=schedule_data.get("start_time"),
                 interval=schedule_data.get("interval"),
-                crontab=schedule_data.get("crontab"),
+                crontab=schedule_data.get("crontab", ""),
                 approval_required=approval_required,
                 task_queue=input_serializer.validated_data.get("task_queue", None),
                 **job_class.serialize_data(cleaned_data),
