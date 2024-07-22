@@ -1105,7 +1105,7 @@ class ScheduledJob(BaseModel):
             crontab (str, optional): The crontab string for the schedule. Defaults to "".
             profile (bool, optional): Flag indicating whether to profile the job. Defaults to False.
             approval_required (bool, optional): Flag indicating if approval is required. Defaults to False.
-            task_queue (str, optional): The task queue for the job. Defaults to None.
+            task_queue (str, optional): The task queue for the job. Defaults to None, which will use the configured default celery queue.
             **job_kwargs: Additional keyword arguments to pass to the job.
         """
 
