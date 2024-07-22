@@ -2,7 +2,7 @@
 
 The documentation assumes that you are running one of the following:
 
-- Ubuntu 20.04+
+- Ubuntu 20.04 - 22.04
 - Debian 11+
 - RHEL/CentOS 8.2+
     - Delimited by `RHEL8` tabs in the docs, but also includes other derivatives of RHEL such as RockyLinux or AlmaLinux
@@ -19,6 +19,9 @@ This will install:
 - Redis server and client
 
 === "Ubuntu/Debian"
+
+    ???+ note "Ubuntu 24.04"
+        Ubuntu 24.04 is not officially supported by Nautobot 2.2 and prior yet. If you wish to attempt to use Nautobot 24.04 the one additional package in early testing to add would be `libjpeg-dev`. The pip resolution with Python 3.12 would require the use of the flag `--ignore-requires-python`.
 
     ```bash title="Install system dependencies"
     sudo apt update -y
