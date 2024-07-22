@@ -1,1 +1,0 @@
-Updated `zipp` to `3.19.1` to address `CVE-2024-5569`. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
