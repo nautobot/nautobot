@@ -1,1 +1,2 @@
 Fixed lags on the JobResults UI page when viewing logs with more than 2000+ rows using pagination.
+Fixed lags on the Bulk Importing of large csv files.
