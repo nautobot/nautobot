@@ -1107,6 +1107,9 @@ class ScheduledJob(BaseModel):
             approval_required (bool, optional): Flag indicating if approval is required. Defaults to False.
             task_queue (str, optional): The task queue for the job. Defaults to None, which will use the configured default celery queue.
             **job_kwargs: Additional keyword arguments to pass to the job.
+
+        Returns:
+            ScheduledJob instance
         """
 
         if interval == JobExecutionType.TYPE_IMMEDIATELY:
