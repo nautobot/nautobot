@@ -1786,7 +1786,6 @@ class JobLogEntryTableView(generic.GenericView):
             )
         else:
             queryset = instance.job_log_entries.all()
-        # queryset = instance.job_log_entries.none()
         log_table = tables.JobLogEntryTable(data=queryset, user=request.user)
         # RequestConfig(request).configure(log_table)
         paginate = {
