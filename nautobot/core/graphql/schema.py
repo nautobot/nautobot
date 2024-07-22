@@ -6,7 +6,8 @@ import logging
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import ValidationError
-from django.db.models.fields.reverse_related import ManyToOneRel, OneToOneRel
+from django.db.models import ManyToManyField
+from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel, OneToOneRel
 import graphene
 from graphene.types import generic
 
@@ -204,9 +205,11 @@ def extend_schema_type_filter(schema_type, model):
         (DjangoObjectType): The extended schema_type object
     """
     for field in model._meta.get_fields():
-        # Check attribute is a ManyToOne field
-        # OneToOneRel is a subclass of ManyToOneRel, but we don't want to treat is as a list
-        if not isinstance(field, ManyToOneRel) or isinstance(field, OneToOneRel):
+        # Check whether attribute is a ManyToOne or ManyToMany field
+        if not isinstance(field, (ManyToManyField, ManyToManyRel, ManyToOneRel)):
+            continue
+        # OneToOneRel is a subclass of ManyToOneRel, but we don't want to treat it as a list
+        if isinstance(field, OneToOneRel):
             continue
         child_schema_type = registry["graphql_types"].get(field.related_model._meta.label_lower)
         if child_schema_type:

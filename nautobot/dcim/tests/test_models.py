@@ -20,6 +20,7 @@ from nautobot.dcim.choices import (
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
+    SubdeviceRoleChoices,
 )
 from nautobot.dcim.models import (
     Cable,
@@ -1391,6 +1392,13 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         self.device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="Test Device Type 1",
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT,
+        )
+        self.child_devicetype = DeviceType.objects.create(
+            model="Child Device Type 1",
+            manufacturer=manufacturer,
+            subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+            u_height=0,
         )
         self.device_role = Role.objects.get_for_model(Device).first()
         self.device_status = Status.objects.get_for_model(Device).first()
@@ -1826,6 +1834,73 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.device.all_rear_ports.count(), 3)
         self.assertEqual(self.device.all_power_ports.count(), 3)
         self.assertEqual(self.device.all_power_outlets.count(), 3)
+
+    def test_child_devices_are_not_saved_when_unnecessary(self):
+        parent_device = Device.objects.create(
+            name="Parent Device 1",
+            location=self.location_3,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+        )
+        parent_device.validated_save()
+
+        child_device = Device.objects.create(
+            name="Child Device 1",
+            location=parent_device.location,
+            device_type=self.child_devicetype,
+            role=parent_device.role,
+            status=self.device_status,
+        )
+        child_device.validated_save()
+        child_mtime_before_parent_saved = str(child_device.last_updated)
+
+        devicebay = DeviceBay.objects.get(device=parent_device, name="Device Bay 1")
+        devicebay.installed_device = child_device
+        devicebay.validated_save()
+
+        #
+        # Tests
+        #
+
+        #
+        # On a NOOP save, the child device shouldn't be updated
+        parent_device.save()
+
+        child_mtime_after_parent_noop_save = str(Device.objects.get(name="Child Device 1").last_updated)
+
+        self.assertEqual(child_mtime_before_parent_saved, child_mtime_after_parent_noop_save)
+
+        #
+        # On a serial number update, the child device shouldn't be updated
+        parent_device.serial = "12345"
+        parent_device.save()
+
+        child_mtime_after_parent_serial_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
+
+        self.assertEqual(child_mtime_before_parent_saved, child_mtime_after_parent_serial_update_save)
+
+        #
+        # If the parent rack updates, the child mtime should update.
+        rack = Rack.objects.create(name="Rack 1", location=parent_device.location, status=self.device_status)
+        parent_device.rack = rack
+        parent_device.save()
+
+        child_mtime_after_parent_rack_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
+
+        self.assertNotEqual(child_mtime_after_parent_noop_save, child_mtime_after_parent_rack_update_save)
+
+        #
+        # If the parent site updates, the child mtime should update
+        location = Location.objects.create(
+            name="New Site 1", status=self.device_status, location_type=self.location_type_3
+        )
+        parent_device.location = location
+        parent_device.save()
+
+        child_mtime_after_parent_site_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
+
+        self.assertNotEqual(child_mtime_after_parent_rack_update_save, child_mtime_after_parent_site_update_save)
 
 
 class DeviceTypeToSoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):

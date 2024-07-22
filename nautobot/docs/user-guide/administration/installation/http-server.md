@@ -69,13 +69,13 @@ Begin by installing NGINX:
     === "Vim"
 
         ```no-highlight title="Edit NGINX config with Vim"
-        vim /etc/nginx/sites-available/nautobot.conf
+        sudo vim /etc/nginx/sites-available/nautobot.conf
         ```
 
     === "Nano"
 
         ```no-highlight title="Edit NGINX config with Nano"
-        nano /etc/nginx/sites-available/nautobot.conf
+        sudo nano /etc/nginx/sites-available/nautobot.conf
         ```
 
     ```nginxconf title="/etc/nginx/sites-available/nautobot.conf"
@@ -128,13 +128,13 @@ Begin by installing NGINX:
     === "Vim"
 
         ```no-highlight title="Edit Nautobot site config with Vim"
-        vim /etc/nginx/conf.d/nautobot.conf
+        sudo vim /etc/nginx/conf.d/nautobot.conf
         ```
 
     === "Nano"
 
         ```no-highlight title="Edit Nautobot site config with Nano"
-        nano /etc/nginx/conf.d/nautobot.conf
+        sudo nano /etc/nginx/conf.d/nautobot.conf
         ```
 
     ```nginxconf title="/etc/nginx/conf.d/nautobot.conf"
