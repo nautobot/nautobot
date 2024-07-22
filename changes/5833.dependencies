@@ -1,2 +1,0 @@
-Updated dependency `social-auth-app-django` to `~5.4.2`.
-Updated optional dependency `django-storages` to `~1.14.4`.
