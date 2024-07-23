@@ -118,36 +118,31 @@ class CloudServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cloud_resource_types = CloudResourceType.objects.get_for_model(CloudService)
         cloud_networks = CloudNetwork.objects.all()
         cloud_accounts = CloudAccount.objects.all()
-        CloudService.objects.create(
-            name="Deletable Cloud Service 1",
-            description="It really is deletable",
-            cloud_resource_type=cloud_resource_types[0],
-            cloud_network=cloud_networks[0],
+        cloud_services = (
+            CloudService.objects.create(name="Deletable Cloud Service 1", cloud_resource_type=cloud_resource_types[0]),
+            CloudService.objects.create(name="Deletable Cloud Service 2", cloud_resource_type=cloud_resource_types[1]),
+            CloudService.objects.create(
+                name="Deletable Cloud Service 3",
+                cloud_resource_type=cloud_resource_types[2],
+                cloud_account=cloud_accounts[0],
+            ),
         )
-        CloudService.objects.create(
-            name="Deletable Cloud Service 2",
-            cloud_resource_type=cloud_resource_types[1],
-            cloud_network=cloud_networks[1],
-        )
-        CloudService.objects.create(
-            name="Deletable Cloud Service 3",
-            cloud_resource_type=cloud_resource_types[2],
-            cloud_network=cloud_networks[2],
-            cloud_account=cloud_accounts[0],
-        )
+        cloud_services[0].cloud_networks.set([cloud_networks[0]])
+        cloud_services[1].cloud_networks.set([cloud_networks[1]])
+        cloud_services[2].cloud_networks.set([cloud_networks[2]])
 
         cls.form_data = {
             "name": "New Cloud Service",
             "description": "It is a new one",
+            "cloud_networks": [cloud_networks[1].pk],
             "cloud_resource_type": cloud_resource_types[1].pk,
-            "cloud_network": cloud_networks[1].pk,
             "cloud_account": cloud_accounts[1].pk,
             "extra_config": '{"role": 1, "status": "greetings"}',
             "tags": [t.pk for t in Tag.objects.get_for_model(CloudService)],
         }
 
         cls.bulk_edit_data = {
-            "cloud_network": cloud_networks[2].pk,
             "cloud_account": cloud_accounts[2].pk,
+            "cloud_networks": [cloud_networks[2].pk],
             "description": "testing",
         }

@@ -168,17 +168,14 @@ class CloudServiceTest(APIViewTestCases.APIViewTestCase):
             name="Deletable Service 1",
             description="It really is deletable",
             cloud_account=cloud_accounts[0],
-            cloud_network=cloud_networks[0],
             cloud_resource_type=cloud_resource_types[0],
         )
         models.CloudService.objects.create(
             name="Deletable Service 2",
-            cloud_network=cloud_networks[1],
             cloud_resource_type=cloud_resource_types[1],
         )
         models.CloudService.objects.create(
             name="Deletable Service 3",
-            cloud_network=cloud_networks[2],
             cloud_resource_type=cloud_resource_types[2],
         )
         cls.create_data = [
@@ -186,32 +183,31 @@ class CloudServiceTest(APIViewTestCases.APIViewTestCase):
                 "name": "Cloud Service 1",
                 "description": "The first cloud service",
                 "cloud_account": cloud_accounts[0].pk,
-                "cloud_network": cloud_networks[0].pk,
+                "cloud_networks": [cloud_networks[0].pk],
                 "cloud_resource_type": cloud_resource_types[0].pk,
                 "extra_config": {"status": "hey"},
             },
             {
                 "name": "Cloud Service 2",
                 "cloud_account": cloud_accounts[1].pk,
-                "cloud_network": cloud_networks[1].pk,
+                "cloud_networks": [cloud_networks[1].pk],
                 "cloud_resource_type": cloud_resource_types[1].pk,
                 "extra_config": {"status": "hello"},
             },
             {
                 "name": "Cloud Service 3",
                 "cloud_account": cloud_accounts[2].pk,
-                "cloud_network": cloud_networks[2].pk,
+                "cloud_networks": [cloud_networks[1].pk, cloud_networks[2].pk],
                 "cloud_resource_type": cloud_resource_types[2].pk,
                 "extra_config": {"status": "greetings", "role": 1},
             },
             {
                 "name": "Cloud Service 4",
-                "cloud_network": cloud_networks[0].pk,
                 "cloud_resource_type": cloud_resource_types[0].pk,
             },
         ]
         cls.bulk_update_data = {
-            "cloud_network": cloud_networks[4].pk,
+            "cloud_networks": [cloud_networks[3].pk, cloud_networks[4].pk],
             "cloud_resource_type": cloud_resource_types[1].pk,
             "description": "testing",
         }

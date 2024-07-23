@@ -202,10 +202,10 @@ class CloudService(CloudResourceTypeMixin, PrimaryModel):
         blank=True,
         null=True,
     )
-    cloud_network = models.ForeignKey(to=CloudNetwork, on_delete=models.PROTECT, related_name="cloud_services")
+    cloud_networks = models.ManyToManyField(to=CloudNetwork, related_name="cloud_services", blank=True)
     clone_fields = [
         "cloud_account",
-        "cloud_network",
+        "cloud_networks",
         "cloud_resource_type",
     ]
 

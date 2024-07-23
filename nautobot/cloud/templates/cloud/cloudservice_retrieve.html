@@ -22,10 +22,6 @@
                 <td>{{ object.cloud_account|hyperlinked_object }}</td>
             </tr>
             <tr>
-                <td>Cloud Network</td>
-                <td>{{ object.cloud_network|hyperlinked_object }}</td>
-            </tr>
-            <tr>
                 <td>Cloud Resource Type</td>
                 <td>{{ object.cloud_resource_type|hyperlinked_object }}</td>
             </tr>
@@ -43,3 +39,13 @@
         </div>
     </div>
 {% endblock content_right_page %}
+
+{% block content_full_width_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Cloud Networks</strong>
+        </div>
+        {% include 'inc/table.html' with table=networks_table %}
+    </div>
+    {% include 'inc/paginator.html' with paginator=networks_table.paginator page=networks_table.page %}
+{% endblock content_full_width_page %}

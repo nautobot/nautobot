@@ -180,14 +180,6 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
-                    "cloud_network",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT,
-                        related_name="cloud_services",
-                        to="cloud.cloudnetwork",
-                    ),
-                ),
-                (
                     "cloud_resource_type",
                     nautobot.core.models.fields.ForeignKeyLimitedByContentTypes(
                         on_delete=django.db.models.deletion.PROTECT, to="cloud.cloudresourcetype"
@@ -267,5 +259,10 @@ class Migration(migrations.Migration):
             model_name="cloudnetwork",
             name="tags",
             field=nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag"),
+        ),
+        migrations.AddField(
+            model_name="cloudservice",
+            name="cloud_networks",
+            field=models.ManyToManyField(blank=True, related_name="cloud_services", to="cloud.cloudnetwork"),
         ),
     ]

@@ -140,3 +140,21 @@ class CloudServiceUIViewSet(NautobotUIViewSet):
     table_class = CloudServiceTable
     form_class = CloudServiceForm
     bulk_update_form_class = CloudServiceBulkEditForm
+
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+
+            networks = instance.cloud_networks.restrict(request.user, "view")
+            networks_table = CloudNetworkTable(networks)
+            RequestConfig(request, paginate).configure(networks_table)
+
+            context.update(
+                {
+                    "networks_count": networks.count(),
+                    "networks_table": networks_table,
+                }
+            )
+
+        return context

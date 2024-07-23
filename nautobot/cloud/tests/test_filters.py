@@ -56,6 +56,8 @@ class CloudNetworkTestCase(FilterTestCases.NameOnlyFilterTestCase):
     generic_filter_tests = [
         ("cloud_account", "cloud_account__id"),
         ("cloud_account", "cloud_account__name"),
+        ("cloud_services", "cloud_services__id"),
+        ("cloud_services", "cloud_services__name"),
         ("cloud_resource_type", "cloud_resource_type__id"),
         ("cloud_resource_type", "cloud_resource_type__name"),
         ("description",),
@@ -81,10 +83,9 @@ class CloudServiceTestCase(FilterTestCases.NameOnlyFilterTestCase):
     generic_filter_tests = [
         ("cloud_account", "cloud_account__id"),
         ("cloud_account", "cloud_account__name"),
-        ("cloud_network", "cloud_network__id"),
-        ("cloud_network", "cloud_network__name"),
+        ("cloud_networks", "cloud_networks__id"),
+        ("cloud_networks", "cloud_networks__name"),
         ("cloud_resource_type", "cloud_resource_type__id"),
         ("cloud_resource_type", "cloud_resource_type__name"),
-        ("description",),
         ("name",),
     ]

@@ -1,0 +1,1 @@
+Changed CloudService `network_account` field from a ForeignKey to a ManyToMany called `network_accounts`.

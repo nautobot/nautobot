@@ -88,6 +88,10 @@ class CloudNetworkFilterSet(NautobotFilterSet):
         queryset=models.CloudAccount.objects.all(),
         label="Cloud account (name or ID)",
     )
+    cloud_services = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.CloudService.objects.all(),
+        label="Cloud services (name or ID)",
+    )
     parent = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudNetwork.objects.all(),
         label="Parent cloud network (name or ID)",
@@ -125,8 +129,8 @@ class CloudServiceFilterSet(NautobotFilterSet):
             "description": "icontains",
             "cloud_account__name": "icontains",
             "cloud_account__description": "icontains",
-            "cloud_network__name": "icontains",
-            "cloud_network__description": "icontains",
+            "cloud_networks__name": "icontains",
+            "cloud_networks__description": "icontains",
             "cloud_resource_type__name": "icontains",
             "cloud_resource_type__description": "icontains",
         }
@@ -135,9 +139,9 @@ class CloudServiceFilterSet(NautobotFilterSet):
         queryset=models.CloudAccount.objects.all(),
         label="Cloud account (name or ID)",
     )
-    cloud_network = NaturalKeyOrPKMultipleChoiceFilter(
+    cloud_networks = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudNetwork.objects.all(),
-        label="Cloud network (name or ID)",
+        label="Cloud networks (name or ID)",
     )
     cloud_resource_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudResourceType.objects.all(),
@@ -146,4 +150,4 @@ class CloudServiceFilterSet(NautobotFilterSet):
 
     class Meta:
         model = models.CloudService
-        fields = ["id", "name", "description", "cloud_account", "cloud_network", "cloud_resource_type", "tags"]
+        fields = ["id", "name", "description", "cloud_account", "cloud_networks", "cloud_resource_type", "tags"]
