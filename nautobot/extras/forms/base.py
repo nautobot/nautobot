@@ -26,11 +26,12 @@ __all__ = (
 
 
 class NautobotModelForm(
+    BootstrapMixin,
+    # The below must be listed *after* BootstrapMixin so that BootstrapMixin applies to their dynamic form fields
     CustomFieldModelFormMixin,
     DynamicGroupModelFormMixin,
     NoteModelFormMixin,
     RelationshipModelFormMixin,
-    BootstrapMixin,
 ):
     """
     This class exists to combine common functionality and is used to inherit from throughout the
@@ -40,9 +41,10 @@ class NautobotModelForm(
 
 
 class NautobotFilterForm(
-    ContactTeamModelFilterFormMixin,
     BootstrapMixin,
-    CustomFieldModelFilterFormMixin,  # currently must come *after* BootstrapMixin to get proper CSS classes applied
+    # The below must be listed *after* BootstrapMixin so that BootstrapMixin applies to their dynamic form fields
+    ContactTeamModelFilterFormMixin,
+    CustomFieldModelFilterFormMixin,
     RelationshipModelFilterFormMixin,
 ):
     """
@@ -53,6 +55,10 @@ class NautobotFilterForm(
 
 
 class NautobotBulkEditForm(
-    BootstrapMixin, CustomFieldModelBulkEditFormMixin, RelationshipModelBulkEditFormMixin, NoteModelBulkEditFormMixin
+    BootstrapMixin,
+    # The below must be listed *after* BootstrapMixin so that BootstrapMixin applies to their dynamic form fields
+    CustomFieldModelBulkEditFormMixin,
+    NoteModelBulkEditFormMixin,
+    RelationshipModelBulkEditFormMixin,
 ):
     """Base class for bulk-edit forms for models that support relationships, custom fields and notes."""
