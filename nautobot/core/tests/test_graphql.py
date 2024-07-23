@@ -731,8 +731,8 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         cls.location_type = LocationType.objects.get(name="Campus")
         cls.location1 = Location.objects.filter(location_type=cls.location_type).first()
         cls.location2 = Location.objects.filter(location_type=cls.location_type).last()
-        cls.location1.name = "Location-1"
-        cls.location2.name = "Location-2"
+        cls.location1.name = "Campus Location-1"
+        cls.location2.name = "Campus Location-2"
         cls.location1.status = cls.location_statuses[0]
         cls.location2.status = cls.location_statuses[1]
         cls.location1.validated_save()
@@ -935,6 +935,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         cls.prefix1 = Prefix.objects.create(
             prefix="10.0.1.0/24", namespace=cls.namespace, status=cls.prefix_statuses[0]
         )
+        cls.prefix1.locations.add(cls.location1, cls.location2)
         cls.ipaddr1 = IPAddress.objects.create(
             address="10.0.1.1/24", namespace=cls.namespace, status=cls.ip_statuses[0]
         )
@@ -974,6 +975,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         cls.prefix2 = Prefix.objects.create(
             prefix="10.0.2.0/24", namespace=cls.namespace, status=cls.prefix_statuses[1]
         )
+        cls.prefix2.locations.add(cls.location1, cls.location2)
         cls.ipaddr2 = IPAddress.objects.create(
             address="10.0.2.1/30", namespace=cls.namespace, status=cls.ip_statuses[1]
         )
@@ -1518,9 +1520,9 @@ query {
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_locations_filter(self):
         filters = (
-            ('name: "Location-1"', 1),
-            ('name: ["Location-1"]', 1),
-            ('name: ["Location-1", "Location-2"]', 2),
+            ('name: "Campus Location-1"', 1),
+            ('name: ["Campus Location-1"]', 1),
+            ('name: ["Campus Location-1", "Campus Location-2"]', 2),
             ('name__ic: "Location"', Location.objects.filter(name__icontains="Location").count()),
             ('name__ic: ["Location"]', Location.objects.filter(name__icontains="Location").count()),
             ('name__nic: "Location"', Location.objects.exclude(name__icontains="Location").count()),
@@ -1551,6 +1553,50 @@ query {
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["locations"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_prefixes_nested_m2m_filter(self):
+        """
+        Test functionality added to address https://github.com/nautobot/nautobot/issues/5906.
+
+        Prefix.locations is a ManyToManyField, which was not filterable in our GraphQL schema before this fix.
+        """
+        query = 'query { prefixes (prefix_length__gte:16) { prefix locations (location_type:["Campus"]) { name } } }'
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        found_valid_location = False
+        found_invalid_location = False
+        for prefix_data in result.data["prefixes"]:
+            for location_data in prefix_data["locations"]:
+                if location_data["name"].startswith("Campus"):
+                    found_valid_location = True
+                else:
+                    print(f"Found unexpected unfiltered location {location_data['name']} under {prefix_data['prefix']}")
+                    found_invalid_location = True
+        self.assertTrue(found_valid_location)
+        self.assertFalse(found_invalid_location)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_locations_nested_reverse_m2m_filter(self):
+        """
+        Test functionality added to address https://github.com/nautobot/nautobot/issues/5906.
+
+        Location.prefixes is a (reverse) ManyToManyRel, which was not filterable in our GraphQL schema before this fix.
+        """
+        query = "query { locations { name prefixes (prefix_length:24) { prefix } } }"
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        found_valid_prefix = False
+        found_invalid_prefix = False
+        for location_data in result.data["locations"]:
+            for prefix_data in location_data["prefixes"]:
+                if prefix_data["prefix"].endswith("/24"):
+                    found_valid_prefix = True
+                else:
+                    print(f"Found unexpected unfiltered prefix {prefix_data['prefix']} under {location_data['name']}")
+                    found_invalid_prefix = True
+        self.assertTrue(found_valid_prefix)
+        self.assertFalse(found_invalid_prefix)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_devices_filter(self):

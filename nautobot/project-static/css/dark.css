@@ -217,6 +217,11 @@ html[data-theme="dark"] pre {
   color: rgb(29, 40, 42);
 }
 
+html[data-theme="dark"] pre code.hljs {
+  /* We let the hljs handle the color so Syntax highlighting works, but we set the background to match the <pre> blocks.*/
+  background-color: rgb(29, 40, 42)
+}
+
 /* Breadcrumbs */
 html[data-theme="dark"] .breadcrumb>li+li:before {
   color: rgb(142, 142, 142);
