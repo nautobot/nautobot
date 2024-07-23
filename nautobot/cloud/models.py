@@ -5,15 +5,10 @@ from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 from jsonschema.validators import Draft7Validator
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel, ContentTypeRelatedQuerySet
+from nautobot.core.models.fields import ForeignKeyLimitedByContentTypes
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.extras.utils import FeatureQuery, extras_features
-
-
-class CloudTypeMixin:
-    """Mixin that designates a model as compatible with CloudType content_types selections."""
-
-    is_cloud_type_model = True
 
 
 @extras_features(
@@ -66,25 +61,27 @@ class CloudAccount(PrimaryModel):
     "graphql",
     "webhooks",
 )
-class CloudType(PrimaryModel):
+class CloudResourceType(PrimaryModel):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, help_text="Type of cloud objects", unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     provider = models.ForeignKey(
         to="dcim.Manufacturer",
         on_delete=models.PROTECT,
-        related_name="cloud_types",
+        related_name="cloud_resource_types",
     )
     config_schema = models.JSONField(null=True, blank=True)
     content_types = models.ManyToManyField(
         to=ContentType,
         help_text="The content type(s) to which this model applies.",
-        related_name="cloud_types",
-        limit_choices_to=FeatureQuery("cloud_types"),
+        related_name="cloud_resource_types",
+        limit_choices_to=FeatureQuery("cloud_resource_types"),
     )
     clone_fields = [
         "provider",
         "content_types",
     ]
+
+    objects = BaseManager.from_queryset(ContentTypeRelatedQuerySet)()
 
     class Meta:
         ordering = ["name"]
@@ -97,6 +94,36 @@ class CloudType(PrimaryModel):
         return f"{self.provider}: {self.name}"
 
 
+class CloudResourceTypeMixin(models.Model):
+    """Mixin that designates a model as compatible with CloudResourceType content_types selections."""
+
+    cloud_resource_type = ForeignKeyLimitedByContentTypes(to=CloudResourceType, on_delete=models.PROTECT)
+    extra_config = models.JSONField(null=True, blank=True)
+
+    is_cloud_resource_type_model = True
+
+    class Meta:
+        abstract = True
+
+    def clean(self):
+        super().clean()
+
+        # Copied from nautobot.extras.models.models.ConfigContextSchemaValidationMixin
+        schema = self.cloud_resource_type.config_schema
+        if schema:
+            try:
+                Draft7Validator(schema, format_checker=Draft7Validator.FORMAT_CHECKER).validate(self.extra_config)
+            except JSONSchemaValidationError as e:
+                raise ValidationError(
+                    {
+                        "extra_config": [
+                            f"Validation according to CloudResourceType {self.cloud_resource_type} config_schema failed.",
+                            e.message,
+                        ]
+                    }
+                )
+
+
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -104,10 +131,9 @@ class CloudType(PrimaryModel):
     "graphql",
     "webhooks",
 )
-class CloudNetwork(CloudTypeMixin, PrimaryModel):
+class CloudNetwork(CloudResourceTypeMixin, PrimaryModel):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
-    cloud_type = models.ForeignKey(to=CloudType, on_delete=models.PROTECT, related_name="cloud_networks")
     cloud_account = models.ForeignKey(to=CloudAccount, on_delete=models.PROTECT, related_name="cloud_networks")
     parent = models.ForeignKey(
         to="cloud.CloudNetwork", on_delete=models.SET_NULL, blank=True, null=True, related_name="children"
@@ -118,9 +144,8 @@ class CloudNetwork(CloudTypeMixin, PrimaryModel):
         to="ipam.Prefix",
         through="cloud.CloudNetworkPrefixAssignment",
     )
-    extra_config = models.JSONField(null=True, blank=True)
     clone_fields = [
-        "cloud_type",
+        "cloud_resource_type",
         "cloud_account",
         "parent",
     ]
@@ -142,22 +167,7 @@ class CloudNetwork(CloudTypeMixin, PrimaryModel):
             if self.parent == self:
                 raise ValidationError({"parent": "A CloudNetwork may not be its own parent."})
 
-        # TODO: should we enforce that self.cloud_type.provider == self.cloud_account.provider?
-
-        # Copied from nautobot.extras.models.models.ConfigContextSchemaValidationMixin
-        schema = self.cloud_type.config_schema
-        if schema:
-            try:
-                Draft7Validator(schema, format_checker=Draft7Validator.FORMAT_CHECKER).validate(self.extra_config)
-            except JSONSchemaValidationError as e:
-                raise ValidationError(
-                    {
-                        "extra_config": [
-                            f"Validation according to CloudType {self.cloud_type} config_schema failed.",
-                            e.message,
-                        ]
-                    }
-                )
+        # TODO: should we enforce that self.cloud_resource_type.provider == self.cloud_account.provider?
 
 
 @extras_features("graphql")
@@ -181,8 +191,9 @@ class CloudNetworkPrefixAssignment(BaseModel):
     "graphql",
     "webhooks",
 )
-class CloudService(PrimaryModel):
+class CloudService(CloudResourceTypeMixin, PrimaryModel):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     cloud_account = models.ForeignKey(
         to=CloudAccount,
         related_name="cloud_services",
@@ -192,12 +203,10 @@ class CloudService(PrimaryModel):
         null=True,
     )
     cloud_network = models.ForeignKey(to=CloudNetwork, on_delete=models.PROTECT, related_name="cloud_services")
-    cloud_type = models.ForeignKey(to=CloudType, on_delete=models.PROTECT, related_name="cloud_services")
-    extra_config = models.JSONField(null=True, blank=True)
     clone_fields = [
         "cloud_account",
         "cloud_network",
-        "cloud_type",
+        "cloud_resource_type",
     ]
 
     class Meta:

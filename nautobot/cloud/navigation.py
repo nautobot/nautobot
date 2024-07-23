@@ -11,29 +11,13 @@ menu_items = (
         weight=200,
         groups=(
             NavMenuGroup(
-                name="Accounts",
+                name="Cloud",
                 weight=100,
                 items=(
                     NavMenuItem(
-                        link="cloud:cloudnetwork_list",
-                        name="Cloud Networks",
-                        weight=100,
-                        permissions=[
-                            "cloud.view_cloudnetwork",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="cloud:cloudnetwork_add",
-                                permissions=[
-                                    "cloud.add_cloudnetwork",
-                                ],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
                         link="cloud:cloudservice_list",
                         name="Cloud Services",
-                        weight=200,
+                        weight=100,
                         permissions=[
                             "cloud.view_cloudservice",
                         ],
@@ -47,17 +31,33 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
-                        link="cloud:cloudtype_list",
-                        name="Cloud Types",
-                        weight=300,
+                        link="cloud:cloudnetwork_list",
+                        name="Cloud Networks",
+                        weight=200,
                         permissions=[
-                            "cloud.view_cloudtype",
+                            "cloud.view_cloudnetwork",
                         ],
                         buttons=(
                             NavMenuAddButton(
-                                link="cloud:cloudtype_add",
+                                link="cloud:cloudnetwork_add",
                                 permissions=[
-                                    "cloud.add_cloudtype",
+                                    "cloud.add_cloudnetwork",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="cloud:cloudresourcetype_list",
+                        name="Cloud Resource Types",
+                        weight=300,
+                        permissions=[
+                            "cloud.view_cloudresourcetype",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="cloud:cloudresourcetype_add",
+                                permissions=[
+                                    "cloud.add_cloudresourcetype",
                                 ],
                             ),
                         ),

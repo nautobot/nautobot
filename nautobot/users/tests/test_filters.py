@@ -14,11 +14,10 @@ from nautobot.extras.models import ObjectChange
 from nautobot.users.filters import (
     GroupFilterSet,
     ObjectPermissionFilterSet,
-    SavedViewFilterSet,
     TokenFilterSet,
     UserFilterSet,
 )
-from nautobot.users.models import ObjectPermission, SavedView, Token
+from nautobot.users.models import ObjectPermission, Token
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -208,37 +207,6 @@ class ObjectPermissionTestCase(FilterTestCases.FilterTestCase):
         object_types = ContentType.objects.filter(model__in=["location", "rack"])
         params = {"object_types": [object_types[0].pk, object_types[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-
-class SavedViewTestCase(FilterTestCases.FilterTestCase):
-    queryset = SavedView.objects.all()
-    filterset = SavedViewFilterSet
-
-    generic_filter_tests = (
-        ["owner", "owner__id"],
-        ["owner", "owner__username"],
-        ["name"],
-        ["view"],
-    )
-
-    @classmethod
-    def setUpTestData(cls):
-        user = User.objects.create(username="User1", is_active=True)
-        SavedView.objects.create(
-            name="Global default View", owner=user, view="dcim:location_list", is_global_default=True
-        )
-
-    def test_is_shared(self):
-        params = {"is_shared": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(is_shared=True)
-        )
-
-    def test_is_global_default(self):
-        params = {"is_global_default": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(is_global_default=True)
-        )
 
 
 class TokenTestCase(FilterTestCases.FilterTestCase):

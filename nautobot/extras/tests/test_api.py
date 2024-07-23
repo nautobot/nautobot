@@ -71,6 +71,7 @@ from nautobot.extras.models import (
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -79,6 +80,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
     Team,
+    UserSavedViewAssociation,
     Webhook,
 )
 from nautobot.extras.models.jobs import JobButton, JobHook
@@ -2302,6 +2304,109 @@ class JobLogEntryTest(
         url = reverse("extras-api:jobresult-logs", kwargs={"pk": self.job_result.pk})
         response = self.client.get(url, **self.header)
         self.assertEqual(len(response.json()), JobLogEntry.objects.filter(job_result=self.job_result).count())
+
+
+class SavedViewTest(APIViewTestCases.APIViewTestCase):
+    model = SavedView
+
+    def setUp(self):
+        super().setUp()
+        self.create_data = [
+            {
+                "owner": self.user.pk,
+                "name": "Saved View 1",
+                "view": "circuits:circuit_list",
+                "config": {
+                    "filter_params": {"circuit_type": ["#047c4c", "#06cc23"], "status": ["Active", "Decommissioned"]}
+                },
+                "is_global_default": False,
+                "is_shared": True,
+            },
+            {
+                "owner": self.user.pk,
+                "name": "Saved View 2",
+                "view": "dcim:device_list",
+                "config": {
+                    "filter_params": {
+                        "location": ["Campus-01", "Building-02", "Aisle-06"],
+                        "role": ["PossibleDangerous", "NervousDangerous"],
+                        "status": ["Active", "ExtremeOriginal"],
+                    }
+                },
+                "is_global_default": False,
+                "is_shared": False,
+            },
+            {
+                "owner": self.user.pk,
+                "name": "Saved View 3",
+                "view": "dcim:location_list",
+                "config": {
+                    "filter_params": {
+                        "location_type": ["Campus", "Building", "Elevator"],
+                        "parent": ["Campus-01", "Building-02"],
+                        "q": "building-02",
+                    },
+                    "pagination_count": 50,
+                    "sort_order": [],
+                    "table_config": {
+                        "LocationTable": {
+                            "columns": ["name", "status", "location_type", "description", "parent", "tenant"]
+                        }
+                    },
+                },
+                "is_global_default": False,
+                "is_shared": True,
+            },
+        ]
+
+
+class UserSavedViewAssociationTest(APIViewTestCases.APIViewTestCase):
+    model = UserSavedViewAssociation
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.saved_view_views_distinct = SavedView.objects.values("view").distinct()
+        cls.users = User.objects.all()
+
+        cls.create_data = []
+        for i, saved_view in enumerate(cls.saved_view_views_distinct[:3]):
+            sv = SavedView.objects.filter(view=saved_view["view"]).first()
+            cls.create_data.append(
+                {
+                    "user": cls.users[i].pk,
+                    "saved_view": sv.pk,
+                    "view_name": sv.view,
+                }
+            )
+        for i, saved_view in enumerate(cls.saved_view_views_distinct[4:7]):
+            sv = SavedView.objects.filter(view=saved_view["view"]).first()
+            UserSavedViewAssociation.objects.create(
+                user=cls.users[i],
+                saved_view=sv,
+                view_name=sv.view,
+            )
+
+    def test_creating_invalid_user_to_saved_view(self):
+        # Add object-level permission
+        duplicate_view_name = self.saved_view_views_distinct[0]["view"]
+        saved_view = SavedView.objects.filter(view=duplicate_view_name).first()
+        user = self.users[0]
+        UserSavedViewAssociation.objects.create(
+            saved_view=saved_view,
+            user=user,
+            view_name=saved_view.view,
+        )
+        duplicate_user_to_savedview_create_data = {
+            "user": user.pk,
+            "saved_view": saved_view.pk,
+            "view_name": duplicate_view_name,
+        }
+        self.add_permissions("extras.add_usersavedviewassociation")
+        response = self.client.post(
+            self._get_list_url(), duplicate_user_to_savedview_create_data, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("User saved view association with this User and View name already exists.", str(response.content))
 
 
 class ScheduledJobTest(

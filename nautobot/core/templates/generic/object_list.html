@@ -75,13 +75,13 @@
                 {% endif %}
                 {% if current_saved_view %}
                     <li>
-                        <a href="{% url 'user:savedview_update_config' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                        <a href="{% url 'extras:savedview_update_config' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
                             <i class="mdi mdi-content-save-outline text-muted" aria-hidden="true"></i>
                             <span>Update Current Saved View</span>
                         </a>
                     </li>
                     <li>
-                        <a href="{% url 'user:savedview_set_default' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                        <a href="{% url 'extras:savedview_set_default' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
                             <i class="mdi mdi-star text-muted" aria-hidden="true"></i>
                             <span>Set As My Default</span>
                         </a>
@@ -95,7 +95,7 @@
                 </li>
                 {% if current_saved_view %}
                     <li>
-                        <a href="{% url 'user:savedview_delete' pk=request.GET.saved_view %}">
+                        <a href="{% url 'extras:savedview_delete' pk=request.GET.saved_view %}">
                             <i class="mdi mdi-trash-can-outline text-danger" aria-hidden="true"></i>
                             <span class="text-danger">Delete Current Saved View</span>
                         </a>
@@ -111,7 +111,11 @@
                 <span class="caret"></span>
                 <span class="sr-only">Toggle Dropdown</span>
             </button>
-        {% else %}
+        {% elif permissions.add and 'import' in action_buttons %}
+            <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
+                Actions <span class="caret"></span>
+            </button>
+        {% elif 'export' in action_buttons %}
             <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
                 Actions <span class="caret"></span>
             </button>
@@ -122,7 +126,9 @@
                     {% job_import_button content_type list_element=True%}
                 {% endblock import_list_element %}
             {% endif %}
-            <li class="divider"></li>
+            {% if permissions.add and 'import' in action_buttons and 'export' in action_buttons %}
+                <li class="divider"></li>
+            {% endif %}
             {% if 'export' in action_buttons %}
                 {% block export_list_element %}
                     {% export_button content_type list_element=True %}

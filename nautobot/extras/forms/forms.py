@@ -74,6 +74,7 @@ from nautobot.extras.models import (
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     ScheduledJob,
     Secret,
     SecretsGroup,
@@ -168,6 +169,8 @@ __all__ = (
     "RoleBulkEditForm",
     "RoleFilterForm",
     "RoleForm",
+    "SavedViewForm",
+    "SavedViewModalForm",
     "ScheduledJobFilterForm",
     "SecretForm",
     "SecretFilterForm",
@@ -642,6 +645,40 @@ class DynamicGroupBulkAssignForm(BootstrapMixin, BulkEditForm):
                 raise ValidationError("Same group specified for both addition and removal")
 
         return data
+
+
+#
+# Saved View
+#
+
+
+class SavedViewForm(BootstrapMixin, forms.ModelForm):
+    is_global_default = forms.BooleanField(
+        label="Is global default",
+        required=False,
+        help_text="If checked, this saved view will be used globally as the default saved view for this particular view",
+    )
+    is_shared = forms.BooleanField(
+        label="Is shared",
+        required=False,
+        help_text="If checked, all users will be able to see this saved view",
+    )
+
+    class Meta:
+        model = SavedView
+        fields = ["name", "is_global_default", "is_shared"]
+
+
+class SavedViewModalForm(BootstrapMixin, forms.ModelForm):
+    is_shared = forms.BooleanField(
+        label="Is shared",
+        required=False,
+        help_text="If checked, all users will be able to see this saved view",
+    )
+
+    class Meta:
+        model = SavedView
+        fields = ["name", "config", "is_shared"]
 
 
 class StaticGroupAssociationFilterForm(NautobotFilterForm):

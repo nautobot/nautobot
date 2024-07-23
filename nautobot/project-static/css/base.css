@@ -896,6 +896,7 @@ pre:has(code.hljs) {
 }
 pre code.hljs {
     padding: 11.5px; /* Same as Bootstrap 3 `pre` padding */
+    background-color: #f4f4f4; /* Reset Bootstrap 3 `pre` background-color in case it contains a `code` element already formatted by highlight.js */
 }
 code.hljs {
     padding: 2px 4px; /* Same as Bootstrap 3 `code` padding */
@@ -978,4 +979,9 @@ code.hljs {
     color: #ffffff;
     text-decoration: none;
     background-color: #646464;
+}
+
+select {
+    appearance: auto;
+    -webkit-appearance: none; /* Webkit Desktop clients likes to use button for this select when using auto, which is an old standard. */
 }

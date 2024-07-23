@@ -15,12 +15,10 @@ from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMix
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.utils.data import flatten_dict
 from nautobot.extras.models.change_logging import ChangeLoggedModel
-from nautobot.extras.utils import extras_features
 
 __all__ = (
     "AdminGroup",
     "ObjectPermission",
-    "SavedView",
     "Token",
     "User",
 )
@@ -57,9 +55,9 @@ class User(BaseModel, AbstractUser):
 
     config_data = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
     default_saved_views = models.ManyToManyField(
-        to="users.SavedView",
+        to="extras.SavedView",
         related_name="users",
-        through="users.UserSavedViewAssociation",
+        through="extras.UserSavedViewAssociation",
         through_fields=("user", "saved_view"),
         blank=True,
         verbose_name="user-specific default saved views",
@@ -169,24 +167,6 @@ class User(BaseModel, AbstractUser):
             self.save()
 
 
-@extras_features("graphql")
-class UserSavedViewAssociation(BaseModel):
-    saved_view = models.ForeignKey("users.SavedView", on_delete=models.CASCADE, related_name="user_assignments")
-    user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="saved_view_assignments")
-    view_name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
-    is_metadata_associable_model = False
-
-    class Meta:
-        unique_together = [["user", "view_name"]]
-
-    def __str__(self):
-        return f"{self.user}: {self.saved_view} - {self.view_name}"
-
-    def clean(self):
-        super().clean()
-        self.view_name = self.saved_view.view
-
-
 #
 # Proxy models for admin
 #
@@ -279,7 +259,7 @@ class ObjectPermission(BaseModel, ChangeLoggedModel):
             )
             | Q(app_label="admin", model__in=["logentry"])
             | Q(app_label="auth", model__in=["group"])
-            | Q(app_label="users", model__in=["objectpermission", "token", "user", "savedview"])
+            | Q(app_label="users", model__in=["objectpermission", "token", "user"])
         ),
         related_name="object_permissions",
     )
@@ -314,61 +294,3 @@ class ObjectPermission(BaseModel, ChangeLoggedModel):
         if not isinstance(self.constraints, list):
             return [self.constraints]
         return self.constraints
-
-
-#
-# SavedView
-#
-
-
-class SavedViewMixin(models.Model):
-    """Abstract mixin for enabling Saved View functionality to a given model class."""
-
-    class Meta:
-        abstract = True
-
-    is_saved_view_model = True
-
-
-@extras_features(
-    "custom_validators",
-)
-class SavedView(BaseModel, ChangeLoggedModel):
-    owner = models.ForeignKey(
-        to=User, blank=False, null=False, on_delete=models.CASCADE, help_text="The user that created this view"
-    )
-    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=False, null=False, help_text="The name of this view")
-    view = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        blank=False,
-        null=False,
-        help_text="The name of the list view that the saved view is derived from, e.g. dcim:device_list",
-    )
-    config = models.JSONField(
-        encoder=DjangoJSONEncoder, blank=True, default=dict, help_text="Saved Configuration on this view"
-    )
-    is_global_default = models.BooleanField(default=False)
-    is_shared = models.BooleanField(default=True)
-
-    documentation_static_path = "docs/user-guide/platform-functionality/savedview.html"
-    is_metadata_associable_model = False
-
-    class Meta:
-        ordering = ["owner", "view", "name"]
-        unique_together = [["owner", "name", "view"]]
-        verbose_name = "saved view"
-        verbose_name_plural = "saved views"
-
-    def __str__(self):
-        return f"{self.owner.username} - {self.view} - {self.name}"
-
-    def save(self, *args, **kwargs):
-        # If this SavedView is set to a global default, all other saved views related to this view name should not be the global default.
-        if self.is_global_default:
-            SavedView.objects.filter(view=self.view, is_global_default=True).exclude(pk=self.pk).update(
-                is_global_default=False
-            )
-            # If the view is set to Global default, is_shared should be true regardless
-            self.is_shared = True
-
-        super().save(*args, **kwargs)

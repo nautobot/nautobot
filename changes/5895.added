@@ -1,1 +1,1 @@
-Added missing model documentation for `CloudNetwork`, `CloudNetworkPrefixAssignment`, `CloudService` and `CloudType`.
+Added missing model documentation for `CloudNetwork`, `CloudNetworkPrefixAssignment`, `CloudService` and ~`CloudType`~ `CloudResourceType`.

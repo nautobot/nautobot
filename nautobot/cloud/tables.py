@@ -9,7 +9,7 @@ from nautobot.core.tables import (
 )
 from nautobot.tenancy.tables import TenantColumn
 
-from .models import CloudAccount, CloudNetwork, CloudNetworkPrefixAssignment, CloudService, CloudType
+from .models import CloudAccount, CloudNetwork, CloudNetworkPrefixAssignment, CloudResourceType, CloudService
 
 
 class CloudAccountTable(BaseTable):
@@ -44,7 +44,7 @@ class CloudAccountTable(BaseTable):
 class CloudNetworkTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    cloud_type = tables.Column(linkify=True)
+    cloud_resource_type = tables.Column(linkify=True)
     cloud_account = tables.Column(linkify=True)
     parent = tables.Column(linkify=True)
     actions = ButtonsColumn(CloudNetwork)
@@ -59,6 +59,7 @@ class CloudNetworkTable(BaseTable):
         verbose_name="Circuits",
         reverse_lookup="circuit_terminations__cloud_network",
     )
+    tags = TagColumn(url_name="cloud:cloudnetwork_list")
 
     class Meta(BaseTable.Meta):
         model = CloudNetwork
@@ -66,7 +67,7 @@ class CloudNetworkTable(BaseTable):
             "pk",
             "name",
             "description",
-            "cloud_type",
+            "cloud_resource_type",
             "cloud_account",
             "parent",
             "assigned_prefix_count",
@@ -78,7 +79,7 @@ class CloudNetworkTable(BaseTable):
             "pk",
             "name",
             "description",
-            "cloud_type",
+            "cloud_resource_type",
             "cloud_account",
             "assigned_prefix_count",
             "circuit_count",
@@ -102,14 +103,15 @@ class CloudNetworkPrefixAssignmentTable(BaseTable):
         fields = ("cloud_network", "prefix", "rd", "tenant")
 
 
-class CloudTypeTable(BaseTable):
+class CloudResourceTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     provider = tables.Column(linkify=True)
-    actions = ButtonsColumn(CloudType)
+    tags = TagColumn(url_name="cloud:cloudresourcetype_list")
+    actions = ButtonsColumn(CloudResourceType)
 
     class Meta(BaseTable.Meta):
-        model = CloudType
+        model = CloudResourceType
         fields = (
             "pk",
             "name",
@@ -135,7 +137,8 @@ class CloudServiceTable(BaseTable):
     name = tables.Column(linkify=True)
     cloud_account = tables.Column(linkify=True)
     cloud_network = tables.Column(linkify=True)
-    cloud_type = tables.Column(linkify=True)
+    cloud_resource_type = tables.Column(linkify=True)
+    tags = TagColumn(url_name="cloud:cloudservice_list")
     actions = ButtonsColumn(CloudService)
 
     class Meta(BaseTable.Meta):
@@ -145,7 +148,7 @@ class CloudServiceTable(BaseTable):
             "name",
             "cloud_account",
             "cloud_network",
-            "cloud_type",
+            "cloud_resource_type",
             "tags",
             "actions",
         )
@@ -154,6 +157,6 @@ class CloudServiceTable(BaseTable):
             "name",
             "cloud_account",
             "cloud_network",
-            "cloud_type",
+            "cloud_resource_type",
             "actions",
         )

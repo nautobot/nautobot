@@ -72,8 +72,8 @@ class Command(BaseCommand):
             from nautobot.cloud.factory import (
                 CloudAccountFactory,
                 CloudNetworkFactory,
+                CloudResourceTypeFactory,
                 CloudServiceFactory,
-                CloudTypeFactory,
             )
             from nautobot.dcim.factory import (
                 ConsolePortTemplateFactory,
@@ -111,6 +111,7 @@ class Command(BaseCommand):
                 ObjectChangeFactory,
                 ObjectMetadataFactory,
                 RoleFactory,
+                SavedViewFactory,
                 StatusFactory,
                 TagFactory,
                 TeamFactory,
@@ -129,7 +130,7 @@ class Command(BaseCommand):
                 VRFFactory,
             )
             from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
-            from nautobot.users.factory import SavedViewFactory, UserFactory
+            from nautobot.users.factory import UserFactory
         except ImportError as err:
             raise CommandError('Unable to load data factories. Is the "factory-boy" package installed?') from err
 
@@ -221,7 +222,7 @@ class Command(BaseCommand):
         _create_batch(SoftwareVersionFactory, 5, description="without Devices")
         _create_batch(SoftwareImageFileFactory, 5, description="without DeviceTypes")
         _create_batch(CloudAccountFactory, 10)
-        _create_batch(CloudTypeFactory, 20)
+        _create_batch(CloudResourceTypeFactory, 20)
         _create_batch(CloudNetworkFactory, 20)
         _create_batch(CloudServiceFactory, 20)
         _create_batch(CircuitTypeFactory, 40)

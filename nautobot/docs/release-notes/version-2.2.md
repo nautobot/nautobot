@@ -66,6 +66,33 @@ The CSV import functionality for all models has been changed from a synchronous 
 Model CharFields' `max_length` attributes have been standardized globally to have at least 255 characters except where a shorter `max_length` is explicitly justified.
 
 <!-- towncrier release notes start -->
+## v2.2.8 (2024-07-22)
+
+### Security
+
+- [#5911](https://github.com/nautobot/nautobot/issues/5911) - Updated `zipp` to `3.19.1` to address `CVE-2024-5569`. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+### Fixed
+
+- [#5569](https://github.com/nautobot/nautobot/issues/5569) - Fixed relationship required to ignore objects that do not match the related filter.
+- [#5613](https://github.com/nautobot/nautobot/issues/5613) - Fixed intermittent failure in integration test for dynamic groups.
+- [#5906](https://github.com/nautobot/nautobot/issues/5906) - Added support for filtering in GraphQL of objects identified by a many-to-many relation (`Location.prefixes`, `Prefix.locations`, etc.)
+- [#5935](https://github.com/nautobot/nautobot/issues/5935) - Fixed issue in which a save() could be called unnecessarily on child devices.
+
+### Dependencies
+
+- [#5833](https://github.com/nautobot/nautobot/issues/5833) - Updated dependency `social-auth-app-django` to `~5.4.2`.
+- [#5833](https://github.com/nautobot/nautobot/issues/5833) - Updated optional dependency `django-storages` to `~1.14.4`.
+
+### Documentation
+
+- [#5833](https://github.com/nautobot/nautobot/issues/5833) - Updated documentation dependency `mkdocs-material` to `~9.5.29`.
+- [#5874](https://github.com/nautobot/nautobot/issues/5874) - Updated documentation regarding Nautobot on Ubuntu 24.04.
+
+### Housekeeping
+
+- [#5610](https://github.com/nautobot/nautobot/issues/5610) - Added integration test to do basic checking for static media failures caused by typos in template files.
+
 ## v2.2.7 (2024-07-08)
 
 ### Security

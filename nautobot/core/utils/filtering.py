@@ -114,9 +114,13 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     elif isinstance(field, NumberFilter):
         form_field = forms.IntegerField()
     elif isinstance(field, ModelMultipleChoiceFilter):
+        if getattr(field, "prefers_id", False):
+            to_field_name = "id"
+        else:
+            to_field_name = field.extra.get("to_field_name", "id")
         form_attr = {
             "queryset": field.extra["queryset"],
-            "to_field_name": field.extra.get("to_field_name", "id"),
+            "to_field_name": to_field_name,
             "query_params": field.extra.get("query_params", {}),
         }
         # ConfigContext requires content_type set to Device and VirtualMachine

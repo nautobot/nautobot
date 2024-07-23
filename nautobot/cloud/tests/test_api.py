@@ -57,8 +57,8 @@ class CloudAccountTest(APIViewTestCases.APIViewTestCase):
         }
 
 
-class CloudTypeTest(APIViewTestCases.APIViewTestCase):
-    model = models.CloudType
+class CloudResourceTypeTest(APIViewTestCases.APIViewTestCase):
+    model = models.CloudResourceType
     bulk_update_data = {
         "description": "Some generic description of multiple types. Not very useful.",
     }
@@ -66,9 +66,9 @@ class CloudTypeTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         manufacturers = Manufacturer.objects.all()
-        models.CloudType.objects.create(name="Deletable Type 1", provider=manufacturers[0])
-        models.CloudType.objects.create(name="Deletable Type 2", provider=manufacturers[0])
-        models.CloudType.objects.create(name="Deletable Type 3", provider=manufacturers[0])
+        models.CloudResourceType.objects.create(name="Deletable Type 1", provider=manufacturers[0])
+        models.CloudResourceType.objects.create(name="Deletable Type 2", provider=manufacturers[0])
+        models.CloudResourceType.objects.create(name="Deletable Type 3", provider=manufacturers[0])
         cls.create_data = [
             {
                 "name": "Type 1",
@@ -104,14 +104,14 @@ class CloudNetworkTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Test VPC",
                 "description": "A VPC is one example object that a CloudNetwork might represent",
-                "cloud_type": models.CloudType.objects.first().pk,
+                "cloud_resource_type": models.CloudResourceType.objects.get_for_model(models.CloudNetwork).first().pk,
                 "cloud_account": models.CloudAccount.objects.first().pk,
                 "extra_config": {},
             },
             {
                 "name": "Test VNET",
                 "description": "A VNET is another example object that a CloudNetwork might be",
-                "cloud_type": models.CloudType.objects.last().pk,
+                "cloud_resource_type": models.CloudResourceType.objects.get_for_model(models.CloudNetwork).last().pk,
                 "cloud_account": models.CloudAccount.objects.last().pk,
                 "extra_config": {
                     "alpha": 1,
@@ -120,14 +120,14 @@ class CloudNetworkTest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "name": "Test subnet",
-                "cloud_type": models.CloudType.objects.first().pk,
+                "cloud_resource_type": models.CloudResourceType.objects.get_for_model(models.CloudNetwork).first().pk,
                 "cloud_account": models.CloudAccount.objects.first().pk,
                 "parent": models.CloudNetwork.objects.filter(parent__isnull=True).first().pk,
             },
         ]
         cls.bulk_update_data = {
             "description": "A new description",
-            "cloud_type": models.CloudType.objects.last().pk,
+            "cloud_resource_type": models.CloudResourceType.objects.get_for_model(models.CloudNetwork).last().pk,
             "cloud_account": models.CloudAccount.objects.last().pk,
             "extra_config": {"A": 1, "B": 2, "C": 3},
         }
@@ -162,53 +162,56 @@ class CloudServiceTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         cloud_accounts = models.CloudAccount.objects.all()
         cloud_networks = models.CloudNetwork.objects.all()
-        cloud_types = models.CloudType.objects.all()
+        cloud_resource_types = models.CloudResourceType.objects.get_for_model(models.CloudService).all()
 
         models.CloudService.objects.create(
             name="Deletable Service 1",
+            description="It really is deletable",
             cloud_account=cloud_accounts[0],
             cloud_network=cloud_networks[0],
-            cloud_type=cloud_types[0],
+            cloud_resource_type=cloud_resource_types[0],
         )
         models.CloudService.objects.create(
             name="Deletable Service 2",
             cloud_network=cloud_networks[1],
-            cloud_type=cloud_types[1],
+            cloud_resource_type=cloud_resource_types[1],
         )
         models.CloudService.objects.create(
             name="Deletable Service 3",
             cloud_network=cloud_networks[2],
-            cloud_type=cloud_types[2],
+            cloud_resource_type=cloud_resource_types[2],
         )
         cls.create_data = [
             {
                 "name": "Cloud Service 1",
+                "description": "The first cloud service",
                 "cloud_account": cloud_accounts[0].pk,
                 "cloud_network": cloud_networks[0].pk,
-                "cloud_type": cloud_types[0].pk,
+                "cloud_resource_type": cloud_resource_types[0].pk,
                 "extra_config": {"status": "hey"},
             },
             {
                 "name": "Cloud Service 2",
                 "cloud_account": cloud_accounts[1].pk,
                 "cloud_network": cloud_networks[1].pk,
-                "cloud_type": cloud_types[1].pk,
+                "cloud_resource_type": cloud_resource_types[1].pk,
                 "extra_config": {"status": "hello"},
             },
             {
                 "name": "Cloud Service 3",
                 "cloud_account": cloud_accounts[2].pk,
                 "cloud_network": cloud_networks[2].pk,
-                "cloud_type": cloud_types[2].pk,
+                "cloud_resource_type": cloud_resource_types[2].pk,
                 "extra_config": {"status": "greetings", "role": 1},
             },
             {
                 "name": "Cloud Service 4",
                 "cloud_network": cloud_networks[0].pk,
-                "cloud_type": cloud_types[0].pk,
+                "cloud_resource_type": cloud_resource_types[0].pk,
             },
         ]
         cls.bulk_update_data = {
             "cloud_network": cloud_networks[4].pk,
-            "cloud_type": cloud_types[1].pk,
+            "cloud_resource_type": cloud_resource_types[1].pk,
+            "description": "testing",
         }
