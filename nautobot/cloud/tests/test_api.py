@@ -166,6 +166,7 @@ class CloudServiceTest(APIViewTestCases.APIViewTestCase):
 
         models.CloudService.objects.create(
             name="Deletable Service 1",
+            description="It really is deletable",
             cloud_account=cloud_accounts[0],
             cloud_network=cloud_networks[0],
             cloud_resource_type=cloud_resource_types[0],
@@ -183,6 +184,7 @@ class CloudServiceTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "name": "Cloud Service 1",
+                "description": "The first cloud service",
                 "cloud_account": cloud_accounts[0].pk,
                 "cloud_network": cloud_networks[0].pk,
                 "cloud_resource_type": cloud_resource_types[0].pk,
@@ -211,4 +213,5 @@ class CloudServiceTest(APIViewTestCases.APIViewTestCase):
         cls.bulk_update_data = {
             "cloud_network": cloud_networks[4].pk,
             "cloud_resource_type": cloud_resource_types[1].pk,
+            "description": "testing",
         }

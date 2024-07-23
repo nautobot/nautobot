@@ -59,6 +59,7 @@ class CloudNetworkTable(BaseTable):
         verbose_name="Circuits",
         reverse_lookup="circuit_terminations__cloud_network",
     )
+    tags = TagColumn(url_name="cloud:cloudnetwork_list")
 
     class Meta(BaseTable.Meta):
         model = CloudNetwork
@@ -137,6 +138,7 @@ class CloudServiceTable(BaseTable):
     cloud_account = tables.Column(linkify=True)
     cloud_network = tables.Column(linkify=True)
     cloud_resource_type = tables.Column(linkify=True)
+    tags = TagColumn(url_name="cloud:cloudservice_list")
     actions = ButtonsColumn(CloudService)
 
     class Meta(BaseTable.Meta):

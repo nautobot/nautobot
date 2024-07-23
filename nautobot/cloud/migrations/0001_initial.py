@@ -167,6 +167,7 @@ class Migration(migrations.Migration):
                 ),
                 ("extra_config", models.JSONField(blank=True, null=True)),
                 ("name", models.CharField(max_length=255, unique=True)),
+                ("description", models.CharField(blank=True, max_length=255)),
                 (
                     "cloud_account",
                     models.ForeignKey(

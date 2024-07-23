@@ -85,5 +85,6 @@ class CloudServiceTestCase(FilterTestCases.NameOnlyFilterTestCase):
         ("cloud_network", "cloud_network__name"),
         ("cloud_resource_type", "cloud_resource_type__id"),
         ("cloud_resource_type", "cloud_resource_type__name"),
+        ("description",),
         ("name",),
     ]

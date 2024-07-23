@@ -90,9 +90,11 @@ class CloudNetworkFactory(PrimaryModelFactory):
 class CloudServiceFactory(PrimaryModelFactory):
     class Meta:
         model = models.CloudService
-        exclude = ("has_cloudaccount",)
+        exclude = ("has_cloudaccount", "has_description")
 
     name = factory.LazyAttributeSequence(lambda o, n: f"CloudService {n + 1}")
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
     has_cloudaccount = NautobotBoolIterator()
     cloud_account = factory.Maybe("has_cloudaccount", random_instance(models.CloudAccount, allow_null=False), None)
     cloud_network = random_instance(models.CloudNetwork, allow_null=False)

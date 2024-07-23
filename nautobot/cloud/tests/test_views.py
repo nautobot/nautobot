@@ -120,6 +120,7 @@ class CloudServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cloud_accounts = CloudAccount.objects.all()
         CloudService.objects.create(
             name="Deletable Cloud Service 1",
+            description="It really is deletable",
             cloud_resource_type=cloud_resource_types[0],
             cloud_network=cloud_networks[0],
         )
@@ -137,6 +138,7 @@ class CloudServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.form_data = {
             "name": "New Cloud Service",
+            "description": "It is a new one",
             "cloud_resource_type": cloud_resource_types[1].pk,
             "cloud_network": cloud_networks[1].pk,
             "cloud_account": cloud_accounts[1].pk,
@@ -147,4 +149,5 @@ class CloudServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             "cloud_network": cloud_networks[2].pk,
             "cloud_account": cloud_accounts[2].pk,
+            "description": "testing",
         }

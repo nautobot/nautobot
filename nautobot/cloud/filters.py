@@ -74,6 +74,10 @@ class CloudNetworkFilterSet(NautobotFilterSet):
         filter_predicates={
             "name": "icontains",
             "description": "icontains",
+            "cloud_account__name": "icontains",
+            "cloud_account__description": "icontains",
+            "cloud_resource_type__name": "icontains",
+            "cloud_resource_type__description": "icontains",
         },
     )
     cloud_resource_type = NaturalKeyOrPKMultipleChoiceFilter(
@@ -118,6 +122,7 @@ class CloudServiceFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
+            "description": "icontains",
             "cloud_account__name": "icontains",
             "cloud_account__description": "icontains",
             "cloud_network__name": "icontains",
@@ -141,4 +146,4 @@ class CloudServiceFilterSet(NautobotFilterSet):
 
     class Meta:
         model = models.CloudService
-        fields = ["id", "name", "cloud_account", "cloud_network", "cloud_resource_type", "tags"]
+        fields = ["id", "name", "description", "cloud_account", "cloud_network", "cloud_resource_type", "tags"]

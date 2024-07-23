@@ -193,6 +193,7 @@ class CloudNetworkPrefixAssignment(BaseModel):
 )
 class CloudService(CloudResourceTypeMixin, PrimaryModel):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     cloud_account = models.ForeignKey(
         to=CloudAccount,
         related_name="cloud_services",
