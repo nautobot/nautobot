@@ -200,32 +200,31 @@ class WorkListJob(Job):
     def run(self, *args, **data):  # pylint: disable=unused-argument
         """Run receptorctl command."""
         self.logger.warning("Run ReceptorCtl Work List.")
-        r = ReceptorControl("tcp://node01.example.internal:1234")
+        r = ReceptorControl("tcp://remote-worker.example.internal:1234")
         self.logger.info(r.simple_command("work list"))
-        result = r.submit_work(worktype='gather-hostname', node="controller01", payload="")
+        result = r.submit_work(worktype="gather-hostname", node="controller01", payload="")
         self.logger.info(r.simple_command("work list"))
-        unit_id = result['unitid']
+        unit_id = result["unitid"]
         resultfile = r.get_work_results(unit_id)
         time.sleep(15)
         stdout = resultfile.read()
-        stdout = str(stdout, encoding='utf-8')
+        stdout = str(stdout, encoding="utf-8")
         self.logger.info(stdout)
         r.simple_command(f"work release {unit_id}")
         self.logger.info(r.simple_command("work list"))
         self.logger.info(r.simple_command("work list"))
-        result = r.submit_work(worktype='hello-world', node="executor01", payload="")
+        result = r.submit_work(worktype="hello-world", node="executor01", payload="")
         self.logger.info(r.simple_command("work list"))
-        unit_id = result['unitid']
+        unit_id = result["unitid"]
         resultfile = r.get_work_results(unit_id)
         time.sleep(15)
         stdout = resultfile.read()
-        stdout = str(stdout, encoding='utf-8')
+        stdout = str(stdout, encoding="utf-8")
         self.logger.info(stdout)
         r.simple_command(f"work release {unit_id}")
         r.close()
         self.logger.info("done")
 
-register_jobs(WorkListJob)
 
 register_jobs(WorkListJob)
 jobs = (
