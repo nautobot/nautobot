@@ -1,0 +1,2 @@
+Fixed performance of JobResults UI when thousands of JobLogEntries are present.
+Fixed performance when Bulk Importing large csv files.
