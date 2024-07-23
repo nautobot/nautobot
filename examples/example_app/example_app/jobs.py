@@ -60,9 +60,8 @@ class ExampleJob(Job):
             *This is italicized*
         """
 
-    def run(self):
+    def run(self, some_json_data):
         # some_json_data is passed to the run method as a Python object (e.g. dictionary)
-        self.logger.warning("Hello, I am running on an ansible receptor")
         pass
 
 

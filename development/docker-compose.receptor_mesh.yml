@@ -1,8 +1,8 @@
 services:
-  node01:
+  remote-worker:
     image: local/nautobot-dev:local-py${PYTHON_VER}
-    container_name: node01
-    hostname: node01.example.internal
+    container_name: remote-worker
+    hostname: remote-worker.example.internal
     entrypoint: "/source/development/receptor-entrypoint.sh"
     command: "receptor -c /etc/receptor/receptor.conf"
     volumes:
