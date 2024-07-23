@@ -23,8 +23,8 @@
     command: python3
     params: /etc/receptor/examples/example_python.py
 
-# - work-command:
-#     worktype: nautobot-runner
-#     command: dynamic_parms.venv
-#     params: /examples/example_python.py
-#     allow....:
+- work-command:
+    worktype: run-nautobot-job
+    command: nautobot-server
+    params: runjob
+    allowruntimeparams: true

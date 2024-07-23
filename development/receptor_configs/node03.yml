@@ -20,3 +20,9 @@
     worktype: hello-world
     command: python3
     params: /etc/receptor/examples/example_python.py
+
+- work-command:
+    worktype: run-nautobot-job
+    command: nautobot-server
+    params: runjob
+    allowruntimeparams: true

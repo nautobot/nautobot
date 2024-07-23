@@ -1,14 +1,25 @@
 services:
   node01:
-    image: quay.io/ansible/receptor:latest
+    image: local/nautobot-dev:local-py${PYTHON_VER}
     container_name: node01
     hostname: node01.example.internal
+    entrypoint: "/source/development/receptor-entrypoint.sh"
     command: "receptor -c /etc/receptor/receptor.conf"
     volumes:
       - "./receptor_configs/node01.yml:/etc/receptor/receptor.conf"
       - "./receptor_examples/example_python.py:/etc/receptor/examples/example_python.py"
+      - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
+      - ../:/source
     ports:
       - "1234:1234"
+    depends_on:
+      nautobot:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - ./dev.env
+    tty: true
 
   node02:
     image: quay.io/ansible/receptor:latest
@@ -17,6 +28,16 @@ services:
     command: "receptor -c /etc/receptor/receptor.conf"
     volumes:
       - "./receptor_configs/node02.yml:/etc/receptor/receptor.conf"
+      - ./nautobot_config.py:/opt/nautobot/nautobot_config.py
+      - ../:/source
+    depends_on:
+      nautobot:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - ./dev.env
+    tty: true
 
   node03:
     image: quay.io/ansible/receptor:latest
@@ -26,3 +47,11 @@ services:
     volumes:
       - "./receptor_configs/node03.yml:/etc/receptor/receptor.conf"
       - "./receptor_examples/example_python.py:/etc/receptor/examples/example_python.py"
+    depends_on:
+      nautobot:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - ./dev.env
+    tty: true
