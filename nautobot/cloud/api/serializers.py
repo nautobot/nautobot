@@ -19,14 +19,14 @@ class CloudAccountSerializer(TaggedModelSerializerMixin, NautobotModelSerializer
         fields = "__all__"
 
 
-class CloudTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+class CloudResourceTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     content_types = ContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("cloud_types").get_query()),
+        queryset=ContentType.objects.filter(FeatureQuery("cloud_resource_types").get_query()),
         many=True,
     )
 
     class Meta:
-        model = models.CloudType
+        model = models.CloudResourceType
         fields = "__all__"
 
 

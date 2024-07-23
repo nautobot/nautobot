@@ -1,6 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudService, CloudType
+from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudResourceType, CloudService
 from nautobot.core.testing import ViewTestCases
 from nautobot.dcim.models import Manufacturer
 from nautobot.extras.models import SecretsGroup, Tag
@@ -44,28 +44,31 @@ class CloudNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
         cloud_network_ct = ContentType.objects.get_for_model(CloudNetwork)
 
-        cloud_types = CloudType.objects.all()
+        cloud_resource_types = CloudResourceType.objects.get_for_model(CloudNetwork)
         cloud_accounts = CloudAccount.objects.all()
-        cloud_type_1 = cloud_types[0]
-        cloud_type_2 = cloud_types[1]
+        cloud_resource_type_1 = cloud_resource_types[0]
+        cloud_resource_type_2 = cloud_resource_types[1]
 
-        cloud_type_1.content_types.add(cloud_network_ct)
-        cloud_type_2.content_types.add(cloud_network_ct)
+        cloud_resource_type_1.content_types.add(cloud_network_ct)
+        cloud_resource_type_2.content_types.add(cloud_network_ct)
 
         cn = CloudNetwork.objects.create(
-            name="Deletable Cloud Network 1", cloud_type=cloud_type_1, cloud_account=cloud_accounts[0]
+            name="Deletable Cloud Network 1", cloud_resource_type=cloud_resource_type_1, cloud_account=cloud_accounts[0]
         )
         CloudNetwork.objects.create(
-            name="Deletable Cloud Network 2", cloud_type=cloud_type_1, cloud_account=cloud_accounts[0]
+            name="Deletable Cloud Network 2", cloud_resource_type=cloud_resource_type_1, cloud_account=cloud_accounts[0]
         )
         CloudNetwork.objects.create(
-            name="Deletable Cloud Network 3", cloud_type=cloud_type_1, cloud_account=cloud_accounts[0], parent=cn
+            name="Deletable Cloud Network 3",
+            cloud_resource_type=cloud_resource_type_1,
+            cloud_account=cloud_accounts[0],
+            parent=cn,
         )
 
         cls.form_data = {
             "name": "New Cloud Network",
             "description": "A new cloud network",
-            "cloud_type": cloud_type_2.pk,
+            "cloud_resource_type": cloud_resource_type_2.pk,
             "cloud_account": cloud_accounts[1].pk,
             "parent": cn.pk,
             "tags": [t.pk for t in Tag.objects.get_for_model(CloudNetwork)],
@@ -73,31 +76,31 @@ class CloudNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.bulk_edit_data = {
             "description": "New description",
-            "cloud_type": cloud_types[1].pk,
+            "cloud_resource_type": cloud_resource_types[1].pk,
             "cloud_account": cloud_accounts[1].pk,
         }
 
 
-class CloudTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
-    model = CloudType
+class CloudResourceTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = CloudResourceType
 
     @classmethod
     def setUpTestData(cls):
         providers = Manufacturer.objects.all()
-        CloudType.objects.create(name="Deletable Cloud Type 1", provider=providers[0])
-        CloudType.objects.create(name="Deletable Cloud Type 2", provider=providers[0])
-        CloudType.objects.create(name="Deletable Cloud Type 3", provider=providers[0])
+        CloudResourceType.objects.create(name="Deletable Cloud Resource Type 1", provider=providers[0])
+        CloudResourceType.objects.create(name="Deletable Cloud Resource Type 2", provider=providers[0])
+        CloudResourceType.objects.create(name="Deletable Cloud Resource Type 3", provider=providers[0])
 
         cts = [
             ContentType.objects.get_for_model(CloudNetwork),
         ]
 
         cls.form_data = {
-            "name": "New Cloud Type",
+            "name": "New Cloud Resource Type",
             "provider": providers[1].pk,
-            "description": "A new cloud type",
+            "description": "A new cloud resource type",
             "content_types": [cts[0].id],
-            "tags": [t.pk for t in Tag.objects.get_for_model(CloudType)],
+            "tags": [t.pk for t in Tag.objects.get_for_model(CloudResourceType)],
         }
 
         cls.bulk_edit_data = {
@@ -112,25 +115,31 @@ class CloudServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cloud_types = CloudType.objects.all()
+        cloud_resource_types = CloudResourceType.objects.get_for_model(CloudService)
         cloud_networks = CloudNetwork.objects.all()
         cloud_accounts = CloudAccount.objects.all()
         CloudService.objects.create(
-            name="Deletable Cloud Service 1", cloud_type=cloud_types[0], cloud_network=cloud_networks[0]
+            name="Deletable Cloud Service 1",
+            description="It really is deletable",
+            cloud_resource_type=cloud_resource_types[0],
+            cloud_network=cloud_networks[0],
         )
         CloudService.objects.create(
-            name="Deletable Cloud Service 2", cloud_type=cloud_types[1], cloud_network=cloud_networks[1]
+            name="Deletable Cloud Service 2",
+            cloud_resource_type=cloud_resource_types[1],
+            cloud_network=cloud_networks[1],
         )
         CloudService.objects.create(
             name="Deletable Cloud Service 3",
-            cloud_type=cloud_types[2],
+            cloud_resource_type=cloud_resource_types[2],
             cloud_network=cloud_networks[2],
             cloud_account=cloud_accounts[0],
         )
 
         cls.form_data = {
             "name": "New Cloud Service",
-            "cloud_type": cloud_types[1].pk,
+            "description": "It is a new one",
+            "cloud_resource_type": cloud_resource_types[1].pk,
             "cloud_network": cloud_networks[1].pk,
             "cloud_account": cloud_accounts[1].pk,
             "extra_config": '{"role": 1, "status": "greetings"}',
@@ -140,4 +149,5 @@ class CloudServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             "cloud_network": cloud_networks[2].pk,
             "cloud_account": cloud_accounts[2].pk,
+            "description": "testing",
         }

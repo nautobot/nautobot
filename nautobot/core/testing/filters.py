@@ -276,6 +276,7 @@ class FilterTestCases:
                 filterset_result.qs,
                 model_queryset,
                 ordered=False,
+                msg=lookup,
             )
 
         def _get_relevant_filterset_queryset(self, queryset, *filter_params):

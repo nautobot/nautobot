@@ -31,9 +31,9 @@ class CloudAccountTestCase(FilterTestCases.NameOnlyFilterTestCase):
             cls.cloud_accounts[i].validated_save()
 
 
-class CloudTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
-    queryset = models.CloudType.objects.all()
-    filterset = filters.CloudTypeFilterSet
+class CloudResourceTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
+    queryset = models.CloudResourceType.objects.all()
+    filterset = filters.CloudResourceTypeFilterSet
     generic_filter_tests = [
         ("description",),
         ("name",),
@@ -46,7 +46,7 @@ class CloudTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
         params = {"content_types": ["cloud.cloudnetwork"]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            models.CloudType.objects.filter(content_types=cn_ct),
+            models.CloudResourceType.objects.filter(content_types=cn_ct),
         )
 
 
@@ -56,8 +56,8 @@ class CloudNetworkTestCase(FilterTestCases.NameOnlyFilterTestCase):
     generic_filter_tests = [
         ("cloud_account", "cloud_account__id"),
         ("cloud_account", "cloud_account__name"),
-        ("cloud_type", "cloud_type__id"),
-        ("cloud_type", "cloud_type__name"),
+        ("cloud_resource_type", "cloud_resource_type__id"),
+        ("cloud_resource_type", "cloud_resource_type__name"),
         ("description",),
         ("name",),
         ("parent", "parent__id"),
@@ -83,7 +83,8 @@ class CloudServiceTestCase(FilterTestCases.NameOnlyFilterTestCase):
         ("cloud_account", "cloud_account__name"),
         ("cloud_network", "cloud_network__id"),
         ("cloud_network", "cloud_network__name"),
-        ("cloud_type", "cloud_type__id"),
-        ("cloud_type", "cloud_type__name"),
+        ("cloud_resource_type", "cloud_resource_type__id"),
+        ("cloud_resource_type", "cloud_resource_type__name"),
+        ("description",),
         ("name",),
     ]

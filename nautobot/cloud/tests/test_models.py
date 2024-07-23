@@ -8,8 +8,8 @@ class CloudAccountModelTestCase(ModelTestCases.BaseModelTestCase):
     model = models.CloudAccount
 
 
-class CloudTypeModelTestCase(ModelTestCases.BaseModelTestCase):
-    model = models.CloudType
+class CloudResourceTypeModelTestCase(ModelTestCases.BaseModelTestCase):
+    model = models.CloudResourceType
 
 
 class CloudNetworkModelTestCase(ModelTestCases.BaseModelTestCase):
@@ -21,7 +21,7 @@ class CloudNetworkModelTestCase(ModelTestCases.BaseModelTestCase):
             models.CloudNetwork(
                 name="Grandchild",
                 cloud_account=models.CloudAccount.objects.first(),
-                cloud_type=models.CloudType.objects.first(),
+                cloud_resource_type=models.CloudResourceType.objects.get_for_model(models.CloudNetwork).first(),
                 parent=illegal_parent,
             ).clean()
 
@@ -29,7 +29,7 @@ class CloudNetworkModelTestCase(ModelTestCases.BaseModelTestCase):
         cloud_network = models.CloudNetwork(
             name="Loop",
             cloud_account=models.CloudAccount.objects.last(),
-            cloud_type=models.CloudType.objects.last(),
+            cloud_resource_type=models.CloudResourceType.objects.get_for_model(models.CloudNetwork).last(),
         )
         cloud_network.validated_save()
         with self.assertRaises(ValidationError):

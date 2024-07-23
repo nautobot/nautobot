@@ -14,16 +14,16 @@ class CloudAccountViewSet(NautobotModelViewSet):
     filterset_class = filters.CloudAccountFilterSet
 
 
-class CloudTypeViewSet(NautobotModelViewSet):
-    queryset = models.CloudType.objects.select_related("provider")
-    serializer_class = serializers.CloudTypeSerializer
-    filterset_class = filters.CloudTypeFilterSet
+class CloudResourceTypeViewSet(NautobotModelViewSet):
+    queryset = models.CloudResourceType.objects.select_related("provider")
+    serializer_class = serializers.CloudResourceTypeSerializer
+    filterset_class = filters.CloudResourceTypeFilterSet
 
 
 class CloudNetworkViewSet(NautobotModelViewSet):
-    queryset = models.CloudNetwork.objects.select_related("cloud_type", "cloud_account", "parent").prefetch_related(
-        "prefixes"
-    )
+    queryset = models.CloudNetwork.objects.select_related(
+        "cloud_resource_type", "cloud_account", "parent"
+    ).prefetch_related("prefixes")
     serializer_class = serializers.CloudNetworkSerializer
     filterset_class = filters.CloudNetworkFilterSet
 
@@ -35,6 +35,6 @@ class CloudNetworkPrefixAssignmentViewSet(NautobotModelViewSet):
 
 
 class CloudServiceViewSet(NautobotModelViewSet):
-    queryset = models.CloudService.objects.select_related("cloud_account", "cloud_network", "cloud_type")
+    queryset = models.CloudService.objects.select_related("cloud_account", "cloud_network", "cloud_resource_type")
     serializer_class = serializers.CloudServiceSerializer
     filterset_class = filters.CloudServiceFilterSet

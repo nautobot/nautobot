@@ -2,7 +2,7 @@ import inspect
 
 from django import forms
 
-from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudService, CloudType
+from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudResourceType, CloudService
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     DynamicModelChoiceField,
@@ -81,8 +81,9 @@ class CloudAccountFilterForm(NautobotFilterForm):
 
 
 class CloudNetworkForm(NautobotModelForm):
-    cloud_type = DynamicModelChoiceField(
-        queryset=CloudType.objects.all(),
+    cloud_resource_type = DynamicModelChoiceField(
+        queryset=CloudResourceType.objects.all(),
+        query_params={"content_types": [CloudNetwork._meta.label_lower]},
     )
     cloud_account = DynamicModelChoiceField(
         queryset=CloudAccount.objects.all(),
@@ -103,7 +104,7 @@ class CloudNetworkForm(NautobotModelForm):
         fields = [
             "name",
             "description",
-            "cloud_type",
+            "cloud_resource_type",
             "cloud_account",
             "parent",
             "prefixes",
@@ -127,7 +128,11 @@ class CloudNetworkForm(NautobotModelForm):
 
 class CloudNetworkBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=CloudNetwork.objects.all(), widget=forms.MultipleHiddenInput)
-    cloud_type = DynamicModelChoiceField(queryset=CloudType.objects.all(), required=False)
+    cloud_resource_type = DynamicModelChoiceField(
+        queryset=CloudResourceType.objects.all(),
+        query_params={"content_types": [CloudNetwork._meta.label_lower]},
+        required=False,
+    )
     cloud_account = DynamicModelChoiceField(queryset=CloudAccount.objects.all(), required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
@@ -149,14 +154,19 @@ class CloudNetworkFilterForm(NautobotFilterForm):
     field_order = [
         "q",
         "name",
-        "cloud_type",
+        "cloud_resource_type",
         "cloud_account",
         "parent",
         "tags",
     ]
     q = forms.CharField(required=False, label="Search")
     name = MultiValueCharField(required=False)
-    cloud_type = DynamicModelMultipleChoiceField(queryset=CloudType.objects.all(), to_field_name="name", required=False)
+    cloud_resource_type = DynamicModelMultipleChoiceField(
+        queryset=CloudResourceType.objects.all(),
+        query_params={"content_types": [CloudNetwork._meta.label_lower]},
+        to_field_name="name",
+        required=False,
+    )
     cloud_account = DynamicModelMultipleChoiceField(
         queryset=CloudAccount.objects.all(), to_field_name="name", required=False
     )
@@ -165,22 +175,22 @@ class CloudNetworkFilterForm(NautobotFilterForm):
 
 
 #
-# Cloud Type
+# Cloud Resource Type
 #
 
 
-class CloudTypeForm(NautobotModelForm):
+class CloudResourceTypeForm(NautobotModelForm):
     provider = DynamicModelChoiceField(
         queryset=Manufacturer.objects.all(),
         help_text="Manufacturers are the recommended model to represent cloud providers.",
     )
     content_types = MultipleContentTypeField(
-        feature="cloud_types",
+        feature="cloud_resource_types",
         label="Content Type(s)",
     )
 
     class Meta:
-        model = CloudType
+        model = CloudResourceType
         fields = [
             "name",
             "description",
@@ -191,11 +201,11 @@ class CloudTypeForm(NautobotModelForm):
         ]
 
 
-class CloudTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
-    pk = forms.ModelMultipleChoiceField(queryset=CloudType.objects.all(), widget=forms.MultipleHiddenInput)
+class CloudResourceTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=CloudResourceType.objects.all(), widget=forms.MultipleHiddenInput)
     provider = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     content_types = MultipleContentTypeField(
-        feature="cloud_types",
+        feature="cloud_resource_types",
         required=False,
         label="Content Type(s)",
     )
@@ -207,8 +217,8 @@ class CloudTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         ]
 
 
-class CloudTypeFilterForm(NautobotFilterForm):
-    model = CloudType
+class CloudResourceTypeFilterForm(NautobotFilterForm):
+    model = CloudResourceType
     field_order = [
         "q",
         "name",
@@ -222,7 +232,7 @@ class CloudTypeFilterForm(NautobotFilterForm):
         queryset=Manufacturer.objects.all(), to_field_name="name", required=False
     )
     content_types = MultipleContentTypeField(
-        feature="cloud_types",
+        feature="cloud_resource_types",
         required=False,
         choices_as_strings=True,
         label="Content Type(s)",
@@ -243,17 +253,19 @@ class CloudServiceForm(NautobotModelForm):
     cloud_network = DynamicModelChoiceField(
         queryset=CloudNetwork.objects.all(),
     )
-    cloud_type = DynamicModelChoiceField(
-        queryset=CloudType.objects.all(),
+    cloud_resource_type = DynamicModelChoiceField(
+        queryset=CloudResourceType.objects.all(),
+        query_params={"content_types": [CloudService._meta.label_lower]},
     )
 
     class Meta:
         model = CloudService
         fields = [
             "name",
+            "description",
             "cloud_account",
             "cloud_network",
-            "cloud_type",
+            "cloud_resource_type",
             "extra_config",
             "tags",
         ]
@@ -261,13 +273,18 @@ class CloudServiceForm(NautobotModelForm):
 
 class CloudServiceBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=CloudService.objects.all(), widget=forms.MultipleHiddenInput)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     cloud_account = DynamicModelChoiceField(queryset=CloudAccount.objects.all(), required=False)
     cloud_network = DynamicModelChoiceField(queryset=CloudNetwork.objects.all(), required=False)
-    cloud_type = DynamicModelChoiceField(queryset=CloudType.objects.all(), required=False)
+    cloud_resource_type = DynamicModelChoiceField(
+        queryset=CloudResourceType.objects.all(),
+        query_params={"content_types": [CloudService._meta.label_lower]},
+        required=False,
+    )
     extra_config = forms.JSONField(required=False)
 
     class Meta:
-        nullable_fields = ["cloud_account", "extra_config"]
+        nullable_fields = ["cloud_account", "description", "extra_config"]
 
 
 class CloudServiceFilterForm(NautobotFilterForm):
@@ -277,7 +294,7 @@ class CloudServiceFilterForm(NautobotFilterForm):
         "name",
         "cloud_account",
         "cloud_network",
-        "cloud_type",
+        "cloud_resource_type",
         "tags",
     ]
     q = forms.CharField(required=False, label="Search")
@@ -288,5 +305,10 @@ class CloudServiceFilterForm(NautobotFilterForm):
     cloud_network = DynamicModelMultipleChoiceField(
         queryset=CloudNetwork.objects.all(), to_field_name="name", required=False
     )
-    cloud_type = DynamicModelMultipleChoiceField(queryset=CloudType.objects.all(), to_field_name="name", required=False)
+    cloud_resource_type = DynamicModelMultipleChoiceField(
+        queryset=CloudResourceType.objects.all(),
+        query_params={"content_types": [CloudService._meta.label_lower]},
+        to_field_name="name",
+        required=False,
+    )
     tags = TagFilterField(model)

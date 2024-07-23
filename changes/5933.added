@@ -1,0 +1,2 @@
+Added tables of related `CloudService` and/or `CloudNetwork` instances to the `CloudResourceType` detail view.
+Added `description` field to `CloudService` model.
