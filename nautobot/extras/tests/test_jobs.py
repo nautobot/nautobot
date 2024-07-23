@@ -55,10 +55,10 @@ class JobTest(TestCase):
 
         self.assertInHTML(
             """<tr><th><label for="id_var_int">Var int:</label></th><td>
-<input class="form-control form-control" id="id_var_int" max="3600" name="var_int" placeholder="None" required type="number" value="0">
+<input class="form-control" id="id_var_int" max="3600" name="var_int" placeholder="None" required type="number" value="0">
 <br><span class="helptext">Test default of 0 Falsey</span></td></tr>
 <tr><th><label for="id_var_int_no_default">Var int no default:</label></th><td>
-<input class="form-control form-control" id="id_var_int_no_default" max="3600" name="var_int_no_default" placeholder="None" type="number">
+<input class="form-control" id="id_var_int_no_default" max="3600" name="var_int_no_default" placeholder="None" type="number">
 <br><span class="helptext">Test default without default</span></td></tr>""",
             form.as_table(),
         )
