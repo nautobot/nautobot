@@ -24,7 +24,7 @@ __all__ = (
 )
 
 VMINTERFACE_BUTTONS = """
-{% if perms.ipam.add_ipaddress and perms.dcim.change_vminterface %}
+{% if perms.ipam.add_ipaddress and perms.virtualization.change_vminterface %}
     <a href="{% url 'ipam:ipaddress_add' %}?vminterface={{ record.pk }}&return_url={{ request.path }}" class="btn btn-xs btn-success" title="Add IP address">
         <i class="mdi mdi-plus-thick" aria-hidden="true"></i>
     </a>
