@@ -40,7 +40,7 @@
 {% endblock extra_nav_tabs %}
 
 {% block extra_tab_content %}
-    {% if object.parent is None %}
+    {% if children_count %}
         <div id="children" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "children" %}active{% else %}fade{% endif %}">
             <div class="panel panel-default">
                 <div class="panel-heading">
