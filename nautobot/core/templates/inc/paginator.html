@@ -33,10 +33,10 @@
                 <option value="{{ n }}"{% if page.paginator.per_page == n %} selected="selected"{% endif %}>{{ n }}</option>
             {% endfor %}
         </select> per page
+        {% if page %}
+            <div class="text-right text-muted">
+                Showing {{ page.start_index }}-{{ page.end_index }} of {{ page.paginator.count }}
+            </div>
+        {% endif %}
     </form>
-    {% if page %}
-        <div class="text-right text-muted">
-            Showing {{ page.start_index }}-{{ page.end_index }} of {{ page.paginator.count }}
-        </div>
-    {% endif %}
 </div>
