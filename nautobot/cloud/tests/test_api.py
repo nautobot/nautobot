@@ -100,19 +100,37 @@ class CloudNetworkTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        cloud_network_parent = models.CloudNetwork.objects.filter(parent__isnull=True).first()
+        cloud_accounts = models.CloudAccount.objects.all()[:3]
+        cloud_resource_types = models.CloudResourceType.objects.get_for_model(models.CloudNetwork).all()[:3]
+        models.CloudNetwork.objects.create(
+            name="Deletable Cloud Network 1",
+            cloud_resource_type=cloud_resource_types[0],
+            cloud_account=cloud_accounts[0],
+        )
+        models.CloudNetwork.objects.create(
+            name="Deletable Cloud Network 2",
+            cloud_resource_type=cloud_resource_types[0],
+            cloud_account=cloud_accounts[0],
+        )
+        models.CloudNetwork.objects.create(
+            name="Deletable Cloud Network 3",
+            cloud_resource_type=cloud_resource_types[0],
+            cloud_account=cloud_accounts[0],
+        )
         cls.create_data = [
             {
                 "name": "Test VPC",
                 "description": "A VPC is one example object that a CloudNetwork might represent",
-                "cloud_resource_type": models.CloudResourceType.objects.get_for_model(models.CloudNetwork).first().pk,
-                "cloud_account": models.CloudAccount.objects.first().pk,
+                "cloud_resource_type": cloud_resource_types[0].pk,
+                "cloud_account": cloud_accounts[0].pk,
                 "extra_config": {},
             },
             {
                 "name": "Test VNET",
                 "description": "A VNET is another example object that a CloudNetwork might be",
-                "cloud_resource_type": models.CloudResourceType.objects.get_for_model(models.CloudNetwork).last().pk,
-                "cloud_account": models.CloudAccount.objects.last().pk,
+                "cloud_resource_type": cloud_resource_types[1].pk,
+                "cloud_account": cloud_accounts[1].pk,
                 "extra_config": {
                     "alpha": 1,
                     "beta": False,
@@ -120,15 +138,15 @@ class CloudNetworkTest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "name": "Test subnet",
-                "cloud_resource_type": models.CloudResourceType.objects.get_for_model(models.CloudNetwork).first().pk,
-                "cloud_account": models.CloudAccount.objects.first().pk,
-                "parent": models.CloudNetwork.objects.filter(parent__isnull=True).first().pk,
+                "cloud_resource_type": cloud_resource_types[0].pk,
+                "cloud_account": cloud_accounts[0].pk,
+                "parent": cloud_network_parent.pk,
             },
         ]
         cls.bulk_update_data = {
             "description": "A new description",
-            "cloud_resource_type": models.CloudResourceType.objects.get_for_model(models.CloudNetwork).last().pk,
-            "cloud_account": models.CloudAccount.objects.last().pk,
+            "cloud_resource_type": cloud_resource_types[1].pk,
+            "cloud_account": cloud_accounts[1].pk,
             "extra_config": {"A": 1, "B": 2, "C": 3},
         }
 
