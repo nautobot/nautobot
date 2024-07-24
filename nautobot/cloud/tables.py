@@ -157,8 +157,8 @@ class CloudServiceTable(BaseTable):
         fields = (
             "pk",
             "name",
-            "cloud_account",
             "cloud_resource_type",
+            "cloud_account",
             "cloud_network_count",
             "tags",
             "actions",
@@ -166,8 +166,8 @@ class CloudServiceTable(BaseTable):
         default_columns = (
             "pk",
             "name",
-            "cloud_account",
             "cloud_resource_type",
+            "cloud_account",
             "cloud_network_count",
             "actions",
         )
