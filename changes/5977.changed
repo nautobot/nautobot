@@ -1,1 +1,1 @@
-Changed the help text of CloudAccount and CloudResourceType model and forms provider field.
+Changed the provider field help text of CloudAccount and CloudResourceType model classes and forms.
