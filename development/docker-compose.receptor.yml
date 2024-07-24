@@ -1,0 +1,43 @@
+---
+services:
+  receptor_local:
+    image: "quay.io/ansible/receptor"
+    volumes:
+      - "./receptor_local.conf:/etc/receptor/receptor.conf:z"
+    networks:
+      - default
+      - local_to_relay
+  receptor_relay:
+    image: "quay.io/ansible/receptor"
+    volumes:
+      - "./receptor_relay.conf:/etc/receptor/receptor.conf:z"
+    networks:
+      - local_to_relay
+      - relay_to_remote
+  receptor_remote:
+    image: "local/nautobot-dev:local-py${PYTHON_VER}"
+    volumes:
+      - "./receptor_remote.conf:/etc/receptor/receptor.conf:z"
+      - "./nautobot_config.py:/opt/nautobot/nautobot_config.py:z"
+      - "../:/source:z"
+    networks:
+      - relay_to_remote
+    entrypoint: "/source/development/receptor-entrypoint.sh"
+    command: "nautobot-server celery worker -l DEBUG --events --queues remote -n remote_worker@%h"
+    environment:
+      NAUTOBOT_DB_HOST: localhost
+      NAUTOBOT_REDIS_HOST: localhost
+    env_file:
+      - ./dev.env
+      - ./override.env
+  # receptor_remote:
+  #   image: "quay.io/ansible/receptor"
+  #   volumes:
+  #     - "./receptor_remote.conf:/etc/receptor/receptor.conf:Z"
+  #   networks:
+  #     - relay_to_remote
+networks:
+  local_to_relay:
+    driver: bridge
+  relay_to_remote:
+    driver: bridge
