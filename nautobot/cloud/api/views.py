@@ -40,3 +40,9 @@ class CloudServiceViewSet(NautobotModelViewSet):
     )
     serializer_class = serializers.CloudServiceSerializer
     filterset_class = filters.CloudServiceFilterSet
+
+
+class CloudServiceNetworkAssignmentViewSet(NautobotModelViewSet):
+    queryset = models.CloudServiceNetworkAssignment.objects.select_related("cloud_network", "cloud_service")
+    serializer_class = serializers.CloudServiceNetworkAssignmentSerializer
+    filterset_class = filters.CloudServiceNetworkAssignmentFilterSet

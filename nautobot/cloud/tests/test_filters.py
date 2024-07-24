@@ -77,6 +77,17 @@ class CloudNetworkPrefixAssignmentTestCase(FilterTestCases.FilterTestCase):
     ]
 
 
+class CloudServiceNetworkAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = models.CloudServiceNetworkAssignment.objects.all()
+    filterset = filters.CloudServiceNetworkAssignmentFilterSet
+    generic_filter_tests = [
+        ("cloud_network", "cloud_network__id"),
+        ("cloud_network", "cloud_network__name"),
+        ("cloud_service", "cloud_service__id"),
+        ("cloud_service", "cloud_service__name"),
+    ]
+
+
 class CloudServiceTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = models.CloudService.objects.all()
     filterset = filters.CloudServiceFilterSet

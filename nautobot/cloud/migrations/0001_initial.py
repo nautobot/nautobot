@@ -227,6 +227,37 @@ class Migration(migrations.Migration):
                 "unique_together": {("cloud_network", "prefix")},
             },
         ),
+        migrations.CreateModel(
+            name="CloudServiceNetworkAssignment",
+            fields=[
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                (
+                    "cloud_network",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="cloud_service_assignments",
+                        to="cloud.cloudnetwork",
+                    ),
+                ),
+                (
+                    "cloud_service",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="cloud_network_assignments",
+                        to="cloud.cloudservice",
+                    ),
+                ),
+            ],
+            options={
+                "ordering": ["cloud_network", "cloud_service"],
+                "unique_together": {("cloud_network", "cloud_service")},
+            },
+        ),
         migrations.AddField(
             model_name="cloudnetwork",
             name="cloud_resource_type",
@@ -263,6 +294,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="cloudservice",
             name="cloud_networks",
-            field=models.ManyToManyField(blank=True, related_name="cloud_services", to="cloud.cloudnetwork"),
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="cloud_services",
+                through="cloud.CloudServiceNetworkAssignment",
+                to="cloud.cloudnetwork",
+            ),
         ),
     ]

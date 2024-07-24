@@ -59,7 +59,6 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
             prefixes = instance.prefixes.restrict(request.user, "view")
-            prefix_count = prefixes.count()
             prefix_table = PrefixTable(prefixes.select_related("namespace"))
             prefix_table.columns.hide("location_count")
             prefix_table.columns.hide("vlan")
@@ -80,9 +79,10 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
 
             context.update(
                 {
-                    "prefix_count": prefix_count,
+                    "prefix_count": prefixes.count(),
                     "prefix_table": prefix_table,
                     "children_table": children_table,
+                    "circuit_count": circuits.count(),
                     "circuits_table": circuits_table,
                 }
             )
@@ -158,3 +158,9 @@ class CloudServiceUIViewSet(NautobotUIViewSet):
             )
 
         return context
+
+    def extra_post_save_action(self, obj, form):
+        if form.cleaned_data.get("add_cloud_networks", None):
+            obj.cloud_networks.add(*form.cleaned_data["add_cloud_networks"])
+        if form.cleaned_data.get("remove_cloud_networks", None):
+            obj.cloud_networks.remove(*form.cleaned_data["remove_cloud_networks"])

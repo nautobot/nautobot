@@ -46,3 +46,9 @@ class CloudServiceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer
     class Meta:
         model = models.CloudService
         fields = "__all__"
+
+
+class CloudServiceNetworkAssignmentSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = models.CloudServiceNetworkAssignment
+        fields = "__all__"

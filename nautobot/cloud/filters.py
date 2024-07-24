@@ -151,3 +151,26 @@ class CloudServiceFilterSet(NautobotFilterSet):
     class Meta:
         model = models.CloudService
         fields = ["id", "name", "description", "cloud_account", "cloud_networks", "cloud_resource_type", "tags"]
+
+
+class CloudServiceNetworkAssignmentFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "cloud_network__name": "icontains",
+            "cloud_network__description": "icontains",
+            "cloud_service__name": "icontains",
+            "cloud_service__description": "icontains",
+        }
+    )
+    cloud_network = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.CloudNetwork.objects.all(),
+        label="Cloud network (name or ID)",
+    )
+    cloud_service = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.CloudService.objects.all(),
+        label="Cloud service (name or ID)",
+    )
+
+    class Meta:
+        model = models.CloudServiceNetworkAssignment
+        fields = ["id"]

@@ -143,6 +143,5 @@ class CloudServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.bulk_edit_data = {
             "cloud_account": cloud_accounts[2].pk,
-            "cloud_networks": [cloud_networks[2].pk],
             "description": "testing",
         }

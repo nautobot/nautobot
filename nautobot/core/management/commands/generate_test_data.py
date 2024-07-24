@@ -375,8 +375,6 @@ Type 'yes' to continue, or 'no' to cancel: """
                 "flush", "--no-input", "--database", options["database"], inhibit_post_migrate=inhibit_post_migrate
             )
 
-        cache.delete("nautobot.extras.utils.change_logged_models_queryset")
-
         if options["cache_test_fixtures"] and os.path.exists(options["fixture_file"]):
             self.stdout.write(self.style.WARNING(f"Loading factory data from file {options['fixture_file']}"))
             call_command("loaddata", "--database", options["database"], options["fixture_file"])

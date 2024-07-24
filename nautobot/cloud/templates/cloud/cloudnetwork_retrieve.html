@@ -15,13 +15,25 @@
                     Children {% badge object.children.count %}
                 </a>
             </li>
-    {% else %}
-        {{ block.super }}
+    {% endif %}
+    {% if prefix_count %}
+        <li role="presentation"{% if request.GET.tab == 'prefixes' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#prefixes" onclick="switch_tab(this.href, reload=false)" aria-controls="prefixes" role="tab" data-toggle="tab">
+                Prefixes {% badge prefix_count %}
+            </a>
+        </li>
+    {% endif %}
+    {% if circuit_count %}
+        <li role="presentation"{% if request.GET.tab == 'circuits' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#circuits" onclick="switch_tab(this.href, reload=false)" aria-controls="circuits" role="tab" data-toggle="tab">
+                Circuits {% badge circuit_count %}
+            </a>
+        </li>
     {% endif %}
 {% endblock extra_nav_tabs %}
 
 {% block extra_tab_content %}
-{% if object.parent is None %}
+    {% if object.parent is None %}
         <div id="children" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "children" %}active{% else %}fade{% endif %}">
             <div class="panel panel-default">
                 <div class="panel-heading">
@@ -38,8 +50,16 @@
             </div>
             {% include 'inc/paginator.html' with paginator=children_table.paginator page=children_table.page %}
         </div>
-    {% else %}
-        {{ block.super }}
+    {% endif %}
+    {% if prefix_count %}
+        <div id="prefixes" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "prefixes" %}active{% else %}fade{% endif %}">
+            {% include 'panel_table.html' with table=prefix_table heading="Assigned Prefixes" %}
+        </div>
+    {% endif %}
+    {% if circuit_count %}
+        <div id="circuits" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "circuits" %}active{% else %}fade{% endif %}">
+            {% include 'panel_table.html' with table=circuits_table heading="Circuits" %}
+        </div>
     {% endif %}
 {% endblock extra_tab_content %}
 
@@ -85,22 +105,9 @@
     <div class="panel panel-default">
         <div class="panel-heading">
             <strong>Extra Config</strong>
-            {% include 'extras/inc/json_format.html' %}
         </div>
         <div class="panel-body">
-            {% include 'extras/inc/json_data.html' with data=object.extra_config format=format %}
+            <pre>{{ object.extra_config|render_json }}</pre>
         </div>
     </div>
-
 {% endblock content_right_page %}
-
-{% block content_full_width_page %}
-    {% include 'panel_table.html' with table=prefix_table heading="Assigned Prefixes" %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <strong>Circuits</strong>
-        </div>
-        {% include 'inc/table.html' with table=circuits_table %}
-    </div>
-    {% include 'inc/paginator.html' with paginator=circuits_table.paginator page=circuits_table.page %}
-{% endblock content_full_width_page %}
