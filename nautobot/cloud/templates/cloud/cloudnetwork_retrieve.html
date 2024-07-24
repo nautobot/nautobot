@@ -54,11 +54,13 @@
     {% if prefix_count %}
         <div id="prefixes" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "prefixes" %}active{% else %}fade{% endif %}">
             {% include 'panel_table.html' with table=prefix_table heading="Assigned Prefixes" %}
+            {% include 'inc/paginator.html' with paginator=prefix_table.paginator page=prefix_table.page %}
         </div>
     {% endif %}
     {% if circuit_count %}
         <div id="circuits" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "circuits" %}active{% else %}fade{% endif %}">
             {% include 'panel_table.html' with table=circuits_table heading="Circuits" %}
+            {% include 'inc/paginator.html' with paginator=circuits_table.paginator page=circuits_table.page %}
         </div>
     {% endif %}
 {% endblock extra_tab_content %}

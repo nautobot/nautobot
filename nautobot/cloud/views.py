@@ -75,7 +75,9 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
             circuits_table.columns.hide("circuit_termination_z")
 
             paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            RequestConfig(request, paginate).configure(children_table)
             RequestConfig(request, paginate).configure(circuits_table)
+            RequestConfig(request, paginate).configure(prefix_table)
 
             context.update(
                 {
