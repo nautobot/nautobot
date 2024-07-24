@@ -59,33 +59,42 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
             prefixes = instance.prefixes.restrict(request.user, "view")
-            prefix_table = PrefixTable(prefixes.select_related("namespace"))
-            prefix_table.columns.hide("location_count")
-            prefix_table.columns.hide("vlan")
-            children_table = CloudNetworkTable(instance.children.restrict(request.user, "view"))
+            prefixes_table = PrefixTable(prefixes.select_related("namespace"))
+            prefixes_table.columns.hide("location_count")
+            prefixes_table.columns.hide("vlan")
+
+            children = instance.children.restrict(request.user, "view")
+            children_table = CloudNetworkTable(children)
             children_table.columns.hide("parent")
 
             circuits = Circuit.objects.restrict(request.user, "view").filter(
                 Q(circuit_termination_a__cloud_network=instance.pk)
                 | Q(circuit_termination_z__cloud_network=instance.pk)
             )
-
             circuits_table = CircuitTable(circuits)
             circuits_table.columns.hide("circuit_termination_a")
             circuits_table.columns.hide("circuit_termination_z")
 
+            cloud_services = instance.cloud_services.restrict(request.user, "view")
+            cloud_services_table = CloudServiceTable(cloud_services)
+            cloud_services_table.columns.hide("cloud_network_count")
+
             paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
             RequestConfig(request, paginate).configure(children_table)
             RequestConfig(request, paginate).configure(circuits_table)
-            RequestConfig(request, paginate).configure(prefix_table)
+            RequestConfig(request, paginate).configure(prefixes_table)
+            RequestConfig(request, paginate).configure(cloud_services_table)
 
             context.update(
                 {
                     "prefix_count": prefixes.count(),
-                    "prefix_table": prefix_table,
+                    "prefixes_table": prefixes_table,
+                    "children_count": children.count(),
                     "children_table": children_table,
                     "circuit_count": circuits.count(),
                     "circuits_table": circuits_table,
+                    "cloud_service_count": cloud_services.count(),
+                    "cloud_services_table": cloud_services_table,
                 }
             )
 
