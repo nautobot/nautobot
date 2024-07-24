@@ -8,7 +8,7 @@ router = OrderedDefaultRouter(view_name="Cloud")
 router.register("cloud-accounts", views.CloudAccountViewSet)
 router.register("cloud-networks", views.CloudNetworkViewSet)
 router.register("cloud-network-prefix-assignments", views.CloudNetworkPrefixAssignmentViewSet)
-router.register("cloud-types", views.CloudTypeViewSet)
+router.register("cloud-resource-types", views.CloudResourceTypeViewSet)
 router.register("cloud-services", views.CloudServiceViewSet)
 
 app_name = "cloud-api"

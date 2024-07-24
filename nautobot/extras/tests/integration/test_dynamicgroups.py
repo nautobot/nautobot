@@ -74,7 +74,7 @@ class DynamicGroupTestCase(SeleniumTestCase):
 
         # And just a cursory check to make sure that the filter worked.
         group = DynamicGroup.objects.get(name=name)
-        self.assertEqual(group.count, len(devices))
+        self.assertEqual(group.count, Device.objects.filter(status__name="Active").count())
         self.assertEqual(group.filter, {"status": ["Active"]})
 
         # Verify dynamic group shows up on device detail tab

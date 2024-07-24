@@ -6,14 +6,14 @@ from nautobot.circuits.tables import CircuitTable
 from nautobot.cloud.api.serializers import (
     CloudAccountSerializer,
     CloudNetworkSerializer,
+    CloudResourceTypeSerializer,
     CloudServiceSerializer,
-    CloudTypeSerializer,
 )
 from nautobot.cloud.filters import (
     CloudAccountFilterSet,
     CloudNetworkFilterSet,
+    CloudResourceTypeFilterSet,
     CloudServiceFilterSet,
-    CloudTypeFilterSet,
 )
 from nautobot.cloud.forms import (
     CloudAccountBulkEditForm,
@@ -22,15 +22,15 @@ from nautobot.cloud.forms import (
     CloudNetworkBulkEditForm,
     CloudNetworkFilterForm,
     CloudNetworkForm,
+    CloudResourceTypeBulkEditForm,
+    CloudResourceTypeFilterForm,
+    CloudResourceTypeForm,
     CloudServiceBulkEditForm,
     CloudServiceFilterForm,
     CloudServiceForm,
-    CloudTypeBulkEditForm,
-    CloudTypeFilterForm,
-    CloudTypeForm,
 )
-from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudService, CloudType
-from nautobot.cloud.tables import CloudAccountTable, CloudNetworkTable, CloudServiceTable, CloudTypeTable
+from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudResourceType, CloudService
+from nautobot.cloud.tables import CloudAccountTable, CloudNetworkTable, CloudResourceTypeTable, CloudServiceTable
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.ipam.tables import PrefixTable
@@ -96,14 +96,40 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
             obj.prefixes.remove(*form.cleaned_data["remove_prefixes"])
 
 
-class CloudTypeUIViewSet(NautobotUIViewSet):
-    queryset = CloudType.objects.all()
-    filterset_class = CloudTypeFilterSet
-    filterset_form_class = CloudTypeFilterForm
-    serializer_class = CloudTypeSerializer
-    table_class = CloudTypeTable
-    form_class = CloudTypeForm
-    bulk_update_form_class = CloudTypeBulkEditForm
+class CloudResourceTypeUIViewSet(NautobotUIViewSet):
+    queryset = CloudResourceType.objects.all()
+    filterset_class = CloudResourceTypeFilterSet
+    filterset_form_class = CloudResourceTypeFilterForm
+    serializer_class = CloudResourceTypeSerializer
+    table_class = CloudResourceTypeTable
+    form_class = CloudResourceTypeForm
+    bulk_update_form_class = CloudResourceTypeBulkEditForm
+
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+
+            networks = instance.cloud_networks.restrict(request.user, "view")
+            networks_table = CloudNetworkTable(networks)
+            networks_table.columns.hide("cloud_resource_type")
+            RequestConfig(request, paginate).configure(networks_table)
+
+            services = instance.cloud_services.restrict(request.user, "view")
+            services_table = CloudServiceTable(services)
+            services_table.columns.hide("cloud_resource_type")
+            RequestConfig(request, paginate).configure(services_table)
+
+            context.update(
+                {
+                    "networks_count": networks.count(),
+                    "networks_table": networks_table,
+                    "services_count": services.count(),
+                    "services_table": services_table,
+                }
+            )
+
+        return context
 
 
 class CloudServiceUIViewSet(NautobotUIViewSet):

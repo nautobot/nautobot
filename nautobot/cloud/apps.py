@@ -8,5 +8,6 @@ class CloudConfig(NautobotConfig):
     searchable_models = [
         "cloudaccount",
         "cloudnetwork",
-        "cloudtype",
+        "cloudresourcetype",
+        "cloudservice",
     ]
