@@ -143,12 +143,12 @@ class CloudServiceTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     cloud_account = tables.Column(linkify=True)
+    cloud_resource_type = tables.Column(linkify=True)
     cloud_network_count = LinkedCountColumn(
         viewname="cloud:cloudnetwork_list",
         url_params={"cloud_services": "name"},
         verbose_name="Cloud Networks",
     )
-    cloud_resource_type = tables.Column(linkify=True)
     tags = TagColumn(url_name="cloud:cloudservice_list")
     actions = ButtonsColumn(CloudService)
 
@@ -158,8 +158,8 @@ class CloudServiceTable(BaseTable):
             "pk",
             "name",
             "cloud_account",
-            "cloud_network_count",
             "cloud_resource_type",
+            "cloud_network_count",
             "tags",
             "actions",
         )
@@ -167,7 +167,7 @@ class CloudServiceTable(BaseTable):
             "pk",
             "name",
             "cloud_account",
-            "cloud_network_count",
             "cloud_resource_type",
+            "cloud_network_count",
             "actions",
         )
