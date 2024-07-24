@@ -290,14 +290,14 @@ class CloudServiceForm(NautobotModelForm):
 class CloudServiceBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=CloudService.objects.all(), widget=forms.MultipleHiddenInput)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-    cloud_account = DynamicModelChoiceField(queryset=CloudAccount.objects.all(), required=False)
-    add_cloud_networks = DynamicModelMultipleChoiceField(queryset=CloudNetwork.objects.all(), required=False)
-    remove_cloud_networks = DynamicModelMultipleChoiceField(queryset=CloudNetwork.objects.all(), required=False)
     cloud_resource_type = DynamicModelChoiceField(
         queryset=CloudResourceType.objects.all(),
         query_params={"content_types": [CloudService._meta.label_lower]},
         required=False,
     )
+    cloud_account = DynamicModelChoiceField(queryset=CloudAccount.objects.all(), required=False)
+    add_cloud_networks = DynamicModelMultipleChoiceField(queryset=CloudNetwork.objects.all(), required=False)
+    remove_cloud_networks = DynamicModelMultipleChoiceField(queryset=CloudNetwork.objects.all(), required=False)
     extra_config = forms.JSONField(required=False)
 
     class Meta:
