@@ -24,7 +24,7 @@ from nautobot.ipam.models import Namespace, Prefix
 class CloudAccountForm(NautobotModelForm):
     provider = DynamicModelChoiceField(
         queryset=Manufacturer.objects.all(),
-        help_text="Manufacturers are the recommended model to represent cloud providers.",
+        help_text="The Manufacturer instance which represents the Cloud Provider",
     )
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all())
 
@@ -182,7 +182,7 @@ class CloudNetworkFilterForm(NautobotFilterForm):
 class CloudResourceTypeForm(NautobotModelForm):
     provider = DynamicModelChoiceField(
         queryset=Manufacturer.objects.all(),
-        help_text="Manufacturers are the recommended model to represent cloud providers.",
+        help_text="The Manufacturer instance which represents the Cloud Provider",
     )
     content_types = MultipleContentTypeField(
         feature="cloud_resource_types",

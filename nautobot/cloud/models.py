@@ -29,7 +29,7 @@ class CloudAccount(PrimaryModel):
         to="dcim.Manufacturer",
         on_delete=models.PROTECT,
         related_name="cloud_accounts",
-        help_text="Manufacturers are the recommended model to represent cloud providers.",
+        help_text="The Manufacturer instance which represents the Cloud Provider",
     )
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
@@ -68,6 +68,7 @@ class CloudResourceType(PrimaryModel):
         to="dcim.Manufacturer",
         on_delete=models.PROTECT,
         related_name="cloud_resource_types",
+        help_text="The Manufacturer instance which represents the Cloud Provider",
     )
     config_schema = models.JSONField(null=True, blank=True)
     content_types = models.ManyToManyField(
