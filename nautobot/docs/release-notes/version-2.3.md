@@ -61,7 +61,7 @@ Cleanup of the change log (deletion of `ObjectChange` records older than a given
 As an additional enhancement, the `LogsCleanup` Job can also be used to cleanup `JobResult` records if desired as well.
 
 <!-- towncrier release notes start -->
-## v2.3.0 (2024-07-25)
+## v2.3.0-beta.1 (2024-07-25)
 
 ### Security
 
