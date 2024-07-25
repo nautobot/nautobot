@@ -1,6 +1,6 @@
 # Cloud
 
-The new Cloud data models allow modeling [cloud networks](./cloudnetwork.md) and [cloud services](./cloudservice.md). Here is an example of how these models can be used together to model an AWS Direct Connect.
+The new Cloud data models allow the modeling of [cloud networks](./cloudnetwork.md) and [cloud services](./cloudservice.md). Here is an example of how these models can be used together to model an AWS Direct Connect.
 
 ## Example
 
