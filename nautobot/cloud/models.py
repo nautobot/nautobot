@@ -171,7 +171,12 @@ class CloudNetwork(CloudResourceTypeMixin, PrimaryModel):
         # TODO: should we enforce that self.cloud_resource_type.provider == self.cloud_account.provider?
 
 
-@extras_features("graphql")
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+)
 class CloudNetworkPrefixAssignment(BaseModel):
     cloud_network = models.ForeignKey(CloudNetwork, on_delete=models.CASCADE, related_name="prefix_assignments")
     prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="cloud_network_assignments")
@@ -223,7 +228,12 @@ class CloudService(CloudResourceTypeMixin, PrimaryModel):
         return self.name
 
 
-@extras_features("graphql")
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+)
 class CloudServiceNetworkAssignment(BaseModel):
     cloud_network = models.ForeignKey(CloudNetwork, on_delete=models.CASCADE, related_name="cloud_service_assignments")
     cloud_service = models.ForeignKey(CloudService, on_delete=models.CASCADE, related_name="cloud_network_assignments")

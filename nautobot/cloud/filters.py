@@ -158,8 +158,16 @@ class CloudServiceNetworkAssignmentFilterSet(BaseFilterSet):
         filter_predicates={
             "cloud_network__name": "icontains",
             "cloud_network__description": "icontains",
+            "cloud_network__cloud_account__name": "icontains",
+            "cloud_network__cloud_account__description": "icontains",
+            "cloud_network__cloud_resource_type__name": "icontains",
+            "cloud_network__cloud_resource_type__description": "icontains",
             "cloud_service__name": "icontains",
             "cloud_service__description": "icontains",
+            "cloud_service__cloud_account__name": "icontains",
+            "cloud_service__cloud_account__description": "icontains",
+            "cloud_service__cloud_resource_type__name": "icontains",
+            "cloud_service__cloud_resource_type__description": "icontains",
         }
     )
     cloud_network = NaturalKeyOrPKMultipleChoiceFilter(
