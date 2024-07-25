@@ -403,6 +403,11 @@ class ContactTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        # Contacts associated with ObjectMetadata objects are protected, create some deletable contacts
+        Contact.objects.create(name="Deletable contact 1")
+        Contact.objects.create(name="Deletable contact 2")
+        Contact.objects.create(name="Deletable contact 3")
+
         cls.create_data = [
             {
                 "name": "Contact 1",
@@ -4106,6 +4111,11 @@ class TeamTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        # Teams associated with ObjectMetadata objects are protected, create some deletable teams
+        Team.objects.create(name="Deletable team 1")
+        Team.objects.create(name="Deletable team 2")
+        Team.objects.create(name="Deletable team 3")
+
         cls.create_data = [
             {
                 "name": "Team 1",
