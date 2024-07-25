@@ -124,6 +124,8 @@ erDiagram
     CloudNetwork ||--o{ CloudResourceType : requires
     CloudNetwork ||--o{ CloudNetwork : "contains children"
 
+    CloudResourceType ||--o{ Manufacturer : requires
+
     CloudService ||--o{ CloudAccount : has
     CloudService ||--o{ CloudResourceType : requires
 ```
