@@ -56,6 +56,8 @@ class CloudNetworkTestCase(FilterTestCases.NameOnlyFilterTestCase):
     generic_filter_tests = [
         ("cloud_account", "cloud_account__id"),
         ("cloud_account", "cloud_account__name"),
+        ("cloud_services", "cloud_services__id"),
+        ("cloud_services", "cloud_services__name"),
         ("cloud_resource_type", "cloud_resource_type__id"),
         ("cloud_resource_type", "cloud_resource_type__name"),
         ("description",),
@@ -75,14 +77,35 @@ class CloudNetworkPrefixAssignmentTestCase(FilterTestCases.FilterTestCase):
     ]
 
 
+class CloudServiceNetworkAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = models.CloudServiceNetworkAssignment.objects.all()
+    filterset = filters.CloudServiceNetworkAssignmentFilterSet
+    generic_filter_tests = [
+        ("cloud_network", "cloud_network__id"),
+        ("cloud_network", "cloud_network__name"),
+        ("cloud_service", "cloud_service__id"),
+        ("cloud_service", "cloud_service__name"),
+    ]
+    exclude_q_filter_predicates = [
+        "cloud_network__cloud_account__name",
+        "cloud_network__cloud_account__description",
+        "cloud_network__cloud_resource_type__name",
+        "cloud_network__cloud_resource_type__description",
+        "cloud_service__cloud_account__name",
+        "cloud_service__cloud_account__description",
+        "cloud_service__cloud_resource_type__name",
+        "cloud_service__cloud_resource_type__description",
+    ]
+
+
 class CloudServiceTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = models.CloudService.objects.all()
     filterset = filters.CloudServiceFilterSet
     generic_filter_tests = [
         ("cloud_account", "cloud_account__id"),
         ("cloud_account", "cloud_account__name"),
-        ("cloud_network", "cloud_network__id"),
-        ("cloud_network", "cloud_network__name"),
+        ("cloud_networks", "cloud_networks__id"),
+        ("cloud_networks", "cloud_networks__name"),
         ("cloud_resource_type", "cloud_resource_type__id"),
         ("cloud_resource_type", "cloud_resource_type__name"),
         ("description",),

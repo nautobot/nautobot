@@ -59,6 +59,11 @@ class CloudNetworkTable(BaseTable):
         verbose_name="Circuits",
         reverse_lookup="circuit_terminations__cloud_network",
     )
+    cloud_service_count = LinkedCountColumn(
+        viewname="cloud:cloudservice_list",
+        url_params={"cloud_networks": "name"},
+        verbose_name="Cloud Services",
+    )
     tags = TagColumn(url_name="cloud:cloudnetwork_list")
 
     class Meta(BaseTable.Meta):
@@ -70,6 +75,7 @@ class CloudNetworkTable(BaseTable):
             "cloud_resource_type",
             "cloud_account",
             "parent",
+            "cloud_service_count",
             "assigned_prefix_count",
             "circuit_count",
             "tags",
@@ -81,6 +87,7 @@ class CloudNetworkTable(BaseTable):
             "description",
             "cloud_resource_type",
             "cloud_account",
+            "cloud_service_count",
             "assigned_prefix_count",
             "circuit_count",
             "parent",
@@ -136,8 +143,12 @@ class CloudServiceTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     cloud_account = tables.Column(linkify=True)
-    cloud_network = tables.Column(linkify=True)
     cloud_resource_type = tables.Column(linkify=True)
+    cloud_network_count = LinkedCountColumn(
+        viewname="cloud:cloudnetwork_list",
+        url_params={"cloud_services": "name"},
+        verbose_name="Cloud Networks",
+    )
     tags = TagColumn(url_name="cloud:cloudservice_list")
     actions = ButtonsColumn(CloudService)
 
@@ -146,17 +157,17 @@ class CloudServiceTable(BaseTable):
         fields = (
             "pk",
             "name",
-            "cloud_account",
-            "cloud_network",
             "cloud_resource_type",
+            "cloud_account",
+            "cloud_network_count",
             "tags",
             "actions",
         )
         default_columns = (
             "pk",
             "name",
-            "cloud_account",
-            "cloud_network",
             "cloud_resource_type",
+            "cloud_account",
+            "cloud_network_count",
             "actions",
         )
