@@ -105,6 +105,10 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
             obj.prefixes.add(*form.cleaned_data["add_prefixes"])
         if form.cleaned_data.get("remove_prefixes", None):
             obj.prefixes.remove(*form.cleaned_data["remove_prefixes"])
+        if form.cleaned_data.get("add_cloud_services", None):
+            obj.cloud_services.add(*form.cleaned_data["add_cloud_services"])
+        if form.cleaned_data.get("remove_cloud_services", None):
+            obj.cloud_services.remove(*form.cleaned_data["remove_cloud_services"])
 
 
 class CloudResourceTypeUIViewSet(NautobotUIViewSet):

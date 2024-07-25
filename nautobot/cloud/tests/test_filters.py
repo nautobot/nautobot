@@ -86,6 +86,16 @@ class CloudServiceNetworkAssignmentTestCase(FilterTestCases.FilterTestCase):
         ("cloud_service", "cloud_service__id"),
         ("cloud_service", "cloud_service__name"),
     ]
+    exclude_q_filter_predicates = [
+        "cloud_network__cloud_account__name",
+        "cloud_network__cloud_account__description",
+        "cloud_network__cloud_resource_type__name",
+        "cloud_network__cloud_resource_type__description",
+        "cloud_service__cloud_account__name",
+        "cloud_service__cloud_account__description",
+        "cloud_service__cloud_resource_type__name",
+        "cloud_service__cloud_resource_type__description",
+    ]
 
 
 class CloudServiceTestCase(FilterTestCases.NameOnlyFilterTestCase):

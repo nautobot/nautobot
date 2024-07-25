@@ -157,6 +157,8 @@ class CloudNetworkBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     remove_prefixes = DynamicModelMultipleChoiceField(
         queryset=Prefix.objects.all(), required=False, query_params={"namespace": "$namespace"}
     )
+    add_cloud_services = DynamicModelMultipleChoiceField(queryset=CloudService.objects.all(), required=False)
+    remove_cloud_services = DynamicModelMultipleChoiceField(queryset=CloudService.objects.all(), required=False)
 
     class Meta:
         nullable_fields = [
