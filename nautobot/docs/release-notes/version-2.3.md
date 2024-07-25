@@ -32,6 +32,10 @@ Added [a set of functionality](../user-guide/platform-functionality/metadata.md)
 
 Added the ability for users to save multiple configurations of list views (table columns, filtering, pagination and sorting) for ease of later use and reuse. Refer to the [Saved View](../user-guide/platform-functionality/savedview.md) documentation for more details and on how to use saved views.
 
+#### Device Modules ([#2101](https://github.com/nautobot/nautobot/issues/2101))
+
+Added new models for `ModuleBay`, `Module`, `ModuleType`, and `ModuleBayTemplate` to support modeling line cards and other modular components of a device. These models allow you to define a hierarchy of module bays and modules within a device, and to assign components (such as interfaces, power ports, etc.) to specific modules.
+
 ### Changed
 
 #### Dynamic Group Cache Changes
