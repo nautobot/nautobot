@@ -53,7 +53,6 @@ from nautobot.dcim.models import (
     RearPortTemplate,
     SoftwareImageFile,
     SoftwareVersion,
-    devices,
 )
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices
