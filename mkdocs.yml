@@ -399,6 +399,7 @@ nav:
               - Circuit Provider: "user-guide/core-data-model/circuits/provider.md"
               - Circuit Provider Network: "user-guide/core-data-model/circuits/providernetwork.md"
           - Cloud:
+              - "user-guide/core-data-model/cloud/cloud.md"
               - Cloud Account: "user-guide/core-data-model/cloud/cloudaccount.md"
               - Cloud Network: "user-guide/core-data-model/cloud/cloudnetwork.md"
               - Cloud Network Prefix Assignment: "user-guide/core-data-model/cloud/cloudnetworkprefixassignment.md"
