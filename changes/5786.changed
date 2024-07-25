@@ -1,7 +1,0 @@
-Changed `TreeManager` class (used for tree-models such as Location, RackGroup, and TenantGroup) default behavior from `with_tree_fields` to `without_tree_fields`. This should improve performance in many cases but may impact Apps or Jobs that were relying on the old default; such code should be updated to explicitly call `.with_tree_fields()` where appropriate.
-Merged the `StaticGroup` model added in [#5472](https://github.com/nautobot/nautobot/issues/5472) into the existing `DynamicGroup` model as a special type of group.
-Replaced `static_groups` filter added in [#5472](https://github.com/nautobot/nautobot/issues/5472) with a `dynamic_groups` filter.
-Replaced `static_groups` model form field added in [#5472](https://github.com/nautobot/nautobot/issues/5472) with a `dynamic_groups` field.
-Replaced `Static Groups` object table column added in [#5472](https://github.com/nautobot/nautobot/issues/5472) with a `Dynamic Groups` column.
-Replaced `static_groups` GraphQL field added in [#5472](https://github.com/nautobot/nautobot/issues/5472) with a `dynamic_groups` field.
-Replaced `StaticGroupMixin` model mixin class added in [#5631](https://github.com/nautobot/nautobot/pull/5631) with a `DynamicGroupsModelMixin` class. Still included by default in `OrganizationalModel` and `PrimaryModel`.
