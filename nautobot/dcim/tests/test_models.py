@@ -1265,6 +1265,8 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
 
 
 class DeviceBayTestCase(ModelTestCases.BaseModelTestCase):
+    model = DeviceBay
+
     def test_assigning_installed_device(self):
         chassis = Device.objects.first()
         server = Device.objects.exclude(device_type__subdevice_role=SubdeviceRoleChoices.ROLE_CHILD).last()
