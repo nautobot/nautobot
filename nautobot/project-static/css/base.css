@@ -980,8 +980,3 @@ code.hljs {
     text-decoration: none;
     background-color: #646464;
 }
-
-select {
-    appearance: auto;
-    -webkit-appearance: none; /* Webkit Desktop clients likes to use button for this select when using auto, which is an old standard. */
-}
