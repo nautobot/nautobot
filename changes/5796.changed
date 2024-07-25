@@ -1,0 +1,1 @@
+Raise exception when trying to assign a none parent/child device to a device bay.

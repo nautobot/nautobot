@@ -53,6 +53,7 @@ from nautobot.dcim.models import (
     RearPortTemplate,
     SoftwareImageFile,
     SoftwareVersion,
+    devices,
 )
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -1262,6 +1263,19 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         child_mtime_after_parent_site_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
 
         self.assertNotEqual(child_mtime_after_parent_rack_update_save, child_mtime_after_parent_site_update_save)
+
+
+class DeviceBayTestCase(ModelTestCases.BaseModelTestCase):
+    def test_assigning_installed_device(self):
+        chassis = Device.objects.first()
+        server = Device.objects.exclude(device_type__subdevice_role=SubdeviceRoleChoices.ROLE_CHILD).last()
+        bay = DeviceBay(device=chassis, name="Device Bay 1", installed_device=server)
+        with self.assertRaises(ValidationError) as err:
+            bay.validated_save()
+            self.assertEqual(
+                err.msg["installed_device"][0],
+                "Cannot install the specified device; device subdevice role is not a child.",
+            )
 
 
 class DeviceTypeToSoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):

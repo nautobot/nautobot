@@ -24,6 +24,7 @@ from nautobot.dcim.choices import (
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
+    SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import (
     NONCONNECTABLE_IFACE_TYPES,
@@ -1018,6 +1019,10 @@ class DeviceBay(ComponentModel):
                     {
                         "installed_device": f"Cannot install the specified device; device is already installed in {current_bay}"
                     }
+                )
+            if self.installed_device.device_type.subdevice_role != SubdeviceRoleChoices.ROLE_CHILD:
+                raise ValidationError(
+                    {"installed_device": "Cannot install the specified device; device subdevice role is not a child."}
                 )
 
     @property
