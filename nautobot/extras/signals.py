@@ -276,8 +276,9 @@ def _handle_deleted_object(sender, instance, **kwargs):
 @receiver(post_migrate)
 def post_migrate_clear_content_type_caches(sender, app_config, signal, **kwargs):
     """Clear various content-type caches after a migration."""
-    cache.delete("nautobot.extras.utils.change_logged_models_queryset")
-    cache.delete_pattern("nautobot.extras.utils.FeatureQuery.*")
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        cache.delete("nautobot.extras.utils.change_logged_models_queryset")
+        cache.delete_pattern("nautobot.extras.utils.FeatureQuery.*")
 
 
 #
