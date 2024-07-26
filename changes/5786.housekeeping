@@ -1,1 +1,0 @@
-Substantially reduced the setup overhead (time/memory) of `OpenAPISchemaTestCases` tests.

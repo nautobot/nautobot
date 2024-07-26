@@ -1,3 +1,0 @@
-Fixed overflowing device component tables in device and module component tabs.
-Fixed an exception when trying to edit an IPAddress that had a NAT Inside IPAddress that was related to a component attached to a module.
-Fixed incorrect sort order of interfaces in the device and module interface tabs.

@@ -1,5 +1,0 @@
-Updated Cable table to display the parent Device of Cables connected to Modules in a Device.
-Updated device and device_id filters for Cables, Interfaces, and other modular device components to recognize components that are nested in Modules in a Device.
-Updated Cable connect form to allow connecting to Console Ports, Console Server Ports, Interfaces, Power Ports, Power Outlets, Front Ports, and Rear Ports that are nested in Modules in a Device.
-Updated Interface `device` filter to allow filtering on Device `name` or `id`.
-Updated `Cable._termination_a_device` and `Cable._termination_b_device` to cache the Device when cables are connected to an Interface or Port of a Module in a Device.

@@ -1,1 +1,0 @@
-Removed the `StaticGroup` model added in #5472, replacing it with a subtype of the `DynamicGroup` model.

@@ -1,1 +1,0 @@
-Deprecated the `DynamicGroupMixin` model mixin class. Models supporting Dynamic Groups should use `DynamicGroupsModelMixin` instead.
