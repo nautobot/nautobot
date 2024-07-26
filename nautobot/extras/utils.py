@@ -1,4 +1,5 @@
 import collections
+import contextlib
 import hashlib
 import hmac
 import logging
@@ -14,6 +15,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
+import redis.exceptions
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -112,11 +114,14 @@ def change_logged_models_queryset():
 
     Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
     """
+    queryset = None
     cache_key = "nautobot.extras.utils.change_logged_models_queryset"
-    queryset = cache.get(cache_key)
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        queryset = cache.get(cache_key)
     if queryset is None:
         queryset = ChangeLoggedModelsQuery().as_queryset()
-        cache.set(cache_key, queryset)
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            cache.set(cache_key, queryset)
     return queryset
 
 
@@ -168,11 +173,14 @@ class FeatureQuery:
 
         Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
         """
+        choices = None
         cache_key = f"nautobot.extras.utils.FeatureQuery.choices.{self.feature}"
-        choices = cache.get(cache_key)
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            choices = cache.get(cache_key)
         if choices is None:
             choices = [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in ContentType.objects.filter(self.get_query())]
-            cache.set(cache_key, choices)
+            with contextlib.suppress(redis.exceptions.ConnectionError):
+                cache.set(cache_key, choices)
         return choices
 
     def list_subclasses(self):
@@ -181,11 +189,14 @@ class FeatureQuery:
 
         Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
         """
+        subclasses = None
         cache_key = f"nautobot.extras.utils.FeatureQuery.subclasses.{self.feature}"
-        subclasses = cache.get(cache_key)
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            subclasses = cache.get(cache_key)
         if subclasses is None:
             subclasses = [ct.model_class() for ct in ContentType.objects.filter(self.get_query())]
-            cache.set(cache_key, subclasses)
+            with contextlib.suppress(redis.exceptions.ConnectionError):
+                cache.set(cache_key, subclasses)
         return subclasses
 
 
