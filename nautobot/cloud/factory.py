@@ -97,8 +97,15 @@ class CloudServiceFactory(PrimaryModelFactory):
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
     has_cloudaccount = NautobotBoolIterator()
     cloud_account = factory.Maybe("has_cloudaccount", random_instance(models.CloudAccount, allow_null=False), None)
-    cloud_network = random_instance(models.CloudNetwork, allow_null=False)
     cloud_resource_type = random_instance(
         lambda: models.CloudResourceType.objects.get_for_model(models.CloudService), allow_null=False
     )
     extra_config = factory.Faker("pydict", value_types=[str, bool, int])
+
+    @factory.post_generation
+    def cloud_networks(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.cloud_networks.set(extracted)
+            else:
+                self.cloud_networks.set(get_random_instances(models.CloudNetwork))

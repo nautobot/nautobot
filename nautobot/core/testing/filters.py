@@ -18,7 +18,7 @@ from nautobot.core.filters import (
 )
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
-from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
+from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Tag, Team
 from nautobot.tenancy import models
 
 
@@ -192,8 +192,16 @@ class FilterTestCases:
                 if len(instance.tags.all()) >= 2:
                     tags = list(instance.tags.all()[:2])
                     break
+
+            # Otherwise, create some tags and apply to an instance for this test
             else:
-                self.fail(f"Couldn't find any {self.queryset.model._meta.object_name} with at least two Tags.")
+                model_ct = ContentType.objects.get_for_model(self.queryset.model)
+                test_tags_filter_a = Tag.objects.get_or_create(name="test tags filter a")[0]
+                test_tags_filter_a.content_types.add(model_ct)
+                test_tags_filter_b = Tag.objects.get_or_create(name="test tags filter b")[0]
+                test_tags_filter_b.content_types.add(model_ct)
+                self.queryset.first().tags.add(test_tags_filter_a, test_tags_filter_b)
+                tags = [test_tags_filter_a, test_tags_filter_b]
             params = {"tags": [tags[0].name, tags[1].pk]}
             filterset_result = self.filterset(params, self.queryset).qs
             # Tags is an AND filter not an OR filter

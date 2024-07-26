@@ -1,1 +1,0 @@
-Deprecated the properties `DynamicGroup.members_cached`, `DynamicGroup.members_cache_key`, `DynamicGroupMixin.dynamic_groups_cached`, `DynamicGroupMixin.dynamic_groups_list`, and `DynamicGroupMixin.dynamic_groups_list_cached`.

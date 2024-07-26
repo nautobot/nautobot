@@ -171,7 +171,12 @@ class CloudNetwork(CloudResourceTypeMixin, PrimaryModel):
         # TODO: should we enforce that self.cloud_resource_type.provider == self.cloud_account.provider?
 
 
-@extras_features("graphql")
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+)
 class CloudNetworkPrefixAssignment(BaseModel):
     cloud_network = models.ForeignKey(CloudNetwork, on_delete=models.CASCADE, related_name="prefix_assignments")
     prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="cloud_network_assignments")
@@ -203,10 +208,16 @@ class CloudService(CloudResourceTypeMixin, PrimaryModel):
         blank=True,
         null=True,
     )
-    cloud_network = models.ForeignKey(to=CloudNetwork, on_delete=models.PROTECT, related_name="cloud_services")
+    cloud_networks = models.ManyToManyField(
+        to=CloudNetwork,
+        through="cloud.CloudServiceNetworkAssignment",
+        related_name="cloud_services",
+        through_fields=("cloud_service", "cloud_network"),
+        blank=True,
+    )
     clone_fields = [
         "cloud_account",
-        "cloud_network",
+        "cloud_networks",
         "cloud_resource_type",
     ]
 
@@ -215,3 +226,22 @@ class CloudService(CloudResourceTypeMixin, PrimaryModel):
 
     def __str__(self):
         return self.name
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+)
+class CloudServiceNetworkAssignment(BaseModel):
+    cloud_network = models.ForeignKey(CloudNetwork, on_delete=models.CASCADE, related_name="cloud_service_assignments")
+    cloud_service = models.ForeignKey(CloudService, on_delete=models.CASCADE, related_name="cloud_network_assignments")
+    is_metadata_associable_model = False
+
+    class Meta:
+        unique_together = ["cloud_network", "cloud_service"]
+        ordering = ["cloud_network", "cloud_service"]
+
+    def __str__(self):
+        return f"{self.cloud_network}: {self.cloud_service}"

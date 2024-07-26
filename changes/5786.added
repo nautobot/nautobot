@@ -1,3 +1,0 @@
-Added `DynamicGroup.group_type` field with options `dynamic-filter`, `dynamic-set`, and `static`. Existing DynamicGroups will automatically be set to either `dynamic-filter` or `dynamic-set` as befits their definitions.
-Added `DynamicGroup.tenant` and `DynamicGroup.tags` fields.
-Added Dynamic Group support to many more Nautobot models.

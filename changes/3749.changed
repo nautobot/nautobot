@@ -1,1 +1,0 @@
-Changed behavior of the `CHANGELOG_RETENTION` setting; it no longer applies automatically to force cleanup of ObjectChange records over a certain age cutoff, but instead serves as the default cutoff age whenever running the new "Logs Cleanup" system Job.

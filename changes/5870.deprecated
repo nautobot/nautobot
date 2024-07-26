@@ -1,1 +1,0 @@
-Deprecated the blocks `block export_button` and `block import_button` in `generic/object_list.html`. Apps and templates should migrate to using `block export_list_element` and `block import_list_element` respectively.

@@ -1,3 +1,0 @@
-Added Python 3.12 to CI.
-Updated CI to use `poetry` 1.8.2 and use action `networktocode/gh-action-setup-poetry-environment@v6`.
-Removed CI workaround for old Poetry versions.

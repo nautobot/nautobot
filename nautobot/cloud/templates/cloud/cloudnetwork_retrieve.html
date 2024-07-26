@@ -9,19 +9,38 @@
 
 
 {% block extra_nav_tabs %}
-    {% if object.parent is None %}
+    {% if children_count %}
             <li role="presentation"{% if request.GET.tab == 'children' %} class="active"{% endif %}>
                 <a href="{{ object.get_absolute_url }}#children" onclick="switch_tab(this.href, reload=false)" aria-controls="children" role="tab" data-toggle="tab">
-                    Children {% badge object.children.count %}
+                    Children {% badge children_count %}
                 </a>
             </li>
-    {% else %}
-        {{ block.super }}
+    {% endif %}
+    {% if prefix_count %}
+        <li role="presentation"{% if request.GET.tab == 'prefixes' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#prefixes" onclick="switch_tab(this.href, reload=false)" aria-controls="prefixes" role="tab" data-toggle="tab">
+                Prefixes {% badge prefix_count %}
+            </a>
+        </li>
+    {% endif %}
+    {% if circuit_count %}
+        <li role="presentation"{% if request.GET.tab == 'circuits' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#circuits" onclick="switch_tab(this.href, reload=false)" aria-controls="circuits" role="tab" data-toggle="tab">
+                Circuits {% badge circuit_count %}
+            </a>
+        </li>
+    {% endif %}
+    {% if cloud_service_count %}
+        <li role="presentation"{% if request.GET.tab == 'cloud_services' %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}#cloud_services" onclick="switch_tab(this.href, reload=false)" aria-controls="cloud_services" role="tab" data-toggle="tab">
+                Cloud Services {% badge cloud_service_count %}
+            </a>
+        </li>
     {% endif %}
 {% endblock extra_nav_tabs %}
 
 {% block extra_tab_content %}
-{% if object.parent is None %}
+    {% if children_count %}
         <div id="children" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "children" %}active{% else %}fade{% endif %}">
             <div class="panel panel-default">
                 <div class="panel-heading">
@@ -38,8 +57,24 @@
             </div>
             {% include 'inc/paginator.html' with paginator=children_table.paginator page=children_table.page %}
         </div>
-    {% else %}
-        {{ block.super }}
+    {% endif %}
+    {% if prefix_count %}
+        <div id="prefixes" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "prefixes" %}active{% else %}fade{% endif %}">
+            {% include 'panel_table.html' with table=prefixes_table heading="Assigned Prefixes" %}
+            {% include 'inc/paginator.html' with paginator=prefixes_table.paginator page=prefixes_table.page %}
+        </div>
+    {% endif %}
+    {% if circuit_count %}
+        <div id="circuits" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "circuits" %}active{% else %}fade{% endif %}">
+            {% include 'panel_table.html' with table=circuits_table heading="Circuits" %}
+            {% include 'inc/paginator.html' with paginator=circuits_table.paginator page=circuits_table.page %}
+        </div>
+    {% endif %}
+    {% if cloud_service_count %}
+        <div id="cloud_services" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "cloud_services" %}active{% else %}fade{% endif %}">
+            {% include 'panel_table.html' with table=cloud_services_table heading="Cloud Services" %}
+            {% include 'inc/paginator.html' with paginator=cloud_services_table.paginator page=cloud_services_table.page %}
+        </div>
     {% endif %}
 {% endblock extra_tab_content %}
 
@@ -85,22 +120,9 @@
     <div class="panel panel-default">
         <div class="panel-heading">
             <strong>Extra Config</strong>
-            {% include 'extras/inc/json_format.html' %}
         </div>
         <div class="panel-body">
-            {% include 'extras/inc/json_data.html' with data=object.extra_config format=format %}
+            <pre>{{ object.extra_config|render_json }}</pre>
         </div>
     </div>
-
 {% endblock content_right_page %}
-
-{% block content_full_width_page %}
-    {% include 'panel_table.html' with table=prefix_table heading="Assigned Prefixes" %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <strong>Circuits</strong>
-        </div>
-        {% include 'inc/table.html' with table=circuits_table %}
-    </div>
-    {% include 'inc/paginator.html' with paginator=circuits_table.paginator page=circuits_table.page %}
-{% endblock content_full_width_page %}
