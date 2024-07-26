@@ -1267,10 +1267,16 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
 class DeviceBayTestCase(ModelTestCases.BaseModelTestCase):
     model = DeviceBay
 
+    def setUp(self):
+        devices = Device.objects.all()[:3]
+        devices[1].device_type.subdevice_role = SubdeviceRoleChoices.ROLE_CHILD
+        devices[1].device_type.validated_save()
+        DeviceBay.objects.create(device=devices[0], name="Device Bay 1", installed_device=devices[1])
+
     def test_assigning_installed_device(self):
         chassis = Device.objects.first()
         server = Device.objects.exclude(device_type__subdevice_role=SubdeviceRoleChoices.ROLE_CHILD).last()
-        bay = DeviceBay(device=chassis, name="Device Bay 1", installed_device=server)
+        bay = DeviceBay(device=chassis, name="Device Bay Err", installed_device=server)
         with self.assertRaises(ValidationError) as err:
             bay.validated_save()
             self.assertEqual(
