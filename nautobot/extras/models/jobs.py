@@ -1074,6 +1074,87 @@ class ScheduledJob(BaseModel):
             day_of_week=day_of_week,
         )
 
+    @classmethod
+    def create_schedule(
+        cls,
+        job_model,
+        user,
+        name=None,
+        start_time=None,
+        interval=JobExecutionType.TYPE_IMMEDIATELY,
+        crontab="",
+        profile=False,
+        approval_required=False,
+        task_queue=None,
+        **job_kwargs,
+    ):
+        """
+        Schedule a job with the specified parameters.
+
+        This method creates a schedule for a job to be executed at a specific time
+        or interval. It handles immediate execution, custom start times, and
+        crontab-based scheduling.
+
+        Parameters:
+            job_model (JobModel): The job model instance.
+            user (User): The user who is scheduling the job.
+            name (str, optional): The name of the scheduled job. Defaults to None.
+            start_time (datetime, optional): The start time for the job. Defaults to None.
+            interval (JobExecutionType, optional): The interval type for the job execution.
+                Defaults to JobExecutionType.TYPE_IMMEDIATELY.
+            crontab (str, optional): The crontab string for the schedule. Defaults to "".
+            profile (bool, optional): Flag indicating whether to profile the job. Defaults to False.
+            approval_required (bool, optional): Flag indicating if approval is required. Defaults to False.
+            task_queue (str, optional): The task queue for the job. Defaults to None, which will use the configured default celery queue.
+            **job_kwargs: Additional keyword arguments to pass to the job.
+
+        Returns:
+            ScheduledJob instance
+        """
+
+        if interval == JobExecutionType.TYPE_IMMEDIATELY:
+            start_time = timezone.now()
+            name = name or f"{job_model.name} - {start_time}"
+        elif interval == JobExecutionType.TYPE_CUSTOM:
+            if start_time is None:
+                # "start_time" is checked against models.ScheduledJob.earliest_possible_time()
+                # which returns timezone.now() + timedelta(seconds=15)
+                start_time = timezone.now() + timedelta(seconds=20)
+
+        celery_kwargs = {
+            "nautobot_job_profile": profile,
+            "queue": task_queue,
+        }
+        if job_model.soft_time_limit > 0:
+            celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
+        if job_model.time_limit > 0:
+            celery_kwargs["time_limit"] = job_model.time_limit
+
+        # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
+        #
+        # We pass in task and job_model here partly for forward/backward compatibility logic, and
+        # part fallback safety. It's mildly useful to store both the task module/class name and the JobModel
+        # FK on the ScheduledJob, as in the case where the JobModel gets deleted (and the FK becomes
+        # null) you still have a bit of context on the ScheduledJob as to what it was originally
+        # scheduled for.
+        scheduled_job = cls(
+            name=name,
+            task=job_model.class_path,
+            job_model=job_model,
+            start_time=start_time,
+            description=f"Nautobot job {name} scheduled by {user} for {start_time}",
+            kwargs=job_kwargs,
+            celery_kwargs=celery_kwargs,
+            interval=interval,
+            one_off=(interval == JobExecutionType.TYPE_FUTURE),
+            user=user,
+            approval_required=approval_required,
+            crontab=crontab,
+            queue=task_queue,
+        )
+        scheduled_job.validated_save()
+        return scheduled_job
+
     def to_cron(self):
         t = self.start_time
         if self.interval == JobExecutionType.TYPE_HOURLY:
