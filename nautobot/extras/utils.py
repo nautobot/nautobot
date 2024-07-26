@@ -109,6 +109,8 @@ class ChangeLoggedModelsQuery(FeaturedQueryMixin):
 def change_logged_models_queryset():
     """
     Cacheable function for cases where we need this queryset many times, such as when saving multiple objects.
+
+    Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
     """
     cache_key = "nautobot.extras.utils.change_logged_models_queryset"
     queryset = cache.get(cache_key)
@@ -163,12 +165,28 @@ class FeatureQuery:
 
             >>> FeatureQuery('statuses').get_choices()
             [('dcim.device', 13), ('dcim.rack', 34)]
+
+        Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
         """
-        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in ContentType.objects.filter(self.get_query())]
+        cache_key = f"nautobot.extras.utils.FeatureQuery.choices.{self.feature}"
+        choices = cache.get(cache_key)
+        if choices is None:
+            choices = [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in ContentType.objects.filter(self.get_query())]
+            cache.set(cache_key, choices)
+        return choices
 
     def list_subclasses(self):
-        """Return a list of model classes that declare this feature."""
-        return [ct.model_class() for ct in ContentType.objects.filter(self.get_query())]
+        """
+        Return a list of model classes that declare this feature.
+
+        Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
+        """
+        cache_key = f"nautobot.extras.utils.FeatureQuery.subclasses.{self.feature}"
+        subclasses = cache.get(cache_key)
+        if subclasses is None:
+            subclasses = [ct.model_class() for ct in ContentType.objects.filter(self.get_query())]
+            cache.set(cache_key, subclasses)
+        return subclasses
 
 
 @deconstructible
