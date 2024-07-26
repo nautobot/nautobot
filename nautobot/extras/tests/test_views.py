@@ -2594,7 +2594,7 @@ class JobTestCase(
 
         self.assertInHTML('<option value="uniquequeue" selected>', content)
         self.assertInHTML(
-            '<input type="text" name="var" value="456" class="form-control form-control" required placeholder="None" id="id_var">',
+            '<input type="text" name="var" value="456" class="form-control" required placeholder="None" id="id_var">',
             content,
         )
         self.assertInHTML('<input type="hidden" name="_profile" value="True" id="id__profile">', content)
