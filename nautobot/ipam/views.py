@@ -939,18 +939,14 @@ class IPAddressAssignView(view_mixins.GetReturnURLMixin, generic.ObjectView):
     def post(self, request):
         interface, _ = retrieve_interface_or_vminterface_from_request(request)
 
-        if pks := request.POST.getlist("pk"):
+        pks = request.POST.getlist("pk")
+        if pks:
             ip_addresses = IPAddress.objects.restrict(request.user, "view").filter(pk__in=pks)
             interface.ip_addresses.add(*ip_addresses)
             return redirect(self.get_return_url(request))
-
-        return render(
-            request,
-            "ipam/ipaddress_assign.html",
-            {
-                "return_url": self.get_return_url(request),
-            },
-        )
+        else:
+            messages.error(request, "Please select at least one IP Address from the table.")
+            return redirect(request.get_full_path())
 
 
 class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermissionRequiredMixin, View):
