@@ -272,6 +272,7 @@ def _handle_deleted_object(sender, instance, **kwargs):
 # Content types
 #
 
+
 @receiver(post_migrate)
 def post_migrate_clear_content_type_caches(sender, app_config, signal, **kwargs):
     """Clear various content-type caches after a migration."""
