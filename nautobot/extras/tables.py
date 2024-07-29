@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
@@ -985,8 +985,10 @@ class ObjectMetadataTable(BaseTable):
             "actions",
         )
 
-    def render_scoped_fields(self, record):
-        return render_json(record.scoped_fields, pretty_print=True)
+    def render_scoped_fields(self, value):
+        if not value:
+            return "(all fields)"
+        return format_html_join(", ", "<code>{}</code>", ([v] for v in sorted(value)))
 
     def render_value(self, record):
         if record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_JSON:

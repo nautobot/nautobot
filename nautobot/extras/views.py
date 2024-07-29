@@ -2245,7 +2245,7 @@ class ObjectMetadataUIViewSet(
 ):
     filterset_class = filters.ObjectMetadataFilterSet
     filterset_form_class = forms.ObjectMetadataFilterForm
-    queryset = ObjectMetadata.objects.all().order_by("assigned_object_type", "scoped_fields")
+    queryset = ObjectMetadata.objects.all().order_by("assigned_object_type", "assigned_object_id", "scoped_fields")
     serializer_class = serializers.ObjectMetadataSerializer
     table_class = tables.ObjectMetadataTable
     action_buttons = ("export",)

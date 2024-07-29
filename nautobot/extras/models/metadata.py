@@ -186,6 +186,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
         base_field=models.CharField(
             max_length=CHARFIELD_MAX_LENGTH,
         ),
+        blank=True,
         help_text="List of scoped fields, only direct fields on the model",
     )
     _value = models.JSONField(

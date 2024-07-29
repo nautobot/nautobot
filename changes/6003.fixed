@@ -1,0 +1,1 @@
+Added missing `blank=True` to `ObjectMetadata.scoped_fields`.

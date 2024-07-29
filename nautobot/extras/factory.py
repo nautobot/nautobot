@@ -251,6 +251,25 @@ class MetadataTypeFactory(PrimaryModelFactory):
                 )
 
 
+def _available_field_names(metadata_type, assigned_object_type, assigned_object_id):
+    assigned_model = assigned_object_type.model_class()
+    field_names = [field.name for field in assigned_model._meta.get_fields()]
+    # Avoid collisions, see ObjectMetadata.clean()
+    existing_metadata_scoped_fields = ObjectMetadata.objects.filter(
+        metadata_type=metadata_type,
+        assigned_object_type=assigned_object_type,
+        assigned_object_id=assigned_object_id,
+    ).values_list("scoped_fields", flat=True)
+    for existing_scoped_fields in existing_metadata_scoped_fields:
+        if existing_scoped_fields:
+            field_names = sorted(set(field_names).difference(existing_scoped_fields))
+        else:
+            field_names = []
+            break
+
+    return field_names
+
+
 class ObjectMetadataFactory(BaseModelFactory):
     """ObjectMetadata model factory"""
 
@@ -263,7 +282,6 @@ class ObjectMetadataFactory(BaseModelFactory):
         MetadataType.objects.all(),
         allow_null=False,
     )
-    scoped_fields = factory.Faker("pylist", allowed_types=[str])
 
     @factory.lazy_attribute
     def contact(self):
@@ -322,8 +340,34 @@ class ObjectMetadataFactory(BaseModelFactory):
 
     @factory.lazy_attribute
     def assigned_object_id(self):
-        queryset = self.assigned_object_type.model_class().objects.all()
-        return factory.random.randgen.choice(queryset).pk
+        assigned_model = self.assigned_object_type.model_class()
+        queryset = assigned_model.objects.all()
+        for _ in range(10):
+            assigned_object_id = factory.random.randgen.choice(queryset).pk
+            if _available_field_names(self.metadata_type, self.assigned_object_type, assigned_object_id):
+                return assigned_object_id
+
+        raise RuntimeError(f"Couldn't find an instance of {assigned_model} not already covered by {self.metadata_type}")
+
+    @factory.lazy_attribute
+    def scoped_fields(self):
+        assigned_model = self.assigned_object_type.model_class()
+        all_field_names = [field.name for field in assigned_model._meta.get_fields()]
+        field_names = _available_field_names(self.metadata_type, self.assigned_object_type, self.assigned_object_id)
+        if not field_names:
+            raise RuntimeError(
+                f"All existing scoped_fields for {self.metadata_type} are covered by existing ObjectMetadata "
+                f"for {self.assigned_object_type} {self.assigned_object_id}"
+            )
+
+        if len(field_names) < len(all_field_names):
+            minimum_fields = 1  # don't allow an empty list since that would cover all fields
+        else:
+            minimum_fields = 0
+
+        return factory.random.randgen.sample(
+            field_names, k=factory.random.randgen.randint(minimum_fields, len(field_names))
+        )
 
 
 class ObjectChangeFactory(BaseModelFactory):
