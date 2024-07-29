@@ -1510,6 +1510,7 @@ class ModuleType(PrimaryModel):
     part_number = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Discrete part number (optional)"
     )
+    comments = models.TextField(blank=True)
 
     clone_fields = [
         "manufacturer",
@@ -1530,6 +1531,7 @@ class ModuleType(PrimaryModel):
                 ("manufacturer", self.manufacturer.name),
                 ("model", self.model),
                 ("part_number", self.part_number),
+                ("comments", self.comments),
             )
         )
 

@@ -817,6 +817,7 @@ class DeviceTypeTestCase(
         cls.bulk_edit_data = {
             "u_height": 0,
             "is_full_depth": False,
+            "comments": "changed comment",
         }
 
     def test_list_has_correct_links(self):
@@ -1196,6 +1197,7 @@ class ModuleTypeTestCase(
         ModuleType.objects.create(
             model="Test Module Type 1",
             manufacturer=manufacturers[0],
+            comments="test comment",
         )
         ModuleType.objects.create(
             model="Test Module Type 2",
@@ -1215,10 +1217,12 @@ class ModuleTypeTestCase(
             "model": "Test Module Type X",
             "part_number": "123ABC",
             "tags": [t.pk for t in Tag.objects.get_for_model(ModuleType)],
+            "comments": "test comment",
         }
 
         cls.bulk_edit_data = {
             "manufacturer": manufacturers[1].pk,
+            "comments": "changed comment",
         }
 
     def test_list_has_correct_links(self):

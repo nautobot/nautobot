@@ -261,7 +261,7 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
     )
     location = tables.Column(linkify=True)
     tenant = TenantColumn()
-    tags = TagColumn(url_name="dcim:device_list")
+    tags = TagColumn(url_name="dcim:module_list")
     actions = ButtonsColumn(Module, prepend_template=MODULE_BUTTONS)
 
     class Meta(BaseTable.Meta):

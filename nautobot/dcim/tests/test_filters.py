@@ -656,9 +656,15 @@ def common_test_data(cls):
     device_redundancy_groups = iter(DeviceRedundancyGroup.objects.all())
 
     module_types = (
-        ModuleType.objects.create(manufacturer=cls.manufacturers[0], model="Filter Test Module Type 1"),
-        ModuleType.objects.create(manufacturer=cls.manufacturers[1], model="Filter Test Module Type 2"),
-        ModuleType.objects.create(manufacturer=cls.manufacturers[2], model="Filter Test Module Type 3"),
+        ModuleType.objects.create(
+            manufacturer=cls.manufacturers[0], model="Filter Test Module Type 1", comments="Module Type 1"
+        ),
+        ModuleType.objects.create(
+            manufacturer=cls.manufacturers[1], model="Filter Test Module Type 2", comments="Module Type 2"
+        ),
+        ModuleType.objects.create(
+            manufacturer=cls.manufacturers[2], model="Filter Test Module Type 3", comments="Module Type 3"
+        ),
     )
 
     # Create 3 of each component template on the first two module types
@@ -898,7 +904,7 @@ class ModularDeviceComponentTestMixin(DeviceComponentTestMixin):
         )
         parent_module_bay = ModuleBay.objects.create(name="Parent module bay", position="1", parent_device=device)
         module_type = ModuleType.objects.create(
-            manufacturer=manufacturer, model=f"Test Device Filter for {model} Module Type"
+            manufacturer=manufacturer, model=f"Test Device Filter for {model} Module Type", comments="Module Type test"
         )
         module = Module.objects.create(
             module_type=module_type, parent_module_bay=parent_module_bay, status=self.module_statuses[0]
@@ -2526,7 +2532,7 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
             name="Parent module bay", position="1", parent_device=device_vc_master
         )
         module_type = ModuleType.objects.create(
-            manufacturer=manufacturer, model="Test Device Filter for Interface Module Type"
+            manufacturer=manufacturer, model="Test Device Filter for Interface Module Type", comments="Module Type test"
         )
         module = Module.objects.create(
             module_type=module_type, parent_module_bay=parent_module_bay, status=self.module_statuses[0]
@@ -2772,7 +2778,7 @@ class FrontPortTestCase(ModularDeviceComponentTestMixin, FilterTestCases.FilterT
         )
         parent_module_bay = ModuleBay.objects.create(name="Parent module bay", position="1", parent_device=device)
         module_type = ModuleType.objects.create(
-            manufacturer=manufacturer, model="Test Device Filter for FrontPort Module Type"
+            manufacturer=manufacturer, model="Test Device Filter for FrontPort Module Type", comments="Module Type test"
         )
         module = Module.objects.create(
             module_type=module_type, parent_module_bay=parent_module_bay, status=self.module_statuses[0]
@@ -3357,7 +3363,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         )
         parent_module_bay = ModuleBay.objects.create(name="Parent module bay", position="1", parent_device=device)
         module_type = ModuleType.objects.create(
-            manufacturer=manufacturer, model="Test Device Filter for Cable Module Type"
+            manufacturer=manufacturer, model="Test Device Filter for Cable Module Type", comments="Module Type test"
         )
         module = Module.objects.create(
             module_type=module_type, parent_module_bay=parent_module_bay, status=self.module_statuses[0]
@@ -4012,6 +4018,7 @@ class ModuleTypeTestCase(FilterTestCases.FilterTestCase):
     queryset = ModuleType.objects.all()
     filterset = ModuleTypeFilterSet
     generic_filter_tests = [
+        ("comments",),
         ("manufacturer", "manufacturer__id"),
         ("manufacturer", "manufacturer__name"),
         ("model",),
