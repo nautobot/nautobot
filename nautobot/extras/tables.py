@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
@@ -957,10 +957,8 @@ class MetadataTypeTable(BaseTable):
 class ObjectMetadataTable(BaseTable):
     pk = ToggleColumn()
     metadata_type = tables.Column(linkify=True)
-    assigned_object = tables.TemplateColumn(template_code=ASSIGNED_OBJECT, orderable=False)
-    actions = ButtonsColumn(
-        ObjectMetadata,
-        buttons=("delete"),
+    assigned_object = tables.TemplateColumn(
+        template_code=ASSIGNED_OBJECT, verbose_name="Assigned object", orderable=False
     )
     # This is needed so that render_value method below does not skip itself
     # when metadata_type.data_type is TYPE_CONTACT_TEAM and we need it to display either contact or team
@@ -974,7 +972,6 @@ class ObjectMetadataTable(BaseTable):
             "metadata_type",
             "scoped_fields",
             "value",
-            "actions",
         )
         default_columns = (
             "pk",
@@ -982,11 +979,12 @@ class ObjectMetadataTable(BaseTable):
             "scoped_fields",
             "value",
             "metadata_type",
-            "actions",
         )
 
-    def render_scoped_fields(self, record):
-        return render_json(record.scoped_fields, pretty_print=True)
+    def render_scoped_fields(self, value):
+        if not value:
+            return "(all fields)"
+        return format_html_join(", ", "<code>{}</code>", ([v] for v in sorted(value)))
 
     def render_value(self, record):
         if record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_JSON:

@@ -3029,8 +3029,7 @@ class ObjectChangeTestCase(TestCase):
 
 
 class ObjectMetadataTestCase(
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
 ):

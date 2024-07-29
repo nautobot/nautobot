@@ -72,7 +72,7 @@ class Migration(migrations.Migration):
                 ("last_updated", models.DateTimeField(auto_now=True, null=True)),
                 (
                     "scoped_fields",
-                    nautobot.core.models.fields.JSONArrayField(base_field=models.CharField(max_length=255)),
+                    nautobot.core.models.fields.JSONArrayField(base_field=models.CharField(max_length=255), blank=True),
                 ),
                 ("_value", models.JSONField(blank=True, null=True)),
                 ("assigned_object_id", models.UUIDField(db_index=True)),
