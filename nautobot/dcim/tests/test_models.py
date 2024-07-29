@@ -1268,10 +1268,21 @@ class DeviceBayTestCase(ModelTestCases.BaseModelTestCase):
     model = DeviceBay
 
     def setUp(self):
-        devices = Device.objects.all()[:3]
-        devices[1].device_type.subdevice_role = SubdeviceRoleChoices.ROLE_CHILD
-        devices[1].device_type.validated_save()
-        DeviceBay.objects.create(device=devices[0], name="Device Bay 1", installed_device=devices[1])
+        device = Device.objects.first()
+        devicetype = DeviceType.objects.create(
+            manufacturer=device.device_type.manufacturer,
+            model="TestDeviceType1",
+            u_height=0,
+            subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+        )
+        child_device = Device.objects.create(
+            device_type=devicetype,
+            role=device.role,
+            name="TestDevice1",
+            status=device.status,
+            location=device.location,
+        )
+        DeviceBay.objects.create(device=device, name="Device Bay 1", installed_device=child_device)
 
     def test_assigning_installed_device(self):
         chassis = Device.objects.first()
@@ -1279,10 +1290,10 @@ class DeviceBayTestCase(ModelTestCases.BaseModelTestCase):
         bay = DeviceBay(device=chassis, name="Device Bay Err", installed_device=server)
         with self.assertRaises(ValidationError) as err:
             bay.validated_save()
-            self.assertEqual(
-                err.msg["installed_device"][0],
-                "Cannot install the specified device; device subdevice role is not a child.",
-            )
+        self.assertEqual(
+            err.exception.message_dict["installed_device"][0],
+            f'Cannot install device "{server}"; device-type "{server.device_type}" subdevice_role is not "child".',
+        )
 
 
 class DeviceTypeToSoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):

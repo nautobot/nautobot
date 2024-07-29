@@ -1022,7 +1022,9 @@ class DeviceBay(ComponentModel):
                 )
             if self.installed_device.device_type.subdevice_role != SubdeviceRoleChoices.ROLE_CHILD:
                 raise ValidationError(
-                    {"installed_device": "Cannot install the specified device; device subdevice role is not a child."}
+                    {
+                        "installed_device": f'Cannot install device "{self.installed_device}"; device-type "{self.installed_device.device_type}" subdevice_role is not "child".'
+                    }
                 )
 
     @property
