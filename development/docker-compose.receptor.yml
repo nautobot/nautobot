@@ -29,7 +29,6 @@ services:
       NAUTOBOT_REDIS_HOST: localhost
     env_file:
       - ./dev.env
-      - ./override.env
   # receptor_remote:
   #   image: "quay.io/ansible/receptor"
   #   volumes:
