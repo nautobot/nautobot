@@ -1,1 +1,0 @@
-Added support for filtering in GraphQL of objects identified by a many-to-many relation (`Location.prefixes`, `Prefix.locations`, etc.)

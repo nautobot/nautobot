@@ -20,7 +20,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import ContentFile
-from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import RegexValidator
 from django.db.models import Model
 from django.db.models.query import QuerySet
@@ -539,7 +539,7 @@ class BaseJob:
             elif isinstance(value, Model):
                 return_data[field_name] = value.pk
             # FileVar (Save each FileVar as a FileProxy)
-            elif isinstance(value, InMemoryUploadedFile):
+            elif isinstance(value, UploadedFile):
                 return_data[field_name] = BaseJob._save_file_to_proxy(value)
             # IPAddressVar, IPAddressWithMaskVar, IPNetworkVar
             elif isinstance(value, netaddr.ip.BaseIP):
