@@ -365,8 +365,8 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
                 if isinstance(value, datetime):
                     # check if datetime object has tzinfo
                     if value.tzinfo is None:
-                        value = value.replace(tzinfo=timezone.utc)
-                    value = value.replace(microsecond=0).isoformat()
+                        value = value.replace(tzinfo=timezone.utc)  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+                    value = value.replace(microsecond=0).isoformat()  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
                 else:
                     acceptable_datetime_formats = [
                         "YYYY-MM-DDTHH:MM:SS",

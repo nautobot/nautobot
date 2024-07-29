@@ -15,7 +15,7 @@ from rest_framework import status
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.testing import APITestCase, APIViewTestCases
-from nautobot.core.testing.utils import disable_warnings
+from nautobot.core.testing.utils import disable_warnings, get_deletable_objects
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
@@ -2790,6 +2790,13 @@ class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
         cls.update_data = {
             "scoped_fields": ["pk"],
         }
+
+    def get_deletable_object(self):
+        # TODO: CSV round-trip doesn't work for empty scoped_fields values at present. :-(
+        instance = get_deletable_objects(self.model, self._get_queryset().exclude(scoped_fields=[])).first()
+        if instance is None:
+            self.fail("Couldn't find a single deletable object with non-empty scoped_fields")
+        return instance
 
 
 class NoteTest(APIViewTestCases.APIViewTestCase):
