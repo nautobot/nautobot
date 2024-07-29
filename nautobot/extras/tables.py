@@ -957,10 +957,8 @@ class MetadataTypeTable(BaseTable):
 class ObjectMetadataTable(BaseTable):
     pk = ToggleColumn()
     metadata_type = tables.Column(linkify=True)
-    assigned_object = tables.TemplateColumn(template_code=ASSIGNED_OBJECT, orderable=False)
-    actions = ButtonsColumn(
-        ObjectMetadata,
-        buttons=("delete"),
+    assigned_object = tables.TemplateColumn(
+        template_code=ASSIGNED_OBJECT, verbose_name="Assigned object", orderable=False
     )
     # This is needed so that render_value method below does not skip itself
     # when metadata_type.data_type is TYPE_CONTACT_TEAM and we need it to display either contact or team
@@ -974,7 +972,6 @@ class ObjectMetadataTable(BaseTable):
             "metadata_type",
             "scoped_fields",
             "value",
-            "actions",
         )
         default_columns = (
             "pk",
@@ -982,7 +979,6 @@ class ObjectMetadataTable(BaseTable):
             "scoped_fields",
             "value",
             "metadata_type",
-            "actions",
         )
 
     def render_scoped_fields(self, value):

@@ -2237,9 +2237,7 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
 
 
 class ObjectMetadataUIViewSet(
-    ObjectBulkDestroyViewMixin,
     ObjectChangeLogViewMixin,
-    ObjectDestroyViewMixin,
     ObjectDetailViewMixin,
     ObjectListViewMixin,
 ):
