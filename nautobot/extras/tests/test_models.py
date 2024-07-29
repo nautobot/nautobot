@@ -1352,7 +1352,7 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
                 value="Invalid assigned object type",
                 scoped_fields=["status"],
                 assigned_object_type=ContentType.objects.get_for_model(IPAddress),
-                assigned_object_id=Contact.objects.first().pk,
+                assigned_object_id=Contact.objects.filter(associated_object_metadatas__isnull=True).first().pk,
             )
             obj_metadata.validated_save()
 
@@ -1362,29 +1362,29 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
         )
         type_contact_team.content_types.add(ContentType.objects.get_for_model(Contact))
         type_contact_team.content_types.add(ContentType.objects.get_for_model(Team))
-        instance1 = ObjectMetadata.objects.create(
+        instance1 = ObjectMetadata(
             metadata_type=type_contact_team,
             contact=Contact.objects.first(),
             team=Team.objects.first(),
             scoped_fields=["address"],
             assigned_object_type=ContentType.objects.get_for_model(Contact),
-            assigned_object_id=Contact.objects.first().pk,
+            assigned_object_id=Contact.objects.filter(associated_object_metadatas__isnull=True).first().pk,
         )
-        instance2 = ObjectMetadata.objects.create(
+        instance2 = ObjectMetadata(
             metadata_type=type_contact_team,
             contact=None,
             team=None,
             scoped_fields=["phone"],
             assigned_object_type=ContentType.objects.get_for_model(Contact),
-            assigned_object_id=Contact.objects.last().pk,
+            assigned_object_id=Contact.objects.filter(associated_object_metadatas__isnull=True).last().pk,
         )
-        instance3 = ObjectMetadata.objects.create(
+        instance3 = ObjectMetadata(
             metadata_type=type_contact_team,
             contact=Contact.objects.first(),
             team=None,
             scoped_fields=["email"],
             assigned_object_type=ContentType.objects.get_for_model(Team),
-            assigned_object_id=Team.objects.first().pk,
+            assigned_object_id=Team.objects.filter(associated_object_metadatas__isnull=True).first().pk,
         )
         with self.assertRaises(ValidationError):
             instance1.validated_save()
@@ -1407,7 +1407,7 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
             value="Some text value",
             scoped_fields=["status", "parent"],
             assigned_object_type=obj_type,
-            assigned_object_id=Location.objects.first().pk,
+            assigned_object_id=Location.objects.filter(associated_object_metadatas__isnull=True).first().pk,
         )
         obj_metadata.save()
 
@@ -1440,7 +1440,7 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
             value=15,
             scoped_fields=["status", "parent"],
             assigned_object_type=obj_type,
-            assigned_object_id=Location.objects.first().pk,
+            assigned_object_id=Location.objects.filter(associated_object_metadatas__isnull=True).first().pk,
         )
         obj_metadata.validated_save()
 
@@ -1484,7 +1484,7 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
             value=15.245,
             scoped_fields=["status", "parent"],
             assigned_object_type=obj_type,
-            assigned_object_id=Location.objects.first().pk,
+            assigned_object_id=Location.objects.filter(associated_object_metadatas__isnull=True).first().pk,
         )
         obj_metadata.validated_save()
 
@@ -1525,7 +1525,7 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
             value=False,
             scoped_fields=["status", "parent"],
             assigned_object_type=obj_type,
-            assigned_object_id=Location.objects.first().pk,
+            assigned_object_id=Location.objects.filter(associated_object_metadatas__isnull=True).first().pk,
         )
         obj_metadata.validated_save()
 
@@ -1559,7 +1559,7 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
             value="1994-01-01",
             scoped_fields=["status", "parent"],
             assigned_object_type=obj_type,
-            assigned_object_id=Location.objects.first().pk,
+            assigned_object_id=Location.objects.filter(associated_object_metadatas__isnull=True).first().pk,
         )
         obj_metadata.validated_save()
 
@@ -1596,7 +1596,7 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
             value="2024-06-27T17:58:47-0500",
             scoped_fields=["status", "parent"],
             assigned_object_type=obj_type,
-            assigned_object_id=Location.objects.first().pk,
+            assigned_object_id=Location.objects.filter(associated_object_metadatas__isnull=True).first().pk,
         )
         obj_metadata.validated_save()
 
@@ -1663,7 +1663,7 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
             value="Option A",
             scoped_fields=["status", "parent"],
             assigned_object_type=obj_type,
-            assigned_object_id=Location.objects.first().pk,
+            assigned_object_id=Location.objects.filter(associated_object_metadatas__isnull=True).first().pk,
         )
         obj_metadata.validated_save()
 
@@ -1689,7 +1689,7 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
             value=["Option A"],
             scoped_fields=["status", "parent"],
             assigned_object_type=obj_type,
-            assigned_object_id=Location.objects.first().pk,
+            assigned_object_id=Location.objects.filter(associated_object_metadatas__isnull=True).first().pk,
         )
         obj_metadata.validated_save()
 
@@ -1700,20 +1700,22 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
         self.assertIn(f"Invalid choice(s) ({invalid_options})", str(context.exception))
 
     def test_no_scoped_fields_overlap(self):
-        """Test that overlapping between scoped_fields of ObjectMetadata with the same metadata_type and the same assigned_object is not allowed"""
+        """
+        Test that overlapping scoped_fields of ObjectMetadata with same metadata_type/assigned_object is not allowed.
+        """
         ObjectMetadata.objects.create(
             metadata_type=MetadataType.objects.first(),
             contact=Contact.objects.first(),
             scoped_fields=["host", "mask_length", "type", "role", "status"],
             assigned_object_type=ContentType.objects.get_for_model(IPAddress),
-            assigned_object_id=IPAddress.objects.first().pk,
+            assigned_object_id=IPAddress.objects.filter(associated_object_metadatas__isnull=True).first().pk,
         )
         instance2 = ObjectMetadata.objects.create(
             metadata_type=MetadataType.objects.first(),
             contact=Contact.objects.first(),
             scoped_fields=[],
             assigned_object_type=ContentType.objects.get_for_model(IPAddress),
-            assigned_object_id=IPAddress.objects.first().pk,
+            assigned_object_id=IPAddress.objects.filter(associated_object_metadatas__isnull=True).first().pk,
         )
         with self.assertRaises(ValidationError):
             # try scope all fields

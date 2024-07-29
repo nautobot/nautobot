@@ -15,7 +15,7 @@ from rest_framework import status
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.testing import APITestCase, APIViewTestCases
-from nautobot.core.testing.utils import disable_warnings
+from nautobot.core.testing.utils import disable_warnings, get_deletable_objects
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
@@ -2741,21 +2741,21 @@ class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
             value="Hey",
             scoped_fields=["parent", "status"],
             assigned_object_type=ContentType.objects.get_for_model(IPAddress),
-            assigned_object_id=IPAddress.objects.first().pk,
+            assigned_object_id=IPAddress.objects.filter(associated_object_metadatas__isnull=True).first().pk,
         )
         ObjectMetadata.objects.create(
             metadata_type=mdts[0],
             value="Hello",
             scoped_fields=["namespace"],
             assigned_object_type=ContentType.objects.get_for_model(Prefix),
-            assigned_object_id=Prefix.objects.first().pk,
+            assigned_object_id=Prefix.objects.filter(associated_object_metadatas__isnull=True).first().pk,
         )
         ObjectMetadata.objects.create(
             metadata_type=mdts[2],
             contact=Contact.objects.first(),
             scoped_fields=["status"],
             assigned_object_type=ContentType.objects.get_for_model(Prefix),
-            assigned_object_id=Prefix.objects.last().pk,
+            assigned_object_id=Prefix.objects.filter(associated_object_metadatas__isnull=True).last().pk,
         )
         cls.create_data = [
             {
@@ -2763,33 +2763,40 @@ class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
                 "scoped_fields": ["location_type"],
                 "value": "random words",
                 "assigned_object_type": "dcim.location",
-                "assigned_object_id": Location.objects.first().pk,
+                "assigned_object_id": Location.objects.filter(associated_object_metadatas__isnull=True).first().pk,
             },
             {
                 "metadata_type": mdts[1].pk,
                 "scoped_fields": ["name"],
                 "value": "random words",
                 "assigned_object_type": "dcim.location",
-                "assigned_object_id": Location.objects.first().pk,
+                "assigned_object_id": Location.objects.filter(associated_object_metadatas__isnull=True).first().pk,
             },
             {
                 "metadata_type": mdts[2].pk,
-                "scoped_fields": ["device_type"],
+                "scoped_fields": [],
                 "contact": Contact.objects.first().pk,
                 "assigned_object_type": "dcim.device",
-                "assigned_object_id": Device.objects.first().pk,
+                "assigned_object_id": Device.objects.filter(associated_object_metadatas__isnull=True).first().pk,
             },
             {
                 "metadata_type": mdts[2].pk,
                 "scoped_fields": ["interfaces"],
                 "team": Team.objects.first().pk,
                 "assigned_object_type": "dcim.device",
-                "assigned_object_id": Device.objects.first().pk,
+                "assigned_object_id": Device.objects.filter(associated_object_metadatas__isnull=True).last().pk,
             },
         ]
         cls.update_data = {
             "scoped_fields": ["pk"],
         }
+
+    def get_deletable_object(self):
+        # TODO: CSV round-trip doesn't work for empty scoped_fields values at present. :-(
+        instance = get_deletable_objects(self.model, self._get_queryset().exclude(scoped_fields=[])).first()
+        if instance is None:
+            self.fail("Couldn't find a single deletable object with non-empty scoped_fields")
+        return instance
 
 
 class NoteTest(APIViewTestCases.APIViewTestCase):

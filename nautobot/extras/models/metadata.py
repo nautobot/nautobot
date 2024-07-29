@@ -186,6 +186,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
         base_field=models.CharField(
             max_length=CHARFIELD_MAX_LENGTH,
         ),
+        blank=True,
         help_text="List of scoped fields, only direct fields on the model",
     )
     _value = models.JSONField(
@@ -361,12 +362,17 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
                         raise ValidationError("Date values must be in the format YYYY-MM-DD.")
             # Validate datetime
             elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_DATETIME:
-                acceptable_datetime_formats = [
-                    "YYYY-MM-DDTHH:MM:SS",
-                    "YYYY-MM-DDTHH:MM:SS(+,-)zzzz",
-                    "YYYY-MM-DDTHH:MM:SS(+,-)zz:zz",
-                ]
-                if not isinstance(value, datetime):
+                if isinstance(value, datetime):
+                    # check if datetime object has tzinfo
+                    if value.tzinfo is None:
+                        value = value.replace(tzinfo=timezone.utc)  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+                    value = value.replace(microsecond=0).isoformat()  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+                else:
+                    acceptable_datetime_formats = [
+                        "YYYY-MM-DDTHH:MM:SS",
+                        "YYYY-MM-DDTHH:MM:SS(+,-)zzzz",
+                        "YYYY-MM-DDTHH:MM:SS(+,-)zz:zz",
+                    ]
                     try:
                         datetime.strptime(value, "%Y-%m-%dT%H:%M:%S%z")
                     except ValueError:
@@ -380,12 +386,6 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
                             )
                     except TypeError:
                         raise ValidationError("Value must be a datetime or str object.")
-                else:
-                    # if value is a datetime object
-                    # check if datetime object has tzinfo
-                    if value.tzinfo is None:
-                        value = value.replace(tzinfo=timezone.utc)
-                    value = value.replace(microsecond=0).isoformat()
             # Validate selected choice
             elif metadata_type_data_type == MetadataTypeDataTypeChoices.TYPE_SELECT:
                 if value not in self.metadata_type.choices.values_list("value", flat=True):
