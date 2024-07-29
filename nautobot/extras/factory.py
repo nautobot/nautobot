@@ -251,14 +251,13 @@ class MetadataTypeFactory(PrimaryModelFactory):
                 )
 
 
-def _available_field_names(metadata_type, assigned_object_type, assigned_object_id):
-    assigned_model = assigned_object_type.model_class()
-    field_names = [field.name for field in assigned_model._meta.get_fields()]
+def _available_field_names(metadata_type, assigned_object):
+    field_names = [field.name for field in assigned_object._meta.get_fields()]
     # Avoid collisions, see ObjectMetadata.clean()
     existing_metadata_scoped_fields = ObjectMetadata.objects.filter(
         metadata_type=metadata_type,
-        assigned_object_type=assigned_object_type,
-        assigned_object_id=assigned_object_id,
+        assigned_object_type=ContentType.objects.get_for_model(assigned_object),
+        assigned_object_id=assigned_object.pk,
     ).values_list("scoped_fields", flat=True)
     for existing_scoped_fields in existing_metadata_scoped_fields:
         if existing_scoped_fields:
@@ -326,38 +325,33 @@ class ObjectMetadataFactory(BaseModelFactory):
             raise RuntimeError(f"Unsupported metadatatype datatype {metadata_type_data_type}")
 
     @factory.lazy_attribute
-    def assigned_object_type(self):
-        while True:
-            allowed_content_types = list(self.metadata_type.content_types.values_list("pk", flat=True))
-            content_type = factory.random.randgen.choice(
-                ContentType.objects.filter(FeatureQuery("metadata").get_query(), pk__in=allowed_content_types)
-            )
+    def assigned_object(self):
+        allowed_content_types = list(self.metadata_type.content_types.all())
+        for content_type in factory.random.randgen.sample(allowed_content_types, len(allowed_content_types)):
             # It does not have a get_absolute_url attribute and is causing failure in API unittests
             if content_type.app_label == "extras" and content_type.model == "taggeditem":
                 continue
-            if content_type.model_class().objects.exists():
-                return content_type
 
-    @factory.lazy_attribute
-    def assigned_object_id(self):
-        assigned_model = self.assigned_object_type.model_class()
-        queryset = assigned_model.objects.all()
-        for _ in range(10):
-            assigned_object_id = factory.random.randgen.choice(queryset).pk
-            if _available_field_names(self.metadata_type, self.assigned_object_type, assigned_object_id):
-                return assigned_object_id
+            assigned_model = content_type.model_class()
+            queryset = assigned_model.objects.all()
 
-        raise RuntimeError(f"Couldn't find an instance of {assigned_model} not already covered by {self.metadata_type}")
+            if not queryset.exists():
+                continue
+
+            for _ in range(10):
+                assigned_object = factory.random.randgen.choice(queryset)
+                if _available_field_names(self.metadata_type, assigned_object):
+                    return assigned_object
+
+        raise RuntimeError(f"Couldn't find any suitable instances not already covered by {self.metadata_type}")
 
     @factory.lazy_attribute
     def scoped_fields(self):
-        assigned_model = self.assigned_object_type.model_class()
-        all_field_names = [field.name for field in assigned_model._meta.get_fields()]
-        field_names = _available_field_names(self.metadata_type, self.assigned_object_type, self.assigned_object_id)
+        all_field_names = [field.name for field in self.assigned_object._meta.get_fields()]
+        field_names = _available_field_names(self.metadata_type, self.assigned_object)
         if not field_names:
             raise RuntimeError(
-                f"All existing scoped_fields for {self.metadata_type} are covered by existing ObjectMetadata "
-                f"for {self.assigned_object_type} {self.assigned_object_id}"
+                f"All existing scoped_fields for {self.metadata_type} are covered by existing ObjectMetadata for {self.assigned_object}"
             )
 
         if len(field_names) < len(all_field_names):
