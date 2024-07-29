@@ -886,6 +886,7 @@ class DeviceTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
     u_height = forms.IntegerField(required=False)
     is_full_depth = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect(), label="Is full depth")
+    comments = CommentField(label="Comments", required=False)
 
     class Meta:
         nullable_fields = ["device_family", "software_image_files"]
@@ -946,6 +947,7 @@ class DeviceTypeFilterForm(NautobotFilterForm):
 
 class ModuleTypeForm(NautobotModelForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all())
+    comments = CommentField(label="Comments")
 
     class Meta:
         model = ModuleType
@@ -953,6 +955,7 @@ class ModuleTypeForm(NautobotModelForm):
             "manufacturer",
             "model",
             "part_number",
+            "comments",
             "tags",
         ]
 
@@ -974,6 +977,7 @@ class ModuleTypeImportForm(BootstrapMixin, forms.ModelForm):
             "manufacturer",
             "model",
             "part_number",
+            "comments",
         ]
 
 
@@ -981,6 +985,7 @@ class ModuleTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ModuleType.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     part_number = forms.CharField(required=False)
+    comments = CommentField(label="Comments", required=False)
 
     class Meta:
         nullable_fields = []

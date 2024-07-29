@@ -760,12 +760,15 @@ module_types = (
 class ModuleTypeFactory(PrimaryModelFactory):
     class Meta:
         model = ModuleType
-        exclude = ("has_part_number",)
+        exclude = ("has_part_number", "has_comments")
 
     manufacturer = random_instance(Manufacturer, allow_null=False)
 
     has_part_number = NautobotBoolIterator()
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
+
+    has_comments = NautobotBoolIterator()
+    comments = factory.Maybe("has_comments", factory.Faker("bs"))
 
     @factory.lazy_attribute
     def model(self):

@@ -1999,6 +1999,10 @@ class ModuleTypeFilterSet(DeviceTypeModuleTypeCommonFiltersMixin, NautobotFilter
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },
+            "comments": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
         },
     )
     has_modules = RelatedMembershipBooleanFilter(
