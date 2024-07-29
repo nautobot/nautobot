@@ -160,7 +160,7 @@ class ModuleTypeTable(BaseTable):
         url_params={"module_type": "pk"},
         verbose_name="Modules",
     )
-    tags = TagColumn(url_name="dcim:devicetype_list")
+    tags = TagColumn(url_name="dcim:moduletype_list")
 
     class Meta(BaseTable.Meta):
         model = ModuleType

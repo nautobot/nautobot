@@ -138,6 +138,7 @@ class Migration(migrations.Migration):
                 ),
                 ("model", models.CharField(max_length=255)),
                 ("part_number", models.CharField(blank=True, max_length=255)),
+                ("comments", models.TextField(blank=True)),
             ],
             options={
                 "ordering": ("manufacturer", "model"),

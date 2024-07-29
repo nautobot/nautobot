@@ -113,6 +113,23 @@
             </div>
 {% endblock content_left_page %}
 
+{% block content_right_page %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <strong>Comments</strong>
+    </div>
+    <div class="panel-body rendered-markdown">
+        {% if object.comments %}
+            {{ object.comments|render_markdown }}
+        {% else %}
+            <span class="text-muted">None</span>
+        {% endif %}
+    </div>
+</div>
+{% endblock content_right_page %}
+
+
+
 {% block extra_tab_content %}
                 <div role="tabpanel" class="tab-pane {% if request.GET.tab == 'interfaces' %}active{% else %}fade{% endif %}" id="interfaces">
                     {% include 'dcim/inc/moduletype_component_table.html' with table=interface_table title='Interfaces' tab='interfaces' %}

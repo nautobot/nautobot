@@ -1022,6 +1022,7 @@ class ModuleTypeTest(APIViewTestCases.APIViewTestCase):
     model = ModuleType
     bulk_update_data = {
         "part_number": "ABC123",
+        "comments": "changed comment",
     }
 
     @classmethod
@@ -1033,6 +1034,7 @@ class ModuleTypeTest(APIViewTestCases.APIViewTestCase):
                 "manufacturer": manufacturer_id,
                 "model": "Module Type 1",
                 "part_number": "123456",
+                "comments": "test comment",
             },
             {
                 "manufacturer": manufacturer_id,
