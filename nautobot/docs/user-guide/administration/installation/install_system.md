@@ -2,7 +2,7 @@
 
 The documentation assumes that you are running one of the following:
 
-- Ubuntu 20.04 - 22.04
+- Ubuntu 20.04+
 - Debian 11+
 - RHEL/CentOS 8.2+
     - Delimited by `RHEL8` tabs in the docs, but also includes other derivatives of RHEL such as RockyLinux or AlmaLinux
@@ -19,9 +19,6 @@ This will install:
 - Redis server and client
 
 === "Ubuntu/Debian"
-
-    ???+ note "Ubuntu 24.04"
-        Ubuntu 24.04 is not officially supported by Nautobot 2.2 and prior yet. If you wish to attempt to use Nautobot 24.04 the one additional package in early testing to add would be `libjpeg-dev`. The pip resolution with Python 3.12 would require the use of the flag `--ignore-requires-python`.
 
     ```bash title="Install system dependencies"
     sudo apt update -y
@@ -75,7 +72,7 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
         ??? example "Example of Entering Postgres"
 
             ```no-highlight title="Entering Postgres DB"
-            psql (12.5 (Ubuntu 12.5-0ubuntu0.20.04.1))
+            psql (16.3 (Ubuntu 16.3-0ubuntu0.24.04.1))
             Type "help" for help.
 
             postgres=#
@@ -119,13 +116,13 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
 
             ```no-highlight title="Example output"
             Password for user nautobot:
-            psql (12.5 (Ubuntu 12.5-0ubuntu0.20.04.1))
-            SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
+            psql (16.3 (Ubuntu 16.3-0ubuntu0.24.04.1))
+            SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off)
             Type "help" for help.
 
             nautobot=> \conninfo
-            You are connected to database "nautobot" as user "nautobot" on host "localhost" (address "127.0.0.1") at port "5432".
-            SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
+            You are connected to database "nautobot" as user "nautobot" on host "localhost" (address "::1") at port "5432".
+            SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off)
             nautobot=> \q
             ```
 
@@ -133,10 +130,10 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
 
         <h3>Install MySQL</h3>
 
-        This will install the MySQL database server and client. Additionally, MySQL requires that the MySQL development libraries are installed so that we may compile the Python `mysqlclient` library during the Nautobot installation steps.
+        This will install the MySQL database server and client. Additionally, MySQL requires that the MySQL development libraries and the `pkg-config` package are both installed so that we may compile the Python `mysqlclient` library during the Nautobot installation steps.
 
         ```no-highlight title="Install MySQL required packages"
-        sudo apt install -y libmysqlclient-dev mysql-server
+        sudo apt install -y libmysqlclient-dev mysql-server pkg-config
         ```
 
         <h3>Create a MySQL Database</h3>
@@ -165,9 +162,9 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
             ```no-highlight title="Example MySQL DB creation output."
             Welcome to the MySQL monitor.  Commands end with ; or \g.
             Your MySQL connection id is 11
-            Server version: 8.0.25-0ubuntu0.20.04.1 (Ubuntu)
+            Server version: 8.0.37-0ubuntu0.24.04.1 (Ubuntu)
 
-            Copyright (c) 2000, 2021, Oracle and/or its affiliates.
+            Copyright (c) 2000, 2024, Oracle and/or its affiliates.
 
             Oracle is a registered trademark of Oracle Corporation and/or its
             affiliates. Other names may be trademarks of their respective
@@ -214,9 +211,9 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
             Enter password:
             Welcome to the MySQL monitor.  Commands end with ; or \g.
             Your MySQL connection id is 13
-            Server version: 8.0.25-0ubuntu0.20.04.1 (Ubuntu)
+            Server version: 8.0.37-0ubuntu0.24.04.1 (Ubuntu)
 
-            Copyright (c) 2000, 2021, Oracle and/or its affiliates.
+            Copyright (c) 2000, 2024, Oracle and/or its affiliates.
 
             Oracle is a registered trademark of Oracle Corporation and/or its
             affiliates. Other names may be trademarks of their respective
@@ -226,7 +223,7 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
 
             mysql> status
             --------------
-            mysql  Ver 8.0.25-0ubuntu0.20.04.1 for Linux on x86_64 ((Ubuntu))
+            mysql  Ver 8.0.37-0ubuntu0.24.04.1 for Linux on x86_64 ((Ubuntu))
 
             Connection id:          13
             Current database:       nautobot
@@ -235,7 +232,7 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
             Current pager:          stdout
             Using outfile:          ''
             Using delimiter:        ;
-            Server version:         8.0.25-0ubuntu0.20.04.1 (Ubuntu)
+            Server version:         8.0.37-0ubuntu0.24.04.1 (Ubuntu)
             Protocol version:       10
             Connection:             Localhost via UNIX socket
             Server characterset:    utf8mb4
