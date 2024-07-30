@@ -67,7 +67,8 @@ django-redis = "~5.4.0"
 # Django silk for request profiling
 django-silk = "~5.1.0"
 # External Storage support (i.e. S3)
-django-storages = {version = "~1.14.4", optional = true}
+# Pinned temporarily to 1.14.3 due to https://github.com/revsys/django-health-check/issues/434
+django-storages = {version = "1.14.3", optional = true}
 # Advanced HTML tables
 django-tables2 = "~2.7.0"
 # Tags
