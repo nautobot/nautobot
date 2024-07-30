@@ -1290,9 +1290,9 @@ class DeviceBayTestCase(ModelTestCases.BaseModelTestCase):
         bay = DeviceBay(device=chassis, name="Device Bay Err", installed_device=server)
         with self.assertRaises(ValidationError) as err:
             bay.validated_save()
-        self.assertEqual(
-            err.exception.message_dict["installed_device"][0],
+        self.assertIn(
             f'Cannot install device "{server}"; device-type "{server.device_type}" subdevice_role is not "child".',
+            str(err.exception),
         )
 
 
