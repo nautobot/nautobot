@@ -213,7 +213,7 @@ sudo usermod -aG nautobot nginx
 
 Ensure that the `NAUTOBOT_ROOT` permissions are set to `750`, allowing other members of the `nautobot` user group (including the `nginx` account) to read and execute files in this directory:
 
-```no-highlight title="Update access permissions to 750 for `$NAUTOBOT_ROOT`"
+```no-highlight title="Update access permissions to 750 for $NAUTOBOT_ROOT"
 chmod 750 $NAUTOBOT_ROOT
 ```
 
