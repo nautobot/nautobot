@@ -212,7 +212,7 @@ sudo systemctl restart nginx
 !!! info
     If the restart fails, and you changed the default key location, check to make sure the `nautobot.conf` file you pasted has the updated key location. For example, CentOS requires keys to be in `/etc/pki/tls/` instead of `/etc/ssl/`.
 
-## Confirm Permissions for NAUTOBOT_ROOT
+## Confirm Permissions for `NAUTOBOT_ROOT`
 
 Ensure that the `NAUTOBOT_ROOT` permissions are set to `755`.
 If permissions need to be changed, as the `nautobot` user run:
