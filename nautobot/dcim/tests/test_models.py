@@ -1268,26 +1268,25 @@ class DeviceBayTestCase(ModelTestCases.BaseModelTestCase):
     model = DeviceBay
 
     def setUp(self):
-        device = Device.objects.first()
+        self.devices = Device.objects.filter(device_type__subdevice_role=SubdeviceRoleChoices.ROLE_PARENT)
         devicetype = DeviceType.objects.create(
-            manufacturer=device.device_type.manufacturer,
+            manufacturer=self.devices[0].device_type.manufacturer,
             model="TestDeviceType1",
             u_height=0,
             subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
         )
         child_device = Device.objects.create(
             device_type=devicetype,
-            role=device.role,
+            role=self.devices[0].role,
             name="TestDevice1",
-            status=device.status,
-            location=device.location,
+            status=self.devices[0].status,
+            location=self.devices[0].location,
         )
-        DeviceBay.objects.create(device=device, name="Device Bay 1", installed_device=child_device)
+        DeviceBay.objects.create(device=self.devices[0], name="Device Bay 1", installed_device=child_device)
 
     def test_assigning_installed_device(self):
-        chassis = Device.objects.first()
         server = Device.objects.exclude(device_type__subdevice_role=SubdeviceRoleChoices.ROLE_CHILD).last()
-        bay = DeviceBay(device=chassis, name="Device Bay Err", installed_device=server)
+        bay = DeviceBay(device=self.devices[1], name="Device Bay Err", installed_device=server)
         with self.assertRaises(ValidationError) as err:
             bay.validated_save()
         self.assertIn(
