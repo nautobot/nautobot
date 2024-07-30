@@ -115,7 +115,7 @@ sudo -iu nautobot
             /opt/nautobot/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
             ```
 
-    === "RHEL"
+    === "Fedora/RHEL"
 
         ```no-highlight title="Print out the PATH variable"
         echo $PATH

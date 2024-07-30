@@ -22,7 +22,7 @@ Two files will be created: the public certificate (`nautobot.crt`) and the priva
       -out /etc/ssl/certs/nautobot.crt
     ```
 
-=== "RHEL"
+=== "Fedora/RHEL"
 
     ```no-highlight title="Create SSL certificate"
     sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
@@ -39,8 +39,7 @@ Any HTTP server of your choosing is supported. For your convenience, setup instr
 
 ### NGINX
 
-[NGINX](https://www.nginx.com/resources/wiki/) is a free, open source, high-performance HTTP server and reverse proxy
-and is by far the most popular choice.
+[NGINX](https://www.nginx.com/resources/wiki/) is a free, open source, high-performance HTTP server and reverse proxy.
 
 #### Install NGINX
 
@@ -52,7 +51,7 @@ Begin by installing NGINX:
     sudo apt install -y nginx
     ```
 
-=== "RHEL"
+=== "Fedora/RHEL"
 
     ```no-highlight title="Install NGINX"
     sudo dnf install -y nginx
@@ -122,7 +121,7 @@ Begin by installing NGINX:
     }
     ```
 
-=== "RHEL"
+=== "Fedora/RHEL"
     Once NGINX is installed, copy and paste the following NGINX configuration for the Nautobot NGINX site.
 
     === "Vim"
@@ -193,7 +192,7 @@ Begin by installing NGINX:
     sudo ln -s /etc/nginx/sites-available/nautobot.conf /etc/nginx/sites-enabled/nautobot.conf
     ```
 
-=== "RHEL"
+=== "Fedora/RHEL"
 
     Run the following command to disable the default site that comes with the `nginx` package:
 

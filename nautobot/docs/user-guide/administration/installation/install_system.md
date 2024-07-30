@@ -4,8 +4,8 @@ The documentation assumes that you are running one of the following:
 
 - Ubuntu 20.04+
 - Debian 11+
-- RHEL/CentOS 8.2+ and derivatives
-    - Delimited by `RHEL` tabs in the docs, but also includes other derivatives of RHEL such as RockyLinux or AlmaLinux
+- Fedora, RHEL/CentOS 8.2+ and derivatives
+    - Delimited by `Fedora/RHEL` tabs in the docs, but also includes other derivatives of RHEL such as RockyLinux or AlmaLinux
 
 ## Install System Packages
 
@@ -25,7 +25,7 @@ This will install:
     sudo apt install -y git python3 python3-pip python3-venv python3-dev redis-server
     ```
 
-=== "RHEL"
+=== "Fedora/RHEL"
 
     ```bash title="Install system dependencies"
     sudo dnf check-update
@@ -250,7 +250,7 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
             Bye
             ```
 
-=== "RHEL"
+=== "Fedora/RHEL"
 
     === "PostgreSQL"
 
@@ -264,7 +264,7 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
 
         <h3>Initialize PostgreSQL</h3>
 
-        CentOS/RHEL requires a manual step to generate the initial configurations required by PostgreSQL.
+        Fedora/RHEL and related distros typically require a manual step to generate the initial configurations required by PostgreSQL.
 
         ```no-highlight title="Setup initial required configurations"
         sudo postgresql-setup --initdb
@@ -272,9 +272,12 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
 
         <h3>Configure Authentication</h3>
 
-        CentOS/RHEL configures PostgreSQL to use [`ident`](https://www.postgresql.org/docs/current/auth-ident.html) host-based authentication by default. Because Nautobot will need to authenticate using a username and password, we must update `pg_hba.conf` to support [`scram-sha-256` password](https://www.postgresql.org/docs/current/auth-password.html) authentication.
+        Fedora/RHEL and related distros typically configure PostgreSQL to use [`ident`](https://www.postgresql.org/docs/current/auth-ident.html) host-based authentication by default. Because Nautobot will need to authenticate using a username and password, we must update `pg_hba.conf` to support [`md5` password](https://www.postgresql.org/docs/current/auth-password.html) authentication.
 
-        As root, edit `/var/lib/pgsql/data/pg_hba.conf` and change `ident` to `scram-sha-256` for the lines below.
+        !!! tip
+            Under many distros, you may be able to use the more secure `scram-sha-256` as an alternative to `md5`, but this option may not be available by default; enabling it is beyond the scope of this documentation.
+
+        As root, edit `/var/lib/pgsql/data/pg_hba.conf` and change `ident` to `md5` for the lines below.
 
         Before:
 
@@ -289,9 +292,9 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
 
         ```no-highlight title="After /var/lib/pgsql/data/pg_hba.conf"
         # IPv4 local connections:
-        host    all             all             127.0.0.1/32            scram-sha-256
+        host    all             all             127.0.0.1/32            md5
         # IPv6 local connections:
-        host    all             all             ::1/128                 scram-sha-256
+        host    all             all             ::1/128                 md5
         ```
 
         <h3>Start PostgreSQL</h3>
@@ -372,6 +375,9 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
         ```no-highlight title="Install MySQL packages"
         sudo dnf install -y gcc mysql-server mysql-devel
         ```
+
+        !!! tip
+            If you get an error about `Unable to find a match: mysql-devel`, you may need to enable additional sources for packages. On at least CentOS 9 and AlmaLinux 9, the command `sudo dnf config-manager --set-enabled crb` is the way to enable the necessary repository.
 
         <h3>Start MySQL</h3>
 
@@ -514,7 +520,7 @@ Django requires the database encoding for PostgreSQL databases to be set to UTF-
         PONG
         ```
 
-=== "RHEL"
+=== "Fedora/RHEL"
 
     <h3>Start Redis</h3>
 
