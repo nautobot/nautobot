@@ -362,4 +362,4 @@ The change summary is added to the file in plain text. Change summaries should b
 
 ### Documentation Updates
 
-The main landing page needs to remain at `docs/index.md` to keep the landing page documentation going to the appropriate location.
+The main landing page needs to remain at `docs/index.md` to prevent 404 errors when switching documentation versions on readthedocs.
