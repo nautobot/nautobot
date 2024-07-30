@@ -456,6 +456,8 @@ class JobLogEntry(BaseModel):
     log_object = models.CharField(max_length=JOB_LOG_MAX_LOG_OBJECT_LENGTH, blank=True, default="")
     absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, blank=True, default="")
 
+    is_metadata_associable_model = False
+
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
 
     def __str__(self):
