@@ -240,10 +240,15 @@ class ImportObjectsTestCase(TransactionTestCase):
         self.assertEqual(
             1, Prefix.objects.filter(status=Status.objects.get(name="Active"), prefix="192.168.1.1/32").count()
         )
-        device_type = DeviceType.objects.first().pk
-        location = (
-            Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(Device)).first().pk
+        mfr = Manufacturer.objects.create(name="Cisco")
+        device_type = DeviceType.objects.create(
+            manufacturer=mfr,
+            model="Cisco CSR1000v",
+            u_height=0,
         )
+        location_type = LocationType.objects.create(name="Test Location Type")
+        location_type.content_types.set([ContentType.objects.get_for_model(Device)])
+        location = Location.objects.create(name="Device Location", location_type=location_type)
         role = Role.objects.get_for_model(Device).first().pk
         status = Status.objects.get(name="Active")
         content = "\n".join(
