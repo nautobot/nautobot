@@ -248,7 +248,11 @@ class ImportObjectsTestCase(TransactionTestCase):
         )
         location_type = LocationType.objects.create(name="Test Location Type")
         location_type.content_types.set([ContentType.objects.get_for_model(Device)])
-        location = Location.objects.create(name="Device Location", location_type=location_type, status=Status.objects.get_for_model(Location).first().pk)
+        location = Location.objects.create(
+            name="Device Location",
+            location_type=location_type,
+            status=Status.objects.get_for_model(Location).first().pk,
+        )
         role = Role.objects.get_for_model(Device).first().pk
         status = Status.objects.get(name="Active")
         content = "\n".join(
