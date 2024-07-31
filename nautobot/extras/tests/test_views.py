@@ -2531,6 +2531,7 @@ class JobButtonRenderingTestCase(TestCase):
                 content,
             )
 
+
 class JobCustomTemplateTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):

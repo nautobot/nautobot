@@ -64,6 +64,7 @@ class ExampleJob(Job):
         # some_json_data is passed to the run method as a Python object (e.g. dictionary)
         pass
 
+
 class ExampleCustomFormJob(Job):
     """This job provides a simple HTML form instead of the dynamically generated form.
 
@@ -95,6 +96,7 @@ class ExampleCustomFormJob(Job):
     def run(self, custom_job_data):
         """Run the job."""
         self.logger.debug("Data is %s", custom_job_data)
+
 
 class ExampleHiddenJob(Job):
     class Meta:
