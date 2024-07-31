@@ -1,10 +1,15 @@
 {% extends 'extras/job.html' %}
 {% load form_helpers %}
+<!-- The `job_form` block is where the actual job form is displayed. -->
 {% block job_form %}
 
-<!-- Here we are rendering a simple HTML form element with bootstrap formatting.
-The field name is `custom_job_data` which must match the script variable name
-in the job.
+<!-- 
+    We are going to render a simple HTML form element with bootstrap formatting.
+    The field name is `custom_job_data` which exactly matches the script variable name
+    in the job.
+
+    Note that we are not calling `block.super` here because we don't want any
+    part of the parent job_form block to be rendered (in this case).
 -->
 <div class="form-group">
     {% with field=job_form.fields.custom_job_data %}
@@ -17,11 +22,13 @@ in the job.
         {% endwith %}
     {% endwith %}
 </div>
-<!--
-The `job_form` block is where the actual job form is displayed. The job form really
-should be rendered so that all of the submit functionality (queues, approval required, etc)
-is included, but fields can be excluded. Here we are going to exclude the `custom_job_data`
-field since we've rendered it above.
+<!-- 
+    Even though we want full control over the rendering of the job form, we do need
+    to render the form object (as opposed to the parent template) so so that all of 
+    the submit functionality (queues, approval required, etc) is included. We can 
+    exclude fields from the render so that the fields defined above are not re-rendered
+    here. Here we are going to exclude the `custom_job_data` field since we've rendered
+    it above.
 -->
 {% render_form job_form excluded_fields="['custom_job_data']" %}
 {% endblock %}
