@@ -958,12 +958,12 @@ class DeviceRedundancyGroupTable(BaseTable):
             "name",
             "status",
             "failover_strategy",
-            "device_count",
             "controller_count",
+            "device_count",
             "secrets_group",
             "tags",
         )
-        default_columns = ("pk", "name", "status", "failover_strategy", "device_count", "controller_count")
+        default_columns = ("pk", "name", "status", "failover_strategy", "controller_count", "device_count")
 
 
 #
