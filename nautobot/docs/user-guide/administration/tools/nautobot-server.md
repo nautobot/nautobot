@@ -812,7 +812,10 @@ Finished.
 
 `nautobot-server validate_models`
 
-Validate all instances of a given model(s) by running a 'full_clean()' or 'validated_save()' on each object, this may take a long time to run..
+Validate all instances of a given model(s) by running a 'full_clean()' or 'validated_save()' on each object.
+
+!!! warning
+    Depending on the number of records in your database, this may take a long time to run.
 
 ```no-highlight
 nautobot-server validate_models
@@ -837,7 +840,7 @@ dcim.Platform
 <omitted for brevity>
 ```
 
-You can validate only specfic models by providing space seperated list of models as shown here:
+You can validate a specific subset of models by providing a space separated list of models as shown here:
 
 ```no-highlight
 nautobot-server validate_models dcim.Manufacturer dcim.Device
@@ -850,7 +853,7 @@ dcim.Device
 ```
 
 `--save`  
-Run validated_save() instead of full_clean() for more thorough data validation, this may be slower.
+Run `validated_save()` instead of `full_clean()` for slower but more thorough data validation.
 
 ### `version`
 
