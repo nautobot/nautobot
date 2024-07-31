@@ -1065,6 +1065,10 @@ class DeviceRedundancyGroup(PrimaryModel):
     def devices_sorted(self):
         return self.devices.order_by("device_redundancy_group_priority")
 
+    @property
+    def controllers_sorted(self):
+        return self.controllers.order_by("name")
+
     def __str__(self):
         return self.name
 
