@@ -51,17 +51,9 @@ In the following steps, we will have you create the virtualenv within the `NAUTO
 
 As root, we're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment including a `bin` directory for scripts and a `lib` directory for Python libraries.
 
-=== "Ubuntu/Debian"
-
-    ```no-highlight title="Create the Virtual Environment"
-    sudo -u nautobot python3 -m venv /opt/nautobot
-    ```
-
-=== "RHEL8"
-
-    ```no-highlight title="Create the Virtual Environment"
-    sudo -u nautobot python3.8 -m venv /opt/nautobot
-    ```
+```no-highlight title="Create the Virtual Environment"
+sudo -u nautobot python3 -m venv /opt/nautobot
+```
 
 ### Update the Nautobot `.bashrc`
 
@@ -89,7 +81,7 @@ It is critical to install Nautobot as the `nautobot` user so that we don't have 
 sudo -iu nautobot
 ```
 
-??? note "Validate the NAUTOBOT_ROOT variable"
+??? note "Validate the `NAUTOBOT_ROOT` variable"
     Observe also that you can now echo the value of the `NAUTOBOT_ROOT` environment variable that is automatically set because we added to `.bashrc`:
 
     ```no-highlight title="Verify Nautobot Root"
@@ -123,7 +115,7 @@ sudo -iu nautobot
             /opt/nautobot/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
             ```
 
-    === "RHEL8"
+    === "Fedora/RHEL"
 
         ```no-highlight title="Print out the PATH variable"
         echo $PATH
@@ -132,7 +124,7 @@ sudo -iu nautobot
         ??? example "Example path output"
 
             ```no-highlight title="Example output of a PATH variable"
-            /opt/nautobot/.local/bin:/opt/nautobot/bin:/opt/nautobot/.local/bin:/opt/nautobot/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin
+            /opt/nautobot/.local/bin:/opt/nautobot/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/var/lib/snapd/snap/bin
             ```
 
     Therefore, any commands executed by the `nautobot` user will always check `$NAUTOBOT_ROOT/bin` first.
@@ -350,7 +342,7 @@ nautobot-server collectstatic
 
     ```no title="Collect static output"
 
-    1103 static files copied to '/opt/nautobot/static'.
+    1156 static files copied to '/opt/nautobot/static'.
     ```
 
 ## Install Local Requirements
