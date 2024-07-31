@@ -16,7 +16,7 @@
         {% with field_value=job_form.initial.custom_job_data|default:field.initial %}
     <label class="col-md-3 control-label required" for="id_custom_job_data">{{ field.label }}</label>
     <div class="col-md-9">
-        <textarea id="id_custom_job_data" name="custom_job_data">{{ field_value }}</textarea>
+        <textarea class="form-control" id="id_custom_job_data" name="custom_job_data">{{ field_value }}</textarea>
         <span class="help-block">{{ field.help_text|safe }}</span>
     </div>
         {% endwith %}
