@@ -95,12 +95,10 @@ Similarly, only the `jobs` module is loaded from Git repositories. If you're usi
 
 If not using submodules, you should register your job in the file where your job is defined.
 
-#### Registering Jobs in Git Repositories
+Examples of the different directory structures when registering jobs in Git repositories:  
 
 !!! note
-    Take note of the `__init__.py` at the root of the repository.  This is required to register jobs in a Git Repository.
-
-Examples of the different directory structures:  
+    Take note of the `__init__.py` at the root of the repository.  This is required to register jobs in a Git repository.
 
 ``` title="jobs.py"
 .
