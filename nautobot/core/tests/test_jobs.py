@@ -220,7 +220,8 @@ class ImportObjectsTestCase(TransactionTestCase):
         Test for bug fix https://github.com/nautobot/nautobot/issues/5812 and https://github.com/nautobot/nautobot/issues/5985
         """
 
-        content = "prefix,status\n192.168.1.1/32,Active"
+        status = Status.objects.get(name="Active").pk
+        content = f"prefix,status\n192.168.1.1/32,{status}"
         content = content.encode("utf-8-sig")
         filename = "test.csv"
         csv_file = FileProxy.objects.create(name=filename, file=ContentFile(content, name=filename))
@@ -240,7 +241,7 @@ class ImportObjectsTestCase(TransactionTestCase):
         self.assertEqual(
             1, Prefix.objects.filter(status=Status.objects.get(name="Active"), prefix="192.168.1.1/32").count()
         )
-        mfr = Manufacturer.objects.create(name="Cisco")
+        mfr = Manufacturer.objects.create(name="Test Cisco Manufacturer")
         device_type = DeviceType.objects.create(
             manufacturer=mfr,
             model="Cisco CSR1000v",
@@ -251,15 +252,14 @@ class ImportObjectsTestCase(TransactionTestCase):
         location = Location.objects.create(
             name="Device Location",
             location_type=location_type,
-            status=Status.objects.get_for_model(Location).first().pk,
+            status=Status.objects.get_for_model(Location).first(),
         )
         role = Role.objects.get_for_model(Device).first().pk
-        status = Status.objects.get(name="Active")
         content = "\n".join(
             [
                 "serial,asset_tag,device_type,location,status,name,role",
-                f"1021C4,CA211,{device_type},{location},{status},Test-AC-01,{role}",
-                f"1021C5,CA212,{device_type},{location},{status},Test-AC-02,{role}",
+                f"1021C4,CA211,{device_type.pk},{location.pk},{status},Test-AC-01,{role}",
+                f"1021C5,CA212,{device_type.pk},{location.pk},{status},Test-AC-02,{role}",
             ]
         )
         content = content.encode("utf-8-sig")
