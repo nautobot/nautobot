@@ -98,7 +98,7 @@ If not using submodules, you should register your job in the file where your job
 #### Registering Jobs in Git Repositories
 
 !!! note
-    Take note of the `__init__.py` at the root of the repository.  This is <u>required</u> to register jobs from a Git Repository.
+    Take note of the `__init__.py` at the root of the repository.  This is required to register jobs in a Git Repository.
 
 Examples of the different directory structures:  
 
