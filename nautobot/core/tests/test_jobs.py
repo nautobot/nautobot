@@ -254,7 +254,8 @@ class ImportObjectsTestCase(TransactionTestCase):
             location_type=location_type,
             status=Status.objects.get_for_model(Location).first(),
         )
-        role = Role.objects.get_for_model(Device).first().pk
+        role = Role.objects.create(name="Device Status")
+        role.content_types.set([ContentType.objects.get_for_model(Device)])
         content = "\n".join(
             [
                 "serial,asset_tag,device_type,location,status,name,role",
