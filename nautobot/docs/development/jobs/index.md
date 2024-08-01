@@ -95,6 +95,25 @@ Similarly, only the `jobs` module is loaded from Git repositories. If you're usi
 
 If not using submodules, you should register your job in the file where your job is defined.
 
+Examples of the different directory structures when registering jobs in Git repositories:  
+
+!!! note
+    Take note of the `__init__.py` at the root of the repository.  This is required to register jobs in a Git repository.
+
+``` title="jobs.py"
+.
+├── __init__.py
+└── jobs.py
+```
+
+``` title="submodule"
+.
+├── __init__.py
+└── jobs
+    ├── __init__.py
+    └── my_job_module.py
+```
+
 #### Registering Jobs in an App
 
 Apps should register jobs in the module defined in their [`NautobotAppConfig.jobs`](../apps/api/nautobot-app-config.md#nautobotappconfig-code-location-attributes) property. This defaults to the `jobs` module of the App.
