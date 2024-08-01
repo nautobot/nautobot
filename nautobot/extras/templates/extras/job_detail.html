@@ -118,7 +118,7 @@
             <tr>
                 <td>Job Results</td>
                 <td>
-                    {% if object.job_results.all %}
+                    {% if object.job_results.exists %}
                         <a href="{% url 'extras:jobresult_list' %}?job_model={{ object.name | urlencode }}">{{ object.job_results.count }}</a>
                     {% else %}
                         {{ None|placeholder }}
