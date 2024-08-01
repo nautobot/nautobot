@@ -1,0 +1,1 @@
+Fixed incorrect labels for derived filters (`tenant__n`, `tenant__isw`, etc.) when the base filter (`tenant`, etc.) has a custom label.
