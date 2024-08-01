@@ -292,7 +292,7 @@ plugins:
         "user-guides/s3-django-storage.md": "user-guide/administration/guides/s3-django-storage.md"
 
         # Post 2.x redirects
-        "index.md": "overview/index.md"
+        "overview/index.md": "index.md"
         "development/apps/api/ui-extensions/object-detail-views.md": "development/apps/api/ui-extensions/object-views.md"
         "development/core/extending-models.md": "development/core/model-checklist.md"
         "user-guide/administration/installation/docker.md": "user-guide/administration/installation-extras/docker.md"
@@ -301,7 +301,7 @@ plugins:
 
 nav:
   - Overview:
-      - "overview/index.md"
+      - "index.md"
       - Design Philosophy: "overview/design_philosophy.md"
       - Application Stack: "overview/application_stack.md"
   - User Guide:
