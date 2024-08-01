@@ -24,7 +24,7 @@ class StaticMediaFailureTestCase(SeleniumTestCase):
             reverse("graphql"),
             reverse("api_docs"),
             "/admin/",
-            "/static/docs/overview/index.html",
+            "/static/docs/index.html",
         ]
         for url in test_urls:
             with self.subTest(test_url=url):
