@@ -1,12 +1,22 @@
 from pathlib import Path
 
 from django.contrib.contenttypes.models import ContentType
+from django.core.files.base import ContentFile
 import yaml
 
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
-from nautobot.dcim.models import DeviceType, Location, LocationType, Manufacturer
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
-from nautobot.extras.models import Contact, ContactAssociation, ExportTemplate, JobLogEntry, Role, Status
+from nautobot.extras.models import (
+    Contact,
+    ContactAssociation,
+    ExportTemplate,
+    FileProxy,
+    JobLogEntry,
+    Role,
+    Status,
+)
+from nautobot.ipam.models import Prefix
 from nautobot.users.models import ObjectPermission
 
 
@@ -203,6 +213,76 @@ class ImportObjectsTestCase(TransactionTestCase):
             JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
         )
         self.assertEqual(4, Status.objects.filter(name__startswith="test_status").count())
+
+    def test_csv_import_with_utf_8_with_bom_encoding(self):
+        """
+        A superuser running the job with a .csv file with utf_8 with bom encoding should successfully create all specified objects.
+        Test for bug fix https://github.com/nautobot/nautobot/issues/5812 and https://github.com/nautobot/nautobot/issues/5985
+        """
+
+        status = Status.objects.get(name="Active").pk
+        content = f"prefix,status\n192.168.1.1/32,{status}"
+        content = content.encode("utf-8-sig")
+        filename = "test.csv"
+        csv_file = FileProxy.objects.create(name=filename, file=ContentFile(content, name=filename))
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            content_type=ContentType.objects.get_for_model(Prefix).pk,
+            csv_file=csv_file.id,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        )
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
+        )
+        self.assertEqual(
+            1, Prefix.objects.filter(status=Status.objects.get(name="Active"), prefix="192.168.1.1/32").count()
+        )
+        mfr = Manufacturer.objects.create(name="Test Cisco Manufacturer")
+        device_type = DeviceType.objects.create(
+            manufacturer=mfr,
+            model="Cisco CSR1000v",
+            u_height=0,
+        )
+        location_type = LocationType.objects.create(name="Test Location Type")
+        location_type.content_types.set([ContentType.objects.get_for_model(Device)])
+        location = Location.objects.create(
+            name="Device Location",
+            location_type=location_type,
+            status=Status.objects.get_for_model(Location).first(),
+        )
+        role = Role.objects.create(name="Device Status")
+        role.content_types.set([ContentType.objects.get_for_model(Device)])
+        content = "\n".join(
+            [
+                "serial,asset_tag,device_type,location,status,name,role",
+                f"1021C4,CA211,{device_type.pk},{location.pk},{status},Test-AC-01,{role}",
+                f"1021C5,CA212,{device_type.pk},{location.pk},{status},Test-AC-02,{role}",
+            ]
+        )
+        content = content.encode("utf-8-sig")
+        filename = "test.csv"
+        csv_file = FileProxy.objects.create(name=filename, file=ContentFile(content, name=filename))
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            content_type=ContentType.objects.get_for_model(Device).pk,
+            csv_file=csv_file.id,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        )
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
+        )
+        device_1 = Device.objects.get(name="Test-AC-01")
+        device_2 = Device.objects.get(name="Test-AC-02")
+        self.assertEqual(device_1.serial, "1021C4")
+        self.assertEqual(device_2.serial, "1021C5")
 
     def test_csv_import_bad_row(self):
         """A row of incorrect data should fail validation for that object but import all others successfully if `roll_back_if_error` is False."""
