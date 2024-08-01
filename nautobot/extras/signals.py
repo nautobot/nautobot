@@ -15,7 +15,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.storage import get_storage_class
 from django.db import transaction
-from django.db.models.signals import m2m_changed, post_delete, post_save, pre_delete, pre_save
+from django.db.models.signals import m2m_changed, post_delete, post_migrate, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
@@ -266,6 +266,19 @@ def _handle_deleted_object(sender, instance, **kwargs):
 
     # Increment metric counters
     model_deletes.labels(instance._meta.model_name).inc()
+
+
+#
+# Content types
+#
+
+
+@receiver(post_migrate)
+def post_migrate_clear_content_type_caches(sender, app_config, signal, **kwargs):
+    """Clear various content-type caches after a migration."""
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        cache.delete("nautobot.extras.utils.change_logged_models_queryset")
+        cache.delete_pattern("nautobot.extras.utils.FeatureQuery.*")
 
 
 #

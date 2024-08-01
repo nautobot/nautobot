@@ -1,0 +1,1 @@
+Pinned `django-storages` temporarily to 1.14.3 due to an [incompatibility](https://github.com/revsys/django-health-check/issues/434) between `django-health-check` and version 1.14.4 of `django-storages`.

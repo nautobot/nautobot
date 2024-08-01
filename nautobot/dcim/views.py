@@ -3029,8 +3029,11 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
     form_class = forms.DeviceRedundancyGroupForm
     queryset = (
         DeviceRedundancyGroup.objects.select_related("status")
-        .prefetch_related("devices")
-        .annotate(device_count=count_related(Device, "device_redundancy_group"))
+        .prefetch_related("controllers", "devices")
+        .annotate(
+            device_count=count_related(Device, "device_redundancy_group"),
+            controller_count=count_related(Controller, "controller_device_redundancy_group"),
+        )
     )
     serializer_class = serializers.DeviceRedundancyGroupSerializer
     table_class = tables.DeviceRedundancyGroupTable
@@ -3043,6 +3046,9 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
             devices_table = tables.DeviceTable(devices)
             devices_table.columns.show("device_redundancy_group_priority")
             context["devices_table"] = devices_table
+            controllers = instance.controllers_sorted.restrict(request.user)
+            controllers_table = tables.ControllerTable(controllers)
+            context["controllers_table"] = controllers_table
         return context
 
 
