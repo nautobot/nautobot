@@ -20,7 +20,7 @@
                     </button>
                 {% endif %}
                 <div class="pull-right">
-                    <a href="{% url table.Meta.model|viewname:"add" %}?device_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%23tab_{{ tab }}" class="btn btn-primary btn-xs">
+                    <a href="{% url table.Meta.model|viewname:"add" %}?device_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab={{ tab }}" class="btn btn-primary btn-xs">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                         Add {{ title }}
                     </a>

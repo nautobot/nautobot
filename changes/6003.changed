@@ -1,0 +1,2 @@
+Changed rendering of `scoped_fields` column in `ObjectMetadataTable`.
+Changed default ordering of `ObjectMetadata` list views.

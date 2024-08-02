@@ -38,7 +38,7 @@ from nautobot.core.templatetags.helpers import render_markdown
 from nautobot.core.utils.data import render_jinja2
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
 from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
 
@@ -65,7 +65,14 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
 
 @extras_features("graphql")
-class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
+class ComputedField(
+    ContactMixin,
+    ChangeLoggedModel,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
     """
     Read-only rendered fields driven by a Jinja2 template that are applied to objects within a ContentType.
     """
@@ -332,7 +339,14 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
 
 @extras_features("webhooks")
-class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
+class CustomField(
+    ContactMixin,
+    ChangeLoggedModel,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="custom_fields",
@@ -760,6 +774,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
     weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")
 
     documentation_static_path = "docs/user-guide/platform-functionality/customfield.html"
+    is_metadata_associable_model = False
 
     class Meta:
         ordering = ["custom_field", "weight", "value"]

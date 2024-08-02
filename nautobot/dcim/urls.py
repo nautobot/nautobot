@@ -41,6 +41,10 @@ router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
 router.register("controllers", views.ControllerUIViewSet)
 router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
+router.register("modules", views.ModuleUIViewSet)
+router.register("module-bays", views.ModuleBayUIViewSet)
+router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
+router.register("module-types", views.ModuleTypeUIViewSet)
 
 urlpatterns = [
     # Location types
@@ -210,7 +214,7 @@ urlpatterns = [
         name="rack_notes",
         kwargs={"model": Rack},
     ),
-    path(
+    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
         "racks/<uuid:pk>/dynamic-groups/",
         ObjectDynamicGroupsView.as_view(),
         name="rack_dynamicgroups",
@@ -649,6 +653,11 @@ urlpatterns = [
         name="device_devicebays",
     ),
     path(
+        "devices/<uuid:pk>/module-bays/",
+        views.DeviceModuleBaysView.as_view(),
+        name="device_modulebays",
+    ),
+    path(
         "devices/<uuid:pk>/inventory/",
         views.DeviceInventoryView.as_view(),
         name="device_inventory",
@@ -670,7 +679,7 @@ urlpatterns = [
         name="device_notes",
         kwargs={"model": Device},
     ),
-    path(
+    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
         "devices/<uuid:pk>/dynamic-groups/",
         views.DeviceDynamicGroupsView.as_view(),
         name="device_dynamicgroups",
@@ -1254,6 +1263,12 @@ urlpatterns = [
         "devices/device-bays/add/",
         views.DeviceBulkAddDeviceBayView.as_view(),
         name="device_bulk_add_devicebay",
+    ),
+    # Module bays (legacy views)
+    path(
+        "devices/module-bays/add/",
+        views.DeviceBulkAddModuleBayView.as_view(),
+        name="device_bulk_add_modulebay",
     ),
     # Inventory items
     path(

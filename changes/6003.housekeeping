@@ -1,0 +1,1 @@
+Updated `ObjectMetadataFactory` to produce more realistic `scoped_fields` values. 

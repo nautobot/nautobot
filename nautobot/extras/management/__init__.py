@@ -21,6 +21,7 @@ STATUS_CHOICESET_MAP = {
     "dcim.Device": dcim_choices.DeviceStatusChoices,
     "dcim.Interface": dcim_choices.InterfaceStatusChoices,
     "dcim.Location": dcim_choices.LocationStatusChoices,
+    "dcim.Module": dcim_choices.ModuleStatusChoices,
     "dcim.PowerFeed": dcim_choices.PowerFeedStatusChoices,
     "dcim.Rack": dcim_choices.RackStatusChoices,
     "dcim.DeviceRedundancyGroup": dcim_choices.DeviceRedundancyGroupStatusChoices,

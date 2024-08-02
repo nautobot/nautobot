@@ -1,9 +1,7 @@
 import contextlib
 import contextvars
-from datetime import timedelta
 import logging
 import os
-import secrets
 import shutil
 import traceback
 
@@ -23,7 +21,6 @@ import redis.exceptions
 
 from nautobot.core.celery import app, import_jobs
 from nautobot.core.models import BaseModel
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
@@ -35,6 +32,7 @@ from nautobot.extras.models import (
     DynamicGroupMembership,
     GitRepository,
     JobResult,
+    MetadataType,
     ObjectChange,
     Relationship,
 )
@@ -66,31 +64,47 @@ def get_user_if_authenticated(user, instance):
         return None
 
 
-@receiver(post_save)
-@receiver(m2m_changed)
-@receiver(post_delete)
+@receiver(post_save, sender=ComputedField)
+@receiver(post_save, sender=CustomField)
+@receiver(post_save, sender=CustomField.content_types.through)
+@receiver(post_save, sender=MetadataType)
+@receiver(post_save, sender=MetadataType.content_types.through)
+@receiver(m2m_changed, sender=ComputedField)
+@receiver(m2m_changed, sender=CustomField)
+@receiver(m2m_changed, sender=CustomField.content_types.through)
+@receiver(m2m_changed, sender=MetadataType)
+@receiver(m2m_changed, sender=MetadataType.content_types.through)
+@receiver(post_delete, sender=ComputedField)
+@receiver(post_delete, sender=CustomField)
+@receiver(post_delete, sender=CustomField.content_types.through)
+@receiver(post_delete, sender=MetadataType)
+@receiver(post_delete, sender=MetadataType.content_types.through)
 def invalidate_models_cache(sender, **kwargs):
-    """Invalidate the related-models cache for ComputedFields, CustomFields and Relationships."""
+    """Invalidate the related-models cache for ComputedFields and CustomFields."""
     if sender is CustomField.content_types.through:
         manager = CustomField.objects
-    elif sender in (ComputedField, CustomField, Relationship):
-        manager = sender.objects
+    elif sender is MetadataType.content_types.through:
+        manager = MetadataType.objects
     else:
-        return
+        manager = sender.objects
 
-    cached_methods = (
-        "get_for_model",
-        "get_for_model_source",
-        "get_for_model_destination",
-    )
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
+        cache.delete_pattern(f"{manager.get_for_model.cache_key_prefix}.*")
 
-    for method_name in cached_methods:
-        if hasattr(manager, method_name):
-            method = getattr(manager, method_name)
-            if hasattr(method, "cache_key_prefix"):
-                with contextlib.suppress(redis.exceptions.ConnectionError):
-                    # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
-                    cache.delete_pattern(f"{method.cache_key_prefix}.*")
+
+@receiver(post_save, sender=Relationship)
+@receiver(m2m_changed, sender=Relationship)
+@receiver(post_delete, sender=Relationship)
+def invalidate_relationship_models_cache(sender, **kwargs):
+    """Invalidate the related-models caches for Relationships."""
+    for method in (
+        Relationship.objects.get_for_model_source,
+        Relationship.objects.get_for_model_destination,
+    ):
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
+            cache.delete_pattern(f"{method.cache_key_prefix}.*")
 
 
 @receiver(post_save)
@@ -131,7 +145,11 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
 
         # Generate a unique identifier for this change to stash in the change context
         # This is used for deferred change logging and for looking up related changes without querying the database
-        unique_object_change_id = f"{changed_object_type.pk}__{changed_object_id}__{user.pk}"
+        unique_object_change_id = None
+        if user is not None:
+            unique_object_change_id = f"{changed_object_type.pk}__{changed_object_id}__{user.pk}"
+        else:
+            unique_object_change_id = f"{changed_object_type.pk}__{changed_object_id}"
 
         # If a change already exists for this change_id, user, and object, update it instead of creating a new one.
         # If the object was deleted then recreated with the same pk (don't do this), change the action to update.
@@ -146,12 +164,13 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
             # Skip the database check when deferring object changes
             if not change_context.defer_object_changes and related_changes.exists():
                 objectchange = instance.to_objectchange(action)
-                most_recent_change = related_changes.order_by("-time").first()
-                if most_recent_change.action == ObjectChangeActionChoices.ACTION_DELETE:
-                    most_recent_change.action = ObjectChangeActionChoices.ACTION_UPDATE
-                most_recent_change.object_data = objectchange.object_data
-                most_recent_change.object_data_v2 = objectchange.object_data_v2
-                most_recent_change.save()
+                if objectchange is not None:
+                    most_recent_change = related_changes.order_by("-time").first()
+                    if most_recent_change.action == ObjectChangeActionChoices.ACTION_DELETE:
+                        most_recent_change.action = ObjectChangeActionChoices.ACTION_UPDATE
+                    most_recent_change.object_data = objectchange.object_data
+                    most_recent_change.object_data_v2 = objectchange.object_data_v2
+                    most_recent_change.save()
 
         else:
             change_context.deferred_object_changes[unique_object_change_id] = [
@@ -159,11 +178,14 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
             ]
             if not change_context.defer_object_changes:
                 objectchange = instance.to_objectchange(action)
-                objectchange.user = user
-                objectchange.request_id = change_context.change_id
-                objectchange.change_context = change_context.context
-                objectchange.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
-                objectchange.save()
+                if objectchange is not None:
+                    objectchange.user = user
+                    objectchange.request_id = change_context.change_id
+                    objectchange.change_context = change_context.context
+                    objectchange.change_context_detail = change_context.context_detail[
+                        :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+                    ]
+                    objectchange.save()
 
         # restore field cache
         instance._state.fields_cache = original_cache
@@ -173,12 +195,6 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         model_inserts.labels(instance._meta.model_name).inc()
     elif action == ObjectChangeActionChoices.ACTION_UPDATE:
         model_updates.labels(instance._meta.model_name).inc()
-
-    # Housekeeping: 0.1% chance of clearing out expired ObjectChanges
-    changelog_retention = get_settings_or_config("CHANGELOG_RETENTION")
-    if changelog_retention and secrets.randbelow(1000) == 0:
-        cutoff = timezone.now() - timedelta(days=changelog_retention)
-        ObjectChange.objects.filter(time__lt=cutoff).delete()
 
 
 @receiver(pre_delete)
@@ -236,13 +252,14 @@ def _handle_deleted_object(sender, instance, **kwargs):
             # Skip the database check when deferring object changes
             if not change_context.defer_object_changes and related_changes.exists():
                 objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-                most_recent_change = related_changes.order_by("-time").first()
-                if most_recent_change.action != ObjectChangeActionChoices.ACTION_CREATE:
-                    most_recent_change.action = ObjectChangeActionChoices.ACTION_DELETE
-                    most_recent_change.object_data = objectchange.object_data
-                    most_recent_change.object_data_v2 = objectchange.object_data_v2
-                    most_recent_change.save()
-                    save_new_objectchange = False
+                if objectchange is not None:
+                    most_recent_change = related_changes.order_by("-time").first()
+                    if most_recent_change.action != ObjectChangeActionChoices.ACTION_CREATE:
+                        most_recent_change.action = ObjectChangeActionChoices.ACTION_DELETE
+                        most_recent_change.object_data = objectchange.object_data
+                        most_recent_change.object_data_v2 = objectchange.object_data_v2
+                        most_recent_change.save()
+                        save_new_objectchange = False
 
         if save_new_objectchange:
             change_context.deferred_object_changes.setdefault(unique_object_change_id, []).append(
@@ -250,16 +267,20 @@ def _handle_deleted_object(sender, instance, **kwargs):
                     "action": ObjectChangeActionChoices.ACTION_DELETE,
                     "instance": instance,
                     "user": user,
-                    "changed_object_id": instance.pk,
+                    "changed_object_id": changed_object_id,
+                    "changed_object_type": changed_object_type,
                 }
             )
             if not change_context.defer_object_changes:
                 objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-                objectchange.user = user
-                objectchange.request_id = change_context.change_id
-                objectchange.change_context = change_context.context
-                objectchange.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
-                objectchange.save()
+                if objectchange is not None:
+                    objectchange.user = user
+                    objectchange.request_id = change_context.change_id
+                    objectchange.change_context = change_context.context
+                    objectchange.change_context_detail = change_context.context_detail[
+                        :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+                    ]
+                    objectchange.save()
 
         # restore field cache
         instance._state.fields_cache = original_cache
@@ -400,60 +421,18 @@ m2m_changed.connect(dynamic_group_children_changed, sender=DynamicGroup.children
 pre_save.connect(dynamic_group_membership_created, sender=DynamicGroupMembership)
 
 
-def dynamic_group_eligible_groups_changed(sender, instance, **kwargs):
-    """
-    When a DynamicGroup is created or deleted, refresh the cache of eligible groups for the associated ContentType.
-
-    Can't change content_type_id on an existing instance, so no need to check for that.
-    """
-
-    if get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT") == 0:
-        # Caching is disabled, so there's nothing to do
-        return
-
-    if kwargs.get("created", None) is False:
-        # We do not care about updates
-        # "created" is not a kwarg for post_delete signals, so is unset or None
-        # "created" is a kwarg for post_save signals, but you cannot change content types of existing groups
-        #   therefor we can ignore cache updates on DynamicGroups updates
-        return
-
-    content_type = instance.content_type
-    cache_key = f"nautobot.{content_type.app_label}.{content_type.model}._get_eligible_dynamic_groups"
-    cache.set(
-        cache_key,
-        DynamicGroup.objects.filter(content_type_id=instance.content_type_id),
-        get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"),
-    )
-
-
-post_save.connect(dynamic_group_eligible_groups_changed, sender=DynamicGroup)
-post_delete.connect(dynamic_group_eligible_groups_changed, sender=DynamicGroup)
-
-
 def dynamic_group_update_cached_members(sender, instance, **kwargs):
     """
-    When a DynamicGroup or DynamicGroupMembership is updated, update the cache of members.
+    When a DynamicGroup or DynamicGroupMembership is updated, update the cache of members for it and any parent groups.
     """
-
-    if get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT") == 0:
-        # Caching is disabled, so there's nothing to do
-        return
-
     if isinstance(instance, DynamicGroupMembership):
-        group = instance.group
+        group = instance.parent_group
     else:
         group = instance
 
-    def _update_cache_and_parents(this_instance):
-        this_instance.update_cached_members()
-
-        # Since a change a group or group of groups does not affect it's children, we only need to go up the tree
-        # A group of groups does not use the cache of it's children due to the complexity of the set operations
-        for ancestor in list(this_instance.parents.all()):
-            _update_cache_and_parents(ancestor)
-
-    _update_cache_and_parents(group)
+    group.update_cached_members()
+    for ancestor in group.get_ancestors():
+        ancestor.update_cached_members()
 
 
 post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroup)
@@ -507,3 +486,19 @@ def refresh_job_models(sender, *, apps, **kwargs):
             )
             job_model.installed = False
             job_model.save()
+
+
+#
+# Metadata
+#
+
+
+def handle_mdt_removed_obj_types(instance, action, pk_set, **kwargs):  # pylint: disable=useless-return
+    """Handle the cleanup of old Metadata when a MetadataType is removed from one or more ContentTypes."""
+    if action != "post_remove":
+        return
+    # Existing content types have been removed from the MetadataType, delete their data.
+    # TODO delete Metadata records with object_type in pk_set and metadata_type == instance
+
+
+m2m_changed.connect(handle_mdt_removed_obj_types, sender=MetadataType.content_types.through)

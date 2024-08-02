@@ -59,6 +59,13 @@ class AddressFieldMixin(forms.ModelForm):
 class BootstrapMixin(forms.BaseForm):
     """
     Add the base Bootstrap CSS classes to form elements.
+
+    Note that this only applies to form fields that are:
+
+    1. statically defined on the form class at declaration time, or
+    2. dynamically added to the form at init time by a class **later in the MRO than this mixin**.
+
+    If a class earlier in the MRO adds its own fields, it will have to ensure that the widgets are correctly configured.
     """
 
     def __init__(self, *args, **kwargs):
@@ -73,8 +80,9 @@ class BootstrapMixin(forms.BaseForm):
 
         for field in self.fields.values():
             if field.widget.__class__ not in exempt_widgets:
-                css = field.widget.attrs.get("class", "")
-                field.widget.attrs["class"] = " ".join([css, "form-control"]).strip()
+                css_classes = field.widget.attrs.get("class", "")
+                if "form-control" not in css_classes:
+                    field.widget.attrs["class"] = " ".join([css_classes, "form-control"]).strip()
             if field.required and not isinstance(field.widget, forms.FileInput):
                 field.widget.attrs["required"] = "required"
             if "placeholder" not in field.widget.attrs:
@@ -121,7 +129,7 @@ class BulkRenameForm(forms.Form):
     """
 
     find = forms.CharField()
-    replace = forms.CharField()
+    replace = forms.CharField(required=False, strip=False)
     use_regex = forms.BooleanField(required=False, initial=True, label="Use regular expressions")
 
     def clean(self):

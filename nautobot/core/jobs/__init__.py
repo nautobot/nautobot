@@ -15,6 +15,8 @@ from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
+from nautobot.core.jobs.cleanup import LogsCleanup
+from nautobot.core.jobs.groups import RefreshDynamicGroupCaches
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
 from nautobot.extras.datasources import ensure_git_repository, git_repository_dry_run, refresh_datasource_content
@@ -37,6 +39,7 @@ class GitRepositorySync(Job):
 
     class Meta:
         name = "Git Repository: Sync"
+        description = "Clone and/or pull a Git repository, then refresh data sourced from this repository."
         has_sensitive_variables = False
 
     def run(self, repository):
@@ -66,6 +69,7 @@ class GitRepositoryDryRun(Job):
 
     class Meta:
         name = "Git Repository: Dry-Run"
+        description = "Dry run of Git repository sync - will not update data sourced from this repository."
         has_sensitive_variables = False
 
     def run(self, repository):
@@ -112,6 +116,7 @@ class ExportObjectList(Job):
 
     class Meta:
         name = "Export Object List"
+        description = "Export a list of objects to CSV or YAML, or render a specified Export Template."
         has_sensitive_variables = False
         # Exporting large querysets may take substantial processing time
         soft_time_limit = 1800
@@ -136,7 +141,15 @@ class ExportObjectList(Job):
         #       such that they never are even seen here.
         query_params = QueryDict(query_string)
         self.logger.debug("Parsed query_params: `%s`", query_params.dict())
-        default_non_filter_params = ("export", "page", "per_page", "sort")
+        default_non_filter_params = (
+            "all_filters_removed",
+            "export",
+            "page",
+            "per_page",
+            "saved_view",
+            "sort",
+            "table_changes_pending",
+        )
         filter_params = get_filterable_params_from_filter_params(
             query_params, default_non_filter_params, filterset_class()
         )
@@ -213,6 +226,7 @@ class ImportObjects(Job):
 
     class Meta:
         name = "Import Objects"
+        description = "Import objects from CSV-formatted data."
         has_sensitive_variables = False
         # Importing large files may take substantial processing time
         soft_time_limit = 1800
@@ -317,5 +331,5 @@ class ImportObjects(Job):
             raise RunJobTaskFailed("CSV import not fully successful, see logs")
 
 
-jobs = [ExportObjectList, GitRepositorySync, GitRepositoryDryRun, ImportObjects]
+jobs = [ExportObjectList, GitRepositorySync, GitRepositoryDryRun, ImportObjects, LogsCleanup, RefreshDynamicGroupCaches]
 register_jobs(*jobs)

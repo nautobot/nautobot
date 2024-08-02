@@ -5,6 +5,7 @@ import re
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
@@ -12,10 +13,11 @@ from django.core.exceptions import (
     ValidationError,
 )
 from django.db import IntegrityError, transaction
-from django.db.models import ManyToManyField, ProtectedError
+from django.db.models import ManyToManyField, ProtectedError, Q
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -38,7 +40,6 @@ from nautobot.core.forms import (
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
@@ -49,14 +50,15 @@ from nautobot.core.views.mixins import GetReturnURLMixin, ObjectPermissionRequir
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
     check_filter_for_display,
+    common_detail_view_context,
     get_csv_form_fields_from_serializer_class,
     handle_protectederror,
     import_csv_helper,
     prepare_cloned_fields,
+    view_changes_not_saved,
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
-from nautobot.extras.models import ContactAssociation, ExportTemplate
-from nautobot.extras.tables import AssociatedContactsTable
+from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
 
 
@@ -111,53 +113,17 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         Generic GET handler for accessing an object.
         """
         instance = get_object_or_404(self.queryset, **kwargs)
-        # Get the ObjectChange records to populate the advanced tab information
-        created_by, last_updated_by = get_created_and_last_updated_usernames_for_model(instance)
+        content_type = ContentType.objects.get_for_model(self.queryset.model)
+        context = {
+            "object": instance,
+            "content_type": content_type,
+            "verbose_name": self.queryset.model._meta.verbose_name,
+            "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+            **common_detail_view_context(request, instance),
+            **self.get_extra_context(request, instance),
+        }
 
-        # TODO: this feels inelegant - should the tabs lookup be a dedicated endpoint rather than piggybacking
-        # on the object-retrieve endpoint?
-        # TODO: similar functionality probably needed in NautobotUIViewSet as well, not currently present
-        if request.GET.get("viewconfig", None) == "true":
-            # TODO: we shouldn't be importing a private-named function from another module. Should it be renamed?
-            from nautobot.extras.templatetags.plugins import _get_registered_content
-
-            temp_fake_context = {
-                "object": instance,
-                "request": request,
-                "settings": {},
-                "csrf_token": "",
-                "perms": {},
-            }
-
-            plugin_tabs = _get_registered_content(instance, "detail_tabs", temp_fake_context, return_html=False)
-            resp = {"tabs": plugin_tabs}
-            return JsonResponse(resp)
-        else:
-            content_type = ContentType.objects.get_for_model(self.queryset.model)
-            context = {
-                "object": instance,
-                "content_type": content_type,
-                "verbose_name": self.queryset.model._meta.verbose_name,
-                "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-                "created_by": created_by,
-                "last_updated_by": last_updated_by,
-                **self.get_extra_context(request, instance),
-            }
-            if instance.is_contact_associable_model:
-                paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-                associations = (
-                    ContactAssociation.objects.filter(
-                        associated_object_id=instance.id,
-                        associated_object_type=content_type,
-                    )
-                    .restrict(request.user, "view")
-                    .order_by("role__name")
-                )
-                associations_table = AssociatedContactsTable(associations, orderable=False)
-                RequestConfig(request, paginate).configure(associations_table)
-                associations_table.columns.show("pk")
-                context["associated_contacts_table"] = associations_table
-            return render(request, self.get_template_name(), context)
+        return render(request, self.get_template_name(), context)
 
 
 class ObjectListView(ObjectPermissionRequiredMixin, View):
@@ -184,12 +150,19 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
+        "saved_view",  # saved_view indicator pk or composite keys
+        "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
+        "all_filters_removed",  # indicator for if all filters have been removed from the saved view
+        "clear_view",  # indicator for if the clear view button is clicked or not
     )
 
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
-        filter_params = request.GET.copy()
-        return get_filterable_params_from_filter_params(filter_params, self.non_filter_params, self.filterset())
+        params = request.GET.copy()
+        filter_params = get_filterable_params_from_filter_params(params, self.non_filter_params, self.filterset())
+        if params.get("saved_view") and not filter_params and not params.get("all_filters_removed"):
+            return SavedView.objects.get(pk=params.get("saved_view")).config.get("filter_params", {})
+        return filter_params
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -225,10 +198,41 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         model = self.queryset.model
         content_type = ContentType.objects.get_for_model(model)
 
+        filter_params = request.GET
+        user = request.user
         display_filter_params = []
         dynamic_filter_form = None
         filter_form = None
         hide_hierarchy_ui = False
+        clear_view = request.GET.get("clear_view", False)
+
+        # If the user clicks on the clear view button, we do not check for global or user defaults
+        if not clear_view and not request.GET.get("saved_view"):
+            # Check if there is a default for this view for this specific user
+            app_label, model_name = model._meta.label.split(".")
+            view_name = f"{app_label}:{model_name.lower()}_list"
+
+            if not isinstance(user, AnonymousUser):
+                try:
+                    user_default_saved_view_pk = UserSavedViewAssociation.objects.get(
+                        user=user, view_name=view_name
+                    ).saved_view.pk
+                    # Saved view should either belong to the user or be public
+                    SavedView.objects.get(
+                        Q(pk=user_default_saved_view_pk),
+                        Q(owner=user) | Q(is_shared=True),
+                    )
+                    sv_url = reverse("extras:savedview", kwargs={"pk": user_default_saved_view_pk})
+                    return redirect(sv_url)
+                except ObjectDoesNotExist:
+                    pass
+
+            # Check if there is a global default for this view
+            try:
+                global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
+                return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
+            except ObjectDoesNotExist:
+                pass
 
         if self.filterset:
             filter_params = self.get_filter_params(request)
@@ -254,7 +258,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
             if request.GET:
                 factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
-                    request.GET, filterset
+                    filter_params, filterset
                 )
                 dynamic_filter_form = DynamicFilterFormSet(filterset=filterset, data=factory_formset_params)
             else:
@@ -296,18 +300,50 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
         table = None
         table_config_form = None
+        current_saved_view = None
+        current_saved_view_pk = self.request.GET.get("saved_view", None)
+        list_url = validated_viewname(model, "list")
+        # We are not using .restrict(request.user, "view") here
+        # User should be able to see any saved view that he has the list view access to.
+        if user.has_perms(["extras.view_savedview"]):
+            saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
+        else:
+            shared_saved_views = (
+                SavedView.objects.filter(view=list_url, is_shared=True).order_by("name").only("pk", "name")
+            )
+            user_owned_saved_views = (
+                SavedView.objects.filter(view=list_url, owner=user).order_by("name").only("pk", "name")
+            )
+            saved_views = shared_saved_views | user_owned_saved_views
         if self.table:
             # Construct the objects table
-            if self.request.GET.getlist("sort"):
+            if current_saved_view_pk:
+                try:
+                    # We are not using .restrict(request.user, "view") here
+                    # User should be able to see any saved view that he has the list view access to.
+                    current_saved_view = SavedView.objects.get(view=list_url, pk=current_saved_view_pk)
+                except ObjectDoesNotExist:
+                    messages.error(request, f"Saved view {current_saved_view_pk} not found")
+            if self.request.GET.getlist("sort") or (
+                current_saved_view is not None and current_saved_view.config.get("sort_order")
+            ):
                 hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
-            table = self.table(self.queryset, user=request.user, hide_hierarchy_ui=hide_hierarchy_ui)
+            table_changes_pending = self.request.GET.get("table_changes_pending", False)
+
+            table = self.table(
+                self.queryset,
+                table_changes_pending=table_changes_pending,
+                saved_view=current_saved_view,
+                user=request.user,
+                hide_hierarchy_ui=hide_hierarchy_ui,
+            )
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")
 
             # Apply the request context
             paginate = {
                 "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
+                "per_page": get_paginate_count(request, current_saved_view),
             }
             RequestConfig(request, paginate).configure(table)
             table_config_form = TableConfigForm(table=table)
@@ -320,9 +356,12 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
         # For the search form field, use a custom placeholder.
         q_placeholder = "Search " + bettertitle(model._meta.verbose_name_plural)
-        search_form = SearchForm(data=request.GET, q_placeholder=q_placeholder)
+        search_form = SearchForm(data=filter_params, q_placeholder=q_placeholder)
 
         valid_actions = self.validate_action_buttons(request)
+
+        # Query SavedViews for dropdown button
+        new_changes_not_applied = view_changes_not_saved(request, self, current_saved_view)
 
         context = {
             "content_type": content_type,
@@ -334,8 +373,12 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "filter_form": filter_form,
             "dynamic_filter_form": dynamic_filter_form,
             "search_form": search_form,
-            "list_url": validated_viewname(model, "list"),
+            "list_url": list_url,
             "title": bettertitle(model._meta.verbose_name_plural),
+            "new_changes_not_applied": new_changes_not_applied,
+            "current_saved_view": current_saved_view,
+            "saved_views": saved_views,
+            "model": model,
         }
 
         # `extra_context()` would require `request` access, however `request` parameter cannot simply be
@@ -439,7 +482,12 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         logger = logging.getLogger(__name__ + ".ObjectEditView")
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
-        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+        form = self.model_form(
+            data=request.POST,
+            files=request.FILES,
+            initial=normalize_querydict(request.GET, form_class=self.model_form),
+            instance=obj,
+        )
         restrict_form_fields(form, request.user)
 
         if form.is_valid():
@@ -752,7 +800,9 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                             related_obj_pks = []
                             for i, rel_obj_data in enumerate(data.get(field_name, [])):
-                                f = related_object_form(obj, rel_obj_data)
+                                # add parent object key to related object data
+                                rel_obj_data[obj._meta.verbose_name.replace(" ", "_")] = str(obj.pk)
+                                f = related_object_form(rel_obj_data)
 
                                 for subfield_name, field in f.fields.items():
                                     if subfield_name not in rel_obj_data and hasattr(field, "initial"):
@@ -1210,7 +1260,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     Delete objects in bulk.
 
     queryset: Custom queryset to use when retrieving objects (e.g. to select related objects)
-    filter: FilterSet to apply when deleting by QuerySet
+    filterset: FilterSet to apply when deleting by QuerySet
     table: The table used to display devices being deleted
     form: The form class used to delete objects in bulk
     template_name: The name of the template
@@ -1336,7 +1386,7 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
         return get_permission_for_model(self.queryset.model, "add")
 
     def get(self, request):
-        form = self.form(initial=request.GET)
+        form = self.form(initial=normalize_querydict(request.GET, form_class=self.form))
         model_form = self.model_form(request.GET)
 
         return render(
@@ -1352,8 +1402,8 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
 
     def post(self, request):
         logger = logging.getLogger(__name__ + ".ComponentCreateView")
-        form = self.form(request.POST, initial=request.GET)
-        model_form = self.model_form(request.POST)
+        form = self.form(request.POST, initial=normalize_querydict(request.GET, form_class=self.form))
+        model_form = self.model_form(request.POST, initial=normalize_querydict(request.GET, form_class=self.model_form))
 
         if form.is_valid():
             new_components = []
@@ -1368,7 +1418,9 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
                 data["label"] = label
                 if hasattr(form, "get_iterative_data"):
                     data.update(form.get_iterative_data(i))
-                component_form = self.model_form(data)
+                component_form = self.model_form(
+                    data, initial=normalize_querydict(request.GET, form_class=self.model_form)
+                )
 
                 if component_form.is_valid():
                     new_components.append(component_form)

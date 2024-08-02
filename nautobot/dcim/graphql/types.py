@@ -58,7 +58,7 @@ class DeviceType(OptimizedNautobotObjectType):
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self, use_cache=True)
+        return DynamicGroup.objects.get_for_object(self)
 
 
 class PlatformType(OptimizedNautobotObjectType):
@@ -82,7 +82,7 @@ class RackType(OptimizedNautobotObjectType):
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self, use_cache=True)
+        return DynamicGroup.objects.get_for_object(self)
 
 
 class CableType(OptimizedNautobotObjectType):

@@ -123,7 +123,7 @@ urlpatterns = [
         name="cluster_changelog",
         kwargs={"model": Cluster},
     ),
-    path(
+    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
         "clusters/<uuid:pk>/dynamic-groups/",
         ObjectDynamicGroupsView.as_view(),
         name="cluster_dynamicgroups",
@@ -197,7 +197,7 @@ urlpatterns = [
         name="virtualmachine_changelog",
         kwargs={"model": VirtualMachine},
     ),
-    path(
+    path(  # 3.0 TODO: remove, no longer needed/used since 2.3
         "virtual-machines/<uuid:pk>/dynamic-groups/",
         ObjectDynamicGroupsView.as_view(),
         name="virtualmachine_dynamicgroups",

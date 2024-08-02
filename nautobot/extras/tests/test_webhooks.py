@@ -314,7 +314,7 @@ class WebhookTest(APITestCase):
         tag = Tag.objects.create(name="Tag 1")
 
         all_changes = get_changes_for_model(location)
-        # Mimicking when all changes have been pruned via CHANGELOG_RETENTION
+        # Mimicking when all changes have been pruned via CHANGELOG_RETENTION / cleanup system Job
         all_changes.delete()
 
         with web_request_context(self.user, change_id=request_id):

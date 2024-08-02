@@ -265,11 +265,15 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         statuses = Status.objects.get_for_model(VMInterface)
         status = statuses.first()
-
+        role = Role.objects.get_for_model(VMInterface).first()
         interfaces = (
-            VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 1", status=status),
+            VMInterface.objects.create(
+                virtual_machine=virtualmachines[0], name="Interface 1", status=status, role=role
+            ),
             VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 2", status=status),
-            VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 3", status=status),
+            VMInterface.objects.create(
+                virtual_machine=virtualmachines[0], name="Interface 3", status=status, role=role
+            ),
             VMInterface.objects.create(virtual_machine=virtualmachines[1], name="BRIDGE", status=status),
         )
         # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
@@ -332,15 +336,27 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "custom_field_1": "Custom field data",
             "tags": [],
+            "role": role.pk,
         }
 
         cls.bulk_edit_data = {
             "enabled": False,
             "mtu": 2000,
             "status": status.pk,
+            "role": role.pk,
             "description": "New description",
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "custom_field_1": "New Custom Field Data",
+        }
+
+    def _edit_object_test_setup(self):
+        test_instance = self._get_queryset().first()
+        self.update_data = {
+            "name": test_instance.name,
+            "virtual_machine": test_instance.virtual_machine.pk,
+            "status": test_instance.status.pk,
+            "label": "new test label",
+            "description": "new test description",
         }

@@ -38,6 +38,7 @@ from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
+    DynamicGroupTypeChoices,
     JobExecutionType,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
@@ -50,6 +51,7 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
     CustomField,
     CustomFieldChoice,
     CustomLink,
@@ -64,21 +66,33 @@ from nautobot.extras.models import (
     JobButton,
     JobHook,
     JobResult,
+    MetadataChoice,
+    MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
+from nautobot.extras.utils import (
+    ChangeLoggedModelsQuery,
+    FeatureQuery,
+    RoleModelsQuery,
+    TaggableClassesQuery,
+)
+from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 
@@ -111,6 +125,7 @@ __all__ = (
     "CustomFieldChoiceFormSet",
     "CustomLinkForm",
     "CustomLinkFilterForm",
+    "DynamicGroupBulkAssignForm",
     "DynamicGroupForm",
     "DynamicGroupFilterForm",
     "DynamicGroupMembershipFormSet",
@@ -139,9 +154,14 @@ __all__ = (
     "LocalContextFilterForm",
     "LocalContextModelForm",
     "LocalContextModelBulkEditForm",
+    "MetadataTypeBulkEditForm",
+    "MetadataTypeForm",
+    "MetadataTypeFilterForm",
+    "MetadataChoiceFormSet",
     "NoteForm",
     "NoteFilterForm",
     "ObjectChangeFilterForm",
+    "ObjectMetadataFilterForm",
     "PasswordInputWithPlaceholder",
     "RelationshipForm",
     "RelationshipFilterForm",
@@ -149,12 +169,15 @@ __all__ = (
     "RoleBulkEditForm",
     "RoleFilterForm",
     "RoleForm",
+    "SavedViewForm",
+    "SavedViewModalForm",
     "ScheduledJobFilterForm",
     "SecretForm",
     "SecretFilterForm",
     "SecretsGroupForm",
     "SecretsGroupFilterForm",
     "SecretsGroupAssociationFormSet",
+    "StaticGroupAssociationFilterForm",
     "StatusForm",
     "StatusFilterForm",
     "StatusBulkEditForm",
@@ -421,8 +444,8 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if self.instance and self.instance.present_in_database:
-            self.fields["key"].widget.attrs["readonly"] = True
+        if self.initial.get("key"):
+            self.fields["key"].disabled = True
 
 
 class CustomFieldFilterForm(NautobotFilterForm):
@@ -501,13 +524,14 @@ class CustomLinkFilterForm(BootstrapMixin, forms.Form):
 #
 
 
-class DynamicGroupForm(NautobotModelForm):
+class DynamicGroupForm(TenancyForm, NautobotModelForm):
     """DynamicGroup model form."""
 
     content_type = CSVContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
         label="Content Type",
     )
+    group_type = forms.ChoiceField(choices=DynamicGroupTypeChoices, widget=StaticSelect2())
 
     class Meta:
         model = DynamicGroup
@@ -515,6 +539,9 @@ class DynamicGroupForm(NautobotModelForm):
             "name",
             "description",
             "content_type",
+            "group_type",
+            "tenant",
+            "tags",
         ]
 
 
@@ -522,8 +549,13 @@ class DynamicGroupMembershipFormSetForm(forms.ModelForm):
     """DynamicGroupMembership model form for use inline on DynamicGroupFormSet."""
 
     group = DynamicModelChoiceField(
-        queryset=DynamicGroup.objects.all(),
-        query_params={"content_type": "$content_type"},
+        queryset=DynamicGroup.objects.filter(
+            group_type__in=[DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER, DynamicGroupTypeChoices.TYPE_DYNAMIC_SET]
+        ),
+        query_params={
+            "content_type": "$content_type",
+            "group_type": [DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER, DynamicGroupTypeChoices.TYPE_DYNAMIC_SET],
+        },
     )
 
     class Meta:
@@ -553,12 +585,110 @@ class DynamicGroupMembershipFormSet(BaseDynamicGroupMembershipFormSet):
     """
 
 
-class DynamicGroupFilterForm(BootstrapMixin, forms.Form):
+class DynamicGroupFilterForm(TenancyFilterForm, NautobotFilterForm):
     """DynamicGroup filter form."""
 
     model = DynamicGroup
     q = forms.CharField(required=False, label="Search")
-    content_type = MultipleContentTypeField(feature="dynamic_groups", choices_as_strings=True, label="Content Type")
+    content_type = MultipleContentTypeField(
+        feature="dynamic_groups", choices_as_strings=True, label="Content Type", required=False
+    )
+    tags = TagFilterField(model)
+
+
+class DynamicGroupBulkAssignForm(BootstrapMixin, BulkEditForm):
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
+        widget=forms.HiddenInput(),
+    )
+    create_and_assign_to_new_group_name = forms.CharField(
+        required=False,
+        label="Create a new group",
+        help_text="Create a new group with this name and assign the selected objects to it.",
+    )
+
+    def __init__(self, model, *args, **kwargs):
+        super().__init__(model, *args, **kwargs)
+        self.fields["content_type"].initial = ContentType.objects.get_for_model(model)
+        self.fields["pk"] = forms.ModelMultipleChoiceField(
+            queryset=model.objects.all(),
+            widget=forms.MultipleHiddenInput(),
+            required=False,
+        )
+        self.fields["add_to_groups"] = DynamicModelMultipleChoiceField(
+            queryset=DynamicGroup.objects.filter(group_type=DynamicGroupTypeChoices.TYPE_STATIC),
+            required=False,
+            query_params={
+                "group_type": "static",
+                "content_type": model._meta.label_lower,
+            },
+            label="Add to existing group(s)",
+        )
+        self.fields["remove_from_groups"] = DynamicModelMultipleChoiceField(
+            queryset=DynamicGroup.objects.filter(group_type=DynamicGroupTypeChoices.TYPE_STATIC),
+            required=False,
+            query_params={
+                "group_type": "static",
+                "content_type": model._meta.label_lower,
+            },
+            label="Remove from group(s)",
+        )
+
+    class Meta:
+        nullable_fields = []
+
+    def clean(self):
+        data = super().clean()
+
+        if "add_to_groups" in data and "remove_from_groups" in data:
+            if data["add_to_groups"].filter(pk__in=data["remove_from_groups"].values_list("pk", flat=True)).exists():
+                raise ValidationError("Same group specified for both addition and removal")
+
+        return data
+
+
+#
+# Saved View
+#
+
+
+class SavedViewForm(BootstrapMixin, forms.ModelForm):
+    is_global_default = forms.BooleanField(
+        label="Is global default",
+        required=False,
+        help_text="If checked, this saved view will be used globally as the default saved view for this particular view",
+    )
+    is_shared = forms.BooleanField(
+        label="Is shared",
+        required=False,
+        help_text="If checked, all users will be able to see this saved view",
+    )
+
+    class Meta:
+        model = SavedView
+        fields = ["name", "is_global_default", "is_shared"]
+
+
+class SavedViewModalForm(BootstrapMixin, forms.ModelForm):
+    is_shared = forms.BooleanField(
+        label="Is shared",
+        required=False,
+        help_text="If checked, all users will be able to see this saved view",
+    )
+
+    class Meta:
+        model = SavedView
+        fields = ["name", "config", "is_shared"]
+
+
+class StaticGroupAssociationFilterForm(NautobotFilterForm):
+    model = StaticGroupAssociation
+    q = forms.CharField(required=False, label="Search")
+    dynamic_group = DynamicModelMultipleChoiceField(queryset=DynamicGroup.objects.all(), required=False)
+    assigned_object_type = CSVContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
+        required=False,
+    )
 
 
 #
@@ -1233,6 +1363,95 @@ class JobButtonFilterForm(BootstrapMixin, forms.Form):
         queryset=ContentType.objects.all(),
         required=False,
         label="Object Types",
+    )
+
+
+#
+# Metadata
+#
+
+
+# MetadataChoice inline formset for use with providing dynamic rows when creating/editing choices
+# for `MetadataType` objects in UI views. Fields/exclude must be set but since we're using all the
+# fields we're just setting `exclude=()` here.
+MetadataChoiceFormSet = inlineformset_factory(
+    parent_model=MetadataType,
+    model=MetadataChoice,
+    exclude=(),
+    extra=5,
+    widgets={
+        "value": forms.TextInput(attrs={"class": "form-control"}),
+        "weight": forms.NumberInput(attrs={"class": "form-control"}),
+    },
+)
+
+
+class MetadataTypeForm(NautobotModelForm):
+    name = forms.CharField(required=True, max_length=CHARFIELD_MAX_LENGTH)
+    description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
+    content_types = MultipleContentTypeField(
+        feature="metadata", help_text="The object(s) to which Metadata of this type can be applied."
+    )
+
+    class Meta:
+        model = MetadataType
+        fields = (
+            "name",
+            "description",
+            "data_type",
+            "content_types",
+            "tags",
+        )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.initial.get("data_type"):
+            self.fields["data_type"].disabled = True
+
+
+class MetadataTypeFilterForm(NautobotFilterForm):
+    model = MetadataType
+    q = forms.CharField(required=False, label="Search")
+    content_types = MultipleContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
+        choices_as_strings=True,
+        required=False,
+        label="Content Type(s)",
+    )
+    tags = TagFilterField(model)
+
+
+class MetadataTypeBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=MetadataType.objects.all(), widget=forms.MultipleHiddenInput)
+    description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
+
+    class Meta:
+        nullable_fields = [
+            "description",
+        ]
+
+
+class ObjectMetadataFilterForm(BootstrapMixin, forms.Form):
+    model = ObjectMetadata
+    q = forms.CharField(required=False, label="Search")
+    contact = DynamicModelMultipleChoiceField(
+        queryset=Contact.objects.all(),
+        required=False,
+    )
+    team = DynamicModelMultipleChoiceField(
+        queryset=Team.objects.all(),
+        required=False,
+    )
+    assigned_object_type = MultipleContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
+        choices_as_strings=True,
+        required=False,
+        label="Content Type(s)",
+    )
+    metadata_type = DynamicModelMultipleChoiceField(
+        queryset=MetadataType.objects.all(),
+        required=False,
     )
 
 

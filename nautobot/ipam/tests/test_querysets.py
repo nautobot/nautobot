@@ -97,7 +97,7 @@ class IPAddressQuerySet(TestCase):
         self.assertFalse(self.queryset._is_ambiguous_network_string("b2a"))
 
     def test__safe_parse_network_string(self):
-        fallback_ipv4 = netaddr.IPNetwork("0/32")
+        fallback_ipv4 = netaddr.IPNetwork("0.0.0.0/32")
         fallback_ipv6 = netaddr.IPNetwork("::/128")
 
         self.assertEqual(self.queryset._safe_parse_network_string("taco", 4), fallback_ipv4)

@@ -156,6 +156,7 @@ class VirtualMachineFilterSet(
         label="Cluster (ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         field_name="cluster__location",
         to_field_name="name",
@@ -262,7 +263,9 @@ class VirtualMachineFilterSet(
         return queryset.filter(primary_ip6__in=ip_queryset)
 
 
-class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomFieldModelFilterSetMixin):
+class VMInterfaceFilterSet(
+    BaseFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin, CustomFieldModelFilterSetMixin
+):
     q = SearchFilter(filter_predicates={"name": "icontains"})
 
     cluster_id = django_filters.ModelMultipleChoiceFilter(
@@ -318,6 +321,7 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         label="MAC address",
     )
     tagged_vlans = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="vid",
         queryset=VLAN.objects.all(),
         label="Tagged VLANs (VID or ID)",
@@ -327,6 +331,7 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         label="Has Tagged VLANs",
     )
     untagged_vlan = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="vid",
         queryset=VLAN.objects.all(),
         label="Untagged VLAN (VID or ID)",
