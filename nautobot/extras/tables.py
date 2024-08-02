@@ -107,6 +107,7 @@ GITREPOSITORY_BUTTONS = """
 
 JOB_BUTTONS = """
 <a href="{% url 'extras:job' pk=record.pk %}" class="btn btn-default btn-xs" title="Details"><i class="mdi mdi-information-outline" aria-hidden="true"></i></a>
+<a href="{% url 'extras:jobresult_list' %}?job_model={{ record.name | urlencode }}" class="btn btn-default btn-xs" title="Job Results"><i class="mdi mdi-format-list-bulleted" aria-hidden="true"></i></a>
 """
 
 OBJECTCHANGE_OBJECT = """
@@ -715,7 +716,10 @@ class JobTable(BaseTable):
         return render_markdown(value)
 
     def render_name(self, value):
-        return format_html('<span class="btn btn-primary btn-xs"><i class="mdi mdi-play"></i></span>{}', value)
+        return format_html(
+            '<span class="btn btn-primary btn-xs"><i class="mdi mdi-play"></i></span>{}',
+            value,
+        )
 
     class Meta(BaseTable.Meta):
         model = JobModel
@@ -887,7 +891,16 @@ class JobResultTable(BaseTable):
             "summary",
             "actions",
         )
-        default_columns = ("pk", "date_created", "name", "job_model", "user", "status", "summary", "actions")
+        default_columns = (
+            "pk",
+            "date_created",
+            "name",
+            "job_model",
+            "user",
+            "status",
+            "summary",
+            "actions",
+        )
 
 
 class JobButtonTable(BaseTable):
@@ -1106,7 +1119,15 @@ class RelationshipAssociationTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = RelationshipAssociation
-        fields = ("pk", "relationship", "source_type", "source", "destination_type", "destination", "actions")
+        fields = (
+            "pk",
+            "relationship",
+            "source_type",
+            "source",
+            "destination_type",
+            "destination",
+            "actions",
+        )
         default_columns = ("pk", "relationship", "source", "destination", "actions")
 
 
@@ -1222,7 +1243,15 @@ class TagTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Tag
-        fields = ("pk", "name", "items", "color", "content_types", "description", "actions")
+        fields = (
+            "pk",
+            "name",
+            "items",
+            "color",
+            "content_types",
+            "description",
+            "actions",
+        )
 
 
 class TaggedItemTable(BaseTable):
@@ -1302,7 +1331,9 @@ class WebhookTable(BaseTable):
 class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     contact_type = tables.TemplateColumn(
-        CONTACT_OR_TEAM_ICON, verbose_name="Type", attrs={"td": {"style": "width:20px;"}}
+        CONTACT_OR_TEAM_ICON,
+        verbose_name="Type",
+        attrs={"td": {"style": "width:20px;"}},
     )
     name = tables.TemplateColumn(CONTACT_OR_TEAM, verbose_name="Name")
     contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team.phone", verbose_name="Phone")

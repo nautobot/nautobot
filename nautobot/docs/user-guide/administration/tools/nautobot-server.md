@@ -808,6 +808,53 @@ Finished.
 !!! note
     This command is safe to run at any time. If it does not detect any changes, it will exit cleanly.
 
+### `validate_models`
+
+`nautobot-server validate_models`
+
+Validate all instances of a given model(s) by running a 'full_clean()' or 'validated_save()' on each object.
+
+!!! warning
+    Depending on the number of records in your database, this may take a long time to run.
+
+```no-highlight
+nautobot-server validate_models
+```
+
+Example output:
+
+```no-highlight
+Validating 171 models.
+auth.Permission
+circuits.ProviderNetwork
+circuits.Provider
+circuits.CircuitType
+circuits.Circuit
+circuits.CircuitTermination
+dcim.Interface
+dcim.Manufacturer
+dcim.DeviceFamily
+dcim.DeviceTypeToSoftwareImageFile
+dcim.DeviceType
+dcim.Platform
+<omitted for brevity>
+```
+
+You can validate a specific subset of models by providing a space separated list of models as shown here:
+
+```no-highlight
+nautobot-server validate_models dcim.Manufacturer dcim.Device
+```
+
+```no-highlight
+Validating 2 models.
+dcim.Manufacturer
+dcim.Device
+```
+
+`--save`  
+Run `validated_save()` instead of `full_clean()` for slower but more thorough data validation.
+
 ### `version`
 
 `nautobot-server version`

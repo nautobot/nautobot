@@ -6,9 +6,11 @@ from django import forms as django_forms
 from django.conf import settings
 from django.db import models
 from django.forms.utils import ErrorDict, ErrorList
+from django.utils.encoding import force_str
+from django.utils.text import capfirst
 import django_filters
 from django_filters.constants import EMPTY_VALUES
-from django_filters.utils import get_model_field, resolve_field
+from django_filters.utils import get_model_field, label_for_filter, resolve_field, verbose_lookup_expr
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 
@@ -719,6 +721,18 @@ class BaseFilterSet(django_filters.FilterSet):
                 # This is a negation filter which requires a queryset.exclude() clause
                 # Of course setting the negation of the existing filter's exclude attribute handles both cases
                 new_filter.exclude = not filter_field.exclude
+
+            # If the base filter_field has a custom label, django_filters won't adjust it for the new_filter lookup,
+            # so we have to do it.
+            if filter_field.label and filter_field.label != label_for_filter(
+                cls.Meta.model, filter_field.field_name, filter_field.lookup_expr, filter_field.exclude
+            ):
+                # Lightly adjusted from label_for_filter() implementation:
+                verbose_expression = ["exclude", filter_field.label] if new_filter.exclude else [filter_field.label]
+                if isinstance(lookup_expr, str):
+                    verbose_expression.append(verbose_lookup_expr(lookup_expr))
+                verbose_expression = [force_str(part) for part in verbose_expression if part]
+                new_filter.label = capfirst(" ".join(verbose_expression))
 
             magic_filters[new_filter_name] = new_filter
 

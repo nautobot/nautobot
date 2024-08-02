@@ -1003,8 +1003,9 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
     def test_duplicate_global_unique(self):
         """Test that duplicate IPs in the same Namespace raises an error."""
         IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
-        with self.assertRaises(IntegrityError):
-            IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+        duplicate_ip = IPAddress(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+        with self.assertRaises(ValidationError):
+            duplicate_ip.full_clean()
 
     def test_multiple_nat_outside_list(self):
         """

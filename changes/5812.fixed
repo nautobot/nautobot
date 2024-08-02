@@ -1,0 +1,1 @@
+Fixed CSV file upload does not correctly handle "UTF-8 with BOM" encoding.

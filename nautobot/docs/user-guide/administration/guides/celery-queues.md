@@ -43,3 +43,6 @@ You may have to change this setting multiple times to find what works best in yo
 
 !!! warning
     Modifying your concurrency setting may increase the CPU and will increase the memory load on your celery worker by at least 175MB per concurrent thread. Only change this setting if you have monitoring systems in place to monitor the system resources on your worker.
+
+!!! tip
+    If you have long-running Jobs in general, you may also want to adjust the [`CELERY_WORKER_PREFETCH_MULTIPLIER` setting](../configuration/optional-settings.md#celery_worker_prefetch_multiplier) so that a worker executing one long-running Job doesn't prefetch and reserve other tasks, preventing those tasks from executing until the current Job is completed.

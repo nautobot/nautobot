@@ -2994,6 +2994,27 @@ class JobButtonRenderingTestCase(TestCase):
             )
 
 
+class JobCustomTemplateTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        # Job model objects are automatically created during database migrations
+
+        # But we do need to make sure the ones we're testing are flagged appropriately
+        cls.example_job = Job.objects.get(job_class_name="ExampleCustomFormJob")
+        cls.example_job.enabled = True
+        cls.example_job.save()
+
+        cls.run_url = reverse("extras:job_run", kwargs={"pk": cls.example_job.pk})
+
+    def test_rendering_custom_template(self):
+        obj_perm = ObjectPermission(name="Test permission", actions=["view", "run"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+        with self.assertTemplateUsed("example_app/custom_job_form.html"):
+            self.client.get(self.run_url)
+
+
 # TODO: Convert to StandardTestCases.Views
 class ObjectChangeTestCase(TestCase):
     user_permissions = ("extras.view_objectchange",)

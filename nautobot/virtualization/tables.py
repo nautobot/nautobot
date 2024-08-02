@@ -23,14 +23,11 @@ __all__ = (
     "VMInterfaceTable",
 )
 
-# TODO: re-introduce assign ip address button?
 VMINTERFACE_BUTTONS = """
-{% if perms.ipam.add_ipaddress %}
-    <!--
-    <a href="{% url 'ipam:ipaddress_add' %}?vminterface={{ record.pk }}&return_url={{ virtualmachine.get_absolute_url }}" class="btn btn-xs btn-success" title="Add IP address">
+{% if perms.ipam.add_ipaddress and perms.virtualization.change_vminterface %}
+    <a href="{% url 'ipam:ipaddress_add' %}?vminterface={{ record.pk }}&return_url={{ request.path }}" class="btn btn-xs btn-success" title="Add IP address">
         <i class="mdi mdi-plus-thick" aria-hidden="true"></i>
     </a>
-    -->
 {% endif %}
 """
 

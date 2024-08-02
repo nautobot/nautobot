@@ -1,0 +1,1 @@
+Fixed broken UI and added error message when submitting IPAddressAssignForm without selecting any IPAddress.

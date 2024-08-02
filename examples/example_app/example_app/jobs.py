@@ -13,6 +13,7 @@ from nautobot.apps.jobs import (
     JobHookReceiver,
     JSONVar,
     register_jobs,
+    StringVar,
 )
 from nautobot.dcim.models import Device, Location
 from nautobot.extras.choices import ObjectChangeActionChoices
@@ -62,6 +63,39 @@ class ExampleJob(Job):
     def run(self, some_json_data):
         # some_json_data is passed to the run method as a Python object (e.g. dictionary)
         pass
+
+
+class ExampleCustomFormJob(Job):
+    """This job provides a simple HTML form instead of the dynamically generated form.
+
+    The Nautobot `Job` base class provides a mechanism to automatically generate a form
+    to be displayed in the run view. This covers most use cases for displaying job
+    input forms. However, it is sometimes necessary to provide some customization
+    in the view. This particular job will simply replace the form element with
+    a different element.
+    """
+
+    # Nautobot jobs use the script variables to generate the dynamic form, but
+    # this form is also used for processing the submitted data. Therefore, to
+    # get data into a submitted job, script vars must be used and the submitted
+    # form field names must match these script var names. As long as the
+    # form field name matches this and includes an id matching `id_{form_field_name}` then
+    # everything should work as expected.
+    #
+    # The `StringVar` here would display a simple input field, but we are going to
+    # display a text area instead in the template.
+    custom_job_data = StringVar(label="Input Data", description="Some input data", default="Lorem Ipsum")
+
+    # specify template_name to override the default job scheduling template
+    template_name = "example_app/custom_job_form.html"
+
+    class Meta:
+        name = "Custom form."
+        has_sensitive_variables = False
+
+    def run(self, custom_job_data):
+        """Run the job."""
+        self.logger.debug("Data is %s", custom_job_data)
 
 
 class ExampleHiddenJob(Job):
@@ -189,6 +223,7 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
 jobs = (
     ExampleDryRunJob,
     ExampleJob,
+    ExampleCustomFormJob,
     ExampleHiddenJob,
     ExampleLoggingJob,
     ExampleFileInputOutputJob,

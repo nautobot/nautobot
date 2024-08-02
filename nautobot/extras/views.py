@@ -1,4 +1,3 @@
-from datetime import timedelta
 import logging
 from urllib.parse import parse_qs
 
@@ -1388,55 +1387,25 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
             if (not dryrun and job_model.approval_required) or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
-                crontab = ""
-
-                if schedule_type == JobExecutionType.TYPE_IMMEDIATELY:
-                    # The job must be approved.
-                    # If the schedule_type is immediate, we still create the task, but mark it for approval
-                    # as a once in the future task with the due date set to the current time. This means
-                    # when approval is granted, the task is immediately due for execution.
-                    schedule_type = JobExecutionType.TYPE_FUTURE
-                    schedule_datetime = timezone.now()
-                    schedule_name = f"{job_model} - {schedule_datetime}"
-
-                else:
-                    schedule_name = schedule_form.cleaned_data["_schedule_name"]
-
-                    if schedule_type == JobExecutionType.TYPE_CUSTOM:
-                        crontab = schedule_form.cleaned_data["_recurrence_custom_time"]
-                        # doing .get("key", "default") returns None instead of "default" here for some reason
-                        schedule_datetime = schedule_form.cleaned_data.get("_schedule_start_time")
-                        if schedule_datetime is None:
-                            # "_schedule_start_time" is checked against ScheduledJob.earliest_possible_time()
-                            # which returns timezone.now() + timedelta(seconds=15)
-                            schedule_datetime = timezone.now() + timedelta(seconds=20)
-                    else:
-                        schedule_datetime = schedule_form.cleaned_data["_schedule_start_time"]
-
-                celery_kwargs = {"nautobot_job_profile": profile, "queue": task_queue}
-                scheduled_job = ScheduledJob(
-                    name=schedule_name,
-                    task=job_model.class_path,
-                    job_model=job_model,
-                    start_time=schedule_datetime,
-                    description=f"Nautobot job {schedule_name} scheduled by {request.user} for {schedule_datetime}",
-                    kwargs=job_class.serialize_data(job_form.cleaned_data),
-                    celery_kwargs=celery_kwargs,
+                scheduled_job = ScheduledJob.create_schedule(
+                    job_model,
+                    request.user,
+                    name=schedule_form.cleaned_data.get("_schedule_name"),
+                    start_time=schedule_form.cleaned_data.get("_schedule_start_time"),
                     interval=schedule_type,
-                    one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
-                    queue=task_queue,
-                    user=request.user,
+                    crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
                     approval_required=job_model.approval_required,
-                    crontab=crontab,
+                    task_queue=task_queue,
+                    profile=profile,
+                    **job_class.serialize_data(job_form.cleaned_data),
                 )
-                scheduled_job.validated_save()
 
                 if job_model.approval_required:
-                    messages.success(request, f"Job {schedule_name} successfully submitted for approval")
-                    return redirect(return_url if return_url else "extras:scheduledjob_approval_queue_list")
+                    messages.success(request, f"Job {scheduled_job.name} successfully submitted for approval")
+                    return redirect(return_url or "extras:scheduledjob_approval_queue_list")
                 else:
-                    messages.success(request, f"Job {schedule_name} successfully scheduled")
-                    return redirect(return_url if return_url else "extras:scheduledjob_list")
+                    messages.success(request, f"Job {scheduled_job.name} successfully scheduled")
+                    return redirect(return_url or "extras:scheduledjob_list")
 
             else:
                 # Enqueue job for immediate execution
@@ -2076,8 +2045,13 @@ class JobLogEntryTableView(generic.GenericView):
         else:
             queryset = instance.job_log_entries.all()
         log_table = tables.JobLogEntryTable(data=queryset, user=request.user)
-        RequestConfig(request).configure(log_table)
-        return HttpResponse(log_table.as_html(request))
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(log_table)
+        table = log_table.as_html(request)
+        return HttpResponse(table)
 
 
 #
