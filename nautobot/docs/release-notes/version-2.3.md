@@ -50,10 +50,6 @@ User accounts with the `is_staff` flag set can access a new worker status page a
 
 The `TreeManager` class (used for tree-models such as Location, RackGroup, and TenantGroup) default behavior has changed from `with_tree_fields` to `without_tree_fields`. This should improve performance in many cases but may impact Apps or Jobs that were relying on the old default; such code should be updated to explicitly call `.with_tree_fields()` where appropriate.
 
-#### Consolidated Detail View Action Buttons with a Dropdown Menu ([#5871](https://github.com/nautobot/nautobot/issues/5871))
-
-Consolidate common standard action buttons (those at the top right) in all detail views with a bootstrap split button dropdown.
-
 #### Dynamic Group Cache Changes ([#5473](https://github.com/nautobot/nautobot/issues/5473))
 
 To improve performance of the Dynamic Groups feature, a number of changes have been made:
@@ -75,6 +71,10 @@ Cleanup of the change log (deletion of `ObjectChange` records older than a given
     Setting [`CHANGELOG_RETENTION`](../user-guide/administration/configuration/optional-settings.md#changelog_retention) in your Nautobot configuration by itself no longer directly results in periodic cleanup of `ObjectChange` records. You must run (or schedule to periodically run) the `LogsCleanup` Job for this to occur.
 
 As an additional enhancement, the `LogsCleanup` Job can also be used to cleanup `JobResult` records if desired as well.
+
+#### UI Button Consolidation ([#5869](https://github.com/nautobot/nautobot/issues/5869), [#5870](https://github.com/nautobot/nautobot/issues/5870), [#5871](https://github.com/nautobot/nautobot/issues/5871))
+
+Consolidate list view bulk action buttons, list view standard action buttons and detail view standard action buttons with bootstrap split button dropdowns.
 
 ### Dependencies
 
