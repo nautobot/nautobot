@@ -50,6 +50,10 @@ User accounts with the `is_staff` flag set can access a new worker status page a
 
 The `TreeManager` class (used for tree-models such as Location, RackGroup, and TenantGroup) default behavior has changed from `with_tree_fields` to `without_tree_fields`. This should improve performance in many cases but may impact Apps or Jobs that were relying on the old default; such code should be updated to explicitly call `.with_tree_fields()` where appropriate.
 
+#### Consolidated Detail View Action Buttons with a Dropdown Menu ([#5871](https://github.com/nautobot/nautobot/issues/5871))
+
+Consolidate common standard action buttons (those at the top right) in all detail views with a bootstrap split button dropdown.
+
 #### Dynamic Group Cache Changes ([#5473](https://github.com/nautobot/nautobot/issues/5473))
 
 To improve performance of the Dynamic Groups feature, a number of changes have been made:
