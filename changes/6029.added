@@ -1,1 +1,0 @@
-Added environment variable support for setting `CELERY_WORKER_PREFETCH_MULTIPLIER`.
