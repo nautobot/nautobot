@@ -1020,7 +1020,7 @@ class IPAddress(PrimaryModel):
     parent = models.ForeignKey(
         "ipam.Prefix",
         blank=True,
-        null=True,
+        null=True,  # TODO remove this, it shouldn't be permitted for the database!
         related_name="ip_addresses",  # `IPAddress` to use `related_name="ip_addresses"`
         on_delete=models.PROTECT,
         help_text="The parent Prefix of this IPAddress.",
@@ -1117,7 +1117,7 @@ class IPAddress(PrimaryModel):
             raise ValidationError({"namespace": "No suitable parent Prefix exists in this Namespace"}) from e
 
     def clean(self):
-        super().clean()
+        self.address = self.address  # not a no-op - forces re-calling of self._deconstruct_address()
 
         # Validate that host is not being modified
         if self.present_in_database:
@@ -1131,8 +1131,8 @@ class IPAddress(PrimaryModel):
 
         closest_parent = self._get_closest_parent()
         # Validate `parent` can be used as the parent for this ipaddress
-        if self.parent and closest_parent:
-            if self.parent != closest_parent:
+        if closest_parent is not None:
+            if self.parent is not None and self.parent != closest_parent:
                 raise ValidationError(
                     {
                         "parent": (
@@ -1144,23 +1144,20 @@ class IPAddress(PrimaryModel):
             self.parent = closest_parent
             self._namespace = None
 
-    def save(self, *args, **kwargs):
         # 3.0 TODO: uncomment the below to enforce this constraint
         # if self.parent.type != choices.PrefixTypeChoices.TYPE_NETWORK:
         #     err_msg = f"IP addresses cannot be created in {self.parent.type} prefixes. You must create a network prefix first."
         #     raise ValidationError({"address": err_msg})
 
-        self.address = self.address  # not a no-op - forces re-calling of self._deconstruct_address()
-
         # Force dns_name to lowercase
         if not self.dns_name.islower:
             self.dns_name = self.dns_name.lower()
 
-        # Host and mask_length are required to get closest parent
-        closest_parent = self._get_closest_parent()
-        if closest_parent is not None:
-            self.parent = closest_parent
-            self._namespace = None
+        super().clean()
+
+    def save(self, *args, **kwargs):
+        self.clean()  # MUST do data fixup as above
+
         super().save(*args, **kwargs)
 
     @property

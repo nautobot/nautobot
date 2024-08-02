@@ -399,10 +399,9 @@ def extend_schema_type_relationships(schema_type, model):
     """Extend the schema type with attributes and resolvers corresponding
     to the relationships associated with this model."""
 
-    ct = ContentType.objects.get_for_model(model)
     relationships_by_side = {
-        "source": Relationship.objects.filter(source_type=ct),
-        "destination": Relationship.objects.filter(destination_type=ct),
+        "source": Relationship.objects.get_for_model_source(model),
+        "destination": Relationship.objects.get_for_model_destination(model),
     }
 
     prefix = ""

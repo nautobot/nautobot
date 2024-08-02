@@ -1125,13 +1125,27 @@ class DeviceRedundancyGroupTable(BaseTable):
         url_params={"device_redundancy_group": "pk"},
         verbose_name="Devices",
     )
+    controller_count = LinkedCountColumn(
+        viewname="dcim:controller_list",
+        url_params={"controller_device_redundancy_group": "pk"},
+        verbose_name="Controllers",
+    )
     secrets_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:deviceredundancygroup_list")
 
     class Meta(BaseTable.Meta):
         model = DeviceRedundancyGroup
-        fields = ("pk", "name", "status", "failover_strategy", "device_count", "secrets_group", "tags")
-        default_columns = ("pk", "name", "status", "failover_strategy", "device_count")
+        fields = (
+            "pk",
+            "name",
+            "status",
+            "failover_strategy",
+            "controller_count",
+            "device_count",
+            "secrets_group",
+            "tags",
+        )
+        default_columns = ("pk", "name", "status", "failover_strategy", "controller_count", "device_count")
 
 
 #

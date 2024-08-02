@@ -2363,6 +2363,19 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 sorted(interface_ips),
             )
 
+        with self.subTest("Assert Assigning IPAddress Without Selecting Any IPAddress Raises Exception"):
+            assign_ip_form_data["pk"] = []
+            assign_ip_request = {
+                "path": reverse("ipam:ipaddress_assign")
+                + f"?interface={self.interfaces[1].id}&return_url={device_list_url}",
+                "data": post_data(assign_ip_form_data),
+            }
+            response = self.client.post(**assign_ip_request, follow=True)
+            self.assertHttpStatus(response, 200)
+            self.assertIn(
+                "Please select at least one IP Address from the table.", response.content.decode(response.charset)
+            )
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_rearports(self):
         device = Device.objects.first()

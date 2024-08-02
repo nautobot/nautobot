@@ -426,6 +426,20 @@ properties:
     see_also:
       "`CELERY_TASK_SOFT_TIME_LIMIT`": "#celery_task_soft_time_limit"
     type: "integer"
+  CELERY_WORKER_PREFETCH_MULTIPLIER:
+    default: 4
+    description: "How many tasks a worker is allowed to reserve for its own consumption and execution."
+    details: >-
+      If set to `0` (not recommended) a single worker can reserve all tasks even if other workers are free.
+      For short running tasks (such as webhooks) you may want to set this to a larger number to increase throughput.
+      Conversely, for long-running tasks (such as SSoT or Golden-Config Jobs at scale) you may want to set this to `1`
+      so that a worker executing a long-running task will not prefetch other tasks, which would block their execution
+      until the long-running task completes.
+    environment_variable: "NAUTOBOT_CELERY_WORKER_PREFETCH_MULTIPLIER"
+    see_also:
+      "Celery documentation": "https://docs.celeryq.dev/en/stable/userguide/optimizing.html#prefetch-limits"
+    type: "integer"
+    version_added: "2.2.9"
   CELERY_WORKER_PROMETHEUS_PORTS:
     default: []
     description: "Ports for Prometheus metric HTTP server running on the celery worker(s)."

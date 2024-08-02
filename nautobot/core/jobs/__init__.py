@@ -1,3 +1,4 @@
+import codecs
 import contextlib
 from io import BytesIO
 
@@ -296,7 +297,9 @@ class ImportObjects(Job):
         if not csv_data and not csv_file:
             raise RunJobTaskFailed("Either csv_data or csv_file must be provided")
         if csv_file:
-            csv_bytes = csv_file
+            # data_encoding is utf-8 and file_encoding is utf-8-sig
+            # Bytes read from the original file are decoded according to file_encoding, and the result is encoded using data_encoding.
+            csv_bytes = codecs.EncodedFile(csv_file, "utf-8", "utf-8-sig")
         else:
             csv_bytes = BytesIO(csv_data.encode("utf-8"))
 

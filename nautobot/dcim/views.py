@@ -4049,6 +4049,9 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
             devices_table = tables.DeviceTable(devices)
             devices_table.columns.show("device_redundancy_group_priority")
             context["devices_table"] = devices_table
+            controllers = instance.controllers_sorted.restrict(request.user)
+            controllers_table = tables.ControllerTable(controllers)
+            context["controllers_table"] = controllers_table
         return context
 
 

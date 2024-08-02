@@ -300,6 +300,7 @@ table.report th a {
 }
 .panel table {
     margin-bottom: 0;
+    overflow: hidden;
 }
 .panel .table th {
     border-bottom-width: 1px;
