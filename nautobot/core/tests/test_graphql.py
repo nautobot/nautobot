@@ -52,6 +52,8 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroupAssociation,
     Location,
     LocationType,
+    Manufacturer,
+    Module,
     PowerFeed,
     PowerOutlet,
     PowerPanel,
@@ -93,15 +95,13 @@ User = get_user_model()
 
 
 class GraphQLTestCaseBase(TestCase):
-    @classmethod
-    def setUpTestData(cls):
-        # TODO: the below *shouldn't* be needed, but without it, when run with --parallel test flag,
-        # these tests consistently fail with schema construction errors
-        cls.SCHEMA = graphene_settings.SCHEMA  # not a no-op; this causes the schema to be built
+    def setUp(self):
+        self.SCHEMA = graphene_settings.SCHEMA  # not a no-op; this causes the schema to be built when first called
 
 
 class GraphQLTestCase(GraphQLTestCaseBase):
     def setUp(self):
+        super().setUp()
         self.user = create_test_user("graphql_testuser")
         GraphQLQuery.objects.create(name="GQL 1", query="{ query: locations {name} }")
         GraphQLQuery.objects.create(name="GQL 2", query="query ($name: [String!]) { locations(name:$name) {name} }")
@@ -178,7 +178,7 @@ class GraphQLTestCase(GraphQLTestCaseBase):
         for app_label, models in registry["model_features"]["graphql"].items():
             for model_name in models:
                 model = apps.get_model(app_label=app_label, model_name=model_name)
-                self.assertIsNotNone(graphene_django_registry.get_type_for_model(model))
+                self.assertIsNotNone(graphene_django_registry.get_type_for_model(model), model)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_graphql_url_field(self):
@@ -238,6 +238,7 @@ class GraphQLGenerateSchemaTypeTestCase(GraphQLTestCaseBase):
 
 class GraphQLExtendSchemaType(GraphQLTestCaseBase):
     def setUp(self):
+        super().setUp()
         self.datas = (
             {"field_name": "my_text", "field_type": CustomFieldTypeChoices.TYPE_TEXT},
             {
@@ -329,6 +330,7 @@ class GraphQLExtendSchemaType(GraphQLTestCaseBase):
 
 class GraphQLExtendSchemaRelationship(GraphQLTestCaseBase):
     def setUp(self):
+        super().setUp()
         location_ct = ContentType.objects.get_for_model(Location)
         rack_ct = ContentType.objects.get_for_model(Rack)
         vlan_ct = ContentType.objects.get_for_model(VLAN)
@@ -455,6 +457,7 @@ class GraphQLExtendSchemaRelationship(GraphQLTestCaseBase):
 
 class GraphQLSearchParameters(GraphQLTestCaseBase):
     def setUp(self):
+        super().setUp()
         self.schema = generate_schema_type(app_name="dcim", model=Location)
 
     def test_search_parameters(self):
@@ -476,8 +479,6 @@ class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
     @classmethod
     def setUpTestData(cls):
         """Initialize the Database with some datas and multiple users associated with different permissions."""
-        super().setUpTestData()
-
         cls.groups = (
             Group.objects.create(name="Group 1"),
             Group.objects.create(name="Group 2"),
@@ -705,22 +706,23 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
     @classmethod
     def setUpTestData(cls):
         """Initialize the Database with some datas."""
-        super().setUpTestData()
         cls.user = User.objects.create(username="Super User", is_active=True, is_superuser=True)
 
-        # Remove random IPAddress and Device fixtures for this custom test
+        # Remove random IPAddress, Module and Device fixtures for this custom test
         IPAddress.objects.all().delete()
         Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
+        Module.objects.all().delete()
 
         # Initialize fake request that will be required to execute GraphQL query
         cls.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
         cls.request.id = uuid.uuid4()
         cls.request.user = cls.user
 
-        # Populate Data
-        cls.device_type1 = DeviceType.objects.first()
-        cls.device_type2 = DeviceType.objects.last()
+        # Populate Data - create new device types with no component templates
+        manufacturer = Manufacturer.objects.first()
+        cls.device_type1 = DeviceType.objects.create(manufacturer=manufacturer, model="test device_type1")
+        cls.device_type2 = DeviceType.objects.create(manufacturer=manufacturer, model="test device_type2")
         roles = Role.objects.get_for_model(Device)
         cls.device_role1 = roles[0]
         cls.device_role2 = roles[1]
@@ -863,6 +865,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         ]
 
         interface_status = Status.objects.get_for_model(Interface).first()
+        interface_role = Role.objects.get_for_model(Interface).first()
         cls.interface11 = Interface.objects.create(
             name="Int1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
@@ -871,12 +874,14 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
             mode=InterfaceModeChoices.MODE_ACCESS,
             untagged_vlan=cls.vlan1,
             status=interface_status,
+            role=interface_role,
         )
         cls.interface12 = Interface.objects.create(
             name="Int2",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=cls.device1,
             status=interface_status,
+            role=interface_role,
         )
         cls.namespace = Namespace.objects.first()
         cls.intr_group_status = Status.objects.get_for_model(InterfaceRedundancyGroup).first()
@@ -958,6 +963,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
             untagged_vlan=cls.vlan2,
             mode=InterfaceModeChoices.MODE_ACCESS,
             status=interface_status,
+            role=interface_role,
         )
         cls.interface22 = Interface.objects.create(
             name="Int2",
@@ -984,7 +990,11 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         )
 
         cls.interface31 = Interface.objects.create(
-            name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=cls.device3, status=interface_status
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=cls.device3,
+            status=interface_status,
+            role=interface_role,
         )
         cls.interface31 = Interface.objects.create(
             name="Mgmt1",
@@ -993,6 +1003,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
             mgmt_only=True,
             enabled=False,
             status=interface_status,
+            role=interface_role,
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
@@ -2197,7 +2208,7 @@ query {
         self.assertIsNone(result.errors)
         self.assertIsInstance(result.data, dict, result)
         self.assertIsInstance(result.data["device_types"], list, result)
-        self.assertEqual(result.data["device_types"][0]["model"], self.device_type1.model, result)
+        self.assertEqual(result.data["device_types"][0]["model"], DeviceType.objects.first().model, result)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interface_pagination(self):
@@ -2233,7 +2244,7 @@ query {
         self.assertEqual(interface_names, ["Int2", "Int1"])
 
         result_2 = self.execute_query(query_all)
-        self.assertEqual(len(result_2.data.get("interfaces", [])), 6)
+        self.assertEqual(len(result_2.data.get("interfaces", [])), Interface.objects.count())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_power_feeds_cable_peer(self):

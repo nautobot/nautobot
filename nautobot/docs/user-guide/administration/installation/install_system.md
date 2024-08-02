@@ -2,10 +2,10 @@
 
 The documentation assumes that you are running one of the following:
 
-- Ubuntu 20.04 - 22.04
+- Ubuntu 20.04+
 - Debian 11+
-- RHEL/CentOS 8.2+
-    - Delimited by `RHEL8` tabs in the docs, but also includes other derivatives of RHEL such as RockyLinux or AlmaLinux
+- Fedora, RHEL/CentOS 8.2+ and derivatives
+    - Delimited by `Fedora/RHEL` tabs in the docs, but also includes other derivatives of RHEL such as RockyLinux or AlmaLinux
 
 ## Install System Packages
 
@@ -20,19 +20,16 @@ This will install:
 
 === "Ubuntu/Debian"
 
-    ???+ note "Ubuntu 24.04"
-        Ubuntu 24.04 is not officially supported by Nautobot 2.2 and prior yet. If you wish to attempt to use Nautobot 24.04 the one additional package in early testing to add would be `libjpeg-dev`. The pip resolution with Python 3.12 would require the use of the flag `--ignore-requires-python`.
-
     ```bash title="Install system dependencies"
     sudo apt update -y
     sudo apt install -y git python3 python3-pip python3-venv python3-dev redis-server
     ```
 
-=== "RHEL8"
+=== "Fedora/RHEL"
 
     ```bash title="Install system dependencies"
     sudo dnf check-update
-    sudo dnf install -y git python38 python38-devel python38-pip redis
+    sudo dnf install -y git python3 python3-devel python3-pip redis
     ```
 
 ## Database Setup
@@ -75,7 +72,7 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
         ??? example "Example of Entering Postgres"
 
             ```no-highlight title="Entering Postgres DB"
-            psql (12.5 (Ubuntu 12.5-0ubuntu0.20.04.1))
+            psql (16.3 (Ubuntu 16.3-0ubuntu0.24.04.1))
             Type "help" for help.
 
             postgres=#
@@ -119,13 +116,13 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
 
             ```no-highlight title="Example output"
             Password for user nautobot:
-            psql (12.5 (Ubuntu 12.5-0ubuntu0.20.04.1))
-            SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
+            psql (16.3 (Ubuntu 16.3-0ubuntu0.24.04.1))
+            SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off)
             Type "help" for help.
 
             nautobot=> \conninfo
-            You are connected to database "nautobot" as user "nautobot" on host "localhost" (address "127.0.0.1") at port "5432".
-            SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
+            You are connected to database "nautobot" as user "nautobot" on host "localhost" (address "::1") at port "5432".
+            SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off)
             nautobot=> \q
             ```
 
@@ -133,10 +130,10 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
 
         <h3>Install MySQL</h3>
 
-        This will install the MySQL database server and client. Additionally, MySQL requires that the MySQL development libraries are installed so that we may compile the Python `mysqlclient` library during the Nautobot installation steps.
+        This will install the MySQL database server and client. Additionally, MySQL requires that the MySQL development libraries and the `pkg-config` package are both installed so that we may compile the Python `mysqlclient` library during the Nautobot installation steps.
 
         ```no-highlight title="Install MySQL required packages"
-        sudo apt install -y libmysqlclient-dev mysql-server
+        sudo apt install -y libmysqlclient-dev mysql-server pkg-config
         ```
 
         <h3>Create a MySQL Database</h3>
@@ -165,9 +162,9 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
             ```no-highlight title="Example MySQL DB creation output."
             Welcome to the MySQL monitor.  Commands end with ; or \g.
             Your MySQL connection id is 11
-            Server version: 8.0.25-0ubuntu0.20.04.1 (Ubuntu)
+            Server version: 8.0.37-0ubuntu0.24.04.1 (Ubuntu)
 
-            Copyright (c) 2000, 2021, Oracle and/or its affiliates.
+            Copyright (c) 2000, 2024, Oracle and/or its affiliates.
 
             Oracle is a registered trademark of Oracle Corporation and/or its
             affiliates. Other names may be trademarks of their respective
@@ -214,9 +211,9 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
             Enter password:
             Welcome to the MySQL monitor.  Commands end with ; or \g.
             Your MySQL connection id is 13
-            Server version: 8.0.25-0ubuntu0.20.04.1 (Ubuntu)
+            Server version: 8.0.37-0ubuntu0.24.04.1 (Ubuntu)
 
-            Copyright (c) 2000, 2021, Oracle and/or its affiliates.
+            Copyright (c) 2000, 2024, Oracle and/or its affiliates.
 
             Oracle is a registered trademark of Oracle Corporation and/or its
             affiliates. Other names may be trademarks of their respective
@@ -226,7 +223,7 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
 
             mysql> status
             --------------
-            mysql  Ver 8.0.25-0ubuntu0.20.04.1 for Linux on x86_64 ((Ubuntu))
+            mysql  Ver 8.0.37-0ubuntu0.24.04.1 for Linux on x86_64 ((Ubuntu))
 
             Connection id:          13
             Current database:       nautobot
@@ -235,7 +232,7 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
             Current pager:          stdout
             Using outfile:          ''
             Using delimiter:        ;
-            Server version:         8.0.25-0ubuntu0.20.04.1 (Ubuntu)
+            Server version:         8.0.37-0ubuntu0.24.04.1 (Ubuntu)
             Protocol version:       10
             Connection:             Localhost via UNIX socket
             Server characterset:    utf8mb4
@@ -253,7 +250,7 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
             Bye
             ```
 
-=== "RHEL8"
+=== "Fedora/RHEL"
 
     === "PostgreSQL"
 
@@ -267,7 +264,7 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
 
         <h3>Initialize PostgreSQL</h3>
 
-        CentOS/RHEL requires a manual step to generate the initial configurations required by PostgreSQL.
+        Fedora/RHEL and related distros typically require a manual step to generate the initial configurations required by PostgreSQL.
 
         ```no-highlight title="Setup initial required configurations"
         sudo postgresql-setup --initdb
@@ -275,7 +272,10 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
 
         <h3>Configure Authentication</h3>
 
-        CentOS/RHEL configures PostgreSQL to use [`ident`](https://www.postgresql.org/docs/current/auth-ident.html) host-based authentication by default. Because Nautobot will need to authenticate using a username and password, we must update `pg_hba.conf` to support [`md5` password](https://www.postgresql.org/docs/current/auth-password.html) authentication.
+        Fedora/RHEL and related distros typically configure PostgreSQL to use [`ident`](https://www.postgresql.org/docs/current/auth-ident.html) host-based authentication by default. Because Nautobot will need to authenticate using a username and password, we must update `pg_hba.conf` to support [`md5` password](https://www.postgresql.org/docs/current/auth-password.html) authentication.
+
+        !!! tip
+            Under many distros, you may be able to use the more secure `scram-sha-256` as an alternative to `md5`, but this option may not be available by default; enabling it is beyond the scope of this documentation.
 
         As root, edit `/var/lib/pgsql/data/pg_hba.conf` and change `ident` to `md5` for the lines below.
 
@@ -358,11 +358,11 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
 
             ```no-highlight
             Password for user nautobot:
-            psql (10.15)
+            psql (16.3)
             Type "help" for help.
 
             nautobot=> \conninfo
-            You are connected to database "nautobot" as user "nautobot" on host "localhost" (address "127.0.0.1") at port "5432".
+            You are connected to database "nautobot" as user "nautobot" on host "localhost" (address "::1") at port "5432".
             nautobot=> \q
             ```
 
@@ -376,6 +376,9 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
         sudo dnf install -y gcc mysql-server mysql-devel
         ```
 
+        !!! tip
+            If you get an error about `Unable to find a match: mysql-devel`, you may need to enable additional sources for packages. On at least CentOS 9 and AlmaLinux 9, the command `sudo dnf config-manager --set-enabled crb` is the way to enable the necessary repository.
+
         <h3>Start MySQL</h3>
 
         Start the service and enable it to run at system startup:
@@ -383,6 +386,9 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
         ```no-highlight title="Start and enable at start up of the MySQL service"
         sudo systemctl enable --now mysql
         ```
+
+        !!! tip
+            Depending on your Linux distribution, the service may be named `mysqld` instead of `mysql`. If you get an error with the above command, try `sudo systemctl enable --now mysqld` instead.
 
         <h3>Create a MySQL Database</h3>
 
@@ -410,9 +416,9 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
             ```no-highlight title="Example output creation of DB"
             Welcome to the MySQL monitor.  Commands end with ; or \g.
             Your MySQL connection id is 8
-            Server version: 8.0.21 Source distribution
+            Server version: 8.0.37 Source distribution
 
-            Copyright (c) 2000, 2020, Oracle and/or its affiliates. All rights reserved.
+            Copyright (c) 2000, 2024, Oracle and/or its affiliates. All rights reserved.
 
             Oracle is a registered trademark of Oracle Corporation and/or its
             affiliates. Other names may be trademarks of their respective
@@ -452,9 +458,9 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
             Enter password:
             Welcome to the MySQL monitor.  Commands end with ; or \g.
             Your MySQL connection id is 10
-            Server version: 8.0.21 Source distribution
+            Server version: 8.0.37 Source distribution
 
-            Copyright (c) 2000, 2020, Oracle and/or its affiliates. All rights reserved.
+            Copyright (c) 2000, 2024, Oracle and/or its affiliates. All rights reserved.
 
             Oracle is a registered trademark of Oracle Corporation and/or its
             affiliates. Other names may be trademarks of their respective
@@ -464,7 +470,7 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
 
             mysql> status
             --------------
-            mysql  Ver 8.0.21 for Linux on x86_64 (Source distribution)
+            mysql  Ver 8.0.37 for Linux on x86_64 (Source distribution)
 
             Connection id:          10
             Current database:       nautobot
@@ -473,7 +479,7 @@ to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entr
             Current pager:          stdout
             Using outfile:          ''
             Using delimiter:        ;
-            Server version:         8.0.21 Source distribution
+            Server version:         8.0.37 Source distribution
             Protocol version:       10
             Connection:             Localhost via UNIX socket
             Server characterset:    utf8mb4
@@ -514,7 +520,7 @@ Django requires the database encoding for PostgreSQL databases to be set to UTF-
         PONG
         ```
 
-=== "RHEL8"
+=== "Fedora/RHEL"
 
     <h3>Start Redis</h3>
 

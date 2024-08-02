@@ -66,22 +66,33 @@ from nautobot.extras.models import (
     JobHook,
     JobLogEntry,
     JobResult,
+    MetadataChoice,
+    MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroupAssociation,
     Status,
     Tag,
     Team,
+    UserSavedViewAssociation,
     Webhook,
 )
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
+from nautobot.extras.utils import (
+    ChangeLoggedModelsQuery,
+    FeatureQuery,
+    RoleModelsQuery,
+    TaggableClassesQuery,
+)
 
 from .fields import MultipleChoiceJSONField
 
@@ -322,7 +333,7 @@ class DynamicGroupMembershipSerializer(ValidatedModelSerializer):
         fields = "__all__"
 
 
-class DynamicGroupSerializer(NautobotModelSerializer):
+class DynamicGroupSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
     )
@@ -332,8 +343,50 @@ class DynamicGroupSerializer(NautobotModelSerializer):
         fields = "__all__"
         extra_kwargs = {
             "children": {"source": "dynamic_group_memberships", "read_only": True},
-            "filter": {"read_only": False},
+            "filter": {"read_only": False, "required": False},
         }
+
+
+class SavedViewSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = SavedView
+        fields = "__all__"
+
+
+class UserSavedViewAssociationSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = UserSavedViewAssociation
+        fields = "__all__"
+        validators = []
+
+
+class StaticGroupAssociationSerializer(NautobotModelSerializer):
+    associated_object_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
+    )
+    associated_object = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = StaticGroupAssociation
+        fields = "__all__"
+
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="DynamicGroupAssociatedObject",
+            resource_type_field_name="object_type",
+            serializers=lambda: nested_serializers_for_models(FeatureQuery("dynamic_groups").list_subclasses()),
+        )
+    )
+    def get_associated_object(self, obj):
+        if obj.associated_object is None:
+            return None
+        try:
+            depth = get_nested_serializer_depth(self)
+            return return_nested_serializer_data_based_on_depth(
+                self, depth, obj, obj.associated_object, "associated_object"
+            )
+        except SerializerNotFound:
+            return None
 
 
 #
@@ -736,6 +789,63 @@ class JobButtonSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
 
 #
+# Metadata
+#
+
+
+class MetadataTypeSerializer(NautobotModelSerializer):
+    content_types = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
+        many=True,
+    )
+
+    class Meta:
+        model = MetadataType
+        fields = "__all__"
+
+
+class MetadataChoiceSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = MetadataChoice
+        fields = "__all__"
+
+
+class ObjectMetadataValueJSONField(serializers.JSONField):
+    """Special class to discern between itself and serializers.JSONField in NautobotCSVParser"""
+
+
+class ObjectMetadataSerializer(ValidatedModelSerializer):
+    assigned_object_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
+    )
+    assigned_object = serializers.SerializerMethodField()
+    value = ObjectMetadataValueJSONField(allow_null=True, required=False)
+
+    class Meta:
+        model = ObjectMetadata
+        fields = "__all__"
+
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="ObjectMetadataAssignedObject",
+            resource_type_field_name="object_type",
+            serializers=lambda: nested_serializers_for_models(FeatureQuery("metadata").list_subclasses()),
+            allow_null=True,
+        )
+    )
+    def get_assigned_object(self, obj):
+        if obj.assigned_object is None:
+            return None
+        try:
+            depth = get_nested_serializer_depth(self)
+            return return_nested_serializer_data_based_on_depth(
+                self, depth, obj, obj.assigned_object, "assigned_object"
+            )
+        except SerializerNotFound:
+            return None
+
+
+#
 # Notes
 #
 
@@ -962,6 +1072,8 @@ class TagSerializer(NautobotModelSerializer):
 
 
 class TeamSerializer(NautobotModelSerializer):
+    contacts = NautobotHyperlinkedRelatedField(queryset=Contact.objects.all(), many=True, required=False)
+
     class Meta:
         model = Team
         fields = "__all__"

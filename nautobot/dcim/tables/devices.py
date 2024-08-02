@@ -1,3 +1,4 @@
+from django.utils.html import format_html
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
@@ -23,6 +24,8 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
     InventoryItem,
+    Module,
+    ModuleBay,
     Platform,
     PowerOutlet,
     PowerPort,
@@ -48,7 +51,8 @@ from .template_code import (
     INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES,
     INTERFACE_REDUNDANCY_INTERFACE_PRIORITY,
     INTERFACE_TAGGED_VLANS,
-    LINKED_RECORD_COUNT,
+    MODULE_BUTTONS,
+    MODULEBAY_BUTTONS,
     PATHENDPOINT,
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
@@ -62,16 +66,17 @@ __all__ = (
     "ControllerTable",
     "ControllerManagedDeviceGroupTable",
     "DeviceBayTable",
-    "DeviceConsolePortTable",
-    "DeviceConsoleServerPortTable",
     "DeviceDeviceBayTable",
-    "DeviceFrontPortTable",
     "DeviceImportTable",
-    "DeviceInterfaceTable",
     "DeviceInventoryItemTable",
-    "DevicePowerPortTable",
-    "DevicePowerOutletTable",
-    "DeviceRearPortTable",
+    "DeviceModuleBayTable",
+    "DeviceModuleConsolePortTable",
+    "DeviceModuleConsoleServerPortTable",
+    "DeviceModuleFrontPortTable",
+    "DeviceModuleInterfaceTable",
+    "DeviceModulePowerPortTable",
+    "DeviceModulePowerOutletTable",
+    "DeviceModuleRearPortTable",
     "DeviceRedundancyGroupTable",
     "DeviceTable",
     "FrontPortTable",
@@ -79,6 +84,9 @@ __all__ = (
     "InterfaceRedundancyGroupTable",
     "InterfaceRedundancyGroupAssociationTable",
     "InventoryItemTable",
+    "ModuleTable",
+    "ModuleBayTable",
+    "ModuleModuleBayTable",
     "PlatformTable",
     "PowerOutletTable",
     "PowerPortTable",
@@ -235,6 +243,57 @@ class DeviceImportTable(BaseTable):
 
 
 #
+# Modules
+#
+
+
+class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
+    pk = ToggleColumn()
+    module_type = tables.Column(
+        linkify=lambda record: record.module_type.get_absolute_url(),
+        verbose_name="Type",
+        accessor="module_type__display",
+    )
+    parent_module_bay = tables.Column(
+        linkify=lambda record: record.parent_module_bay.get_absolute_url(),
+        verbose_name="Parent Module Bay",
+        accessor="parent_module_bay__display",
+    )
+    location = tables.Column(linkify=True)
+    tenant = TenantColumn()
+    tags = TagColumn(url_name="dcim:module_list")
+    actions = ButtonsColumn(Module, prepend_template=MODULE_BUTTONS)
+
+    class Meta(BaseTable.Meta):
+        model = Module
+        fields = (
+            "pk",
+            "module_type",
+            "parent_module_bay",
+            "location",
+            "serial",
+            "asset_tag",
+            "status",
+            "role",
+            "tenant",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "module_type",
+            "parent_module_bay",
+            "location",
+            "serial",
+            "asset_tag",
+            "status",
+            "role",
+            "tenant",
+            "actions",
+        )
+
+
+#
 # Device components
 #
 
@@ -245,8 +304,18 @@ class DeviceComponentTable(BaseTable):
     name = tables.Column(linkify=True, order_by=("_name",))
     cable = tables.Column(linkify=True)
 
-    class Meta(BaseTable.Meta):
-        order_by = ("device", "name")
+
+class ModularDeviceComponentTable(DeviceComponentTable):
+    module = tables.Column()
+
+    def __init__(self, *args, parent_module=None, **kwargs):
+        self.parent_module = parent_module
+        super().__init__(*args, **kwargs)
+
+    def render_module(self, record, value, **kwargs):
+        if value and value == self.parent_module:
+            return self.default
+        return format_html('<a href="{}">{}</a>', value.get_absolute_url(), value)
 
 
 class CableTerminationTable(BaseTable):
@@ -268,14 +337,15 @@ class PathEndpointTable(CableTerminationTable):
     )
 
 
-class ConsolePortTable(DeviceComponentTable, PathEndpointTable):
+class ConsolePortTable(ModularDeviceComponentTable, PathEndpointTable):
     tags = TagColumn(url_name="dcim:consoleport_list")
 
-    class Meta(DeviceComponentTable.Meta):
+    class Meta(ModularDeviceComponentTable.Meta):
         model = ConsolePort
         fields = (
             "pk",
             "device",
+            "module",
             "name",
             "label",
             "type",
@@ -285,10 +355,10 @@ class ConsolePortTable(DeviceComponentTable, PathEndpointTable):
             "connection",
             "tags",
         )
-        default_columns = ("pk", "device", "name", "label", "type", "description")
+        default_columns = ("pk", "device", "module", "name", "label", "type", "description")
 
 
-class DeviceConsolePortTable(ConsolePortTable):
+class DeviceModuleConsolePortTable(ConsolePortTable):
     name = tables.TemplateColumn(
         template_code='<i class="mdi mdi-console"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
         attrs={"td": {"class": "text-nowrap"}},
@@ -299,12 +369,13 @@ class DeviceConsolePortTable(ConsolePortTable):
         prepend_template=CONSOLEPORT_BUTTONS,
     )
 
-    class Meta(DeviceComponentTable.Meta):
+    class Meta(ModularDeviceComponentTable.Meta):
         model = ConsolePort
         fields = (
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "description",
             "cable",
@@ -317,6 +388,7 @@ class DeviceConsolePortTable(ConsolePortTable):
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "description",
             "cable",
@@ -328,14 +400,15 @@ class DeviceConsolePortTable(ConsolePortTable):
         }
 
 
-class ConsoleServerPortTable(DeviceComponentTable, PathEndpointTable):
+class ConsoleServerPortTable(ModularDeviceComponentTable, PathEndpointTable):
     tags = TagColumn(url_name="dcim:consoleserverport_list")
 
-    class Meta(DeviceComponentTable.Meta):
+    class Meta(ModularDeviceComponentTable.Meta):
         model = ConsoleServerPort
         fields = (
             "pk",
             "device",
+            "module",
             "name",
             "label",
             "type",
@@ -345,10 +418,10 @@ class ConsoleServerPortTable(DeviceComponentTable, PathEndpointTable):
             "connection",
             "tags",
         )
-        default_columns = ("pk", "device", "name", "label", "type", "description")
+        default_columns = ("pk", "device", "module", "name", "label", "type", "description")
 
 
-class DeviceConsoleServerPortTable(ConsoleServerPortTable):
+class DeviceModuleConsoleServerPortTable(ConsoleServerPortTable):
     name = tables.TemplateColumn(
         template_code='<i class="mdi mdi-console-network-outline"></i> '
         '<a href="{{ record.get_absolute_url }}">{{ value }}</a>',
@@ -360,12 +433,13 @@ class DeviceConsoleServerPortTable(ConsoleServerPortTable):
         prepend_template=CONSOLESERVERPORT_BUTTONS,
     )
 
-    class Meta(DeviceComponentTable.Meta):
+    class Meta(ModularDeviceComponentTable.Meta):
         model = ConsoleServerPort
         fields = (
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "description",
             "cable",
@@ -378,6 +452,7 @@ class DeviceConsoleServerPortTable(ConsoleServerPortTable):
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "description",
             "cable",
@@ -389,14 +464,15 @@ class DeviceConsoleServerPortTable(ConsoleServerPortTable):
         }
 
 
-class PowerPortTable(DeviceComponentTable, PathEndpointTable):
+class PowerPortTable(ModularDeviceComponentTable, PathEndpointTable):
     tags = TagColumn(url_name="dcim:powerport_list")
 
-    class Meta(DeviceComponentTable.Meta):
+    class Meta(ModularDeviceComponentTable.Meta):
         model = PowerPort
         fields = (
             "pk",
             "device",
+            "module",
             "name",
             "label",
             "type",
@@ -411,6 +487,7 @@ class PowerPortTable(DeviceComponentTable, PathEndpointTable):
         default_columns = (
             "pk",
             "device",
+            "module",
             "name",
             "label",
             "type",
@@ -420,7 +497,7 @@ class PowerPortTable(DeviceComponentTable, PathEndpointTable):
         )
 
 
-class DevicePowerPortTable(PowerPortTable):
+class DeviceModulePowerPortTable(PowerPortTable):
     name = tables.TemplateColumn(
         template_code='<i class="mdi mdi-power-plug-outline"></i> <a href="{{ record.get_absolute_url }}">'
         "{{ value }}</a>",
@@ -428,12 +505,13 @@ class DevicePowerPortTable(PowerPortTable):
     )
     actions = ButtonsColumn(model=PowerPort, buttons=("edit", "delete"), prepend_template=POWERPORT_BUTTONS)
 
-    class Meta(DeviceComponentTable.Meta):
+    class Meta(ModularDeviceComponentTable.Meta):
         model = PowerPort
         fields = (
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "maximum_draw",
             "allocated_draw",
@@ -448,6 +526,7 @@ class DevicePowerPortTable(PowerPortTable):
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "maximum_draw",
             "allocated_draw",
@@ -459,15 +538,16 @@ class DevicePowerPortTable(PowerPortTable):
         row_attrs = {"style": cable_status_color_css}
 
 
-class PowerOutletTable(DeviceComponentTable, PathEndpointTable):
+class PowerOutletTable(ModularDeviceComponentTable, PathEndpointTable):
     power_port = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:poweroutlet_list")
 
-    class Meta(DeviceComponentTable.Meta):
+    class Meta(ModularDeviceComponentTable.Meta):
         model = PowerOutlet
         fields = (
             "pk",
             "device",
+            "module",
             "name",
             "label",
             "type",
@@ -482,6 +562,7 @@ class PowerOutletTable(DeviceComponentTable, PathEndpointTable):
         default_columns = (
             "pk",
             "device",
+            "module",
             "name",
             "label",
             "type",
@@ -491,7 +572,7 @@ class PowerOutletTable(DeviceComponentTable, PathEndpointTable):
         )
 
 
-class DevicePowerOutletTable(PowerOutletTable):
+class DeviceModulePowerOutletTable(PowerOutletTable):
     name = tables.TemplateColumn(
         template_code='<i class="mdi mdi-power-socket"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
         attrs={"td": {"class": "text-nowrap"}},
@@ -502,12 +583,13 @@ class DevicePowerOutletTable(PowerOutletTable):
         prepend_template=POWEROUTLET_BUTTONS,
     )
 
-    class Meta(DeviceComponentTable.Meta):
+    class Meta(ModularDeviceComponentTable.Meta):
         model = PowerOutlet
         fields = (
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "power_port",
             "feed_leg",
@@ -522,6 +604,7 @@ class DevicePowerOutletTable(PowerOutletTable):
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "power_port",
             "feed_leg",
@@ -549,17 +632,19 @@ class BaseInterfaceTable(BaseTable):
     vrf = tables.Column(linkify=True, verbose_name="VRF")
 
 
-class InterfaceTable(StatusTableMixin, DeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
+class InterfaceTable(StatusTableMixin, ModularDeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
     mgmt_only = BooleanColumn()
     tags = TagColumn(url_name="dcim:interface_list")
 
-    class Meta(DeviceComponentTable.Meta):
+    class Meta(ModularDeviceComponentTable.Meta):
         model = Interface
         fields = (
             "pk",
             "device",
+            "module",
             "name",
             "status",
+            "role",
             "label",
             "enabled",
             "type",
@@ -580,8 +665,10 @@ class InterfaceTable(StatusTableMixin, DeviceComponentTable, BaseInterfaceTable,
         default_columns = (
             "pk",
             "device",
+            "module",
             "name",
             "status",
+            "role",
             "label",
             "enabled",
             "type",
@@ -589,7 +676,7 @@ class InterfaceTable(StatusTableMixin, DeviceComponentTable, BaseInterfaceTable,
         )
 
 
-class DeviceInterfaceTable(InterfaceTable):
+class DeviceModuleInterfaceTable(InterfaceTable):
     name = tables.TemplateColumn(
         template_code='<i class="mdi mdi-{% if iface.mgmt_only %}wrench{% elif iface.is_lag %}drag-horizontal-variant'
         "{% elif iface.is_virtual %}circle{% elif iface.is_wireless %}wifi{% else %}ethernet"
@@ -601,14 +688,16 @@ class DeviceInterfaceTable(InterfaceTable):
     lag = tables.Column(linkify=True, verbose_name="LAG")
     actions = ButtonsColumn(model=Interface, buttons=("edit", "delete"), prepend_template=INTERFACE_BUTTONS)
 
-    class Meta(DeviceComponentTable.Meta):
+    class Meta(ModularDeviceComponentTable.Meta):
         model = Interface
         fields = (
             "pk",
             "name",
             "status",
+            "role",
             "device",
             "label",
+            "module",
             "enabled",
             "type",
             "parent_interface",
@@ -633,7 +722,9 @@ class DeviceInterfaceTable(InterfaceTable):
             "pk",
             "name",
             "status",
+            "role",
             "label",
+            "module",
             "enabled",
             "type",
             "parent_interface",
@@ -653,16 +744,17 @@ class DeviceInterfaceTable(InterfaceTable):
         }
 
 
-class FrontPortTable(DeviceComponentTable, CableTerminationTable):
+class FrontPortTable(ModularDeviceComponentTable, CableTerminationTable):
     rear_port_position = tables.Column(verbose_name="Position")
     rear_port = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:frontport_list")
 
-    class Meta(DeviceComponentTable.Meta):
+    class Meta(ModularDeviceComponentTable.Meta):
         model = FrontPort
         fields = (
             "pk",
             "device",
+            "module",
             "name",
             "label",
             "type",
@@ -676,6 +768,7 @@ class FrontPortTable(DeviceComponentTable, CableTerminationTable):
         default_columns = (
             "pk",
             "device",
+            "module",
             "name",
             "label",
             "type",
@@ -685,7 +778,7 @@ class FrontPortTable(DeviceComponentTable, CableTerminationTable):
         )
 
 
-class DeviceFrontPortTable(FrontPortTable):
+class DeviceModuleFrontPortTable(FrontPortTable):
     name = tables.TemplateColumn(
         template_code='<i class="mdi mdi-square-rounded{% if not record.cable %}-outline{% endif %}"></i> '
         '<a href="{{ record.get_absolute_url }}">{{ value }}</a>',
@@ -693,12 +786,13 @@ class DeviceFrontPortTable(FrontPortTable):
     )
     actions = ButtonsColumn(model=FrontPort, buttons=("edit", "delete"), prepend_template=FRONTPORT_BUTTONS)
 
-    class Meta(DeviceComponentTable.Meta):
+    class Meta(ModularDeviceComponentTable.Meta):
         model = FrontPort
         fields = (
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "rear_port",
             "rear_port_position",
@@ -712,6 +806,7 @@ class DeviceFrontPortTable(FrontPortTable):
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "rear_port",
             "rear_port_position",
@@ -723,14 +818,15 @@ class DeviceFrontPortTable(FrontPortTable):
         row_attrs = {"style": cable_status_color_css}
 
 
-class RearPortTable(DeviceComponentTable, CableTerminationTable):
+class RearPortTable(ModularDeviceComponentTable, CableTerminationTable):
     tags = TagColumn(url_name="dcim:rearport_list")
 
-    class Meta(DeviceComponentTable.Meta):
+    class Meta(ModularDeviceComponentTable.Meta):
         model = RearPort
         fields = (
             "pk",
             "device",
+            "module",
             "name",
             "label",
             "type",
@@ -740,10 +836,10 @@ class RearPortTable(DeviceComponentTable, CableTerminationTable):
             "cable_peer",
             "tags",
         )
-        default_columns = ("pk", "device", "name", "label", "type", "description")
+        default_columns = ("pk", "device", "module", "name", "label", "type", "description")
 
 
-class DeviceRearPortTable(RearPortTable):
+class DeviceModuleRearPortTable(RearPortTable):
     name = tables.TemplateColumn(
         template_code='<i class="mdi mdi-square-rounded{% if not record.cable %}-outline{% endif %}"></i> '
         '<a href="{{ record.get_absolute_url }}">{{ value }}</a>',
@@ -751,12 +847,13 @@ class DeviceRearPortTable(RearPortTable):
     )
     actions = ButtonsColumn(model=RearPort, buttons=("edit", "delete"), prepend_template=REARPORT_BUTTONS)
 
-    class Meta(DeviceComponentTable.Meta):
+    class Meta(ModularDeviceComponentTable.Meta):
         model = RearPort
         fields = (
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "positions",
             "description",
@@ -769,6 +866,7 @@ class DeviceRearPortTable(RearPortTable):
             "pk",
             "name",
             "label",
+            "module",
             "type",
             "positions",
             "description",
@@ -807,9 +905,53 @@ class DeviceBayTable(DeviceComponentTable):
         )
 
 
+class ModuleBayTable(BaseTable):
+    pk = ToggleColumn()
+    parent_device = tables.Column(
+        linkify=lambda record: record.parent_device.get_absolute_url(),
+        verbose_name="Parent Device",
+        accessor="parent_device__display",
+    )
+    parent_module = tables.Column(
+        linkify=lambda record: record.parent_module.get_absolute_url(),
+        verbose_name="Parent Module",
+        accessor="parent_module__display",
+    )
+    name = tables.Column(linkify=True, order_by=("_name",))
+    installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
+    installed_module__status = ColoredLabelColumn()
+    tags = TagColumn(url_name="dcim:devicebay_list")
+
+    class Meta(BaseTable.Meta):
+        model = ModuleBay
+        fields = (
+            "pk",
+            "parent_device",
+            "parent_module",
+            "name",
+            "position",
+            "label",
+            "description",
+            "installed_module",
+            "installed_module__status",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "parent_device",
+            "parent_module",
+            "name",
+            "position",
+            "label",
+            "description",
+            "installed_module",
+            "installed_module__status",
+        )
+
+
 class DeviceDeviceBayTable(DeviceBayTable):
     name = tables.TemplateColumn(
-        template_code='<i class="mdi mdi-circle{% if record.installed_device %}slice-8{% else %}outline{% endif %}'
+        template_code='<i class="mdi mdi-circle-{% if record.installed_device %}slice-8{% else %}outline{% endif %}'
         '"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
         attrs={"td": {"class": "text-nowrap"}},
     )
@@ -836,6 +978,46 @@ class DeviceDeviceBayTable(DeviceBayTable):
             "description",
             "actions",
         )
+
+
+class DeviceModuleBayTable(ModuleBayTable):
+    name = tables.TemplateColumn(
+        template_code='<i class="mdi mdi-{% if record.installed_module %}expansion-card-variant{% else %}tray{% endif %}'
+        '"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
+        attrs={"td": {"class": "text-nowrap"}},
+    )
+    installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
+    installed_module__status = ColoredLabelColumn(verbose_name="Installed Module Status")
+    actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=MODULEBAY_BUTTONS)
+
+    class Meta(ModularDeviceComponentTable.Meta):
+        model = ModuleBay
+        fields = (
+            "pk",
+            "name",
+            "position",
+            "installed_module",
+            "installed_module__status",
+            "label",
+            "description",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "position",
+            "installed_module",
+            "installed_module__status",
+            "actions",
+        )
+
+
+class ModuleModuleBayTable(DeviceModuleBayTable):
+    actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=MODULEBAY_BUTTONS)
+
+    class Meta(DeviceModuleBayTable.Meta):
+        pass
 
 
 class InventoryItemTable(DeviceComponentTable):
@@ -1201,7 +1383,11 @@ class ControllerManagedDeviceGroupTable(BaseTable):
     controller = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:controllermanageddevicegroup_list")
     actions = ButtonsColumn(ControllerManagedDeviceGroup)
-    device_count = tables.TemplateColumn(template_code=LINKED_RECORD_COUNT, verbose_name="Devices")
+    device_count = LinkedCountColumn(
+        viewname="dcim:device_list",
+        url_params={"controller_managed_device_group": "pk"},
+        verbose_name="Devices",
+    )
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""

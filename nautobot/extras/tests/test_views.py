@@ -7,15 +7,17 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.html import format_html
+from django.utils.html import escape, format_html
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
-from nautobot.core.testing import extract_form_failures, extract_page_body, TestCase, ViewTestCases
+from nautobot.core.templatetags.helpers import bettertitle
+from nautobot.core.testing import extract_form_failures, extract_page_body, ModelViewTestCase, TestCase, ViewTestCases
 from nautobot.core.testing.utils import disable_warnings, post_data
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
@@ -31,8 +33,10 @@ from nautobot.dcim.models import (
 from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
+    DynamicGroupTypeChoices,
     JobExecutionType,
     LogLevelChoices,
+    MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -56,18 +60,23 @@ from nautobot.extras.models import (
     JobButton,
     JobLogEntry,
     JobResult,
+    MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroupAssociation,
     Status,
     Tag,
     Team,
+    UserSavedViewAssociation,
     Webhook,
 )
 from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
@@ -75,6 +84,7 @@ from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 
 # Use the proper swappable User model
@@ -364,6 +374,11 @@ class ContactTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        # Contacts associated with ObjectMetadata objects are protected, create some deletable contacts
+        Contact.objects.create(name="Deletable contact 1")
+        Contact.objects.create(name="Deletable contact 2")
+        Contact.objects.create(name="Deletable contact 3")
+
         cls.form_data = {
             "name": "new contact",
             "phone": "555-0121",
@@ -788,12 +803,18 @@ class DynamicGroupTestCase(
             "name": "new_dynamic_group",
             "description": "I am a new dynamic group object.",
             "content_type": content_type.pk,
+            "group_type": DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            "tenant": Tenant.objects.first().pk,
+            "tags": [t.pk for t in Tag.objects.get_for_model(DynamicGroup)],
             # Management form fields required for the dynamic formset
             "dynamic_group_memberships-TOTAL_FORMS": "0",
             "dynamic_group_memberships-INITIAL_FORMS": "1",
             "dynamic_group_memberships-MIN_NUM_FORMS": "0",
             "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
         }
+
+    def _get_queryset(self):
+        return super()._get_queryset().filter(group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER)  # TODO
 
     def test_get_object_with_permission(self):
         instance = self._get_queryset().first()
@@ -879,6 +900,16 @@ class DynamicGroupTestCase(
         response = self.client.get(url)
         self.assertHttpStatus(response, 404)
 
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
+        super().test_edit_object_with_permission()
+
+    def test_edit_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
+        super().test_edit_object_with_constrained_permission()
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_edit_saved_filter(self):
         """Test that editing a filter works using the edit view."""
@@ -914,6 +945,80 @@ class DynamicGroupTestCase(
         path = self._get_url("list")
         response = self.client.get(path + "?content_type=dcim.device")
         self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_assign_successful(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+        group_1 = DynamicGroup.objects.create(
+            content_type=location_ct, name="Group 1", group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        )
+        group_2 = DynamicGroup.objects.create(
+            content_type=location_ct, name="Group 2", group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        )
+        group_2.add_members(Location.objects.filter(name__startswith="Root"))
+
+        self.add_permissions(
+            "extras.add_staticgroupassociation", "extras.delete_staticgroupassociation", "extras.add_dynamicgroup"
+        )
+
+        url = reverse("extras:dynamicgroup_bulk_assign")
+        request = {
+            "path": url,
+            "data": post_data(
+                {
+                    "content_type": location_ct.pk,
+                    "pk": list(Location.objects.filter(parent__isnull=True).values_list("pk", flat=True)),
+                    "create_and_assign_to_new_group_name": "Root Locations",
+                    "add_to_groups": [group_1.pk],
+                    "remove_from_groups": [group_2.pk],
+                }
+            ),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        new_group = DynamicGroup.objects.get(name="Root Locations")
+        self.assertEqual(new_group.content_type, location_ct)
+        self.assertEqual(new_group.group_type, DynamicGroupTypeChoices.TYPE_STATIC)
+        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), new_group.members)
+        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), group_1.members)
+        self.assertQuerysetEqualAndNotEmpty(
+            Location.objects.filter(name__startswith="Root").exclude(parent__isnull=True), group_2.members
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_assign_non_static_groups_forbidden(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+        group_1 = DynamicGroup.objects.create(content_type=location_ct, name="Group 1")
+        group_2 = DynamicGroup.objects.create(
+            content_type=location_ct, name="Group 2", group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET
+        )
+
+        self.add_permissions(
+            "extras.add_staticgroupassociation", "extras.delete_staticgroupassociation", "extras.add_dynamicgroup"
+        )
+
+        url = reverse("extras:dynamicgroup_bulk_assign")
+        request = {
+            "path": url,
+            "data": post_data(
+                {
+                    "content_type": location_ct.pk,
+                    "pk": list(Location.objects.filter(parent__isnull=True).distinct().values_list("pk", flat=True)),
+                    "add_to_groups": [group_1.pk],
+                },
+            ),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        # TODO check for specific form validation error?
+
+        del request["data"]["add_to_groups"]
+        request["data"]["remove_from_groups"] = [group_2.pk]
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        # TODO check for specific form validation error?
+
+    # TODO: negative tests for bulk assign - global and object-level permission violations, invalid data, etc.
 
 
 class ExportTemplateTestCase(
@@ -1063,6 +1168,50 @@ class GitRepositoryTestCase(
     # TODO: mock/stub out `enqueue_git_repository_diff_origin_and_local` and test successful POST with permissions
 
 
+class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = MetadataType
+    bulk_edit_data = {"description": "A new description"}
+
+    def setUp(self):
+        super().setUp()
+        self.form_data = {
+            "name": "New Metadata Type",
+            "description": "A new type of metadata",
+            "data_type": MetadataTypeDataTypeChoices.TYPE_DATETIME,
+            "content_types": [
+                ContentType.objects.get_for_model(Device).pk,
+                ContentType.objects.get_for_model(ContactAssociation).pk,
+            ],
+            "choices-TOTAL_FORMS": "0",
+            "choices-INITIAL_FORMS": "5",
+            "choices-MIN_NUM_FORMS": "0",
+            "choices-MAX_NUM_FORMS": "1000",
+        }
+
+    def get_deletable_object(self):
+        return MetadataType.objects.create(name="Delete Me", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT)
+
+    def get_deletable_object_pks(self):
+        mdts = [
+            MetadataType.objects.create(name="SoR", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT),
+            MetadataType.objects.create(name="Colors", data_type=MetadataTypeDataTypeChoices.TYPE_MULTISELECT),
+            MetadataType.objects.create(
+                name="Location Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT
+            ),
+        ]
+        return [mdt.pk for mdt in mdts]
+
+    def test_edit_object_with_constrained_permission(self):
+        # Can't change data_type once set
+        self.form_data["data_type"] = self.model.objects.first().data_type
+        return super().test_edit_object_with_constrained_permission()
+
+    def test_edit_object_with_permission(self):
+        # Can't change data_type once set
+        self.form_data["data_type"] = self.model.objects.first().data_type
+        return super().test_edit_object_with_permission()
+
+
 class NoteTestCase(
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
@@ -1123,6 +1272,319 @@ class NoteTestCase(
         self.add_permissions("dcim.change_location")
         response = self.client.post(reverse("dcim:location_bulk_edit"), data={"pk": self.location.pk})
         self.assertNotContains(response, self.expected_object_note, html=True)
+
+
+class SavedViewTest(ModelViewTestCase):
+    """
+    Tests for Saved Views
+    """
+
+    model = SavedView
+
+    def get_view_url_for_saved_view(self, saved_view, action="detail"):
+        """
+        Since saved view detail url redirects, we need to manually construct its detail url
+        to test the content of its response.
+        """
+        view = saved_view.view
+        pk = saved_view.pk
+
+        if action == "detail":
+            url = reverse(view) + f"?saved_view={pk}"
+        elif action == "edit":
+            url = saved_view.get_absolute_url() + "update-config/"
+        else:
+            url = reverse("extras:savedview_add")
+
+        return url
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_get_object_anonymous(self):
+        # Make the request as an unauthenticated user
+        self.client.logout()
+        instance = self._get_queryset().first()
+        response = self.client.get(instance.get_absolute_url(), follow=True)
+        self.assertHttpStatus(response, 200)
+        # This view should redirect to /login/?next={saved_view's absolute url}
+        self.assertRedirects(response, f"/login/?next={instance.get_absolute_url()}")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_object_without_permission(self):
+        instance = self._get_queryset().first()
+        view = instance.view
+        app_label = view.split(":")[0]
+        model_name = view.split(":")[1].split("_")[0]
+        # SavedView detail view should only require the model's view permission
+        self.add_permissions(f"{app_label}.view_{model_name}")
+
+        # Try GET with model-level permission
+        response = self.client.get(instance.get_absolute_url(), follow=True)
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_object_with_permission(self):
+        instance = self._get_queryset().first()
+        view = instance.view
+        app_label = view.split(":")[0]
+        model_name = view.split(":")[1].split("_")[0]
+        # Add model-level permission
+        self.add_permissions("extras.view_savedview")
+        self.add_permissions(f"{app_label}.view_{model_name}")
+
+        # Try GET with model-level permission
+        # SavedView detail view should redirect to the View from which it is derived
+        response = self.client.get(instance.get_absolute_url(), follow=True)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(escape(instance.name), response_body, msg=response_body)
+
+        query_strings = ["&table_changes_pending=true", "&per_page=1234", "&status=active", "&sort=name"]
+        for string in query_strings:
+            view_url = self.get_view_url_for_saved_view(instance) + string
+            response = self.client.get(view_url)
+            self.assertHttpStatus(response, 200)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            # Assert that the star sign is rendered on the page since there are unsaved changes
+            self.assertIn('<i title="Pending changes not saved">', response_body, msg=response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_object_with_constrained_permission(self):
+        instance1, instance2 = self._get_queryset().all()[:2]
+
+        # Add object-level permission
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance1.pk},
+            actions=["view", "add", "change", "delete"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+        app_label = instance1.view.split(":")[0]
+        model_name = instance1.view.split(":")[1].split("_")[0]
+        self.add_permissions(f"{app_label}.view_{model_name}")
+
+        # Try GET to permitted object
+        self.assertHttpStatus(self.client.get(instance1.get_absolute_url()), 302)
+
+        # Try GET to non-permitted object
+        # Should be able to get to any SavedView instance as long as the user has "{app_label}.view_{model_name}" permission
+        app_label = instance2.view.split(":")[0]
+        model_name = instance2.view.split(":")[1].split("_")[0]
+        self.add_permissions(f"{app_label}.view_{model_name}")
+        self.assertHttpStatus(self.client.get(instance2.get_absolute_url()), 302)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_saved_view_as_different_user(self):
+        instance = self._get_queryset().first()
+        update_query_strings = ["per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
+        update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
+        different_user = User.objects.create(username="User 1", is_active=True)
+        # Try update the saved view with a different user from the owner of the saved view
+        self.client.force_login(different_user)
+        response = self.client.get(update_url, follow=True)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            f"You do not have the required permission to modify this Saved View owned by {instance.owner}",
+            response_body,
+            msg=response_body,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_saved_view_as_owner(self):
+        instance = self._get_queryset().first()
+        update_query_strings = ["per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
+        update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
+        # Try update the saved view with the same user as the owner of the saved view
+        instance.owner.is_active = True
+        instance.owner.save()
+        self.client.force_login(instance.owner)
+        response = self.client.get(update_url)
+        self.assertHttpStatus(response, 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.config["pagination_count"], 12)
+        self.assertEqual(instance.config["filter_params"]["status"], ["active"])
+        self.assertEqual(instance.config["filter_params"]["name"], ["new_name_filter"])
+        self.assertEqual(instance.config["sort_order"], ["name"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_delete_saved_view_as_different_user(self):
+        instance = self._get_queryset().first()
+        instance.config = {
+            "filter_params": {
+                "location_type": ["Campus", "Building", "Floor", "Elevator"],
+                "tenant": ["Krause, Welch and Fuentes"],
+            },
+            "table_config": {"LocationTable": {"columns": ["name", "status", "location_type", "tags"]}},
+        }
+        instance.validated_save()
+        delete_url = reverse("extras:savedview_delete", kwargs={"pk": instance.pk})
+        different_user = User.objects.create(username="User 2", is_active=True)
+        # Try delete the saved view with a different user from the owner of the saved view
+        self.client.force_login(different_user)
+        response = self.client.post(delete_url, follow=True)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            f"You do not have the required permission to delete this Saved View owned by {instance.owner}",
+            response_body,
+            msg=response_body,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_delete_saved_view_as_owner(self):
+        instance = self._get_queryset().first()
+        instance.config = {
+            "filter_params": {
+                "location_type": ["Campus", "Building", "Floor", "Elevator"],
+                "tenant": ["Krause, Welch and Fuentes"],
+            },
+            "table_config": {"LocationTable": {"columns": ["name", "status", "location_type", "tags"]}},
+        }
+        instance.validated_save()
+        delete_url = reverse("extras:savedview_delete", kwargs={"pk": instance.pk})
+        # Delete functionality should work even without "extras.delete_savedview" permissions
+        # if the saved view belongs to the user.
+        instance.owner.is_active = True
+        instance.owner.save()
+        self.client.force_login(instance.owner)
+        response = self.client.post(delete_url, follow=True)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            "Are you sure you want to delete saved view",
+            response_body,
+            msg=response_body,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_saved_view(self):
+        instance = self._get_queryset().first()
+        # User should be able to create saved view with only "{app_label}.view_{model_name}" permission
+        # self.add_permissions("extras.add_savedview")
+        view = instance.view
+        app_label = view.split(":")[0]
+        model_name = view.split(":")[1].split("_")[0]
+        self.add_permissions(f"{app_label}.view_{model_name}")
+        create_query_strings = [
+            f"saved_view={instance.pk}",
+            "&per_page=12",
+            "&status=active",
+            "&name=new_name_filter",
+            "&sort=name",
+        ]
+        create_url = self.get_view_url_for_saved_view(instance, "create")
+        request = {
+            "path": create_url,
+            "data": post_data(
+                {"name": "New Test View", "view": f"{instance.view}", "params": "".join(create_query_strings)}
+            ),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        instance = SavedView.objects.get(name="New Test View")
+        self.assertEqual(instance.config["pagination_count"], 12)
+        self.assertEqual(instance.config["filter_params"]["status"], ["active"])
+        self.assertEqual(instance.config["filter_params"]["name"], ["new_name_filter"])
+        self.assertEqual(instance.config["sort_order"], ["name"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_is_global_default(self):
+        view_name = "dcim:location_list"
+        SavedView.objects.create(
+            name="Global Location Default View",
+            owner=self.user,
+            view=view_name,
+            is_global_default=True,
+        )
+        response = self.client.get(reverse(view_name), follow=True)
+        # Assert that Location List View got redirected to Saved View set as global default
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(
+            """
+            <strong>
+                Global Location Default View
+            </strong>
+            """,
+            response_body,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_user_default(self):
+        view_name = "dcim:location_list"
+        sv = SavedView.objects.create(
+            name="User Location Default View",
+            owner=self.user,
+            view=view_name,
+            is_global_default=True,
+        )
+        UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
+        response = self.client.get(reverse(view_name), follow=True)
+        # Assert that Location List View got redirected to Saved View set as user default
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(
+            """
+            <strong>
+                User Location Default View
+            </strong>
+            """,
+            response_body,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_user_default_precedes_global_default(self):
+        view_name = "dcim:location_list"
+        SavedView.objects.create(
+            name="Global Location Default View",
+            owner=self.user,
+            view=view_name,
+            is_global_default=True,
+        )
+        sv = SavedView.objects.create(
+            name="User Location Default View",
+            owner=self.user,
+            view=view_name,
+        )
+        UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
+        response = self.client.get(reverse(view_name), follow=True)
+        # Assert that Location List View got redirected to Saved View set as user default
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(
+            """
+            <strong>
+                User Location Default View
+            </strong>
+            """,
+            response_body,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_is_shared(self):
+        view_name = "dcim:location_list"
+        new_user = User.objects.create(username="Different User", is_active=True)
+        sv_shared = SavedView.objects.create(
+            name="Shared Location Saved View",
+            owner=new_user,
+            view=view_name,
+        )
+        sv_not_shared = SavedView.objects.create(
+            name="Private Location Saved View",
+            owner=new_user,
+            view=view_name,
+            is_shared=False,
+        )
+        app_label = view_name.split(":")[0]
+        model_name = view_name.split(":")[1].split("_")[0]
+        self.add_permissions(f"{app_label}.view_{model_name}")
+        response = self.client.get(reverse(view_name), follow=True)
+        # Assert that Location List View got redirected to Saved View set as user default
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(str(sv_shared.pk), response_body, msg=response_body)
+        self.assertNotIn(str(sv_not_shared.pk), response_body, msg=response_body)
 
 
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
@@ -2132,7 +2594,7 @@ class JobTestCase(
 
         self.assertInHTML('<option value="uniquequeue" selected>', content)
         self.assertInHTML(
-            '<input type="text" name="var" value="456" class="form-control form-control" required placeholder="None" id="id_var">',
+            '<input type="text" name="var" value="456" class="form-control" required placeholder="None" id="id_var">',
             content,
         )
         self.assertInHTML('<input type="hidden" name="_profile" value="True" id="id__profile">', content)
@@ -2587,6 +3049,56 @@ class ObjectChangeTestCase(TestCase):
         self.assertHttpStatus(response, 200)
 
 
+class ObjectMetadataTestCase(
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = ObjectMetadata
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_value_column_in_list_view_rendered_correctly(self):
+        """
+        GET a list of objects as an authenticated user with permission to view the objects.
+        """
+        instance1 = self._get_queryset().filter(contact__isnull=False).first()
+        instance2 = self._get_queryset().filter(team__isnull=False).first()
+
+        # Try GET to permitted objects
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # Check if the contact or team absolute url is rendered in the ObjectListView table
+        self.assertIn(instance1.contact.get_absolute_url(), content, msg=content)
+        self.assertIn(instance2.team.get_absolute_url(), content, msg=content)
+        # TODO check if other types of values are rendered correctly
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_objects_with_constrained_permission(self):
+        instance1 = self._get_queryset().first()
+        instance2 = self._get_queryset().filter(~Q(assigned_object_id=instance1.assigned_object_id)).first()
+        self._get_queryset().filter(~Q(pk=instance1.pk) & ~Q(pk=instance2.pk)).delete()
+
+        # Add object-level permission
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance1.pk},
+            actions=["view", "add"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with object-level permission
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # Since we do not render the absolute url in ObjectListView of ObjectMetadata, we need to check assigned_object
+        # fields and if they are rendered.
+        self.assertIn(instance1.assigned_object.get_absolute_url(), content, msg=content)
+        self.assertNotIn(instance2.assigned_object.get_absolute_url(), content, msg=content)
+
+
 class RelationshipTestCase(
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
@@ -2844,7 +3356,51 @@ class RelationshipAssociationTestCase(
         self.assertNotIn(instance2.destination.name, content, msg=content)
 
 
+class StaticGroupAssociationTestCase(
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = StaticGroupAssociation
+
+    def test_list_objects_omits_hidden_by_default(self):
+        """The list view should not by default include associations for hidden groups."""
+        sga1 = StaticGroupAssociation.all_objects.filter(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
+        self.assertIsNotNone(sga1)
+        sga2 = StaticGroupAssociation.all_objects.exclude(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
+        self.assertIsNotNone(sga2)
+
+        self.add_permissions("extras.view_staticgroupassociation")
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertIn(sga1.get_absolute_url(), content, msg=content)
+        self.assertNotIn(sga2.get_absolute_url(), content, msg=content)
+
+    def test_list_objects_can_explicitly_include_hidden(self):
+        """The list view can include hidden groups' associations with the correct query parameter."""
+        sga1 = StaticGroupAssociation.all_objects.exclude(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
+        self.assertIsNotNone(sga1)
+
+        self.add_permissions("extras.view_staticgroupassociation")
+        response = self.client.get(f"{self._get_url('list')}?dynamic_group={sga1.dynamic_group.pk}")
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertIn(sga1.get_absolute_url(), content, msg=content)
+
+
 class StatusTestCase(
+    # TODO? ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
@@ -2876,6 +3432,11 @@ class TeamTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        # Teams associated with ObjectMetadata objects are protected, create some deletable teams
+        Team.objects.create(name="Deletable team 1")
+        Team.objects.create(name="Deletable team 2")
+        Team.objects.create(name="Deletable team 3")
+
         cls.form_data = {
             "name": "new team",
             "phone": "555-0122",
@@ -3084,11 +3645,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             for model_class in eligible_ct_model_classes:
                 verbose_name_plural = model_class._meta.verbose_name_plural
                 content_type = ContentType.objects.get_for_model(model_class)
-                result = " ".join(elem.capitalize() for elem in verbose_name_plural.split())
-                if result == "Ip Addresses":
-                    result = "IP Addresses"
-                elif result == "Vlans":
-                    result = "VLANs"
+                result = " ".join(bettertitle(elem) for elem in verbose_name_plural.split())
                 # Assert tables are correctly rendered
                 if content_type not in role_content_types:
                     if result == "Contact Associations":

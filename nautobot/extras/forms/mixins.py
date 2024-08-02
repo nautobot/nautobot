@@ -13,17 +13,21 @@ from nautobot.core.forms import (
 )
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.choices import (
+    DynamicGroupTypeChoices,
     RelationshipSideChoices,
     RelationshipTypeChoices,
 )
 from nautobot.extras.models import (
+    Contact,
     CustomField,
+    DynamicGroup,
     Note,
     Relationship,
     RelationshipAssociation,
     Role,
     Status,
     Tag,
+    Team,
 )
 from nautobot.extras.utils import remove_prefix_from_cf_key
 
@@ -31,9 +35,11 @@ logger = logging.getLogger(__name__)
 
 
 __all__ = (
+    "ContactTeamModelFilterFormMixin",
     "CustomFieldModelBulkEditFormMixin",
     "CustomFieldModelFilterFormMixin",
     "CustomFieldModelFormMixin",
+    "DynamicGroupModelFormMixin",
     "NoteModelBulkEditFormMixin",
     "NoteModelFormMixin",
     "RelationshipModelBulkEditFormMixin",
@@ -49,6 +55,8 @@ __all__ = (
     "RelationshipModelForm",
     "RoleModelBulkEditFormMixin",
     "RoleModelFilterFormMixin",
+    "RoleNotRequiredModelFormMixin",
+    "RoleRequiredModelFormMixin",
     "StatusBulkEditFormMixin",
     "StatusFilterFormMixin",
 )
@@ -57,6 +65,30 @@ __all__ = (
 #
 # Form mixins
 #
+
+
+class ContactTeamModelFilterFormMixin(forms.Form):
+    """Adds the `contacts` and `teams` form fields to a filter form."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if getattr(self.model, "is_contact_associable_model", False):
+            if "contacts" not in self.fields:
+                self.fields["contacts"] = DynamicModelMultipleChoiceField(
+                    required=False,
+                    queryset=Contact.objects.all(),
+                    to_field_name="name",
+                )
+
+            if "teams" not in self.fields:
+                self.fields["teams"] = DynamicModelMultipleChoiceField(
+                    required=False,
+                    queryset=Team.objects.all(),
+                    to_field_name="name",
+                )
+
+            self.order_fields(self.field_order)
 
 
 class CustomFieldModelFilterFormMixin(forms.Form):
@@ -133,6 +165,41 @@ class CustomFieldModelBulkEditFormMixin(BulkEditForm):
             self.fields[field_name] = cf.to_form_field(set_initial=False, enforce_required=False)
             # Annotate this as a custom field
             self.custom_fields.append(field_name)
+
+
+class DynamicGroupModelFormMixin(forms.ModelForm):
+    """
+    Mixin to add `dynamic_groups` field to model create/edit forms where applicable.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self._meta.model.is_dynamic_group_associable_model:
+            self.fields["dynamic_groups"] = DynamicModelMultipleChoiceField(
+                required=False,
+                initial=self.instance.dynamic_groups if self.instance else None,
+                queryset=(
+                    DynamicGroup.objects.get_for_model(self._meta.model).filter(
+                        group_type=DynamicGroupTypeChoices.TYPE_STATIC
+                    )
+                ),
+                query_params={
+                    "content_type": self._meta.model._meta.label_lower,
+                    "group_type": DynamicGroupTypeChoices.TYPE_STATIC,
+                },
+                to_field_name="name",
+                help_text='Only Dynamic Groups of type "static" are selectable here.',
+            )
+
+    def save(self, commit=True):
+        obj = super().save(commit=commit)
+        if commit and obj.is_dynamic_group_associable_model:
+            current_groups = set(obj.dynamic_groups.filter(group_type=DynamicGroupTypeChoices.TYPE_STATIC))
+            for dynamic_group in set(self.cleaned_data.get("dynamic_groups")).difference(current_groups):
+                dynamic_group.add_members([obj])
+            for dynamic_group in current_groups.difference(self.cleaned_data.get("dynamic_groups")):
+                dynamic_group.remove_members([obj])
+        return obj
 
 
 class NoteFormBase(forms.Form):
@@ -693,6 +760,32 @@ class RoleModelBulkEditFormMixin(forms.Form):
         super().__init__(*args, **kwargs)
         self.fields["role"] = DynamicModelChoiceField(
             required=False,
+            queryset=Role.objects.all(),
+            query_params={"content_types": self.model._meta.label_lower},
+        )
+        self.order_fields(self.field_order)  # Reorder fields again
+
+
+class RoleNotRequiredModelFormMixin(forms.Form):
+    """Mixin to add non-required `role` choice field to forms."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["role"] = DynamicModelChoiceField(
+            required=False,
+            queryset=Role.objects.all(),
+            query_params={"content_types": self.model._meta.label_lower},
+        )
+        self.order_fields(self.field_order)  # Reorder fields again
+
+
+class RoleRequiredModelFormMixin(forms.Form):
+    """Mixin to add required `role` choice field to forms"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["role"] = DynamicModelChoiceField(
+            required=True,
             queryset=Role.objects.all(),
             query_params={"content_types": self.model._meta.label_lower},
         )

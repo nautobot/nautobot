@@ -142,6 +142,7 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
                 self.child_location_2ab,
                 self.child_location_same_name_2,
             ],
+            ordered=False,
         )
 
     def test_filter_null(self):
@@ -212,6 +213,7 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
                 self.child_location_2ab,
                 self.child_location_same_name_2,
             ],
+            ordered=False,
         )
 
     def test_filter_combined_name_exclude(self):
@@ -1304,14 +1306,14 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
             parent=self.parent_location_1,
             name="Test Child Location 1",
             location_type=self.lt,
-            asn=1234,
+            asn=12345,
             status=status,
         )
         self.child_location_2 = dcim_models.Location.objects.create(
             parent=self.parent_location_2,
             name="Test Child Location 2",
             location_type=self.lt,
-            asn=12345,
+            asn=123456,
             status=status,
         )
         self.child_location_3 = dcim_models.Location.objects.create(
@@ -1353,19 +1355,19 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
 
     def test_default_exact(self):
         """Test a default search for an "exact" value."""
-        params = {"q": "1234"}
+        params = {"q": "12345"}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact="1234")
+            self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact=12345)
         )
         asn = (
-            dcim_models.Location.objects.exclude(asn="1234")
+            dcim_models.Location.objects.exclude(asn="12345")
             .exclude(asn__isnull=True)
             .values_list("asn", flat=True)
             .first()
         )
         params = {"q": str(asn)}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact=str(asn))
+            self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact=asn)
         )
 
     def test_default_id(self):
@@ -1389,9 +1391,9 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
 
             q = filters.SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact", "preprocessor": int}})
 
-        params = {"q": "1234"}
+        params = {"q": "12345"}
         self.assertQuerysetEqualAndNotEmpty(
-            MyLocationFilterSet(params, self.queryset).qs, self.queryset.filter(asn__exact="1234")
+            MyLocationFilterSet(params, self.queryset).qs, self.queryset.filter(asn__exact="12345")
         )
         params = {"q": "123"}
         # Both querysets are empty so we dont use assertQuerysetEqualAndNotEmpty here.
@@ -1403,7 +1405,7 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
 
             q = filters.SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact", "preprocessor": dict}})
 
-        params = {"q": "1234"}
+        params = {"q": "12345"}
         # Both querysets are empty so we dont use assertQuerysetEqualAndNotEmpty here.
         self.assertEqual(self.get_filterset_count(params, MyLocationFilterSet2), 0)
 

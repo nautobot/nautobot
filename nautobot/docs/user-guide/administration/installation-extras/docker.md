@@ -4,7 +4,7 @@ Nautobot is packaged as a Docker image for use in a production environment; deve
 
 ## Python Versions
 
-Docker images are published for multiple supported Python versions. The default image, recommended for most users, is based on the `python:3.11-slim` image.
+Docker images are published for multiple supported Python versions. The default image, recommended for most users, is based on the `python:3.12-slim` image.
 
 +/- 1.6.1
     The Python version for the image tags that do not explicitly state a Python version changed to 3.11 for Nautobot 1.6.1. From now on, these tagged images will always contain the **latest** supported Python version (e.g., when Python 3.12 support is added, these tags will change to contain Python 3.12). This is a change from Nautobot 1.6.0 and earlier, where tags that did not state a Python version would contain the **earliest** supported Python version.
@@ -15,12 +15,16 @@ Currently images are pushed for the following python versions:
 * 3.9
 * 3.10
 * 3.11
+* 3.12
 
 +++ 1.6.0
     Python 3.11 was added to the set of published images.
 
 --- 1.6.0
     Python 3.7 was removed from the set of published images as Python 3.7 is now end-of-life.
+
++++ 2.3.0
+    Python 3.12 was added to the set of published images and is now the default version.
 
 ## Platforms
 
@@ -48,13 +52,13 @@ The following tags are available on both Docker Hub and the GitHub Container Reg
 
 | Tag                                                           | Nautobot Version      | Python Version | Example        |
 | ------------------------------------------------------------- | --------------------- | -------------- | -------------- |
-| `latest`                                                      | Latest stable release | 3.11           | `latest`       |
+| `latest`                                                      | Latest stable release | 3.12           | `latest`       |
 | `latest-py${PYTHON_VER}`                                      | Latest stable release | As specified   | `latest-py3.8` |
-| `${NAUTOBOT_VER}`                                             | As specified          | 3.11           | `2.0.0`        |
-| `${NAUTOBOT_VER}-py${PYTHON_VER}`                             | As specified          | As specified   | `2.0.0-py3.8`  |
-| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}`                 | As specified          | 3.11           | `2.0`          |
-| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}-py${PYTHON_VER}` | As specified          | As specified   | `2.0-py3.8`    |
-| `stable`                                                      | Latest stable release | 3.11           | `stable`       |
+| `${NAUTOBOT_VER}`                                             | As specified          | 3.12           | `2.3.0`        |
+| `${NAUTOBOT_VER}-py${PYTHON_VER}`                             | As specified          | As specified   | `2.3.0-py3.8`  |
+| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}`                 | As specified          | 3.12           | `2.3`          |
+| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}-py${PYTHON_VER}` | As specified          | As specified   | `2.3-py3.8`    |
+| `stable`                                                      | Latest stable release | 3.12           | `stable`       |
 | `stable-py${PYTHON_VER}`                                      | Latest stable release | As specified   | `stable-py3.8` |
 
 ### Developer Tags
@@ -65,11 +69,11 @@ In addition to all tags described in the previous section, the following additio
 
 | Tag                                                  | Nautobot Branch              | Python Version |
 | ---------------------------------------------------- | ---------------------------- | -------------- |
-| `develop`                                            | `develop`, the latest commit | 3.11           |
+| `develop`                                            | `develop`, the latest commit | 3.12           |
 | `develop-py${PYTHON_VER}`                            | `develop`, the latest commit | As specified   |
 | `ltm-1.6`                                            | `ltm-1.6`, the latest commit | 3.11           |
 | `ltm-1.6-py${PYTHON_VER}`                            | `ltm-1.6`, the latest commit | As specified   |
-| `next`                                               | `next`, the latest commit    | 3.11           |
+| `next`                                               | `next`, the latest commit    | 3.12           |
 | `next-py${PYTHON_VER}`                               | `next`, the latest commit    | As specified   |
 
 ## Getting Started

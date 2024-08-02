@@ -161,6 +161,18 @@ class CustomLinkButtonClassChoices(ButtonClassChoices):
 #
 
 
+class DynamicGroupTypeChoices(ChoiceSet):
+    TYPE_DYNAMIC_FILTER = "dynamic-filter"
+    TYPE_DYNAMIC_SET = "dynamic-set"
+    TYPE_STATIC = "static"
+
+    CHOICES = (
+        (TYPE_DYNAMIC_FILTER, "Filter-defined"),
+        (TYPE_DYNAMIC_SET, "Group of groups"),
+        (TYPE_STATIC, "Static assignment"),
+    )
+
+
 class DynamicGroupOperatorChoices(ChoiceSet):
     OPERATOR_UNION = "union"
     OPERATOR_INTERSECTION = "intersection"
@@ -299,6 +311,37 @@ class LogLevelChoices(ChoiceSet):
         LOG_ERROR: "error",
         LOG_CRITICAL: "critical",
     }
+
+
+#
+# Metadata
+#
+
+
+class MetadataTypeDataTypeChoices(CustomFieldTypeChoices):
+    """
+    Values for the MetadataType.data_type field.
+
+    Generally equivalent to CustomFieldTypeChoices, but adds TYPE_CONTACT_OR_TEAM.
+    """
+
+    TYPE_CONTACT_TEAM = "contact-or-team"
+    # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
+    TYPE_DATETIME = "datetime"
+    TYPE_FLOAT = "float"
+
+    CHOICES = (
+        *CustomFieldTypeChoices.CHOICES,
+        (TYPE_CONTACT_TEAM, "Contact or Team"),
+        # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
+        (TYPE_DATETIME, "Date/time"),
+        (TYPE_FLOAT, "Floating point number"),
+    )
+
+    MIN_MAX_TYPES = (
+        *CustomFieldTypeChoices.MIN_MAX_TYPES,
+        TYPE_FLOAT,
+    )
 
 
 #

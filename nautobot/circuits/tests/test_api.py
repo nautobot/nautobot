@@ -28,7 +28,9 @@ class ProviderTest(APIViewTestCases.APIViewTestCase):
         {
             "name": "Provider 6",
         },
-        {"name": "Provider 7"},
+        {
+            "name": "Provider 7",
+        },
     ]
     bulk_update_data = {
         "asn": 1234,
@@ -250,12 +252,12 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
                 circuits[0].circuit_termination_a.get_absolute_url(api=True),
                 **self.header,
             )
-            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.status_code, 200, response.json())
             response = self.client.get(
                 circuits[0].circuit_termination_z.get_absolute_url(api=True),
                 **self.header,
             )
-            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.status_code, 200, response.json())
 
         with self.subTest("Assert CircuitTermination Cable connected to a FrontPort and CircuitTermination"):
             Cable.objects.create(
@@ -275,9 +277,9 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
                 circuits[2].circuit_termination_a.get_absolute_url(api=True),
                 **self.header,
             )
-            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.status_code, 200, response.json())
             response = self.client.get(
                 circuits[2].circuit_termination_z.get_absolute_url(api=True),
                 **self.header,
             )
-            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.status_code, 200, response.json())

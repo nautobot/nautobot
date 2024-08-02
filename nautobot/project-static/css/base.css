@@ -97,6 +97,7 @@ table.attr-table td:nth-child(1) {
 }
 .table-headings th {
     background-color: #f5f5f5;
+    white-space: nowrap;
 }
 td.min-width {
     width: 1%;
@@ -896,6 +897,7 @@ pre:has(code.hljs) {
 }
 pre code.hljs {
     padding: 11.5px; /* Same as Bootstrap 3 `pre` padding */
+    background-color: #f4f4f4; /* Reset Bootstrap 3 `pre` background-color in case it contains a `code` element already formatted by highlight.js */
 }
 code.hljs {
     padding: 2px 4px; /* Same as Bootstrap 3 `code` padding */
@@ -960,4 +962,22 @@ code.hljs {
     border-top: 1px solid #d8d8d8;
     display: flex;
     padding-top: 10px;
+}
+
+/* Buttons inside dropdown menus */
+.dropdown-menu button {
+    background: none;
+    border: none;
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 3px 20px;
+    cursor: pointer;
+    text-wrap: nowrap;
+}
+.dropdown-menu button:focus,
+.dropdown-menu button:hover {
+    color: #ffffff;
+    text-decoration: none;
+    background-color: #646464;
 }

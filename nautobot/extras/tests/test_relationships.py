@@ -1579,6 +1579,7 @@ class RequiredRelationshipTestMixin:
                 self.assertEqual(from_model.objects.count(), existing_count)
 
                 # 3. Try creating an object when all required data is present
+                related_objects_data = {}
                 if interact_with == "ui":
                     related_objects_data = {related_field_name: required_object_pks}
 

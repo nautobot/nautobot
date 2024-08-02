@@ -600,7 +600,7 @@ Removing expired sessions...
 
 `nautobot-server refresh_dynamic_group_member_caches`
 
-Refresh the cached members of all Dynamic Groups. This is useful to periodically update the cached list of members of a Dynamic Group without having to wait for caches to expire, which defaults to one hour.
+Refresh the cached members of all Dynamic Groups. This can also be achieved by running the `Refresh Dynamic Group Caches` system Job.
 
 ### `refresh_content_type_caches`
 

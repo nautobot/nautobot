@@ -1,7 +1,6 @@
 {% extends 'dcim/device/base.html' %}
 {% load helpers %}
 {% load static %}
-{% load render_table from django_tables2 %}
 
 {% block content %}
     <form method="post">
@@ -11,11 +10,11 @@
                 <strong>Console Ports</strong>
                 <div class="pull-right noprint">
                     {% if request.user.is_authenticated %}
-                        <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#DeviceConsolePortTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
+                        {% table_config_button_small consoleport_table %}
                     {% endif %}
                 </div>
             </div>
-            {% render_table consoleport_table 'inc/table.html' %}
+            {% include 'responsive_table.html' with table=consoleport_table %}
             <div class="panel-footer noprint">
                 {% if perms.dcim.change_consoleport %}
                     <button type="submit" name="_rename" formaction="{% url 'dcim:consoleport_bulk_rename' %}?return_url={% url 'dcim:device_consoleports' pk=object.pk %}" class="btn btn-warning btn-xs">

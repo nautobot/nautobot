@@ -167,6 +167,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
     filterset = PrefixFilterSet
     tenancy_related_name = "prefixes"
     generic_filter_tests = (
+        ["cloud_networks", "cloud_networks__name"],
         ["date_allocated"],
         ["prefix_length"],
         ["rir", "rir__id"],
@@ -177,6 +178,24 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ["status", "status__name"],
         ["type"],
     )
+
+    def test_filters_generic(self):
+        # We usually have type container and network prefixes present
+        # but we need a third value for test_filters_generic() to work.
+        # So this is to ensure we have type pool prefixes in our test data.
+        Prefix.objects.create(
+            prefix="192.0.2.0/29",
+            type=PrefixTypeChoices.TYPE_POOL,
+            namespace=Namespace.objects.first(),
+            status=Status.objects.get_for_model(Prefix).first(),
+        )
+        Prefix.objects.create(
+            prefix="192.0.2.0/30",
+            type=PrefixTypeChoices.TYPE_POOL,
+            namespace=Namespace.objects.first(),
+            status=Status.objects.get_for_model(Prefix).first(),
+        )
+        return super().test_filters_generic()
 
     def test_search(self):
         prefixes = Prefix.objects.all()[:2]
@@ -954,9 +973,14 @@ class IPAddressToInterfaceTestCase(FilterTestCases.FilterTestCase):
         vm_status = Status.objects.get_for_model(VirtualMachine).first()
         virtual_machine = (VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, status=vm_status),)
         vm_int_status = Status.objects.get_for_model(VMInterface).first()
+        vm_int_role = Role.objects.get_for_model(VMInterface).first()
         vm_interfaces = [
-            VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status),
-            VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth1", status=vm_int_status),
+            VMInterface.objects.create(
+                virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status, role=vm_int_role
+            ),
+            VMInterface.objects.create(
+                virtual_machine=virtual_machine[0], name="veth1", status=vm_int_status, role=vm_int_role
+            ),
         ]
 
         IPAddressToInterface.objects.create(ip_address=ip_addresses[0], interface=interfaces[0], vm_interface=None)

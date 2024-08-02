@@ -1,8 +1,9 @@
+import contextlib
 import logging
 
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
-from django.core.exceptions import FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist, FieldError
 from django.db import NotSupportedError
 from django.db.models.fields.related import ForeignKey, RelatedField
 from django.db.models.fields.reverse_related import ManyToOneRel
@@ -15,6 +16,7 @@ from django_tables2.data import TableQuerysetData
 from django_tables2.utils import Accessor, OrderBy, OrderByTuple
 from tree_queries.models import TreeNode
 
+from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
 from nautobot.core.utils import lookup
 from nautobot.extras import choices, models
@@ -34,9 +36,26 @@ class BaseTable(django_tables2.Table):
             "class": "table table-hover table-headings",
         }
 
-    def __init__(self, *args, user=None, hide_hierarchy_ui=False, **kwargs):
+    def __init__(
+        self,
+        *args,
+        table_changes_pending=False,
+        saved_view=None,
+        user=None,
+        hide_hierarchy_ui=False,
+        order_by=None,
+        **kwargs,
+    ):
         # Add custom field columns
         model = self._meta.model
+
+        if model.is_dynamic_group_associable_model:
+            self.base_columns["dynamic_group_count"] = LinkedCountColumn(
+                viewname="extras:dynamicgroup_list",
+                url_params={"member_id": "pk"},
+                verbose_name="Dynamic Groups",
+                reverse_lookup="static_group_associations__associated_object_id",
+            )
 
         for cf in models.CustomField.objects.get_for_model(model):
             name = cf.add_prefix_to_cf_key()
@@ -62,8 +81,16 @@ class BaseTable(django_tables2.Table):
                 )
             # symmetric relationships are already handled above in the source_type case
 
+        if order_by is None and saved_view is not None:
+            order_by = saved_view.config.get("sort_order", None)
+
         # Init table
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, order_by=order_by, **kwargs)
+
+        # Don't show hierarchy if we're sorted
+        if order_by is not None and hide_hierarchy_ui is None:
+            hide_hierarchy_ui = True
+
         self.hide_hierarchy_ui = hide_hierarchy_ui
 
         # Set default empty_text if none was provided
@@ -79,65 +106,89 @@ class BaseTable(django_tables2.Table):
                     # Hide the column if it is non-default *and* not manually specified as an extra column
                     self.columns.hide(column.name)
 
-        # Apply custom column ordering for user
-        if user is not None and not isinstance(user, AnonymousUser):
-            columns = user.get_config(f"tables.{self.__class__.__name__}.columns")
-            if columns:
-                pk = self.base_columns.pop("pk", None)
-                actions = self.base_columns.pop("actions", None)
+        # Apply custom column ordering for SavedView if it is available
+        # Takes precedence before user config
+        columns = []
+        pk = self.base_columns.pop("pk", None)
+        actions = self.base_columns.pop("actions", None)
+        if saved_view is not None and not table_changes_pending:
+            view_table_config = saved_view.config.get("table_config", {}).get(f"{self.__class__.__name__}", None)
+            if view_table_config is not None:
+                columns = view_table_config.get("columns", [])
+        else:
+            if user is not None and not isinstance(user, AnonymousUser):
+                columns = user.get_config(f"tables.{self.__class__.__name__}.columns")
+        if columns:
+            for name, column in self.base_columns.items():
+                if name in columns:
+                    self.columns.show(name)
+                else:
+                    self.columns.hide(name)
+            self.sequence = [c for c in columns if c in self.base_columns]
 
-                for name, column in self.base_columns.items():
-                    if name in columns:
-                        self.columns.show(name)
-                    else:
-                        self.columns.hide(name)
-                self.sequence = [c for c in columns if c in self.base_columns]
-
-                # Always include PK and actions column, if defined on the table
-                if pk:
-                    self.base_columns["pk"] = pk
-                    self.sequence.insert(0, "pk")
-                if actions:
-                    self.base_columns["actions"] = actions
-                    self.sequence.append("actions")
+        # Always include PK and actions columns, if defined on the table, as first and last columns respectively
+        if pk:
+            with contextlib.suppress(ValueError):
+                self.sequence.remove("pk")
+            self.base_columns["pk"] = pk
+            self.sequence.insert(0, "pk")
+        if actions:
+            with contextlib.suppress(ValueError):
+                self.sequence.remove("actions")
+            self.base_columns["actions"] = actions
+            self.sequence.append("actions")
 
         # Dynamically update the table's QuerySet to ensure related fields are pre-fetched
         if isinstance(self.data, TableQuerysetData):
             queryset = self.data.data
+
+            if hasattr(queryset, "with_tree_fields") and not self.hide_hierarchy_ui:
+                queryset = queryset.with_tree_fields()
+            elif hasattr(queryset, "without_tree_fields") and self.hide_hierarchy_ui:
+                queryset = queryset.without_tree_fields()
+
             select_fields = []
             prefetch_fields = []
+            count_fields = []
             for column in self.columns:
-                if column.visible:
-                    column_model = model
-                    accessor = column.accessor
-                    select_path = []
-                    prefetch_path = []
-                    for field_name in accessor.split(accessor.SEPARATOR):
-                        try:
-                            field = column_model._meta.get_field(field_name)
-                        except FieldDoesNotExist:
-                            break
-                        if isinstance(field, ForeignKey) and not prefetch_path:
-                            # Follow ForeignKeys to the related model via select_related
-                            select_path.append(field_name)
-                            column_model = field.remote_field.model
-                        elif isinstance(field, (RelatedField, ManyToOneRel)) and not select_path:
-                            # Follow O2M and M2M relations to the related model via prefetch_related
-                            prefetch_path.append(field_name)
-                            column_model = field.remote_field.model
-                        elif isinstance(field, GenericForeignKey) and not select_path:
-                            # Can't prefetch beyond a GenericForeignKey
-                            prefetch_path.append(field_name)
-                            break
-                        else:
-                            # Need to stop processing once field is not a RelatedField or GFK
-                            # Ex: ["_custom_field_data", "tenant_id"] needs to exit
-                            # the loop as "tenant_id" would be misidentified as a RelatedField.
-                            break
-                    if select_path:
-                        select_fields.append("__".join(select_path))
-                    elif prefetch_path:
-                        prefetch_fields.append("__".join(prefetch_path))
+                if not column.visible:
+                    continue
+                if isinstance(column.column, LinkedCountColumn):
+                    column_model = lookup.get_model_for_view_name(column.column.viewname)
+                    reverse_lookup = column.column.reverse_lookup or next(iter(column.column.url_params.keys()))
+                    count_fields.append((column.name, column_model, reverse_lookup))
+                    continue
+
+                column_model = model
+                accessor = column.accessor
+                select_path = []
+                prefetch_path = []
+                for field_name in accessor.split(accessor.SEPARATOR):
+                    try:
+                        field = column_model._meta.get_field(field_name)
+                    except FieldDoesNotExist:
+                        break
+                    if isinstance(field, ForeignKey) and not prefetch_path:
+                        # Follow ForeignKeys to the related model via select_related
+                        select_path.append(field_name)
+                        column_model = field.remote_field.model
+                    elif isinstance(field, (RelatedField, ManyToOneRel)) and not select_path:
+                        # Follow O2M and M2M relations to the related model via prefetch_related
+                        prefetch_path.append(field_name)
+                        column_model = field.remote_field.model
+                    elif isinstance(field, GenericForeignKey) and not select_path:
+                        # Can't prefetch beyond a GenericForeignKey
+                        prefetch_path.append(field_name)
+                        break
+                    else:
+                        # Need to stop processing once field is not a RelatedField or GFK
+                        # Ex: ["_custom_field_data", "tenant_id"] needs to exit
+                        # the loop as "tenant_id" would be misidentified as a RelatedField.
+                        break
+                if select_path:
+                    select_fields.append("__".join(select_path))
+                elif prefetch_path:
+                    prefetch_fields.append("__".join(prefetch_path))
 
             if select_fields:
                 # Django doesn't allow .select_related() on a QuerySet that had .values()/.values_list() applied, or
@@ -185,6 +236,23 @@ class BaseTable(django_tables2.Table):
                             model.__name__,
                             exc,
                         )
+
+            if count_fields:
+                for column_name, column_model, lookup_name in count_fields:
+                    if hasattr(queryset.first(), column_name):
+                        continue
+                    try:
+                        logger.debug(
+                            "Applying .annotate(%s=count_related(%s, %r) to %s QuerySet",
+                            column_name,
+                            column_model.__name__,
+                            lookup_name,
+                            model.__name__,
+                        )
+                        queryset = queryset.annotate(**{column_name: count_related(column_model, lookup_name)})
+                    except FieldError:
+                        # No error message logged here as the above is *very much* best-effort
+                        pass
 
             self.data.data = queryset
 
@@ -396,12 +464,15 @@ class LinkedCountColumn(django_tables2.Column):
     :param viewname: The view name to use for URL resolution
     :param view_kwargs: Additional kwargs to pass for URL resolution (optional)
     :param url_params: A dict of query parameters to append to the URL (e.g. ?foo=bar) (optional)
+    :param reverse_lookup: The reverse lookup parameter to use to derive the count. If not specified, the first key
+        in `url_params` will be implicitly used as the `reverse_lookup` value.
     """
 
-    def __init__(self, viewname, *args, view_kwargs=None, url_params=None, default=0, **kwargs):
+    def __init__(self, viewname, *args, view_kwargs=None, url_params=None, reverse_lookup=None, default=0, **kwargs):
         self.viewname = viewname
         self.view_kwargs = view_kwargs or {}
         self.url_params = url_params
+        self.reverse_lookup = reverse_lookup
         super().__init__(*args, default=default, **kwargs)
 
     def render(self, record, value):  # pylint: disable=arguments-differ

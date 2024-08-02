@@ -1,0 +1,2 @@
+Added missing `comments` field to DeviceType bulk edit.
+Added `comments` field to ModuleType.

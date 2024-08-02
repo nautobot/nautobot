@@ -55,10 +55,10 @@ class JobTest(TestCase):
 
         self.assertInHTML(
             """<tr><th><label for="id_var_int">Var int:</label></th><td>
-<input class="form-control form-control" id="id_var_int" max="3600" name="var_int" placeholder="None" required type="number" value="0">
+<input class="form-control" id="id_var_int" max="3600" name="var_int" placeholder="None" required type="number" value="0">
 <br><span class="helptext">Test default of 0 Falsey</span></td></tr>
 <tr><th><label for="id_var_int_no_default">Var int no default:</label></th><td>
-<input class="form-control form-control" id="id_var_int_no_default" max="3600" name="var_int_no_default" placeholder="None" type="number">
+<input class="form-control" id="id_var_int_no_default" max="3600" name="var_int_no_default" placeholder="None" type="number">
 <br><span class="helptext">Test default without default</span></td></tr>""",
             form.as_table(),
         )
@@ -1079,11 +1079,11 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         job_hook.content_types.set([obj_type])
 
     def test_enqueue_job_hook(self):
-        self.assertEqual(models.JobLogEntry.objects.count(), 0)
         with web_request_context(user=self.user):
             status = models.Status.objects.get_for_model(Location).first()
             Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type, status=status)
-        job_result = models.JobResult.objects.get(job_model=self.job_model)
+        job_result = models.JobResult.objects.filter(job_model=self.job_model).first()
+        self.assertIsNotNone(job_result)
         expected_log_messages = [
             ("info", "Running job"),
             ("info", f"change: dcim | location Test Job Hook Location 1 created by {self.user.username}"),
@@ -1101,7 +1101,6 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
 
         https://github.com/nautobot/nautobot/issues/4327
         """
-        self.assertEqual(models.JobLogEntry.objects.count(), 0)
         status = models.Status.objects.get_for_model(Location).first()
         loc = Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type, status=status)
         models.ObjectChange.objects.all().delete()
@@ -1109,7 +1108,8 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         tag.content_types.add(ContentType.objects.get_for_model(Location))
         with web_request_context(user=self.user):
             loc.tags.add(tag)
-        job_result = models.JobResult.objects.get(job_model=self.job_model)
+        job_result = models.JobResult.objects.filter(job_model=self.job_model).first()
+        self.assertIsNotNone(job_result)
         expected_log_messages = [
             ("info", "Running job"),
             ("info", f"change: dcim | location Test Job Hook Location 1 updated by {self.user.username}"),

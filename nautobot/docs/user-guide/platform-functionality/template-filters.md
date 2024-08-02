@@ -311,6 +311,17 @@ The set of permitted HTML tags is defined in `nautobot.core.constants.HTML_ALLOW
     | `<var>`        |                                                                      |
     | `<wbr>`        |                                                                      |
 
+### render_uptime
+
+Render an uptime value in seconds to a human readable value.
+    1024768 => "11 days 20 hours 39 minutes"
+    1 => "0 days 0 hours 0 minutes"
+    3660 => "0 days 1 hour 1 minute"
+
+```django
+{{ 1024768 | render_uptime }}
+```
+
 ### render_yaml
 
 Render a dictionary as formatted YAML.

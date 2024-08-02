@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
@@ -15,8 +15,10 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.core.templatetags.helpers import render_boolean, render_markdown
+from nautobot.core.templatetags.helpers import render_boolean, render_json, render_markdown
+from nautobot.tenancy.tables import TenantColumn
 
+from .choices import MetadataTypeDataTypeChoices
 from .models import (
     ComputedField,
     ConfigContext,
@@ -36,14 +38,18 @@ from .models import (
     JobHook,
     JobLogEntry,
     JobResult,
+    MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     ScheduledJob,
     Secret,
     SecretsGroup,
+    StaticGroupAssociation,
     Status,
     Tag,
     TaggedItem,
@@ -51,6 +57,11 @@ from .models import (
     Webhook,
 )
 from .registry import registry
+
+ASSIGNED_OBJECT = """
+{% load helpers %}
+{{ record.assigned_object|hyperlinked_object }}
+"""
 
 CONTACT_OR_TEAM_ICON = """
 {% if record.contact %}
@@ -76,11 +87,8 @@ EMAIL = """
 """
 
 TAGGED_ITEM = """
-{% if value.get_absolute_url %}
-    <a href="{{ value.get_absolute_url }}">{{ value }}</a>
-{% else %}
-    {{ value }}
-{% endif %}
+{% load helpers %}
+{{ value|hyperlinked_object }}
 """
 
 GITREPOSITORY_PROVIDES = """
@@ -112,6 +120,17 @@ OBJECTCHANGE_OBJECT = """
 
 OBJECTCHANGE_REQUEST_ID = """
 <a href="{% url 'extras:objectchange_list' %}?request_id={{ value }}">{{ value }}</a>
+"""
+
+MEMBERS_COUNT = """
+{% load helpers %}
+{% with urlname=record.model|validated_viewname:"list" %}
+{% if urlname %}
+    <a href="{% url urlname %}?dynamic_groups={{ record.name }}">{{ record.members_count }}</a>
+{% else %}
+    {{ record.members_count }}
+{% endif %}
+{% endwith %}
 """
 
 # TODO: Webhook content_types in table order_by
@@ -328,11 +347,24 @@ class DynamicGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     members = tables.Column(accessor="count", verbose_name="Group Members", orderable=False)
+    tenant = TenantColumn()
+    tags = TagColumn(url_name="extras:dynamicgroup_list")
     actions = ButtonsColumn(DynamicGroup)
 
     class Meta(BaseTable.Meta):  # pylint: disable=too-few-public-methods
         model = DynamicGroup
         fields = (
+            "pk",
+            "name",
+            "description",
+            "content_type",
+            "group_type",
+            "members",
+            "tenant",
+            "tags",
+            "actions",
+        )
+        default_columns = (
             "pk",
             "name",
             "description",
@@ -353,7 +385,7 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
     """Hybrid table for displaying info for both group and membership."""
 
     description = tables.Column(accessor="group.description")
-    actions = ButtonsColumn(DynamicGroup, pk_field="pk", buttons=("edit",))
+    members = tables.Column(accessor="group.count", verbose_name="Group Members", orderable=False)
 
     class Meta(BaseTable.Meta):
         model = DynamicGroupMembership
@@ -364,9 +396,8 @@ class DynamicGroupMembershipTable(DynamicGroupTable):
             "weight",
             "members",
             "description",
-            "actions",
         )
-        exclude = ("content_type",)
+        exclude = ("content_type", "actions", "group_type")
 
 
 DESCENDANTS_LINK = """
@@ -437,6 +468,51 @@ class NestedDynamicGroupAncestorsTable(DynamicGroupTable):
     class Meta(DynamicGroupTable.Meta):
         fields = ["name", "members", "description", "actions"]
         exclude = ["content_type"]
+
+
+class SavedViewTable(BaseTable):
+    name = tables.Column(linkify=True)
+    actions = ButtonsColumn(SavedView)
+    is_global_default = BooleanColumn()
+    is_shared = BooleanColumn()
+
+    class Meta(BaseTable.Meta):
+        model = SavedView
+        fields = (
+            "name",
+            "owner",
+            "view",
+            "config",
+            "is_global_default",
+            "is_shared",
+            "actions",
+        )
+        default_columns = (
+            "name",
+            "owner",
+            "view",
+            "is_global_default",
+            "actions",
+        )
+
+    def render_config(self, record):
+        if record.config:
+            return render_json(record.config, pretty_print=True)
+        return self.default
+
+
+class StaticGroupAssociationTable(BaseTable):
+    """Table for list view of `StaticGroupAssociation` objects."""
+
+    pk = ToggleColumn()
+    dynamic_group = tables.Column(linkify=True)
+    associated_object = tables.Column(linkify=True, verbose_name="Associated Object")
+    actions = ButtonsColumn(StaticGroupAssociation, buttons=["changelog", "delete"])
+
+    class Meta(BaseTable.Meta):
+        model = StaticGroupAssociation
+        fields = ["pk", "dynamic_group", "associated_object", "actions"]
+        default_columns = ["pk", "dynamic_group", "associated_object", "actions"]
 
 
 class ExportTemplateTable(BaseTable):
@@ -589,7 +665,7 @@ class GraphQLQueryTable(BaseTable):
 
 
 def log_object_link(value, record):
-    return record.absolute_url
+    return record.absolute_url or None
 
 
 def log_entry_color_css(record):
@@ -862,6 +938,83 @@ class JobButtonTable(BaseTable):
 
 
 #
+# Metadata
+#
+
+
+class MetadataTypeTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    content_types = ContentTypesColumn(truncate_words=15)
+    actions = ButtonsColumn(MetadataType)
+
+    class Meta(BaseTable.Meta):
+        model = MetadataType
+        fields = (
+            "pk",
+            "name",
+            "description",
+            "content_types",
+            "data_type",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "content_types",
+            "data_type",
+            "actions",
+        )
+
+
+class ObjectMetadataTable(BaseTable):
+    pk = ToggleColumn()
+    metadata_type = tables.Column(linkify=True)
+    assigned_object = tables.TemplateColumn(
+        template_code=ASSIGNED_OBJECT, verbose_name="Assigned object", orderable=False
+    )
+    # This is needed so that render_value method below does not skip itself
+    # when metadata_type.data_type is TYPE_CONTACT_TEAM and we need it to display either contact or team
+    value = tables.Column(empty_values=[])
+
+    class Meta(BaseTable.Meta):
+        model = ObjectMetadata
+        fields = (
+            "pk",
+            "assigned_object",
+            "metadata_type",
+            "scoped_fields",
+            "value",
+        )
+        default_columns = (
+            "pk",
+            "assigned_object",
+            "scoped_fields",
+            "value",
+            "metadata_type",
+        )
+
+    def render_scoped_fields(self, value):
+        if not value:
+            return "(all fields)"
+        return format_html_join(", ", "<code>{}</code>", ([v] for v in sorted(value)))
+
+    def render_value(self, record):
+        if record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_JSON:
+            return render_json(record.value, pretty_print=True)
+        elif record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_MARKDOWN:
+            return render_markdown(record.value)
+        elif record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:
+            return render_boolean(record.value)
+        elif record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
+            if record.contact:
+                return format_html('<a href="{}">{}</a>', record.contact.get_absolute_url(), record.contact)
+            else:
+                return format_html('<a href="{}">{}</a>', record.team.get_absolute_url(), record.team)
+        return record.value
+
+
+#
 # Notes
 #
 
@@ -1072,7 +1225,7 @@ class StatusTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Status
-        fields = ["pk", "name", "color", "content_types", "description"]
+        fields = ["pk", "name", "color", "content_types", "description", "actions"]
 
 
 class StatusTableMixin(BaseTable):
