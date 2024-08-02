@@ -166,19 +166,19 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
     metadata_type = models.ForeignKey(
         to=MetadataType,
         on_delete=models.PROTECT,
-        related_name="object_metadatas",
+        related_name="object_metadata",
     )
     contact = models.ForeignKey(
         to=Contact,
         on_delete=models.PROTECT,
-        related_name="object_metadatas",
+        related_name="object_metadata",
         blank=True,
         null=True,
     )
     team = models.ForeignKey(
         to=Team,
         on_delete=models.PROTECT,
-        related_name="object_metadatas",
+        related_name="object_metadata",
         blank=True,
         null=True,
     )

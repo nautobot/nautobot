@@ -96,6 +96,7 @@ class CloudNetworkFilterSet(NautobotFilterSet):
         queryset=models.CloudNetwork.objects.all(),
         label="Parent cloud network (name or ID)",
     )
+    prefixes = django_filters.ModelMultipleChoiceFilter(queryset=Prefix.objects.all())
 
     class Meta:
         model = models.CloudNetwork

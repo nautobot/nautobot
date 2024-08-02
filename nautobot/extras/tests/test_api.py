@@ -2741,21 +2741,21 @@ class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
             value="Hey",
             scoped_fields=["parent", "status"],
             assigned_object_type=ContentType.objects.get_for_model(IPAddress),
-            assigned_object_id=IPAddress.objects.filter(associated_object_metadatas__isnull=True).first().pk,
+            assigned_object_id=IPAddress.objects.filter(associated_object_metadata__isnull=True).first().pk,
         )
         ObjectMetadata.objects.create(
             metadata_type=mdts[0],
             value="Hello",
             scoped_fields=["namespace"],
             assigned_object_type=ContentType.objects.get_for_model(Prefix),
-            assigned_object_id=Prefix.objects.filter(associated_object_metadatas__isnull=True).first().pk,
+            assigned_object_id=Prefix.objects.filter(associated_object_metadata__isnull=True).first().pk,
         )
         ObjectMetadata.objects.create(
             metadata_type=mdts[2],
             contact=Contact.objects.first(),
             scoped_fields=["status"],
             assigned_object_type=ContentType.objects.get_for_model(Prefix),
-            assigned_object_id=Prefix.objects.filter(associated_object_metadatas__isnull=True).last().pk,
+            assigned_object_id=Prefix.objects.filter(associated_object_metadata__isnull=True).last().pk,
         )
         cls.create_data = [
             {
@@ -2763,28 +2763,28 @@ class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
                 "scoped_fields": ["location_type"],
                 "value": "random words",
                 "assigned_object_type": "dcim.location",
-                "assigned_object_id": Location.objects.filter(associated_object_metadatas__isnull=True).first().pk,
+                "assigned_object_id": Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
             },
             {
                 "metadata_type": mdts[1].pk,
                 "scoped_fields": ["name"],
                 "value": "random words",
                 "assigned_object_type": "dcim.location",
-                "assigned_object_id": Location.objects.filter(associated_object_metadatas__isnull=True).first().pk,
+                "assigned_object_id": Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
             },
             {
                 "metadata_type": mdts[2].pk,
                 "scoped_fields": [],
                 "contact": Contact.objects.first().pk,
                 "assigned_object_type": "dcim.device",
-                "assigned_object_id": Device.objects.filter(associated_object_metadatas__isnull=True).first().pk,
+                "assigned_object_id": Device.objects.filter(associated_object_metadata__isnull=True).first().pk,
             },
             {
                 "metadata_type": mdts[2].pk,
                 "scoped_fields": ["interfaces"],
                 "team": Team.objects.first().pk,
                 "assigned_object_type": "dcim.device",
-                "assigned_object_id": Device.objects.filter(associated_object_metadatas__isnull=True).last().pk,
+                "assigned_object_id": Device.objects.filter(associated_object_metadata__isnull=True).last().pk,
             },
         ]
         cls.update_data = {
