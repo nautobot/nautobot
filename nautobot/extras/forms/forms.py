@@ -196,6 +196,7 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
         fields = (
             "content_type",
             "label",
+            "grouping",
             "key",
             "description",
             "template",

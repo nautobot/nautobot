@@ -81,6 +81,11 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
         help_text="Internal field name. Please use underscores rather than dashes in this key.",
         slugify_function=slugify_dashes_to_underscores,
     )
+    grouping = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=True,
+        help_text="Human-readable grouping that this computed field belongs to.",
+    )
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, help_text="Name of the field as displayed to users")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     template = models.TextField(max_length=500, help_text="Jinja2 template code for field value")
