@@ -15,7 +15,7 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 import netaddr
 
-from nautobot.cloud.tables import CloudNetworkPrefixAssignmentTable
+from nautobot.cloud.tables import CloudNetworkTable
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -456,8 +456,9 @@ class PrefixView(generic.ObjectView):
         vrfs = instance.vrf_assignments.restrict(request.user, "view")
         vrf_table = tables.VRFPrefixAssignmentTable(vrfs, orderable=False)
 
-        cloud_networks = instance.cloud_network_assignments.restrict(request.user, "view")
-        cloud_network_table = CloudNetworkPrefixAssignmentTable(cloud_networks, orderable=False)
+        cloud_networks = instance.cloud_networks.restrict(request.user, "view")
+        cloud_network_table = CloudNetworkTable(cloud_networks, orderable=False)
+        cloud_network_table.exclude = ("actions", "assigned_prefix_count", "circuit_count", "cloud_service_count")
 
         return {
             "vrf_table": vrf_table,

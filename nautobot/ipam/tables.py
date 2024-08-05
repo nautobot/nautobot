@@ -355,6 +355,9 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     location_count = LinkedCountColumn(
         viewname="dcim:location_list", url_params={"prefixes": "pk"}, verbose_name="Locations"
     )
+    cloud_networks_count = LinkedCountColumn(
+        viewname="cloud:cloudnetwork_list", url_params={"prefixes": "pk"}, verbose_name="Cloud Networks"
+    )
 
     class Meta(BaseTable.Meta):
         model = Prefix
@@ -368,6 +371,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "namespace",
             "tenant",
             "location_count",
+            "cloud_networks_count",
             "vlan",
             "role",
             "rir",
