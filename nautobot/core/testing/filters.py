@@ -133,12 +133,12 @@ class FilterTestCases:
                         self.generic_filter_tests = (*self.generic_filter_tests, generic_filter_test)
 
                 # Make sure we have at least 3 contacts and 3 teams in the database
-                if len(Contact.objects.all()) < 3:
+                if Contact.objects.count() < 3:
                     Contact.objects.create(name="Generic Filter Test Contact 1")
                     Contact.objects.create(name="Generic Filter Test Contact 2")
                     Contact.objects.create(name="Generic Filter Test Contact 3")
 
-                if len(Team.objects.all()) < 3:
+                if Team.objects.count() < 3:
                     Team.objects.create(name="Generic Filter Test Team 1")
                     Team.objects.create(name="Generic Filter Test Team 2")
                     Team.objects.create(name="Generic Filter Test Team 3")
