@@ -74,6 +74,8 @@ class CloudNetworkFilterSet(NautobotFilterSet):
         filter_predicates={
             "name": "icontains",
             "description": "icontains",
+            "parent__name": "icontains",
+            "parent__description": "icontains",
             "cloud_account__name": "icontains",
             "cloud_account__description": "icontains",
             "cloud_resource_type__name": "icontains",
