@@ -938,17 +938,32 @@ class VirtualChassisTable(BaseTable):
 class DeviceRedundancyGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    device_count = tables.TemplateColumn(
-        template_code=LINKED_RECORD_COUNT,
+    device_count = LinkedCountColumn(
+        viewname="dcim:device_list",
+        url_params={"device_redundancy_group": "pk"},
         verbose_name="Devices",
+    )
+    controller_count = LinkedCountColumn(
+        viewname="dcim:controller_list",
+        url_params={"controller_device_redundancy_group": "pk"},
+        verbose_name="Controllers",
     )
     secrets_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:deviceredundancygroup_list")
 
     class Meta(BaseTable.Meta):
         model = DeviceRedundancyGroup
-        fields = ("pk", "name", "status", "failover_strategy", "device_count", "secrets_group", "tags")
-        default_columns = ("pk", "name", "status", "failover_strategy", "device_count")
+        fields = (
+            "pk",
+            "name",
+            "status",
+            "failover_strategy",
+            "controller_count",
+            "device_count",
+            "secrets_group",
+            "tags",
+        )
+        default_columns = ("pk", "name", "status", "failover_strategy", "controller_count", "device_count")
 
 
 #

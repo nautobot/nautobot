@@ -95,6 +95,25 @@ Similarly, only the `jobs` module is loaded from Git repositories. If you're usi
 
 If not using submodules, you should register your job in the file where your job is defined.
 
+Examples of the different directory structures when registering jobs in Git repositories:  
+
+!!! note
+    Take note of the `__init__.py` at the root of the repository.  This is required to register jobs in a Git repository.
+
+``` title="jobs.py"
+.
+├── __init__.py
+└── jobs.py
+```
+
+``` title="submodule"
+.
+├── __init__.py
+└── jobs
+    ├── __init__.py
+    └── my_job_module.py
+```
+
 #### Registering Jobs in an App
 
 Apps should register jobs in the module defined in their [`NautobotAppConfig.jobs`](../apps/api/nautobot-app-config.md#nautobotappconfig-code-location-attributes) property. This defaults to the `jobs` module of the App.
@@ -785,7 +804,6 @@ from nautobot.apps.jobs import Job, StringVar, IntegerVar, ObjectVar, register_j
 from nautobot.dcim.models import Location, LocationType, Device, Manufacturer, DeviceType
 from nautobot.extras.models import Status, Role
 
-
 class NewBranch(Job):
     class Meta:
         name = "New Branch"
@@ -799,11 +817,13 @@ class NewBranch(Job):
         description="Access switch model", model=DeviceType, query_params={"manufacturer_id": "$manufacturer"}
     )
 
-    def run(self, location_name, switch_count, switch_model):
+    def run(self, *, location_name, switch_count, switch_model, manufacturer=None):
         STATUS_PLANNED = Status.objects.get(name="Planned")
 
         # Create the new location
-        root_type = LocationType.objects.get_or_create(name="Campus")
+        root_type, lt_created = LocationType.objects.get_or_create(name="Campus")
+        device_ct = ContentType.objects.get_for_model(Device)
+        root_type.content_types.add(device_ct)
         location = Location(
             name=location_name,
             location_type=root_type,
@@ -813,8 +833,7 @@ class NewBranch(Job):
         self.logger.info("Created new location", extra={"object": location})
 
         # Create access switches
-        device_ct = ContentType.objects.get_for_model(Device)
-        switch_role = Role.objects.get(name="Access Switch")
+        switch_role, r_created = Role.objects.get_or_create(name="Access Switch")
         switch_role.content_types.add(device_ct)
         for i in range(1, switch_count + 1):
             switch = Device(
@@ -834,7 +853,6 @@ class NewBranch(Job):
             output.append(",".join(attrs))
 
         return "\n".join(output)
-
 
 register_jobs(NewBranch)
 ```

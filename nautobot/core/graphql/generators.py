@@ -64,8 +64,8 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
     """
     filterset_class = schema_type._meta.filterset_class
 
-    def resolve_filter(self, *args, **kwargs):
-        if not filterset_class:
+    def resolve_filter(self, info, **kwargs):
+        if not filterset_class or not kwargs:
             return getattr(self, field_name).all()
 
         # Inverse of substitution logic from get_filtering_args_from_filterset() - transform "_type" back to "type"
