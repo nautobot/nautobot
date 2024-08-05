@@ -1,1 +1,0 @@
-Added missing validation to ensure that a DeviceBay can only contain Devices with a `subdevice_role` of `child`.
