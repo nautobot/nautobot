@@ -10,9 +10,9 @@ Nautobot's _Metadata_ feature set allows users and administrators to define data
 * Which system of record is this data originally sourced from?
 * When was this data last synced from that system into Nautobot? (Note that this is different than the `last_updated` field, as a sync may indicate "no change" since some previous sync date)
 
-While there are several data model extensibility features in Nautobot--like Custom Fields & Computed Fields--that aim to expand the existing network data model to suit your originization's specific needs, note that the Object Metadata feature set is not intended to represent data about the network. Rather, Object Metdata is a platform level feature that supports ancelary buisness process pertaining to the management of data within Nautobot. Still though, there are aspects that are likely to be useful to networking teams alike, for example, knowing who to talk to about correcting some device records, or identify the upstream system that is providing location data into Nautobot.
+While there are several data model extensibility features in Nautobot -- like Custom Fields & Computed Fields -- that aim to expand the existing network data model to suit your organization's specific needs, note that the Object Metadata feature set is not intended to represent data about the network. Rather, Object Metadata is a platform-level feature that supports ancillary business process pertaining to the management of data within Nautobot. Still though, there are aspects that are likely to be useful to networking teams alike, for example, knowing who to talk to about correcting some device records, or identify the upstream system that is providing location data into Nautobot.
 
-This Object Metadata feature is entirely optional and very flexible in terms of the type of information it can support. At present, all data stored by Object Metdata is read-only in the web UI and the intention is that metdata is managed by Nautobot system intentions, namely SSoTs and REST API integrations. Thus, it is up to the maintainer of such integrations to implement support for tracking Object Metadata, but full ORM and REST API access is available.
+This Object Metadata feature is entirely optional and very flexible in terms of the type of information it can support. At present, all data stored by Object Metadata is read-only in the web UI and the intention is that metadata is managed by Nautobot system integrations, namely SSoTs and REST API integrations. Thus, it is up to the maintainer of such integrations to implement support for tracking Object Metadata, but full ORM and REST API access is available.
 
 The following data models are parts of the feature set.
 
@@ -20,7 +20,7 @@ The following data models are parts of the feature set.
 
 This model defines a type of metadata that you will use for various data in your Nautobot system. Each of the examples given in the introduction to this document would be defined as a distinct `MetadataType`. Much like a `CustomField` record, this doesn't define a specific value for the data, so much as it defines the structure that that data will take. Each Metadata Type has a unique name, description, a data type that it describes (such as freeform text, integers, date/time, or choices from a defined list of text values), and a set of object types (content-types) that metadata of this type can be applied to.
 
-Specifc data types include:
+Specific data types include:
 
 * Text
 * Integer
@@ -49,7 +49,7 @@ On standard Nautobot object detail views (e.g. the detail page for an individual
 
 ## Developer Usage
 
-Currently, administrators may manage `MetadataType` definitions in the UI, however all `ObjectMetadata` records are managed programmatically, specifically targeting data integrations, like SSoT jobs. Developers of such integrations will be responsible for managing the metadata for the Nautobot data that their integration touches. Depending on the use case, the integration should either rely on administrator defined `MetadataType` (and `MetadataChoice` records), or programmatically create them, before `ObjectMetadata`. This is a simple example, showing how a Text field and Contact can be linked to a device record.
+Currently, administrators may manage `MetadataType` definitions in the UI, however all `ObjectMetadata` records are managed programmatically, specifically targeting data integrations, like SSoT jobs. Developers of such integrations will be responsible for managing the metadata for the Nautobot data that their integration touches. Depending on the use case, the integration should either rely on administrator defined `MetadataType` (and `MetadataChoice`) records, or programmatically create them, before `ObjectMetadata`. This is a simple example, showing how a Text field and Contact can be linked to a device record.
 
 ```python
 from django.contrib.contenttypes.models import ContentType
@@ -64,7 +64,7 @@ from nautobot.extras.models.metadata import MetadataChoice, MetadataTypeDataType
 # Create the selection type
 source_cmdb_type = MetadataType(
     name="Upstream CMDB",
-    description="Describes the upstream system for some parts of the device inventory data"
+    description="Describes the upstream system for some parts of the device inventory data",
     data_type=MetadataTypeDataTypeChoices.TYPE_SELECTION
 )
 source_cmdb_type.validated_save()
@@ -92,7 +92,7 @@ choice_remedy.validated_save()
 # Create the contact type
 source_cmdb_owner_type = MetadataType(
     name="Upstream data owner",
-    description="Describes the person that owns the record in the upstream CMDB system"
+    description="Describes the person that owns the record in the upstream CMDB system",
     data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
 )
 source_cmdb_owner_type.validated_save()
