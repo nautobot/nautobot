@@ -4,6 +4,25 @@
 
 This document describes all new features and changes in Nautobot 2.3.
 
+## Upgrade Actions
+
+### Administrators
+
+Administrators should plan to take these actions during or immediately after upgrade from a previous version. New installations should also take note of these actions where appropriate.
+
+- As noted [below](#dynamic-group-cache-changes-5473), a new system job is provided for automated Dynamic Group cache updates. Administrators should schedule this system job to run on a recurring basis within the Jobs UI, after the upgrade, or on new install. Configuration referencing the `DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT` setting can be safely removed, as it is no longer used. If this setting was being used previously, it is recommended to set the new scheduled job's interval to the same value.
+- As noted [below](#log-cleanup-as-system-job-3749), change logging retention cleanup is now handled via a system job. Administrators should schedule this job to run on a recurring basis to meet their needs. The `CHANGELOG_RETENTION` setting is still used to define the retention period, but the scheduled system job will perform the actual cleanup, if any needed.
+- Python 3.12 is now the default recommended version of Python.
+
+### Job Authors & App Developers
+
+Job Authors and App Developers should take these actions prior to upgrade, to ensure compatibility with their Jobs and Apps.
+
+- Job Authors and App Developers should carefully consider the [updates to the DynamicGroup API](#dynamic-group-cache-changes-5473) and decide if their use cases dictate changing their group membership access paterns to use `DynamicGroup.update_cached_members()` to find the correct balance between Dynamic Group performance and membership updates.
+- Job Authors and App Developers should carefully consider the [updates to the TreeManager default behavior](#changed-treemanager-default-behavior-5786) and make necisary changes to their access of Tree based models.
+- Job Authors and App Developers should carefully consider the updates and changes in the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
+- Python 3.12 is now the default recomended version of Python.
+
 ## Release Overview
 
 ### Added
@@ -30,7 +49,7 @@ Added an optional `role` field to Interface and VMInterface models to track comm
 
 #### Object Metadata Models ([#5663](https://github.com/nautobot/nautobot/issues/5663))
 
-Added [a set of functionality](../user-guide/platform-functionality/metadata.md) for defining and managing object metadata, that is to say, data _about_ the network data managed in Nautobot, such as data provenance, data ownership, and data classification. For more details, refer to the linked documentation.
+Added [a set of functionality](../user-guide/platform-functionality/objectmetadata.md) for defining and managing object metadata, that is to say, data _about_ the network data managed in Nautobot, such as data provenance, data ownership, and data classification. For more details, refer to the linked documentation.
 
 #### Python 3.12 Support ([#5429](https://github.com/nautobot/nautobot/issues/5429))
 
@@ -119,7 +138,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#5716](https://github.com/nautobot/nautobot/issues/5716) - Added CloudNetwork to CircuitTermination model, UI, and REST API.
 - [#5716](https://github.com/nautobot/nautobot/issues/5716) - Added CloudNetwork to Prefix View.
 - [#5719](https://github.com/nautobot/nautobot/issues/5719) - Added CloudAccount Model, UI, GraphQL and REST API.
-- [#5721](https://github.com/nautobot/nautobot/issues/5721) - Added ~`CloudType`~ `CloudResourceType` Model, UI, GraphQL and REST API.
+- [#5721](https://github.com/nautobot/nautobot/issues/5721) - Added ~~`CloudType`~~ `CloudResourceType` Model, UI, GraphQL and REST API.
 - [#5730](https://github.com/nautobot/nautobot/issues/5730) - Added a feature that replaces `{module}`, `{module.parent}`, `{module.parent.parent}`, etc. with the selected module's `parent_module_bay` `position` when creating a component in a module.
 - [#5732](https://github.com/nautobot/nautobot/issues/5732) - Added indices on `StaticGroupAssociation` table for common lookup patterns.
 - [#5786](https://github.com/nautobot/nautobot/issues/5786) - Added `DynamicGroup.group_type` field with options `dynamic-filter`, `dynamic-set`, and `static`. Existing DynamicGroups will automatically be set to either `dynamic-filter` or `dynamic-set` as befits their definitions.
@@ -233,7 +252,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 ### Documentation
 
 - [#5699](https://github.com/nautobot/nautobot/issues/5699) - Fixed a number of broken links within the documentation.
-- [#5895](https://github.com/nautobot/nautobot/issues/5895) - Added missing model documentation for `CloudNetwork`, `CloudNetworkPrefixAssignment`, `CloudService` and ~`CloudType`~ `CloudResourceType`.
+- [#5895](https://github.com/nautobot/nautobot/issues/5895) - Added missing model documentation for `CloudNetwork`, `CloudNetworkPrefixAssignment`, `CloudService` and ~~`CloudType`~~ `CloudResourceType`.
 - [#5934](https://github.com/nautobot/nautobot/issues/5934) - Add Cloud Model Example and Entity Diagram.
 
 ### Housekeeping

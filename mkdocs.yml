@@ -110,6 +110,7 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
   - "pymdownx.tabbed":
       "alternate_style": true
+  - "pymdownx.tilde"
 
 plugins:
   - "search"
@@ -307,9 +308,9 @@ plugins:
         "models/dcim/modulebay.md": "user-guide/core-data-model/dcim/modulebay.md"
         "models/dcim/modulebaytemplate.md": "user-guide/core-data-model/dcim/modulebaytemplate.md"
         "models/dcim/moduletype.md": "user-guide/core-data-model/dcim/moduletype.md"
-        "models/extras/metadatachoice.md": "user-guide/platform-functionality/metadata.md"
-        "models/extras/metadatatype.md": "user-guide/platform-functionality/metadata.md"
-        "models/extras/objectmetadata.md": "user-guide/platform-functionality/metadata.md"
+        "models/extras/metadatachoice.md": "user-guide/platform-functionality/objectmetadata.md"
+        "models/extras/metadatatype.md": "user-guide/platform-functionality/objectmetadata.md"
+        "models/extras/objectmetadata.md": "user-guide/platform-functionality/objectmetadata.md"
         "models/extras/savedview.md": "user-guide/platform-functionality/savedview.md"
         "models/extras/staticgroupassociation.md": "user-guide/platform-functionality/staticgroupassociation.md"
         "user-guide/administration/installation/docker.md": "user-guide/administration/installation-extras/docker.md"
@@ -515,9 +516,9 @@ nav:
               - Job Hooks: "user-guide/platform-functionality/jobs/jobhook.md"
               - Job Models: "user-guide/platform-functionality/jobs/models.md"
               - Job Scheduling and Approvals: "user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md"
-          - Metadata: "user-guide/platform-functionality/metadata.md"
           - NAPALM: "user-guide/platform-functionality/napalm.md"
           - Notes: "user-guide/platform-functionality/note.md"
+          - Object Metadata: "user-guide/platform-functionality/objectmetadata.md"
           - Relationships: "user-guide/platform-functionality/relationship.md"
           - REST API:
               - "user-guide/platform-functionality/rest-api/overview.md"
