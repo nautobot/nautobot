@@ -1,1 +1,0 @@
-Added caching to `FeatureQuery().get_choices()` and `FeatureQuery().list_subclasses()`.
