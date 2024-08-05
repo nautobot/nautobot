@@ -74,7 +74,7 @@ As an additional enhancement, the `LogsCleanup` Job can also be used to cleanup 
 
 #### UI Button Consolidation ([#5869](https://github.com/nautobot/nautobot/issues/5869), [#5870](https://github.com/nautobot/nautobot/issues/5870), [#5871](https://github.com/nautobot/nautobot/issues/5871))
 
-Consolidate list view bulk action buttons, list view standard action buttons and detail view standard action buttons with bootstrap split button dropdowns.
+Various button groups in the "object list" and "object detail" views have been consolidated following a common UI pattern of a single button for the most common action plus a popup menu for less common actions.
 
 ### Dependencies
 
