@@ -10,17 +10,17 @@ This document describes all new features and changes in Nautobot 2.3.
 
 Administrators should plan to take these actions during or imediately after upgrade from a previous version. New installations should also take note of these actions where appropriate.
 
-* As noted [below](#dynamic-group-cache-changes), a new system job is provided for automated Dynamic Group cache updates. Administators should schedule this system job to run on a recurring basis within the Jobs UI, after the upgrade, or on new install. Configuration referencing the `DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT` setting can be safely removed, as it is no longer used. If this setting was being used previosly, it is recomended to set the new scheduled job's interval to the same value.
-* As noted [below](#log-cleanup-as-system-job), change logging retention cleanup is now handled via a system job. Administrators should schedule this job to run on a recurring bassis, to meet their needs. The `CHANGELOG_RETENTION` setting is still used to define the rentention period, but the scheduled system job will perform the actual cleanup, if any needed.
-* Python 3.12 is now the default recomended version of Python.
+- As noted [below](version-2.3.md#dynamic-group-cache-changes), a new system job is provided for automated Dynamic Group cache updates. Administators should schedule this system job to run on a recurring basis within the Jobs UI, after the upgrade, or on new install. Configuration referencing the `DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT` setting can be safely removed, as it is no longer used. If this setting was being used previosly, it is recomended to set the new scheduled job's interval to the same value.
+- As noted [below](version-2.3.md#log-cleanup-as-system-job), change logging retention cleanup is now handled via a system job. Administrators should schedule this job to run on a recurring bassis, to meet their needs. The `CHANGELOG_RETENTION` setting is still used to define the rentention period, but the scheduled system job will perform the actual cleanup, if any needed.
+- Python 3.12 is now the default recomended version of Python.
 
 ### Job Authors & App Developers
 
 Job Authors and App Developers should take these actions prior to upgrade, to ensure compatability with their Jobs and Apps.
 
-* Job Authors and App Developers should carefully consider the [updates to the DynamicGroup API](#dynamic-group-cache-changes) and decide if their use cases dictate changing their group membership access paterns to use `DynamicGroup.update_cached_members()` to find the correct balance between Dynamic Group performance and membership updates.
-* Job Authors and App Developers should carefully consider the [updates to the TreeManager default behavior](#changed-treemanager-default-behavior) and make necisary changes to their access of Tree based models.
-* Job Authors and App Developers should carefully consider the updates and changes in the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
+- Job Authors and App Developers should carefully consider the [updates to the DynamicGroup API](version-2.3.md#dynamic-group-cache-changes) and decide if their use cases dictate changing their group membership access paterns to use `DynamicGroup.update_cached_members()` to find the correct balance between Dynamic Group performance and membership updates.
+- Job Authors and App Developers should carefully consider the [updates to the TreeManager default behavior](version-2.3.md#changed-treemanager-default-behavior) and make necisary changes to their access of Tree based models.
+- Job Authors and App Developers should carefully consider the updates and changes in the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 * Python 3.12 is now the default recomended version of Python.
 
 ## Release Overview
