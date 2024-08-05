@@ -61,7 +61,7 @@ class MetadataType(PrimaryModel):
 
     objects = MetadataTypeManager()
     clone_fields = ["data_type"]
-    documentation_static_path = "docs/user-guide/platform-functionality/metadata.html"
+    documentation_static_path = "docs/user-guide/platform-functionality/objectmetadata.html"
 
     class Meta:
         ordering = ["name"]
@@ -106,7 +106,7 @@ class MetadataChoice(ChangeLoggedModel, BaseModel):
     weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")
     is_metadata_associable_model = False
 
-    documentation_static_path = "docs/user-guide/platform-functionality/metadata.html"
+    documentation_static_path = "docs/user-guide/platform-functionality/objectmetadata.html"
 
     class Meta:
         ordering = ["metadata_type", "weight", "value"]
@@ -200,7 +200,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
 
     objects = ObjectMetadataManager()
     natural_key_field_names = ["pk"]
-    documentation_static_path = "docs/user-guide/platform-functionality/metadata.html"
+    documentation_static_path = "docs/user-guide/platform-functionality/objectmetadata.html"
 
     class Meta:
         ordering = ["metadata_type"]
