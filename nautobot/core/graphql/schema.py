@@ -4,6 +4,7 @@ from collections import OrderedDict
 import logging
 
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import ValidationError
 from django.db.models import ManyToManyField
@@ -205,8 +206,7 @@ def extend_schema_type_filter(schema_type, model):
         (DjangoObjectType): The extended schema_type object
     """
     for field in model._meta.get_fields():
-        # Check whether attribute is a ManyToOne or ManyToMany field
-        if not isinstance(field, (ManyToManyField, ManyToManyRel, ManyToOneRel)):
+        if not isinstance(field, (ManyToManyField, ManyToManyRel, ManyToOneRel, GenericRelation)):
             continue
         # OneToOneRel is a subclass of ManyToOneRel, but we don't want to treat it as a list
         if isinstance(field, OneToOneRel):
@@ -374,16 +374,9 @@ def extend_schema_type_config_context(schema_type, model):
 
 def extend_schema_type_global_features(schema_type, model):
     """
-    Extend schema_type object to have attributes and resolvers for global features (contacts, dynamic groups, etc.).
+    Extend schema_type object to have attributes and resolvers for global features (dynamic groups, etc.).
     """
-    if getattr(model, "is_contact_associable_model", False):
-
-        def resolve_associated_contacts(self, args):
-            return self.associated_contacts.all()
-
-        setattr(schema_type, "resolve_associated_contacts", resolve_associated_contacts)
-        schema_type._meta.fields["associated_contacts"] = graphene.Field.mounted(graphene.List(ContactAssociationType))
-
+    # associated_contacts and associated_object_metadata are handled elsewhere by extend_schema_type_filter()
     if getattr(model, "is_dynamic_group_associable_model", False):
 
         def resolve_dynamic_groups(self, args):
