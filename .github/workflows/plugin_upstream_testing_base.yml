@@ -16,9 +16,9 @@ env:
 
 jobs:
   build:
+    continue-on-error: true
     strategy:
       fail-fast: false
-      continue-on-error: true
       matrix:
         nautobot-version: ["develop", "ltm-1.6"]
     runs-on: "ubuntu-20.04"
