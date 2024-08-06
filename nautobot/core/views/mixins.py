@@ -743,7 +743,6 @@ class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
         request = self.request
         obj = self.obj
         queryset = self.get_queryset()
-        msg = ""
         try:
             with transaction.atomic():
                 msg = f"Deleted {queryset.model._meta.verbose_name} {obj}"
