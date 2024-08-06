@@ -91,7 +91,6 @@ class RackGroup(TreeModel, OrganizationalModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
