@@ -49,7 +49,6 @@ logger = logging.getLogger(__name__)
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -399,7 +398,6 @@ class RIR(OrganizationalModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -501,11 +499,6 @@ class Prefix(PrimaryModel):
         "type",
         "vlan",
     ]
-    """
-    dynamic_group_filter_fields = {
-        "vrf": "vrf_id",  # Duplicate filter fields that will be collapsed in 2.0
-    }
-    """
 
     class Meta:
         ordering = (
@@ -986,7 +979,6 @@ class PrefixLocationAssignment(BaseModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "statuses",

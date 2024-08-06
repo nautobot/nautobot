@@ -452,7 +452,6 @@ class Platform(OrganizationalModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -1109,7 +1108,6 @@ class VirtualChassis(PrimaryModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "statuses",
@@ -1341,7 +1339,6 @@ class SoftwareVersion(PrimaryModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -1425,7 +1422,6 @@ class Controller(PrimaryModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "webhooks",
