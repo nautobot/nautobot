@@ -586,15 +586,16 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
         if form.is_valid():
             logger.debug("Form validation was successful")
+            msg = ""
 
             try:
+                msg = f"Deleted {self.queryset.model._meta.verbose_name} {obj}"
                 obj.delete()
             except ProtectedError as e:
                 logger.info("Caught ProtectedError while attempting to delete object")
                 handle_protectederror([obj], request, e)
                 return redirect(obj.get_absolute_url())
 
-            msg = f"Deleted {self.queryset.model._meta.verbose_name} {obj}"
             logger.info(msg)
             messages.success(request, msg)
 
