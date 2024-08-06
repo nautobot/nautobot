@@ -83,7 +83,6 @@ class ClusterGroup(OrganizationalModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -169,7 +168,6 @@ class Cluster(PrimaryModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "statuses",
