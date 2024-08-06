@@ -1,0 +1,1 @@
+Fixed the order of object deletion by constructing delete success message before the object is deleted.
