@@ -18,6 +18,7 @@ jobs:
   build:
     strategy:
       fail-fast: false
+      continue-on-error: true
       matrix:
         nautobot-version: ["develop", "ltm-1.6"]
     runs-on: "ubuntu-20.04"
@@ -62,6 +63,14 @@ jobs:
         nautobot-version: ["develop", "ltm-1.6"]
     runs-on: "ubuntu-20.04"
     steps:
+      # Try to download the artifact first so the job can be skipped if the artifact is not found
+      - name: Download docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: "docker_nautobot_${{ matrix.nautobot-version }}"
+          path: /tmp
+      - name: Load docker image
+        run: "docker load --input /tmp/nautobot_${{ matrix.nautobot-version }}.tar"
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
         with:
@@ -72,13 +81,6 @@ jobs:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "1.8.2"
           python-version: "${{ env.PYTHON_VERSION }}"
-      - name: Download docker image artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: "docker_nautobot_${{ matrix.nautobot-version }}"
-          path: /tmp
-      - name: Load docker image
-        run: "docker load --input /tmp/nautobot_${{ matrix.nautobot-version }}.tar"
       - name: "Copy credentials"
         run: "cp development/creds.example.env development/creds.env"
       - name: "Run Tests"
@@ -92,6 +94,14 @@ jobs:
         nautobot-version: ["develop", "ltm-1.6"]
     runs-on: "ubuntu-20.04"
     steps:
+      # Try to download the artifact first so the job can be skipped if the artifact is not found
+      - name: Download docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: "docker_nautobot_${{ matrix.nautobot-version }}"
+          path: /tmp
+      - name: Load docker image
+        run: "docker load --input /tmp/nautobot_${{ matrix.nautobot-version }}.tar"
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
         with:
@@ -102,13 +112,6 @@ jobs:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "1.8.2"
           python-version: "${{ env.PYTHON_VERSION }}"
-      - name: Download docker image artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: "docker_nautobot_${{ matrix.nautobot-version }}"
-          path: /tmp
-      - name: Load docker image
-        run: "docker load --input /tmp/nautobot_${{ matrix.nautobot-version }}.tar"
       - name: "Copy credentials"
         run: "cp development/creds.example.env development/creds.env"
       - name: "Run check migrations"
