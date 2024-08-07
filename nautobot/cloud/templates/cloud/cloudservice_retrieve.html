@@ -49,6 +49,10 @@
                 <td>Cloud Resource Type</td>
                 <td>{{ object.cloud_resource_type|hyperlinked_object }}</td>
             </tr>
+            <tr>
+                <td>Description</td>
+                <td>{{ object.description|placeholder }}</td>
+            </tr>
         </table>
     </div>
 {% endblock content_left_page %}

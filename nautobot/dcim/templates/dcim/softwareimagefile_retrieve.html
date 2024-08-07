@@ -236,7 +236,7 @@
             </div>
         {% endif %}
         {% if object.is_metadata_associable_model and perms.extras.view_objectmetadata %}
-            <div id="object_metadatas" role="tabpanel" class="tab-pane {% if request.GET.tab == 'object_metadatas' %}active{% else %}fade{% endif %}">
+            <div id="object_metadata" role="tabpanel" class="tab-pane {% if request.GET.tab == 'object_metadata' %}active{% else %}fade{% endif %}">
                 <div class="row">
                     <div class="col-md-12">
                         <form method="post">
@@ -249,7 +249,7 @@
                                     </div>
                                 </div>
                                 <div class="table-responsive">
-                                    {% render_table associated_object_metadatas_table 'inc/table.html' %}
+                                    {% render_table associated_object_metadata_table 'inc/table.html' %}
                                 </div>
                             </div>
                         </form>

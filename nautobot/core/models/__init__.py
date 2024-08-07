@@ -54,11 +54,11 @@ class BaseModel(models.Model):
     is_saved_view_model = False  # SavedViewMixin overrides this to default True
     is_cloud_resource_type_model = False  # CloudResourceTypeMixin overrides this to default True
 
-    associated_object_metadatas = GenericRelation(
+    associated_object_metadata = GenericRelation(
         "extras.ObjectMetadata",
         content_type_field="assigned_object_type",
         object_id_field="assigned_object_id",
-        related_query_name="associated_object_metadatas_%(app_label)s_%(class)s",  # e.g. 'associated_object_metadatas_dcim_device'
+        related_query_name="associated_object_metadata_%(app_label)s_%(class)s",  # e.g. 'associated_object_metadata_dcim_device'
     )
 
     class Meta:
