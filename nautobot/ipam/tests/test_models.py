@@ -962,6 +962,54 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         self.status = Status.objects.get(name="Active")
         self.prefix = Prefix.objects.create(prefix="192.0.2.0/24", status=self.status, namespace=self.namespace)
 
+    def test_get_or_create(self):
+        """Test that"""
+        default_namespace = get_default_namespace()
+        # Use a namespace different from the default namespace which has an ipaddress
+        namespace = (
+            Namespace.objects.exclude(pk=default_namespace.pk).filter(prefixes__ip_addresses__isnull=False).first()
+        )
+        ipaddress = IPAddress.objects.filter(parent__namespace=namespace).first()
+        host = ipaddress.host
+        mask_length = ipaddress.mask_length
+        status = ipaddress.status
+
+        with self.subTest("Assert retrieve"):
+            ip_obj, created = IPAddress.objects.get_or_create(
+                host=host,
+                mask_length=mask_length,
+                namespace=namespace,
+                status=status,
+            )
+            self.assertEqual(ip_obj, ipaddress)
+            self.assertFalse(created)
+
+        with self.subTest(
+            "Assert get_or_create utilizes default namespace when retrieving parent if no namespace is provided"
+        ):
+            ipaddress.parent.namespace = default_namespace
+            ipaddress.parent.save()
+            ip_obj, created = IPAddress.objects.get_or_create(
+                host=host,
+                mask_length=mask_length,
+                status=status,
+            )
+            self.assertEqual(ip_obj, ipaddress)
+            self.assertFalse(created)
+
+        with self.subTest("Assert create"):
+            ipaddress.delete()
+
+            ip_obj, created = IPAddress.objects.get_or_create(
+                host=host,
+                mask_length=mask_length,
+                status=status,
+            )
+            self.assertEqual(ip_obj.host, host)
+            self.assertEqual(ip_obj.mask_length, mask_length)
+            self.assertEqual(ip_obj._namespace, default_namespace)
+            self.assertTrue(created)
+
     def test_create_field_population(self):
         """Test that the various ways of creating an IPAddress result in correctly populated fields."""
         if self.namespace != get_default_namespace():

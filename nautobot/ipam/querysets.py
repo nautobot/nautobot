@@ -397,6 +397,22 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         """
         return super().order_by("host")
 
+    def get_or_create(self, **kwargs):
+        from nautobot.ipam.models import get_default_namespace, Prefix
+
+        parent = kwargs.get("parent")
+        namespace = kwargs.pop("namespace", None)
+        if not parent:
+            host = kwargs.get("host")
+            mask_length = kwargs.get("mask_length")
+            if not namespace:
+                namespace = get_default_namespace()
+            parent = Prefix.objects.filter(namespace=namespace).get_closest_parent(
+                cidr=f"{host}/{mask_length}", include_self=True
+            )
+            kwargs["parent"] = parent
+        return super().get_or_create(**kwargs)
+
     def string_search(self, search):
         """
         Interpret a search string and return useful results.
