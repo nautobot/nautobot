@@ -96,7 +96,7 @@ class LogEntryAdmin(NautobotModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         """Disable delete permission."""
-        return request.user.is_superuser
+        return False
 
     def object_link(self, obj):
         """Link to the related object, unless it was deleted."""
