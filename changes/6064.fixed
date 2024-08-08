@@ -1,2 +1,0 @@
-Reverted an undesired change to `IPAddressFilterSet.device` filter.
-Reverted an undesired change to `ServiceForm.ip_addresses` valid addresses.

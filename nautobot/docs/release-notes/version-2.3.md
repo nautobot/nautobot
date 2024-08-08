@@ -102,6 +102,70 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
+## v2.3.0 (2024-08-08)
+
+### Security
+
+- [#6073](https://github.com/nautobot/nautobot/issues/6073) - Updated `Django` to `~4.2.15` due to `CVE-2024-41989`, `CVE-2024-41990`, `CVE-2024-41991`, and `CVE-2024-42005`.
+
+### Added
+
+- [#5996](https://github.com/nautobot/nautobot/issues/5996) - Added missing `comments` field to DeviceType bulk edit.
+- [#5996](https://github.com/nautobot/nautobot/issues/5996) - Added `comments` field to ModuleType.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added `Cloud Networks` column to `PrefixTable`.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added `prefixes` filter to `CloudNetworkFilterSet`.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added `parent__name` and `parent__description` to `CloudNetworkFilterSet` `q` filter.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added support for querying `GenericRelation` relationships (reverse of `GenericForeignKey`) in GraphQL.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added support for filtering an object's `associated_contacts` in GraphQL.
+
+### Changed
+
+- [#6003](https://github.com/nautobot/nautobot/issues/6003) - Changed rendering of `scoped_fields` column in `ObjectMetadataTable`.
+- [#6003](https://github.com/nautobot/nautobot/issues/6003) - Changed default ordering of `ObjectMetadata` list views.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Renamed `associated_object_metadatas` GenericRelation to `associated_object_metadata`.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Renamed `object_metadatas` reverse-relations to `object_metadata`.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Changed `CloudNetwork.parent` foreign-key `on_delete` behavior to `PROTECT`.
+- [#6070](https://github.com/nautobot/nautobot/issues/6070) - Marked the `Note` model as `is_metadata_associable_model = False`.
+
+### Removed
+
+- [#6005](https://github.com/nautobot/nautobot/issues/6005) - Removed "delete" and "bulk-delete" functionalities from the ObjectMetadata views.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Removed unneeded `CloudNetworkPrefixAssignmentTable`.
+
+### Fixed
+
+- [#5967](https://github.com/nautobot/nautobot/issues/5967) - Fixed a regression in the display of custom fields in object-edit forms.
+- [#5996](https://github.com/nautobot/nautobot/issues/5996) - Fixed URL typo in module and module type list views.
+- [#6003](https://github.com/nautobot/nautobot/issues/6003) - Added missing `blank=True` to `ObjectMetadata.scoped_fields`.
+- [#6019](https://github.com/nautobot/nautobot/issues/6019) - Marked the `JobLogEntry` model as invalid for association of `ObjectMetadata`.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added missing `Config Schema` display to detail view of `CloudResourceType`.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added missing `Description` display to detail view of `CloudService`.
+- [#6045](https://github.com/nautobot/nautobot/issues/6045) - Fixed interfaces of Virtual Chassis Master missing other member's interfaces.
+- [#6051](https://github.com/nautobot/nautobot/issues/6051) - Fixed improper escaping of saved-view name in success message.
+- [#6051](https://github.com/nautobot/nautobot/issues/6051) - Fixed incorrect ordering of items in Tenant detail view.
+- [#6051](https://github.com/nautobot/nautobot/issues/6051) - Fixed query parameters for `CloudNetwork.parent` form field.
+- [#6056](https://github.com/nautobot/nautobot/issues/6056) - Fixed the order of object deletion by constructing delete success message before the object is deleted.
+- [#6064](https://github.com/nautobot/nautobot/issues/6064) - Reverted an undesired change to `IPAddressFilterSet.device` filter.
+- [#6064](https://github.com/nautobot/nautobot/issues/6064) - Reverted an undesired change to `ServiceForm.ip_addresses` valid addresses.
+
+### Documentation
+
+- [#5920](https://github.com/nautobot/nautobot/issues/5920) - Updated documentation for installation under Ubuntu 24.04 LTS, Fedora 40, AlmaLinux 9, and similar distros.
+- [#6019](https://github.com/nautobot/nautobot/issues/6019) - Updated the installation documentation to recommend a more secure set of filesystem permissions.
+- [#6050](https://github.com/nautobot/nautobot/issues/6050) - Updated model development docs with information about object metadata and dynamic groups features.
+- [#6050](https://github.com/nautobot/nautobot/issues/6050) - Added some crosslinks within the DCIM model documentation.
+- [#6062](https://github.com/nautobot/nautobot/issues/6062) - Updated Configuration Context docs with additional examples for dictionary of dictionaries.
+
+### Housekeeping
+
+- [#5962](https://github.com/nautobot/nautobot/issues/5962) - Updated development dependency `ruff` to `~0.5.6`.
+- [#5962](https://github.com/nautobot/nautobot/issues/5962) - Updated documentation dependencies: `mkdocs-material` to `~9.5.31`, `mkdocstrings` to `~0.25.2`, and `mkdocstrings-python` to `~1.10.7`.
+- [#6003](https://github.com/nautobot/nautobot/issues/6003) - Updated `ObjectMetadataFactory` to produce more realistic `scoped_fields` values.
+- [#6014](https://github.com/nautobot/nautobot/issues/6014) - Fixed intermittent `ObjectMetadata` factory failures.
+- [#6047](https://github.com/nautobot/nautobot/issues/6047) - Made sure that there is a sufficient amount of `Contact` and `Team` instances exist in the database when testing `contacts` and `teams` filters of an object's filterset.
+- [#6055](https://github.com/nautobot/nautobot/issues/6055) - Added migrations check to upstream testing workflow.
+- [#6071](https://github.com/nautobot/nautobot/issues/6071) - Fixed incorrect generic-test logic in `FilterTestCase.test_q_filter_valid` for `q` filters containing `iexact` lookups.
+
 ## v2.3.0-beta.1 (2024-07-25)
 
 ### Security
