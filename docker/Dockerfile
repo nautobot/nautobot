@@ -79,7 +79,7 @@ FROM system-dependencies AS system-dev-dependencies
 # Install development/install-time OS dependencies
 # hadolint ignore=DL3008
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y build-essential libssl-dev pkg-config libldap-dev libsasl2-dev libmariadb-dev nodejs npm && \
+    apt-get install --no-install-recommends -y build-essential libssl-dev pkg-config libldap-dev libsasl2-dev libmariadb-dev nodejs npm mariadb-client && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/*
@@ -115,7 +115,7 @@ FROM python:${PYTHON_VER}-slim AS poetry
 # This also makes it so that Poetry will *not* be included in the "final" image since it's not installed to /usr/local/
 ARG POETRY_HOME=/opt/poetry
 ARG POETRY_INSTALLER_PARALLEL=true
-ARG POETRY_VERSION=1.5.1
+ARG POETRY_VERSION=1.8.2
 ARG POETRY_VIRTUALENVS_CREATE=false
 ADD https://install.python-poetry.org /tmp/install-poetry.py
 RUN python /tmp/install-poetry.py

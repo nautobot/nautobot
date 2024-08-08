@@ -22,6 +22,9 @@ For Devices forming a group (Failover, Load-Sharing, Redundacy or similar) refer
 +++ 2.2.0
     The [Software Version](softwareversion.md) model has been introduced to represent the software version that is currently installed on a device. An optional software version field has been added to devices.
 
++++ 2.3.0
+    Components from [modules](module.md) installed in [module bays](modulebay.md) on the device will also be shown in the device component lists. This includes modules that are in nested module bays. Device primary IP address can be designated from interfaces installed in modules.
+
 ## Developer API
 
 The `Device` Django model class supports a method called `create_components()`. This method is normally called during `device_instance.save()`, which is called whenever you save create a Device via the GUI or the REST API, but if you are working directly in the ORM and encounter one of the two following scenarios, `device_instance.save()` is not called:

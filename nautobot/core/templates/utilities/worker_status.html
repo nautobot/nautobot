@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% load helpers %}
+
+{% block extra_styles %}
+<style>
+    .panel {
+        overflow: hidden  /* Fix for panel overflow issues */
+    }
+</style>
+{% endblock %}
+
+{% block header %}
+<h1>
+    {% block title %}Nautobot Worker Status{% endblock %}
+</h1>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Worker Queues</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                {% for queue_name, workers in worker_status.queue_worker_count.items %}
+                    <tr>
+                        <td><span class="label label-primary">{{ queue_name }}</span></td>
+                        <td>
+                            {% for worker in workers %}
+                                <span class="label label-default">{{ worker }}</span>
+                            {% empty %}
+                                No workers found.
+                            {% endfor %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% for worker in worker_status.workers %}
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>{{ worker.hostname }}</strong>
+                </div>
+                <table id="accordion" class="table table-hover panel-body attr-table">
+                    <tbody>
+                        <tr>
+                            <td>Uptime</td>
+                            <td colspan="2">{{ worker.uptime|render_uptime }}</td>
+                        </tr>
+                        <tr>
+                            <td>Queues</td>
+                            <td colspan="2">
+                                {% for queue in worker.queues %}
+                                    <span class="label label-primary">{{ queue }}</span>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th colspan="{{ worker.running_tasks_table.columns|length }}">
+                                <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-right"
+                                        name="running-tasks-{{ worker.hostname|slugify }}" data-toggle="collapse"
+                                        data-target=".collapseme-running-tasks-{{ worker.hostname|slugify }}">
+                                    Running Tasks {% badge worker.running_tasks_table.rows|length show_empty=True %}
+                                </button>
+                            </th>
+                        </tr>
+                    </tbody>
+                    <tbody class="collapseme-running-tasks-{{ worker.hostname|slugify }} collapse" data-parent="#accordion" aria-expanded="false">
+                        <tr>
+                            {% for column in worker.running_tasks_table.columns %}
+                                <th {{ column.attrs.th.as_html }}>{{ column.header }}</th>
+                            {% endfor %}
+                        </tr>
+                        {% for row in worker.running_tasks_table.page.object_list|default:worker.running_tasks_table.rows %}
+                            <tr {{ row.attrs.as_html }}>
+                                {% for column, cell in row.items %}
+                                    <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% empty %}
+                            {% if worker.running_tasks_table.empty_text %}
+                                <tr>
+                                    <td colspan="{{ worker.running_tasks_table.columns|length }}" class="text-center text-muted">
+                                        &mdash; {{ worker.running_tasks_table.empty_text }} &mdash;
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                    <tbody>
+                        <tr>
+                            <th colspan="{{ worker.pending_tasks_table.columns|length }}">
+                                <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-right"
+                                        name="pending-tasks-{{ worker.hostname|slugify }}" data-toggle="collapse"
+                                        data-target=".collapseme-pending-tasks-{{ worker.hostname|slugify }}">
+                                    Pending Tasks {% badge worker.pending_tasks_table.rows|length show_empty=True %}
+                                </button>
+                            </th>
+                        </tr>
+                    </tbody>
+                    <tbody class="collapseme-pending-tasks-{{ worker.hostname|slugify }} collapse" data-parent="#accordion" aria-expanded="false">
+                        <tr>
+                            {% for column in worker.pending_tasks_table.columns %}
+                                <th {{ column.attrs.th.as_html }}>{{ column.header }}</th>
+                            {% endfor %}
+                        </tr>
+                        {% for row in worker.pending_tasks_table.page.object_list|default:worker.pending_tasks_table.rows %}
+                            <tr {{ row.attrs.as_html }}>
+                                {% for column, cell in row.items %}
+                                    <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% empty %}
+                            {% if worker.pending_tasks_table.empty_text %}
+                                <tr>
+                                    <td colspan="{{ worker.pending_tasks_table.columns|length }}" class="text-center text-muted">
+                                        &mdash; {{ worker.pending_tasks_table.empty_text }} &mdash;
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% empty %}
+        </div>
+        <div class="alert alert-warning">
+            {% with increased_timeout=worker_status.timeout|add:5 %}
+                <strong>Warning:</strong> No workers responded within the {{ worker_status.timeout }} second timeout.
+                {% if increased_timeout <= worker_status.max_timeout %}
+                    <a href="{{ request.path }}?timeout={{ increased_timeout }}">Retry with a {{ increased_timeout }} second timeout</a>.
+                {% else %}
+                    <a href="{{ request.get_full_path }}">Retry</a>.
+                {% endif %}
+            {% endwith %}
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block javascript %}
+{{ block.super }}
+<script>
+    // Toggle v -. >
+    $("#accordion .accordion-toggle").click(function() {
+        $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
+    });
+</script>
+{% endblock %}

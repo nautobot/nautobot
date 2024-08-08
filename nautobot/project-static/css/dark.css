@@ -190,6 +190,12 @@ html[data-theme="dark"] .navbar-nav>li>a:hover {          /* Navbar top level me
   color: rgb(224, 120, 7) !important;
 }
 
+html[data-theme="dark"] .dropdown-menu button:hover,      /* Navbar button item when hovering */
+html[data-theme="dark"] .dropdown-menu>li>button:hover {
+  color: rgb(51, 51, 51) !important;
+  background-color: rgb(196, 204, 210) !important;
+}
+
 html[data-theme="dark"] .dropdown-menu>li>a {             /* Navbar dropdown text links */
   color: rgb(51, 51, 51) !important;
 }
@@ -209,6 +215,11 @@ html[data-theme="dark"] .close {                          /* X button to close m
 html[data-theme="dark"] pre {
   background-color: rgb(211, 221, 222);
   color: rgb(29, 40, 42);
+}
+
+html[data-theme="dark"] pre code.hljs {
+  /* We let the hljs handle the color so Syntax highlighting works, but we set the background to match the <pre> blocks.*/
+  background-color: rgb(29, 40, 42)
 }
 
 /* Breadcrumbs */

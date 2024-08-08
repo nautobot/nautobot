@@ -18,6 +18,7 @@ class ImportObjectsUITestCase(SeleniumTestCase):
         self.browser.visit(self.live_server_url)
         self.browser.links.find_by_partial_text("Organization").click()
         self.browser.links.find_by_partial_text("Locations").click()
+        self.browser.find_by_id("actions-dropdown").click()
         self.browser.find_by_id("import-button").click()
 
         # Make sure the table of fields for a Location import is populated via a few spot checks

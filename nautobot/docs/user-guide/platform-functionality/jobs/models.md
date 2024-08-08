@@ -63,3 +63,6 @@ Records of this type store the following data:
 
 +/- 1.2.0
     Note that prior to Nautobot 1.2, job log records were stored in the `data` field; they are now stored as distinct [`JobLogEntry`](#job-log-entry) records instead.
+
++/- 2.3.0
+    The Additional Data tab has been removed, you can now find the data in the Advanced Tab.

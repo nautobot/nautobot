@@ -30,7 +30,11 @@ router.register("contacts", views.ContactUIViewSet)
 router.register("contact-associations", views.ContactAssociationUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
+router.register("metadata-types", views.MetadataTypeUIViewSet)
+router.register("object-metadata", views.ObjectMetadataUIViewSet)
 router.register("roles", views.RoleUIViewSet)
+router.register("saved-views", views.SavedViewUIViewSet)
+router.register("static-group-associations", views.StaticGroupAssociationUIViewSet)
 router.register("teams", views.TeamUIViewSet)
 
 urlpatterns = [
@@ -242,6 +246,7 @@ urlpatterns = [
     # Dynamic Groups
     path("dynamic-groups/", views.DynamicGroupListView.as_view(), name="dynamicgroup_list"),
     path("dynamic-groups/add/", views.DynamicGroupEditView.as_view(), name="dynamicgroup_add"),
+    path("dynamic-groups/assign-members/", views.DynamicGroupBulkAssignView.as_view(), name="dynamicgroup_bulk_assign"),
     path(
         "dynamic-groups/delete/",
         views.DynamicGroupBulkDeleteView.as_view(),

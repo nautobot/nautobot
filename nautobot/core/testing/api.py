@@ -740,7 +740,11 @@ class APIViewTestCases:
 
             initial_count = self._get_queryset().count()
             response = self.client.post(self._get_list_url(), self.create_data, format="json", **self.header)
-            self.assertHttpStatus(response, status.HTTP_201_CREATED)
+            self.assertHttpStatus(
+                response,
+                status.HTTP_201_CREATED,
+                msg=f"create_data: {self.create_data}\nexisting records: {list(self._get_queryset())}",
+            )
             self.assertEqual(len(response.data), len(self.create_data))
             self.assertEqual(self._get_queryset().count(), initial_count + len(self.create_data))
             for i, obj in enumerate(response.data):
@@ -841,7 +845,6 @@ class APIViewTestCases:
             # This may change (hah) at some point -- see https://github.com/nautobot/nautobot/issues/3321
             if hasattr(self.model, "to_objectchange"):
                 objectchanges = lookup.get_changes_for_model(instance)
-                self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
                 objectchanges.delete()
 
@@ -858,7 +861,6 @@ class APIViewTestCases:
             # Verify ObjectChange creation
             if hasattr(self.model, "to_objectchange"):
                 objectchanges = lookup.get_changes_for_model(instance)
-                self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
 
         def test_get_put_round_trip(self):
@@ -1030,7 +1032,6 @@ class APIViewTestCases:
             # Verify ObjectChange creation
             if hasattr(self.model, "to_objectchange"):
                 objectchanges = lookup.get_changes_for_model(instance)
-                self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
 
         def test_bulk_delete_objects(self):

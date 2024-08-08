@@ -54,19 +54,25 @@ from nautobot.extras.models import (
     JobHook,
     JobLogEntry,
     JobResult,
+    MetadataChoice,
+    MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroupAssociation,
     Status,
     Tag,
     TaggedItem,
     Team,
+    UserSavedViewAssociation,
     Webhook,
 )
 from nautobot.extras.secrets.exceptions import SecretError
@@ -321,6 +327,43 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
     queryset = DynamicGroupMembership.objects.select_related("group", "parent_group")
     serializer_class = serializers.DynamicGroupMembershipSerializer
     filterset_class = filters.DynamicGroupMembershipFilterSet
+
+
+#
+# Saved Views
+#
+
+
+class SavedViewViewSet(ModelViewSet):
+    queryset = SavedView.objects.select_related("owner")
+    serializer_class = serializers.SavedViewSerializer
+    filterset_class = filters.SavedViewFilterSet
+
+
+class UserSavedViewAssociationViewSet(ModelViewSet):
+    queryset = UserSavedViewAssociation.objects.select_related("user", "saved_view")
+    serializer_class = serializers.UserSavedViewAssociationSerializer
+    filterset_class = filters.UserSavedViewAssociationFilterSet
+
+
+class StaticGroupAssociationViewSet(NautobotModelViewSet):
+    """
+    Manage Static Group Associations through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = StaticGroupAssociation.objects.select_related("associated_object_type", "dynamic_group")
+    serializer_class = serializers.StaticGroupAssociationSerializer
+    filterset_class = filters.StaticGroupAssociationFilterSet
+
+    def get_queryset(self):
+        if (
+            hasattr(self, "request")
+            and self.request is not None
+            and "dynamic_group" in self.request.GET
+            and self.action in ["list", "retrieve"]
+        ):
+            self.queryset = StaticGroupAssociation.all_objects.select_related("associated_object_type", "dynamic_group")
+        return super().get_queryset()
 
 
 #
@@ -930,6 +973,29 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})
 
         return Response(serializer.data)
+
+
+#
+# Metadata
+#
+
+
+class MetadataTypeViewSet(NautobotModelViewSet):
+    queryset = MetadataType.objects.all()
+    serializer_class = serializers.MetadataTypeSerializer
+    filterset_class = filters.MetadataTypeFilterSet
+
+
+class MetadataChoiceViewSet(ModelViewSet):
+    queryset = MetadataChoice.objects.select_related("metadata_type")
+    serializer_class = serializers.MetadataChoiceSerializer
+    filterset_class = filters.MetadataChoiceFilterSet
+
+
+class ObjectMetadataViewSet(NautobotModelViewSet):
+    queryset = ObjectMetadata.objects.all()
+    serializer_class = serializers.ObjectMetadataSerializer
+    filterset_class = filters.ObjectMetadataFilterSet
 
 
 #

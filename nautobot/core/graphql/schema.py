@@ -4,6 +4,7 @@ from collections import OrderedDict
 import logging
 
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import ValidationError
 from django.db.models import ManyToManyField
@@ -42,7 +43,7 @@ from nautobot.dcim.graphql.types import (
     RearPortType,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
-from nautobot.extras.graphql.types import DynamicGroupType, TagType
+from nautobot.extras.graphql.types import ContactAssociationType, DynamicGroupType, TagType
 from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import check_if_key_is_graphql_safe
@@ -68,8 +69,9 @@ registry["graphql_types"]["dcim.powerport"] = PowerPortType
 registry["graphql_types"]["dcim.rack"] = RackType
 registry["graphql_types"]["dcim.rearport"] = RearPortType
 registry["graphql_types"]["dcim.location"] = LocationType
-registry["graphql_types"]["extras.tag"] = TagType
+registry["graphql_types"]["extras.contactassociation"] = ContactAssociationType
 registry["graphql_types"]["extras.dynamicgroup"] = DynamicGroupType
+registry["graphql_types"]["extras.tag"] = TagType
 registry["graphql_types"]["ipam.ipaddress"] = IPAddressType
 registry["graphql_types"]["ipam.prefix"] = PrefixType
 registry["graphql_types"]["ipam.vlan"] = VLANType
@@ -126,6 +128,11 @@ def extend_schema_type(schema_type):
     # Config Context
     #
     schema_type = extend_schema_type_config_context(schema_type, model)
+
+    #
+    # Global features (contacts, teams, dynamic groups)
+    #
+    schema_type = extend_schema_type_global_features(schema_type, model)
 
     #
     # Relationships
@@ -199,8 +206,7 @@ def extend_schema_type_filter(schema_type, model):
         (DjangoObjectType): The extended schema_type object
     """
     for field in model._meta.get_fields():
-        # Check whether attribute is a ManyToOne or ManyToMany field
-        if not isinstance(field, (ManyToManyField, ManyToManyRel, ManyToOneRel)):
+        if not isinstance(field, (ManyToManyField, ManyToManyRel, ManyToOneRel, GenericRelation)):
             continue
         # OneToOneRel is a subclass of ManyToOneRel, but we don't want to treat it as a list
         if isinstance(field, OneToOneRel):
@@ -362,6 +368,22 @@ def extend_schema_type_config_context(schema_type, model):
 
     schema_type._meta.fields["config_context"] = graphene.Field.mounted(generic.GenericScalar())
     setattr(schema_type, "resolve_config_context", resolve_config_context)
+
+    return schema_type
+
+
+def extend_schema_type_global_features(schema_type, model):
+    """
+    Extend schema_type object to have attributes and resolvers for global features (dynamic groups, etc.).
+    """
+    # associated_contacts and associated_object_metadata are handled elsewhere by extend_schema_type_filter()
+    if getattr(model, "is_dynamic_group_associable_model", False):
+
+        def resolve_dynamic_groups(self, args):
+            return self.dynamic_groups
+
+        setattr(schema_type, "resolve_dynamic_groups", resolve_dynamic_groups)
+        schema_type._meta.fields["dynamic_groups"] = graphene.Field.mounted(graphene.List(DynamicGroupType))
 
     return schema_type
 

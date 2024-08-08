@@ -159,6 +159,19 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     },
 # }
 
+# Enable the following to setup structlog logging for Nautobot.
+# Configures defined loggers to use structlog and overwrites all formatters and handlers.
+#
+# from nautobot.core.settings_funcs import setup_structlog_logging
+# setup_structlog_logging(
+#     LOGGING,
+#     INSTALLED_APPS,
+#     MIDDLEWARE,
+#     log_level="DEBUG" if DEBUG else "INFO",
+#     debug_db=False,  # Set to True to log all database queries
+#     plain_format=bool(DEBUG),  # Set to True to use human-readable structlog format over JSON
+# )
+
 # The file path where uploaded media such as image attachments are stored. A trailing slash is not needed.
 #
 # MEDIA_ROOT = os.path.join(NAUTOBOT_ROOT, "media").rstrip("/")
@@ -346,14 +359,6 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #
 # if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"] != "":
 #     DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
-
-# The number of seconds to cache the member list of dynamic groups. Set this to `0` to disable caching.
-#
-# if (
-#     "NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT" in os.environ
-#     and os.environ["NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"] != ""
-# ):
-#     DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT = int(os.environ["NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"])
 
 # Exempt certain models from the enforcement of view permissions. Models listed here will be viewable by all users and
 # by anonymous users. List models in the form `<app>.<model>`. Add '*' to this list to exempt all models.

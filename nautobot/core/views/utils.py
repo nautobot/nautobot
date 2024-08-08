@@ -7,6 +7,7 @@ from django.core.exceptions import FieldError, ValidationError
 from django.db.models import ForeignKey
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
+from django_tables2 import RequestConfig
 from rest_framework import exceptions, serializers
 
 from nautobot.core.api.fields import ChoiceField, ContentTypeField, TimeZoneSerializerField
@@ -14,7 +15,9 @@ from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.models.utils import is_taggable
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_filter_field_label
-from nautobot.core.utils.lookup import get_form_for_model
+from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model, get_form_for_model
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
 
 
 def check_filter_for_display(filters, field_name, values):
@@ -291,3 +294,80 @@ def prepare_cloned_fields(instance):
     param_string = urllib.parse.urlencode(params)
 
     return param_string
+
+
+def view_changes_not_saved(request, view, current_saved_view):
+    """
+    Compare request.GET's query dict with the configuration stored on the current saved view
+    If there is any configuration different, return True
+    If every configuration is the same, return False
+    """
+    if current_saved_view is None:
+        return True
+    query_dict = request.GET.dict()
+
+    if "table_changes_pending" in query_dict or "all_filters_removed" in query_dict:
+        return True
+    per_page = int(query_dict.get("per_page", 0))
+    if per_page and per_page != current_saved_view.config.get("pagination_count"):
+        return True
+    sort = request.GET.getlist("sort", [])
+    if sort and sort != current_saved_view.config.get("sort_order", []):
+        return True
+    query_dict_keys = sorted(list(query_dict.keys()))
+    for param in view.non_filter_params:
+        if param in query_dict_keys:
+            query_dict_keys.remove(param)
+    filter_params = current_saved_view.config.get("filter_params", {})
+
+    if query_dict_keys:
+        if set(query_dict_keys) != set(filter_params.keys()):
+            return True
+        for key, value in filter_params.items():
+            if set(value) != set(request.GET.getlist(key)):
+                return True
+    return False
+
+
+def common_detail_view_context(request, instance):
+    """Additional template context for object detail views, shared by both ObjectView and NautobotHTMLRenderer."""
+    context = {}
+
+    created_by, last_updated_by = get_created_and_last_updated_usernames_for_model(instance)
+    context["created_by"] = created_by
+    context["last_updated_by"] = last_updated_by
+
+    if instance.is_contact_associable_model:
+        paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        associations = instance.associated_contacts.restrict(request.user, "view").order_by("role__name")
+        associations_table = AssociatedContactsTable(associations, orderable=False)
+        RequestConfig(request, paginate).configure(associations_table)
+        associations_table.columns.show("pk")
+        context["associated_contacts_table"] = associations_table
+    else:
+        context["associated_contacts_table"] = None
+
+    if instance.is_dynamic_group_associable_model:
+        paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        dynamic_groups = instance.dynamic_groups.restrict(request.user, "view")
+        dynamic_groups_table = DynamicGroupTable(dynamic_groups, orderable=False)
+        dynamic_groups_table.columns.hide("content_type")
+        RequestConfig(request, paginate).configure(dynamic_groups_table)
+        # dynamic_groups_table.columns.show("pk")  # we don't have any supported bulk ops here presently
+        context["associated_dynamic_groups_table"] = dynamic_groups_table
+    else:
+        context["associated_dynamic_groups_table"] = None
+
+    if instance.is_metadata_associable_model:
+        paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        object_metadata = instance.associated_object_metadata.restrict(request.user, "view").order_by(
+            "metadata_type", "scoped_fields"
+        )
+        object_metadata_table = ObjectMetadataTable(object_metadata, orderable=False)
+        object_metadata_table.columns.hide("assigned_object")
+        RequestConfig(request, paginate).configure(object_metadata_table)
+        context["associated_object_metadata_table"] = object_metadata_table
+    else:
+        context["associated_object_metadata_table"] = None
+
+    return context

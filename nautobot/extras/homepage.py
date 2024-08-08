@@ -1,6 +1,6 @@
 from nautobot.core.apps import HomePageItem, HomePagePanel
 from nautobot.extras.choices import JobResultStatusChoices
-from nautobot.extras.models import GitRepository, JobResult, ObjectChange
+from nautobot.extras.models import DynamicGroup, GitRepository, JobResult, ObjectChange
 
 
 def get_job_results(request):
@@ -28,6 +28,19 @@ def get_changelog(request):
 
 
 layout = (
+    HomePagePanel(
+        name="Organization",
+        items=(
+            HomePageItem(
+                name="Dynamic Groups",
+                link="extras:dynamicgroup_list",
+                model=DynamicGroup,
+                description="Groups of related objects",
+                permissions=["extras.view_dynamicgroup"],
+                weight=300,
+            ),
+        ),
+    ),
     HomePagePanel(
         name="Data Sources",
         weight=700,

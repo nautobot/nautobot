@@ -2,6 +2,7 @@ from nautobot.core.apps import NautobotConfig
 
 
 class DCIMConfig(NautobotConfig):
+    default = True
     name = "nautobot.dcim"
     verbose_name = "DCIM"
     searchable_models = [
@@ -12,6 +13,8 @@ class DCIMConfig(NautobotConfig):
         "deviceredundancygroup",
         "devicetype",
         "location",
+        "module",
+        "moduletype",
         "powerfeed",
         "rack",
         "rackgroup",

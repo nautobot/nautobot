@@ -1,16 +1,19 @@
 import logging
+from urllib.parse import parse_qs
 
 from celery import chain
 from django.contrib import messages
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError, Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.urls import reverse
+from django.urls.exceptions import NoReverseMatch
 from django.utils import timezone
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
@@ -18,38 +21,51 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
+from rest_framework.decorators import action
 
 from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.tables import ButtonsColumn
-from nautobot.core.utils.lookup import get_table_for_model
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.lookup import (
+    get_filterset_for_model,
+    get_route_for_model,
+    get_table_class_string_from_view_name,
+    get_table_for_model,
+)
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.mixins import (
+    GetReturnURLMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
+    ObjectChangeLogViewMixin,
     ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
     ObjectEditViewMixin,
+    ObjectListViewMixin,
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.models import Controller, Device, Interface, Location, Rack
-from nautobot.dcim.tables import ControllerTable, DeviceTable, RackTable
+from nautobot.dcim.models import Controller, Device, Interface, Module, Rack
+from nautobot.dcim.tables import ControllerTable, DeviceTable, InterfaceTable, ModuleTable, RackTable
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
+from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.signals import change_context_state
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
-from nautobot.virtualization.tables import VirtualMachineTable
+from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 
 from . import filters, forms, tables
 from .api import serializers
-from .choices import JobExecutionType, JobResultStatusChoices, LogLevelChoices
+from .choices import DynamicGroupTypeChoices, JobExecutionType, JobResultStatusChoices, LogLevelChoices
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
     enqueue_pull_git_repository_and_refresh_data,
@@ -75,19 +91,24 @@ from .models import (
     JobHook,
     JobLogEntry,
     JobResult,
+    MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroupAssociation,
     Status,
     Tag,
     TaggedItem,
     Team,
+    UserSavedViewAssociation,
     Webhook,
 )
 from .registry import registry
@@ -698,12 +719,19 @@ class DynamicGroupView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-        model = instance.content_type.model_class()
+        model = instance.model
         table_class = get_table_for_model(model)
+
+        if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+            # Ensure that members cache is up-to-date for this specific group
+            members = instance.update_cached_members()
+            messages.success(request, f"Refreshed cached members list for {instance}")
+        else:
+            members = instance.members
 
         if table_class is not None:
             # Members table (for display on Members nav tab)
-            members_table = table_class(instance.members.restrict(request.user, "view"), orderable=False)
+            members_table = table_class(members.restrict(request.user, "view"), orderable=False)
             paginate = {
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request),
@@ -723,7 +751,16 @@ class DynamicGroupView(generic.ObjectView):
             ancestors_table = tables.NestedDynamicGroupAncestorsTable(ancestors, orderable=False)
             ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
 
-            context["raw_query"] = pretty_print_query(instance.generate_query())
+            if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+                context["raw_query"] = pretty_print_query(instance.generate_query())
+                context["members_list_url"] = None
+            else:
+                context["raw_query"] = None
+                try:
+                    context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
+                except NoReverseMatch:
+                    context["members_list_url"] = None
+            context["members_verbose_name_plural"] = instance.model._meta.verbose_name_plural
             context["members_table"] = members_table
             context["ancestors_table"] = ancestors_table
             context["ancestors_tree"] = ancestors_tree
@@ -775,16 +812,19 @@ class DynamicGroupEditView(generic.ObjectEditView):
                     # Obtain the instance, but do not yet `save()` it to the database.
                     obj = form.save(commit=False)
 
-                    # Process the filter form and save the query filters to `obj.filter`.
                     ctx = self.get_extra_context(request, obj)
-                    filter_form = ctx["filter_form"]
-                    if filter_form.is_valid():
-                        obj.set_filter(filter_form.cleaned_data)
-                    else:
-                        raise RuntimeError(filter_form.errors)
+                    if obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+                        # Process the filter form and save the query filters to `obj.filter`.
+                        filter_form = ctx["filter_form"]
+                        if filter_form.is_valid():
+                            obj.set_filter(filter_form.cleaned_data)
+                        else:
+                            raise RuntimeError(filter_form.errors)
 
                     # After filters have been set, now we save the object to the database.
                     obj.save()
+                    # Save m2m fields, such as Tags https://docs.djangoproject.com/en/3.2/topics/forms/modelforms/#the-save-method
+                    form.save_m2m()
                     # Check that the new object conforms with any assigned object-level permissions
                     self.queryset.get(pk=obj.pk)
 
@@ -867,6 +907,7 @@ class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
     filterset = filters.DynamicGroupFilterSet
 
 
+# 3.0 TODO: remove, deprecated since 2.3 (#5845)
 class ObjectDynamicGroupsView(generic.GenericView):
     """
     Present a list of dynamic groups associated to a particular object.
@@ -883,16 +924,18 @@ class ObjectDynamicGroupsView(generic.GenericView):
             obj = get_object_or_404(model, **kwargs)
 
         # Gather all dynamic groups for this object (and its related objects)
-        dynamicsgroups_table = tables.DynamicGroupTable(
-            data=obj.dynamic_groups_cached.restrict(request.user, "view"), orderable=False
+        dynamicgroups_table = tables.DynamicGroupTable(
+            data=obj.dynamic_groups.restrict(request.user, "view"), orderable=False
         )
+        dynamicgroups_table.columns.hide("content_type")
+        dynamicgroups_table.columns.hide("members")
 
         # Apply the request context
         paginate = {
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
         }
-        RequestConfig(request, paginate).configure(dynamicsgroups_table)
+        RequestConfig(request, paginate).configure(dynamicgroups_table)
 
         self.base_template = get_base_template(self.base_template, model)
 
@@ -903,7 +946,7 @@ class ObjectDynamicGroupsView(generic.GenericView):
                 "object": obj,
                 "verbose_name": obj._meta.verbose_name,
                 "verbose_name_plural": obj._meta.verbose_name_plural,
-                "table": dynamicsgroups_table,
+                "table": dynamicgroups_table,
                 "base_template": self.base_template,
                 "active_tab": "dynamic-groups",
             },
@@ -1583,6 +1626,257 @@ class JobApprovalRequestView(generic.ObjectView):
         )
 
 
+#
+# Saved Views
+#
+
+
+class SavedViewUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectEditViewMixin,
+    ObjectListViewMixin,
+):
+    queryset = SavedView.objects.all()
+    form_class = forms.SavedViewForm
+    filterset_class = filters.SavedViewFilterSet
+    serializer_class = serializers.SavedViewSerializer
+    table_class = tables.SavedViewTable
+    action_buttons = ("export",)
+
+    def alter_queryset(self, request):
+        """
+        Two scenarios we need to handle here:
+        1. User can view all saved views with extras.view_savedview permission.
+        2. User without the permission can only view shared savedviews and his/her own saved views.
+        """
+        queryset = super().alter_queryset(request)
+        user = request.user
+        if user.has_perms(["extras.view_savedview"]):
+            saved_views = queryset.restrict(user, "view")
+        else:
+            shared_saved_views = queryset.filter(is_shared=True)
+            user_owned_saved_views = queryset.filter(owner=user)
+            saved_views = shared_saved_views | user_owned_saved_views
+        return saved_views
+
+    def get_queryset(self):
+        """
+        Get the list of items for this view.
+        All users should be able to see saved views so we do not apply extra permissions.
+        """
+        return self.queryset.all()
+
+    def check_permissions(self, request):
+        """
+        Override this method to not check any permissions.
+        Since users with <app_label>.view_<model_name> permissions should be able to view saved views related to this model.
+        And those permissions will be enforced in the related view.
+        """
+
+    def dispatch(self, request, *args, **kwargs):
+        if isinstance(request.user, AnonymousUser):
+            return self.handle_no_permission()
+        return super().dispatch(request, *args, **kwargs)
+
+    def extra_message_context(self, obj):
+        """
+        Context variables for this extra message.
+        """
+        return {"new_global_default_view": obj}
+
+    def extra_message(self, **kwargs):
+        new_global_default_view = kwargs.get("new_global_default_view")
+        view_name = new_global_default_view.view
+        message = ""
+        if new_global_default_view.is_global_default:
+            message = format_html(
+                '<br>The global default saved view for "{}" is set to <a href="{}">{}</a>',
+                view_name,
+                new_global_default_view.get_absolute_url(),
+                new_global_default_view.name,
+            )
+        return message
+
+    def list(self, request, *args, **kwargs):
+        if not request.user.has_perms(["extras.view_savedview"]):
+            return self.handle_no_permission()
+        return super().list(request, *args, **kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        The detail view for a saved view should the related ObjectListView with saved configurations applied
+        """
+        instance = self.get_object()
+        list_view_url = reverse(instance.view) + f"?saved_view={instance.pk}"
+        return redirect(list_view_url)
+
+    @action(detail=True, name="Set Default", methods=["get"], url_path="set-default", url_name="set_default")
+    def set_default(self, request, *args, **kwargs):
+        """
+        Set current saved view as the the request.user default view. Overriding the global default view if there is one.
+        """
+        user = request.user
+        sv = SavedView.objects.get(pk=kwargs.get("pk", None))
+        UserSavedViewAssociation.objects.filter(user=user, view_name=sv.view).delete()
+        UserSavedViewAssociation.objects.create(user=user, saved_view=sv, view_name=sv.view)
+        list_view_url = sv.get_absolute_url()
+        messages.success(
+            request, f"Successfully set current view '{sv.name}' as the default '{sv.view}' view for user {user}"
+        )
+        return redirect(list_view_url)
+
+    @action(detail=True, name="Update Config", methods=["get"], url_path="update-config", url_name="update_config")
+    def update_saved_view_config(self, request, *args, **kwargs):
+        """
+        Extract filter_params, pagination and sort_order from request.GET and apply it to the SavedView specified
+        """
+        sv = SavedView.objects.get(pk=kwargs.get("pk", None))
+        if sv.owner == request.user or request.user.has_perms(["extras.change_savedview"]):
+            pass
+        else:
+            messages.error(
+                request, f"You do not have the required permission to modify this Saved View owned by {sv.owner}"
+            )
+            return redirect(self.get_return_url(request, obj=sv))
+        table_changes_pending = request.GET.get("table_changes_pending", False)
+        all_filters_removed = request.GET.get("all_filters_removed", False)
+        pagination_count = request.GET.get("per_page", None)
+        if pagination_count is not None:
+            sv.config["pagination_count"] = int(pagination_count)
+        sort_order = request.GET.getlist("sort", [])
+        if sort_order:
+            sv.config["sort_order"] = sort_order
+
+        filter_params = {}
+        for key in request.GET:
+            if key in self.non_filter_params:
+                continue
+            # TODO: this is fragile, other single-value filters will also be unhappy if given a list
+            if key == "q":
+                filter_params[key] = request.GET.get(key)
+            else:
+                filter_params[key] = request.GET.getlist(key)
+
+        if filter_params:
+            sv.config["filter_params"] = filter_params
+        elif all_filters_removed:
+            sv.config["filter_params"] = {}
+
+        if table_changes_pending:
+            table_class = get_table_class_string_from_view_name(sv.view)
+            if table_class:
+                if sv.config.get("table_config", None) is None:
+                    sv.config["table_config"] = {}
+                sv.config["table_config"][f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
+
+        sv.validated_save()
+        list_view_url = sv.get_absolute_url()
+        messages.success(request, f"Successfully updated current view {sv.name}")
+        return redirect(list_view_url)
+
+    def create(self, request, *args, **kwargs):
+        """
+        This method will extract filter_params, pagination and sort_order from request.GET
+        and the name of the new SavedView from request.POST to create a new SavedView.
+        """
+        name = request.POST.get("name")
+        is_shared = request.POST.get("is_shared", False)
+        if is_shared:
+            is_shared = True
+        params = request.POST.get("params", "")
+
+        param_dict = parse_qs(params)
+
+        single_value_params = ["saved_view", "table_changes_pending", "all_filters_removed", "q", "per_page"]
+        for key in param_dict.keys():
+            if key in single_value_params:
+                param_dict[key] = param_dict[key][0]
+
+        derived_view_pk = param_dict.get("saved_view", None)
+        derived_instance = None
+        if derived_view_pk:
+            derived_instance = self.get_queryset().get(pk=derived_view_pk)
+        view_name = request.POST.get("view")
+        try:
+            reverse(view_name)
+        except NoReverseMatch:
+            messages.error(request, f"Invalid view name {view_name} specified.")
+            if derived_view_pk:
+                return redirect(self.get_return_url(request, obj=derived_instance))
+            else:
+                return redirect(self.get_return_url(request))
+        table_changes_pending = param_dict.get("table_changes_pending", False)
+        all_filters_removed = param_dict.get("all_filters_removed", False)
+        try:
+            sv = SavedView.objects.create(name=name, owner=request.user, view=view_name, is_shared=is_shared)
+        except IntegrityError:
+            messages.error(request, f"You already have a Saved View named '{name}' for this view '{view_name}'")
+            if derived_view_pk:
+                return redirect(self.get_return_url(request, obj=derived_instance))
+            else:
+                return redirect(reverse(view_name))
+        pagination_count = param_dict.get("per_page", None)
+        if not pagination_count:
+            if derived_instance and derived_instance.config.get("pagination_count", None):
+                pagination_count = derived_instance.config["pagination_count"]
+            else:
+                pagination_count = get_settings_or_config("PAGINATE_COUNT")
+        sv.config["pagination_count"] = int(pagination_count)
+        sort_order = param_dict.get("sort", [])
+        if not sort_order:
+            if derived_instance:
+                sort_order = derived_instance.config.get("sort_order", [])
+        sv.config["sort_order"] = sort_order
+
+        sv.config["filter_params"] = {}
+        for key in param_dict:
+            if key in [*self.non_filter_params, "view"]:
+                continue
+            sv.config["filter_params"][key] = param_dict.get(key)
+        if not sv.config["filter_params"]:
+            if derived_instance and all_filters_removed:
+                sv.config["filter_params"] = {}
+            elif derived_instance:
+                sv.config["filter_params"] = derived_instance.config["filter_params"]
+
+        table_class = get_table_class_string_from_view_name(view_name)
+        sv.config["table_config"] = {}
+        if table_class:
+            if table_changes_pending or derived_instance is None:
+                sv.config["table_config"][f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
+            elif derived_instance.config.get("table_config") and derived_instance.config["table_config"].get(
+                f"{table_class}"
+            ):
+                sv.config["table_config"][f"{table_class}"] = derived_instance.config["table_config"][f"{table_class}"]
+        try:
+            sv.validated_save()
+            list_view_url = sv.get_absolute_url()
+            message = f"Successfully created new Saved View '{sv.name}'."
+            messages.success(request, message)
+            return redirect(list_view_url)
+        except ValidationError as e:
+            messages.error(request, e)
+            return redirect(self.get_return_url(request))
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        request.GET: render the ObjectDeleteConfirmationForm which is passed to NautobotHTMLRenderer as Response.
+        request.POST: call perform_destroy() which validates the form and perform the action of delete.
+        Override to add more variables to Response
+        """
+        sv = SavedView.objects.get(pk=kwargs.get("pk", None))
+        if sv.owner == request.user or request.user.has_perms(["extras.delete_savedview"]):
+            pass
+        else:
+            messages.error(
+                request, f"You do not have the required permission to delete this Saved View owned by {sv.owner}"
+            )
+            return redirect(self.get_return_url(request, obj=sv))
+        return super().destroy(request, *args, **kwargs)
+
+
 class ScheduledJobListView(generic.ObjectListView):
     queryset = ScheduledJob.objects.enabled()
     table = tables.ScheduledJobTable
@@ -1883,6 +2177,58 @@ class ObjectChangeLogView(generic.GenericView):
 
 
 #
+# Metadata
+#
+
+
+class MetadataTypeUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.MetadataTypeBulkEditForm
+    filterset_class = filters.MetadataTypeFilterSet
+    filterset_form_class = forms.MetadataTypeFilterForm
+    form_class = forms.MetadataTypeForm
+    queryset = MetadataType.objects.all()
+    serializer_class = serializers.MetadataTypeSerializer
+    table_class = tables.MetadataTypeTable
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        if self.action in ("create", "update"):
+            if request.POST:
+                context["choices"] = forms.MetadataChoiceFormSet(data=request.POST, instance=instance)
+            else:
+                context["choices"] = forms.MetadataChoiceFormSet(instance=instance)
+
+        return context
+
+    def form_save(self, form, **kwargs):
+        obj = super().form_save(form, **kwargs)
+
+        # Process the formset for choices
+        ctx = self.get_extra_context(self.request, obj)
+        choices = ctx["choices"]
+        if choices.is_valid():
+            choices.save()
+        else:
+            raise ValidationError(choices.errors)
+
+        return obj
+
+
+class ObjectMetadataUIViewSet(
+    ObjectChangeLogViewMixin,
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+):
+    filterset_class = filters.ObjectMetadataFilterSet
+    filterset_form_class = forms.ObjectMetadataFilterForm
+    queryset = ObjectMetadata.objects.all().order_by("assigned_object_type", "assigned_object_id", "scoped_fields")
+    serializer_class = serializers.ObjectMetadataSerializer
+    table_class = tables.ObjectMetadataTable
+    action_buttons = ("export",)
+
+
+#
 # Notes
 #
 
@@ -2041,43 +2387,32 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
             }
 
             if ContentType.objects.get_for_model(Device) in context["content_types"]:
-                devices = instance.devices.select_related(
-                    "status",
-                    "location",
-                    "tenant",
-                    "role",
-                    "rack",
-                    "device_type",
-                ).restrict(request.user, "view")
+                devices = instance.devices.restrict(request.user, "view")
                 device_table = DeviceTable(devices)
                 device_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(device_table)
                 context["device_table"] = device_table
 
+            if ContentType.objects.get_for_model(Interface) in context["content_types"]:
+                interfaces = instance.interfaces.restrict(request.user, "view")
+                interface_table = InterfaceTable(interfaces)
+                interface_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(interface_table)
+                context["interface_table"] = interface_table
+
             if ContentType.objects.get_for_model(Controller) in context["content_types"]:
-                controllers = instance.controllers.select_related(
-                    "status",
-                    "location",
-                    "tenant",
-                    "role",
-                ).restrict(request.user, "view")
+                controllers = instance.controllers.restrict(request.user, "view")
                 controller_table = ControllerTable(controllers)
                 controller_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(controller_table)
                 context["controller_table"] = controller_table
 
             if ContentType.objects.get_for_model(IPAddress) in context["content_types"]:
-                ipaddress = (
-                    instance.ip_addresses.select_related("status", "tenant")
-                    .restrict(request.user, "view")
-                    .annotate(
-                        interface_count=count_related(Interface, "ip_addresses"),
-                        interface_parent_count=count_related(Device, "interfaces__ip_addresses", distinct=True),
-                        vm_interface_count=count_related(VMInterface, "ip_addresses"),
-                        vm_interface_parent_count=count_related(
-                            VirtualMachine, "interfaces__ip_addresses", distinct=True
-                        ),
-                    )
+                ipaddress = instance.ip_addresses.restrict(request.user, "view").annotate(
+                    interface_count=count_related(Interface, "ip_addresses"),
+                    interface_parent_count=count_related(Device, "interfaces__ip_addresses", distinct=True),
+                    vm_interface_count=count_related(VMInterface, "ip_addresses"),
+                    vm_interface_parent_count=count_related(VirtualMachine, "interfaces__ip_addresses", distinct=True),
                 )
                 ipaddress_table = IPAddressTable(ipaddress)
                 ipaddress_table.columns.hide("role")
@@ -2085,57 +2420,41 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 context["ipaddress_table"] = ipaddress_table
 
             if ContentType.objects.get_for_model(Prefix) in context["content_types"]:
-                prefixes = (
-                    instance.prefixes.select_related(
-                        "status",
-                        "tenant",
-                        "vlan",
-                        "namespace",
-                    )
-                    .restrict(request.user, "view")
-                    .annotate(location_count=count_related(Location, "prefixes"))
-                )
+                prefixes = instance.prefixes.restrict(request.user, "view")
                 prefix_table = PrefixTable(prefixes)
                 prefix_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(prefix_table)
                 context["prefix_table"] = prefix_table
             if ContentType.objects.get_for_model(Rack) in context["content_types"]:
-                racks = instance.racks.select_related(
-                    "location",
-                    "status",
-                    "tenant",
-                    "rack_group",
-                ).restrict(request.user, "view")
+                racks = instance.racks.restrict(request.user, "view")
                 rack_table = RackTable(racks)
                 rack_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(rack_table)
                 context["rack_table"] = rack_table
             if ContentType.objects.get_for_model(VirtualMachine) in context["content_types"]:
-                virtual_machines = instance.virtual_machines.select_related(
-                    "cluster",
-                    "role",
-                    "status",
-                    "tenant",
-                ).restrict(request.user, "view")
+                virtual_machines = instance.virtual_machines.restrict(request.user, "view")
                 virtual_machine_table = VirtualMachineTable(virtual_machines)
                 virtual_machine_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(virtual_machine_table)
                 context["virtual_machine_table"] = virtual_machine_table
-
+            if ContentType.objects.get_for_model(VMInterface) in context["content_types"]:
+                vm_interfaces = instance.vm_interfaces.restrict(request.user, "view")
+                vminterface_table = VMInterfaceTable(vm_interfaces)
+                vminterface_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(vminterface_table)
+                context["vminterface_table"] = vminterface_table
             if ContentType.objects.get_for_model(VLAN) in context["content_types"]:
-                vlans = (
-                    instance.vlans.annotate(location_count=count_related(Location, "vlans"))
-                    .select_related(
-                        "vlan_group",
-                        "status",
-                        "tenant",
-                    )
-                    .restrict(request.user, "view")
-                )
+                vlans = instance.vlans.restrict(request.user, "view")
                 vlan_table = VLANTable(vlans)
                 vlan_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(vlan_table)
                 context["vlan_table"] = vlan_table
+            if ContentType.objects.get_for_model(Module) in context["content_types"]:
+                modules = instance.modules.restrict(request.user, "view")
+                module_table = ModuleTable(modules)
+                module_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(module_table)
+                context["module_table"] = module_table
         return context
 
 
@@ -2332,6 +2651,153 @@ class SecretsGroupBulkDeleteView(generic.BulkDeleteView):
     queryset = SecretsGroup.objects.all()
     filterset = filters.SecretsGroupFilterSet
     table = tables.SecretsGroupTable
+
+
+#
+# Static Groups
+#
+
+
+class StaticGroupAssociationUIViewSet(
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    # TODO anything else?
+):
+    filterset_class = filters.StaticGroupAssociationFilterSet
+    filterset_form_class = forms.StaticGroupAssociationFilterForm
+    queryset = StaticGroupAssociation.all_objects.all()
+    serializer_class = serializers.StaticGroupAssociationSerializer
+    table_class = tables.StaticGroupAssociationTable
+    action_buttons = ("export",)
+
+    def alter_queryset(self, request):
+        queryset = super().alter_queryset(request)
+        # Default to only showing associations for static-type groups:
+        if request is None or "dynamic_group" not in request.GET:
+            queryset = queryset.filter(dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC)
+        return queryset
+
+
+class DynamicGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
+    queryset = StaticGroupAssociation.objects.all()
+    form_class = forms.DynamicGroupBulkAssignForm
+
+    def get_required_permission(self):
+        return get_permission_for_model(self.queryset.model, "add")
+
+    def get(self, request):
+        return redirect(self.get_return_url(request))
+
+    def post(self, request, **kwargs):
+        """
+        Update the static group assignments of the provided `pk_list` (or `_all`) of the given `content_type`.
+
+        Unlike BulkEditView, this takes a single POST rather than two to perform its operation as
+        there's no separate confirmation step involved.
+        """
+        # TODO more error handling - content-type doesn't exist, model_class not found, filterset missing, etc.
+        content_type = ContentType.objects.get(pk=request.POST.get("content_type"))
+        model = content_type.model_class()
+        self.default_return_url = get_route_for_model(model, "list")
+        filterset_class = get_filterset_for_model(model)
+
+        if request.POST.get("_all"):
+            if filterset_class is not None:
+                pk_list = list(filterset_class(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True))
+            else:
+                pk_list = list(model.objects.all().values_list("pk", flat=True))
+        else:
+            pk_list = request.POST.getlist("pk")
+
+        form = self.form_class(model, request.POST)
+        restrict_form_fields(form, request.user)
+
+        if form.is_valid():
+            logger.debug("Form validation was successful")
+            try:
+                with transaction.atomic():
+                    add_to_groups = list(form.cleaned_data["add_to_groups"])
+                    new_group_name = form.cleaned_data["create_and_assign_to_new_group_name"]
+                    if new_group_name:
+                        if not request.user.has_perm("extras.add_dynamicgroup"):
+                            raise DynamicGroup.DoesNotExist
+                        else:
+                            new_group = DynamicGroup(
+                                name=new_group_name,
+                                content_type=content_type,
+                                group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+                            )
+                            new_group.validated_save()
+                            # Check permissions
+                            DynamicGroup.objects.restrict(request.user, "add").get(pk=new_group.pk)
+
+                            add_to_groups.append(new_group)
+                            msg = "Created dynamic group"
+                            logger.info(f"{msg} {new_group} (PK: {new_group.pk})")
+                            msg = format_html('{} <a href="{}">{}</a>', msg, new_group.get_absolute_url(), new_group)
+                            messages.success(self.request, msg)
+
+                    with deferred_change_logging_for_bulk_operation():
+                        associations = []
+                        for pk in pk_list:
+                            for dynamic_group in add_to_groups:
+                                association, created = StaticGroupAssociation.objects.get_or_create(
+                                    dynamic_group=dynamic_group,
+                                    associated_object_type_id=content_type.id,
+                                    associated_object_id=pk,
+                                )
+                                association.validated_save()
+                                associations.append(association)
+                                if created:
+                                    logger.debug("Created %s", association)
+
+                        # Enforce object-level permissions
+                        if self.queryset.filter(pk__in=[assoc.pk for assoc in associations]).count() != len(
+                            associations
+                        ):
+                            raise StaticGroupAssociation.DoesNotExist
+
+                    if associations:
+                        msg = (
+                            f"Added {len(pk_list)} {model._meta.verbose_name_plural} "
+                            f"to {len(add_to_groups)} dynamic group(s)."
+                        )
+                        logger.info(msg)
+                        messages.success(self.request, msg)
+
+                    if form.cleaned_data["remove_from_groups"]:
+                        for dynamic_group in form.cleaned_data["remove_from_groups"]:
+                            (
+                                StaticGroupAssociation.objects.restrict(request.user, "delete")
+                                .filter(
+                                    dynamic_group=dynamic_group,
+                                    associated_object_type=content_type,
+                                    associated_object_id__in=pk_list,
+                                )
+                                .delete()
+                            )
+
+                        msg = (
+                            f"Removed {len(pk_list)} {model._meta.verbose_name_plural} from "
+                            f"{len(form.cleaned_data['remove_from_groups'])} dynamic group(s)."
+                        )
+                        logger.info(msg)
+                        messages.success(self.request, msg)
+            except ValidationError as e:
+                messages.error(self.request, e)
+            except ObjectDoesNotExist:
+                msg = "Static group association failed due to object-level permissions violation"
+                logger.warning(msg)
+                messages.error(self.request, msg)
+
+        else:
+            logger.debug("Form validation failed")
+            messages.error(self.request, form.errors)
+
+        return redirect(self.get_return_url(request))
 
 
 #

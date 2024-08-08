@@ -71,6 +71,7 @@ from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,
     CustomFieldModelFormMixin,
+    DynamicGroupModelFormMixin,
     NautobotBulkEditForm,
     NautobotModelForm,
     NoteModelBulkEditFormMixin,
@@ -87,6 +88,7 @@ from nautobot.extras.forms.forms import (
     provider_choices_with_blank,
 )
 from nautobot.extras.forms.mixins import (
+    ContactTeamModelFilterFormMixin,
     CustomFieldModelFilterFormMixin,
     NoteFormBase,
     RelationshipModelFilterFormMixin,
@@ -109,6 +111,7 @@ __all__ = (
     "ColorSelect",
     "CommentField",
     "ConfirmationForm",
+    "ContactTeamModelFilterFormMixin",
     "ContentTypeSelect",
     "CSVChoiceField",
     "CSVContentTypeField",
@@ -126,6 +129,7 @@ __all__ = (
     "DateTimePicker",
     "dynamic_formset_factory",
     "DynamicFilterForm",
+    "DynamicGroupModelFormMixin",
     "DynamicModelChoiceField",
     "DynamicModelChoiceMixin",
     "DynamicModelMultipleChoiceField",

@@ -2,7 +2,7 @@ from .change_logging import ChangeLoggedModel, ObjectChange
 from .contacts import Contact, ContactAssociation, Team
 from .customfields import ComputedField, CustomField, CustomFieldChoice, CustomFieldModel
 from .datasources import GitRepository
-from .groups import DynamicGroup, DynamicGroupMembership
+from .groups import DynamicGroup, DynamicGroupMembership, StaticGroupAssociation
 from .jobs import (
     Job,
     JobButton,
@@ -12,6 +12,8 @@ from .jobs import (
     ScheduledJob,
     ScheduledJobs,
 )
+from .metadata import MetadataChoice, MetadataType, ObjectMetadata
+from .mixins import ContactMixin, DynamicGroupMixin, DynamicGroupsModelMixin, SavedViewMixin
 from .models import (
     ConfigContext,
     ConfigContextModel,
@@ -25,6 +27,8 @@ from .models import (
     HealthCheckTestModel,
     ImageAttachment,
     Note,
+    SavedView,
+    UserSavedViewAssociation,
     Webhook,
 )
 from .relationships import Relationship, RelationshipAssociation, RelationshipModel
@@ -41,12 +45,15 @@ __all__ = (
     "ConfigContextSchema",
     "Contact",
     "ContactAssociation",
+    "ContactMixin",
     "CustomField",
     "CustomFieldChoice",
     "CustomFieldModel",
     "CustomLink",
     "DynamicGroup",
     "DynamicGroupMembership",
+    "DynamicGroupMixin",  # deprecated
+    "DynamicGroupsModelMixin",
     "ExportTemplate",
     "ExternalIntegration",
     "FileAttachment",
@@ -60,23 +67,30 @@ __all__ = (
     "JobHook",
     "JobLogEntry",
     "JobResult",
+    "MetadataChoice",
+    "MetadataType",
     "Note",
     "ObjectChange",
+    "ObjectMetadata",
     "Relationship",
     "RelationshipModel",
     "RelationshipAssociation",
     "Role",
     "RoleField",
+    "SavedView",
+    "SavedViewMixin",
     "ScheduledJob",
     "ScheduledJobs",
     "Secret",
     "SecretsGroup",
     "SecretsGroupAssociation",
+    "StaticGroupAssociation",
     "Status",
     "StatusField",
     "StatusModel",
     "Tag",
     "TaggedItem",
     "Team",
+    "UserSavedViewAssociation",
     "Webhook",
 )

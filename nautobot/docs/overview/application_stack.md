@@ -9,7 +9,7 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
 | HTTP service       | :simple-nginx: NGINX                                                                                                               |
 | WSGI service       | :material-web: uWSGI or Gunicorn                                                                                                   |
-| Application        | :simple-django: Django <br> :material-language-python: Python 3.8 - 3.11 supported                                                 |
+| Application        | :simple-django: Django <br> :material-language-python: Python 3.8 - 3.12 supported                                                 |
 | Database           | :simple-postgresql: PostgreSQL 12+ or <br>  :simple-mysql: MySQL 8.0+                                                              |
 | Cache              | :simple-redis: Django/Redis                                                                                                        |
 | Task queuing       | :simple-redis: Redis / :simple-celery: Celery                                                                                      |
@@ -45,6 +45,10 @@ See the [installation guide](../user-guide/administration/installation/index.md)
 
 --- 2.1.0 "PostgreSQL <12.0"
     Support for versions of PostgreSQL older than 12.0 was removed.
+
++++ 2.3.0 "Python 3.12, Django 4"
+    - Python 3.12 support was added.
+    - Nautobot migrated from Django 3.2 to Django 4.2.
 
 ## Notices
 

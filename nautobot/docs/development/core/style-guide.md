@@ -63,7 +63,7 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
 +++ 1.4.0
 
-    * Similarly, for filter forms, `nautobot.extras.forms.NautobotFilterForm` combines `nautobot.core.forms.BootstrapMixin`, `nautobot.extras.forms.CustomFieldModelFilterFormMixin`, and `nautobot.extras.forms.RelationshipModelFilterFormMixin`, and should be used where appropriate.
+    * Similarly, for filter forms, `nautobot.extras.forms.NautobotFilterForm` combines `nautobot.core.forms.BootstrapMixin`, `nautobot.extras.forms.ContactTeamModelFilterFormMixin` (since Nautobot 2.3.0), `nautobot.extras.forms.CustomFieldModelFilterFormMixin`, and `nautobot.extras.forms.RelationshipModelFilterFormMixin`, and should be used where appropriate.
 
     * Similarly, for bulk-edit forms, `nautobot.extras.forms.NautobotBulkEditForm` combines `nautobot.core.forms.BulkEditForm` and `nautobot.core.forms.BootstrapMixin` with `nautobot.extras.forms.CustomFieldModelBulkEditFormMixin`, `nautobot.extras.forms.RelationshipModelBulkEditFormMixin` and `nautobot.extras.forms.NoteModelBulkEditFormMixin`, and should be used where appropriate.
 

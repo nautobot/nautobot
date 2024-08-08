@@ -3,10 +3,12 @@ import string
 
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count, Q
+from django.db.models.fields import CharField, TextField
 from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.test import tag
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.filters import (
     ContentTypeChoiceFilter,
     ContentTypeFilter,
@@ -16,6 +18,7 @@ from nautobot.core.filters import (
 )
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
+from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Tag, Team
 from nautobot.tenancy import models
 
 
@@ -119,6 +122,42 @@ class FilterTestCases:
                     )
                 This expects a field named `devices` on the model and a filter named `devices` on the filterset.
             """
+            if getattr(self.queryset.model, "is_contact_associable_model", False):
+                for generic_filter_test in (
+                    ["contacts", "associated_contacts__contact__name"],
+                    ["contacts", "associated_contacts__contact__id"],
+                    ["teams", "associated_contacts__team__name"],
+                    ["teams", "associated_contacts__team__id"],
+                ):
+                    if generic_filter_test not in self.generic_filter_tests:
+                        self.generic_filter_tests = (*self.generic_filter_tests, generic_filter_test)
+
+                # Make sure we have at least 3 contacts and 3 teams in the database
+                if Contact.objects.count() < 3:
+                    Contact.objects.create(name="Generic Filter Test Contact 1")
+                    Contact.objects.create(name="Generic Filter Test Contact 2")
+                    Contact.objects.create(name="Generic Filter Test Contact 3")
+
+                if Team.objects.count() < 3:
+                    Team.objects.create(name="Generic Filter Test Team 1")
+                    Team.objects.create(name="Generic Filter Test Team 2")
+                    Team.objects.create(name="Generic Filter Test Team 3")
+
+                # Make sure we have some valid contact-associations:
+                for contact, team, instance in zip(Contact.objects.all()[:3], Team.objects.all()[:3], self.queryset):
+                    ContactAssociation.objects.create(
+                        contact=contact,
+                        associated_object=instance,
+                        role=Role.objects.get_for_model(ContactAssociation).first(),
+                        status=Status.objects.get_for_model(ContactAssociation).first(),
+                    )
+                    ContactAssociation.objects.create(
+                        team=team,
+                        associated_object=instance,
+                        role=Role.objects.get_for_model(ContactAssociation).last(),
+                        status=Status.objects.get_for_model(ContactAssociation).last(),
+                    )
+
             if not self.generic_filter_tests:
                 self.skipTest("No generic_filter_tests defined?")
 
@@ -147,11 +186,11 @@ class FilterTestCases:
                 field_name = filter_object.field_name
                 with self.subTest(f"{self.filterset.__name__} RelatedMembershipBooleanFilter {filter_name} (True)"):
                     filterset_result = self.filterset({filter_name: True}, self.queryset).qs
-                    qs_result = self.queryset.filter(**{f"{field_name}__isnull": False}).distinct()
+                    qs_result = self.queryset.filter(**{f"{field_name}__isnull": filter_object.exclude}).distinct()
                     self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
                 with self.subTest(f"{self.filterset.__name__} RelatedMembershipBooleanFilter {filter_name} (False)"):
                     filterset_result = self.filterset({filter_name: False}, self.queryset).qs
-                    qs_result = self.queryset.filter(**{f"{field_name}__isnull": True}).distinct()
+                    qs_result = self.queryset.exclude(**{f"{field_name}__isnull": filter_object.exclude}).distinct()
                     self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
         def test_tags_filter(self):
@@ -164,8 +203,16 @@ class FilterTestCases:
                 if len(instance.tags.all()) >= 2:
                     tags = list(instance.tags.all()[:2])
                     break
+
+            # Otherwise, create some tags and apply to an instance for this test
             else:
-                self.fail(f"Couldn't find any {self.queryset.model._meta.object_name} with at least two Tags.")
+                model_ct = ContentType.objects.get_for_model(self.queryset.model)
+                test_tags_filter_a = Tag.objects.get_or_create(name="test tags filter a")[0]
+                test_tags_filter_a.content_types.add(model_ct)
+                test_tags_filter_b = Tag.objects.get_or_create(name="test tags filter b")[0]
+                test_tags_filter_b.content_types.add(model_ct)
+                self.queryset.first().tags.add(test_tags_filter_a, test_tags_filter_b)
+                tags = [test_tags_filter_a, test_tags_filter_b]
             params = {"tags": [tags[0].name, tags[1].pk]}
             filterset_result = self.filterset(params, self.queryset).qs
             # Tags is an AND filter not an OR filter
@@ -222,22 +269,23 @@ class FilterTestCases:
             """
             self._assert_valid_filter_predicates(obj, obj_field_name)
 
-            # Create random 5 char string to append to attribute, used for icontains partial lookup
-            lookup = "".join(random.choices(string.ascii_lowercase, k=5))  # noqa: S311 # pseudo-random generator
-            obj_field_value = getattr(obj, obj_field_name)
+            # Generic test only supports CharField or TextFields, skip all other types
+            obj_field = obj._meta.get_field(obj_field_name)
+            if not isinstance(obj_field, (CharField, TextField)):
+                self.skipTest("Not a CharField or TextField")
 
-            if isinstance(obj_field_value, str):
-                updated_attr = obj_field_value + lookup
-                setattr(obj, obj_field_name, updated_attr)
-            else:
-                # Skip the test if the field is not a CharField, as we currently only support generic testing for CharField
-                self.skipTest("Not a CharField")
+            # Create random lowercase string to use for icontains lookup
+            max_length = obj_field.max_length or CHARFIELD_MAX_LENGTH
+            randomized_attr_value = "".join(random.choices(string.ascii_lowercase, k=max_length))  # noqa: S311 # pseudo-random generator
+            setattr(obj, obj_field_name, randomized_attr_value)
             obj.save()
+
             # if lookup_method is iexact use the full updated attr
             if lookup_method == "iexact":
-                lookup = updated_attr
-                model_queryset = self.queryset.filter(**{f"{filter_field_name}": lookup})
+                lookup = randomized_attr_value.upper()
+                model_queryset = self.queryset.filter(**{f"{filter_field_name}__iexact": lookup})
             else:
+                lookup = randomized_attr_value[1:].upper()
                 model_queryset = self.queryset.filter(**{f"{filter_field_name}__icontains": lookup})
             params = {"q": lookup}
             filterset_result = self.filterset(params, self.queryset)
@@ -247,6 +295,7 @@ class FilterTestCases:
                 filterset_result.qs,
                 model_queryset,
                 ordered=False,
+                msg=lookup,
             )
 
         def _get_relevant_filterset_queryset(self, queryset, *filter_params):

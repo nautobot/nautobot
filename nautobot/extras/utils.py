@@ -151,15 +151,25 @@ class FeatureQuery:
         # `registry` record being used by `FeatureQuery`.
 
         populate_model_features_registry()
-        query = Q()
-        for app_label, models in self.as_dict():
-            query |= Q(app_label=app_label, model__in=models)
+        try:
+            query = Q()
+            if not self.as_dict():  # no registered models??
+                raise KeyError
+            else:
+                for app_label, models in self.as_dict():
+                    query |= Q(app_label=app_label, model__in=models)
+        except KeyError:
+            query = Q(pk__in=[])
 
         return query
 
     def as_dict(self):
         """
-        Given an extras feature, return a dict of app_label: [models] for content type lookup
+        Given an extras feature, return a iterable of app_label: [models] for content type lookup.
+
+        Misnamed, as it returns an iterable of (key, value) (i.e. dict.items()) rather than an actual dict.
+
+        Raises a KeyError if the given feature doesn't exist.
         """
         return registry["model_features"][self.feature].items()
 
@@ -277,8 +287,10 @@ def populate_model_features_registry(refresh=False):
                             useful to narrow down the search for fields that match certain criteria. For example, if
                             `field_attributes` is set to {"related_model": RelationshipAssociation}, only fields with
                             a related model of RelationshipAssociation will be considered.
+        - 'additional_constraints': Optional dictionary of additional `{field: value}` constraints that can be checked.
     - Looks up all the models in the installed apps.
-    - For each dictionary in lookup_confs, calls lookup_by_field() function to look for all models that have fields with the names given in the dictionary.
+    - For each dictionary in lookup_confs, calls lookup_by_field() function to look for all models that have
+      fields with the names given in the dictionary.
     - Groups the results by app and updates the registry model features for each app.
     """
     if registry.get("populate_model_features_registry_called", False) and not refresh:
@@ -288,13 +300,39 @@ def populate_model_features_registry(refresh=False):
 
     lookup_confs = [
         {
+            "feature_name": "cloud_resource_types",
+            "field_names": [],
+            "additional_constraints": {"is_cloud_resource_type_model": True},
+        },
+        {
+            "feature_name": "contacts",
+            "field_names": ["associated_contacts"],
+            "additional_constraints": {"is_contact_associable_model": True},
+        },
+        {
             "feature_name": "custom_fields",
             "field_names": ["_custom_field_data"],
+        },
+        {
+            "feature_name": "metadata",
+            "field_names": [],  # TODO: add "associated_metadata" ReverseRelation here when implemented
+            "additional_constraints": {"is_metadata_associable_model": True},
         },
         {
             "feature_name": "relationships",
             "field_names": ["source_for_associations", "destination_for_associations"],
             "field_attributes": {"related_model": RelationshipAssociation},
+        },
+        {
+            "feature_name": "saved_views",
+            "field_names": [],
+            "additional_constraints": {"is_saved_view_model": True},
+        },
+        {
+            "feature_name": "dynamic_groups",
+            # models using DynamicGroupMixin but not DynamicGroupsModelMixin will lack a static_group_association_set
+            "field_names": [],
+            "additional_constraints": {"is_dynamic_group_associable_model": True},
         },
     ]
 
@@ -304,6 +342,7 @@ def populate_model_features_registry(refresh=False):
             app_models=app_models,
             field_names=lookup_conf["field_names"],
             field_attributes=lookup_conf.get("field_attributes"),
+            additional_constraints=lookup_conf.get("additional_constraints"),
         )
         feature_name = lookup_conf["feature_name"]
         registry["model_features"][feature_name] = registry_items
@@ -666,12 +705,13 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
                     ObjectChange.objects.bulk_create(queued_object_changes)
                     queued_object_changes = []
                 oc = obj.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-                oc.user = change_context.get_user()
-                oc.user_name = oc.user.username
-                oc.request_id = change_context.change_id
-                oc.change_context = change_context.context
-                oc.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
-                queued_object_changes.append(oc)
+                if oc is not None:
+                    oc.user = change_context.get_user()
+                    oc.user_name = oc.user.username
+                    oc.request_id = change_context.change_id
+                    oc.change_context = change_context.context
+                    oc.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+                    queued_object_changes.append(oc)
             ObjectChange.objects.bulk_create(queued_object_changes)
             return qs.delete()
         finally:

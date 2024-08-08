@@ -27,13 +27,19 @@ from .validators import DNSValidator
 
 __all__ = (
     "IPAddress",
+    "IPAddressToInterface",
+    "Namespace",
     "Prefix",
+    "PrefixLocationAssignment",
     "RIR",
     "RouteTarget",
     "Service",
     "VLAN",
     "VLANGroup",
+    "VLANLocationAssignment",
     "VRF",
+    "VRFDeviceAssignment",
+    "VRFPrefixAssignment",
 )
 
 
@@ -43,7 +49,6 @@ logger = logging.getLogger(__name__)
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -275,6 +280,7 @@ class VRFDeviceAssignment(BaseModel):
         help_text="Unique route distinguisher (as defined in RFC 4364)",
     )
     name = models.CharField(blank=True, max_length=CHARFIELD_MAX_LENGTH)
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = [
@@ -312,6 +318,7 @@ class VRFDeviceAssignment(BaseModel):
 class VRFPrefixAssignment(BaseModel):
     vrf = models.ForeignKey("ipam.VRF", on_delete=models.CASCADE, related_name="+")
     prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="vrf_assignments")
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = ["vrf", "prefix"]
@@ -391,7 +398,6 @@ class RIR(OrganizationalModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -493,11 +499,6 @@ class Prefix(PrimaryModel):
         "type",
         "vlan",
     ]
-    """
-    dynamic_group_filter_fields = {
-        "vrf": "vrf_id",  # Duplicate filter fields that will be collapsed in 2.0
-    }
-    """
 
     class Meta:
         ordering = (
@@ -965,6 +966,7 @@ class Prefix(PrimaryModel):
 class PrefixLocationAssignment(BaseModel):
     prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="location_assignments")
     location = models.ForeignKey("dcim.Location", on_delete=models.CASCADE, related_name="prefix_assignments")
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = ["prefix", "location"]
@@ -977,7 +979,6 @@ class PrefixLocationAssignment(BaseModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "statuses",
@@ -1244,6 +1245,7 @@ class IPAddressToInterface(BaseModel):
     is_primary = models.BooleanField(default=False, help_text="Is primary address on interface")
     is_secondary = models.BooleanField(default=False, help_text="Is secondary address on interface")
     is_standby = models.BooleanField(default=False, help_text="Is standby address on interface")
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = [
@@ -1441,6 +1443,7 @@ class VLAN(PrimaryModel):
 class VLANLocationAssignment(BaseModel):
     vlan = models.ForeignKey("ipam.VLAN", on_delete=models.CASCADE, related_name="location_assignments")
     location = models.ForeignKey("dcim.Location", on_delete=models.CASCADE, related_name="vlan_assignments")
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = ["vlan", "location"]

@@ -15,7 +15,7 @@ from rest_framework import status
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.testing import APITestCase, APIViewTestCases
-from nautobot.core.testing.utils import disable_warnings
+from nautobot.core.testing.utils import disable_warnings, get_deletable_objects
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
@@ -32,8 +32,10 @@ from nautobot.dcim.tests import test_views
 from nautobot.extras.api.serializers import ConfigContextSerializer, JobResultSerializer
 from nautobot.extras.choices import (
     DynamicGroupOperatorChoices,
+    DynamicGroupTypeChoices,
     JobExecutionType,
     JobResultStatusChoices,
+    MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
     RelationshipTypeChoices,
@@ -61,18 +63,24 @@ from nautobot.extras.models import (
     Job,
     JobLogEntry,
     JobResult,
+    MetadataChoice,
+    MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroupAssociation,
     Status,
     Tag,
     Team,
+    UserSavedViewAssociation,
     Webhook,
 )
 from nautobot.extras.models.jobs import JobButton, JobHook
@@ -80,6 +88,7 @@ from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 
 User = get_user_model()
@@ -394,6 +403,11 @@ class ContactTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        # Contacts associated with ObjectMetadata objects are protected, create some deletable contacts
+        Contact.objects.create(name="Deletable contact 1")
+        Contact.objects.create(name="Deletable contact 2")
+        Contact.objects.create(name="Deletable contact 3")
+
         cls.create_data = [
             {
                 "name": "Contact 1",
@@ -790,29 +804,56 @@ class DynamicGroupTestMixin:
 
 class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     model = DynamicGroup
-    choices_fields = ["content_type"]
-    create_data = [
-        {
-            "name": "API DynamicGroup 4",
-            "content_type": "dcim.device",
-            "filter": {"location": ["Location 1"]},
-        },
-        {
-            "name": "API DynamicGroup 5",
-            "content_type": "dcim.device",
-            "filter": {"has_interfaces": False},
-        },
-        {
-            "name": "API DynamicGroup 6",
-            "content_type": "dcim.device",
-            "filter": {"location": ["Location 2"]},
-        },
-    ]
+    choices_fields = ["content_type", "group_type"]
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        cls.create_data = [
+            {
+                "name": "API DynamicGroup 4",
+                "content_type": "dcim.device",
+                "filter": {"location": ["Location 1"]},
+                "tags": [tag.pk for tag in Tag.objects.get_for_model(DynamicGroup)],
+                "tenant": Tenant.objects.first().pk,
+            },
+            {
+                "name": "API DynamicGroup 5",
+                "content_type": "dcim.device",
+                "group_type": "dynamic-filter",
+                "filter": {"has_interfaces": False},
+            },
+            {
+                "name": "API DynamicGroup 6",
+                "content_type": "dcim.device",
+                "filter": {"location": ["Location 2"]},
+            },
+            {
+                "name": "API DynamicGroup 7",
+                "content_type": "dcim.device",
+                "group_type": "static",
+            },
+        ]
+        cls.update_data = {
+            "name": "A new name",
+            "tags": [],
+            "tenant": Tenant.objects.last().pk,
+            "description": "a new description",
+        }
+
+    def test_changing_content_type_not_allowed(self):
+        self.add_permissions("extras.change_dynamicgroup")
+        data = {
+            "content_type": "circuits.circuittermination",
+        }
+        response = self.client.patch(self._get_detail_url(self.groups[0]), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
     def test_get_members(self):
         """Test that the `/members/` API endpoint returns what is expected."""
         self.add_permissions("extras.view_dynamicgroup")
-        instance = self.groups[0]
+        instance = DynamicGroup.objects.filter(static_group_associations__isnull=False).distinct().first()
         self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"))
         member_count = instance.members.count()
         url = reverse("extras-api:dynamicgroup-members", kwargs={"pk": instance.pk})
@@ -823,7 +864,7 @@ class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     def test_get_members_with_constrained_permission(self):
         """Test that the `/members/` API endpoint enforces permissions on the member model."""
         self.add_permissions("extras.view_dynamicgroup")
-        instance = self.groups[0]
+        instance = DynamicGroup.objects.filter(static_group_associations__isnull=False).distinct().first()
         obj1 = instance.members.first()
         obj_perm = ObjectPermission(
             name="Test permission",
@@ -837,7 +878,7 @@ class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
         url = reverse("extras-api:dynamicgroup-members", kwargs={"pk": instance.pk})
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(len(response.json()["results"]), 1)
+        self.assertEqual(response.json()["count"], 1)
         self.assertEqual(response.json()["results"][0]["id"], str(obj1.pk))
 
 
@@ -2267,7 +2308,110 @@ class JobLogEntryTest(
         self.add_permissions("extras.view_jobresult")
         url = reverse("extras-api:jobresult-logs", kwargs={"pk": self.job_result.pk})
         response = self.client.get(url, **self.header)
-        self.assertEqual(len(response.json()), JobLogEntry.objects.count())
+        self.assertEqual(len(response.json()), JobLogEntry.objects.filter(job_result=self.job_result).count())
+
+
+class SavedViewTest(APIViewTestCases.APIViewTestCase):
+    model = SavedView
+
+    def setUp(self):
+        super().setUp()
+        self.create_data = [
+            {
+                "owner": self.user.pk,
+                "name": "Saved View 1",
+                "view": "circuits:circuit_list",
+                "config": {
+                    "filter_params": {"circuit_type": ["#047c4c", "#06cc23"], "status": ["Active", "Decommissioned"]}
+                },
+                "is_global_default": False,
+                "is_shared": True,
+            },
+            {
+                "owner": self.user.pk,
+                "name": "Saved View 2",
+                "view": "dcim:device_list",
+                "config": {
+                    "filter_params": {
+                        "location": ["Campus-01", "Building-02", "Aisle-06"],
+                        "role": ["PossibleDangerous", "NervousDangerous"],
+                        "status": ["Active", "ExtremeOriginal"],
+                    }
+                },
+                "is_global_default": False,
+                "is_shared": False,
+            },
+            {
+                "owner": self.user.pk,
+                "name": "Saved View 3",
+                "view": "dcim:location_list",
+                "config": {
+                    "filter_params": {
+                        "location_type": ["Campus", "Building", "Elevator"],
+                        "parent": ["Campus-01", "Building-02"],
+                        "q": "building-02",
+                    },
+                    "pagination_count": 50,
+                    "sort_order": [],
+                    "table_config": {
+                        "LocationTable": {
+                            "columns": ["name", "status", "location_type", "description", "parent", "tenant"]
+                        }
+                    },
+                },
+                "is_global_default": False,
+                "is_shared": True,
+            },
+        ]
+
+
+class UserSavedViewAssociationTest(APIViewTestCases.APIViewTestCase):
+    model = UserSavedViewAssociation
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.saved_view_views_distinct = SavedView.objects.values("view").distinct()
+        cls.users = User.objects.all()
+
+        cls.create_data = []
+        for i, saved_view in enumerate(cls.saved_view_views_distinct[:3]):
+            sv = SavedView.objects.filter(view=saved_view["view"]).first()
+            cls.create_data.append(
+                {
+                    "user": cls.users[i].pk,
+                    "saved_view": sv.pk,
+                    "view_name": sv.view,
+                }
+            )
+        for i, saved_view in enumerate(cls.saved_view_views_distinct[4:7]):
+            sv = SavedView.objects.filter(view=saved_view["view"]).first()
+            UserSavedViewAssociation.objects.create(
+                user=cls.users[i],
+                saved_view=sv,
+                view_name=sv.view,
+            )
+
+    def test_creating_invalid_user_to_saved_view(self):
+        # Add object-level permission
+        duplicate_view_name = self.saved_view_views_distinct[0]["view"]
+        saved_view = SavedView.objects.filter(view=duplicate_view_name).first()
+        user = self.users[0]
+        UserSavedViewAssociation.objects.create(
+            saved_view=saved_view,
+            user=user,
+            view_name=saved_view.view,
+        )
+        duplicate_user_to_savedview_create_data = {
+            "user": user.pk,
+            "saved_view": saved_view.pk,
+            "view_name": duplicate_view_name,
+        }
+        self.add_permissions("extras.add_usersavedviewassociation")
+        response = self.client.post(
+            self._get_list_url(), duplicate_user_to_savedview_create_data, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("User saved view association with this User and View name already exists.", str(response.content))
 
 
 class ScheduledJobTest(
@@ -2493,6 +2637,168 @@ class JobApprovalTest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
+class MetadataTypeTest(APIViewTestCases.APIViewTestCase):
+    model = MetadataType
+    choices_fields = ["data_type"]
+    create_data = [
+        {
+            "name": "System of Record",
+            "description": "The SoR that this record or field originates from",
+            "data_type": MetadataTypeDataTypeChoices.TYPE_TEXT,
+            "content_types": ["dcim.device", "dcim.interface", "ipam.ipaddress"],
+        },
+        {
+            "name": "Last Synced",
+            "description": "The last time this record or field was synced from the SoR",
+            "data_type": MetadataTypeDataTypeChoices.TYPE_DATETIME,
+            "content_types": ["dcim.device", "dcim.interface", "ipam.ipaddress"],
+        },
+        {
+            "name": "Data Owner",
+            "data_type": MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM,
+            "content_types": ["extras.customfield"],
+        },
+    ]
+    update_data = {
+        "name": "Something new",
+        "description": "A new name for existing metadata.",
+        "content_types": ["dcim.interface", "ipam.vrf"],
+    }
+
+    def get_deletable_object(self):
+        return MetadataType.objects.create(name="Delete Me", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT)
+
+    def get_deletable_object_pks(self):
+        mdts = [
+            MetadataType.objects.create(name="SoR", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT),
+            MetadataType.objects.create(name="Colors", data_type=MetadataTypeDataTypeChoices.TYPE_MULTISELECT),
+            MetadataType.objects.create(
+                name="Location Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT
+            ),
+        ]
+        return [mdt.pk for mdt in mdts]
+
+
+class MetadataChoiceTest(APIViewTestCases.APIViewTestCase):
+    model = MetadataChoice
+
+    update_data = {
+        "value": "Something new",
+        "weight": 0,
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        mdts = [
+            MetadataType.objects.create(name="SoR", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT),
+            MetadataType.objects.create(name="Colors", data_type=MetadataTypeDataTypeChoices.TYPE_MULTISELECT),
+        ]
+
+        cls.create_data = [
+            {
+                "metadata_type": mdts[0].pk,
+                "value": "ServiceNow",
+                "weight": 200,
+            },
+            {
+                "metadata_type": mdts[0].pk,
+                "value": "IPFabric",
+            },
+            {
+                "metadata_type": mdts[1].pk,
+                "value": "red",
+                "weight": 250,
+            },
+            {
+                "metadata_type": mdts[1].pk,
+                "value": "green",
+                "weight": 250,
+            },
+        ]
+
+
+class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
+    model = ObjectMetadata
+    choices_fields = ["assigned_object_type"]
+    # ObjectMetadata records created for SoftwareImageFile records will contain a `hashing_algorithm` key;
+    # presence of strings like "md5" and "sha256" in the API response for ObjectMetadatas is therefore *not* a failure
+    VERBOTEN_STRINGS = ("password",)
+
+    @classmethod
+    def setUpTestData(cls):
+        mdts = [
+            MetadataType.objects.create(name="Location Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT),
+            MetadataType.objects.create(name="Device Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT),
+            MetadataType.objects.create(
+                name="Contact/Team Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
+            ),
+        ]
+        mdts[0].content_types.set(list(ContentType.objects.values_list("pk", flat=True)))
+        mdts[1].content_types.set(list(ContentType.objects.values_list("pk", flat=True)))
+        mdts[2].content_types.set(list(ContentType.objects.values_list("pk", flat=True)))
+        ObjectMetadata.objects.create(
+            metadata_type=mdts[0],
+            value="Hey",
+            scoped_fields=["parent", "status"],
+            assigned_object_type=ContentType.objects.get_for_model(IPAddress),
+            assigned_object_id=IPAddress.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=mdts[0],
+            value="Hello",
+            scoped_fields=["namespace"],
+            assigned_object_type=ContentType.objects.get_for_model(Prefix),
+            assigned_object_id=Prefix.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=mdts[2],
+            contact=Contact.objects.first(),
+            scoped_fields=["status"],
+            assigned_object_type=ContentType.objects.get_for_model(Prefix),
+            assigned_object_id=Prefix.objects.filter(associated_object_metadata__isnull=True).last().pk,
+        )
+        cls.create_data = [
+            {
+                "metadata_type": mdts[0].pk,
+                "scoped_fields": ["location_type"],
+                "value": "random words",
+                "assigned_object_type": "dcim.location",
+                "assigned_object_id": Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
+            },
+            {
+                "metadata_type": mdts[1].pk,
+                "scoped_fields": ["name"],
+                "value": "random words",
+                "assigned_object_type": "dcim.location",
+                "assigned_object_id": Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
+            },
+            {
+                "metadata_type": mdts[2].pk,
+                "scoped_fields": [],
+                "contact": Contact.objects.first().pk,
+                "assigned_object_type": "dcim.device",
+                "assigned_object_id": Device.objects.filter(associated_object_metadata__isnull=True).first().pk,
+            },
+            {
+                "metadata_type": mdts[2].pk,
+                "scoped_fields": ["interfaces"],
+                "team": Team.objects.first().pk,
+                "assigned_object_type": "dcim.device",
+                "assigned_object_id": Device.objects.filter(associated_object_metadata__isnull=True).last().pk,
+            },
+        ]
+        cls.update_data = {
+            "scoped_fields": ["pk"],
+        }
+
+    def get_deletable_object(self):
+        # TODO: CSV round-trip doesn't work for empty scoped_fields values at present. :-(
+        instance = get_deletable_objects(self.model, self._get_queryset().exclude(scoped_fields=[])).first()
+        if instance is None:
+            self.fail("Couldn't find a single deletable object with non-empty scoped_fields")
+        return instance
+
+
 class NoteTest(APIViewTestCases.APIViewTestCase):
     model = Note
     choices_fields = ["assigned_object_type"]
@@ -2558,6 +2864,10 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
 
 class ObjectChangeTest(APIViewTestCases.GetObjectViewTestCase, APIViewTestCases.ListObjectsViewTestCase):
     model = ObjectChange
+
+    # ObjectChange records created for SoftwareImageFile records will contain a `hashing_algorithm` key;
+    # presence of strings like "md5" and "sha256" in the API response for ObjectChanges is therefore *not* a failure
+    VERBOTEN_STRINGS = ("password",)
 
     @classmethod
     def setUpTestData(cls):
@@ -3513,6 +3823,177 @@ class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
+class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
+    model = StaticGroupAssociation
+    choices_fields = ["associated_object_type"]
+
+    # StaticGroupAssociation records created for SoftwareImageFile records will contain a `hashing_algorithm` key;
+    # presence of strings like "md5" and "sha256" in the API response for StaticGroupAssociation is *not* a failure
+    VERBOTEN_STRINGS = ("password",)
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.dg1 = DynamicGroup.objects.create(
+            name="Locations",
+            content_type=ContentType.objects.get_for_model(Location),
+            group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+        )
+        cls.dg2 = DynamicGroup.objects.create(
+            name="Devices",
+            content_type=ContentType.objects.get_for_model(Device),
+            group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+        )
+        cls.dg3 = DynamicGroup.objects.create(
+            name="VLANs",
+            content_type=ContentType.objects.get_for_model(VLAN),
+            group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+        )
+        location_pks = list(Location.objects.values_list("pk", flat=True)[:4])
+        device_pks = list(Device.objects.values_list("pk", flat=True)[:4])
+        StaticGroupAssociation.objects.create(
+            dynamic_group=cls.dg1,
+            associated_object_type=ContentType.objects.get_for_model(Location),
+            associated_object_id=location_pks[0],
+        )
+        StaticGroupAssociation.objects.create(
+            dynamic_group=cls.dg1,
+            associated_object_type=ContentType.objects.get_for_model(Location),
+            associated_object_id=location_pks[1],
+        )
+        StaticGroupAssociation.objects.create(
+            dynamic_group=cls.dg2,
+            associated_object_type=ContentType.objects.get_for_model(Device),
+            associated_object_id=device_pks[0],
+        )
+
+        cls.create_data = [
+            {
+                "dynamic_group": cls.dg1.pk,
+                "associated_object_type": "dcim.location",
+                "associated_object_id": location_pks[2],
+            },
+            {
+                "dynamic_group": cls.dg1.pk,
+                "associated_object_type": "dcim.location",
+                "associated_object_id": location_pks[3],
+            },
+            {
+                "dynamic_group": cls.dg2.pk,
+                "associated_object_type": "dcim.device",
+                "associated_object_id": device_pks[2],
+            },
+            {
+                "dynamic_group": cls.dg2.pk,
+                "associated_object_type": "dcim.device",
+                "associated_object_id": device_pks[3],
+            },
+        ]
+        # TODO: this isn't really valid since we're changing the associated_object_type but not the associated_object_id
+        # Should we disallow bulk-updates of StaticGroupAssociation? Or maybe skip the bulk-update tests at least?
+        cls.bulk_update_data = {
+            "dynamic_group": cls.dg3.pk,
+            "associated_object_type": "ipam.vlan",
+        }
+
+    def test_content_type_mismatch(self):
+        self.add_permissions("extras.add_staticgroupassociation")
+        data = {
+            "dynamic_group": self.dg1.pk,
+            "associated_object_type": "ipam.ipaddress",
+            "associated_object_id": IPAddress.objects.first().pk,
+        }
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_list_omits_hidden_by_default(self):
+        """Test that the list view defaults to omitting associations of non-static groups."""
+        sga1 = StaticGroupAssociation.all_objects.filter(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
+        self.assertIsNotNone(sga1)
+        sga2 = StaticGroupAssociation.all_objects.exclude(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
+        self.assertIsNotNone(sga2)
+
+        self.add_permissions("extras.view_staticgroupassociation")
+        response = self.client.get(self._get_list_url(), **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, dict)
+        self.assertIn("results", response.data)
+        found_sga1 = False
+        found_sga2 = False
+        for record in response.data["results"]:
+            if record["id"] == str(sga1.id):
+                found_sga1 = True
+            elif record["id"] == str(sga2.id):
+                found_sga2 = True
+        self.assertTrue(found_sga1)
+        self.assertFalse(found_sga2)
+
+    def test_list_hidden_with_filter(self):
+        """Test that the list view can show hidden associations with the appropriate filter."""
+        sga1 = StaticGroupAssociation.all_objects.exclude(
+            dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        ).first()
+        self.assertIsNotNone(sga1)
+
+        self.add_permissions("extras.view_staticgroupassociation")
+        response = self.client.get(f"{self._get_list_url()}?dynamic_group={sga1.dynamic_group.pk}", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, dict)
+        self.assertIn("results", response.data)
+        found_sga1 = False
+        for record in response.data["results"]:
+            if record["id"] == str(sga1.id):
+                found_sga1 = True
+        self.assertTrue(found_sga1)
+
+    def test_changes_to_hidden_groups_not_permitted(self):
+        """Test that the REST API cannot create/update/delete hidden associations."""
+        self.add_permissions(
+            "extras.view_staticgroupassociation",
+            "extras.add_staticgroupassociation",
+            "extras.delete_staticgroupassociation",
+            "extras.change_staticgroupassociation",
+        )
+
+        with self.subTest("create hidden association"):
+            dg = DynamicGroup.objects.exclude(group_type=DynamicGroupTypeChoices.TYPE_STATIC).first()
+            self.assertIsNotNone(dg)
+            create_data = {
+                "dynamic_group": str(dg.pk),
+                "associated_object_type": f"{dg.content_type.app_label}.{dg.content_type.model}",
+                "associated_object_id": "00000000-0000-0000-0000-000000000000",
+            }
+            response = self.client.post(
+                f"{self._get_list_url()}?dynamic_group={dg.pk}", create_data, format="json", **self.header
+            )
+            self.assertHttpStatus(response, [status.HTTP_400_BAD_REQUEST, status.HTTP_403_FORBIDDEN])
+
+        with self.subTest("update hidden association"):
+            sga = StaticGroupAssociation.all_objects.exclude(
+                dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+            ).first()
+            self.assertIsNotNone(sga)
+            url = self._get_detail_url(sga) + f"?dynamic_group={sga.dynamic_group.pk}"
+            update_data = {"associated_object_id": "00000000-0000-0000-0000-000000000000"}
+            response = self.client.patch(url, update_data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+            sga.refresh_from_db()
+            self.assertNotEqual(sga.associated_object_id, "00000000-0000-0000-0000-000000000000")
+
+        with self.subTest("delete hidden association"):
+            sga = StaticGroupAssociation.all_objects.exclude(
+                dynamic_group__group_type=DynamicGroupTypeChoices.TYPE_STATIC
+            ).first()
+            self.assertIsNotNone(sga)
+            url = self._get_detail_url(sga) + f"?dynamic_group={sga.dynamic_group.pk}"
+            response = self.client.delete(url, **self.header)
+            self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+            self.assertTrue(StaticGroupAssociation.all_objects.filter(pk=sga.pk).exists())
+
+
 class StatusTest(APIViewTestCases.APIViewTestCase):
     model = Status
     bulk_update_data = {
@@ -3637,6 +4118,11 @@ class TeamTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        # Teams associated with ObjectMetadata objects are protected, create some deletable teams
+        Team.objects.create(name="Deletable team 1")
+        Team.objects.create(name="Deletable team 2")
+        Team.objects.create(name="Deletable team 3")
+
         cls.create_data = [
             {
                 "name": "Team 1",

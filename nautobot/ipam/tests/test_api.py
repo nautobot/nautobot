@@ -15,7 +15,6 @@ from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
 from nautobot.extras.models import Role, Status
 from nautobot.ipam import choices
-from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressToInterface,
@@ -51,17 +50,17 @@ class NamespaceTest(APIViewTestCases.APIViewTestCase):
         location = Location.objects.first()
         cls.create_data = [
             {
-                "name": "Purple Monkey Namesapce 1",
+                "name": "Purple Monkey Namespace 1",
                 "description": "A perfectly cromulent namespace.",
                 "location": location.pk,
             },
             {
-                "name": "Purple Monkey Namesapce 2",
+                "name": "Purple Monkey Namespace 2",
                 "description": "A secondarily cromulent namespace.",
                 "location": location.pk,
             },
             {
-                "name": "Purple Monkey Namesapce 3",
+                "name": "Purple Monkey Namespace 3",
                 "description": "A third cromulent namespace.",
                 "location": location.pk,
             },
@@ -211,7 +210,9 @@ class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.vrfs = VRF.objects.all()
+        cls.vrfs = (
+            VRF.objects.annotate(prefixes_count=Count("namespace__prefixes")).filter(prefixes_count__gte=2).distinct()
+        )
         cls.prefixes = Prefix.objects.all()
 
         VRFPrefixAssignment.objects.create(
@@ -233,15 +234,15 @@ class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "vrf": cls.vrfs[2].pk,
-                "prefix": cls.prefixes.filter(namespace=cls.vrfs[2].namespace)[0].pk,
+                "prefix": cls.prefixes.filter(namespace=cls.vrfs[2].namespace).exclude(vrfs=cls.vrfs[2])[0].pk,
             },
             {
                 "vrf": cls.vrfs[3].pk,
-                "prefix": cls.prefixes.filter(namespace=cls.vrfs[3].namespace)[0].pk,
+                "prefix": cls.prefixes.filter(namespace=cls.vrfs[3].namespace).exclude(vrfs=cls.vrfs[3])[0].pk,
             },
             {
                 "vrf": cls.vrfs[4].pk,
-                "prefix": cls.prefixes.filter(namespace=cls.vrfs[4].namespace)[0].pk,
+                "prefix": cls.prefixes.filter(namespace=cls.vrfs[4].namespace).exclude(vrfs=cls.vrfs[4])[0].pk,
             },
         ]
 
@@ -622,26 +623,33 @@ class PrefixLocationAssignmentTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.prefixes = Prefix.objects.filter(locations__isnull=False)
+        cls.prefixes = Prefix.objects.all()
         cls.locations = Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(Prefix))
-        locations_without_prefix = cls.locations.exclude(prefixes__in=[cls.prefixes[0], cls.prefixes[1]])
+
+        # Guarantees that at-least 3 locations do not have this prefix
+        for location in cls.locations[:3]:
+            location.prefixes.remove(cls.prefixes[0])
+        for location in cls.locations[3:6]:
+            location.prefixes.remove(cls.prefixes[1])
+        locations_without_prefix_0 = cls.locations.exclude(prefixes__in=[cls.prefixes[0]])
+        locations_without_prefix_1 = cls.locations.exclude(prefixes__in=[cls.prefixes[1]])
 
         cls.create_data = [
             {
                 "prefix": cls.prefixes[0].pk,
-                "location": locations_without_prefix[1].pk,
+                "location": locations_without_prefix_0[0].pk,
             },
             {
                 "prefix": cls.prefixes[0].pk,
-                "location": locations_without_prefix[2].pk,
+                "location": locations_without_prefix_0[1].pk,
             },
             {
                 "prefix": cls.prefixes[1].pk,
-                "location": locations_without_prefix[3].pk,
+                "location": locations_without_prefix_1[0].pk,
             },
             {
                 "prefix": cls.prefixes[1].pk,
-                "location": locations_without_prefix[4].pk,
+                "location": locations_without_prefix_1[1].pk,
             },
         ]
 
@@ -877,11 +885,12 @@ class IPAddressToInterfaceTest(APIViewTestCases.APIViewTestCase):
             status=devicestatus,
         )
         int_status = Status.objects.get_for_model(Interface).first()
+        int_role = Role.objects.get_for_model(Interface).first()
         int_type = InterfaceTypeChoices.TYPE_1GE_FIXED
         interfaces = [
-            Interface.objects.create(device=device, name="eth0", status=int_status, type=int_type),
+            Interface.objects.create(device=device, name="eth0", status=int_status, role=int_role, type=int_type),
             Interface.objects.create(device=device, name="eth1", status=int_status, type=int_type),
-            Interface.objects.create(device=device, name="eth2", status=int_status, type=int_type),
+            Interface.objects.create(device=device, name="eth2", status=int_status, role=int_role, type=int_type),
             Interface.objects.create(device=device, name="eth3", status=int_status, type=int_type),
         ]
 
@@ -890,8 +899,11 @@ class IPAddressToInterfaceTest(APIViewTestCases.APIViewTestCase):
         vm_status = Status.objects.get_for_model(VirtualMachine).first()
         virtual_machine = (VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, status=vm_status),)
         vm_int_status = Status.objects.get_for_model(VMInterface).first()
+        vm_int_role = Role.objects.get_for_model(VMInterface).first()
         vm_interfaces = [
-            VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status),
+            VMInterface.objects.create(
+                virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status, role=vm_int_role
+            ),
             VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth1", status=vm_int_status),
         ]
 
@@ -942,7 +954,11 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
         return VLANGroup.objects.create(name="DELETE ME")
 
     def get_deletable_object_pks(self):
-        vlangroups = VLANGroupFactory.create_batch(size=3)
+        vlangroups = [
+            VLANGroup.objects.create(name="DELETE ME"),
+            VLANGroup.objects.create(name="ME TOO"),
+            VLANGroup.objects.create(name="AND ME"),
+        ]
         return [vg.pk for vg in vlangroups]
 
 
@@ -1063,6 +1079,9 @@ class VLANLocationAssignmentTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         cls.vlans = VLAN.objects.filter(locations__isnull=False)
         cls.locations = Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(VLAN))
+        # make sure there are 4 locations without vlans 1 and 2 for the create_data below
+        for i in range(4):
+            cls.locations[i].vlans.set([])
         locations_without_vlans = cls.locations.exclude(vlans__in=[cls.vlans[0], cls.vlans[1]])
 
         cls.create_data = [

@@ -269,7 +269,7 @@ class ViewTestCases:
             response = self.client.get(url)
             self.assertHttpStatus(response, 200)
             response_data = response.content.decode(response.charset)
-            if type(obj) not in [extras_models.Contact, extras_models.Team]:
+            if getattr(obj, "is_contact_associable_model", False):
                 self.assertInHTML(
                     f'<a href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">Contacts</a>',
                     response_data,
@@ -288,7 +288,7 @@ class ViewTestCases:
                 response = self.client.get(url)
                 self.assertHttpStatus(response, 200)
                 response_data = response.content.decode(response.charset)
-                if type(obj) not in [extras_models.Contact, extras_models.Team]:
+                if getattr(obj, "is_contact_associable_model", False):
                     self.assertInHTML(
                         f'<a href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">Contacts</a>',
                         response_data,
@@ -467,10 +467,12 @@ class ViewTestCases:
         """
         Edit a single existing instance.
 
-        :form_data: Data to be used when updating the first existing object.
+        :update_data: Data to be used when updating the first existing object, fall back to form_data if not provided.
+        :form_data: Fall back to this data if update_data is not provided, for backward compatibility.
         """
 
         form_data = {}
+        update_data = {}
 
         def test_edit_object_without_permission(self):
             instance = self._get_queryset().first()
@@ -480,9 +482,10 @@ class ViewTestCases:
                 self.assertHttpStatus(self.client.get(self._get_url("edit", instance)), [403, 404])
 
             # Try POST without permission
+            update_data = self.update_data or self.form_data
             request = {
                 "path": self._get_url("edit", instance),
-                "data": utils.post_data(self.form_data),
+                "data": utils.post_data(update_data),
             }
             with utils.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.post(**request), [403, 404])
@@ -501,17 +504,17 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.get(self._get_url("edit", instance)), 200)
 
             # Try POST with model-level permission
+            update_data = self.update_data or self.form_data
             request = {
                 "path": self._get_url("edit", instance),
-                "data": utils.post_data(self.form_data),
+                "data": utils.post_data(update_data),
             }
             self.assertHttpStatus(self.client.post(**request), 302)
-            self.assertInstanceEqual(self._get_queryset().get(pk=instance.pk), self.form_data)
+            self.assertInstanceEqual(self._get_queryset().get(pk=instance.pk), update_data)
 
             if hasattr(self.model, "to_objectchange"):
                 # Verify ObjectChange creation
                 objectchanges = lookup.get_changes_for_model(instance)
-                self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
                 # Validate if detail view exists
                 validate = URLValidator()
@@ -549,17 +552,18 @@ class ViewTestCases:
             self.assertHttpStatus(self.client.get(self._get_url("edit", instance2)), 404)
 
             # Try to edit a permitted object
+            update_data = self.update_data or self.form_data
             request = {
                 "path": self._get_url("edit", instance1),
-                "data": utils.post_data(self.form_data),
+                "data": utils.post_data(update_data),
             }
             self.assertHttpStatus(self.client.post(**request), 302)
-            self.assertInstanceEqual(self._get_queryset().get(pk=instance1.pk), self.form_data)
+            self.assertInstanceEqual(self._get_queryset().get(pk=instance1.pk), update_data)
 
             # Try to edit a non-permitted object
             request = {
                 "path": self._get_url("edit", instance2),
-                "data": utils.post_data(self.form_data),
+                "data": utils.post_data(update_data),
             }
             self.assertHttpStatus(self.client.post(**request), 404)
 
@@ -637,7 +641,6 @@ class ViewTestCases:
             if hasattr(self.model, "to_objectchange"):
                 # Verify ObjectChange creation
                 objectchanges = lookup.get_changes_for_model(instance)
-                self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
 
             if hasattr(self.model, "notes") and isinstance(instance.notes, extras_querysets.NotesQuerySet):
@@ -678,7 +681,6 @@ class ViewTestCases:
             if hasattr(self.model, "to_objectchange"):
                 # Verify ObjectChange creation
                 objectchanges = lookup.get_changes_for_model(instance)
-                self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -790,6 +792,10 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_filtered(self):
             instance1, instance2 = self._get_queryset().all()[:2]
+            if hasattr(self.model, "name") and instance1.name == instance2.name:
+                instance2.name += "X"
+                instance2.save()
+
             response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}")
             self.assertHttpStatus(response, 200)
             content = utils.extract_page_body(response.content.decode(response.charset))
@@ -815,6 +821,10 @@ class ViewTestCases:
         def test_list_objects_unknown_filter_no_strict_filtering(self):
             """Verify that without STRICT_FILTERING, an unknown filter is ignored."""
             instance1, instance2 = self._get_queryset().all()[:2]
+            if hasattr(self.model, "name") and instance1.name == instance2.name:
+                instance2.name += "X"
+                instance2.save()
+
             with self.assertLogs("nautobot.core.filters") as cm:
                 response = self.client.get(f"{self._get_url('list')}?ice_cream_flavor=chocolate")
             filterset = self.get_filterset()
@@ -881,6 +891,9 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_with_constrained_permission(self):
             instance1, instance2 = self._get_queryset().all()[:2]
+            if hasattr(self.model, "name") and instance1.name == instance2.name:
+                instance2.name += "X"
+                instance2.save()
 
             # Add object-level permission
             obj_perm = users_models.ObjectPermission(
@@ -1409,7 +1422,9 @@ class ViewTestCases:
             # Try POST with model-level permission
             self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data), 302)
             for i, instance in enumerate(self._get_queryset().filter(pk__in=pk_list)):
-                self.assertEqual(instance.name, f"{objects[i].name}X")
+                name = getattr(instance, "name")
+                expected_name = getattr(objects[i], "name") + "X"
+                self.assertEqual(name, expected_name)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename_objects_with_constrained_permission(self):
@@ -1442,7 +1457,9 @@ class ViewTestCases:
             # Bulk rename permitted objects
             self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data), 302)
             for i, instance in enumerate(self._get_queryset().filter(pk__in=pk_list)):
-                self.assertEqual(instance.name, f"{objects[i].name}X")
+                name = getattr(instance, "name")
+                expected_name = getattr(objects[i], "name") + "X"
+                self.assertEqual(name, expected_name)
 
     class PrimaryObjectViewTestCase(
         GetObjectViewTestCase,

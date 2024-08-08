@@ -2,6 +2,7 @@ import logging
 
 from django.contrib import messages
 from django.contrib.auth.mixins import AccessMixin
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
@@ -10,7 +11,7 @@ from django.core.exceptions import (
     ValidationError,
 )
 from django.db import transaction
-from django.db.models import ManyToManyField, ProtectedError
+from django.db.models import ManyToManyField, ProtectedError, Q
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -37,7 +38,7 @@ from nautobot.core.forms import (
     restrict_form_fields,
 )
 from nautobot.core.utils import lookup, permissions
-from nautobot.core.utils.requests import get_filterable_params_from_filter_params
+from nautobot.core.utils.requests import get_filterable_params_from_filter_params, normalize_querydict
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utils import (
     get_csv_form_fields_from_serializer_class,
@@ -47,9 +48,9 @@ from nautobot.core.views.utils import (
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.forms import NoteForm
-from nautobot.extras.models import ExportTemplate
+from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
-from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
+from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template, remove_prefix_from_cf_key
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -59,6 +60,7 @@ PERMISSIONS_ACTION_MAP = {
     "update": "change",
     "bulk_create": "add",  # 3.0 TODO: remove, replaced by system Job
     "bulk_destroy": "delete",
+    "bulk_rename": "change",
     "bulk_update": "change",
     "changelog": "view",
     "notes": "view",
@@ -459,8 +461,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
 
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
-        filter_params = request.GET.copy()
-        return get_filterable_params_from_filter_params(filter_params, self.non_filter_params, self.filterset_class())
+        params = request.GET.copy()
+        filter_params = get_filterable_params_from_filter_params(params, self.non_filter_params, self.filterset_class())
+        if params.get("saved_view") and not filter_params and not params.get("all_filters_removed"):
+            return SavedView.objects.get(pk=params.get("saved_view")).config.get("filter_params", {})
+        return filter_params
 
     def get_queryset(self):
         """
@@ -586,6 +591,9 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         queryset = self.get_queryset()
         return queryset.all()
 
+    def extra_post_save_action(self, obj, form):
+        """Extra actions after a form is saved"""
+
 
 class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
     """
@@ -596,11 +604,7 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
         """
         Retrieve a model instance.
         """
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-
-        context = serializer.data
-        context["use_new_ui"] = True
+        context = {"use_new_ui": True}
         return Response(context)
 
 
@@ -618,6 +622,10 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
+        "saved_view",  # saved_view indicator pk or composite keys
+        "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
+        "all_filters_removed",  # indicator for if all filters have been removed from the saved view
+        "clear_view",  # indicator for if the clear view button is clicked or not
     )
 
     def filter_queryset(self, queryset):
@@ -684,13 +692,43 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         List the model instances.
         """
         context = {"use_new_ui": True}
+        queryset = self.get_queryset()
+        clear_view = request.GET.get("clear_view", False)
         if "export" in request.GET:  # 3.0 TODO: remove, irrelevant after #4746
-            queryset = self.get_queryset()
             model = queryset.model
             content_type = ContentType.objects.get_for_model(model)
             response = self.check_for_export(request, model, content_type)
             if response is not None:
                 return response
+
+        # If the user clicks on the clear view button, we do not check for global or user defaults
+        if not clear_view and not request.GET.get("saved_view"):
+            # Check if there is a default for this view for this specific user
+            app_label, model_name = queryset.model._meta.label.split(".")
+            view_name = f"{app_label}:{model_name.lower()}_list"
+            user = request.user
+            if not isinstance(user, AnonymousUser):
+                try:
+                    user_default_saved_view_pk = UserSavedViewAssociation.objects.get(
+                        user=user, view_name=view_name
+                    ).saved_view.pk
+                    # Saved view should either belong to the user or be public
+                    SavedView.objects.get(
+                        Q(pk=user_default_saved_view_pk),
+                        Q(owner=user) | Q(is_shared=True),
+                    )
+                    sv_url = reverse("extras:savedview", kwargs={"pk": user_default_saved_view_pk})
+                    return redirect(sv_url)
+                except ObjectDoesNotExist:
+                    pass
+
+            # Check if there is a global default for this view
+            try:
+                global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
+                return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
+            except ObjectDoesNotExist:
+                pass
+
         return Response(context)
 
 
@@ -707,8 +745,8 @@ class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
         queryset = self.get_queryset()
         try:
             with transaction.atomic():
-                obj.delete()
                 msg = f"Deleted {queryset.model._meta.verbose_name} {obj}"
+                obj.delete()
                 self.logger.info(msg)
                 messages.success(request, msg)
                 self.success_url = self.get_return_url(request, obj)
@@ -734,7 +772,7 @@ class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
         """
         self.obj = self.get_object()
         form_class = self.get_form_class()
-        form = form_class(request.POST)
+        form = form_class(request.POST, initial=normalize_querydict(request.GET, form_class=form_class))
         if form.is_valid():
             return self.form_valid(form)
         else:
@@ -745,6 +783,18 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
     """
     UI mixin to create or update a model instance.
     """
+
+    def extra_message_context(self, obj):
+        """
+        Context variables for this extra message.
+        """
+        return {}
+
+    def extra_message(self, **kwargs):
+        """
+        Append extra message at the end of create or update success message.
+        """
+        return ""
 
     def _process_create_or_update_form(self, form):
         """
@@ -765,9 +815,14 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             msg = f'{"Created" if object_created else "Modified"} {queryset.model._meta.verbose_name}'
             self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
             try:
-                msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+                msg = format_html(
+                    '{} <a href="{}">{}</a>' + self.extra_message(**self.extra_message_context(obj)),
+                    msg,
+                    obj.get_absolute_url(),
+                    obj,
+                )
             except AttributeError:
-                msg = format_html("{} {}", msg, obj)
+                msg = format_html("{} {}" + self.extra_message(**self.extra_message_context(obj)), msg, obj)
             messages.success(request, msg)
             if "_addanother" in request.POST:
                 # If the object has clone_fields, pre-populate a new instance of the form
@@ -800,7 +855,12 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
         """
         self.obj = self.get_object()
         form_class = self.get_form_class()
-        form = form_class(data=request.POST, files=request.FILES, instance=self.obj)
+        form = form_class(
+            data=request.POST,
+            files=request.FILES,
+            initial=normalize_querydict(request.GET, form_class=form_class),
+            instance=self.obj,
+        )
         restrict_form_fields(form, request.user)
         if form.is_valid():
             return self.form_valid(form)
@@ -825,7 +885,12 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
         """
         self.obj = self.get_object()
         form_class = self.get_form_class()
-        form = form_class(data=request.POST, files=request.FILES, instance=self.obj)
+        form = form_class(
+            data=request.POST,
+            files=request.FILES,
+            initial=normalize_querydict(request.GET, form_class=form_class),
+            instance=self.obj,
+        )
         restrict_form_fields(form, request.user)
         if form.is_valid():
             return self.form_valid(form)
@@ -878,21 +943,18 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         model = queryset.model
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
-            filter_params = self.get_filter_params(request)
-            if not filter_params:
-                self.pk_list = list(model.objects.only("pk").all().values_list("pk", flat=True))
-            elif self.filterset_class is None:
-                raise NotImplementedError("filterset_class must be defined to use _all")
-            else:
+            if self.filterset_class is not None:
                 self.pk_list = list(
-                    self.filterset_class(filter_params, model.objects.only("pk")).qs.values_list("pk", flat=True)
+                    self.filterset_class(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True)
                 )
+            else:
+                self.pk_list = list(model.objects.all().values_list("pk", flat=True))
         else:
             self.pk_list = list(request.POST.getlist("pk"))
         form_class = self.get_form_class(**kwargs)
         data = {}
         if "_confirm" in request.POST:
-            form = form_class(request.POST)
+            form = form_class(request.POST, initial=normalize_querydict(request.GET, form_class=form_class))
             if form.is_valid():
                 return self.form_valid(form)
             else:
@@ -953,7 +1015,11 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):  # 3.0 TODO: remove, unus
 
     def perform_bulk_create(self, request):
         form_class = self.get_form_class()
-        form = form_class(request.POST, request.FILES)
+        form = form_class(
+            data=request.POST,
+            files=request.FILES,
+            initial=normalize_querydict(request.GET, form_class=form_class),
+        )
         if form.is_valid():
             return self.form_valid(form)
         else:
@@ -1031,6 +1097,8 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
                 if hasattr(form, "save_note") and callable(form.save_note):
                     form.save_note(instance=obj, user=request.user)
 
+                self.extra_post_save_action(obj, form)
+
             # Enforce object-level permissions
             if queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(updated_objects):
                 raise ObjectDoesNotExist
@@ -1059,15 +1127,12 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
 
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
         if request.POST.get("_all"):
-            filter_params = self.get_filter_params(request)
-            if not filter_params:
-                self.pk_list = list(model.objects.only("pk").all().values_list("pk", flat=True))
-            elif self.filterset_class is None:
-                raise NotImplementedError("filterset_class must be defined to use _all")
-            else:
+            if self.filterset_class is not None:
                 self.pk_list = list(
-                    self.filterset_class(filter_params, model.objects.only("pk")).qs.values_list("pk", flat=True)
+                    self.filterset_class(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True)
                 )
+            else:
+                self.pk_list = list(model.objects.all().values_list("pk", flat=True))
         else:
             self.pk_list = list(request.POST.getlist("pk"))
         data = {}
@@ -1101,8 +1166,10 @@ class ObjectChangeLogViewMixin(NautobotViewSetMixin):
 
     @drf_action(detail=True)
     def changelog(self, request, *args, **kwargs):
+        model = self.get_queryset().model
         data = {
-            "base_template": self.base_template,
+            "base_template": get_base_template(self.base_template, model),
+            "active_tab": "changelog",
         }
         return Response(data)
 
@@ -1116,7 +1183,9 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
 
     @drf_action(detail=True)
     def notes(self, request, *args, **kwargs):
+        model = self.get_queryset().model
         data = {
-            "base_template": self.base_template,
+            "base_template": get_base_template(self.base_template, model),
+            "active_tab": "notes",
         }
         return Response(data)

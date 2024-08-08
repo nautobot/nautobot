@@ -36,6 +36,7 @@ class NautobotConfig(AppConfig):
     and `homepage.py` files from installed Nautobot core applications and Apps.
     """
 
+    default = False  # abstract base class, all subclasses must set this to True
     homepage_layout = "homepage.layout"
     menu_tabs = "navigation.menu_items"
     # New UI Navigation
@@ -49,19 +50,20 @@ class NautobotConfig(AppConfig):
         try:
             homepage_layout = import_string(f"{self.name}.{self.homepage_layout}")
             register_homepage_panels(self.path, self.label, homepage_layout)
-        except ModuleNotFoundError:
+        except ImportError:
             pass
 
         try:
             menu_items = import_string(f"{self.name}.{self.menu_tabs}")
             register_menu_items(menu_items)
-        except ModuleNotFoundError:
+        except ImportError:
             pass
 
+        # TODO we should remove this because it is no longer relevant.
         try:
             navigation = import_string(f"{self.name}.{self.navigation}")
             register_new_ui_menu_items(navigation)
-        except ModuleNotFoundError:
+        except ImportError:
             pass
 
         try:
@@ -872,6 +874,7 @@ class CoreConfig(NautobotConfig):
     AppConfig for the core of Nautobot.
     """
 
+    default = True
     name = "nautobot.core"
     verbose_name = "Nautobot Core"
 

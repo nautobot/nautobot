@@ -481,6 +481,12 @@ properties:
       !!! warning
           If enabling indefinite changelog retention, it is recommended to periodically delete old entries.
           Otherwise, the database may eventually exceed capacity.
+
+      +/- 2.3.0
+          As of Nautobot 2.3.0, changelog cleanup does not run automatically. Use the `Cleanup of ObjectChange records`
+          system Job to handle changelog cleanup; you may schedule this to run automatically like any other Job if
+          desired. The `CHANGELOG_RETENTION` setting provides a default age cutoff for the Job but may be overridden
+          at runtime if desired.
     environment_variable: "NAUTOBOT_CHANGELOG_RETENTION"
     is_constance_config: true
     type: "integer"
@@ -732,19 +738,6 @@ properties:
     is_constance_config: true
     type: "boolean"
     version_added: "2.0.0"
-  DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT:
-    default: 0
-    description: >-
-      The number of seconds to cache the member list of dynamic groups. Set this to `0` to disable caching.
-    details: >-
-      With large datasets (those in scope of a Dynamic Group and number of Dynamic Groups themselves),
-      users will encounter a performance penalty using or accessing the membership lists.
-      This setting allows users to accept a cached list for common use cases (particularly in the UI)
-      that expires after the configured time."
-    environment_variable: "NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"
-    is_constance_config: true
-    type: "integer"
-    version_added: "1.6.0"
   EXEMPT_VIEW_PERMISSIONS:
     default: []
     description: "A list of Nautobot models to exempt from the enforcement of view permissions."
@@ -1120,6 +1113,34 @@ properties:
       * `nautobot.core.graphql.*` - [GraphQL](../../platform-functionality/graphql.md) initialization and operation.
       * `nautobot.extras.plugins.*` - App loading and activity
       * `nautobot.core.views.generic.*` - Generic views which handle business logic for the web UI
+
+      #### Structlog Configuration
+
+      As of Nautobot 2.3, [django-structlog](https://django-structlog.readthedocs.io/en/latest/) is added as a core dependency. To use structlog, you can add the following code to your `nautobot_config.py` file:
+
+      ```python
+      from nautobot.core.settings_funcs import setup_structlog_logging
+
+      setup_structlog_logging(
+          LOGGING,
+          INSTALLED_APPS,
+          MIDDLEWARE,
+          log_level="DEBUG" if DEBUG else "INFO",
+          root_level="INFO",
+          plain_format=bool(DEBUG),  # Set to True to use human-readable structlog format over JSON
+          debug_db=False,  # Set to True to log all database queries
+      )
+      ```
+
+      Calling this function disables logging if running tests, otherwise:
+
+      * Overwrites all `formatters` and `handlers` to avoid logging duplication.
+          It's possible to add custom `formatters` and `handlers` after calling this function.
+      * Updates all `loggers` to use structlog with the specified `log_level`.
+      * Adds or updates the root logger to use structlog with the specified `root_level`.
+      * Uses a human-readable structlog format if `plain_format` is True, otherwise uses JSON.
+      * Adds database query logging if `debug_db` is True.
+      * Adds necessary Django apps and middleware for structlog.
     properties:
       additionalProperties: true
       disable_existing_loggers:

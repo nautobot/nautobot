@@ -23,6 +23,7 @@ from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     JobResultStatusChoices,
+    MetadataTypeDataTypeChoices,
     RelationshipTypeChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -72,21 +73,32 @@ from nautobot.extras.models import (
     JobHook,
     JobLogEntry,
     JobResult,
+    MetadataChoice,
+    MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroupAssociation,
     Status,
     Tag,
     Team,
+    UserSavedViewAssociation,
     Webhook,
 )
-from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
+from nautobot.extras.utils import (
+    ChangeLoggedModelsQuery,
+    FeatureQuery,
+    RoleModelsQuery,
+    TaggableClassesQuery,
+)
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup
 
@@ -123,6 +135,8 @@ __all__ = (
     "JobResultFilterSet",
     "LocalContextFilterSet",
     "LocalContextModelFilterSetMixin",
+    "MetadataTypeFilterSet",
+    "MetadataChoiceFilterSet",
     "NautobotFilterSet",
     "NoteFilterSet",
     "ObjectChangeFilterSet",
@@ -348,6 +362,7 @@ class ContentTypeFilterSet(BaseFilterSet):
     has_serializer = django_filters.BooleanFilter(
         method="_has_serializer", label="A REST API serializer exists for this type"
     )
+    feature = django_filters.CharFilter(method="_feature", label="Objects of this type support the named feature")
 
     class Meta:
         model = ContentType
@@ -391,6 +406,9 @@ class ContentTypeFilterSet(BaseFilterSet):
             return queryset.filter(pk__in=ct_pks)
         else:
             return queryset.exclude(pk__in=ct_pks)
+
+    def _feature(self, queryset, name, value):
+        return queryset.filter(FeatureQuery(value).get_query())
 
 
 # TODO: remove in 2.2
@@ -565,8 +583,11 @@ class CustomLinkFilterSet(BaseFilterSet):
 # Dynamic Groups
 #
 
+# Must be imported **after* NautobotFilterSet class is defined to avoid a circular import loop.
+from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin  # noqa: E402
 
-class DynamicGroupFilterSet(NautobotFilterSet):
+
+class DynamicGroupFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -576,10 +597,14 @@ class DynamicGroupFilterSet(NautobotFilterSet):
         },
     )
     content_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("dynamic_groups").get_choices, conjoined=False)
+    member_id = MultiValueUUIDFilter(
+        field_name="static_group_associations__associated_object_id",
+        label="Group member ID",
+    )
 
     class Meta:
         model = DynamicGroup
-        fields = ("id", "name", "description")
+        fields = ("id", "name", "description", "group_type", "tags")
 
 
 class DynamicGroupMembershipFilterSet(NautobotFilterSet):
@@ -604,6 +629,67 @@ class DynamicGroupMembershipFilterSet(NautobotFilterSet):
     class Meta:
         model = DynamicGroupMembership
         fields = ("id", "group", "parent_group", "operator", "weight")
+
+
+class SavedViewFilterSet(BaseFilterSet):
+    q = SearchFilter(filter_predicates={"name": "icontains", "owner__username": "icontains"})
+    owner = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="username",
+        queryset=get_user_model().objects.all(),
+        label="Owner (ID or name)",
+    )
+
+    class Meta:
+        model = SavedView
+        fields = [
+            "id",
+            "owner",
+            "name",
+            "view",
+            "is_global_default",
+            "is_shared",
+        ]
+
+
+class UserSavedViewAssociationFilterSet(NautobotFilterSet):
+    saved_view = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SavedView.objects.all(),
+        to_field_name="name",
+        label="Saved View (ID or name)",
+    )
+    user = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="username",
+        queryset=get_user_model().objects.all(),
+        label="User (ID or username)",
+    )
+
+    class Meta:
+        model = UserSavedViewAssociation
+        fields = ["id", "saved_view", "user", "view_name"]
+
+
+class StaticGroupAssociationFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "dynamic_group__name": "icontains",
+            "dynamic_group__description": "icontains",
+            "associated_object_type__app_label": "icontains",
+            "associated_object_type__model": "icontains",
+        }
+    )
+
+    dynamic_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DynamicGroup.objects.all(),
+        to_field_name="name",
+        label="Dynamic group (name or ID)",
+    )
+    associated_object_type = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("dynamic_groups").get_choices, conjoined=False
+    )
+
+    class Meta:
+        model = StaticGroupAssociation
+        fields = "__all__"
 
 
 #
@@ -921,6 +1007,91 @@ class JobButtonFilterSet(BaseFilterSet):
 @class_deprecated_in_favor_of(LocalContextModelFilterSetMixin)
 class LocalContextFilterSet(LocalContextModelFilterSetMixin):
     pass
+
+
+#
+# Metadata
+#
+
+
+class MetadataTypeFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+        },
+    )
+    content_types = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("metadata").get_choices,
+    )
+
+    class Meta:
+        model = MetadataType
+        fields = "__all__"
+
+
+class MetadataChoiceFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "value": "icontains",
+        },
+    )
+
+    metadata_type = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=MetadataType.objects.filter(
+            data_type__in=[MetadataTypeDataTypeChoices.TYPE_SELECT, MetadataTypeDataTypeChoices.TYPE_MULTISELECT]
+        ),
+        label="Metadata type (name or ID)",
+    )
+
+    class Meta:
+        model = MetadataChoice
+        fields = "__all__"
+
+
+class ObjectMetadataFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "_value": "icontains",
+            "metadata_type__name": "icontains",
+            "contact__name": "icontains",
+            "team__name": "icontains",
+        },
+    )
+    contact = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Contact.objects.all(),
+        to_field_name="name",
+        label="Contact (name or ID)",
+    )
+    team = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Team.objects.all(),
+        to_field_name="name",
+        label="Team (name or ID)",
+    )
+    metadata_type = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=MetadataType.objects.all(),
+        label="Metadata type (name or ID)",
+    )
+    assigned_object_type = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("metadata").get_choices,
+    )
+    value = django_filters.Filter(field_name="_value", method="filter_value")
+
+    class Meta:
+        model = ObjectMetadata
+        fields = "__all__"
+
+    def filter_value(self, queryset, name, value):
+        value = value.strip()
+        query = Q(_value__icontains=value)
+        if not value:
+            return queryset
+        return queryset.filter(query)
+
+
+#
+# Notes
+#
 
 
 class NoteFilterSet(BaseFilterSet):

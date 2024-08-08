@@ -65,7 +65,7 @@ class TreeManager(TreeManager_, BaseManager.from_queryset(TreeQuerySet)):
     Extend django-tree-queries' TreeManager to incorporate RestrictedQuerySet.
     """
 
-    _with_tree_fields = True
+    _with_tree_fields = False
     use_in_migrations = True
 
     @property
