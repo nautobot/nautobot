@@ -292,7 +292,6 @@ class SearchView(AccessMixin, View):
                     # For UIViewSet, view_func.cls gets what we need; for an ObjectListView, view_func.view_class is it.
                     view_or_viewset = getattr(view_func, "cls", getattr(view_func, "view_class", None))
                     queryset = view_or_viewset.queryset.restrict(request.user, "view")
-                    model = queryset.model
                     # For a UIViewSet, .filterset_class, for an ObjectListView, .filterset.
                     filterset = getattr(view_or_viewset, "filterset_class", getattr(view_or_viewset, "filterset", None))
                     # For a UIViewSet, .table_class, for an ObjectListView, .table.
