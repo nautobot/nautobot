@@ -146,11 +146,11 @@ class ModularComponentTemplateModel(ComponentTemplateModel):
         ordering = ("device_type", "module_type", "_name")
         constraints = [
             models.UniqueConstraint(
-                fields=("device_type", "name"),
+                fields=("name", "device_type"),
                 name="%(app_label)s_%(class)s_device_type_name_unique",
             ),
             models.UniqueConstraint(
-                fields=("module_type", "name"),
+                fields=("name", "module_type"),
                 name="%(app_label)s_%(class)s_module_type_name_unique",
             ),
         ]
@@ -379,7 +379,7 @@ class FrontPortTemplate(ModularComponentTemplateModel):
         constraints = [
             *ModularComponentTemplateModel.Meta.constraints,
             models.UniqueConstraint(
-                fields=("rear_port_template", "rear_port_position"),
+                fields=("rear_port_position", "rear_port_template"),
                 name="dcim_frontporttemplate_rear_port_template_position_unique",
             ),
         ]

@@ -603,159 +603,159 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="consoleporttemplate",
             constraint=models.UniqueConstraint(
-                fields=("device_type", "name"), name="dcim_consoleporttemplate_device_type_name_unique"
+                fields=("name", "device_type"), name="dcim_consoleporttemplate_device_type_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="consoleporttemplate",
             constraint=models.UniqueConstraint(
-                fields=("module_type", "name"), name="dcim_consoleporttemplate_module_type_name_unique"
+                fields=("name", "module_type"), name="dcim_consoleporttemplate_module_type_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="consoleserverporttemplate",
             constraint=models.UniqueConstraint(
-                fields=("device_type", "name"), name="dcim_consoleserverporttemplate_device_type_name_unique"
+                fields=("name", "device_type"), name="dcim_consoleserverporttemplate_device_type_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="consoleserverporttemplate",
             constraint=models.UniqueConstraint(
-                fields=("module_type", "name"), name="dcim_consoleserverporttemplate_module_type_name_unique"
+                fields=("name", "module_type"), name="dcim_consoleserverporttemplate_module_type_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="frontporttemplate",
             constraint=models.UniqueConstraint(
-                fields=("device_type", "name"), name="dcim_frontporttemplate_device_type_name_unique"
+                fields=("name", "device_type"), name="dcim_frontporttemplate_device_type_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="frontporttemplate",
             constraint=models.UniqueConstraint(
-                fields=("module_type", "name"), name="dcim_frontporttemplate_module_type_name_unique"
+                fields=("name", "module_type"), name="dcim_frontporttemplate_module_type_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="frontporttemplate",
             constraint=models.UniqueConstraint(
-                fields=("rear_port_template", "rear_port_position"),
+                fields=("rear_port_position", "rear_port_template"),
                 name="dcim_frontporttemplate_rear_port_template_position_unique",
             ),
         ),
         migrations.AddConstraint(
             model_name="interfacetemplate",
             constraint=models.UniqueConstraint(
-                fields=("device_type", "name"), name="dcim_interfacetemplate_device_type_name_unique"
+                fields=("name", "device_type"), name="dcim_interfacetemplate_device_type_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="interfacetemplate",
             constraint=models.UniqueConstraint(
-                fields=("module_type", "name"), name="dcim_interfacetemplate_module_type_name_unique"
+                fields=("name", "module_type"), name="dcim_interfacetemplate_module_type_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="poweroutlettemplate",
             constraint=models.UniqueConstraint(
-                fields=("device_type", "name"), name="dcim_poweroutlettemplate_device_type_name_unique"
+                fields=("name", "device_type"), name="dcim_poweroutlettemplate_device_type_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="poweroutlettemplate",
             constraint=models.UniqueConstraint(
-                fields=("module_type", "name"), name="dcim_poweroutlettemplate_module_type_name_unique"
+                fields=("name", "module_type"), name="dcim_poweroutlettemplate_module_type_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="powerporttemplate",
             constraint=models.UniqueConstraint(
-                fields=("device_type", "name"), name="dcim_powerporttemplate_device_type_name_unique"
+                fields=("name", "device_type"), name="dcim_powerporttemplate_device_type_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="powerporttemplate",
             constraint=models.UniqueConstraint(
-                fields=("module_type", "name"), name="dcim_powerporttemplate_module_type_name_unique"
+                fields=("name", "module_type"), name="dcim_powerporttemplate_module_type_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="rearporttemplate",
             constraint=models.UniqueConstraint(
-                fields=("device_type", "name"), name="dcim_rearporttemplate_device_type_name_unique"
+                fields=("name", "device_type"), name="dcim_rearporttemplate_device_type_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="rearporttemplate",
             constraint=models.UniqueConstraint(
-                fields=("module_type", "name"), name="dcim_rearporttemplate_module_type_name_unique"
+                fields=("name", "module_type"), name="dcim_rearporttemplate_module_type_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="consoleport",
-            constraint=models.UniqueConstraint(fields=("device", "name"), name="dcim_consoleport_device_name_unique"),
+            constraint=models.UniqueConstraint(fields=("name", "device"), name="dcim_consoleport_device_name_unique"),
         ),
         migrations.AddConstraint(
             model_name="consoleport",
-            constraint=models.UniqueConstraint(fields=("module", "name"), name="dcim_consoleport_module_name_unique"),
+            constraint=models.UniqueConstraint(fields=("name", "module"), name="dcim_consoleport_module_name_unique"),
         ),
         migrations.AddConstraint(
             model_name="consoleserverport",
             constraint=models.UniqueConstraint(
-                fields=("device", "name"), name="dcim_consoleserverport_device_name_unique"
+                fields=("name", "device"), name="dcim_consoleserverport_device_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="consoleserverport",
             constraint=models.UniqueConstraint(
-                fields=("module", "name"), name="dcim_consoleserverport_module_name_unique"
+                fields=("name", "module"), name="dcim_consoleserverport_module_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="frontport",
-            constraint=models.UniqueConstraint(fields=("device", "name"), name="dcim_frontport_device_name_unique"),
+            constraint=models.UniqueConstraint(fields=("name", "device"), name="dcim_frontport_device_name_unique"),
         ),
         migrations.AddConstraint(
             model_name="frontport",
-            constraint=models.UniqueConstraint(fields=("module", "name"), name="dcim_frontport_module_name_unique"),
+            constraint=models.UniqueConstraint(fields=("name", "module"), name="dcim_frontport_module_name_unique"),
         ),
         migrations.AddConstraint(
             model_name="frontport",
             constraint=models.UniqueConstraint(
-                fields=("rear_port", "rear_port_position"), name="dcim_frontport_rear_port_position_unique"
+                fields=("rear_port_position", "rear_port"), name="dcim_frontport_rear_port_position_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="interface",
-            constraint=models.UniqueConstraint(fields=("device", "name"), name="dcim_interface_device_name_unique"),
+            constraint=models.UniqueConstraint(fields=("name", "device"), name="dcim_interface_device_name_unique"),
         ),
         migrations.AddConstraint(
             model_name="interface",
-            constraint=models.UniqueConstraint(fields=("module", "name"), name="dcim_interface_module_name_unique"),
+            constraint=models.UniqueConstraint(fields=("name", "module"), name="dcim_interface_module_name_unique"),
         ),
         migrations.AddConstraint(
             model_name="poweroutlet",
-            constraint=models.UniqueConstraint(fields=("device", "name"), name="dcim_poweroutlet_device_name_unique"),
+            constraint=models.UniqueConstraint(fields=("name", "device"), name="dcim_poweroutlet_device_name_unique"),
         ),
         migrations.AddConstraint(
             model_name="poweroutlet",
-            constraint=models.UniqueConstraint(fields=("module", "name"), name="dcim_poweroutlet_module_name_unique"),
+            constraint=models.UniqueConstraint(fields=("name", "module"), name="dcim_poweroutlet_module_name_unique"),
         ),
         migrations.AddConstraint(
             model_name="powerport",
-            constraint=models.UniqueConstraint(fields=("device", "name"), name="dcim_powerport_device_name_unique"),
+            constraint=models.UniqueConstraint(fields=("name", "device"), name="dcim_powerport_device_name_unique"),
         ),
         migrations.AddConstraint(
             model_name="powerport",
-            constraint=models.UniqueConstraint(fields=("module", "name"), name="dcim_powerport_module_name_unique"),
+            constraint=models.UniqueConstraint(fields=("name", "module"), name="dcim_powerport_module_name_unique"),
         ),
         migrations.AddConstraint(
             model_name="rearport",
-            constraint=models.UniqueConstraint(fields=("device", "name"), name="dcim_rearport_device_name_unique"),
+            constraint=models.UniqueConstraint(fields=("name", "device"), name="dcim_rearport_device_name_unique"),
         ),
         migrations.AddConstraint(
             model_name="rearport",
-            constraint=models.UniqueConstraint(fields=("module", "name"), name="dcim_rearport_module_name_unique"),
+            constraint=models.UniqueConstraint(fields=("name", "module"), name="dcim_rearport_module_name_unique"),
         ),
         migrations.AlterUniqueTogether(
             name="moduletype",
@@ -782,25 +782,25 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="modulebay",
             constraint=models.UniqueConstraint(
-                fields=("parent_device", "name"), name="dcim_modulebay_parent_device_name_unique"
+                fields=("name", "parent_device"), name="dcim_modulebay_parent_device_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="modulebay",
             constraint=models.UniqueConstraint(
-                fields=("parent_module", "name"), name="dcim_modulebay_parent_module_name_unique"
+                fields=("name", "parent_module"), name="dcim_modulebay_parent_module_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="modulebaytemplate",
             constraint=models.UniqueConstraint(
-                fields=("device_type", "name"), name="dcim_modulebaytemplate_device_type_name_unique"
+                fields=("name", "device_type"), name="dcim_modulebaytemplate_device_type_name_unique"
             ),
         ),
         migrations.AddConstraint(
             model_name="modulebaytemplate",
             constraint=models.UniqueConstraint(
-                fields=("module_type", "name"), name="dcim_modulebaytemplate_module_type_name_unique"
+                fields=("name", "module_type"), name="dcim_modulebaytemplate_module_type_name_unique"
             ),
         ),
         migrations.AlterUniqueTogether(

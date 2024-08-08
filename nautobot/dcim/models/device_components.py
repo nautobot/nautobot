@@ -126,11 +126,11 @@ class ModularComponentModel(ComponentModel):
         ordering = ("device", "module", "_name")
         constraints = [
             models.UniqueConstraint(
-                fields=("device", "name"),
+                fields=("name", "device"),
                 name="%(app_label)s_%(class)s_device_name_unique",
             ),
             models.UniqueConstraint(
-                fields=("module", "name"),
+                fields=("name", "module"),
                 name="%(app_label)s_%(class)s_module_name_unique",
             ),
         ]
@@ -1003,7 +1003,7 @@ class FrontPort(ModularComponentModel, CableTermination):
         constraints = [
             *ModularComponentModel.Meta.constraints,
             models.UniqueConstraint(
-                fields=("rear_port", "rear_port_position"),
+                fields=("rear_port_position", "rear_port"),
                 name="dcim_frontport_rear_port_position_unique",
             ),
         ]
@@ -1228,11 +1228,11 @@ class ModuleBay(PrimaryModel):
         )
         constraints = [
             models.UniqueConstraint(
-                fields=["parent_device", "name"],
+                fields=["name", "parent_device"],
                 name="dcim_modulebay_parent_device_name_unique",
             ),
             models.UniqueConstraint(
-                fields=["parent_module", "name"],
+                fields=["name", "parent_module"],
                 name="dcim_modulebay_parent_module_name_unique",
             ),
         ]
