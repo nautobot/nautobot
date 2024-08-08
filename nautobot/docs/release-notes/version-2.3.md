@@ -10,18 +10,33 @@ This document describes all new features and changes in Nautobot 2.3.
 
 Administrators should plan to take these actions during or immediately after upgrade from a previous version. New installations should also take note of these actions where appropriate.
 
+- Python 3.12 is now the default recommended version of Python.
+
+!!! warning "Python 3.12"
+    Because Nautobot prior to 2.3.0 did not declare support for Python 3.12, most Apps similarly needed to previously declare an upper bound of Python 3.11 for their own compatibility. Therefore, older versions of most Apps **will not be installable** under Python 3.12. Before migrating your Nautobot environment to Python 3.12, it is your responsibility to confirm that all relevant Apps in your environment are also compatible and installable.
+
+    There is a minor "chicken-and-egg" problem here in that Apps generally cannot declare support for a new Python version before Nautobot itself publishes a release that does so; therefore, as of the 2.3.0 Nautobot release day, most Apps have not yet been updated to declare support for Python 3.12. We'll be working in the following days to promptly update our supported Apps as needed, so stay tuned.
+
+!!! warning "Docker images"
+    As has been Nautobot's policy since version 1.6.1, our published Docker images _that are not tagged with a specific Python version_ implicitly always include the _latest_ supported version of Python. This means that as of the release of Nautobot 2.3.0, the tags `latest`, `stable`, `2.3`, and `2.3.0` will all indicate Docker images that include Python 3.12, whereas previously these indicated Python 3.11 images. As noted above and below, updating to Python 3.12 may not be immediately desirable (or even possible, depending on the status of your Apps) as a "day one" action.
+
+    If you need to stay with a given Python version for the time being, you must make sure that you're relying on an appropriately specific image tag, such as `2.3-py3.11`, `stable-py3.10`, etc.
+
 - As noted [below](#dynamic-group-cache-changes-5473), a new system job is provided for automated Dynamic Group cache updates. Administrators should schedule this system job to run on a recurring basis within the Jobs UI, after the upgrade, or on new install. Configuration referencing the `DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT` setting can be safely removed, as it is no longer used. If this setting was being used previously, it is recommended to set the new scheduled job's interval to the same value.
 - As noted [below](#log-cleanup-as-system-job-3749), change logging retention cleanup is now handled via a system job. Administrators should schedule this job to run on a recurring basis to meet their needs. The `CHANGELOG_RETENTION` setting is still used to define the retention period, but the scheduled system job will perform the actual cleanup, if any needed.
-- Python 3.12 is now the default recommended version of Python.
 
 ### Job Authors & App Developers
 
-Job Authors and App Developers should take these actions prior to upgrade, to ensure compatibility with their Jobs and Apps.
+Job Authors and App Developers should take these actions to ensure compatibility with their Jobs and Apps.
 
-- Job Authors and App Developers should carefully consider the [updates to the DynamicGroup API](#dynamic-group-cache-changes-5473) and decide if their use cases dictate changing their group membership access paterns to use `DynamicGroup.update_cached_members()` to find the correct balance between Dynamic Group performance and membership updates.
-- Job Authors and App Developers should carefully consider the [updates to the TreeManager default behavior](#changed-treemanager-default-behavior-5786) and make necisary changes to their access of Tree based models.
-- Job Authors and App Developers should carefully consider the updates and changes in the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
-- Python 3.12 is now the default recomended version of Python.
+- Job Authors and App Developers should carefully consider the [updates to the DynamicGroup API](#dynamic-group-cache-changes-5473) and decide if their use cases dictate changing their group membership access patterns to use `DynamicGroup.update_cached_members()` to find the correct balance between Dynamic Group performance and membership updates.
+- Job Authors and App Developers should carefully consider the [updates to the TreeManager default behavior](#changed-treemanager-default-behavior-5786) and make necessary changes to their access of Tree based models.
+- Django 4.2 is now required by Nautobot, replacing the previous Django 3.2 dependency. Job Authors and App Developers should carefully consider the updates and changes in the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
+
+!!! warning "Django 4"
+    Django 4 includes a small number of breaking changes compared to Django 3. In our experience, most Apps have required few (or zero) updates to be Django 4 compatible, but your mileage may vary.
+
+- Python 3.12 is now supported by Nautobot and is now the default recommended version of Python. Apps will likely need to update their packaging in order to explicitly declare support for Python 3.12.
 
 ## Release Overview
 
