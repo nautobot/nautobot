@@ -47,7 +47,6 @@ from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.extras.models import FileProxy, GraphQLQuery, Status
 from nautobot.extras.registry import registry
-from nautobot.ipam.models import Prefix
 
 
 class HomeView(AccessMixin, TemplateView):
@@ -301,10 +300,7 @@ class SearchView(AccessMixin, View):
 
                     # Construct the results table for this object type
                     filtered_queryset = filterset({"q": form.cleaned_data["q"]}, queryset=queryset).qs
-                    if model == Prefix:
-                        table = table(filtered_queryset, hide_hierarchy_ui=True, orderable=False)
-                    else:
-                        table = table(filtered_queryset, orderable=False)
+                    table = table(filtered_queryset, hide_hierarchy_ui=True, orderable=False)
                     table.paginate(per_page=SEARCH_MAX_RESULTS)
 
                     if table.page:

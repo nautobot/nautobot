@@ -250,7 +250,7 @@ class VRFView(generic.ObjectView):
 
         prefixes = instance.prefixes.restrict(request.user, "view")
         prefix_count = prefixes.count()
-        prefix_table = tables.PrefixTable(prefixes.select_related("namespace"))
+        prefix_table = tables.PrefixTable(prefixes.select_related("namespace"), hide_hierarchy_ui=True)
 
         # devices = instance.devices.restrict(request.user, "view")
         # device_count = devices.count()
@@ -390,7 +390,7 @@ class RIRView(generic.ObjectView):
         # Prefixes
         assigned_prefixes = Prefix.objects.restrict(request.user, "view").filter(rir=instance).select_related("tenant")
 
-        assigned_prefix_table = tables.PrefixTable(assigned_prefixes)
+        assigned_prefix_table = tables.PrefixTable(assigned_prefixes, hide_hierarchy_ui=True)
 
         paginate = {
             "paginator_class": EnhancedPaginator,

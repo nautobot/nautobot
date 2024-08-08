@@ -2421,7 +2421,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
 
             if ContentType.objects.get_for_model(Prefix) in context["content_types"]:
                 prefixes = instance.prefixes.restrict(request.user, "view")
-                prefix_table = PrefixTable(prefixes)
+                prefix_table = PrefixTable(prefixes, hide_hierarchy_ui=True)
                 prefix_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(prefix_table)
                 context["prefix_table"] = prefix_table
