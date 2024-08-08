@@ -283,7 +283,7 @@ class FilterTestCases:
             # if lookup_method is iexact use the full updated attr
             if lookup_method == "iexact":
                 lookup = randomized_attr_value.upper()
-                model_queryset = self.queryset.filter(**{f"{filter_field_name}": lookup})
+                model_queryset = self.queryset.filter(**{f"{filter_field_name}__iexact": lookup})
             else:
                 lookup = randomized_attr_value[1:].upper()
                 model_queryset = self.queryset.filter(**{f"{filter_field_name}__icontains": lookup})

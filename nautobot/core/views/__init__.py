@@ -299,7 +299,7 @@ class SearchView(AccessMixin, View):
 
                     # Construct the results table for this object type
                     filtered_queryset = filterset({"q": form.cleaned_data["q"]}, queryset=queryset).qs
-                    table = table(filtered_queryset, orderable=False)
+                    table = table(filtered_queryset, hide_hierarchy_ui=True, orderable=False)
                     table.paginate(per_page=SEARCH_MAX_RESULTS)
 
                     if table.page:
