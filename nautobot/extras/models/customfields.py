@@ -88,6 +88,11 @@ class ComputedField(
         help_text="Internal field name. Please use underscores rather than dashes in this key.",
         slugify_function=slugify_dashes_to_underscores,
     )
+    grouping = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=True,
+        help_text="Human-readable grouping that this computed field belongs to.",
+    )
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, help_text="Name of the field as displayed to users")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     template = models.TextField(max_length=500, help_text="Jinja2 template code for field value")
@@ -294,6 +299,55 @@ class CustomFieldModel(models.Model):
         if render:
             return computed_field.render(context={"obj": self})
         return computed_field.template
+
+    def get_computed_fields_grouping_basic(self):
+        """
+        This method exists to help call get_computed_field_groupings() in templates where a function argument (advanced_ui) cannot be specified.
+        Return a dictonary of computed fields grouped by the same grouping in the form
+        {
+            <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
+            ...
+            <grouping_5>: [(cf8, <value for cf8>), (cf9, <value for cf9>), ...],
+            ...
+        }
+        which have advanced_ui set to False
+        """
+        return self.get_computed_fields_grouping(advanced_ui=False)
+
+    def get_computed_fields_grouping_advanced(self):
+        """
+        This method exists to help call get_computed_field_groupings() in templates where a function argument (advanced_ui) cannot be specified.
+        Return a dictonary of computed fields grouped by the same grouping in the form
+        {
+            <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
+            ...
+            <grouping_5>: [(cf8, <value for cf8>), (cf9, <value for cf9>), ...],
+            ...
+        }
+        which have advanced_ui set to True
+        """
+        return self.get_computed_fields_grouping(advanced_ui=True)
+
+    def get_computed_fields_grouping(self, advanced_ui=None):
+        """
+        Return a dictonary of computed fields grouped by the same grouping in the form
+        {
+            <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
+            ...
+            <grouping_5>: [(cf8, <value for cf8>), (cf9, <value for cf9>), ...],
+            ...
+        }
+        """
+        record = {}
+        computed_fields = ComputedField.objects.get_for_model(self)
+        if advanced_ui is not None:
+            computed_fields = computed_fields.filter(advanced_ui=advanced_ui)
+
+        for field in computed_fields:
+            data = (field, field.render(context={"obj": self}))
+            record.setdefault(field.grouping, []).append(data)
+        record = dict(sorted(record.items()))
+        return record
 
     def get_computed_fields(self, label_as_key=False, advanced_ui=None):
         """

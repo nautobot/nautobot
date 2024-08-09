@@ -181,6 +181,7 @@ class ComputedFieldFilterSet(BaseFilterSet):
             "description": "icontains",
             "content_type__app_label": "icontains",
             "content_type__model": "icontains",
+            "grouping": "icontains",
             "template": "icontains",
             "fallback_value": "icontains",
         },
@@ -192,6 +193,7 @@ class ComputedFieldFilterSet(BaseFilterSet):
         fields = (
             "content_type",
             "key",
+            "grouping",
             "template",
             "fallback_value",
             "weight",
@@ -422,6 +424,7 @@ class CustomFieldFilterSet(BaseFilterSet):
         filter_predicates={
             "label": "icontains",
             "description": "icontains",
+            "grouping": "icontains",
         },
     )
     content_types = ContentTypeMultipleChoiceFilter(
@@ -430,7 +433,7 @@ class CustomFieldFilterSet(BaseFilterSet):
 
     class Meta:
         model = CustomField
-        fields = ["id", "content_types", "label", "required", "filter_logic", "weight"]
+        fields = ["id", "content_types", "label", "grouping", "required", "filter_logic", "weight"]
 
 
 class CustomFieldChoiceFilterSet(BaseFilterSet):
