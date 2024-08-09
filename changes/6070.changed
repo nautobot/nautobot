@@ -1,1 +1,0 @@
-Marked the `Note` model as `is_metadata_associable_model = False`.

@@ -10,18 +10,33 @@ This document describes all new features and changes in Nautobot 2.3.
 
 Administrators should plan to take these actions during or immediately after upgrade from a previous version. New installations should also take note of these actions where appropriate.
 
+- Python 3.12 is now the default recommended version of Python.
+
+!!! warning "Python 3.12"
+    Because Nautobot prior to 2.3.0 did not declare support for Python 3.12, most Apps similarly needed to previously declare an upper bound of Python 3.11 for their own compatibility. Therefore, older versions of most Apps **will not be installable** under Python 3.12. Before migrating your Nautobot environment to Python 3.12, it is your responsibility to confirm that all relevant Apps in your environment are also compatible and installable.
+
+    There is a minor "chicken-and-egg" problem here in that Apps generally cannot declare support for a new Python version before Nautobot itself publishes a release that does so; therefore, as of the 2.3.0 Nautobot release day, most Apps have not yet been updated to declare support for Python 3.12. We'll be working in the following days to promptly update our supported Apps as needed, so stay tuned.
+
+!!! warning "Docker images"
+    As has been Nautobot's policy since version 1.6.1, our published Docker images _that are not tagged with a specific Python version_ implicitly always include the _latest_ supported version of Python. This means that as of the release of Nautobot 2.3.0, the tags `latest`, `stable`, `2.3`, and `2.3.0` will all indicate Docker images that include Python 3.12, whereas previously these indicated Python 3.11 images. As noted above and below, updating to Python 3.12 may not be immediately desirable (or even possible, depending on the status of your Apps) as a "day one" action.
+
+    If you need to stay with a given Python version for the time being, you must make sure that you're relying on an appropriately specific image tag, such as `2.3-py3.11`, `stable-py3.10`, etc.
+
 - As noted [below](#dynamic-group-cache-changes-5473), a new system job is provided for automated Dynamic Group cache updates. Administrators should schedule this system job to run on a recurring basis within the Jobs UI, after the upgrade, or on new install. Configuration referencing the `DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT` setting can be safely removed, as it is no longer used. If this setting was being used previously, it is recommended to set the new scheduled job's interval to the same value.
 - As noted [below](#log-cleanup-as-system-job-3749), change logging retention cleanup is now handled via a system job. Administrators should schedule this job to run on a recurring basis to meet their needs. The `CHANGELOG_RETENTION` setting is still used to define the retention period, but the scheduled system job will perform the actual cleanup, if any needed.
-- Python 3.12 is now the default recommended version of Python.
 
 ### Job Authors & App Developers
 
-Job Authors and App Developers should take these actions prior to upgrade, to ensure compatibility with their Jobs and Apps.
+Job Authors and App Developers should take these actions to ensure compatibility with their Jobs and Apps.
 
-- Job Authors and App Developers should carefully consider the [updates to the DynamicGroup API](#dynamic-group-cache-changes-5473) and decide if their use cases dictate changing their group membership access paterns to use `DynamicGroup.update_cached_members()` to find the correct balance between Dynamic Group performance and membership updates.
-- Job Authors and App Developers should carefully consider the [updates to the TreeManager default behavior](#changed-treemanager-default-behavior-5786) and make necisary changes to their access of Tree based models.
-- Job Authors and App Developers should carefully consider the updates and changes in the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
-- Python 3.12 is now the default recomended version of Python.
+- Job Authors and App Developers should carefully consider the [updates to the DynamicGroup API](#dynamic-group-cache-changes-5473) and decide if their use cases dictate changing their group membership access patterns to use `DynamicGroup.update_cached_members()` to find the correct balance between Dynamic Group performance and membership updates.
+- Job Authors and App Developers should carefully consider the [updates to the TreeManager default behavior](#changed-treemanager-default-behavior-5786) and make necessary changes to their access of Tree based models.
+- Django 4.2 is now required by Nautobot, replacing the previous Django 3.2 dependency. Job Authors and App Developers should carefully consider the updates and changes in the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
+
+!!! warning "Django 4"
+    Django 4 includes a small number of breaking changes compared to Django 3. In our experience, most Apps have required few (or zero) updates to be Django 4 compatible, but your mileage may vary.
+
+- Python 3.12 is now supported by Nautobot and is now the default recommended version of Python. Apps will likely need to update their packaging in order to explicitly declare support for Python 3.12.
 
 ## Release Overview
 
@@ -102,6 +117,70 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
+## v2.3.0 (2024-08-08)
+
+### Security
+
+- [#6073](https://github.com/nautobot/nautobot/issues/6073) - Updated `Django` to `~4.2.15` due to `CVE-2024-41989`, `CVE-2024-41990`, `CVE-2024-41991`, and `CVE-2024-42005`.
+
+### Added
+
+- [#5996](https://github.com/nautobot/nautobot/issues/5996) - Added missing `comments` field to DeviceType bulk edit.
+- [#5996](https://github.com/nautobot/nautobot/issues/5996) - Added `comments` field to ModuleType.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added `Cloud Networks` column to `PrefixTable`.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added `prefixes` filter to `CloudNetworkFilterSet`.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added `parent__name` and `parent__description` to `CloudNetworkFilterSet` `q` filter.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added support for querying `GenericRelation` relationships (reverse of `GenericForeignKey`) in GraphQL.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added support for filtering an object's `associated_contacts` in GraphQL.
+
+### Changed
+
+- [#6003](https://github.com/nautobot/nautobot/issues/6003) - Changed rendering of `scoped_fields` column in `ObjectMetadataTable`.
+- [#6003](https://github.com/nautobot/nautobot/issues/6003) - Changed default ordering of `ObjectMetadata` list views.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Renamed `associated_object_metadatas` GenericRelation to `associated_object_metadata`.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Renamed `object_metadatas` reverse-relations to `object_metadata`.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Changed `CloudNetwork.parent` foreign-key `on_delete` behavior to `PROTECT`.
+- [#6070](https://github.com/nautobot/nautobot/issues/6070) - Marked the `Note` model as `is_metadata_associable_model = False`.
+
+### Removed
+
+- [#6005](https://github.com/nautobot/nautobot/issues/6005) - Removed "delete" and "bulk-delete" functionalities from the ObjectMetadata views.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Removed unneeded `CloudNetworkPrefixAssignmentTable`.
+
+### Fixed
+
+- [#5967](https://github.com/nautobot/nautobot/issues/5967) - Fixed a regression in the display of custom fields in object-edit forms.
+- [#5996](https://github.com/nautobot/nautobot/issues/5996) - Fixed URL typo in module and module type list views.
+- [#6003](https://github.com/nautobot/nautobot/issues/6003) - Added missing `blank=True` to `ObjectMetadata.scoped_fields`.
+- [#6019](https://github.com/nautobot/nautobot/issues/6019) - Marked the `JobLogEntry` model as invalid for association of `ObjectMetadata`.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added missing `Config Schema` display to detail view of `CloudResourceType`.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added missing `Description` display to detail view of `CloudService`.
+- [#6045](https://github.com/nautobot/nautobot/issues/6045) - Fixed interfaces of Virtual Chassis Master missing other member's interfaces.
+- [#6051](https://github.com/nautobot/nautobot/issues/6051) - Fixed improper escaping of saved-view name in success message.
+- [#6051](https://github.com/nautobot/nautobot/issues/6051) - Fixed incorrect ordering of items in Tenant detail view.
+- [#6051](https://github.com/nautobot/nautobot/issues/6051) - Fixed query parameters for `CloudNetwork.parent` form field.
+- [#6056](https://github.com/nautobot/nautobot/issues/6056) - Fixed the order of object deletion by constructing delete success message before the object is deleted.
+- [#6064](https://github.com/nautobot/nautobot/issues/6064) - Reverted an undesired change to `IPAddressFilterSet.device` filter.
+- [#6064](https://github.com/nautobot/nautobot/issues/6064) - Reverted an undesired change to `ServiceForm.ip_addresses` valid addresses.
+
+### Documentation
+
+- [#5920](https://github.com/nautobot/nautobot/issues/5920) - Updated documentation for installation under Ubuntu 24.04 LTS, Fedora 40, AlmaLinux 9, and similar distros.
+- [#6019](https://github.com/nautobot/nautobot/issues/6019) - Updated the installation documentation to recommend a more secure set of filesystem permissions.
+- [#6050](https://github.com/nautobot/nautobot/issues/6050) - Updated model development docs with information about object metadata and dynamic groups features.
+- [#6050](https://github.com/nautobot/nautobot/issues/6050) - Added some crosslinks within the DCIM model documentation.
+- [#6062](https://github.com/nautobot/nautobot/issues/6062) - Updated Configuration Context docs with additional examples for dictionary of dictionaries.
+
+### Housekeeping
+
+- [#5962](https://github.com/nautobot/nautobot/issues/5962) - Updated development dependency `ruff` to `~0.5.6`.
+- [#5962](https://github.com/nautobot/nautobot/issues/5962) - Updated documentation dependencies: `mkdocs-material` to `~9.5.31`, `mkdocstrings` to `~0.25.2`, and `mkdocstrings-python` to `~1.10.7`.
+- [#6003](https://github.com/nautobot/nautobot/issues/6003) - Updated `ObjectMetadataFactory` to produce more realistic `scoped_fields` values.
+- [#6014](https://github.com/nautobot/nautobot/issues/6014) - Fixed intermittent `ObjectMetadata` factory failures.
+- [#6047](https://github.com/nautobot/nautobot/issues/6047) - Made sure that there is a sufficient amount of `Contact` and `Team` instances exist in the database when testing `contacts` and `teams` filters of an object's filterset.
+- [#6055](https://github.com/nautobot/nautobot/issues/6055) - Added migrations check to upstream testing workflow.
+- [#6071](https://github.com/nautobot/nautobot/issues/6071) - Fixed incorrect generic-test logic in `FilterTestCase.test_q_filter_valid` for `q` filters containing `iexact` lookups.
+
 ## v2.3.0-beta.1 (2024-07-25)
 
 ### Security

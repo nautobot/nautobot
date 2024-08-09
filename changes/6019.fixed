@@ -1,1 +1,0 @@
-Marked the `JobLogEntry` model as invalid for association of `ObjectMetadata`.
