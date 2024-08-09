@@ -1,15 +1,3 @@
 {% extends 'generic/object_list.html' %}
-{% load helpers %}
 
 {% block title %}Change Log{% endblock %}
-
-{% block header_extra %}
-    <div class="text-muted">
-        Change log retention:
-        {% if "CHANGELOG_RETENTION"|settings_or_config %}
-            {{ "CHANGELOG_RETENTION"|settings_or_config }} days
-        {% else %}
-            Indefinite
-        {% endif %}
-    </div>
-{% endblock %}

@@ -21,7 +21,9 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
+    DynamicGroupTypeChoices,
     JobResultStatusChoices,
+    MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -46,13 +48,18 @@ from nautobot.extras.filters import (
     JobHookFilterSet,
     JobLogEntryFilterSet,
     JobResultFilterSet,
+    MetadataChoiceFilterSet,
+    MetadataTypeFilterSet,
     ObjectChangeFilterSet,
+    ObjectMetadataFilterSet,
     RelationshipAssociationFilterSet,
     RelationshipFilterSet,
     RoleFilterSet,
+    SavedViewFilterSet,
     SecretFilterSet,
     SecretsGroupAssociationFilterSet,
     SecretsGroupFilterSet,
+    StaticGroupAssociationFilterSet,
     StatusFilterSet,
     TagFilterSet,
     TeamFilterSet,
@@ -66,6 +73,7 @@ from nautobot.extras.models import (
     CustomField,
     CustomFieldChoice,
     CustomLink,
+    DynamicGroup,
     ExportTemplate,
     ExternalIntegration,
     FileProxy,
@@ -77,13 +85,18 @@ from nautobot.extras.models import (
     JobHook,
     JobLogEntry,
     JobResult,
+    MetadataChoice,
+    MetadataType,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroupAssociation,
     Status,
     Tag,
     Team,
@@ -465,6 +478,7 @@ class ContactAndTeamFilterSetTestCaseMixin:
     def test_similar_to_location_data(self):
         """Complex test to test the complex `similar_to_location_data` method filter."""
         ContactAssociation.objects.all().delete()
+        ObjectMetadata.objects.all().delete()
         self.queryset.delete()
         location_type = LocationType.objects.filter(parent__isnull=True).first()
         location_status = Status.objects.get_for_model(Location).first()
@@ -984,17 +998,17 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
         location_ct = ContentType.objects.get(app_label="dcim", model="location")
         rack_ct = ContentType.objects.get(app_label="dcim", model="rack")
 
-        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
+        cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
         rack_status = Status.objects.get_for_model(Rack).first()
         racks = (
-            Rack.objects.create(name="Rack 1", location=locations[0], status=rack_status),
-            Rack.objects.create(name="Rack 2", location=locations[1], status=rack_status),
+            Rack.objects.create(name="Rack 1", location=cls.locations[0], status=rack_status),
+            Rack.objects.create(name="Rack 2", location=cls.locations[1], status=rack_status),
         )
 
         ImageAttachment.objects.create(
             content_type=location_ct,
-            object_id=locations[0].pk,
+            object_id=cls.locations[0].pk,
             name="Image Attachment 1",
             image="http://example.com/image1.png",
             image_height=100,
@@ -1002,7 +1016,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
         )
         ImageAttachment.objects.create(
             content_type=location_ct,
-            object_id=locations[1].pk,
+            object_id=cls.locations[1].pk,
             name="Image Attachment 2",
             image="http://example.com/image2.png",
             image_height=100,
@@ -1036,7 +1050,7 @@ class ImageAttachmentTestCase(FilterTestCases.FilterTestCase):
     def test_content_type_id_and_object_id(self):
         params = {
             "content_type_id": ContentType.objects.get(app_label="dcim", model="location").pk,
-            "object_id": [Location.objects.first().pk],
+            "object_id": [self.locations[0].pk],
         }
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
@@ -1303,16 +1317,62 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
     def test_search(self):
         params = {"q": "run"}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(grouping__icontains="run")
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(
+                # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+                # pylint: disable=unsupported-binary-operation
+                Q(grouping__icontains="run") | Q(message__icontains="run") | Q(log_level__icontains="run")
+                # pylint: enable=unsupported-binary-operation
+            ),
         )
-        params = {"q": "warning log"}
+        params = {"q": "warning"}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(message__icontains="warning log")
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(
+                # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+                # pylint: disable=unsupported-binary-operation
+                Q(grouping__icontains="warning") | Q(message__icontains="warning") | Q(log_level__icontains="warning")
+                # pylint: enable=unsupported-binary-operation
+            ),
         )
         params = {"q": "debug"}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(log_level__icontains="debug")
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(
+                # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+                # pylint: disable=unsupported-binary-operation
+                Q(grouping__icontains="debug") | Q(message__icontains="debug") | Q(log_level__icontains="debug")
+                # pylint: enable=unsupported-binary-operation
+            ),
         )
+
+
+class MetadataChoiceTestCase(FilterTestCases.FilterTestCase):
+    queryset = MetadataChoice.objects.all()
+    filterset = MetadataChoiceFilterSet
+    generic_filter_tests = (
+        ["metadata_type", "metadata_type__name"],
+        ["metadata_type", "metadata_type__id"],
+        ["value"],
+        ["weight"],
+    )
+
+
+class MetadataTypeTestCase(FilterTestCases.FilterTestCase):
+    queryset = MetadataType.objects.all()
+    filterset = MetadataTypeFilterSet
+    generic_filter_tests = (
+        ["name"],
+        ["description"],
+        ["data_type"],
+    )
+
+    def test_content_types(self):
+        device_ct = ContentType.objects.get_for_model(Device)
+        rack_ct = ContentType.objects.get_for_model(Rack)
+        mdts = self.queryset.filter(content_types=device_ct).filter(content_types=rack_ct).distinct()
+        params = {"content_types": ["dcim.device", "dcim.rack"]}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, mdts)
 
 
 class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
@@ -1406,16 +1466,97 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
 
     def test_changed_object_type(self):
         params = {"changed_object_type": "dcim.location"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(changed_object_type=ContentType.objects.get_for_model(Location)),
+        )
 
     def test_changed_object_type_id(self):
         params = {"changed_object_type_id": ContentType.objects.get(app_label="dcim", model="location").pk}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(changed_object_type=ContentType.objects.get_for_model(Location)),
+        )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+
+class ObjectMetadataTestCase(FilterTestCases.FilterTestCase):
+    queryset = ObjectMetadata.objects.all()
+    filterset = ObjectMetadataFilterSet
+    generic_filter_tests = (
+        ["contact", "contact__name"],
+        ["contact", "contact__id"],
+        ["team", "team__name"],
+        ["team", "team__id"],
+        ["metadata_type", "metadata_type__name"],
+        ["metadata_type", "metadata_type__id"],
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        mdt = MetadataType.objects.create(
+            name="Contact/Team Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
+        )
+        contacts = Contact.objects.all()
+        teams = Team.objects.all()
+        mdt.content_types.set(list(ContentType.objects.values_list("pk", flat=True)))
+        ObjectMetadata.objects.create(
+            metadata_type=mdt,
+            contact=contacts[0],
+            scoped_fields=["parent"],
+            assigned_object_type=ContentType.objects.get_for_model(IPAddress),
+            assigned_object_id=IPAddress.objects.first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=mdt,
+            contact=contacts[1],
+            scoped_fields=["status"],
+            assigned_object_type=ContentType.objects.get_for_model(IPAddress),
+            assigned_object_id=IPAddress.objects.first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=mdt,
+            contact=contacts[2],
+            scoped_fields=["namespace"],
+            assigned_object_type=ContentType.objects.get_for_model(IPAddress),
+            assigned_object_id=IPAddress.objects.first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=mdt,
+            team=teams[0],
+            scoped_fields=["device_type"],
+            assigned_object_type=ContentType.objects.get_for_model(Device),
+            assigned_object_id=Device.objects.first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=mdt,
+            team=teams[1],
+            scoped_fields=["status"],
+            assigned_object_type=ContentType.objects.get_for_model(Device),
+            assigned_object_id=Device.objects.first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=mdt,
+            team=teams[2],
+            scoped_fields=["name"],
+            assigned_object_type=ContentType.objects.get_for_model(Device),
+            assigned_object_id=Device.objects.first().pk,
+        )
+
+    def test_assigned_object_type(self):
+        ct_1_pk, ct_2_pk = self.queryset.values_list("assigned_object_type", flat=True)[:2]
+        ct_1 = ContentType.objects.get(pk=ct_1_pk)
+        ct_2 = ContentType.objects.get(pk=ct_2_pk)
+        oms = self.queryset.filter(assigned_object_type=ct_1_pk).distinct()
+        params = {"assigned_object_type": [f"{ct_1.app_label}.{ct_1.model}"]}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, oms)
+        oms = self.queryset.filter(assigned_object_type=ct_2_pk).distinct()
+        params = {"assigned_object_type": [f"{ct_2.app_label}.{ct_2.model}"]}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, oms)
 
 
 class RelationshipTestCase(FilterTestCases.FilterTestCase):
@@ -1721,6 +1862,37 @@ class RelationshipAssociationFilterSetTestCase(FilterTestCases.FilterTestCase):
         )
 
 
+class SavedViewTestCase(FilterTestCases.FilterTestCase):
+    queryset = SavedView.objects.all()
+    filterset = SavedViewFilterSet
+
+    generic_filter_tests = (
+        ["owner", "owner__id"],
+        ["owner", "owner__username"],
+        ["name"],
+        ["view"],
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        user = User.objects.create(username="User1", is_active=True)
+        SavedView.objects.create(
+            name="Global default View", owner=user, view="dcim:location_list", is_global_default=True
+        )
+
+    def test_is_shared(self):
+        params = {"is_shared": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(is_shared=True)
+        )
+
+    def test_is_global_default(self):
+        params = {"is_global_default": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(is_global_default=True)
+        )
+
+
 class SecretTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = Secret.objects.all()
     filterset = SecretFilterSet
@@ -1846,6 +2018,33 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
     def test_secret_type(self):
         params = {"secret_type": [SecretsGroupSecretTypeChoices.TYPE_PASSWORD]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+
+class StaticGroupAssociationTestCase(FilterTestCases.FilterTestCase):
+    queryset = StaticGroupAssociation.objects.all()
+    filterset = StaticGroupAssociationFilterSet
+
+    generic_filter_tests = (
+        ["dynamic_group", "dynamic_group__id"],
+        ["dynamic_group", "dynamic_group__name"],
+        ["associated_object_id"],
+    )
+
+    def test_associated_object_type(self):
+        ct = (
+            DynamicGroup.objects.filter(
+                static_group_associations__isnull=False,
+                group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+            )
+            .first()
+            .content_type
+        )
+        params = {"associated_object_type": [ct.model_class()._meta.label_lower]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            StaticGroupAssociation.objects.filter(associated_object_type=ct),
+            ordered=False,
+        )
 
 
 class StatusTestCase(FilterTestCases.NameOnlyFilterTestCase):

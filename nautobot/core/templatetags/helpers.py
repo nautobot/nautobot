@@ -2,10 +2,14 @@ import datetime
 import json
 import logging
 import re
+from urllib.parse import parse_qs
 
 from django import template
 from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.staticfiles.finders import find
+from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
@@ -192,7 +196,7 @@ def render_markdown(value):
 
 @library.filter()
 @register.filter()
-def render_json(value, syntax_highlight=True):
+def render_json(value, syntax_highlight=True, pretty_print=False):
     """
     Render a dictionary as formatted JSON.
 
@@ -201,7 +205,11 @@ def render_json(value, syntax_highlight=True):
     """
     rendered_json = json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
     if syntax_highlight:
-        return format_html('<code class="language-json">{}</code>', rendered_json)
+        html_string = '<code class="language-json">{}</code>'
+        if pretty_print:
+            html_string = "<pre>" + html_string + "</pre>"
+        return format_html(html_string, rendered_json)
+
     return rendered_json
 
 
@@ -581,6 +589,33 @@ def slugify(value):
     return django_slugify(value)
 
 
+@library.filter()
+@register.filter()
+def render_uptime(seconds):
+    """Format a value in seconds to a human readable value.
+
+    Example:
+        >>> render_uptime(1024768)
+        "11 days 20 hours 39 minutes"
+    """
+    try:
+        seconds = int(seconds)
+    except ValueError:
+        return placeholder(seconds)
+    delta = datetime.timedelta(seconds=seconds)
+    uptime_hours = delta.seconds // 3600
+    uptime_minutes = delta.seconds // 60 % 60
+    return format_html(
+        "{} {} {} {} {} {}",
+        delta.days,
+        "days" if delta.days != 1 else "day",
+        uptime_hours,
+        "hours" if uptime_hours != 1 else "hour",
+        uptime_minutes,
+        "minutes" if uptime_minutes != 1 else "minute",
+    )
+
+
 #
 # Tags
 #
@@ -607,6 +642,23 @@ def querystring(request, **kwargs):
         return "?" + query_string
     else:
         return ""
+
+
+@register.simple_tag()
+def table_config_button(table, table_name=None, extra_classes=""):
+    if table_name is None:
+        table_name = table.__class__.__name__
+    html_template = (
+        '<button type="button" class="btn btn-default {}'
+        '" data-toggle="modal" data-target="#{}_config" title="Configure table">'
+        '<i class="mdi mdi-cog"></i> Configure</button>'
+    )
+    return format_html(html_template, extra_classes, table_name)
+
+
+@register.simple_tag()
+def table_config_button_small(table, table_name=None):
+    return table_config_button(table, table_name, "btn-xs")
 
 
 @register.inclusion_tag("utilities/templatetags/utilization_graph.html")
@@ -714,6 +766,121 @@ def filter_form_modal(
     }
 
 
+@register.inclusion_tag("utilities/templatetags/saved_view_modal.html")
+def saved_view_modal(
+    params,
+    view,
+    model,
+    request,
+):
+    from nautobot.extras.forms import SavedViewModalForm
+    from nautobot.extras.models import SavedView
+
+    param_dict = {}
+    filters_applied = parse_qs(params)
+
+    sort_order = []
+    per_page = None
+    table_changes_pending = False
+    all_filters_removed = False
+    current_saved_view = None
+    current_saved_view_pk = None
+    non_filter_params = [
+        "all_filters_removed",
+        "page",
+        "per_page",
+        "sort",
+        "saved_view",
+        "table_changes_pending",
+        "clear_view",
+    ]
+
+    table_name = lookup.get_table_for_model(model).__name__
+    for param in non_filter_params:
+        if param == "saved_view":
+            current_saved_view_pk = filters_applied.pop(param, None)
+            if current_saved_view_pk:
+                current_saved_view_pk = current_saved_view_pk[0]
+                try:
+                    # We are not using .restrict(request.user, "view") here
+                    # User should be able to see any saved view that he has the list view access to.
+                    current_saved_view = SavedView.objects.get(pk=current_saved_view_pk)
+                except ObjectDoesNotExist:
+                    messages.error(request, f"Saved view {current_saved_view_pk} not found")
+
+        elif param == "table_changes_pending":
+            table_changes_pending = filters_applied.pop(param, False)
+        elif param == "all_filters_removed":
+            all_filters_removed = filters_applied.pop(param, False)
+        elif param == "per_page":
+            per_page = filters_applied.pop(param, None)
+        elif param == "sort":
+            sort_order = filters_applied.pop(param, [])
+        elif param == "clear_view":
+            filters_applied.pop(param, False)
+
+    if filters_applied:
+        param_dict["filter_params"] = filters_applied
+    else:
+        if (current_saved_view is not None and all_filters_removed) or (current_saved_view is None):
+            # user removed all the filters in a saved view
+            param_dict["filter_params"] = {}
+        elif current_saved_view is not None:
+            # user did not make any changes to the saved view filter params
+            param_dict["filter_params"] = current_saved_view.config.get("filter_params", {})
+
+    if current_saved_view is not None and not table_changes_pending:
+        # user did not make any changes to the saved view table config
+        view_table_config = current_saved_view.config.get("table_config", {}).get(f"{table_name}", None)
+        if view_table_config is not None:
+            param_dict["table_config"] = view_table_config.get("columns", [])
+    else:
+        # display default user display
+        if request.user is not None and not isinstance(request.user, AnonymousUser):
+            param_dict["table_config"] = request.user.get_config(f"tables.{table_name}.columns")
+    # If both are not available, do not display table_config
+
+    if per_page:
+        # user made changes to saved view pagination count
+        param_dict["per_page"] = per_page
+    elif current_saved_view is not None and not per_page:
+        # no changes made, display current saved view pagination count
+        param_dict["per_page"] = current_saved_view.config.get(
+            "pagination_count", config.get_settings_or_config("PAGINATE_COUNT")
+        )
+    else:
+        # display default pagination count
+        param_dict["per_page"] = config.get_settings_or_config("PAGINATE_COUNT")
+
+    if sort_order:
+        # user made changes to saved view sort order
+        param_dict["sort_order"] = sort_order
+    elif current_saved_view is not None and not sort_order:
+        # no changes made, display current saved view sort order
+        param_dict["sort_order"] = current_saved_view.config.get("sort_order", [])
+    else:
+        # no sorting applied
+        param_dict["sort_order"] = []
+
+    param_dict = json.dumps(param_dict, indent=4, sort_keys=True, ensure_ascii=False)
+    return {
+        "form": SavedViewModalForm(),
+        "params": params,
+        "param_dict": param_dict,
+        "view": view,
+    }
+
+
+@register.inclusion_tag("utilities/templatetags/dynamic_group_assignment_modal.html")
+def dynamic_group_assignment_modal(request, content_type):
+    from nautobot.extras.forms import DynamicGroupBulkAssignForm
+
+    return {
+        "request": request,
+        "form": DynamicGroupBulkAssignForm(model=content_type.model_class()),
+    }
+
+
 @register.inclusion_tag("utilities/templatetags/modal_form_as_dialog.html")
 def modal_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type=None):
     """Generate a form in a modal view.
@@ -806,7 +973,7 @@ def hyperlinked_object_with_color(obj):
     if obj:
         content = f'<span class="label" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{hyperlinked_object(obj)}</span>'
         return format_html(content)
-    return "—"
+    return HTML_NONE
 
 
 @register.filter()
@@ -870,12 +1037,15 @@ def _build_hyperlink(value, field="", target="", rel=""):
     attributes = {}
     display = getattr(value, field) if hasattr(value, field) else str(value)
     if hasattr(value, "get_absolute_url"):
-        attributes["href"] = value.get_absolute_url()
-        if hasattr(value, "description") and value.description:
-            attributes["title"] = value.description
-        if target:
-            attributes["target"] = target
-        if rel:
-            attributes["rel"] = rel
-        return format_html("<a {}>{}</a>", format_html_join(" ", '{}="{}"', attributes.items()), display)
+        try:
+            attributes["href"] = value.get_absolute_url()
+            if hasattr(value, "description") and value.description:
+                attributes["title"] = value.description
+            if target:
+                attributes["target"] = target
+            if rel:
+                attributes["rel"] = rel
+            return format_html("<a {}>{}</a>", format_html_join(" ", '{}="{}"', attributes.items()), display)
+        except AttributeError:
+            pass
     return format_html("{}", display)

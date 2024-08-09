@@ -1,0 +1,37 @@
+{% load form_helpers %}
+
+<div class="modal fade" tabindex="-1" role="dialog" id="dynamic_group_assignment_modal">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type-"button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title">Static Assignment to Dynamic Groups</h4>
+            </div>
+            <form id="dynamic_group_assignment_form" action="{% url 'extras:dynamicgroup_bulk_assign' %}?"
+                  method="post" class="form form-horizontal">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" name="return_url" value="{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                    <input type="hidden" id="dynamic_group_assignment_all" name="_all">
+                    <span id="dynamic_group_assignment_pks"></span>
+                    {% for field in form.hidden_fields %}
+                        {{ field }}
+                    {% endfor %}
+                    {% render_field form.add_to_groups %}
+                    {% render_field form.create_and_assign_to_new_group_name %}
+                    {% render_field form.remove_from_groups %}
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">
+                        <span class="mdi mdi-group" aria-hidden="true"></span> Apply
+                    </button>
+                    <button type="button" class="btn btn-default" id="dynamic_group_assignment_cancel">
+                        <span class="mdi mdi-close-thick" aria-hidden="true"></span> Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -241,6 +241,20 @@ menu_items = (
                 ),
             ),
             NavMenuGroup(
+                name="Users",
+                weight=150,
+                items=(
+                    NavMenuItem(
+                        link="extras:savedview_list",
+                        name="Saved Views",
+                        weight=100,
+                        permissions=[
+                            "extras.view_savedview",
+                        ],
+                    ),
+                ),
+            ),
+            NavMenuGroup(
                 name="Data Sources",
                 weight=200,
                 items=(
@@ -445,6 +459,37 @@ menu_items = (
                                 ],
                             ),
                         ),
+                    ),
+                ),
+            ),
+            NavMenuGroup(
+                name="Metadata",
+                weight=700,
+                items=(
+                    NavMenuItem(
+                        link="extras:metadatatype_list",
+                        name="Metadata Types",
+                        weight=100,
+                        permissions=[
+                            "extras.view_metadatatype",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:metadatatype_add",
+                                permissions=[
+                                    "extras.add_metadatatype",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="extras:objectmetadata_list",
+                        name="Object Metadata",
+                        weight=200,
+                        permissions=[
+                            "extras.view_objectmetadata",
+                        ],
+                        buttons=(),
                     ),
                 ),
             ),
@@ -710,6 +755,18 @@ navigation = (
                         # However `extras:note_list` is not a reverse url lookup that does not exist.
                         link="extras:note_list",
                         permissions=["extras.view_note"],
+                    ),
+                ),
+            ),
+            NavGrouping(
+                name="Users",
+                weight=500,
+                items=(
+                    NavItem(
+                        link="extras:savedview_list",
+                        name="Saved Views",
+                        weight=100,
+                        permissions=["extras.view_savedviews"],
                     ),
                 ),
             ),

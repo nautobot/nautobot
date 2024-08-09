@@ -43,7 +43,7 @@ from nautobot.extras.constants import (
 )
 from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.models import ChangeLoggedModel, GitRepository
-from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -456,6 +456,8 @@ class JobLogEntry(BaseModel):
     log_object = models.CharField(max_length=JOB_LOG_MAX_LOG_OBJECT_LENGTH, blank=True, default="")
     absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, blank=True, default="")
 
+    is_metadata_associable_model = False
+
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
 
     def __str__(self):
@@ -793,9 +795,10 @@ class JobResult(BaseModel, CustomFieldModel):
 
 
 @extras_features("graphql")
-class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
+class JobButton(ContactMixin, ChangeLoggedModel, DynamicGroupsModelMixin, NotesMixin, BaseModel):
     """
-    A predefined button that includes all necessary information to run a Nautobot Job based on a single object as a source.
+    A predefined button that includes all information to run a Nautobot Job based on a single object as a source.
+
     The button text field accepts Jinja2 template code to be rendered with an object as context.
     """
 

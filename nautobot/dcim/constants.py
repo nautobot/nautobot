@@ -118,3 +118,10 @@ NETUTILS_NETWORK_DRIVER_MAPPING_NAMES = {
     "pyntc",
     "scrapli",
 }
+
+#
+# Modules
+#
+
+# Limit of 4 allows recursion depth of Device->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module
+MODULE_RECURSION_DEPTH_LIMIT = 4

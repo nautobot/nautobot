@@ -1,4 +1,5 @@
 import collections
+import contextlib
 import hashlib
 import hmac
 import logging
@@ -14,6 +15,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
+import redis.exceptions
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -109,12 +111,17 @@ class ChangeLoggedModelsQuery(FeaturedQueryMixin):
 def change_logged_models_queryset():
     """
     Cacheable function for cases where we need this queryset many times, such as when saving multiple objects.
+
+    Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
     """
+    queryset = None
     cache_key = "nautobot.extras.utils.change_logged_models_queryset"
-    queryset = cache.get(cache_key)
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        queryset = cache.get(cache_key)
     if queryset is None:
         queryset = ChangeLoggedModelsQuery().as_queryset()
-        cache.set(cache_key, queryset)
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            cache.set(cache_key, queryset)
     return queryset
 
 
@@ -144,15 +151,25 @@ class FeatureQuery:
         # `registry` record being used by `FeatureQuery`.
 
         populate_model_features_registry()
-        query = Q()
-        for app_label, models in self.as_dict():
-            query |= Q(app_label=app_label, model__in=models)
+        try:
+            query = Q()
+            if not self.as_dict():  # no registered models??
+                raise KeyError
+            else:
+                for app_label, models in self.as_dict():
+                    query |= Q(app_label=app_label, model__in=models)
+        except KeyError:
+            query = Q(pk__in=[])
 
         return query
 
     def as_dict(self):
         """
-        Given an extras feature, return a dict of app_label: [models] for content type lookup
+        Given an extras feature, return a iterable of app_label: [models] for content type lookup.
+
+        Misnamed, as it returns an iterable of (key, value) (i.e. dict.items()) rather than an actual dict.
+
+        Raises a KeyError if the given feature doesn't exist.
         """
         return registry["model_features"][self.feature].items()
 
@@ -163,12 +180,34 @@ class FeatureQuery:
 
             >>> FeatureQuery('statuses').get_choices()
             [('dcim.device', 13), ('dcim.rack', 34)]
+
+        Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
         """
-        return [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in ContentType.objects.filter(self.get_query())]
+        choices = None
+        cache_key = f"nautobot.extras.utils.FeatureQuery.choices.{self.feature}"
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            choices = cache.get(cache_key)
+        if choices is None:
+            choices = [(f"{ct.app_label}.{ct.model}", ct.pk) for ct in ContentType.objects.filter(self.get_query())]
+            with contextlib.suppress(redis.exceptions.ConnectionError):
+                cache.set(cache_key, choices)
+        return choices
 
     def list_subclasses(self):
-        """Return a list of model classes that declare this feature."""
-        return [ct.model_class() for ct in ContentType.objects.filter(self.get_query())]
+        """
+        Return a list of model classes that declare this feature.
+
+        Cache is cleared by post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
+        """
+        subclasses = None
+        cache_key = f"nautobot.extras.utils.FeatureQuery.subclasses.{self.feature}"
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            subclasses = cache.get(cache_key)
+        if subclasses is None:
+            subclasses = [ct.model_class() for ct in ContentType.objects.filter(self.get_query())]
+            with contextlib.suppress(redis.exceptions.ConnectionError):
+                cache.set(cache_key, subclasses)
+        return subclasses
 
 
 @deconstructible
@@ -248,8 +287,10 @@ def populate_model_features_registry(refresh=False):
                             useful to narrow down the search for fields that match certain criteria. For example, if
                             `field_attributes` is set to {"related_model": RelationshipAssociation}, only fields with
                             a related model of RelationshipAssociation will be considered.
+        - 'additional_constraints': Optional dictionary of additional `{field: value}` constraints that can be checked.
     - Looks up all the models in the installed apps.
-    - For each dictionary in lookup_confs, calls lookup_by_field() function to look for all models that have fields with the names given in the dictionary.
+    - For each dictionary in lookup_confs, calls lookup_by_field() function to look for all models that have
+      fields with the names given in the dictionary.
     - Groups the results by app and updates the registry model features for each app.
     """
     if registry.get("populate_model_features_registry_called", False) and not refresh:
@@ -259,13 +300,39 @@ def populate_model_features_registry(refresh=False):
 
     lookup_confs = [
         {
+            "feature_name": "cloud_resource_types",
+            "field_names": [],
+            "additional_constraints": {"is_cloud_resource_type_model": True},
+        },
+        {
+            "feature_name": "contacts",
+            "field_names": ["associated_contacts"],
+            "additional_constraints": {"is_contact_associable_model": True},
+        },
+        {
             "feature_name": "custom_fields",
             "field_names": ["_custom_field_data"],
+        },
+        {
+            "feature_name": "metadata",
+            "field_names": [],  # TODO: add "associated_metadata" ReverseRelation here when implemented
+            "additional_constraints": {"is_metadata_associable_model": True},
         },
         {
             "feature_name": "relationships",
             "field_names": ["source_for_associations", "destination_for_associations"],
             "field_attributes": {"related_model": RelationshipAssociation},
+        },
+        {
+            "feature_name": "saved_views",
+            "field_names": [],
+            "additional_constraints": {"is_saved_view_model": True},
+        },
+        {
+            "feature_name": "dynamic_groups",
+            # models using DynamicGroupMixin but not DynamicGroupsModelMixin will lack a static_group_association_set
+            "field_names": [],
+            "additional_constraints": {"is_dynamic_group_associable_model": True},
         },
     ]
 
@@ -275,6 +342,7 @@ def populate_model_features_registry(refresh=False):
             app_models=app_models,
             field_names=lookup_conf["field_names"],
             field_attributes=lookup_conf.get("field_attributes"),
+            additional_constraints=lookup_conf.get("additional_constraints"),
         )
         feature_name = lookup_conf["feature_name"]
         registry["model_features"][feature_name] = registry_items
@@ -637,12 +705,13 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
                     ObjectChange.objects.bulk_create(queued_object_changes)
                     queued_object_changes = []
                 oc = obj.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-                oc.user = change_context.get_user()
-                oc.user_name = oc.user.username
-                oc.request_id = change_context.change_id
-                oc.change_context = change_context.context
-                oc.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
-                queued_object_changes.append(oc)
+                if oc is not None:
+                    oc.user = change_context.get_user()
+                    oc.user_name = oc.user.username
+                    oc.request_id = change_context.change_id
+                    oc.change_context = change_context.context
+                    oc.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+                    queued_object_changes.append(oc)
             ObjectChange.objects.bulk_create(queued_object_changes)
             return qs.delete()
         finally:

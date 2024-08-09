@@ -51,17 +51,9 @@ In the following steps, we will have you create the virtualenv within the `NAUTO
 
 As root, we're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nautobot` user to populate the `/opt/nautobot` directory with a self-contained Python environment including a `bin` directory for scripts and a `lib` directory for Python libraries.
 
-=== "Ubuntu/Debian"
-
-    ```no-highlight title="Create the Virtual Environment"
-    sudo -u nautobot python3 -m venv /opt/nautobot
-    ```
-
-=== "RHEL8"
-
-    ```no-highlight title="Create the Virtual Environment"
-    sudo -u nautobot python3.8 -m venv /opt/nautobot
-    ```
+```no-highlight title="Create the Virtual Environment"
+sudo -u nautobot python3 -m venv /opt/nautobot
+```
 
 ### Update the Nautobot `.bashrc`
 
@@ -89,7 +81,7 @@ It is critical to install Nautobot as the `nautobot` user so that we don't have 
 sudo -iu nautobot
 ```
 
-??? note "Validate the NAUTOBOT_ROOT variable"
+??? note "Validate the `NAUTOBOT_ROOT` variable"
     Observe also that you can now echo the value of the `NAUTOBOT_ROOT` environment variable that is automatically set because we added to `.bashrc`:
 
     ```no-highlight title="Verify Nautobot Root"
@@ -123,7 +115,7 @@ sudo -iu nautobot
             /opt/nautobot/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
             ```
 
-    === "RHEL8"
+    === "Fedora/RHEL"
 
         ```no-highlight title="Print out the PATH variable"
         echo $PATH
@@ -132,7 +124,7 @@ sudo -iu nautobot
         ??? example "Example path output"
 
             ```no-highlight title="Example output of a PATH variable"
-            /opt/nautobot/.local/bin:/opt/nautobot/bin:/opt/nautobot/.local/bin:/opt/nautobot/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin
+            /opt/nautobot/.local/bin:/opt/nautobot/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/var/lib/snapd/snap/bin
             ```
 
     Therefore, any commands executed by the `nautobot` user will always check `$NAUTOBOT_ROOT/bin` first.
@@ -166,19 +158,21 @@ pip3 install --upgrade pip wheel
 ??? example "Example pip update output"
 
     ```no-highlight
-    Requirement already satisfied: pip in ./lib/python3.10/site-packages (22.0.2)
+    Requirement already satisfied: pip in ./lib/python3.12/site-packages (24.0)
     Collecting pip
-    Downloading pip-24.0-py3-none-any.whl (2.1 MB)
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 14.8 MB/s eta 0:00:00
+      Downloading pip-24.2-py3-none-any.whl.metadata (3.6 kB)
     Collecting wheel
+      Downloading wheel-0.43.0-py3-none-any.whl.metadata (2.2 kB)
+    Downloading pip-24.2-py3-none-any.whl (1.8 MB)
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 36.6 MB/s eta 0:00:00
     Downloading wheel-0.43.0-py3-none-any.whl (65 kB)
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 65.8/65.8 KB 11.8 MB/s eta 0:00:00
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 65.8/65.8 kB 7.5 MB/s eta 0:00:00
     Installing collected packages: wheel, pip
-    Attempting uninstall: pip
-        Found existing installation: pip 22.0.2
-        Uninstalling pip-22.0.2:
-        Successfully uninstalled pip-22.0.2
-    Successfully installed pip-24.0 wheel-0.43.0
+      Attempting uninstall: pip
+        Found existing installation: pip 24.0
+        Uninstalling pip-24.0:
+          Successfully uninstalled pip-24.0
+    Successfully installed pip-24.2 wheel-0.43.0
     ```
 
 By default, Pip will now install Python packages as wheels. In most cases this is desirable, however in some cases the wheel versions of packages may have been compiled with options differing from what is needed for a specific scenario. One such case presents itself here - the wheel for `pyuwsgi`, a key web server component of Nautobot, is built without SSL (HTTPS) support. This may be fine for a non-production deployment of Nautobot, such as in your lab, but for production deployments, not supporting HTTPS will not do at all. Fortunately, you can tell Pip when you don't want to use wheels for a specific package by passing the `--no-binary=<package>` CLI parameter. We'll use that below.
@@ -229,7 +223,8 @@ nautobot-server init
 
     ```no-highlight title="Example `nautobot-server init`"
     Nautobot would like to send anonymized installation metrics to the project's maintainers.
-    These metrics include the installed Nautobot version, the Python version in use, an anonymous "deployment ID", and a list of one-way-hashed names of enabled Nautobot Apps and their versions.
+    These metrics include the installed Nautobot version, the Python version in use, an anonymous
+    "deployment ID", and a list of one-way-hashed names of enabled Nautobot Apps and their versions.
     Allow Nautobot to send these metrics? [y/n]:
     ```
 
@@ -238,8 +233,8 @@ nautobot-server init
     Configuration file created at /opt/nautobot/nautobot_config.py
     ```
 
-+++ 1.6.0
-    The `nautobot-server init` command will now prompt you to set the initial value for the [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled) setting. See the [send_installation_metrics](../tools/nautobot-server.md#send_installation_metrics) command for more information about the feature that this setting toggles.
++++ 1.6.0 "Installation metrics selection"
+    The `nautobot-server init` command will now prompt you to set the initial value for the [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled) setting. See the [`send_installation_metrics`](../tools/nautobot-server.md#send_installation_metrics) command for more information about the feature that this setting toggles.
 
 ### Required Settings
 
@@ -253,13 +248,13 @@ Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on 
 
 === "PostgreSQL"
 
-    - At a minimum, you'll need to update the `"USER"` and `"PASSWORD"` fields under `DATABASES`.
+    - At a minimum, you'll need to update the `"USER"` and `"PASSWORD"` fields under `DATABASES`. Depending on your security posture, you may wish to set these via environment variables (`NAUTOBOT_DB_USER` and `NAUTOBOT_DB_PASSWORD`) rather than writing them directly into your `nautobot_config.py`. Most Nautobot configuration settings can be set by environment variables if preferred.
 
 === "MySQL"
 
-    - At a minimum, you'll need to update the `"USER"` and `"PASSWORD"` fields under `DATABASES`.
+    - At a minimum, you'll need to update the `"USER"` and `"PASSWORD"` fields under `DATABASES`. Depending on your security posture, you may wish to set these via environment variables (`NAUTOBOT_DB_USER` and `NAUTOBOT_DB_PASSWORD`) rather than writing them directly into your `nautobot_config.py`. Most Nautobot configuration settings can be set by environment variables if preferred.
     - Additionally, since Nautobot's configuration defaults to assuming PostgreSQL, you must change the `"ENGINE"` setting from `django.db.backends.postgresql` to `django.db.backends.mysql`.
-    - If you want to enable support for Unicode text, including emojis, please make sure to add `"OPTIONS": {"charset": "utf8mb4"}`. Refer to the [configuration guide on MySQL Unicode settings](../configuration/required-settings.md#databases) for more information.
+    - If you want to enable support for Unicode text, including emojis, please make sure to include `"OPTIONS": {"charset": "utf8mb4"}`. Refer to the [configuration guide on MySQL Unicode settings](../configuration/required-settings.md#databases) for more information.
 
 !!! warning
     You absolutely must update your required settings in your `nautobot_config.py` or Nautobot will not work.
@@ -268,7 +263,7 @@ Save your changes to your `nautobot_config.py` and then proceed to the next step
 
 ### Optional Settings
 
-All Python packages required by Nautobot will be installed automatically when running `pip3 install nautobot`.
+All Python packages required by Nautobot were installed automatically when running `pip3 install nautobot` above.
 
 Nautobot also supports the ability to install optional Python packages. If desired, these packages should be listed in `local_requirements.txt` within the `NAUTOBOT_ROOT` directory, such as `/opt/nautobot/local_requirements.txt`.
 
@@ -347,7 +342,7 @@ nautobot-server collectstatic
 
     ```no title="Collect static output"
 
-    1103 static files copied to '/opt/nautobot/static'.
+    1156 static files copied to '/opt/nautobot/static'.
     ```
 
 ## Install Local Requirements

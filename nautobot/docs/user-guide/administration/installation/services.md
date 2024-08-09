@@ -26,15 +26,18 @@ Nautobot requires at least one worker to consume background tasks required for a
 nautobot-server celery --help
 ```
 
-+/- 1.1.0
++/- 1.1.0 "Celery added to Nautobot"
     Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*. RQ and the `@job` decorator for custom tasks were still supported for the remainder of the 1.x.y releases, but users should [migrate the primary worker to Celery](#migrating-to-celery-from-rq).
 
---- 2.0.0
+--- 2.0.0 "RQ removed from Nautobot"
     Support for RQ has been completely removed from Nautobot.
 
 #### Advanced Task Queue Configuration
 
 You may want to deploy multiple workers and/or multiple queues. For more information see the [task queues](../guides/celery-queues.md) documentation.
+
++++ 2.3.0 "Worker status view added"
+    In Nautobot 2.3.0, `staff` accounts can access a new worker status page at `/worker-status/` to view the status of the Celery worker(s) and the configured queues. The link to this page appears in the "User" dropdown at the bottom of the navigation menu, under the link to the "Profile" page. Use this page with caution as it runs a live query against the Celery worker(s) and may impact performance of your web service.
 
 ## Configuration
 
@@ -168,17 +171,12 @@ WantedBy=multi-user.target
 
 ### Nautobot Background Services
 
-+/- 1.1.0
-    Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated* and has been replaced with Celery. RQ and the `@job` decorator for custom tasks were still supported for the remainder of the 1.x.y releases, but users should [migrate the primary worker to Celery](#migrating-to-celery-from-rq).
-
---- 2.0.0
-    RQ support has been fully removed from Nautobot.
-
 Next, we will setup the `systemd` units for the Celery worker and Celery Beat scheduler.
 
 #### Celery Worker
 
-+++ 1.1.0
++++ 1.1.0 "Celery added to Nautobot"
+    Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated* and has been replaced with Celery. RQ and the `@job` decorator for custom tasks were still supported for the remainder of the 1.x.y releases, but users should [migrate the primary worker to Celery](#migrating-to-celery-from-rq).
 
 The Celery worker service consumes tasks from background task queues and is required for taking advantage of advanced
 Nautobot features including [Jobs](../../platform-functionality/jobs/index.md), [Custom
@@ -226,7 +224,7 @@ WantedBy=multi-user.target
 
 #### Celery Beat Scheduler
 
-+++ 1.2.0
++++ 1.2.0 "Celery Beat added to Nautobot"
 
 The Celery Beat scheduler enables the periodic execution of and scheduling of background tasks. It is required to take advantage of the [job scheduling and approval](../../platform-functionality/jobs/job-scheduling-and-approvals.md) features.
 
@@ -278,43 +276,44 @@ WantedBy=multi-user.target
 
 #### Migrating to Celery from RQ
 
-Prior to migrating, you need to determine whether you have any Apps installed that run custom background tasks that still rely on the RQ worker. There are a few ways to do this. Two of them are:
+??? abstract "Details of migrating an existing Nautobot installation from RQ to Celery"
+    Prior to migrating, you need to determine whether you have any Apps installed that run custom background tasks that still rely on the RQ worker. There are a few ways to do this. Two of them are:
 
-* Ask your developer or administrator if there are any Apps running background tasks still using the RQ worker
-* If you are savvy with code, search your code for the `@job` decorator or for `from django_rq import job`
+    * Ask your developer or administrator if there are any Apps running background tasks still using the RQ worker
+    * If you are savvy with code, search your code for the `@job` decorator or for `from django_rq import job`
 
-If you're upgrading from Nautobot version 1.0.x and are NOT running Apps that use the RQ worker, all you really need to do are two things.
+    If you're upgrading from Nautobot version 1.0.x and are NOT running Apps that use the RQ worker, all you really need to do are two things.
 
-First, you must replace the contents of `/etc/systemd/system/nautobot-worker.service` with the `systemd` unit file provided just above.
+    First, you must replace the contents of `/etc/systemd/system/nautobot-worker.service` with the `systemd` unit file provided just above.
 
-Next, you must update any custom background tasks that you may have written. If you do not have any custom background tasks, then you may continue on to the next section to reload your worker service to use Celery.
+    Next, you must update any custom background tasks that you may have written. If you do not have any custom background tasks, then you may continue on to the next section to reload your worker service to use Celery.
 
-To update your custom tasks, you'll need to do the following.
+    To update your custom tasks, you'll need to do the following.
 
-* Replace each import `from django_rq import job` with `from nautobot.core.celery import nautobot_task`
-* Replace each decorator of `@job` with `@nautobot_task`
+    * Replace each import `from django_rq import job` with `from nautobot.core.celery import nautobot_task`
+    * Replace each decorator of `@job` with `@nautobot_task`
 
-For example:
+    For example:
 
-```diff title="Diff of tasks for celery vs rq"
-diff --git a/task_example.py b/task_example.py
-index f84073fb5..52baf6096 100644
---- a/task_example.py
-+++ b/task_example.py
-@@ -1,6 +1,6 @@
--from django_rq import job
-+from nautobot.core.celery import nautobot_task
+    ```diff title="Diff of tasks for celery vs rq"
+    diff --git a/task_example.py b/task_example.py
+    index f84073fb5..52baf6096 100644
+    --- a/task_example.py
+    +++ b/task_example.py
+    @@ -1,6 +1,6 @@
+    -from django_rq import job
+    +from nautobot.core.celery import nautobot_task
 
 
--@job("default")
-+@nautobot_task
- def example_task(*args, **kwargs):
-     return "examples are cool!"
-(END)
-```
+    -@job("default")
+    +@nautobot_task
+     def example_task(*args, **kwargs):
+         return "examples are cool!"
+    (END)
+    ```
 
-!!! warning
-    Failure to account for the RQ to Celery migration may break your custom background tasks.
+    !!! warning
+        Failure to account for the RQ to Celery migration may break your custom background tasks.
 
 ### Configure systemd
 
@@ -336,19 +335,16 @@ You can use the command `systemctl status nautobot.service` to verify that the W
 
 ```no-highlight title="Validate services are running"
 ● nautobot.service - Nautobot WSGI Service
-     Loaded: loaded (/etc/systemd/system/nautobot.service; enabled; vendor preset: enabled)
-     Active: active (running) since Fri 2021-03-05 22:23:33 UTC; 35min ago
+     Loaded: loaded (/etc/systemd/system/nautobot.service; enabled; preset: enabled)
+     Active: active (running) since Mon 2024-07-29 20:44:21 UTC; 5s ago
        Docs: https://docs.nautobot.com/projects/core/en/stable/
-   Main PID: 6992 (nautobot-server)
-      Tasks: 16 (limit: 9513)
-     Memory: 221.1M
+   Main PID: 7340 (nautobot-server)
+      Tasks: 2 (limit: 4658)
+     Memory: 135.2M (peak: 135.5M)
+        CPU: 3.445s
      CGroup: /system.slice/nautobot.service
-             ├─6992 /opt/nautobot/bin/python3 /opt/nautobot/bin/nautobot-server start />
-             ├─7007 /opt/nautobot/bin/python3 /opt/nautobot/bin/nautobot-server start />
-             ├─7010 /opt/nautobot/bin/python3 /opt/nautobot/bin/nautobot-server start />
-             ├─7013 /opt/nautobot/bin/python3 /opt/nautobot/bin/nautobot-server start />
-             ├─7016 /opt/nautobot/bin/python3 /opt/nautobot/bin/nautobot-server start />
-             └─7019 /opt/nautobot/bin/python3 /opt/nautobot/bin/nautobot-server start />
+             ├─7340 /opt/nautobot/bin/python3 /opt/nautobot/bin/nautobot-server start --pidfile /var/tmp/nautobot.pid
+             └─7351 /opt/nautobot/bin/python3 /opt/nautobot/bin/nautobot-server start --pidfile /var/tmp/nautobot.pid
 ```
 
 !!! note

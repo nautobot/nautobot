@@ -16,5 +16,3 @@ class ExampleAppWithOverrideConfig(NautobotAppConfig):
 
 
 config = ExampleAppWithOverrideConfig
-
-default_app_config = "nautobot.core.apps.CoreConfig"

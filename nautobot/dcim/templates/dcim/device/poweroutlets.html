@@ -1,6 +1,5 @@
 {% extends 'dcim/device/base.html' %}
 {% load helpers %}
-{% load render_table from django_tables2 %}
 {% load static %}
 
 {% block content %}
@@ -11,11 +10,11 @@
                 <strong>Power Outlets</strong>
                 <div class="pull-right noprint">
                     {% if request.user.is_authenticated %}
-                        <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#DevicePowerOutletTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
+                        {% table_config_button_small poweroutlet_table %}
                     {% endif %}
                 </div>
             </div>
-            {% render_table poweroutlet_table 'inc/table.html' %}
+            {% include 'responsive_table.html' with table=poweroutlet_table %}
             <div class="panel-footer noprint">
                 {% if perms.dcim.change_powerport %}
                     <button type="submit" name="_rename" formaction="{% url 'dcim:poweroutlet_bulk_rename' %}?return_url={% url 'dcim:device_poweroutlets' pk=object.pk %}" class="btn btn-warning btn-xs">

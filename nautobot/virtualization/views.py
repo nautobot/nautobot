@@ -6,7 +6,6 @@ from django.urls import reverse
 from django.utils.functional import cached_property
 from django_tables2 import RequestConfig
 
-from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
@@ -25,7 +24,7 @@ from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterf
 
 
 class ClusterTypeListView(generic.ObjectListView):
-    queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "cluster_type"))
+    queryset = ClusterType.objects.all()
     filterset = filters.ClusterTypeFilterSet
     filterset_form = forms.ClusterTypeFilterForm
     table = tables.ClusterTypeTable
@@ -36,14 +35,7 @@ class ClusterTypeView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Clusters
-        clusters = (
-            Cluster.objects.restrict(request.user, "view")
-            .filter(cluster_type=instance)
-            .select_related("cluster_group", "location", "tenant")
-        ).annotate(
-            device_count=count_related(Device, "cluster"),
-            vm_count=count_related(VirtualMachine, "cluster"),
-        )
+        clusters = Cluster.objects.restrict(request.user, "view").filter(cluster_type=instance)
 
         cluster_table = tables.ClusterTable(clusters)
         cluster_table.columns.hide("cluster_type")
@@ -72,7 +64,7 @@ class ClusterTypeBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, un
 
 
 class ClusterTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = ClusterType.objects.annotate(cluster_count=count_related(Cluster, "cluster_type"))
+    queryset = ClusterType.objects.all()
     table = tables.ClusterTypeTable
     filterset = filters.ClusterTypeFilterSet
 
@@ -83,7 +75,7 @@ class ClusterTypeBulkDeleteView(generic.BulkDeleteView):
 
 
 class ClusterGroupListView(generic.ObjectListView):
-    queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "cluster_group"))
+    queryset = ClusterGroup.objects.all()
     filterset = filters.ClusterGroupFilterSet
     filterset_form = forms.ClusterGroupFilterForm
     table = tables.ClusterGroupTable
@@ -94,14 +86,7 @@ class ClusterGroupView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Clusters
-        clusters = (
-            Cluster.objects.restrict(request.user, "view")
-            .filter(cluster_group=instance)
-            .select_related("cluster_type", "location", "tenant")
-        ).annotate(
-            device_count=count_related(Device, "cluster"),
-            vm_count=count_related(VirtualMachine, "cluster"),
-        )
+        clusters = Cluster.objects.restrict(request.user, "view").filter(cluster_group=instance)
 
         cluster_table = tables.ClusterTable(clusters)
         cluster_table.columns.hide("cluster_group")
@@ -130,7 +115,7 @@ class ClusterGroupBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, u
 
 
 class ClusterGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = ClusterGroup.objects.annotate(cluster_count=count_related(Cluster, "cluster_group"))
+    queryset = ClusterGroup.objects.all()
     table = tables.ClusterGroupTable
     filterset = filters.ClusterGroupFilterSet
 
@@ -142,10 +127,7 @@ class ClusterGroupBulkDeleteView(generic.BulkDeleteView):
 
 class ClusterListView(generic.ObjectListView):
     permission_required = "virtualization.view_cluster"
-    queryset = Cluster.objects.annotate(
-        device_count=count_related(Device, "cluster"),
-        vm_count=count_related(VirtualMachine, "cluster"),
-    )
+    queryset = Cluster.objects.all()
     table = tables.ClusterTable
     filterset = filters.ClusterFilterSet
     filterset_form = forms.ClusterFilterForm
@@ -155,11 +137,7 @@ class ClusterView(generic.ObjectView):
     queryset = Cluster.objects.all()
 
     def get_extra_context(self, request, instance):
-        devices = (
-            Device.objects.restrict(request.user, "view")
-            .filter(cluster=instance)
-            .select_related("location", "rack", "tenant", "device_type__manufacturer")
-        )
+        devices = Device.objects.restrict(request.user, "view").filter(cluster=instance)
         device_table = DeviceTable(list(devices), orderable=False)
         if request.user.has_perm("virtualization.change_cluster"):
             device_table.columns.show("pk")
@@ -183,14 +161,14 @@ class ClusterBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
 
 
 class ClusterBulkEditView(generic.BulkEditView):
-    queryset = Cluster.objects.select_related("cluster_type", "cluster_group", "location")
+    queryset = Cluster.objects.all()
     filterset = filters.ClusterFilterSet
     table = tables.ClusterTable
     form = forms.ClusterBulkEditForm
 
 
 class ClusterBulkDeleteView(generic.BulkDeleteView):
-    queryset = Cluster.objects.select_related("cluster_type", "cluster_group", "location")
+    queryset = Cluster.objects.all()
     filterset = filters.ClusterFilterSet
     table = tables.ClusterTable
 

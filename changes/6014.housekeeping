@@ -1,0 +1,1 @@
+Fixed intermittent `ObjectMetadata` factory failures.

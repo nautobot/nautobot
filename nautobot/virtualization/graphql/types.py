@@ -16,7 +16,7 @@ class ClusterType(OptimizedNautobotObjectType):
         filterset_class = ClusterFilterSet
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self, use_cache=True)
+        return DynamicGroup.objects.get_for_object(self)
 
 
 class VirtualMachineType(OptimizedNautobotObjectType):
@@ -29,7 +29,7 @@ class VirtualMachineType(OptimizedNautobotObjectType):
         filterset_class = VirtualMachineFilterSet
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self, use_cache=True)
+        return DynamicGroup.objects.get_for_object(self)
 
 
 class VMInterfaceType(OptimizedNautobotObjectType):

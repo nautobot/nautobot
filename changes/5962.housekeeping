@@ -1,0 +1,2 @@
+Updated development dependency `ruff` to `~0.5.6`.
+Updated documentation dependencies: `mkdocs-material` to `~9.5.31`, `mkdocstrings` to `~0.25.2`, and `mkdocstrings-python` to `~1.10.7`.

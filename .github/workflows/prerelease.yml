@@ -17,11 +17,11 @@ jobs:
     runs-on: "ubuntu-20.04"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v2"
+        uses: "actions/checkout@v4"
       - name: "Set up Python"
         uses: "actions/setup-python@v2"
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: "Install Python Packages"
         run: "pip install poetry"
       - name: "Configure Poetry"
@@ -54,12 +54,12 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.8", "3.9", "3.10", "3.11" ]
+        python-version: [ "3.8", "3.9", "3.10", "3.11", "3.12" ]
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v2"
+        uses: "actions/checkout@v4"
       - run: echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_OUTPUT
         id: "gitbranch"
       - name: "Set up QEMU"
@@ -86,7 +86,7 @@ jobs:
             latest=false
           tags: |
             type=match,pattern=v(.*),group=1,suffix=-py${{ matrix.python-version }}
-            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.11 }}
+            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.12 }}
           labels: |
             org.opencontainers.image.title=Nautobot
       - name: "Build"
@@ -113,7 +113,7 @@ jobs:
             latest=false
           tags: |
             type=match,pattern=v(.*),group=1,suffix=-py${{ matrix.python-version }}
-            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.11 }}
+            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.12 }}
           labels: |
             org.opencontainers.image.title=Nautobot
       - name: "Build Dev Containers"

@@ -2,6 +2,7 @@ import hashlib
 import json
 import os
 
+from django.contrib.contenttypes.models import ContentType
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.core.serializers.json import DjangoJSONEncoder
@@ -68,30 +69,56 @@ class Command(BaseCommand):
                 ProviderFactory,
                 ProviderNetworkFactory,
             )
+            from nautobot.cloud.factory import (
+                CloudAccountFactory,
+                CloudNetworkFactory,
+                CloudResourceTypeFactory,
+                CloudServiceFactory,
+            )
             from nautobot.dcim.factory import (
+                ConsolePortTemplateFactory,
+                ConsoleServerPortTemplateFactory,
                 ControllerFactory,
                 ControllerManagedDeviceGroupFactory,
                 DeviceFactory,
                 DeviceFamilyFactory,
                 DeviceRedundancyGroupFactory,
                 DeviceTypeFactory,
+                FrontPortTemplateFactory,
+                InterfaceTemplateFactory,
                 LocationFactory,
                 LocationTypeFactory,
                 ManufacturerFactory,
+                ModuleBayTemplateFactory,
+                ModuleFactory,
+                ModuleTypeFactory,
                 PlatformFactory,
+                PowerOutletTemplateFactory,
+                PowerPortTemplateFactory,
+                RearPortTemplateFactory,
                 SoftwareImageFileFactory,
                 SoftwareVersionFactory,
             )
+            from nautobot.extras.choices import MetadataTypeDataTypeChoices
             from nautobot.extras.factory import (
                 ContactFactory,
+                DynamicGroupFactory,
                 ExternalIntegrationFactory,
+                JobLogEntryFactory,
+                JobResultFactory,
+                MetadataChoiceFactory,
+                MetadataTypeFactory,
+                ObjectChangeFactory,
+                ObjectMetadataFactory,
                 RoleFactory,
+                SavedViewFactory,
                 StatusFactory,
                 TagFactory,
                 TeamFactory,
             )
             from nautobot.extras.management import populate_role_choices, populate_status_choices
-            from nautobot.extras.utils import TaggableClassesQuery
+            from nautobot.extras.models import MetadataType
+            from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
             from nautobot.ipam.choices import PrefixTypeChoices
             from nautobot.ipam.factory import (
                 NamespaceFactory,
@@ -103,6 +130,7 @@ class Command(BaseCommand):
                 VRFFactory,
             )
             from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
+            from nautobot.users.factory import UserFactory
         except ImportError as err:
             raise CommandError('Unable to load data factories. Is the "factory-boy" package installed?') from err
 
@@ -133,6 +161,8 @@ class Command(BaseCommand):
         )
         # ...and some tags that apply to a random subset of content-types
         _create_batch(TagFactory, 15, description="on some content-types")
+        _create_batch(UserFactory, 5)
+        _create_batch(SavedViewFactory, 20)
         _create_batch(ContactFactory, 20)
         _create_batch(TeamFactory, 20)
         _create_batch(TenantGroupFactory, 10, description="without parents", has_parent=False)
@@ -176,11 +206,25 @@ class Command(BaseCommand):
         _create_batch(SoftwareImageFileFactory, 25, description="to be usable by DeviceTypes")
         _create_batch(ManufacturerFactory, 4, description="without Platforms")  # 4 more hard-coded Manufacturers
         _create_batch(DeviceTypeFactory, 30)
+        _create_batch(ModuleTypeFactory, 20)
+        _create_batch(ConsolePortTemplateFactory, 30)
+        _create_batch(ConsoleServerPortTemplateFactory, 30)
+        _create_batch(RearPortTemplateFactory, 30)
+        _create_batch(FrontPortTemplateFactory, 30)
+        _create_batch(InterfaceTemplateFactory, 30)
+        _create_batch(PowerPortTemplateFactory, 30)
+        _create_batch(PowerOutletTemplateFactory, 30)
+        _create_batch(ModuleBayTemplateFactory, 90)
         _create_batch(ManufacturerFactory, 2, description="without Platforms or DeviceTypes")  # Last 2 hard-coded
         _create_batch(DeviceRedundancyGroupFactory, 20)
         _create_batch(DeviceFactory, 20)
+        _create_batch(ModuleFactory, 20)
         _create_batch(SoftwareVersionFactory, 5, description="without Devices")
         _create_batch(SoftwareImageFileFactory, 5, description="without DeviceTypes")
+        _create_batch(CloudAccountFactory, 10)
+        _create_batch(CloudResourceTypeFactory, 20)
+        _create_batch(CloudNetworkFactory, 20)
+        _create_batch(CloudServiceFactory, 20)
         _create_batch(CircuitTypeFactory, 40)
         _create_batch(ProviderFactory, 20, description="to be usable by Circuits")
         _create_batch(ProviderNetworkFactory, 20)
@@ -205,6 +249,38 @@ class Command(BaseCommand):
             2,
             description="without a location, for side Z",
             has_location=False,
+            term_side="Z",
+        )
+        _create_batch(
+            CircuitTerminationFactory,
+            2,
+            description="with a cloud network, for side A",
+            has_location=False,
+            has_cloud_network=True,
+            term_side="A",
+        )
+        _create_batch(
+            CircuitTerminationFactory,
+            2,
+            description="with a cloud network, for side Z",
+            has_location=False,
+            has_cloud_network=True,
+            term_side="Z",
+        )
+        _create_batch(
+            CircuitTerminationFactory,
+            2,
+            description="with a provider network, for side A",
+            has_location=False,
+            has_cloud_network=False,
+            term_side="A",
+        )
+        _create_batch(
+            CircuitTerminationFactory,
+            2,
+            description="with a provider network, for side Z",
+            has_location=False,
+            has_cloud_network=False,
             term_side="Z",
         )
         _create_batch(
@@ -239,6 +315,37 @@ class Command(BaseCommand):
         # _create_batch(ClusterFactory, 10)
         # _create_batch(VirtualMachineFactory, 10)
         # We need to remove them from there and enable them here instead, but that will require many test updates.
+        _create_batch(DynamicGroupFactory, 20, description="and StaticGroupAssociations")
+        _create_batch(
+            MetadataTypeFactory,
+            len(MetadataTypeDataTypeChoices.CHOICES),
+            description="on all content-types",
+            content_types=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
+        )
+        _create_batch(
+            MetadataTypeFactory,
+            2 * len(MetadataTypeDataTypeChoices.CHOICES),
+            description="on various content-types",
+        )
+        _create_batch(MetadataChoiceFactory, 100)
+        _create_batch(ObjectChangeFactory, 100)
+        _create_batch(JobResultFactory, 20)
+        _create_batch(JobLogEntryFactory, 100)
+        _create_batch(ObjectMetadataFactory, 100)
+        _create_batch(
+            ObjectMetadataFactory,
+            20,
+            metadata_type=MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM).first(),
+            has_contact=True,
+            description="with contacts",
+        )
+        _create_batch(
+            ObjectMetadataFactory,
+            20,
+            metadata_type=MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM).first(),
+            has_contact=False,
+            description="with teams",
+        )
 
     def handle(self, *args, **options):
         if options["flush"]:
@@ -259,7 +366,13 @@ Type 'yes' to continue, or 'no' to cancel: """
             self.stdout.write(
                 self.style.WARNING(f'Flushing all existing data from the database "{options["database"]}"...')
             )
-            call_command("flush", "--no-input", "--database", options["database"])
+
+            # If we already have a fixture file to use, suppress the "post_migrate" signal that "flush" would normally
+            # trigger, as that would lead to creation of Job records (etc.) that WILL conflict with the fixture data.
+            inhibit_post_migrate = options["cache_test_fixtures"] and os.path.exists(options["fixture_file"])
+            call_command(
+                "flush", "--no-input", "--database", options["database"], inhibit_post_migrate=inhibit_post_migrate
+            )
 
         if options["cache_test_fixtures"] and os.path.exists(options["fixture_file"]):
             self.stdout.write(self.style.WARNING(f"Loading factory data from file {options['fixture_file']}"))
@@ -277,7 +390,7 @@ Type 'yes' to continue, or 'no' to cancel: """
                     "dumpdata",
                     indent=2,
                     format="json",
-                    exclude=["auth.permission", "extras.job", "extras.customfield"],
+                    exclude=["auth.permission"],
                     output=options["fixture_file"],
                 )
 

@@ -600,7 +600,7 @@ Removing expired sessions...
 
 `nautobot-server refresh_dynamic_group_member_caches`
 
-Refresh the cached members of all Dynamic Groups. This is useful to periodically update the cached list of members of a Dynamic Group without having to wait for caches to expire, which defaults to one hour.
+Refresh the cached members of all Dynamic Groups. This can also be achieved by running the `Refresh Dynamic Group Caches` system Job.
 
 ### `refresh_content_type_caches`
 
@@ -807,6 +807,53 @@ Finished.
 
 !!! note
     This command is safe to run at any time. If it does not detect any changes, it will exit cleanly.
+
+### `validate_models`
+
+`nautobot-server validate_models`
+
+Validate all instances of a given model(s) by running a 'full_clean()' or 'validated_save()' on each object.
+
+!!! warning
+    Depending on the number of records in your database, this may take a long time to run.
+
+```no-highlight
+nautobot-server validate_models
+```
+
+Example output:
+
+```no-highlight
+Validating 171 models.
+auth.Permission
+circuits.ProviderNetwork
+circuits.Provider
+circuits.CircuitType
+circuits.Circuit
+circuits.CircuitTermination
+dcim.Interface
+dcim.Manufacturer
+dcim.DeviceFamily
+dcim.DeviceTypeToSoftwareImageFile
+dcim.DeviceType
+dcim.Platform
+<omitted for brevity>
+```
+
+You can validate a specific subset of models by providing a space separated list of models as shown here:
+
+```no-highlight
+nautobot-server validate_models dcim.Manufacturer dcim.Device
+```
+
+```no-highlight
+Validating 2 models.
+dcim.Manufacturer
+dcim.Device
+```
+
+`--save`  
+Run `validated_save()` instead of `full_clean()` for slower but more thorough data validation.
 
 ### `version`
 

@@ -1,0 +1,13 @@
+{% if bulk_action_buttons|length > 1 %}
+<div class="btn-group dropup">
+    {% for button in bulk_action_buttons %}
+        {{ button }}
+        {% if forloop.first %}
+    <ul class="dropdown-menu">
+        {% endif %}
+    {% endfor %}
+    </ul>
+</div>
+{% elif bulk_action_buttons|length == 1 %}
+    {{ bulk_action_buttons|first }}
+{% endif %}

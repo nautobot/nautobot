@@ -33,10 +33,10 @@ class ChangeLoggedModel(models.Model):
 
     def to_objectchange(self, action, *, related_object=None, object_data_extra=None, object_data_exclude=None):
         """
-        Return a new ObjectChange representing a change made to this object. This will typically be called automatically
-        by ChangeLoggingMiddleware.
-        """
+        Return a new ObjectChange representing a change made to this object, or None if the object shouldn't be logged.
 
+        This will typically be called automatically by ChangeLoggingMiddleware.
+        """
         return ObjectChange(
             changed_object=self,
             object_repr=str(self)[:CHANGELOG_MAX_OBJECT_REPR],
