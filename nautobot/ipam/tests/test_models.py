@@ -963,7 +963,7 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         self.prefix = Prefix.objects.create(prefix="192.0.2.0/24", status=self.status, namespace=self.namespace)
 
     def test_get_or_create(self):
-        """Test that"""
+        """Assert `get_or_create` method to permit specifying a namespace as an alternative to a parent prefix."""
         default_namespace = get_default_namespace()
         # Use a namespace different from the default namespace which has an ipaddress
         namespace = (
@@ -1008,6 +1008,16 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
             self.assertEqual(ip_obj.host, host)
             self.assertEqual(ip_obj.mask_length, mask_length)
             self.assertEqual(ip_obj._namespace, default_namespace)
+            self.assertTrue(created)
+
+        with self.subTest("Assert create explicitly defining a non default namespace"):
+            ip_obj.delete()
+            ip_obj, created = IPAddress.objects.get_or_create(
+                host=host, mask_length=mask_length, status=status, namespace=namespace
+            )
+            self.assertEqual(ip_obj.host, host)
+            self.assertEqual(ip_obj.mask_length, mask_length)
+            self.assertEqual(ip_obj._namespace, namespace)
             self.assertTrue(created)
 
     def test_create_field_population(self):
