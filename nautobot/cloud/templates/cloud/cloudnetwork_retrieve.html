@@ -100,13 +100,7 @@
                 </tr>
                 <tr>
                     <td>Parent</td>
-                    <td>
-                        {% if object.parent %}
-                            {{ object.parent|hyperlinked_object }}
-                        {% else %}
-                            <span class="text-muted">&mdash;</span>
-                        {% endif %}
-                    </td>
+                    <td>{{ object.parent|hyperlinked_object }}</td>
                 </tr>
                 <tr>
                     <td>Description</td>

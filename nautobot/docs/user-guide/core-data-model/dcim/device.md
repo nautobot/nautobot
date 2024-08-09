@@ -23,7 +23,7 @@ For Devices forming a group (Failover, Load-Sharing, Redundacy or similar) refer
     The [Software Version](softwareversion.md) model has been introduced to represent the software version that is currently installed on a device. An optional software version field has been added to devices.
 
 +++ 2.3.0
-    Components from modules installed in module bays on the device will be shown in the device component lists. This includes modules that are in nested module bays. Device primary IP address can be designated from interfaces installed in modules.
+    Components from [modules](module.md) installed in [module bays](modulebay.md) on the device will also be shown in the device component lists. This includes modules that are in nested module bays. Device primary IP address can be designated from interfaces installed in modules.
 
 ## Developer API
 

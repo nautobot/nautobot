@@ -132,6 +132,17 @@ class FilterTestCases:
                     if generic_filter_test not in self.generic_filter_tests:
                         self.generic_filter_tests = (*self.generic_filter_tests, generic_filter_test)
 
+                # Make sure we have at least 3 contacts and 3 teams in the database
+                if Contact.objects.count() < 3:
+                    Contact.objects.create(name="Generic Filter Test Contact 1")
+                    Contact.objects.create(name="Generic Filter Test Contact 2")
+                    Contact.objects.create(name="Generic Filter Test Contact 3")
+
+                if Team.objects.count() < 3:
+                    Team.objects.create(name="Generic Filter Test Team 1")
+                    Team.objects.create(name="Generic Filter Test Team 2")
+                    Team.objects.create(name="Generic Filter Test Team 3")
+
                 # Make sure we have some valid contact-associations:
                 for contact, team, instance in zip(Contact.objects.all()[:3], Team.objects.all()[:3], self.queryset):
                     ContactAssociation.objects.create(
@@ -272,7 +283,7 @@ class FilterTestCases:
             # if lookup_method is iexact use the full updated attr
             if lookup_method == "iexact":
                 lookup = randomized_attr_value.upper()
-                model_queryset = self.queryset.filter(**{f"{filter_field_name}": lookup})
+                model_queryset = self.queryset.filter(**{f"{filter_field_name}__iexact": lookup})
             else:
                 lookup = randomized_attr_value[1:].upper()
                 model_queryset = self.queryset.filter(**{f"{filter_field_name}__icontains": lookup})
