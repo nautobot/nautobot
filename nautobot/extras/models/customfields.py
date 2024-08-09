@@ -306,7 +306,7 @@ class CustomFieldModel(models.Model):
         which have advanced_ui set to False
         """
         return self.get_computed_fields_grouping(advanced_ui=False)
-    
+
     def get_computed_fields_grouping_advanced(self):
         """
         This method exists to help call get_computed_field_groupings() in templates where a function argument (advanced_ui) cannot be specified.
