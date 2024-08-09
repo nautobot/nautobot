@@ -1,3 +1,0 @@
-Renamed `associated_object_metadatas` GenericRelation to `associated_object_metadata`.
-Renamed `object_metadatas` reverse-relations to `object_metadata`.
-Changed `CloudNetwork.parent` foreign-key `on_delete` behavior to `PROTECT`.
