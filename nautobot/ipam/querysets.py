@@ -402,7 +402,7 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
 
         parent = kwargs.get("parent")
         namespace = kwargs.pop("namespace", None)
-        if not parent:
+        if parent is None:
             host = kwargs.get("host")
             mask_length = kwargs.get("mask_length")
             if not namespace:
