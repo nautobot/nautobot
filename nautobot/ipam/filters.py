@@ -593,6 +593,8 @@ class VLANFilterSet(
         if not devices.exists():
             return queryset.none()
         location_ids = list(devices.values_list("location__id", flat=True))
+        for location in Location.objects.filter(pk__in=location_ids):
+            location_ids.extend([ancestor.id for ancestor in location.ancestors()])
         return queryset.filter(Q(locations__isnull=True) | Q(locations__in=location_ids))
 
 
