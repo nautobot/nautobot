@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('extras', '0113_saved_views'),
+        ("extras", "0113_saved_views"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='computedfield',
-            name='grouping',
+            model_name="computedfield",
+            name="grouping",
             field=models.CharField(blank=True, max_length=255),
         ),
     ]
