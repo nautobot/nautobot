@@ -402,9 +402,10 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
 
         parent = kwargs.get("parent")
         namespace = kwargs.pop("namespace", None)
-        if parent is None:
-            host = kwargs.get("host")
-            mask_length = kwargs.get("mask_length")
+        host = kwargs.get("host")
+        mask_length = kwargs.get("mask_length")
+        # If `host` or `mask_length` is None skip; then there is no way of getting the closest parent;
+        if parent is None and host is not None and mask_length is not None:
             if not namespace:
                 namespace = get_default_namespace()
             parent = Prefix.objects.filter(namespace=namespace).get_closest_parent(
