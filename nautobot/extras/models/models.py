@@ -822,6 +822,8 @@ class Note(ChangeLoggedModel, BaseModel):
     note = models.TextField()
     objects = BaseManager.from_queryset(NotesQuerySet)()
 
+    is_metadata_associable_model = False
+
     class Meta:
         ordering = ["created"]
         unique_together = [["assigned_object_type", "assigned_object_id", "user_name", "created"]]

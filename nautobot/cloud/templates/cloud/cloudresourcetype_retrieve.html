@@ -60,6 +60,17 @@
     </div>
 {% endblock content_left_page %}
 
+{% block content_right_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Config Schema</strong>
+        </div>
+        <div class="panel-body">
+            <pre>{{ object.config_schema|render_json }}</pre>
+        </div>
+    </div>
+{% endblock content_right_page %}
+
 {% block extra_tab_content %}
     {% if networks_count %}
         <div id="networks" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "networks" %}active{% else %}fade{% endif %}">

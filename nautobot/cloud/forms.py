@@ -94,6 +94,7 @@ class CloudNetworkForm(NautobotModelForm):
     )
     parent = DynamicModelChoiceField(
         queryset=CloudNetwork.objects.all(),
+        query_params={"parent__isnull": True},
         required=False,
     )
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
@@ -187,7 +188,12 @@ class CloudNetworkFilterForm(NautobotFilterForm):
     cloud_account = DynamicModelMultipleChoiceField(
         queryset=CloudAccount.objects.all(), to_field_name="name", required=False
     )
-    parent = DynamicModelMultipleChoiceField(queryset=CloudNetwork.objects.all(), to_field_name="name", required=False)
+    parent = DynamicModelMultipleChoiceField(
+        queryset=CloudNetwork.objects.all(),
+        query_params={"parent__isnull": True},
+        to_field_name="name",
+        required=False,
+    )
     tags = TagFilterField(model)
 
 

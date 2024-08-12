@@ -1,1 +1,0 @@
-Improved performance of GraphQL queries by no longer unnecessarily creating `FilterSet` instances when no filter is present.

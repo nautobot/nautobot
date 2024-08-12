@@ -1923,7 +1923,7 @@ class DeviceInterfacesView(DeviceComponentTabView):
 
     def get_extra_context(self, request, instance):
         interfaces = (
-            instance.all_interfaces.restrict(request.user, "view")
+            instance.vc_interfaces.restrict(request.user, "view")
             .prefetch_related(
                 Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)),
                 Prefetch("member_interfaces", queryset=Interface.objects.restrict(request.user)),

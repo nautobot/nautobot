@@ -498,7 +498,7 @@ class IPAddressFilterSet(
             return queryset.none()
         interface_ids = []
         for device in devices:
-            interface_ids.extend(device.all_interfaces.values_list("id", flat=True))
+            interface_ids.extend(device.vc_interfaces.values_list("id", flat=True))
         return queryset.filter(interfaces__in=interface_ids)
 
     def filter_virtual_machine(self, queryset, name, value):
