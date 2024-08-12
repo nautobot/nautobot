@@ -1,5 +1,0 @@
-Added `Cloud Networks` column to `PrefixTable`.
-Added `prefixes` filter to `CloudNetworkFilterSet`.
-Added `parent__name` and `parent__description` to `CloudNetworkFilterSet` `q` filter.
-Added support for querying `GenericRelation` relationships (reverse of `GenericForeignKey`) in GraphQL.
-Added support for filtering an object's `associated_contacts` in GraphQL.
