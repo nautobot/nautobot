@@ -227,17 +227,6 @@ files = [
 ]
 
 [[package]]
-name = "bracex"
-version = "2.4"
-description = "Bash style brace expander."
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "bracex-2.4-py3-none-any.whl", hash = "sha256:efdc71eff95eaff5e0f8cfebe7d01adf2c8637c8c92edaf63ef348c241a82418"},
-    {file = "bracex-2.4.tar.gz", hash = "sha256:a27eaf1df42cf561fed58b7a8f3fdf129d1ea16a81e1fadd1d17989bc6384beb"},
-]
-
-[[package]]
 name = "celery"
 version = "5.3.6"
 description = "Distributed Task Queue."
@@ -2111,24 +2100,6 @@ files = [
     {file = "mkdocs-glightbox-0.4.0.tar.gz", hash = "sha256:392b34207bf95991071a16d5f8916d1d2f2cd5d5bb59ae2997485ccd778c70d9"},
     {file = "mkdocs_glightbox-0.4.0-py3-none-any.whl", hash = "sha256:e0107beee75d3eb7380ac06ea2d6eac94c999eaa49f8c3cbab0e7be2ac006ccf"},
 ]
-
-[[package]]
-name = "mkdocs-include-markdown-plugin"
-version = "6.2.1"
-description = "Mkdocs Markdown includer plugin."
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "mkdocs_include_markdown_plugin-6.2.1-py3-none-any.whl", hash = "sha256:8dfc3aee9435679b094cbdff023239e91d86cf357c40b0e99c28036449661830"},
-    {file = "mkdocs_include_markdown_plugin-6.2.1.tar.gz", hash = "sha256:46fc372886d48eec541d36138d1fe1db42afd08b976ef7c8d8d4ea6ee4d5d1e8"},
-]
-
-[package.dependencies]
-mkdocs = ">=1.4"
-wcmatch = ">=8,<9"
-
-[package.extras]
-cache = ["platformdirs"]
 
 [[package]]
 name = "mkdocs-macros-plugin"
@@ -4059,20 +4030,6 @@ files = [
 watchmedo = ["PyYAML (>=3.10)"]
 
 [[package]]
-name = "wcmatch"
-version = "8.5.2"
-description = "Wildcard/glob file name matcher."
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "wcmatch-8.5.2-py3-none-any.whl", hash = "sha256:17d3ad3758f9d0b5b4dedc770b65420d4dac62e680229c287bf24c9db856a478"},
-    {file = "wcmatch-8.5.2.tar.gz", hash = "sha256:a70222b86dea82fb382dd87b73278c10756c138bd6f8f714e2183128887b9eb2"},
-]
-
-[package.dependencies]
-bracex = ">=2.1.1"
-
-[[package]]
 name = "wcwidth"
 version = "0.2.13"
 description = "Measures the displayed width of unicode strings in a terminal"
@@ -4255,4 +4212,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.13"
-content-hash = "3c899ba7008f48d015c53bbc81d9db3cd02b9934e4c99973f76d7e7ce99ca320"
+content-hash = "0ce49422ff12566d685b603fe0efa7b2bdacd38c35cbb18b4e36b75464a133d0"
