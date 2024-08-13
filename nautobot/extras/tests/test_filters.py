@@ -1139,7 +1139,8 @@ class JobQueueFilterSetTestCase(FilterTestCases.FilterTestCase):
         )
         params = {"queue_type": [JobQueueTypeChoices.TYPE_KUBERNETES]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(queue_type=JobQueueTypeChoices.TYPE_KUBERNETES)
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(queue_type=JobQueueTypeChoices.TYPE_KUBERNETES),
         )
 
 
