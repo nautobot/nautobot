@@ -59,7 +59,7 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
             prefixes = instance.prefixes.restrict(request.user, "view")
-            prefixes_table = PrefixTable(prefixes.select_related("namespace"))
+            prefixes_table = PrefixTable(prefixes.select_related("namespace"), hide_hierarchy_ui=True)
             prefixes_table.columns.hide("location_count")
             prefixes_table.columns.hide("vlan")
 

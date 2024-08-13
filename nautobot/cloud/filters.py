@@ -74,6 +74,8 @@ class CloudNetworkFilterSet(NautobotFilterSet):
         filter_predicates={
             "name": "icontains",
             "description": "icontains",
+            "parent__name": "icontains",
+            "parent__description": "icontains",
             "cloud_account__name": "icontains",
             "cloud_account__description": "icontains",
             "cloud_resource_type__name": "icontains",
@@ -96,6 +98,7 @@ class CloudNetworkFilterSet(NautobotFilterSet):
         queryset=models.CloudNetwork.objects.all(),
         label="Parent cloud network (name or ID)",
     )
+    prefixes = django_filters.ModelMultipleChoiceFilter(queryset=Prefix.objects.all())
 
     class Meta:
         model = models.CloudNetwork

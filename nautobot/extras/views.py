@@ -1691,7 +1691,12 @@ class SavedViewUIViewSet(
         view_name = new_global_default_view.view
         message = ""
         if new_global_default_view.is_global_default:
-            message += f"<br>The global default saved View for '{view_name}' is set to <a href='{new_global_default_view.get_absolute_url()}'>{new_global_default_view.name}</a>."
+            message = format_html(
+                '<br>The global default saved view for "{}" is set to <a href="{}">{}</a>',
+                view_name,
+                new_global_default_view.get_absolute_url(),
+                new_global_default_view.name,
+            )
         return message
 
     def list(self, request, *args, **kwargs):
@@ -2416,7 +2421,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
 
             if ContentType.objects.get_for_model(Prefix) in context["content_types"]:
                 prefixes = instance.prefixes.restrict(request.user, "view")
-                prefix_table = PrefixTable(prefixes)
+                prefix_table = PrefixTable(prefixes, hide_hierarchy_ui=True)
                 prefix_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(prefix_table)
                 context["prefix_table"] = prefix_table

@@ -66,6 +66,42 @@ The CSV import functionality for all models has been changed from a synchronous 
 Model CharFields' `max_length` attributes have been standardized globally to have at least 255 characters except where a shorter `max_length` is explicitly justified.
 
 <!-- towncrier release notes start -->
+## v2.2.9 (2024-08-05)
+
+### Added
+
+- [#5965](https://github.com/nautobot/nautobot/issues/5965) - Added missing controller references for DeviceRedundancyGroup in the UI.
+- [#5980](https://github.com/nautobot/nautobot/issues/5980) - Added caching to `FeatureQuery().get_choices()` and `FeatureQuery().list_subclasses()`.
+- [#6029](https://github.com/nautobot/nautobot/issues/6029) - Added environment variable support for setting `CELERY_WORKER_PREFETCH_MULTIPLIER`.
+- [#6030](https://github.com/nautobot/nautobot/issues/6030) - Added links from the Job list and detail views to quickly filter the list of Job Results to the corresponding Job.
+
+### Fixed
+
+- [#5775](https://github.com/nautobot/nautobot/issues/5775) - Reintroduced `Add IP Address` button to VirtualMachine Interface table.
+- [#5785](https://github.com/nautobot/nautobot/issues/5785) - Fixed Scheduled Jobs not respecting Job Soft / Hard Time Limit.
+- [#5796](https://github.com/nautobot/nautobot/issues/5796) - Added missing validation to ensure that a DeviceBay can only contain Devices with a `subdevice_role` of `child`.
+- [#5811](https://github.com/nautobot/nautobot/issues/5811) - Fixed broken UI and added error message when submitting IPAddressAssignForm without selecting any IPAddress.
+- [#5812](https://github.com/nautobot/nautobot/issues/5812) - Fixed CSV file upload handling of "UTF-8 with BOM" encoding.
+- [#5904](https://github.com/nautobot/nautobot/issues/5904) - Fixed performance of JobResults UI when thousands of JobLogEntries are present.
+- [#5904](https://github.com/nautobot/nautobot/issues/5904) - Fixed performance when Bulk Importing large csv files.
+- [#5912](https://github.com/nautobot/nautobot/issues/5912) - Fixed incorrect `clean()` behavior on `IPAddress` that caused certain uniqueness violations to not be caught until `save()`.
+- [#5948](https://github.com/nautobot/nautobot/issues/5948) - Fixed table overflow.
+- [#5980](https://github.com/nautobot/nautobot/issues/5980) - Improved performance of GraphQL queries by no longer unnecessarily creating `FilterSet` instances when no filter is present.
+- [#5992](https://github.com/nautobot/nautobot/issues/5992) - Added signal to clear relevant content-type caches after running migrations.
+- [#6022](https://github.com/nautobot/nautobot/issues/6022) - Fixed incorrect labels for derived filters (`tenant__n`, `tenant__isw`, etc.) when the base filter (`tenant`, etc.) has a custom label.
+
+### Dependencies
+
+- [#6010](https://github.com/nautobot/nautobot/issues/6010) - Pinned `django-storages` temporarily to 1.14.3 due to an [incompatibility](https://github.com/revsys/django-health-check/issues/434) between `django-health-check` and version 1.14.4 of `django-storages`.
+
+### Documentation
+
+- [#5949](https://github.com/nautobot/nautobot/issues/5949) - Fixed NewBranch job code in documentation.
+- [#5958](https://github.com/nautobot/nautobot/issues/5958) - Added an example job that uses a custom template to render the job form.
+- [#5959](https://github.com/nautobot/nautobot/issues/5959) - Fixed documentation structure and added documentation on contributing documentation updates.
+- [#5971](https://github.com/nautobot/nautobot/issues/5971) - Added documentation for registering jobs from Git Repositories.
+- [#6024](https://github.com/nautobot/nautobot/issues/6024) - Added documentation for the `nautobot-server validate_models` command.
+
 ## v2.2.8 (2024-07-22)
 
 ### Security

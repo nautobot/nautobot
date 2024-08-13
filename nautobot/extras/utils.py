@@ -167,7 +167,7 @@ class FeatureQuery:
         """
         Given an extras feature, return a iterable of app_label: [models] for content type lookup.
 
-        Mis-named, as it returns an iterable of (key, value) (i.e. dict.items()) rather than an actual dict.
+        Misnamed, as it returns an iterable of (key, value) (i.e. dict.items()) rather than an actual dict.
 
         Raises a KeyError if the given feature doesn't exist.
         """
