@@ -484,6 +484,8 @@ class JobLogEntry(BaseModel):
 
 @extras_features(
     "custom_links",
+    "custom_validators",
+    "export_templates",
     "graphql",
     "webhooks",
 )
@@ -497,7 +499,6 @@ class JobQueue(PrimaryModel):
     type = models.CharField(
         max_length=50,
         choices=JobQueueTypeChoices,
-        help_text="Job Queue Type, can be one of two types (Celery, Kubernetes)",
     )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
@@ -511,7 +512,7 @@ class JobQueue(PrimaryModel):
         ordering = ["name"]
 
     def __str__(self):
-        return self.name
+        return f"{self.type}: {self.name}"
 
 
 @extras_features(
@@ -519,6 +520,7 @@ class JobQueue(PrimaryModel):
     "custom_validators",
     "export_templates",
     "graphql",
+    "webhooks",
 )
 class JobQueueAssignment(BaseModel):
     """

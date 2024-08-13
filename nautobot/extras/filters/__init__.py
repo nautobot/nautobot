@@ -907,7 +907,7 @@ class JobHookFilterSet(BaseFilterSet):
         ]
 
 
-class JobQueueFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
+class JobQueueFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
