@@ -496,7 +496,7 @@ class JobQueue(PrimaryModel):
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
-    type = models.CharField(
+    queue_type = models.CharField(
         max_length=50,
         choices=JobQueueTypeChoices,
     )
@@ -512,7 +512,7 @@ class JobQueue(PrimaryModel):
         ordering = ["name"]
 
     def __str__(self):
-        return f"{self.type}: {self.name}"
+        return f"{self.queue_type}: {self.name}"
 
 
 @extras_features(

@@ -1130,16 +1130,16 @@ class JobQueueFilterSetTestCase(FilterTestCases.FilterTestCase):
         ["tenant", "tenant__name"],
     ]
 
-    def test_type(self):
+    def test_queue_type(self):
         # we cannot add this test to self.generic_filter_tests because JobQueueTypeChoices only has two values.
         # self.generic_filter_tests needs at least three.
-        params = {"type": [JobQueueTypeChoices.TYPE_CELERY]}
+        params = {"queue_type": [JobQueueTypeChoices.TYPE_CELERY]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(type=JobQueueTypeChoices.TYPE_CELERY)
+            self.filterset(params, self.queryset).qs, self.queryset.filter(queue_type=JobQueueTypeChoices.TYPE_CELERY)
         )
-        params = {"type": [JobQueueTypeChoices.TYPE_KUBERNETES]}
+        params = {"queue_type": [JobQueueTypeChoices.TYPE_KUBERNETES]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(type=JobQueueTypeChoices.TYPE_KUBERNETES)
+            self.filterset(params, self.queryset).qs, self.queryset.filter(queue_type=JobQueueTypeChoices.TYPE_KUBERNETES)
         )
 
 

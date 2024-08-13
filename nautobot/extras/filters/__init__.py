@@ -914,7 +914,7 @@ class JobQueueFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "type": "icontains",
+            "queue_type": "icontains",
             "description": "icontains",
             "tenant__name": "icontains",
         },
@@ -924,14 +924,14 @@ class JobQueueFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         label="Tenant (ID or name)",
         to_field_name="name",
     )
-    type = django_filters.MultipleChoiceFilter(choices=JobQueueTypeChoices, null_value=None)
+    queue_type = django_filters.MultipleChoiceFilter(choices=JobQueueTypeChoices, null_value=None)
 
     class Meta:
         model = JobQueue
         fields = [
             "id",
             "name",
-            "type",
+            "queue_type",
             "description",
             "tenant",
             "tags",
@@ -946,7 +946,7 @@ class JobQueueAssignmentFilterSet(BaseFilterSet):
             "job__description": "icontains",
             "job_queue__name": "icontains",
             "job_queue__description": "icontains",
-            "job_queue__type": "icontains",
+            "job_queue__queue_type": "icontains",
         }
     )
     job = NaturalKeyOrPKMultipleChoiceFilter(

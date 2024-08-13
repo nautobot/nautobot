@@ -153,9 +153,9 @@ class JobQueueFactory(PrimaryModelFactory):
         has_description = NautobotBoolIterator()
         has_tenant = NautobotBoolIterator()
 
-    name = factory.LazyAttributeSequence(lambda o, n: f"{o.type} Job Queue - {n}")
+    name = factory.LazyAttributeSequence(lambda o, n: f"{o.queue_type} Job Queue - {n}")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
-    type = factory.Maybe("is_celery_type", JobQueueTypeChoices.TYPE_CELERY, JobQueueTypeChoices.TYPE_KUBERNETES)
+    queue_type = factory.Maybe("is_celery_type", JobQueueTypeChoices.TYPE_CELERY, JobQueueTypeChoices.TYPE_KUBERNETES)
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
 
 

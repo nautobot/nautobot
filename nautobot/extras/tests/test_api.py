@@ -2316,26 +2316,26 @@ class JobLogEntryTest(
 
 class JobQueueTestCase(APIViewTestCases.APIViewTestCase):
     model = JobQueue
-    choices_fields = ["type"]
+    choices_fields = ["queue_type"]
 
     def setUp(self):
         super().setUp()
         self.create_data = [
             {
                 "name": "Test API Job Queue 1",
-                "type": JobQueueTypeChoices.TYPE_CELERY,
+                "queue_type": JobQueueTypeChoices.TYPE_CELERY,
                 "description": "Job Queue 1 for API Testing",
                 "tenant": Tenant.objects.first().pk,
             },
             {
                 "name": "Test API Job Queue 2",
-                "type": JobQueueTypeChoices.TYPE_KUBERNETES,
+                "queue_type": JobQueueTypeChoices.TYPE_KUBERNETES,
                 "description": "Job Queue 2 for API Testing",
                 "tenant": Tenant.objects.first().pk,
             },
             {
                 "name": "Test API Job Queue 3",
-                "type": JobQueueTypeChoices.TYPE_CELERY,
+                "queue_type": JobQueueTypeChoices.TYPE_CELERY,
                 "description": "Job Queue 3 for API Testing",
                 "tenant": Tenant.objects.last().pk,
                 "tags": [tag.pk for tag in Tag.objects.get_for_model(JobQueue)],
