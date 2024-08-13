@@ -922,6 +922,7 @@ class JobQueueFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "id",
             "name",
             "type",
+            "description",
             "tenant",
             "tags",
         ]
