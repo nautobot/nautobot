@@ -53,6 +53,8 @@ from nautobot.extras.models import (
     JobButton,
     JobHook,
     JobLogEntry,
+    JobQueue,
+    JobQueueAssignment,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -771,6 +773,31 @@ class JobHooksViewSet(NautobotModelViewSet):
     queryset = JobHook.objects.all()
     serializer_class = serializers.JobHookSerializer
     filterset_class = filters.JobHookFilterSet
+
+
+#
+# Job Queues
+#
+
+
+class JobQueueViewSet(NautobotModelViewSet):
+    """
+    Manage job queues through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = JobQueue.objects.all()
+    serializer_class = serializers.JobQueueSerializer
+    filterset_class = filters.JobQueueFilterSet
+
+
+class JobQueueAssignmentViewSet(NautobotModelViewSet):
+    """
+    Manage job queue assignments through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = JobQueueAssignment.objects.select_related("job", "job_queue")
+    serializer_class = serializers.JobQueueAssignmentSerializer
+    filterset_class = filters.JobQueueAssignmentFilterSet
 
 
 #

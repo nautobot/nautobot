@@ -72,6 +72,8 @@ from nautobot.extras.models import (
     JobButton,
     JobHook,
     JobLogEntry,
+    JobQueue,
+    JobQueueAssignment,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -132,6 +134,8 @@ __all__ = (
     "ImageAttachmentFilterSet",
     "JobFilterSet",
     "JobLogEntryFilterSet",
+    "JobQueueFilterSet",
+    "JobQueueAssignmentFilterSet",
     "JobResultFilterSet",
     "LocalContextFilterSet",
     "LocalContextModelFilterSetMixin",
@@ -900,6 +904,52 @@ class JobHookFilterSet(BaseFilterSet):
             "type_update",
             "type_delete",
         ]
+
+
+class JobQueueFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "type": "icontains",
+            "description": "icontains",
+            "tenant__name": "icontains",
+        },
+    )
+
+    class Meta:
+        model = Job
+        fields = [
+            "id",
+            "name",
+            "type",
+            "tenant",
+            "tags",
+        ]
+
+
+class JobQueueAssignmentFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "job__name": "icontains",
+            "job__grouping": "icontains",
+            "job__description": "icontains",
+            "job_queue__name": "icontains",
+            "job_queue__description": "icontains",
+            "job_queue__type": "icontains",
+        }
+    )
+    job = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Job.objects.all(),
+        label="Job (name or ID)",
+    )
+    job_queue = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=JobQueue.objects.all(),
+        label="Job Queue (name or ID)",
+    )
+
+    class Meta:
+        model = JobQueueAssignment
+        fields = ["id"]
 
 
 class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
