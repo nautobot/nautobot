@@ -1,6 +1,7 @@
 import re
 
 from django.core.exceptions import ValidationError
+from django.core.validators import validate_ipv46_address
 from django.db.models import ProtectedError, Q
 import netaddr
 
@@ -408,9 +409,17 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         if parent is None and host is not None and mask_length is not None:
             if not namespace:
                 namespace = get_default_namespace()
-            parent = Prefix.objects.filter(namespace=namespace).get_closest_parent(
-                cidr=f"{host}/{mask_length}", include_self=True
-            )
+            cidr = f"{host}/{mask_length}"
+
+            try:
+                validate_ipv46_address(host)
+            except ValidationError as err:
+                raise ValidationError({"host": err.error_list}) from err
+            try:
+                netaddr.IPNetwork(cidr)
+            except netaddr.AddrFormatError as err:
+                raise ValidationError(f"{cidr} does not appear to be an IPv4 or IPv6 network.") from err
+            parent = Prefix.objects.filter(namespace=namespace).get_closest_parent(cidr=cidr, include_self=True)
             kwargs["parent"] = parent
         return super().get_or_create(**kwargs)
 
