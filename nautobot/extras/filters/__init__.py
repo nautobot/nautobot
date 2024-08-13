@@ -919,11 +919,6 @@ class JobQueueFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
             "tenant__name": "icontains",
         },
     )
-    tenant = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Tenant.objects.all(),
-        label="Tenant (ID or name)",
-        to_field_name="name",
-    )
     queue_type = django_filters.MultipleChoiceFilter(choices=JobQueueTypeChoices, null_value=None)
 
     class Meta:
@@ -931,9 +926,7 @@ class JobQueueFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         fields = [
             "id",
             "name",
-            "queue_type",
             "description",
-            "tenant",
             "tags",
         ]
 
