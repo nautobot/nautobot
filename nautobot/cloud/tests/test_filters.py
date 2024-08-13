@@ -65,6 +65,18 @@ class CloudNetworkTestCase(FilterTestCases.NameOnlyFilterTestCase):
         ("parent", "parent__id"),
         ("parent", "parent__name"),
     ]
+    exclude_q_filter_predicates = [
+        "parent__name",
+        "parent__description",
+    ]
+
+    def _get_relevant_filterset_queryset(self, queryset, *filter_params):
+        queryset = super()._get_relevant_filterset_queryset(queryset, *filter_params)
+        if "name" in filter_params or "description" in filter_params:
+            # Only select an instance with no children as otherwise the search will also match the children,
+            # due to `parent__name` and `parent__description` also being search parameters
+            queryset = queryset.filter(children__isnull=True)
+        return queryset
 
 
 class CloudNetworkPrefixAssignmentTestCase(FilterTestCases.FilterTestCase):

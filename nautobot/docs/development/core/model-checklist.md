@@ -27,7 +27,11 @@ article ul li {
     - _optional_ Define appropriate additional [`clean()`](best-practices.md#model-validation) logic
         - Be sure to always call `super().clean()` as well!
     - _optional_ Define appropriate `verbose_name`/`verbose_name_plural` if defaults aren't optimal
-    - _optional_ Opt the model out of contact/team association (`is_contact_associable_model = False`) or dynamic-group association (`is_dynamic_group_associable_model = False`) -- only if there is a strong justification for doing so.
+    - _optional_ Opt out of specific model features **if and only if** there is a strong justification for doing so:
+        - Contact/team association (`is_contact_associable_model = False`, OrganizationalModel/PrimaryModel only)
+        - Dynamic-group association (`is_dynamic_group_associable_model = False`, OrganizationalModel/PrimaryModel only)
+        - Object-metadata association (`is_metadata_associable_model = False`, any base class)
+        - Saved-view support (`is_saved_view_model = False`, OrganizationalModel/PrimaryModel only)
 - Generate database schema migration(s) with `invoke makemigrations <app> -n <migration_name>`
 - _optional_ Add [data migration(s)](https://docs.djangoproject.com/en/stable/topics/migrations/#data-migrations) to populate default records, migrate data from existing models, etc.
     - Remember: data migrations must not share a file with schema migrations or vice versa!
@@ -43,7 +47,7 @@ article ul li {
 - `custom_fields`: (DEPRECATED - Uses `nautobot.extras.utils.populate_model_features_registry` to populate [Model Features Registry](model-features.md)) Models that support ComputedFields and CustomFields, used for limiting the choices for the `CustomField.content_types` and `ComputedField.content_type` fields
 - `custom_links`: Models that can display `CustomLinks` on the object's detail view (by default, all models that use `generic/object_retrieve.html` as a base template support custom links)
 - `custom_validators`: Models that can support custom `clean` logic by implementing a [`CustomValidator`](../apps/api/platform-features/custom-validators.md)
-- `dynamic_groups`: Models that can be assigned to a `DynamicGroup`, used for limiting the choices for the `DynamicGroup.content_type` form field (TODO)
+- `dynamic_groups`: Models that can be assigned to a `DynamicGroup`, used for limiting the choices for the `DynamicGroup.content_type` form field (DEPRECATED - Use the `DynamicGroupsModelMixin` class mixin instead)
 - `export_template_owners`: Models that can be assigned to the `owner` GenericForeignKey field on an `ExportTemplate`
 - `export_templates`: Models that can be exported using an `ExportTemplate`, used for limiting the choices for the `ExportTemplate.content_type` field
 - `graphql`: Models that should be exposed through the [GraphQL API](../apps/api/models/graphql.md), used to build the list of registered models to build the GraphQL schema

@@ -4189,6 +4189,28 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "domain": "domain-x",
         }
 
+    def test_device_interfaces_count_correct(self):
+        """
+        This checks whether the other memebers' interfaces are included in the
+        interfaces tab of the master device and whether the interface count on the tab header is
+        rendered correctly.
+        """
+        self.user.is_superuser = True
+        self.user.save()
+        interface_status = Status.objects.get_for_model(Interface).first()
+        Interface.objects.create(device=self.devices[0], name="eth0", status=interface_status)
+        Interface.objects.create(device=self.devices[0], name="eth1", status=interface_status)
+        Interface.objects.create(device=self.devices[1], name="device 1 interface 1", status=interface_status)
+        Interface.objects.create(device=self.devices[1], name="device 1 interface 2", status=interface_status)
+        Interface.objects.create(device=self.devices[2], name="device 2 interface 1", status=interface_status)
+        Interface.objects.create(device=self.devices[2], name="device 2 interface 2", status=interface_status)
+        response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[0].pk}))
+        self.assertIn('Interfaces <span class="badge">6</span>', str(response.content))
+        self.assertIn("device 1 interface 1", str(response.content))
+        self.assertIn("device 1 interface 2", str(response.content))
+        self.assertIn("device 2 interface 1", str(response.content))
+        self.assertIn("device 2 interface 2", str(response.content))
+
     def test_device_column_visible(self):
         """
         This checks whether the device column on a device's interfaces

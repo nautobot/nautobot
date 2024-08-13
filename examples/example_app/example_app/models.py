@@ -7,7 +7,6 @@ from nautobot.apps.models import extras_features, OrganizationalModel
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "webhooks",
@@ -25,7 +24,6 @@ class ExampleModel(OrganizationalModel):
 
 @extras_features(
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     # "graphql", Not specified here as we have a custom type for this model, see example_app.graphql.types
     "webhooks",

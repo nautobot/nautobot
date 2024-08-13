@@ -14,7 +14,6 @@ from nautobot.extras.utils import FeatureQuery, extras_features
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "webhooks",
@@ -137,7 +136,7 @@ class CloudNetwork(CloudResourceTypeMixin, PrimaryModel):
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     cloud_account = models.ForeignKey(to=CloudAccount, on_delete=models.PROTECT, related_name="cloud_networks")
     parent = models.ForeignKey(
-        to="cloud.CloudNetwork", on_delete=models.SET_NULL, blank=True, null=True, related_name="children"
+        to="cloud.CloudNetwork", on_delete=models.PROTECT, blank=True, null=True, related_name="children"
     )
     prefixes = models.ManyToManyField(
         blank=True,

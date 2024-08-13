@@ -4,41 +4,87 @@
 
 This document describes all new features and changes in Nautobot 2.3.
 
+## Upgrade Actions
+
+### Administrators
+
+Administrators should plan to take these actions during or immediately after upgrade from a previous version. New installations should also take note of these actions where appropriate.
+
+- Python 3.12 is now the default recommended version of Python.
+
+!!! warning "Python 3.12"
+    Because Nautobot prior to 2.3.0 did not declare support for Python 3.12, most Apps similarly needed to previously declare an upper bound of Python 3.11 for their own compatibility. Therefore, older versions of most Apps **will not be installable** under Python 3.12. Before migrating your Nautobot environment to Python 3.12, it is your responsibility to confirm that all relevant Apps in your environment are also compatible and installable.
+
+    There is a minor "chicken-and-egg" problem here in that Apps generally cannot declare support for a new Python version before Nautobot itself publishes a release that does so; therefore, as of the 2.3.0 Nautobot release day, most Apps have not yet been updated to declare support for Python 3.12. We'll be working in the following days to promptly update our supported Apps as needed, so stay tuned.
+
+!!! warning "Docker images"
+    As has been Nautobot's policy since version 1.6.1, our published Docker images _that are not tagged with a specific Python version_ implicitly always include the _latest_ supported version of Python. This means that as of the release of Nautobot 2.3.0, the tags `latest`, `stable`, `2.3`, and `2.3.0` will all indicate Docker images that include Python 3.12, whereas previously these indicated Python 3.11 images. As noted above and below, updating to Python 3.12 may not be immediately desirable (or even possible, depending on the status of your Apps) as a "day one" action.
+
+    If you need to stay with a given Python version for the time being, you must make sure that you're relying on an appropriately specific image tag, such as `2.3-py3.11`, `stable-py3.10`, etc.
+
+- As noted [below](#dynamic-group-cache-changes-5473), a new system job is provided for automated Dynamic Group cache updates. Administrators should schedule this system job to run on a recurring basis within the Jobs UI, after the upgrade, or on new install. Configuration referencing the `DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT` setting can be safely removed, as it is no longer used. If this setting was being used previously, it is recommended to set the new scheduled job's interval to the same value.
+- As noted [below](#log-cleanup-as-system-job-3749), change logging retention cleanup is now handled via a system job. Administrators should schedule this job to run on a recurring basis to meet their needs. The `CHANGELOG_RETENTION` setting is still used to define the retention period, but the scheduled system job will perform the actual cleanup, if any needed.
+
+### Job Authors & App Developers
+
+Job Authors and App Developers should take these actions to ensure compatibility with their Jobs and Apps.
+
+- Job Authors and App Developers should carefully consider the [updates to the DynamicGroup API](#dynamic-group-cache-changes-5473) and decide if their use cases dictate changing their group membership access patterns to use `DynamicGroup.update_cached_members()` to find the correct balance between Dynamic Group performance and membership updates.
+- Job Authors and App Developers should carefully consider the [updates to the TreeManager default behavior](#changed-treemanager-default-behavior-5786) and make necessary changes to their access of Tree based models.
+- Django 4.2 is now required by Nautobot, replacing the previous Django 3.2 dependency. Job Authors and App Developers should carefully consider the updates and changes in the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
+
+!!! warning "Django 4"
+    Django 4 includes a small number of breaking changes compared to Django 3. In our experience, most Apps have required few (or zero) updates to be Django 4 compatible, but your mileage may vary.
+
+- Python 3.12 is now supported by Nautobot and is now the default recommended version of Python. Apps will likely need to update their packaging in order to explicitly declare support for Python 3.12.
+
 ## Release Overview
 
 ### Added
-
-#### Added an Optional `role` field to Interface and VMInterface models ([#4406](https://github.com/nautobot/nautobot/issues/4406))
-
-Added an optional `role` field to Interface and VMInterface models to track common interface configurations. Now the users can create [Role](../user-guide/platform-functionality/role.md) instances that can be assigned to [interfaces](../user-guide/core-data-model/dcim/interface.md) and [vminterfaces](../user-guide/core-data-model/virtualization/vminterface.md).
 
 #### Cloud Models ([#5716](https://github.com/nautobot/nautobot/issues/5716), [#5719](https://github.com/nautobot/nautobot/issues/5719), [#5721](https://github.com/nautobot/nautobot/issues/5721), [#5872](https://github.com/nautobot/nautobot/issues/5872))
 
 Added the new models `CloudAccount`, `CloudResourceType`, `CloudNetwork`, and `CloudService` to support recording of cloud provider accounts (AWS, Azure, GCP, DigitalOcean, etc.), cloud resource types (AWS EC2, Azure Virtual Machine Service, Google App Engine, etc.), cloud services (specific instances of services described by cloud resource types) and cloud network objects (such as VPCs) in Nautobot.
 
-#### Dynamic Group Enhancements
-
-Dynamic Groups now have a `group_type` field, which specifies whether this group is defined by an object filter, defined by aggregating other groups via set operations, or defined via static assignment of objects as group members (this third type is new in Nautobot 2.3). Additionally, you can now assign a tenant and/or tags to each Dynamic Group.
-
-A new model, `StaticGroupAssociation`, and associated REST API, have been added in support of the new "static" group type. See also "[Dynamic Group Cache Changes](#dynamic-group-cache-changes)" below.
-
-For more details, refer to the [Dynamic Group](../user-guide/platform-functionality/dynamicgroup.md) documentation.
-
-#### Object Metadata Models ([#5663](https://github.com/nautobot/nautobot/issues/5663))
-
-Added [a set of functionality](../user-guide/platform-functionality/metadata.md) for defining and managing object metadata, that is to say, data _about_ the network data managed in Nautobot, such as data provenance, data ownership, and data classification. For more details, refer to the linked documentation.
-
-#### Saved Views
-
-Added the ability for users to save multiple configurations of list views (table columns, filtering, pagination and sorting) for ease of later use and reuse. Refer to the [Saved View](../user-guide/platform-functionality/savedview.md) documentation for more details and on how to use saved views.
-
 #### Device Modules ([#2101](https://github.com/nautobot/nautobot/issues/2101))
 
 Added new models for `ModuleBay`, `Module`, `ModuleType`, and `ModuleBayTemplate` to support modeling line cards and other modular components of a device. These models allow you to define a hierarchy of module bays and modules within a device, and to assign components (such as interfaces, power ports, etc.) to specific modules.
 
+#### Dynamic Group Enhancements ([#5472](https://github.com/nautobot/nautobot/issues/5472), [#5786](https://github.com/nautobot/nautobot/issues/5786))
+
+Dynamic Groups now have a `group_type` field, which specifies whether this group is defined by an object filter, defined by aggregating other groups via set operations, or defined via static assignment of objects as group members (this third type is new in Nautobot 2.3). Additionally, you can now assign a tenant and/or tags to each Dynamic Group, and many more models now can be included in Dynamic Groups.
+
+A new model, `StaticGroupAssociation`, and associated REST API, have been added in support of the new "static" group type. See also "[Dynamic Group Cache Changes](#dynamic-group-cache-changes-5473)" below.
+
+For more details, refer to the [Dynamic Group](../user-guide/platform-functionality/dynamicgroup.md) documentation.
+
+#### Interface and VMInterface Roles ([#4406](https://github.com/nautobot/nautobot/issues/4406))
+
+Added an optional `role` field to Interface and VMInterface models to track common interface configurations. Now the users can create [Role](../user-guide/platform-functionality/role.md) instances that can be assigned to [interfaces](../user-guide/core-data-model/dcim/interface.md) and [vminterfaces](../user-guide/core-data-model/virtualization/vminterface.md).
+
+#### Object Metadata Models ([#5663](https://github.com/nautobot/nautobot/issues/5663))
+
+Added [a set of functionality](../user-guide/platform-functionality/objectmetadata.md) for defining and managing object metadata, that is to say, data _about_ the network data managed in Nautobot, such as data provenance, data ownership, and data classification. For more details, refer to the linked documentation.
+
+#### Python 3.12 Support ([#5429](https://github.com/nautobot/nautobot/issues/5429))
+
+Nautobot now supports Python 3.12, and Python 3.12 is now the default Python version included in the `nautobot` Docker images.
+
+#### Saved Views ([#1758](https://github.com/nautobot/nautobot/issues/1758))
+
+Added the ability for users to save multiple configurations of list views (table columns, filtering, pagination and sorting) for ease of later use and reuse. Refer to the [Saved View](../user-guide/platform-functionality/savedview.md) documentation for more details and on how to use saved views.
+
+#### Worker Status Page ([#5873](https://github.com/nautobot/nautobot/issues/5873))
+
+User accounts with the `is_staff` flag set can access a new worker status page at `/worker-status/` to view the status of the Celery worker(s) and the configured queues. The link to this page appears in the "User" dropdown at the bottom of the navigation menu, under the link to the "Profile" page. Use this page with caution as it runs a live query against the Celery worker(s) and may impact performance of your web service.
+
 ### Changed
 
-#### Dynamic Group Cache Changes
+#### Changed TreeManager Default Behavior ([#5786](https://github.com/nautobot/nautobot/issues/5786))
+
+The `TreeManager` class (used for tree-models such as Location, RackGroup, and TenantGroup) default behavior has changed from `with_tree_fields` to `without_tree_fields`. This should improve performance in many cases but may impact Apps or Jobs that were relying on the old default; such code should be updated to explicitly call `.with_tree_fields()` where appropriate.
+
+#### Dynamic Group Cache Changes ([#5473](https://github.com/nautobot/nautobot/issues/5473))
 
 To improve performance of the Dynamic Groups feature, a number of changes have been made:
 
@@ -48,12 +94,8 @@ To improve performance of the Dynamic Groups feature, a number of changes have b
 - The APIs `DynamicGroup.members_cached`, `DynamicGroup.members_cache_key`, `object.dynamic_groups_cached`, `object.dynamic_groups_list`, and `object.dynamic_groups_list_cached` are now deprecated.
 - Editing a Dynamic Group definition refreshes its cached members and those of any "parent" groups that use it.
 - Viewing a Dynamic Group detail view in the UI refreshes its cached members (only).
-- A new System Job, `Refresh Dynamic Group Caches`, can be run or scheduled as apprropriate to refresh Dynamic Group member caches on demand.
+- A new System Job, `Refresh Dynamic Group Caches`, can be run or scheduled as appropriate to refresh Dynamic Group member caches on demand.
 - The existing API `DynamicGroup.update_cached_members()` can be called by Apps or Jobs needing to ensure that the cache is up-to-date for any given Dynamic Group.
-
-#### Updated to Django 4.2
-
-As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 #### Log Cleanup as System Job ([#3749](https://github.com/nautobot/nautobot/issues/3749))
 
@@ -64,7 +106,81 @@ Cleanup of the change log (deletion of `ObjectChange` records older than a given
 
 As an additional enhancement, the `LogsCleanup` Job can also be used to cleanup `JobResult` records if desired as well.
 
+#### UI Button Consolidation ([#5869](https://github.com/nautobot/nautobot/issues/5869), [#5870](https://github.com/nautobot/nautobot/issues/5870), [#5871](https://github.com/nautobot/nautobot/issues/5871))
+
+Various button groups in the "object list" and "object detail" views have been consolidated following a common UI pattern of a single button for the most common action plus a popup menu for less common actions.
+
+### Dependencies
+
+#### Updated to Django 4.2 ([#3581](https://github.com/nautobot/nautobot/issues/3581))
+
+As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
+
 <!-- towncrier release notes start -->
+## v2.3.0 (2024-08-08)
+
+### Security
+
+- [#6073](https://github.com/nautobot/nautobot/issues/6073) - Updated `Django` to `~4.2.15` due to `CVE-2024-41989`, `CVE-2024-41990`, `CVE-2024-41991`, and `CVE-2024-42005`.
+
+### Added
+
+- [#5996](https://github.com/nautobot/nautobot/issues/5996) - Added missing `comments` field to DeviceType bulk edit.
+- [#5996](https://github.com/nautobot/nautobot/issues/5996) - Added `comments` field to ModuleType.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added `Cloud Networks` column to `PrefixTable`.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added `prefixes` filter to `CloudNetworkFilterSet`.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added `parent__name` and `parent__description` to `CloudNetworkFilterSet` `q` filter.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added support for querying `GenericRelation` relationships (reverse of `GenericForeignKey`) in GraphQL.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added support for filtering an object's `associated_contacts` in GraphQL.
+
+### Changed
+
+- [#6003](https://github.com/nautobot/nautobot/issues/6003) - Changed rendering of `scoped_fields` column in `ObjectMetadataTable`.
+- [#6003](https://github.com/nautobot/nautobot/issues/6003) - Changed default ordering of `ObjectMetadata` list views.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Renamed `associated_object_metadatas` GenericRelation to `associated_object_metadata`.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Renamed `object_metadatas` reverse-relations to `object_metadata`.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Changed `CloudNetwork.parent` foreign-key `on_delete` behavior to `PROTECT`.
+- [#6070](https://github.com/nautobot/nautobot/issues/6070) - Marked the `Note` model as `is_metadata_associable_model = False`.
+
+### Removed
+
+- [#6005](https://github.com/nautobot/nautobot/issues/6005) - Removed "delete" and "bulk-delete" functionalities from the ObjectMetadata views.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Removed unneeded `CloudNetworkPrefixAssignmentTable`.
+
+### Fixed
+
+- [#5967](https://github.com/nautobot/nautobot/issues/5967) - Fixed a regression in the display of custom fields in object-edit forms.
+- [#5996](https://github.com/nautobot/nautobot/issues/5996) - Fixed URL typo in module and module type list views.
+- [#6003](https://github.com/nautobot/nautobot/issues/6003) - Added missing `blank=True` to `ObjectMetadata.scoped_fields`.
+- [#6019](https://github.com/nautobot/nautobot/issues/6019) - Marked the `JobLogEntry` model as invalid for association of `ObjectMetadata`.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added missing `Config Schema` display to detail view of `CloudResourceType`.
+- [#6039](https://github.com/nautobot/nautobot/issues/6039) - Added missing `Description` display to detail view of `CloudService`.
+- [#6045](https://github.com/nautobot/nautobot/issues/6045) - Fixed interfaces of Virtual Chassis Master missing other member's interfaces.
+- [#6051](https://github.com/nautobot/nautobot/issues/6051) - Fixed improper escaping of saved-view name in success message.
+- [#6051](https://github.com/nautobot/nautobot/issues/6051) - Fixed incorrect ordering of items in Tenant detail view.
+- [#6051](https://github.com/nautobot/nautobot/issues/6051) - Fixed query parameters for `CloudNetwork.parent` form field.
+- [#6056](https://github.com/nautobot/nautobot/issues/6056) - Fixed the order of object deletion by constructing delete success message before the object is deleted.
+- [#6064](https://github.com/nautobot/nautobot/issues/6064) - Reverted an undesired change to `IPAddressFilterSet.device` filter.
+- [#6064](https://github.com/nautobot/nautobot/issues/6064) - Reverted an undesired change to `ServiceForm.ip_addresses` valid addresses.
+
+### Documentation
+
+- [#5920](https://github.com/nautobot/nautobot/issues/5920) - Updated documentation for installation under Ubuntu 24.04 LTS, Fedora 40, AlmaLinux 9, and similar distros.
+- [#6019](https://github.com/nautobot/nautobot/issues/6019) - Updated the installation documentation to recommend a more secure set of filesystem permissions.
+- [#6050](https://github.com/nautobot/nautobot/issues/6050) - Updated model development docs with information about object metadata and dynamic groups features.
+- [#6050](https://github.com/nautobot/nautobot/issues/6050) - Added some crosslinks within the DCIM model documentation.
+- [#6062](https://github.com/nautobot/nautobot/issues/6062) - Updated Configuration Context docs with additional examples for dictionary of dictionaries.
+
+### Housekeeping
+
+- [#5962](https://github.com/nautobot/nautobot/issues/5962) - Updated development dependency `ruff` to `~0.5.6`.
+- [#5962](https://github.com/nautobot/nautobot/issues/5962) - Updated documentation dependencies: `mkdocs-material` to `~9.5.31`, `mkdocstrings` to `~0.25.2`, and `mkdocstrings-python` to `~1.10.7`.
+- [#6003](https://github.com/nautobot/nautobot/issues/6003) - Updated `ObjectMetadataFactory` to produce more realistic `scoped_fields` values.
+- [#6014](https://github.com/nautobot/nautobot/issues/6014) - Fixed intermittent `ObjectMetadata` factory failures.
+- [#6047](https://github.com/nautobot/nautobot/issues/6047) - Made sure that there is a sufficient amount of `Contact` and `Team` instances exist in the database when testing `contacts` and `teams` filters of an object's filterset.
+- [#6055](https://github.com/nautobot/nautobot/issues/6055) - Added migrations check to upstream testing workflow.
+- [#6071](https://github.com/nautobot/nautobot/issues/6071) - Fixed incorrect generic-test logic in `FilterTestCase.test_q_filter_valid` for `q` filters containing `iexact` lookups.
+
 ## v2.3.0-beta.1 (2024-07-25)
 
 ### Security
@@ -101,8 +217,8 @@ As an additional enhancement, the `LogsCleanup` Job can also be used to cleanup 
 - [#5716](https://github.com/nautobot/nautobot/issues/5716) - Added CloudNetwork to CircuitTermination model, UI, and REST API.
 - [#5716](https://github.com/nautobot/nautobot/issues/5716) - Added CloudNetwork to Prefix View.
 - [#5719](https://github.com/nautobot/nautobot/issues/5719) - Added CloudAccount Model, UI, GraphQL and REST API.
-- [#5721](https://github.com/nautobot/nautobot/issues/5721) - Added ~`CloudType`~ `CloudResourceType` Model, UI, GraphQL and REST API.
-- [#5730](https://github.com/nautobot/nautobot/issues/5730) - Added a feature that replaces `{module}`, `{module.parent}`, `{module.parent.parent}`, etc. with the selected module's parent_module_bay `position` when creating a component in a module.
+- [#5721](https://github.com/nautobot/nautobot/issues/5721) - Added ~~`CloudType`~~ `CloudResourceType` Model, UI, GraphQL and REST API.
+- [#5730](https://github.com/nautobot/nautobot/issues/5730) - Added a feature that replaces `{module}`, `{module.parent}`, `{module.parent.parent}`, etc. with the selected module's `parent_module_bay` `position` when creating a component in a module.
 - [#5732](https://github.com/nautobot/nautobot/issues/5732) - Added indices on `StaticGroupAssociation` table for common lookup patterns.
 - [#5786](https://github.com/nautobot/nautobot/issues/5786) - Added `DynamicGroup.group_type` field with options `dynamic-filter`, `dynamic-set`, and `static`. Existing DynamicGroups will automatically be set to either `dynamic-filter` or `dynamic-set` as befits their definitions.
 - [#5786](https://github.com/nautobot/nautobot/issues/5786) - Added `DynamicGroup.tenant` and `DynamicGroup.tags` fields.
@@ -114,7 +230,6 @@ As an additional enhancement, the `LogsCleanup` Job can also be used to cleanup 
 - [#5872](https://github.com/nautobot/nautobot/issues/5872) - Added CloudService Model, UI, GraphQL and REST API.
 - [#5873](https://github.com/nautobot/nautobot/issues/5873) - Added worker status page for staff users.
 - [#5890](https://github.com/nautobot/nautobot/issues/5890) - Add CSS class to pagination dropdown to resolve issue with color-scheme.
-- [#5895](https://github.com/nautobot/nautobot/issues/5895) - Added missing model documentation for `CloudNetwork`, `CloudNetworkPrefixAssignment`, `CloudService` and ~`CloudType`~ `CloudResourceType`.
 - [#5923](https://github.com/nautobot/nautobot/issues/5923) - Added `prefers_id` keyword argument to NaturalKeyOrPKMultipleChoiceFilter initialization to use the object ID instead of the `to_field_name` when automatically generating a form field for the filter.
 - [#5933](https://github.com/nautobot/nautobot/issues/5933) - Added tables of related `CloudService` and/or `CloudNetwork` instances to the `CloudResourceType` detail view.
 - [#5933](https://github.com/nautobot/nautobot/issues/5933) - Added `description` field to `CloudService` model.
@@ -136,7 +251,7 @@ As an additional enhancement, the `LogsCleanup` Job can also be used to cleanup 
 - [#5786](https://github.com/nautobot/nautobot/issues/5786) - Replaced `static_groups` GraphQL field added in [#5472](https://github.com/nautobot/nautobot/issues/5472) with a `dynamic_groups` field.
 - [#5786](https://github.com/nautobot/nautobot/issues/5786) - Replaced `StaticGroupMixin` model mixin class added in [#5631](https://github.com/nautobot/nautobot/pull/5631) with a `DynamicGroupsModelMixin` class. Still included by default in `OrganizationalModel` and `PrimaryModel`.
 - [#5790](https://github.com/nautobot/nautobot/issues/5790) - Updated Cable table to display the parent Device of Cables connected to Modules in a Device.
-- [#5790](https://github.com/nautobot/nautobot/issues/5790) - Updated device and device_id filters for Cables, Interfaces, and other modular device components to recognize components that are nested in Modules in a Device.
+- [#5790](https://github.com/nautobot/nautobot/issues/5790) - Updated device and `device_id` filters for Cables, Interfaces, and other modular device components to recognize components that are nested in Modules in a Device.
 - [#5790](https://github.com/nautobot/nautobot/issues/5790) - Updated Cable connect form to allow connecting to Console Ports, Console Server Ports, Interfaces, Power Ports, Power Outlets, Front Ports, and Rear Ports that are nested in Modules in a Device.
 - [#5790](https://github.com/nautobot/nautobot/issues/5790) - Updated Interface `device` filter to allow filtering on Device `name` or `id`.
 - [#5790](https://github.com/nautobot/nautobot/issues/5790) - Updated `Cable._termination_a_device` and `Cable._termination_b_device` to cache the Device when cables are connected to an Interface or Port of a Module in a Device.
@@ -215,9 +330,9 @@ As an additional enhancement, the `LogsCleanup` Job can also be used to cleanup 
 
 ### Documentation
 
-- [#5699](https://github.com/nautobot/nautobot/issues/5699) - Updated to `mkdocs~1.6.0` and `mkdocs-material~9.5.23`.
 - [#5699](https://github.com/nautobot/nautobot/issues/5699) - Fixed a number of broken links within the documentation.
-- [#5735](https://github.com/nautobot/nautobot/issues/5735) - Updated `mkdocstrings` to `~0.25.1` and `mkdocstrings-python` to `~1.10.2`.
+- [#5895](https://github.com/nautobot/nautobot/issues/5895) - Added missing model documentation for `CloudNetwork`, `CloudNetworkPrefixAssignment`, `CloudService` and ~~`CloudType`~~ `CloudResourceType`.
+- [#5934](https://github.com/nautobot/nautobot/issues/5934) - Add Cloud Model Example and Entity Diagram.
 
 ### Housekeeping
 
@@ -229,7 +344,9 @@ As an additional enhancement, the `LogsCleanup` Job can also be used to cleanup 
 - [#5473](https://github.com/nautobot/nautobot/issues/5473) - Added `assertApproximateNumQueries` test-case helper method.
 - [#5524](https://github.com/nautobot/nautobot/issues/5524) - Deleted unnecessary special case handling for `test_view_with_content_types`.
 - [#5663](https://github.com/nautobot/nautobot/issues/5663) - Added support for `django_get_or_create` property in `BaseModelFactory`.
+- [#5699](https://github.com/nautobot/nautobot/issues/5699) - Updated to `mkdocs~1.6.0` and `mkdocs-material~9.5.23`.
 - [#5725](https://github.com/nautobot/nautobot/issues/5725) - Updated development dependencies `pylint` to `3.2.0`, `ruff` to `0.4.0`, and `selenium` to `4.21`.
+- [#5735](https://github.com/nautobot/nautobot/issues/5735) - Updated `mkdocstrings` to `~0.25.1` and `mkdocstrings-python` to `~1.10.2`.
 - [#5786](https://github.com/nautobot/nautobot/issues/5786) - Substantially reduced the setup overhead (time/memory) of `OpenAPISchemaTestCases` tests.
 - [#5842](https://github.com/nautobot/nautobot/issues/5842) - Fixed missing mysqldump client when trying to run tests with --parallel on mysql.
 - [#5865](https://github.com/nautobot/nautobot/issues/5865) - Updated `django-debug-toolbar` development dependency to `~4.4.0`.
@@ -240,5 +357,4 @@ As an additional enhancement, the `LogsCleanup` Job can also be used to cleanup 
 - [#5865](https://github.com/nautobot/nautobot/issues/5865) - Updated `pylint` development dependency to `~3.2.5`.
 - [#5865](https://github.com/nautobot/nautobot/issues/5865) - Updated `ruff` development dependency to `~0.5.0`.
 - [#5865](https://github.com/nautobot/nautobot/issues/5865) - Updated `selenium` development dependency to `~4.22.0`.
-- [#5934](https://github.com/nautobot/nautobot/issues/5934) - Add Cloud Model Example and Entity Diagram.
 - [#5986](https://github.com/nautobot/nautobot/issues/5986) - Fixed multiple intermittent failures in unit tests.
