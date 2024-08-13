@@ -1,1 +1,0 @@
-Added signal to clear relevant content-type caches after running migrations.

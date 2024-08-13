@@ -155,6 +155,9 @@ class BaseTable(django_tables2.Table):
                     continue
                 if isinstance(column.column, LinkedCountColumn):
                     column_model = lookup.get_model_for_view_name(column.column.viewname)
+                    if column_model is None:
+                        logger.error("Couldn't find model for %s", column.column.viewname)
+                        continue
                     reverse_lookup = column.column.reverse_lookup or next(iter(column.column.url_params.keys()))
                     count_fields.append((column.name, column_model, reverse_lookup))
                     continue

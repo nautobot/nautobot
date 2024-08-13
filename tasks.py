@@ -626,7 +626,7 @@ def yamllint(context):
 
 @task
 def serve_docs(context):
-    """Runs local instance of mkdocs serve (ctrl-c to stop)."""
+    """Runs local instance of mkdocs serve on port 8001 (ctrl-c to stop)."""
     if is_truthy(context.nautobot.local):
         run_command(context, "mkdocs serve")
     else:
@@ -676,9 +676,11 @@ def check_schema(context, api_version=None):
         nautobot_version = get_nautobot_version()
         # logic equivalent to nautobot.core.settings REST_FRAMEWORK_ALLOWED_VERSIONS - keep them in sync!
         current_major, current_minor = [int(v) for v in nautobot_version.split(".")[:2]]
-        if current_major != 2:
+        if current_major > 3:
             raise RuntimeError(f"check_schemas version calc must be updated to handle version {current_major}")
-        api_versions = [f"{current_major}.{minor}" for minor in range(0, current_minor + 1)]
+        api_versions = ["2.0", "2.1", "2.2", "2.3"] + [
+            f"{current_major}.{minor}" for minor in range(0, current_minor + 1)
+        ]
 
     for api_vers in api_versions:
         command = f"nautobot-server spectacular --api-version {api_vers} --validate --fail-on-warn --file /dev/null"

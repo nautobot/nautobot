@@ -24,6 +24,7 @@ class CloudAccountFactory(PrimaryModelFactory):
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
     provider = random_instance(Manufacturer, allow_null=False)
+    # TODO: once SecretsGroupFactory is implemented:
     # has_secrets_group = NautobotBoolIterator()
     # secrets_group = factory.Maybe(
     #     "has_secrets_group",
@@ -40,6 +41,7 @@ class CloudResourceTypeFactory(PrimaryModelFactory):
     name = factory.LazyAttributeSequence(lambda o, n: f"{o.provider.name} CloudResourceType {n + 1}")
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    # TODO: if we add a `config_schema` here, then CloudNetworkFactory and CloudServiceFactory have to follow it...
 
     @factory.post_generation
     def content_types(self, create, extracted, **kwargs):
