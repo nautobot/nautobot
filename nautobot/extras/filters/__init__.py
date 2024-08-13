@@ -22,6 +22,7 @@ from nautobot.core.filters import (
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
+    JobQueueTypeChoices,
     JobResultStatusChoices,
     MetadataTypeDataTypeChoices,
     RelationshipTypeChoices,
@@ -915,9 +916,15 @@ class JobQueueFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "tenant__name": "icontains",
         },
     )
+    tenant = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Tenant.objects.all(),
+        label="Tenant (ID or name)",
+        to_field_name="name",
+    )
+    type = django_filters.MultipleChoiceFilter(choices=JobQueueTypeChoices, null_value=None)
 
     class Meta:
-        model = Job
+        model = JobQueue
         fields = [
             "id",
             "name",

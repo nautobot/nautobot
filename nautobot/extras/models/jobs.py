@@ -524,6 +524,7 @@ class JobQueueAssignment(BaseModel):
     """
     Through table model that represents the m2m relationship between jobs and job queues.
     """
+
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name="job_queue_assignments")
     job_queue = models.ForeignKey(JobQueue, on_delete=models.CASCADE, related_name="job_assignments")
     is_metadata_associable_model = False
