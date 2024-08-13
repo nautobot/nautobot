@@ -520,7 +520,6 @@ class JobQueue(PrimaryModel):
     "custom_validators",
     "export_templates",
     "graphql",
-    "webhooks",
 )
 class JobQueueAssignment(BaseModel):
     """
