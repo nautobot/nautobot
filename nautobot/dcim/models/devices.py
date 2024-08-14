@@ -818,21 +818,30 @@ class Device(PrimaryModel, ConfigContextModel):
                 }
             )
 
-        # Validate device software version has a software image file that matches the device's device type or is a default image
-        if self.software_version is not None and not any(
-            (
-                self.software_version.software_image_files.filter(device_types=self.device_type).exists(),
-                self.software_version.software_image_files.filter(default_image=True).exists(),
-            )
-        ):
-            raise ValidationError(
-                {
-                    "software_version": (
-                        f"No software image files for version '{self.software_version}' are "
-                        f"valid for device type {self.device_type}."
+        # If software version is specified and any software image file is specified, validate that
+        # each of the software image files belongs to the specified software version's software image files
+        # that match the device's device type or is a default image
+
+        if self.software_version and self.software_image_files.exists():
+            for image_file in self.software_image_files.all():
+                if not any(
+                    (
+                        self.software_version.software_image_files.filter(
+                            device_types=self.device_type, pk=image_file.pk
+                        ).exists(),
+                        self.software_version.software_image_files.filter(
+                            default_image=True, pk=image_file.pk
+                        ).exists(),
                     )
-                }
-            )
+                ):
+                    raise ValidationError(
+                        {
+                            "software_image_files": (
+                                f"Software image file {image_file} for version '{self.software_version}' is not "
+                                f"valid for device type {self.device_type}."
+                            )
+                        }
+                    )
 
     def save(self, *args, **kwargs):
         is_new = not self.present_in_database
