@@ -1121,13 +1121,12 @@ class JobFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
 
 
-class JobQueueFilterSetTestCase(FilterTestCases.FilterTestCase):
+class JobQueueFilterSetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = JobQueue.objects.all()
     filterset = JobQueueFilterSet
+    tenancy_related_name = "job_queues"
     generic_filter_tests = [
         ["name"],
-        ["tenant", "tenant__id"],
-        ["tenant", "tenant__name"],
     ]
 
     def test_queue_type(self):
