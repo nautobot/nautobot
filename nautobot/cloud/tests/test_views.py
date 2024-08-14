@@ -2,6 +2,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudResourceType, CloudService
 from nautobot.core.testing import ViewTestCases
+from nautobot.core.testing.utils import post_data
 from nautobot.dcim.models import Manufacturer
 from nautobot.extras.models import SecretsGroup, Tag
 
@@ -35,6 +36,22 @@ class CloudAccountTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "New description",
             "comments": "New comments",
         }
+
+    def test_post_without_secrets_group(self):
+        """Assert Secrets Group form field is not required: Fix for https://github.com/nautobot/nautobot/issues/6096"""
+        self.add_permissions("cloud.add_cloudaccount", "dcim.view_manufacturer")
+        form_data = {
+            "name": "New Cloud Account 2",
+            "account_number": "8928371982311",
+            "provider": Manufacturer.objects.first().pk,
+            "description": "A new cloud account",
+        }
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertTrue(CloudAccount.objects.filter(name="New Cloud Account 2").exists())
 
 
 class CloudNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):

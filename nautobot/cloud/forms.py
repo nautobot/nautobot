@@ -26,7 +26,7 @@ class CloudAccountForm(NautobotModelForm):
         queryset=Manufacturer.objects.all(),
         help_text="The Manufacturer instance which represents the Cloud Provider",
     )
-    secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all())
+    secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
 
     class Meta:
         model = CloudAccount
