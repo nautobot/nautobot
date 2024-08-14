@@ -991,6 +991,10 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
             self.assertEqual(ip_obj, ipaddress)
             self.assertFalse(created)
 
+            ip_obj, created = IPAddress.objects.get_or_create(host=ipaddress.host, status=ipaddr_status)
+            self.assertEqual(ip_obj.status, ipaddr_status)
+            self.assertFalse(created)
+
         with self.subTest(
             "Assert get_or_create utilizes default namespace when retrieving parent if no namespace is provided"
         ):
@@ -1025,11 +1029,6 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
             self.assertEqual(ip_obj.parent, parent)
             self.assertEqual(ip_obj.parent.namespace, namespace)
             self.assertTrue(created)
-
-        with self.subTest("Assert if host is not present"):
-            ip_obj, created = IPAddress.objects.get_or_create(host=ipaddress.host, status=ipaddr_status)
-            self.assertEqual(ip_obj.status, ipaddr_status)
-            self.assertFalse(created)
 
         with self.subTest("Assert passing invalid host/mask_length"):
             with self.assertRaises(ValidationError) as err:
