@@ -51,8 +51,8 @@ class DeviceTestCase(FormTestCases.BaseFormTestCase):
             status=Status.objects.get_for_model(SoftwareVersion).first(),
         )
         cls.software_version = SoftwareVersion.objects.first()
-        cls.software_image_files = SoftwareImageFile.objects.exclude(
-            software_version=cls.software_version, default_image=True
+        cls.software_image_files = SoftwareImageFile.objects.exclude(software_version=cls.software_version).exclude(
+            default_image=True
         )
 
         Device.objects.create(

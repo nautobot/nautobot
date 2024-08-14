@@ -2068,26 +2068,17 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         super().clean()
 
         device_type = self.cleaned_data["device_type"]
-        software_version = self.cleaned_data["software_version"]
         software_image_files = self.cleaned_data["software_image_files"]
 
-        # If software version is specified and any software image file is specified, validate that
-        # each of the software image files belongs to the specified software version's software image files
-        # that match the device's device type or is a default image
-        if software_version and software_image_files:
+        # If any software image file is specified, validate that
+        # each of the software image files belongs to the device's device type or is a default image
+        if software_image_files:
             for image_file in software_image_files:
-                if not any(
-                    (
-                        software_version.software_image_files.filter(
-                            device_types=device_type, pk=image_file.pk
-                        ).exists(),
-                        software_version.software_image_files.filter(default_image=True, pk=image_file.pk).exists(),
-                    )
-                ):
+                if device_type not in image_file.device_types.all() and not image_file.default_image:
                     raise ValidationError(
                         {
                             "software_image_files": (
-                                f"Software image file {image_file} for version '{software_version}' is not "
+                                f"Software image file {image_file} for version '{image_file.software_version}' is not "
                                 f"valid for device type {device_type}."
                             )
                         }
