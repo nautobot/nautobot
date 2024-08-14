@@ -22,6 +22,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     DynamicGroupTypeChoices,
+    JobQueueTypeChoices,
     JobResultStatusChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
@@ -47,6 +48,8 @@ from nautobot.extras.filters import (
     JobFilterSet,
     JobHookFilterSet,
     JobLogEntryFilterSet,
+    JobQueueAssignmentFilterSet,
+    JobQueueFilterSet,
     JobResultFilterSet,
     MetadataChoiceFilterSet,
     MetadataTypeFilterSet,
@@ -84,6 +87,8 @@ from nautobot.extras.models import (
     JobButton,
     JobHook,
     JobLogEntry,
+    JobQueue,
+    JobQueueAssignment,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -1114,6 +1119,47 @@ class JobFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
     def test_is_job_hook_receiver(self):
         params = {"is_job_hook_receiver": True}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+
+
+class JobQueueFilterSetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
+    queryset = JobQueue.objects.all()
+    filterset = JobQueueFilterSet
+    tenancy_related_name = "job_queues"
+    generic_filter_tests = [
+        ["name"],
+    ]
+
+    def test_queue_type(self):
+        # we cannot add this test to self.generic_filter_tests because JobQueueTypeChoices only has two values.
+        # self.generic_filter_tests needs at least three.
+        params = {"queue_type": [JobQueueTypeChoices.TYPE_CELERY]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(queue_type=JobQueueTypeChoices.TYPE_CELERY)
+        )
+        params = {"queue_type": [JobQueueTypeChoices.TYPE_KUBERNETES]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(queue_type=JobQueueTypeChoices.TYPE_KUBERNETES),
+        )
+
+
+class JobQueueAssignmentFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = JobQueueAssignment.objects.all()
+    filterset = JobQueueAssignmentFilterSet
+    generic_filter_tests = [
+        ("job", "job__id"),
+        ("job", "job__name"),
+        ("job_queue", "job_queue__id"),
+        ("job_queue", "job_queue__name"),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        jobs = Job.objects.all()[:3]
+        job_queues = JobQueue.objects.all()[:3]
+        for job in jobs:
+            for queue in job_queues:
+                JobQueueAssignment.objects.create(job=job, job_queue=queue)
 
 
 class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
