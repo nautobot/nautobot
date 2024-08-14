@@ -407,7 +407,7 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         mask_length = kwargs.get("mask_length")
         # If `host` or `mask_length` is None skip; then there is no way of getting the closest parent;
         if parent is None and host is not None and mask_length is not None:
-            if not namespace:
+            if namespace is None:
                 namespace = get_default_namespace()
             cidr = f"{host}/{mask_length}"
 
