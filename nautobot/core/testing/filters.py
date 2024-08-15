@@ -361,7 +361,7 @@ class FilterTestCases:
                     )
 
     # Test cases should just explicitly include `name` as a generic_filter_tests entry
-    @class_deprecated_in_favor_of(FilterTestCase)
+    @class_deprecated_in_favor_of(FilterTestCase)  # pylint: disable=undefined-variable
     class NameOnlyFilterTestCase(FilterTestCase):
         """Add simple tests for filtering by name."""
 
@@ -371,7 +371,7 @@ class FilterTestCases:
             super().test_filters_generic()
 
     # Test cases should just explicitly include `name` and `slug` as generic_filter_tests entries
-    @class_deprecated_in_favor_of(FilterTestCase)
+    @class_deprecated_in_favor_of(FilterTestCase)  # pylint: disable=undefined-variable
     class NameSlugFilterTestCase(FilterTestCase):
         """Add simple tests for filtering by name and by slug."""
 
