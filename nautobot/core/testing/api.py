@@ -169,6 +169,10 @@ class APIViewTestCases:
             if issubclass(self.model, extras_models.ChangeLoggedModel):
                 self.assertIn("created", response.data)
                 self.assertIn("last_updated", response.data)
+            if hasattr(self.model, "notes") and isinstance(instance1.notes, QuerySet):
+                self.assertIn("notes_url", response.data)
+                self.assertIn(f"{url}notes/", str(response.data["notes_url"]))
+                self.assertIn(instance1.get_notes_url(api=True), str(response.data["notes_url"]))
             # Fields that should be absent by default (opt-in fields):
             self.assertNotIn("computed_fields", response.data)
             self.assertNotIn("relationships", response.data)
@@ -637,10 +641,7 @@ class APIViewTestCases:
             POST a single object with permission.
             """
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
 
             initial_count = self._get_queryset().count()
             for i, create_data in enumerate(self.create_data):
@@ -683,10 +684,10 @@ class APIViewTestCases:
                 self.fail("Couldn't find a single deletable object!")
 
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add", "view"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(
+                f"{self.model._meta.app_label}.add_{self.model._meta.model_name}",
+                f"{self.model._meta.app_label}.view_{self.model._meta.model_name}",
+            )
 
             response = self.client.get(self._get_detail_url(instance) + "?format=csv", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -733,10 +734,7 @@ class APIViewTestCases:
             POST a set of objects in a single request.
             """
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
 
             initial_count = self._get_queryset().count()
             response = self.client.post(self._get_list_url(), self.create_data, format="json", **self.header)
@@ -867,10 +865,10 @@ class APIViewTestCases:
             """GET and then PUT an object and verify that it's accepted and unchanged."""
             self.maxDiff = None
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["view", "change"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(
+                f"{self.model._meta.app_label}.view_{self.model._meta.model_name}",
+                f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
+            )
 
             instance = self._get_queryset().first()
             url = self._get_detail_url(instance)
@@ -901,10 +899,7 @@ class APIViewTestCases:
                 self.skipTest("Bulk update data not set")
 
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["change"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
             id_list = list(self._get_queryset().values_list("id", flat=True)[:3])
             self.assertEqual(len(id_list), 3, "Insufficient number of objects to test bulk update")
@@ -1020,10 +1015,7 @@ class APIViewTestCases:
             url = self._get_detail_url(instance)
 
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["delete"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")
 
             response = self.client.delete(url, **self.header)
             self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
@@ -1040,10 +1032,7 @@ class APIViewTestCases:
             """
             id_list = self.get_deletable_object_pks()
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["delete"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")
 
             data = [{"id": id} for id in id_list]
 
@@ -1054,30 +1043,6 @@ class APIViewTestCases:
 
     class NotesURLViewTestCase(APITestCase):
         """Validate Notes URL on objects that have the Note model Mixin."""
-
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-        def test_notes_url_on_object(self):
-            if not hasattr(self.model, "notes"):
-                self.skipTest("Model doesn't appear to support Notes")
-            instance = self._get_queryset().first()
-            if not isinstance(instance.notes, QuerySet):
-                self.skipTest("Model has a notes field but it doesn't appear to be Notes")
-
-            # Add object-level permission
-            obj_perm = users_models.ObjectPermission(
-                name="Test permission",
-                constraints={"pk": instance.pk},
-                actions=["view"],
-            )
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
-            url = self._get_detail_url(instance)
-            response = self.client.get(url, **self.header)
-            self.assertHttpStatus(response, status.HTTP_200_OK)
-            self.assertIn("notes_url", response.data)
-            self.assertIn(f"{url}notes/", str(response.data["notes_url"]))
-            self.assertIn(instance.get_notes_url(api=True), str(response.data["notes_url"]))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_notes_url_functionality(self):

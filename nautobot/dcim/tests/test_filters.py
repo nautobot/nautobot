@@ -994,11 +994,12 @@ class PathEndpointModelTestMixin:
             )
 
 
-class LocationTypeFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class LocationTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = LocationType.objects.all()
     filterset = LocationTypeFilterSet
     generic_filter_tests = [
         ("description",),
+        ("name",),
         ("parent", "parent__id"),
         ("parent", "parent__name"),
     ]
@@ -1030,7 +1031,7 @@ class LocationTypeFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
             )
 
 
-class LocationFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
+class LocationFilterSetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Location.objects.all()
     filterset = LocationFilterSet
     tenancy_related_name = "locations"
@@ -1051,6 +1052,7 @@ class LocationFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTe
         ("longitude",),
         ("location_type", "location_type__id"),
         ("location_type", "location_type__name"),
+        ("name",),
         ("parent", "parent__id"),
         ("parent", "parent__name"),
         ("physical_address",),
@@ -1101,17 +1103,13 @@ class LocationFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTe
             Location.objects.filter(location_type__content_types=ct),
         )
 
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.filter(pk=value))
 
-
-class RackGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class RackGroupTestCase(FilterTestCases.FilterTestCase):
     queryset = RackGroup.objects.all()
     filterset = RackGroupFilterSet
     generic_filter_tests = [
         ("description",),
+        ("name",),
         ("parent", "parent__id"),
         ("parent", "parent__name"),
         ("power_panels", "power_panels__id"),
@@ -1230,11 +1228,6 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             params = {"outer_unit": [RackDimensionUnitChoices.UNIT_MILLIMETER]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
-
 
 class RackReservationTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = RackReservation.objects.all()
@@ -1254,13 +1247,8 @@ class RackReservationTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Te
     def setUpTestData(cls):
         common_test_data(cls)
 
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
-
-class ManufacturerTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class ManufacturerTestCase(FilterTestCases.FilterTestCase):
     queryset = Manufacturer.objects.all()
     filterset = ManufacturerFilterSet
     generic_filter_tests = [
@@ -1269,6 +1257,7 @@ class ManufacturerTestCase(FilterTestCases.NameOnlyFilterTestCase):
         ("device_types", "device_types__model"),
         ("inventory_items", "inventory_items__id"),
         ("inventory_items", "inventory_items__name"),
+        ("name",),
         ("platforms", "platforms__id"),
         ("platforms", "platforms__name"),
     ]
@@ -1284,13 +1273,14 @@ class ManufacturerTestCase(FilterTestCases.NameOnlyFilterTestCase):
         InventoryItem.objects.create(device=devices[2], name="Inventory Item 3", manufacturer=cls.manufacturers[2])
 
 
-class DeviceFamilyTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class DeviceFamilyTestCase(FilterTestCases.FilterTestCase):
     queryset = DeviceFamily.objects.all()
     filterset = DeviceFamilyFilterSet
     generic_filter_tests = [
         ("description",),
         ("device_types", "device_types__id"),
         ("device_types", "device_types__model"),
+        ("name",),
     ]
 
 
@@ -1480,11 +1470,6 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
                 self.queryset.exclude(device_bay_templates__isnull=False),
             )
 
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
-
 
 class ConsolePortTemplateTestCase(ModularComponentTemplateTestMixin, FilterTestCases.FilterTestCase):
     queryset = ConsolePortTemplate.objects.all()
@@ -1632,7 +1617,7 @@ class DeviceBayTemplateTestCase(ComponentTemplateTestMixin, FilterTestCases.Filt
     filterset = DeviceBayTemplateFilterSet
 
 
-class PlatformTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class PlatformTestCase(FilterTestCases.FilterTestCase):
     queryset = Platform.objects.all()
     filterset = PlatformFilterSet
     generic_filter_tests = [
@@ -1640,6 +1625,7 @@ class PlatformTestCase(FilterTestCases.NameOnlyFilterTestCase):
         ("devices", "devices__id"),
         ("manufacturer", "manufacturer__id"),
         ("manufacturer", "manufacturer__name"),
+        ("name",),
         ("napalm_driver",),
         ("virtual_machines", "virtual_machines__id"),
     ]
@@ -1917,45 +1903,6 @@ class DeviceTestCase(
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 Device.objects.filter(local_config_context_data__isnull=True),
-            )
-
-    def test_search(self):
-        filter_fields = (
-            "name",
-            "serial",
-            "inventory_items__serial",
-            "asset_tag",
-            "device_type__manufacturer__name",
-            "comments",
-        )
-        for filter_field in filter_fields:
-            with self.subTest(f"test q filter by field {filter_field}"):
-                value = (
-                    self.queryset.values_list(filter_field, flat=True)
-                    .exclude(**{f"{filter_field}__in": ["", None]})
-                    .first()
-                )
-                params = {"q": value}
-                # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
-                # pylint: disable=unsupported-binary-operation
-                qs_filter = (
-                    Q(name__icontains=value)
-                    | Q(serial__icontains=value.strip())
-                    | Q(inventory_items__serial__icontains=value.strip())
-                    | Q(asset_tag__icontains=value.strip())
-                    | Q(device_type__manufacturer__name__icontains=value.strip())
-                    | Q(comments__icontains=value)
-                )
-                self.assertQuerysetEqualAndNotEmpty(
-                    self.filterset(params, self.queryset).qs,
-                    self.queryset.filter(qs_filter),
-                )
-
-        with self.subTest("test q filter by field pk"):
-            value = self.queryset.values_list("pk", flat=True).first()
-            params = {"q": value}
-            self.assertQuerysetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs, self.queryset.filter(id=value)
             )
 
 
@@ -3055,11 +3002,6 @@ class InventoryItemTestCase(DeviceComponentTestMixin, FilterTestCases.FilterTest
             params = {"serial": "abc"}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
-
 
 class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
     queryset = VirtualChassis.objects.all()
@@ -3143,11 +3085,6 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
         Device.objects.filter(pk=devices[1].pk).update(virtual_chassis=virtual_chassis[0])
         Device.objects.filter(pk=devices[3].pk).update(virtual_chassis=virtual_chassis[1])
         Device.objects.filter(pk=devices[5].pk).update(virtual_chassis=virtual_chassis[2])
-
-    def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
 class CableTestCase(FilterTestCases.FilterTestCase):
