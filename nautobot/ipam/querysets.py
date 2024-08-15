@@ -1,6 +1,7 @@
 import re
 
 from django.core.exceptions import ValidationError
+from django.core.validators import validate_ipv46_address
 from django.db.models import ProtectedError, Q
 import netaddr
 
@@ -396,6 +397,31 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         IP address as a /32 or /128.
         """
         return super().order_by("host")
+
+    def get_or_create(self, **kwargs):
+        from nautobot.ipam.models import get_default_namespace, Prefix
+
+        parent = kwargs.get("parent")
+        namespace = kwargs.pop("namespace", None)
+        host = kwargs.get("host")
+        mask_length = kwargs.get("mask_length")
+        # If `host` or `mask_length` is None skip; then there is no way of getting the closest parent;
+        if parent is None and host is not None and mask_length is not None:
+            if namespace is None:
+                namespace = get_default_namespace()
+            cidr = f"{host}/{mask_length}"
+
+            try:
+                validate_ipv46_address(host)
+            except ValidationError as err:
+                raise ValidationError({"host": err.error_list}) from err
+            try:
+                netaddr.IPNetwork(cidr)
+            except netaddr.AddrFormatError as err:
+                raise ValidationError(f"{cidr} does not appear to be an IPv4 or IPv6 network.") from err
+            parent = Prefix.objects.filter(namespace=namespace).get_closest_parent(cidr=cidr, include_self=True)
+            kwargs["parent"] = parent
+        return super().get_or_create(**kwargs)
 
     def string_search(self, search):
         """
