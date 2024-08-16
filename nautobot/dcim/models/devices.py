@@ -820,18 +820,16 @@ class Device(PrimaryModel, ConfigContextModel):
 
         # If any software image file is specified, validate that
         # each of the software image files belongs to the device's device type or is a default image
-
-        if self.software_image_files.exists():
-            for image_file in self.software_image_files.all():
-                if self.device_type not in image_file.device_types.all() and not image_file.default_image:
-                    raise ValidationError(
-                        {
-                            "software_image_files": (
-                                f"Software image file {image_file} for version '{image_file.software_version}' is not "
-                                f"valid for device type {self.device_type}."
-                            )
-                        }
-                    )
+        for image_file in self.software_image_files.all():
+            if not image_file.default_image and self.device_type not in image_file.device_types.all():
+                raise ValidationError(
+                    {
+                        "software_image_files": (
+                            f"Software image file {image_file} for version '{image_file.software_version}' is not "
+                            f"valid for device type {self.device_type}."
+                        )
+                    }
+                )
 
     def save(self, *args, **kwargs):
         is_new = not self.present_in_database
