@@ -7,6 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
 from django.db import models
+from django.db.models.fields.json import KeyTransform
 
 from nautobot.circuits.models import Circuit
 from nautobot.dcim.models import (
@@ -376,41 +377,60 @@ def check_permissions_constraints(command):
                 continue
 
             for lookup in qs._query.where.children:
-                related_model = lookup.lhs.target.related_model or lookup.lhs.target.model
+                lhs = lookup.lhs
 
-                if related_model in replaced_models:
-                    cls = f"{related_model.__module__}.{related_model.__name__}"
-                    warnings.append(
-                        f"ObjectPermission '{perm}' (id: {perm.id}) has a constraint that references "
-                        f"a model ({cls}) that will be migrated to a new model by the Nautobot 2.0 migration.\n"
-                        + json.dumps(perm.constraints, indent=4)
-                    )
+                # Check if the left-hand side (lhs) of the lookup is a KeyTransform.
+                # KeyTransform is used for accessing nested keys in JSON fields.
+                if isinstance(lhs, KeyTransform):
+                    # If lhs is a KeyTransform, it means we're dealing with a JSON field lookup usually a CustomField.
+                    # `lhs.source_expressions` returns a list of `Col` objects representing the columns involved in the lookup.
+                    cols = lhs.source_expressions
+                    # - `col.field.name` gives the base field name (_custom_field_data).
+                    # - `lhs.key_name` provides the specific custom field name (test_custom_field).
+                    # Construct the field name by combining these with a double underscore.
+                    suffix = f"__{lhs.key_name}"
+                else:
+                    # If lhs is not a KeyTransform, it is a direct column reference.
+                    # Wrap lhs in a list to handle it uniformly in the next step.
+                    cols = [lhs]
+                    suffix = ""
 
-                if related_model in field_change_models:
-                    field_name = lookup.lhs.field.name
-                    if field_name in field_change_models[related_model]:
+                for col in cols:
+                    field_name = f"{col.field.name}{suffix}"
+                    related_model = col.target.related_model or col.target.model
+
+                    if related_model in replaced_models:
                         cls = f"{related_model.__module__}.{related_model.__name__}"
                         warnings.append(
                             f"ObjectPermission '{perm}' (id: {perm.id}) has a constraint that references "
-                            f"a model field ({cls}.{field_name}) that may be changed by the Nautobot 2.0 migration.\n"
+                            f"a model ({cls}) that will be migrated to a new model by the Nautobot 2.0 migration.\n"
                             + json.dumps(perm.constraints, indent=4)
                         )
 
-                if lookup.lhs.field.name == "slug" and related_model is not GitRepository:
-                    warnings.append(
-                        f"ObjectPermission '{perm}' (id: {perm.id}) has a constraint that references "
-                        f"a 'slug' field that will be deleted by the Nautobot 2.0 migration.\n"
-                        + json.dumps(perm.constraints, indent=4)
-                    )
+                    if related_model in field_change_models:
+                        if field_name in field_change_models[related_model]:
+                            cls = f"{related_model.__module__}.{related_model.__name__}"
+                            warnings.append(
+                                f"ObjectPermission '{perm}' (id: {perm.id}) has a constraint that references "
+                                f"a model field ({cls}.{field_name}) that may be changed by the Nautobot 2.0 migration.\n"
+                                + json.dumps(perm.constraints, indent=4)
+                            )
 
-                if related_model in pk_change_models:
-                    if isinstance(lookup.lhs.target, (models.fields.related.RelatedField, models.fields.UUIDField)):
-                        cls = f"{related_model.__module__}.{related_model.__name__}"
+                    if field_name == "slug" and related_model is not GitRepository:
                         warnings.append(
                             f"ObjectPermission '{perm}' (id: {perm.id}) has a constraint that references "
-                            f"an object ({cls}) that may have its primary key changed by the Nautobot 2.0 migration.\n"
+                            f"a 'slug' field that will be deleted by the Nautobot 2.0 migration.\n"
                             + json.dumps(perm.constraints, indent=4)
                         )
+
+                    if related_model in pk_change_models:
+                        if isinstance(col.target, (models.fields.related.RelatedField, models.fields.UUIDField)):
+                            cls = f"{related_model.__module__}.{related_model.__name__}"
+                            warnings.append(
+                                f"ObjectPermission '{perm}' (id: {perm.id}) has a constraint that references "
+                                f"an object ({cls}) that may have its primary key changed by the Nautobot 2.0 migration.\n"
+                                + json.dumps(perm.constraints, indent=4)
+                            )
 
     if warnings:
         msg = """

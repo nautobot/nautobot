@@ -5,8 +5,13 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.contrib.contenttypes.models import ContentType
 
+from nautobot.dcim.models.devices import Device
+from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.models.customfields import CustomField
+from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import TestCase
 from nautobot.dcim.models import VirtualChassis
+from nautobot.dcim.models.sites import Site
 from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.models import ConfigContext, ConfigContextSchema, ExportTemplate, GitRepository
 
@@ -24,6 +29,17 @@ class PreMigrateCommandTest(TestCase):
             provided_contents=[entry.content_identifier for entry in get_datasource_contents("extras.gitrepository")],
         )
         self.git_repo.save(trigger_resync=False)
+
+        # Adding this test data to assert that https://github.com/nautobot/nautobot/issues/6081 is fixed
+        ct = ContentType.objects.get_for_model(GitRepository)
+        custom_field = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="test_custom_field")
+        custom_field.content_types.add(ct)
+        obj_perm = ObjectPermission.objects.create(
+            name="Test permission",
+            constraints={"_custom_field_data__test_custom_field__in": ["test-1", "test-2"]},
+            actions=["view"],
+        )
+        obj_perm.object_types.add(ct)
 
     def run_command(self, *args):
         out = StringIO()
@@ -80,3 +96,22 @@ class PreMigrateCommandTest(TestCase):
 
         with self.assertRaises(CommandError):
             self.run_command()
+
+    def test_permission_constraints_failure(self):
+        """Test that duplicate VirtualChassis objects result in a failure."""
+        device_ct = ContentType.objects.get_for_model(Device)
+        site_ct = ContentType.objects.get_for_model(Device)
+        custom_field = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="custom_field")
+        custom_field.content_types.add(site_ct)
+        obj_perm = ObjectPermission.objects.create(
+            name="Test permission 2",
+            constraints={"site___custom_field_data__custom_field_in": ["test-1", "test-2"]},
+            actions=["view"],
+        )
+        obj_perm.object_types.add(device_ct)
+
+        out, _ = self.run_command()
+        self.assertIn(
+            f"ObjectPermission 'Test permission 2' (id: {obj_perm.pk}) has a constraint that references a model (nautobot.dcim.models.sites.Site) that will be migrated to a new model by the Nautobot 2.0 migration.",
+            out,
+        )
