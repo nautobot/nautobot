@@ -11,7 +11,6 @@ from nautobot.extras.models.customfields import CustomField
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.testing import TestCase
 from nautobot.dcim.models import VirtualChassis
-from nautobot.dcim.models.sites import Site
 from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.models import ConfigContext, ConfigContextSchema, ExportTemplate, GitRepository
 
