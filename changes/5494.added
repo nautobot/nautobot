@@ -1,0 +1,1 @@
+Added validation logic to `DeviceForm` `clean()` method to raise a validation error if there is any invalid software image file specified.
