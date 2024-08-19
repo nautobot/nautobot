@@ -233,7 +233,7 @@
                                     {% include 'dcim/inc/detail_softwareversion_softwareimagefile_rows.html' %}
                                 </table>
                             </div>
-                            {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields_advanced_ui=False %}
+                            {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields=object.get_computed_fields_grouping_basic computed_fields_advanced_ui=False %}
                             {% include 'inc/relationships/panel_override.html' with relationships_fields_override=object.get_relationships_data_basic_fields %}
                             {% include 'extras/inc/tags_panel.html' with tags=object.tags.all url='dcim:device_list' %}
                             <div class="panel panel-default">

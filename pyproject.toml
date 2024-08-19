@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.3.0"
+version = "2.3.1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -201,7 +201,7 @@ mkdocs-section-index = "~0.3.9"
 # Automatic documentation from sources, for MkDocs
 mkdocstrings = "~0.25.2"
 # Python-specific extension to mkdocstrings
-mkdocstrings-python = {version = "~1.10.7", python = ">=3.8.6"}
+mkdocstrings-python = "~1.10.8"
 
 [tool.poetry.group.linting.dependencies]
 # Code static analysis
