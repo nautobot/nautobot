@@ -117,6 +117,28 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
+## v2.3.1 (2024-08-19)
+
+### Added
+
+- [#5232](https://github.com/nautobot/nautobot/issues/5232) - Added support for groupings to computed fields.
+- [#5494](https://github.com/nautobot/nautobot/issues/5494) - Added validation logic to `DeviceForm` `clean()` method to raise a validation error if there is any invalid software image file specified.
+- [#5915](https://github.com/nautobot/nautobot/issues/5915) - Enhanced `IPAddress.objects.get_or_create` method to permit specifying a namespace as an alternative to a parent prefix.
+
+### Changed
+
+- [#5970](https://github.com/nautobot/nautobot/issues/5970) - Removed indentations for PrefixTable in various locations in the UI.
+
+### Fixed
+
+- [#5494](https://github.com/nautobot/nautobot/issues/5494) - Fixed `Device` model `clean()` validation logic to allow user to specify a software version on a device without specifying any software image files.
+- [#6096](https://github.com/nautobot/nautobot/issues/6096) - Updated CloudAccount UI: Set the secrets_group form field to be optional.
+- [#6097](https://github.com/nautobot/nautobot/issues/6097) - Updated ContactAssociation API: Set the role field to be required.
+
+### Housekeeping
+
+- [#6107](https://github.com/nautobot/nautobot/issues/6107) - Updated documentation dependency `mkdocstrings-python` to `~1.10.8`.
+
 ## v2.3.0 (2024-08-08)
 
 ### Security
