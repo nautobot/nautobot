@@ -97,7 +97,7 @@ class PreMigrateCommandTest(TestCase):
             self.run_command()
 
     def test_permission_constraints_failure(self):
-        """Test that duplicate VirtualChassis objects result in a failure."""
+        """Test permission constraints logs warning when needed for CustomField."""
         device_ct = ContentType.objects.get_for_model(Device)
         site_ct = ContentType.objects.get_for_model(Device)
         custom_field = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, name="custom_field")
