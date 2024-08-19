@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from datetime import datetime
 import logging
 from pathlib import Path
 
@@ -72,6 +73,10 @@ class NautobotScheduleEntry(ModelEntry):
             model.last_run_at = self._default_now()
 
         self.last_run_at = model.last_run_at
+
+    def _default_now(self):
+        """Instead of using self.app.timezone, use the timezone specific to this schedule entry."""
+        return datetime.now(self.model.time_zone)
 
 
 class NautobotDatabaseScheduler(DatabaseScheduler):

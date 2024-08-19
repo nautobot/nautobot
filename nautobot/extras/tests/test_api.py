@@ -1583,7 +1583,7 @@ class JobTest(
             "schedule": {
                 "name": "test",
                 "interval": "future",
-                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "start_time": str(now() + timedelta(minutes=1)),
             },
         }
 
@@ -1780,7 +1780,7 @@ class JobTest(
             "var2": "Ground control to Major Tom",
             "var23": "Commencing countdown, engines on",
             "var1": test_file,
-            "_schedule_start_time": str(datetime.now() + timedelta(minutes=1)),
+            "_schedule_start_time": str(now() + timedelta(minutes=1)),
             "_schedule_interval": "future",
             "_schedule_name": "test",
         }
@@ -1799,7 +1799,7 @@ class JobTest(
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "schedule": {
-                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "start_time": str(now() + timedelta(minutes=1)),
                 "interval": "future",
                 "name": "test",
             },
@@ -1838,7 +1838,7 @@ class JobTest(
         data = {
             "data": {},
             "schedule": {
-                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "start_time": str(now() + timedelta(minutes=1)),
                 "interval": "future",
                 "name": "test",
             },
@@ -1914,7 +1914,7 @@ class JobTest(
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "schedule": {
-                "start_time": str(datetime.now() - timedelta(minutes=1)),
+                "start_time": str(now() - timedelta(minutes=1)),
                 "interval": "future",
                 "name": "test",
             },
@@ -1933,7 +1933,7 @@ class JobTest(
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "schedule": {
-                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "start_time": str(now() + timedelta(minutes=1)),
                 "interval": "hourly",
                 "name": "test",
             },
@@ -2447,7 +2447,7 @@ class ScheduledJobTest(
             name="test3",
             task="pass.TestPass",
             job_model=job_model,
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            interval=JobExecutionType.TYPE_DAILY,
             user=user,
             approval_required=True,
             start_time=now(),
