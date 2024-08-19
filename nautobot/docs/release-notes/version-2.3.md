@@ -132,8 +132,9 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 ### Fixed
 
 - [#5494](https://github.com/nautobot/nautobot/issues/5494) - Fixed `Device` model `clean()` validation logic to allow user to specify a software version on a device without specifying any software image files.
-- [#6096](https://github.com/nautobot/nautobot/issues/6096) - Updated CloudAccount UI: Set the secrets_group form field to be optional.
+- [#6096](https://github.com/nautobot/nautobot/issues/6096) - Updated CloudAccount UI: Set the `secrets_group` form field to be optional.
 - [#6097](https://github.com/nautobot/nautobot/issues/6097) - Updated ContactAssociation API: Set the role field to be required.
+- [#6116](https://github.com/nautobot/nautobot/issues/6116) - Added handling for an `OperationalError` that might be raised when running `pylint-nautobot` or similar linters that depend on successfully running `nautobot.setup()`.
 
 ### Housekeeping
 
