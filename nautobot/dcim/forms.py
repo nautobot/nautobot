@@ -213,16 +213,20 @@ class InterfaceCommonForm(forms.Form):
         elif mode == InterfaceModeChoices.MODE_TAGGED_ALL:
             self.cleaned_data["tagged_vlans"] = []
 
-        # Validate tagged VLANs; must be a global VLAN or in the same location
-        # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to add a VLAN
-        # belongs to the parent Location or the child location of the parent device to the `tagged_vlan` field of the interface?
+        # Validate tagged VLANs; must be a global VLAN or in the same location as the
+        # parent device/VM or any of that location's parent locations
         elif mode == InterfaceModeChoices.MODE_TAGGED:
-            valid_location = self.cleaned_data[parent_field].location
+            location = self.cleaned_data[parent_field].location
+            if location:
+                location_ids =[ancestor.id for ancestor in location.ancestors()]
+                location_ids.append(location.id)
+            else:
+                location_ids = []
             invalid_vlans = [
                 str(v)
                 for v in tagged_vlans
                 if v.locations.without_tree_fields().exists()
-                and not VLANLocationAssignment.objects.filter(location=valid_location, vlan=v).exists()
+                and not VLANLocationAssignment.objects.filter(location__in=location_ids, vlan=v).exists()
             ]
 
             if invalid_vlans:
