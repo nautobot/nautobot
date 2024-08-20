@@ -8,7 +8,7 @@ from celery import Celery, shared_task, signals
 from celery.app.log import TaskFormatter
 from celery.utils.log import get_logger
 from django.conf import settings
-from django.db.utils import ProgrammingError
+from django.db.utils import OperationalError, ProgrammingError
 from django.utils.functional import SimpleLazyObject
 from django.utils.module_loading import import_string
 from kombu.serialization import register
@@ -55,7 +55,10 @@ def import_jobs(sender=None, **kwargs):
 
     try:
         _import_jobs_from_git_repositories()
-    except ProgrammingError:  # Database not ready yet, as may be the case on initial startup and migration
+    except (
+        OperationalError,  # Database not present, as may be the case when running pylint-nautobot
+        ProgrammingError,  # Database not ready yet, as may be the case on initial startup and migration
+    ):
         pass
 
 
