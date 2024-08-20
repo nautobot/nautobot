@@ -1723,10 +1723,18 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         software_version.software_image_files.all().update(default_image=False)
         self.device_type.software_image_files.set([])
         self.device.software_version = software_version
+        invalid_software_image_file = SoftwareImageFile.objects.filter(default_image=False).first()
+        invalid_software_image_file.device_types.set([])
+        self.device.software_image_files.set([invalid_software_image_file])
 
-        # No device type or default image match
+        # There is an invalid non-default software_image_file specified for the software version
+        # It is not a default image and it does not match any device type
         with self.assertRaises(ValidationError):
             self.device.validated_save()
+
+        # user should be able to specify any software version without specifying software_image_files
+        self.device.software_image_files.set([])
+        self.device.validated_save()
 
         # Default image matches
         software_image_file = software_version.software_image_files.first()
