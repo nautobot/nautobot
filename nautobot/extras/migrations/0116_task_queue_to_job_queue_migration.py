@@ -17,9 +17,7 @@ def migrate_task_queues_to_job_queues(apps, schema):
         # Go through each task_queue
         # make or get the corresponding job_queue object and assign it to the job
         for task_queue in task_queues:
-            job_queue, _ = JobQueue.objects.get_or_create(
-                name=task_queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
-            )
+            job_queue, _ = JobQueue.objects.get_or_create(name=task_queue, queue_type=JobQueueTypeChoices.TYPE_CELERY)
             job.job_queues.add(job_queue)
 
     Job.objects.all().update(task_queues=[])
