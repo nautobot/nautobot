@@ -230,7 +230,6 @@ class ContactAssociationSerializer(NautobotModelSerializer):
         fields = "__all__"
         validators = []
         extra_kwargs = {
-            "role": {"required": False},
             "contact": {"required": False},
             "team": {"required": False},
         }
