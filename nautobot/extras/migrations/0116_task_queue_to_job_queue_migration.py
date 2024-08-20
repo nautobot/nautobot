@@ -22,6 +22,7 @@ def migrate_task_queues_to_job_queues(apps, schema):
 
     Job.objects.all().update(task_queues=[])
 
+
 def reverse_migrate_task_queues_to_job_queues(apps, schema):
     Job = apps.get_model("extras", "Job")
     JobQueueAssignment = apps.get_model("extras", "JobQueueAssignment")
@@ -31,6 +32,7 @@ def reverse_migrate_task_queues_to_job_queues(apps, schema):
         job.task_queues = queue_names
         job.save()
     JobQueueAssignment.objects.all().delete()
+
 
 class Migration(migrations.Migration):
     dependencies = [
