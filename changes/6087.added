@@ -1,1 +1,2 @@
 Added JobQueue and JobQueueAssignment models and API.
+Added a data migrations to convert `Job.task_queues` to many-to-many relationships with `JobQueue` instances.
