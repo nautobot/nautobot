@@ -6,6 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 import django_filters
 from drf_spectacular.utils import extend_schema_field
+from timezone_field import TimeZoneField
 
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
@@ -960,10 +961,15 @@ class ScheduledJobFilterSet(BaseFilterSet):
         queryset=Job.objects.all(),
         label="Job (ID) - Deprecated (use job_model filter)",
     )
+    time_zone = django_filters.MultipleChoiceFilter(
+        choices=[(str(obj), name) for obj, name in TimeZoneField().choices],
+        label="Time zone",
+        null_value="",
+    )
 
     class Meta:
         model = ScheduledJob
-        fields = ["id", "name", "total_run_count", "start_time", "last_run_at"]
+        fields = ["id", "name", "total_run_count", "start_time", "last_run_at", "time_zone"]
 
 
 #

@@ -582,7 +582,7 @@ class JobVariableSerializer(serializers.Serializer):
 
 class ScheduledJobSerializer(BaseModelSerializer):
     # start_time = serializers.DateTimeField(format=None, required=False)
-    time_zone = TimeZoneSerializerField(required=False, default="UTC")
+    time_zone = TimeZoneSerializerField(required=False)
 
     class Meta:
         model = ScheduledJob
