@@ -962,6 +962,92 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         self.status = Status.objects.get(name="Active")
         self.prefix = Prefix.objects.create(prefix="192.0.2.0/24", status=self.status, namespace=self.namespace)
 
+    def test_get_or_create(self):
+        """Assert `get_or_create` method to permit specifying a namespace as an alternative to a parent prefix."""
+        default_namespace = get_default_namespace()
+        namespace = Namespace.objects.create(name="Test Namespace")
+
+        ipaddr_status = Status.objects.get_for_model(IPAddress).first()
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+
+        parent = Prefix.objects.create(prefix="10.1.1.0/24", namespace=namespace, status=prefix_status)
+        default_namespace_parent = Prefix.objects.create(
+            prefix="10.0.0.0/24", namespace=default_namespace, status=prefix_status
+        )
+
+        ipaddress = IPAddress.objects.create(address="10.1.1.1/24", namespace=namespace, status=ipaddr_status)
+        default_namespace_ipaddress = IPAddress.objects.create(
+            address="10.0.0.1/24", namespace=default_namespace, status=ipaddr_status
+        )
+        mask_length = 24
+
+        with self.subTest("Assert retrieve"):
+            ip_obj, created = IPAddress.objects.get_or_create(
+                host=ipaddress.host,
+                mask_length=mask_length,
+                namespace=namespace,
+                status=ipaddr_status,
+            )
+            self.assertEqual(ip_obj, ipaddress)
+            self.assertFalse(created)
+
+            ip_obj, created = IPAddress.objects.get_or_create(host=ipaddress.host, status=ipaddr_status)
+            self.assertEqual(ip_obj.status, ipaddr_status)
+            self.assertFalse(created)
+
+        with self.subTest(
+            "Assert get_or_create utilizes default namespace when retrieving parent if no namespace is provided"
+        ):
+            ip_obj, created = IPAddress.objects.get_or_create(
+                host=default_namespace_ipaddress.host,
+                mask_length=default_namespace_ipaddress.mask_length,
+                status=ipaddr_status,
+            )
+            self.assertEqual(ip_obj, default_namespace_ipaddress)
+            self.assertFalse(created)
+
+        with self.subTest("Assert create"):
+            new_host = "10.0.0.2"
+            ip_obj, created = IPAddress.objects.get_or_create(
+                host=new_host,
+                mask_length=mask_length,
+                status=ipaddr_status,
+            )
+            self.assertEqual(ip_obj.host, new_host)
+            self.assertEqual(ip_obj.mask_length, mask_length)
+            self.assertEqual(ip_obj.parent, default_namespace_parent)
+            self.assertEqual(ip_obj.parent.namespace, default_namespace)
+            self.assertTrue(created)
+
+        with self.subTest("Assert create explicitly defining a non default namespace"):
+            new_host = "10.1.1.2"
+            ip_obj, created = IPAddress.objects.get_or_create(
+                host=new_host, mask_length=mask_length, status=ipaddr_status, namespace=namespace
+            )
+            self.assertEqual(ip_obj.host, new_host)
+            self.assertEqual(ip_obj.mask_length, mask_length)
+            self.assertEqual(ip_obj.parent, parent)
+            self.assertEqual(ip_obj.parent.namespace, namespace)
+            self.assertTrue(created)
+
+        with self.subTest("Assert passing invalid host/mask_length"):
+            with self.assertRaises(ValidationError) as err:
+                IPAddress.objects.get_or_create(
+                    host="0.000.0", mask_length=mask_length, status=ipaddr_status, namespace=namespace
+                )
+            self.assertIn(
+                "Enter a valid IPv4 or IPv6 address.",
+                str(err.exception),
+            )
+            with self.assertRaises(ValidationError) as err:
+                IPAddress.objects.get_or_create(
+                    host=ipaddress.host, mask_length=5712, status=ipaddr_status, namespace=namespace
+                )
+            self.assertIn(
+                f"{ipaddress.host}/5712 does not appear to be an IPv4 or IPv6 network.",
+                str(err.exception),
+            )
+
     def test_create_field_population(self):
         """Test that the various ways of creating an IPAddress result in correctly populated fields."""
         if self.namespace != get_default_namespace():
