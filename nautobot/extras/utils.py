@@ -391,26 +391,6 @@ def get_worker_count(request=None, queue=None):
     return celery_queues.get(queue, 0)
 
 
-def task_queues_as_choices(task_queues):
-    """
-    Returns a list of 2-tuples for use in the form field `choices` argument. Appends
-    worker count to the description.
-    """
-    if not task_queues:
-        task_queues = [settings.CELERY_TASK_DEFAULT_QUEUE]
-
-    choices = []
-    celery_queues = get_celery_queues()
-    for queue in task_queues:
-        if not queue:
-            worker_count = celery_queues.get(settings.CELERY_TASK_DEFAULT_QUEUE, 0)
-        else:
-            worker_count = celery_queues.get(queue, 0)
-        description = f"{queue if queue else 'default queue'} ({worker_count} worker{'s'[:worker_count^1]})"
-        choices.append((queue, description))
-    return choices
-
-
 def refresh_job_model_from_job_class(job_model_class, job_class):
     """
     Create or update a job_model record based on the metadata of the provided job_class.

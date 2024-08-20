@@ -1,0 +1,1 @@
+Removed `task_queues` and `task_queues_override` from Job model class.

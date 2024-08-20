@@ -73,7 +73,6 @@ from nautobot.extras.utils import (
     remove_prefix_from_cf_key,
     RoleModelsQuery,
     TaggableClassesQuery,
-    task_queues_as_choices,
 )
 
 __all__ = (
@@ -143,7 +142,6 @@ __all__ = (
     "shallow_compare_dict",
     "swap_status_initials",
     "TaggableClassesQuery",
-    "task_queues_as_choices",
     "to_meters",
     "wrap_model_clean_methods",
 )

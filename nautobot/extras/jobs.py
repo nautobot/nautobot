@@ -48,7 +48,7 @@ from nautobot.extras.models import (
     ObjectChange,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.utils import change_logged_models_queryset, task_queues_as_choices
+from nautobot.extras.utils import change_logged_models_queryset
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -104,7 +104,6 @@ class BaseJob:
         - soft_time_limit (int)
         - time_limit (int)
         - has_sensitive_variables (bool)
-        - task_queues (list)
         """
 
     def __init__(self):
@@ -477,14 +476,9 @@ class BaseJob:
         try:
             job_model = JobModel.objects.get_for_class_path(cls.class_path)
             dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else cls.dryrun_default
-            task_queues = job_model.task_queues if job_model.task_queues_override else cls.task_queues
         except JobModel.DoesNotExist:
             logger.error("No Job instance found in the database corresponding to %s", cls.class_path)
             dryrun_default = cls.dryrun_default
-            task_queues = cls.task_queues
-
-        # Update task queue choices
-        form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
 
         if cls.supports_dryrun and (not initial or "dryrun" not in initial):
             # Set initial "dryrun" checkbox state based on the Meta parameter
