@@ -1,1 +1,0 @@
-Added handling for an `OperationalError` that might be raised when running `pylint-nautobot` or similar linters that depend on successfully running `nautobot.setup()`.
