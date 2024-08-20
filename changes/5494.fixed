@@ -1,1 +1,0 @@
-Fixed `Device` model `clean()` validation logic to allow user to specify a software version on a device without specifying any software image files.
