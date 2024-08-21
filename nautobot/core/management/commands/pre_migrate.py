@@ -408,7 +408,7 @@ def check_permissions_constraints(command):
                         )
 
                     if related_model in field_change_models:
-                        if field_name in field_change_models[related_model]:
+                        if col.field.name in field_change_models[related_model]:
                             cls = f"{related_model.__module__}.{related_model.__name__}"
                             warnings.append(
                                 f"ObjectPermission '{perm}' (id: {perm.id}) has a constraint that references "
