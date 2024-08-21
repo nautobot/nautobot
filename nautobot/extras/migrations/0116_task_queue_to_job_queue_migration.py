@@ -23,8 +23,6 @@ def migrate_task_queues_to_job_queues(apps, schema):
             )
             job.job_queues.add(job_queue)
 
-    Job.objects.all().update(task_queues=[])
-
     for sj in ScheduledJob.objects.all():
         queue = sj.queue
         job_queue = None
@@ -33,7 +31,6 @@ def migrate_task_queues_to_job_queues(apps, schema):
                 name=queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
             )
         sj.job_queue = job_queue
-        sj.queue = ""
         sj.save()
 
 
