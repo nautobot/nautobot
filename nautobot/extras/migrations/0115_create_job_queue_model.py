@@ -98,6 +98,7 @@ class Migration(migrations.Migration):
             model_name="scheduledjob",
             name="job_queue",
             field=models.ForeignKey(
+                blank=True,
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name="scheduled_jobs",

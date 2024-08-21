@@ -1000,6 +1000,7 @@ class ScheduledJob(BaseModel):
         on_delete=models.SET_NULL,
         related_name="scheduled_jobs",
         null=True,
+        blank=True,
         verbose_name="Job Queue Override",
     )
     one_off = models.BooleanField(

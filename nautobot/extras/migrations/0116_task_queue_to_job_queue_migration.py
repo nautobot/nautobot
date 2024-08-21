@@ -30,7 +30,7 @@ def migrate_task_queues_to_job_queues(apps, schema):
         job_queue = None
         if queue:
             job_queue, _ = JobQueue.objects.get_or_create(
-                name=task_queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+                name=queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
             )
         sj.job_queue = job_queue
         sj.queue = ""
