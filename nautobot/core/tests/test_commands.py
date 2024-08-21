@@ -59,10 +59,7 @@ class PreMigrateCommandTest(TestCase):
 
         self.assertIn("All pre-migration checks passed.", out)
         # Assert Permission constrain warning not logged
-        self.assertNotIn(
-            f"ObjectPermission '{self.obj_perm.name}'",
-            out,
-        )
+        self.assertNotIn(f"ObjectPermission '{self.obj_perm.name}'",  out)
         self.assertEqual("", err)
 
     def test_configcontext_failure(self):
