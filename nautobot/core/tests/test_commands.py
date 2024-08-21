@@ -60,7 +60,7 @@ class PreMigrateCommandTest(TestCase):
         self.assertIn("All pre-migration checks passed.", out)
         # Assert Permission constrain warning not logged
         self.assertNotIn(
-            f"ObjectPermission '{self.obj_perm.name}' (id: {self.obj_perm.pk}) has a constraint that references a model (nautobot.extras.models.datasources.GitRepository) that will be migrated to a new model by the Nautobot 2.0 migration.",
+            f"ObjectPermission '{self.obj_perm.name}'",
             out,
         )
         self.assertEqual("", err)
