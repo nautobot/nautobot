@@ -1,0 +1,1 @@
+Fixed AttributeError during pre_migrate when permission constraints are applied to custom fields.
