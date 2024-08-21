@@ -53,13 +53,16 @@ def cable_status_color_css(record):
     """
     Given a record such as an Interface, return the CSS needed to apply appropriate coloring to it.
     """
+    CABLE_STATUS_TO_CSS_CLASS = {
+        "Connected": "success",
+        "Decommissioning": "danger",
+        "Planned": "info",
+    }
+
     if not record.cable:
         return ""
-    # The status colors are for use with labels and such, and tend to be quite bright.
-    # For this function we want a much milder, mellower color suitable as a row background.
-    base_color = record.cable.get_status_color().strip("#")
-    lighter_color = rgb_to_hex(*lighten_color(*hex_to_rgb(base_color), 0.75))
-    return f"background-color: #{lighter_color}"
+    else:
+        return CABLE_STATUS_TO_CSS_CLASS.get(record.cable.status.name, "")
 
 
 def get_network_driver_mapping_tool_names():
