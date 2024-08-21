@@ -1,1 +1,3 @@
 Added JobQueue and JobQueueAssignment models and API.
+Added a data migration to replace `Job.task_queues` with `JobQueue` instances.
+Added a data migration to replace `ScheduledJob.queue` with a `JobQueue` instance.

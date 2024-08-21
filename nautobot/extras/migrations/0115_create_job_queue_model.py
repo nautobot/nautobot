@@ -94,4 +94,15 @@ class Migration(migrations.Migration):
                 related_name="jobs", through="extras.JobQueueAssignment", to="extras.jobqueue"
             ),
         ),
+        migrations.AddField(
+            model_name="scheduledjob",
+            name="job_queue",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="scheduled_jobs",
+                to="extras.jobqueue",
+            ),
+        ),
     ]

@@ -995,6 +995,14 @@ class ScheduledJob(BaseModel):
         help_text="Queue defined in CELERY_TASK_QUEUES. Leave empty for default queuing.",
         db_index=True,
     )
+    job_queue = models.ForeignKey(
+        to="extras.JobQueue",
+        on_delete=models.SET_NULL,
+        related_name="scheduled_jobs",
+        null=True,
+        blank=True,
+        verbose_name="Job Queue Override",
+    )
     one_off = models.BooleanField(
         default=False,
         verbose_name="One-off Task",
