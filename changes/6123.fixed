@@ -1,1 +1,1 @@
-Fixed appropriate cable status coloring not applied for DeviceModule*Table rows in dark mode.
+Fixed cable status coloring for `DeviceModule*Table` rows in dark mode.

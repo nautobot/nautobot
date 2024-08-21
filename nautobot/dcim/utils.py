@@ -14,9 +14,11 @@ from netutils.lib_mapper import (
     SCRAPLI_LIB_MAPPER_REVERSE,
 )
 
+from nautobot.core.choices import ColorChoices
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.dcim.choices import InterfaceModeChoices
+from nautobot.dcim.choices import CableStatusChoices, InterfaceModeChoices
 from nautobot.dcim.constants import NETUTILS_NETWORK_DRIVER_MAPPING_NAMES
+from nautobot.extras.management import STATUS_COLOR_MAP
 
 
 def compile_path_node(ct_id, object_id):
@@ -52,16 +54,22 @@ def cable_status_color_css(record):
     """
     Given a record such as an Interface, return the CSS needed to apply appropriate coloring to it.
     """
-    CABLE_STATUS_TO_CSS_CLASS = {
-        "Connected": "success",
-        "Decommissioning": "danger",
-        "Planned": "info",
-    }
-
+    CABLE_STATUS_TO_CSS_CLASS = {}
     if not record.cable:
         return ""
     else:
-        return CABLE_STATUS_TO_CSS_CLASS.get(record.cable.status.name, "")
+        for choice in CableStatusChoices.CHOICES:
+            color_value = STATUS_COLOR_MAP[choice[1]]
+            if color_value == ColorChoices.COLOR_GREEN:
+                CABLE_STATUS_TO_CSS_CLASS[color_value] = "success"
+            elif color_value == ColorChoices.COLOR_AMBER:
+                CABLE_STATUS_TO_CSS_CLASS[color_value] = "danger"
+            elif color_value == ColorChoices.COLOR_CYAN:
+                CABLE_STATUS_TO_CSS_CLASS[color_value] = "info"
+            else:
+                continue
+        status_color = record.cable.get_status_color().strip("#")
+        return CABLE_STATUS_TO_CSS_CLASS.get(status_color, "")
 
 
 def get_network_driver_mapping_tool_names():
