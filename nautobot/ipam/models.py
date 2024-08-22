@@ -16,7 +16,7 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.models import Interface
-from nautobot.extras.models import RoleField, StatusField
+from nautobot.extras.models import RoleField, StatusField, Status
 from nautobot.extras.utils import extras_features
 from nautobot.ipam import choices, constants
 from nautobot.virtualization.models import VMInterface
@@ -91,12 +91,24 @@ def get_default_namespace_pk():
     """Return the PK of the Global namespace for use in default value for foreign keys."""
     return get_default_namespace().pk
 
+def get_default_status():
+    """Return the active status."""
+    obj, _ = Status.objects.get_or_create(
+        name="Active", defaults={"description": "Default Active status. Created by Nautobot."}
+    )
+    return obj
+
+def get_default_status_pk():
+    """Return the PK of the Global namespace for use in default value for foreign keys."""
+    return get_default_status().pk
+
 
 @extras_features(
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
+    "statuses",
     "webhooks",
 )
 class VRF(PrimaryModel):
@@ -114,6 +126,7 @@ class VRF(PrimaryModel):
         verbose_name="Route distinguisher",
         help_text="Unique route distinguisher (as defined in RFC 4364)",
     )
+    status = StatusField(blank=False, null=False, default=get_default_status_pk())
     namespace = models.ForeignKey(
         "ipam.Namespace",
         on_delete=models.PROTECT,
