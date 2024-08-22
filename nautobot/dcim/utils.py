@@ -16,9 +16,8 @@ from netutils.lib_mapper import (
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.dcim.choices import CableStatusChoices, InterfaceModeChoices
+from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.constants import NETUTILS_NETWORK_DRIVER_MAPPING_NAMES
-from nautobot.extras.management import STATUS_COLOR_MAP
 
 
 def compile_path_node(ct_id, object_id):
@@ -61,7 +60,6 @@ def cable_status_color_css(record):
             ColorChoices.COLOR_GREEN: "success",
             ColorChoices.COLOR_AMBER: "warning",
             ColorChoices.COLOR_CYAN: "info",
-
         }
         status_color = record.cable.get_status_color().strip("#")
         return CABLE_STATUS_TO_CSS_CLASS.get(status_color, "")
