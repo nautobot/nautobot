@@ -1171,8 +1171,8 @@ class ScheduledJob(BaseModel):
         return scheduled_job
 
     def to_cron(self):
-        t = self.start_time.astimezone(self.time_zone)
         tz = self.time_zone
+        t = self.start_time.astimezone(tz)
         if self.interval == JobExecutionType.TYPE_HOURLY:
             return TzAwareCrontab(minute=t.minute, tz=tz)
         elif self.interval == JobExecutionType.TYPE_DAILY:
