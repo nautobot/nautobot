@@ -12,6 +12,11 @@ from django.urls import reverse
 from django.utils.timezone import make_aware, now
 from rest_framework import status
 
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:  # Python 3.8
+    from backports.zoneinfo import ZoneInfo
+
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.testing import APITestCase, APIViewTestCases
@@ -2438,29 +2443,23 @@ class ScheduledJobTest(
             name="test2",
             task="pass.TestPass",
             job_model=job_model,
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            interval=JobExecutionType.TYPE_DAILY,
             user=user,
             approval_required=True,
-            start_time=now(),
+            start_time=datetime(2020, 1, 23, 12, 34, 56, tzinfo=ZoneInfo("America/New_York")),
+            time_zone=ZoneInfo("America/New_York"),
         )
         ScheduledJob.objects.create(
             name="test3",
             task="pass.TestPass",
             job_model=job_model,
-            interval=JobExecutionType.TYPE_DAILY,
+            interval=JobExecutionType.TYPE_CUSTOM,
+            crontab="34 12 * * *",
+            enabled=False,
             user=user,
             approval_required=True,
             start_time=now(),
         )
-
-    # TODO: Unskip after resolving #2908, #2909
-    @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
-    def test_list_objects_ascending_ordered(self):
-        pass
-
-    @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
-    def test_list_objects_descending_ordered(self):
-        pass
 
 
 class JobApprovalTest(APITestCase):
