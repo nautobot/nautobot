@@ -14,7 +14,7 @@ from netutils.lib_mapper import (
     SCRAPLI_LIB_MAPPER_REVERSE,
 )
 
-from nautobot.core.utils.color import hex_to_rgb, lighten_color, rgb_to_hex
+from nautobot.core.choices import ColorChoices
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.constants import NETUTILS_NETWORK_DRIVER_MAPPING_NAMES
@@ -55,11 +55,14 @@ def cable_status_color_css(record):
     """
     if not record.cable:
         return ""
-    # The status colors are for use with labels and such, and tend to be quite bright.
-    # For this function we want a much milder, mellower color suitable as a row background.
-    base_color = record.cable.get_status_color().strip("#")
-    lighter_color = rgb_to_hex(*lighten_color(*hex_to_rgb(base_color), 0.75))
-    return f"background-color: #{lighter_color}"
+    else:
+        CABLE_STATUS_TO_CSS_CLASS = {
+            ColorChoices.COLOR_GREEN: "success",
+            ColorChoices.COLOR_AMBER: "warning",
+            ColorChoices.COLOR_CYAN: "info",
+        }
+        status_color = record.cable.get_status_color().strip("#")
+        return CABLE_STATUS_TO_CSS_CLASS.get(status_color, "")
 
 
 def get_network_driver_mapping_tool_names():
