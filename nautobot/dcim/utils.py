@@ -54,20 +54,15 @@ def cable_status_color_css(record):
     """
     Given a record such as an Interface, return the CSS needed to apply appropriate coloring to it.
     """
-    CABLE_STATUS_TO_CSS_CLASS = {}
     if not record.cable:
         return ""
     else:
-        for choice in CableStatusChoices.CHOICES:
-            color_value = STATUS_COLOR_MAP[choice[1]]
-            if color_value == ColorChoices.COLOR_GREEN:
-                CABLE_STATUS_TO_CSS_CLASS[color_value] = "success"
-            elif color_value == ColorChoices.COLOR_AMBER:
-                CABLE_STATUS_TO_CSS_CLASS[color_value] = "danger"
-            elif color_value == ColorChoices.COLOR_CYAN:
-                CABLE_STATUS_TO_CSS_CLASS[color_value] = "info"
-            else:
-                continue
+        CABLE_STATUS_TO_CSS_CLASS = {
+            ColorChoices.COLOR_GREEN: "success",
+            ColorChoices.COLOR_AMBER: "warning",
+            ColorChoices.COLOR_CYAN: "info",
+
+        }
         status_color = record.cable.get_status_color().strip("#")
         return CABLE_STATUS_TO_CSS_CLASS.get(status_color, "")
 
