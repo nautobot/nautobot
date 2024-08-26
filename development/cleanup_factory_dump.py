@@ -122,7 +122,7 @@ for record in input_data:
 # Then reorder the regrouped data by creation order and by timestamp
 final_data = {}
 
-for model in sorted(regrouped_data.keys(), key=lambda model: FACTORY_ORDER.index(model)):
+for model in sorted(regrouped_data.keys(), key=FACTORY_ORDER.index):
     final_data[model] = {}
     # Sort records within a model by created timestamp, or if not applicable, by PK.
     for pk, fields in sorted(regrouped_data[model].items(), key=lambda tup: tup[1].get("created", tup[0])):
