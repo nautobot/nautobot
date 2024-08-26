@@ -241,7 +241,7 @@ class VRFTable(StatusTableMixin, BaseTable):
             "tags",
         )
         # default_columns = ("pk", "name", "rd", "namespace", "tenant", "description")
-        default_columns = ("pk", "status", "name", "namespace", "tenant", "description")
+        default_columns = ("pk", "name", "status", "namespace", "tenant", "description")
 
 
 class VRFDeviceAssignmentTable(BaseTable):
