@@ -13,7 +13,7 @@ from nautobot.core.testing import APITestCase, APIViewTestCases, disable_warning
 from nautobot.core.testing.api import APITransactionTestCase
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
-from nautobot.extras.models import Role, Status
+from nautobot.extras.models import CustomField, Role, Status
 from nautobot.ipam import choices
 from nautobot.ipam.models import (
     IPAddress,
@@ -332,6 +332,8 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         cls.statuses = Status.objects.get_for_model(Prefix)
         cls.status = cls.statuses[0]
         cls.locations = Location.objects.get_for_model(Prefix)
+        cls.custom_field = CustomField.objects.create(key="prefixcf", label="Prefix Custom Field", type="text")
+        cls.custom_field.content_types.add(ContentType.objects.get_for_model(Prefix))
         cls.create_data = [
             {
                 "prefix": "192.168.4.0/24",
@@ -346,6 +348,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
                 "rir": rir.pk,
                 "type": choices.PrefixTypeChoices.TYPE_NETWORK,
                 "namespace": cls.namespace.pk,
+                "custom_fields": {"prefixcf": "hello world"},
             },
             {
                 "prefix": "192.168.6.0/24",
@@ -457,12 +460,16 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
                 "prefix_length": child_prefix_length,
                 "status": self.status.pk,
                 "description": f"Test Prefix {i + 1}",
+                "custom_fields": {"prefixcf": f"value {i+1}"},
             }
             response = self.client.post(url, data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
             self.assertEqual(response.data["prefix"], str(prefixes_to_be_created[i]))
             self.assertEqual(str(response.data["namespace"]["url"]), self.absolute_api_url(prefix.namespace))
             self.assertEqual(response.data["description"], data["description"])
+            self.assertIn("custom_fields", response.data)
+            self.assertIn("prefixcf", response.data["custom_fields"])
+            self.assertEqual(response.data["custom_fields"]["prefixcf"], data["custom_fields"]["prefixcf"])
 
         # Try to create one more prefix, and expect a HTTP 204 response.
         # This feels wrong to me (shouldn't it be a 4xx or 5xx?) but it's how the API has historically behaved.
@@ -501,6 +508,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
                 "prefix_length": child_prefix_length,
                 "description": "Test Prefix 1",
                 "status": self.status.pk,
+                "custom_fields": {"prefixcf": "value 1"},
             },
             {
                 "prefix_length": child_prefix_length,
@@ -537,6 +545,9 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, data[:4], format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(len(response.data), 4)
+        self.assertIn("custom_fields", response.data[0])
+        self.assertIn("prefixcf", response.data[0]["custom_fields"])
+        self.assertEqual("value 1", response.data[0]["custom_fields"]["prefixcf"])
 
     def test_list_available_ips(self):
         """
@@ -571,6 +582,8 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             type=choices.PrefixTypeChoices.TYPE_NETWORK,
             status=self.status,
         )
+        cf = CustomField.objects.create(key="ipcf", label="IP Custom Field", type="text")
+        cf.content_types.add(ContentType.objects.get_for_model(IPAddress))
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "extras.view_status")
 
@@ -579,11 +592,15 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             data = {
                 "description": f"Test IP {i}",
                 "status": self.status.pk,
+                "custom_fields": {"ipcf": f"value {i}"},
             }
             response = self.client.post(url, data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
             self.assertEqual(str(response.data["parent"]["url"]), self.absolute_api_url(prefix))
             self.assertEqual(response.data["description"], data["description"])
+            self.assertIn("custom_fields", response.data)
+            self.assertIn("ipcf", response.data["custom_fields"])
+            self.assertEqual(f"value {i}", response.data["custom_fields"]["ipcf"])
 
         # Try to create one more IP
         response = self.client.post(url, {"status": self.status.pk}, format="json", **self.header)
@@ -601,21 +618,29 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             namespace=self.namespace,
             status=self.status,
         )
+        cf = CustomField.objects.create(key="ipcf", label="IP Custom Field", type="text")
+        cf.content_types.add(ContentType.objects.get_for_model(IPAddress))
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "extras.view_status")
 
         # Try to create seven IPs (only six are available)
-        data = [{"description": f"Test IP {i}", "status": self.status.pk} for i in range(1, 8)]  # 7 IPs
+        data = [
+            {"description": f"Test IP {i}", "status": self.status.pk, "custom_fields": {"ipcf": str(i)}}
+            for i in range(1, 8)
+        ]  # 7 IPs
         response = self.client.post(url, data, format="json", **self.header)
         # This feels wrong to me (shouldn't it be a 4xx or 5xx?) but it's how the API has historically behaved.
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
         self.assertIn("detail", response.data)
 
         # Create all six available IPs in a single request
-        data = [{"description": f"Test IP {i}", "status": self.status.pk} for i in range(1, 7)]  # 6 IPs
+        data = data[:6]
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(len(response.data), 6)
+        self.assertIn("custom_fields", response.data[0])
+        self.assertIn("ipcf", response.data[0]["custom_fields"])
+        self.assertEqual("1", response.data[0]["custom_fields"]["ipcf"])
 
 
 class PrefixLocationAssignmentTest(APIViewTestCases.APIViewTestCase):
