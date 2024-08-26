@@ -217,7 +217,7 @@ class NamespaceTable(BaseTable):
 #
 
 
-class VRFTable(StatusTableMixin,BaseTable):
+class VRFTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     # rd = tables.Column(verbose_name="RD")
