@@ -40,6 +40,7 @@ from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Loca
 from nautobot.extras.choices import (
     DynamicGroupTypeChoices,
     JobExecutionType,
+    JobQueueTypeChoices,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
     RelationshipTypeChoices,
@@ -65,6 +66,7 @@ from nautobot.extras.models import (
     Job,
     JobButton,
     JobHook,
+    JobQueue,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -149,6 +151,9 @@ __all__ = (
     "JobFilterForm",
     "JobHookForm",
     "JobHookFilterForm",
+    "JobQueueBulkEditForm",
+    "JobQueueFilterForm",
+    "JobQueueForm",
     "JobScheduleForm",
     "JobResultFilterForm",
     "LocalContextFilterForm",
@@ -967,6 +972,14 @@ class JobForm(BootstrapMixin, forms.Form):
 
 
 class JobEditForm(NautobotModelForm):
+
+    job_queues = DynamicModelMultipleChoiceField(
+        label="Job Queues",
+        queryset=JobQueue.objects.all(),
+        required=False,
+        to_field_name="name",
+        widget=APISelectMultiple(api_url="/api/extras/job-queues/"),
+    )
     class Meta:
         model = Job
         fields = [
@@ -991,6 +1004,7 @@ class JobEditForm(NautobotModelForm):
             "has_sensitive_variables",
             "task_queues_override",
             "task_queues",
+            "job_queues",
             "tags",
         ]
 
@@ -1200,6 +1214,58 @@ class JobHookFilterForm(BootstrapMixin, forms.Form):
     type_update = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     type_delete = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
 
+class JobQueueBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(
+        queryset=JobQueue.objects.all(),
+        widget=forms.MultipleHiddenInput(),
+    )
+    queue_type = forms.ChoiceField(
+        choices=JobQueueTypeChoices,
+        help_text="The job can either run immediately, once in the future, or on a recurring schedule.",
+        label="Type",
+    )
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+    )
+    description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
+
+    class Meta:
+        model = JobQueue
+
+class JobQueueFilterForm(NautobotFilterForm):
+    model = JobQueue
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False)
+    queue_type = forms.MultipleChoiceField(
+        choices=JobQueueTypeChoices,
+        required=False,
+        widget=StaticSelect2Multiple(),
+    )
+    tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="name", required=False)
+    tags = TagFilterField(model)
+
+class JobQueueForm(NautobotModelForm):
+    name = forms.CharField(required=True, max_length=CHARFIELD_MAX_LENGTH)
+    queue_type = forms.ChoiceField(
+        choices=JobQueueTypeChoices,
+        help_text="The job can either run immediately, once in the future, or on a recurring schedule.",
+        label="Type",
+    )
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+    )
+    description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
+
+    class Meta:
+        model = JobQueue
+        fields = (
+            "name",
+            "queue_type",
+            "description",
+            "tenant",
+        )
 
 class JobScheduleForm(BootstrapMixin, forms.Form):
     """

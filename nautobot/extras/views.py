@@ -90,6 +90,7 @@ from .models import (
     JobButton,
     JobHook,
     JobLogEntry,
+    JobQueue,
     JobResult,
     MetadataType,
     Note,
@@ -1624,6 +1625,15 @@ class JobApprovalRequestView(generic.ObjectView):
                 **self.get_extra_context(request, scheduled_job),
             },
         )
+
+class JobQueueUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.JobQueueBulkEditForm
+    filterset_form_class = forms.JobQueueFilterForm
+    queryset = JobQueue.objects.all()
+    form_class = forms.JobQueueForm
+    filterset_class = filters.JobQueueFilterSet
+    serializer_class = serializers.JobQueueSerializer
+    table_class = tables.JobQueueTable
 
 
 #

@@ -261,6 +261,16 @@
                 </td>
             </tr>
             <tr>
+                <td>Job Queues</td>
+                <td>
+                    <ul>
+                        {% for queue in object.job_queues.all %}
+                            <li><a href="{% url 'extras:jobqueue' pk=queue.pk %}">{{queue}}</a></li>
+                        {% endfor %}
+                    </ul>
+                </td>
+            </tr>
+            <tr>
                 <td>Task Queues</td>
                 <td colspan="2">
                     {% include 'extras/inc/json_data.html' with data=object.task_queues format="json" %}

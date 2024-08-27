@@ -37,6 +37,7 @@ from .models import (
     JobButton,
     JobHook,
     JobLogEntry,
+    JobQueue,
     JobResult,
     MetadataType,
     Note,
@@ -821,6 +822,29 @@ class JobLogEntryTable(BaseTable):
             "id": "logs",
         }
 
+class JobQueueTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    queue_type = tables.Column()
+    tenant = tables.Column(linkify=True)
+    description = tables.Column()
+
+    class Meta(BaseTable.Meta):
+        model = JobQueue
+        fields = (
+            "pk",
+            "name",
+            "queue_type",
+            "tenant",
+            "description",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "queue_type",
+            "tenant",
+            "description",
+        )
 
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
