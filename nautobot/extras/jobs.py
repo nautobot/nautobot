@@ -479,20 +479,19 @@ class BaseJob:
             job_model = JobModel.objects.get_for_class_path(cls.class_path)
             dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else cls.dryrun_default
             task_queues = job_model.task_queues if job_model.task_queues_override else cls.task_queues
+            # Initialize job_queue choices
+            form.fields["job_queue"] = DynamicModelChoiceField(
+                queryset=JobQueue.objects.all(),
+                query_params={"jobs": [job_model.pk]},
+                required=False,
+                help_text="The job queue to route this job to",
+                label="Job queue",
+            )
         except JobModel.DoesNotExist:
             logger.error("No Job instance found in the database corresponding to %s", cls.class_path)
             dryrun_default = cls.dryrun_default
             task_queues = cls.task_queues
 
-        # Initialize job_queue choices
-        form.fields["job_queue"] = DynamicModelChoiceField(
-            display_field="display_with_worker_count",
-            queryset=JobQueue.objects.all(),
-            query_params={"jobs": [job_model.pk]},
-            required=False,
-            help_text="The job queue to route this job to",
-            label="Job queue",
-        )
         # Update task queue choices
         form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
 

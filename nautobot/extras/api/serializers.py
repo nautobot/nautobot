@@ -560,8 +560,6 @@ class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 
 class JobQueueSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    display_with_worker_count = serializers.CharField(read_only=True)
-
     class Meta:
         model = JobQueue
         fields = "__all__"

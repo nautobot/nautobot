@@ -265,7 +265,7 @@
                 <td>
                     <ul>
                         {% for queue in object.job_queues.all %}
-                            <li><a href="{% url 'extras:jobqueue' pk=queue.pk %}">{{queue}}</a></li>
+                            <li>{{ queue|hyperlinked_object }}</li>
                         {% endfor %}
                     </ul>
                 </td>

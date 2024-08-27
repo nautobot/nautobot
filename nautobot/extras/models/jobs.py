@@ -516,7 +516,7 @@ class JobQueue(PrimaryModel):
         return f"{self.queue_type}: {self.name}"
 
     @property
-    def display_with_worker_count(self):
+    def display(self):
         worker_count = get_job_queue_worker_count(job_queue=self)
         workers = "worker" if worker_count == 1 else "workers"
         return f"{self.queue_type}: {self.name} ({worker_count} {workers})"

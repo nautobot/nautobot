@@ -977,7 +977,6 @@ class JobEditForm(NautobotModelForm):
         label="Job Queues",
         queryset=JobQueue.objects.all(),
         required=False,
-        widget=APISelectMultiple(api_url="/api/extras/job-queues/"),
     )
 
     class Meta:
