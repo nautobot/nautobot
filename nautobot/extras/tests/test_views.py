@@ -2213,8 +2213,8 @@ class ApprovalQueueTestCase(
         instance.refresh_from_db()
         self.assertIsNone(instance.approved_by_user)
 
-class JobQueueTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
+class JobQueueTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = JobQueue
 
     @classmethod
@@ -2233,6 +2233,7 @@ class JobQueueTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": Tenant.objects.last().pk,
             # TODO add tests for add_tags/remove_tags fields in TagsBulkEditFormMixin
         }
+
 
 class JobResultTestCase(
     ViewTestCases.GetObjectViewTestCase,

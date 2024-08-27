@@ -49,6 +49,7 @@ from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     extras_features,
+    get_job_queue_worker_count,
 )
 
 from .customfields import CustomFieldModel
@@ -513,6 +514,12 @@ class JobQueue(PrimaryModel):
 
     def __str__(self):
         return f"{self.queue_type}: {self.name}"
+
+    @property
+    def display_with_worker_count(self):
+        worker_count = get_job_queue_worker_count(job_queue=self)
+        workers = "worker" if worker_count == 1 else "workers"
+        return f"{self.queue_type}: {self.name} ({worker_count} {workers})"
 
 
 @extras_features(

@@ -44,6 +44,7 @@ from nautobot.extras.models import (
     FileProxy,
     Job as JobModel,
     JobHook,
+    JobQueue,
     JobResult,
     ObjectChange,
 )
@@ -483,6 +484,15 @@ class BaseJob:
             dryrun_default = cls.dryrun_default
             task_queues = cls.task_queues
 
+        # Initialize job_queue choices
+        form.fields["job_queue"] = DynamicModelChoiceField(
+            display_field="display_with_worker_count",
+            queryset=JobQueue.objects.all(),
+            query_params={"jobs": [job_model.pk]},
+            required=False,
+            help_text="The job queue to route this job to",
+            label="Job queue",
+        )
         # Update task queue choices
         form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
 

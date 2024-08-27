@@ -973,14 +973,13 @@ class JobForm(BootstrapMixin, forms.Form):
 
 
 class JobEditForm(NautobotModelForm):
-
     job_queues = DynamicModelMultipleChoiceField(
         label="Job Queues",
         queryset=JobQueue.objects.all(),
         required=False,
-        to_field_name="name",
         widget=APISelectMultiple(api_url="/api/extras/job-queues/"),
     )
+
     class Meta:
         model = Job
         fields = [
@@ -1215,6 +1214,7 @@ class JobHookFilterForm(BootstrapMixin, forms.Form):
     type_update = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     type_delete = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
 
+
 class JobQueueBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(
         queryset=JobQueue.objects.all(),
@@ -1237,6 +1237,7 @@ class JobQueueBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
             "description",
         ]
 
+
 class JobQueueFilterForm(NautobotFilterForm):
     model = JobQueue
     q = forms.CharField(required=False, label="Search")
@@ -1248,6 +1249,7 @@ class JobQueueFilterForm(NautobotFilterForm):
     )
     tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="name", required=False)
     tags = TagFilterField(model)
+
 
 class JobQueueForm(NautobotModelForm):
     name = forms.CharField(required=True, max_length=CHARFIELD_MAX_LENGTH)
@@ -1264,13 +1266,8 @@ class JobQueueForm(NautobotModelForm):
 
     class Meta:
         model = JobQueue
-        fields = (
-            "name",
-            "queue_type",
-            "description",
-            "tenant",
-            "tags"
-        )
+        fields = ("name", "queue_type", "description", "tenant", "tags")
+
 
 class JobScheduleForm(BootstrapMixin, forms.Form):
     """

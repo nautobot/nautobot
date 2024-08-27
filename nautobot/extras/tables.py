@@ -822,6 +822,7 @@ class JobLogEntryTable(BaseTable):
             "id": "logs",
         }
 
+
 class JobQueueTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
@@ -845,6 +846,7 @@ class JobQueueTable(BaseTable):
             "tenant",
             "description",
         )
+
 
 class JobResultTable(BaseTable):
     pk = ToggleColumn()

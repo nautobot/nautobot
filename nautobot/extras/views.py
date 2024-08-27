@@ -1626,6 +1626,7 @@ class JobApprovalRequestView(generic.ObjectView):
             },
         )
 
+
 class JobQueueUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.JobQueueBulkEditForm
     filterset_form_class = forms.JobQueueFilterForm
