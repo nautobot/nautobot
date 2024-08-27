@@ -108,6 +108,7 @@ from .mixins import (
     CustomFieldModelFormMixin,
     NoteModelBulkEditFormMixin,
     NoteModelFormMixin,
+    TagsBulkEditFormMixin,
 )
 
 __all__ = (
@@ -1214,7 +1215,7 @@ class JobHookFilterForm(BootstrapMixin, forms.Form):
     type_update = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     type_delete = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
 
-class JobQueueBulkEditForm(NautobotBulkEditForm):
+class JobQueueBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(
         queryset=JobQueue.objects.all(),
         widget=forms.MultipleHiddenInput(),
@@ -1232,6 +1233,9 @@ class JobQueueBulkEditForm(NautobotBulkEditForm):
 
     class Meta:
         model = JobQueue
+        nullable_fields = [
+            "description",
+        ]
 
 class JobQueueFilterForm(NautobotFilterForm):
     model = JobQueue
@@ -1249,14 +1253,14 @@ class JobQueueForm(NautobotModelForm):
     name = forms.CharField(required=True, max_length=CHARFIELD_MAX_LENGTH)
     queue_type = forms.ChoiceField(
         choices=JobQueueTypeChoices,
-        help_text="The job can either run immediately, once in the future, or on a recurring schedule.",
-        label="Type",
+        label="Queue Type",
     )
     tenant = DynamicModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False,
     )
     description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
+    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = JobQueue
@@ -1265,6 +1269,7 @@ class JobQueueForm(NautobotModelForm):
             "queue_type",
             "description",
             "tenant",
+            "tags"
         )
 
 class JobScheduleForm(BootstrapMixin, forms.Form):
@@ -1489,7 +1494,7 @@ class MetadataTypeFilterForm(NautobotFilterForm):
     tags = TagFilterField(model)
 
 
-class MetadataTypeBulkEditForm(NautobotBulkEditForm):
+class MetadataTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=MetadataType.objects.all(), widget=forms.MultipleHiddenInput)
     description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
 

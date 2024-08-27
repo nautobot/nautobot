@@ -35,6 +35,7 @@ from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
+    JobQueueTypeChoices,
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
@@ -59,6 +60,7 @@ from nautobot.extras.models import (
     Job,
     JobButton,
     JobLogEntry,
+    JobQueue,
     JobResult,
     MetadataType,
     Note,
@@ -2211,6 +2213,26 @@ class ApprovalQueueTestCase(
         instance.refresh_from_db()
         self.assertIsNone(instance.approved_by_user)
 
+class JobQueueTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+
+    model = JobQueue
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.form_data = {
+            "name": "Test Job Queue",
+            "queue_type": JobQueueTypeChoices.TYPE_CELERY,
+            "description": "This is a very detailed description",
+            "tenant": Tenant.objects.first().pk,
+            "tags": [t.pk for t in Tag.objects.get_for_model(JobQueue)],
+        }
+
+        cls.bulk_edit_data = {
+            "queue_type": JobQueueTypeChoices.TYPE_KUBERNETES,
+            "description": "This is a very detailed new description",
+            "tenant": Tenant.objects.last().pk,
+            # TODO add tests for add_tags/remove_tags fields in TagsBulkEditFormMixin
+        }
 
 class JobResultTestCase(
     ViewTestCases.GetObjectViewTestCase,
