@@ -432,9 +432,12 @@ def vscode(context):
 # ACTIONS
 # ------------------------------------------------------------------------------
 @task
-def nbshell(context):
+def nbshell(context, quiet=False):
     """Launch an interactive Nautobot shell."""
     command = "nautobot-server nbshell"
+
+    if quiet:
+        command += " --quiet"
 
     run_command(context, command)
 
