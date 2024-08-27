@@ -202,13 +202,17 @@ class PrefixViewSet(NautobotModelViewSet):
                         if requested_prefix["prefix_length"] >= available_prefix.prefixlen:
                             allocated_prefix = f"{available_prefix.network}/{requested_prefix['prefix_length']}"
                             requested_prefix["prefix"] = allocated_prefix
-                            requested_prefix["namespace"] = prefix.namespace.pk
+                            requested_prefix["namespace"] = prefix.namespace
                             break
                     else:
                         return Response(
                             {"detail": "Insufficient space is available to accommodate the requested prefix size(s)"},
                             status=status.HTTP_204_NO_CONTENT,
                         )
+
+                    # The serializer usage above has mapped "custom_fields" dict to "_custom_field_data".
+                    # We need to convert it back to "custom_fields" as we're going to deserialize it a second time below
+                    requested_prefix["custom_fields"] = requested_prefix.pop("_custom_field_data", {})
 
                     # Remove the allocated prefix from the list of available prefixes
                     available_prefixes.remove(allocated_prefix)
@@ -299,7 +303,10 @@ class PrefixViewSet(NautobotModelViewSet):
                 prefix_length = prefix.prefix.prefixlen
                 for requested_ip in requested_ips:
                     requested_ip["address"] = f"{next(available_ips)}/{prefix_length}"
-                    requested_ip["namespace"] = prefix.namespace.pk
+                    requested_ip["namespace"] = prefix.namespace
+                    # The serializer usage above has mapped "custom_fields" dict to "_custom_field_data".
+                    # We need to convert it back to "custom_fields" as we're going to deserialize it a second time below
+                    requested_ip["custom_fields"] = requested_ip.pop("_custom_field_data", {})
 
                 # Initialize the serializer with a list or a single object depending on what was requested
                 context = {"request": request, "depth": 0}
