@@ -84,11 +84,14 @@ class VRFTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         namespace = Namespace.objects.first()
+        vrf_statuses = Status.objects.get_for_model(VRF)
+
         cls.create_data = [
             {
                 "namespace": namespace.pk,
                 "name": "VRF 4",
                 "rd": "65000:4",
+                "status": vrf_statuses.first().pk,
             },
             {
                 "namespace": namespace.pk,
@@ -98,10 +101,12 @@ class VRFTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "VRF 6",
                 "rd": "65000:6",
+                "status": vrf_statuses.last().pk,
             },
         ]
         cls.bulk_update_data = {
             "description": "New description",
+            "status": vrf_statuses.last().pk,
         }
 
 
