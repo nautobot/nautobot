@@ -2338,7 +2338,7 @@ class JobTestCase(
         cls.data_run_immediately = {
             "_schedule_type": "immediately",
         }
-
+        job_queues = JobQueue.objects.all()[:3]
         cls.form_data = {
             "enabled": True,
             "grouping_override": True,
@@ -2359,8 +2359,7 @@ class JobTestCase(
             "time_limit": 650,
             "has_sensitive_variables": False,
             "has_sensitive_variables_override": True,
-            "task_queues": "overridden,priority",
-            "task_queues_override": True,
+            "job_queues": [queue.pk for queue in job_queues],
         }
         # This form is emulating the non-conventional JobBulkEditForm
         cls.bulk_edit_data = {
@@ -2381,8 +2380,7 @@ class JobTestCase(
             "time_limit": "",
             "has_sensitive_variables": False,
             "clear_has_sensitive_variables_override": False,
-            "task_queues": "overridden,priority",
-            "clear_task_queues_override": False,
+            "job_queues": [queue.pk for queue in job_queues],
         }
 
     def validate_job_data_after_bulk_edit(self, pk_list, old_data):
@@ -2597,13 +2595,14 @@ class JobTestCase(
         self.add_permissions("extras.view_jobresult")
 
         mock_task_queues_as_choices.return_value = [("default", ""), ("queue1", ""), ("uniquequeue", "")]
+        job_queue = JobQueue.objects.create(name="uniquequeue", queue_type=JobQueueTypeChoices.TYPE_CELERY)
         job_celery_kwargs = {
             "nautobot_job_job_model_id": self.test_required_args.id,
             "nautobot_job_profile": True,
             "nautobot_job_user_id": self.user.id,
-            "queue": "uniquequeue",
+            "queue": job_queue.pk,
         }
-
+        self.test_required_args.job_queues.set([job_queue])
         previous_result = JobResult.objects.create(
             job_model=self.test_required_args,
             user=self.user,
@@ -2614,8 +2613,7 @@ class JobTestCase(
         run_url = reverse("extras:job_run", kwargs={"pk": self.test_required_args.pk})
         response = self.client.get(f"{run_url}?kwargs_from_job_result={previous_result.pk!s}")
         content = extract_page_body(response.content.decode(response.charset))
-
-        self.assertInHTML('<option value="uniquequeue" selected>', content)
+        self.assertInHTML(f'<option value="{job_queue.pk}" selected>{job_queue}</option>', content)
         self.assertInHTML(
             '<input type="text" name="var" value="456" class="form-control" required placeholder="None" id="id_var">',
             content,
@@ -2736,7 +2734,7 @@ class JobTestCase(
 
         data = {
             "_schedule_type": "immediately",
-            "_task_queue": "invalid",
+            "job_queue": "invalid",
         }
 
         for run_url in self.run_urls:
@@ -2746,7 +2744,7 @@ class JobTestCase(
             errors = extract_form_failures(response.content.decode(response.charset))
             self.assertEqual(
                 errors,
-                ["_task_queue: Select a valid choice. invalid is not one of the available choices."],
+                ["job_queue: Select a valid choice. invalid is not one of the available choices."],
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
@@ -2911,14 +2909,15 @@ class JobButtonRenderingTestCase(TestCase):
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        self.assertIn(f'<input type="hidden" name="_task_queue" value="{self.job.task_queues[0]}">', content, content)
+        job_queues = self.job.job_queues.all().values_list("name", flat=True)
+        self.assertIn(f'<input type="hidden" name="_job_queue" value="{job_queues[0]}">', content, content)
         self.job.task_queues_override = False
         self.job.save()
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn(
-            f'<input type="hidden" name="_task_queue" value="{settings.CELERY_TASK_DEFAULT_QUEUE}">', content, content
+            f'<input type="hidden" name="_job_queue" value="{settings.CELERY_TASK_DEFAULT_QUEUE}">', content, content
         )
 
     def test_view_object_with_unsafe_text(self):
