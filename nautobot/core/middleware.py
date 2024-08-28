@@ -4,6 +4,7 @@ from django.db import ProgrammingError
 from django.http import Http404
 from django.urls import resolve
 from django.urls.exceptions import Resolver404
+from django.utils import timezone
 from django.utils.deprecation import MiddlewareMixin
 
 from nautobot.core.api.utils import is_api_request, rest_api_server_error
@@ -16,6 +17,7 @@ from nautobot.core.settings_funcs import (
     remote_auth_enabled,
     sso_auth_enabled,
 )
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.views import server_error
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
@@ -149,3 +151,17 @@ class ExceptionHandlingMiddleware:
             return server_error(request, template_name=custom_template)
 
         return None
+
+
+class UserDefinedTimeZoneMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # tzname = request.session.get("django_timezone")
+        tzname = get_settings_or_config("DEFAULT_TIMEZONE")
+        if tzname:
+            timezone.activate(tzname)
+        else:
+            timezone.deactivate()
+        return self.get_response(request)

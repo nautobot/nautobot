@@ -548,6 +548,7 @@ MIDDLEWARE = [
     "nautobot.core.middleware.ExternalAuthMiddleware",
     "nautobot.core.middleware.ObjectChangeMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
+    "nautobot.core.middleware.UserDefinedTimeZoneMiddleware",
 ]
 
 ROOT_URLCONF = "nautobot.core.urls"
@@ -667,6 +668,13 @@ CONSTANCE_ADDITIONAL_FIELDS = {
         "django.forms.fields.JSONField",
         {
             "required": False,
+        },
+    ],
+    "select_timezone": [
+        "timezone_field.TimeZoneFormField",
+        {
+            "required": False,
+            "widget": "nautobot.core.forms.widgets.StaticSelect2"
         },
     ],
 }
@@ -791,6 +799,11 @@ CONSTANCE_CONFIG = {
         "Markdown is supported, as are some HTML tags and attributes.\n"
         "If unspecified, instructions to join Network to Code's Slack community will be provided.",
     ),
+    "DEFAULT_TIMEZONE": ConstanceConfigItem(
+        default="UTC",
+        help_text="Choose Default Timezone",
+        field_type="select_timezone",
+    ),
 }
 
 CONSTANCE_CONFIG_FIELDSETS = {
@@ -807,7 +820,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT",
     ],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["SUPPORT_MESSAGE"],
+    "User Interface": ["SUPPORT_MESSAGE", "DEFAULT_TIMEZONE"],
     "Debugging": ["ALLOW_REQUEST_PROFILING"],
 }
 

@@ -8,6 +8,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, RequestFactory
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
+from django.utils import timezone
 from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
@@ -572,3 +573,19 @@ class SilkUIAccessTestCase(TestCase):
 
         # Check for success status code (e.g., 200)
         self.assertEqual(response.status_code, 200)
+
+
+class TimeZoneTestCase(TestCase):
+    def test_timezone_change(self):
+        # Login as superuser
+        self.user.is_superuser = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        # Attempt to access the view
+        with override_settings(DEFAULT_TIMEZONE="UTC"):
+            response = self.client.get(reverse("home"))
+            default_timezone = timezone.get_current_timezone_name()
+            print(default_timezone)
+            # default_datetime = timezone.now().astimezone(default_timezone)
+            self.assertEqual(response.status_code, 201)
