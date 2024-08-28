@@ -132,11 +132,18 @@ class CircuitUIViewSet(NautobotUIViewSet):
     object_detail_content = ObjectDetailContent(
         detail_fields={
             "Circuit": [
-                "status", "provider", "cid", "circuit_type", "tenant", "install_date", "commit_rate", "description"
+                "status",
+                "provider",
+                "cid",
+                "circuit_type",
+                "tenant",
+                "install_date",
+                "commit_rate",
+                "description",
             ],
             "Comments": ["comments"],
         },
-        field_transforms={"commit_rate": [humanize_speed, placeholder], "comments": [render_markdown, placeholder]}
+        field_transforms={"commit_rate": [humanize_speed, placeholder], "comments": [render_markdown, placeholder]},
         # TODO: add right panels for circuit terminations
     )
 

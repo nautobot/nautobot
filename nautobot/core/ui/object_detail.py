@@ -9,7 +9,13 @@ from django.template import RequestContext, Template
 from django.template.loader import render_to_string
 from django.utils.html import format_html, format_html_join
 
-from nautobot.core.templatetags.helpers import badge, bettertitle, hyperlinked_object, hyperlinked_object_with_color, placeholder
+from nautobot.core.templatetags.helpers import (
+    badge,
+    bettertitle,
+    hyperlinked_object,
+    hyperlinked_object_with_color,
+    placeholder,
+)
 from nautobot.extras.templatetags.plugins import plugin_full_width_page, plugin_left_page, plugin_right_page
 from nautobot.tenancy.models import Tenant
 
@@ -209,9 +215,7 @@ class ObjectDetailMainTab(Tab):
             layouts = [
                 LayoutTwoColumn(
                     include_template_extensions=True,
-                    left_panels=(
-                        ObjectFieldsPanel(),
-                    ),
+                    left_panels=(ObjectFieldsPanel(),),
                 ),
                 LayoutFullWidth(include_template_extensions=True),
             ]
@@ -232,7 +236,7 @@ class ObjectDetailAdvancedTab(Tab):
                     left_panels=(
                         # TODO
                         TemplatePanel(label="Object Details", template_string="Object Details"),
-                        TemplatePanel(label="Data Provenance", template_string="Data Provenance")
+                        TemplatePanel(label="Data Provenance", template_string="Data Provenance"),
                     ),
                 ),
                 LayoutFullWidth(),
@@ -384,8 +388,7 @@ class Layout(ABC):
         }
 
     @abstractmethod
-    def render(self, request, instance):
-        ...
+    def render(self, request, instance): ...
 
 
 class LayoutTwoColumn(Layout):
@@ -415,9 +418,15 @@ class LayoutTwoColumn(Layout):
     </div>
 </div>""",
             left_panels=format_html_join("\n", "{}", ([panel.render(request, instance)] for panel in self.left_panels)),
-            right_panels=format_html_join("\n", "{}", ([panel.render(request, instance)] for panel in self.right_panels)),
-            plugin_left_page=plugin_left_page(self._request_context(request), instance) if self.include_template_extensions else "",
-            plugin_right_page=plugin_right_page(self._request_context(request), instance) if self.include_template_extensions else "",
+            right_panels=format_html_join(
+                "\n", "{}", ([panel.render(request, instance)] for panel in self.right_panels)
+            ),
+            plugin_left_page=plugin_left_page(self._request_context(request), instance)
+            if self.include_template_extensions
+            else "",
+            plugin_right_page=plugin_right_page(self._request_context(request), instance)
+            if self.include_template_extensions
+            else "",
         )
 
 
@@ -441,8 +450,11 @@ class LayoutFullWidth(Layout):
     </div>
 </div>""",
             panels=format_html_join("\n", "{}", ([panel.render(request, instance)] for panel in self.panels)),
-            plugin_full_width_page=plugin_full_width_page(self._request_context(request), instance) if self.include_template_extensions else "",
+            plugin_full_width_page=plugin_full_width_page(self._request_context(request), instance)
+            if self.include_template_extensions
+            else "",
         )
+
 
 class Panel(ABC):
     """Abstract base class for defining an individual display panel within a Layout within a Tab."""
