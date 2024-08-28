@@ -25,7 +25,6 @@ from nautobot.core.celery import (
 )
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
-from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import (
@@ -165,12 +164,6 @@ class Job(PrimaryModel):
         help_text="Maximum runtime in seconds before the job will be forcibly terminated."
         "<br>Set to 0 to use Nautobot system default",
     )
-    task_queues = JSONArrayField(
-        base_field=models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True),
-        default=list,
-        blank=True,
-        help_text="Comma separated list of task queues that this job can run on. A blank list will use the default queue",
-    )
     supports_dryrun = models.BooleanField(
         default=False,
         editable=False,
@@ -211,10 +204,6 @@ class Job(PrimaryModel):
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
     has_sensitive_variables_override = models.BooleanField(
-        default=False,
-        help_text="If set, the configured value will remain even if the underlying Job source code changes",
-    )
-    task_queues_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
@@ -301,6 +290,18 @@ class Job(PrimaryModel):
             return get_job(self.class_path, reload=True)()
         except TypeError as err:  # keep 2.0-2.2.2 exception behavior
             raise NotRegistered from err
+
+    @property
+    def task_queues(self):
+        return self.job_queues.all().values_list("name", flat=True)
+
+    @task_queues.setter
+    def task_queues(self, value):
+        # value is going to be a comma separated list of queue names
+        # assume all queue types are celery for now
+        for queue in value:
+            job_queue, _ = JobQueue.objects.get_or_create(name=queue, queue_type=JobQueueTypeChoices.TYPE_CELERY)
+            JobQueueAssignment.objects.get_or_create(job_queue=job_queue, job=self)
 
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
@@ -994,14 +995,6 @@ class ScheduledJob(BaseModel):
     args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
     kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
     celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
-    queue = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        blank=True,
-        default="",
-        verbose_name="Queue Override",
-        help_text="Queue defined in CELERY_TASK_QUEUES. Leave empty for default queuing.",
-        db_index=True,
-    )
     job_queue = models.ForeignKey(
         to="extras.JobQueue",
         on_delete=models.SET_NULL,
@@ -1133,6 +1126,15 @@ class ScheduledJob(BaseModel):
             return clocked(clocked_time=self.start_time)
 
         return self.to_cron()
+
+    @property
+    def queue(self):
+        return self.job_queue.name if self.job_queue else ""
+
+    @queue.setter
+    def queue(self, value):
+        job_queue = JobQueue.objects.get_or_create(name=value, type=JobQueueTypeChoices.TYPE_CELERY)
+        self.job_queue = job_queue
 
     @staticmethod
     def earliest_possible_time():
