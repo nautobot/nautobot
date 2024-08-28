@@ -95,8 +95,28 @@ from nautobot.tenancy.models import Tenant
 
 
 class ObjectDetailContent:
+    """
+    Base class for UI framework definition of the contents of an Object Detail (Object Retrieve) page.
+
+    This currently defines the tabs and their contents, but currently does NOT define the page title, breadcrumbs, etc.
+    """
 
     def __init__(self, tabs=None, detail_fields=None, field_transforms=None):
+        """
+        Create an ObjectDetailContent.
+
+        Args:
+            tabs (list): Optional list of `Tab` instances; if unset, the default `ObjectDetailMainTab` will be used.
+                         Standard extras Tabs (advanced, contacts, dynamic-groups, metadata, etc.) do not need to be
+                         specified as they will be automatically included regardless.
+            detail_fields (dict): Optional dict of {panel_name: [list of object field names], ...}.
+                                  This addresses the common case where a detail view doesn't care to define custom tabs,
+                                  layouts, or panels, but wants some control over how the default `ObjectDetailMainTab`
+                                  presents the object's fields in an ObjectFieldsPanel(s).
+            field_transforms (dict): Optional dict of {field_name: [list of transform functions], ...}.
+                                     This can be used to provide custom rendering of given field(s) within the automatic
+                                     `ObjectDetailMainTab` class, for example `{"commit_rate": [humanize_speed]}`.
+        """
         if tabs is None:
             tabs = [ObjectDetailMainTab()]
             if detail_fields is not None:
@@ -114,23 +134,33 @@ class ObjectDetailContent:
         self.tabs = tabs
 
     def render_tabs(self, request, instance):
+        """Render the tabs (as opposed to their contents) for each of `self.tabs`."""
         return format_html_join("\n", "{}", ([tab.render_tab(request, instance)] for tab in self.tabs))
 
     def render_content(self, request, instance):
+        """Render the tab content for each of `self.tabs`."""
         return format_html_join("\n", "{}", ([tab.render_content(request, instance)] for tab in self.tabs))
 
 
 class Tab(ABC):
+    """Base class for UI framework definition of a single tabbed pane within an Object Detail (Object Retrieve) page."""
 
     tab_id: str
     tab_label: str
 
     def __init__(self, layouts=None):
+        """
+        Create a Tab containing the given layouts of data.
+
+        Args:
+            layouts (list): List of `Layout` instances contained in this tab.
+        """
         if layouts is None:
             layouts = []
         self.layouts = list(layouts)
 
     def render_tab(self, request, instance):
+        """Render the tab (as opposed to its contents) to HTML."""
         self.request = request
         self.instance = instance
 
@@ -148,6 +178,7 @@ class Tab(ABC):
         )
 
     def render_content(self, request, instance):
+        """Render the tab contents to HTML."""
         self.request = request
         self.instance = instance
 
@@ -163,28 +194,33 @@ class Tab(ABC):
 
 
 class ObjectDetailMainTab(Tab):
+    """Base class for a main display tab containing an overview of object fields and similar data."""
 
     tab_id = "main"
 
     @property
     def tab_label(self):
+        """Use the `verbose_name` of the given instance's Model as the tab label by default."""
         return bettertitle(self.instance._meta.verbose_name)
 
     def __init__(self, layouts=None):
+        """Default to two-column layout at top (containing a left `ObjectFieldsPanel`) with full-width layout below."""
         if layouts is None:
             layouts = [
                 LayoutTwoColumn(
+                    include_template_extensions=True,
                     left_panels=(
                         ObjectFieldsPanel(),
                     ),
                 ),
-                LayoutFullWidth(),
+                LayoutFullWidth(include_template_extensions=True),
             ]
         # TODO: autoinject standard panels (custom fields, relationships, tags, etc.) even if layouts was customized
         super().__init__(layouts=layouts)
 
 
 class ObjectDetailAdvancedTab(Tab):
+    """Built-in class for a Tab displaying "advanced" information such as PKs and data provenance."""
 
     tab_id = "advanced"
     tab_label = "Advanced"
@@ -193,19 +229,19 @@ class ObjectDetailAdvancedTab(Tab):
         super().__init__(
             layouts=(
                 LayoutTwoColumn(
-                    include_template_extensions=False,
                     left_panels=(
                         # TODO
                         TemplatePanel(label="Object Details", template_string="Object Details"),
                         TemplatePanel(label="Data Provenance", template_string="Data Provenance")
                     ),
                 ),
-                LayoutFullWidth(include_template_extensions=False),
+                LayoutFullWidth(),
             )
         )
 
 
 class ObjectDetailContactsTab(Tab):
+    """Built-in class for a Tab displaying information about contact/team associations."""
 
     tab_id = "contacts"
 
@@ -213,7 +249,6 @@ class ObjectDetailContactsTab(Tab):
         super().__init__(
             layouts=(
                 LayoutFullWidth(
-                    include_template_extensions=False,
                     panels=(
                         # TODO
                         TemplatePanel(label="Contact Associations", template_string="Contact Associations Table"),
@@ -241,6 +276,7 @@ class ObjectDetailContactsTab(Tab):
 
 
 class ObjectDetailGroupsTab(Tab):
+    """Built-in class for a Tab displaying information about associated dynamic groups."""
 
     tab_id = "dynamic_groups"
 
@@ -248,7 +284,6 @@ class ObjectDetailGroupsTab(Tab):
         super().__init__(
             layouts=(
                 LayoutFullWidth(
-                    include_template_extensions=False,
                     panels=(
                         # TODO
                         TemplatePanel(label="Dynamic Groups", template_string="Dynamic Groups Table"),
@@ -284,6 +319,7 @@ class ObjectDetailGroupsTab(Tab):
 
 
 class ObjectDetailMetadataTab(Tab):
+    """Built-in class for a Tab displaying information about associated object metadata."""
 
     tab_id = "object_metadata"
 
@@ -291,7 +327,6 @@ class ObjectDetailMetadataTab(Tab):
         super().__init__(
             layouts=(
                 LayoutFullWidth(
-                    include_template_extensions=False,
                     panels=(
                         # TODO
                         TemplatePanel(label="Object Metadata", template_string="Object Metadata Table"),
@@ -329,8 +364,15 @@ class ObjectDetailMetadataTab(Tab):
 
 
 class Layout(ABC):
+    """Abstract base class for defining a layout of content panels within a `Tab`."""
 
-    def __init__(self, *, include_template_extensions=True):
+    def __init__(self, *, include_template_extensions=False):
+        """Instantiate a Layout.
+
+        Args:
+            include_template_extensions (bool): If True, this layout will include any App-defined TemplateExtension
+                                                content as a part of its rendering.
+        """
         self.include_template_extensions = include_template_extensions
 
     def _request_context(self, request):
@@ -403,8 +445,15 @@ class LayoutFullWidth(Layout):
         )
 
 class Panel(ABC):
+    """Abstract base class for defining an individual display panel within a Layout within a Tab."""
 
     def __init__(self, *, label=None):
+        """
+        Instantiate a Panel.
+
+        Args:
+            label (str): The label to display at the top of the panel.
+        """
         self.label = label
 
     def render(self, request, instance):
@@ -449,8 +498,17 @@ class TemplatePanel(Panel):
 
 
 class ObjectFieldsPanel(Panel):
+    """A panel that renders a table of object instance attributes."""
 
     def __init__(self, *, fields="__all__", field_transforms=None, **kwargs):
+        """
+        Instantiate an ObjectFieldsPanel.
+
+        Args:
+            fields (str, list): The string "__all__", or an ordered list of field names to display.
+            field_transforms (dict): A dict of `{field_name: [transform_functions]}` that can be used to customize the
+                                     display string for any given field.
+        """
         self.fields = fields
         self.field_transforms = field_transforms or {}
         super().__init__(**kwargs)
@@ -477,9 +535,12 @@ class ObjectFieldsPanel(Panel):
         return super().render_label(request, instance)
 
     def render_content(self, request, instance):
+        """Render the table rows corresponding to the specified fields, applying field_transforms as specified."""
         result = format_html("")
         fields = self.fields
+
         if fields == "__all__":
+            # Derive the list of fields from the instance, skipping certain fields by default.
             fields = []
             for field in instance._meta.get_fields():
                 if field.hidden or field.name.startswith("_"):
@@ -495,6 +556,7 @@ class ObjectFieldsPanel(Panel):
             field = instance._meta.get_field(field_name)
             field_label = bettertitle(field.verbose_name)
             field_value = getattr(instance, field.name)
+
             if field_name in self.field_transforms:
                 field_display = field_value
                 for transform in self.field_transforms[field_name]:
