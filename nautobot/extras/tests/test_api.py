@@ -1360,8 +1360,7 @@ class JobTest(
         "time_limit": 650,
         "has_sensitive_variables": False,
         "has_sensitive_variables_override": True,
-        "task_queues": ["default", "priority"],
-        "task_queues_override": True,
+        "job_queues": [],
     }
     bulk_update_data = {
         "enabled": True,

@@ -299,6 +299,8 @@ class Job(PrimaryModel):
     def task_queues(self, value):
         # value is going to be a comma separated list of queue names
         # assume all queue types are celery for now
+        if isinstance(value, str):
+            value = value.split(",")
         for queue in value:
             job_queue, _ = JobQueue.objects.get_or_create(name=queue, queue_type=JobQueueTypeChoices.TYPE_CELERY)
             JobQueueAssignment.objects.get_or_create(job_queue=job_queue, job=self)
@@ -1133,8 +1135,9 @@ class ScheduledJob(BaseModel):
 
     @queue.setter
     def queue(self, value):
-        job_queue = JobQueue.objects.get_or_create(name=value, type=JobQueueTypeChoices.TYPE_CELERY)
-        self.job_queue = job_queue
+        if value:
+            job_queue = JobQueue.objects.get_or_create(name=value, queue_type=JobQueueTypeChoices.TYPE_CELERY)
+            self.job_queue = job_queue
 
     @staticmethod
     def earliest_possible_time():
