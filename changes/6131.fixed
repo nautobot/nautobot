@@ -1,0 +1,1 @@
+Fixed a regression in which IP addresses and prefixes created through the `/api/ipam/prefixes/<uuid>/available-ips/` and `/api/ipam/prefixes/<uuid>/available-prefixes/` REST API endpoints could not be assigned custom field data during their creation.

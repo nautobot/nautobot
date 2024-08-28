@@ -97,6 +97,7 @@ def get_default_namespace_pk():
     "custom_validators",
     "export_templates",
     "graphql",
+    "statuses",
     "webhooks",
 )
 class VRF(PrimaryModel):
@@ -114,6 +115,7 @@ class VRF(PrimaryModel):
         verbose_name="Route distinguisher",
         help_text="Unique route distinguisher (as defined in RFC 4364)",
     )
+    status = StatusField(blank=True, null=True)
     namespace = models.ForeignKey(
         "ipam.Namespace",
         on_delete=models.PROTECT,
