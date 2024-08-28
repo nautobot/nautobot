@@ -125,6 +125,7 @@ class VRFForm(NautobotModelForm, TenancyForm):
             "name",
             "rd",
             "namespace",
+            "status",
             "description",
             "import_targets",
             "export_targets",
@@ -140,10 +141,11 @@ class VRFForm(NautobotModelForm, TenancyForm):
         }
         help_texts = {
             "rd": "Route distinguisher unique to this Namespace (as defined in RFC 4364)",
+            "status": "Operational status of this VRF",
         }
 
 
-class VRFBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+class VRFBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=VRF.objects.all(), widget=forms.MultipleHiddenInput())
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
@@ -162,9 +164,9 @@ class VRFBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         ]
 
 
-class VRFFilterForm(NautobotFilterForm, TenancyFilterForm):
+class VRFFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, TenancyFilterForm):
     model = VRF
-    field_order = ["q", "import_targets", "export_targets", "tenant_group", "tenant"]
+    field_order = ["q", "import_targets", "export_targets", "status", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
     import_targets = DynamicModelMultipleChoiceField(
         queryset=RouteTarget.objects.all(), to_field_name="name", required=False
