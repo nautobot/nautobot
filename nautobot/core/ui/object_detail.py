@@ -11,6 +11,7 @@ from django.utils.html import format_html, format_html_join
 
 from nautobot.core.templatetags.helpers import badge, bettertitle, hyperlinked_object, hyperlinked_object_with_color, placeholder
 from nautobot.extras.templatetags.plugins import plugin_full_width_page, plugin_left_page, plugin_right_page
+from nautobot.tenancy.models import Tenant
 
 # ObjectDetailContent
 #  Tab ("Device")
@@ -95,9 +96,15 @@ from nautobot.extras.templatetags.plugins import plugin_full_width_page, plugin_
 
 class ObjectDetailContent:
 
-    def __init__(self, tabs=None):
+    def __init__(self, tabs=None, detail_fields=None, field_transforms=None):
         if tabs is None:
-            tabs = (ObjectDetailMainTab(),)
+            tabs = [ObjectDetailMainTab()]
+            if detail_fields is not None:
+                tabs[0].layouts[0].left_panels = [
+                    ObjectFieldsPanel(label=label, fields=fields, field_transforms=field_transforms)
+                    for label, fields in detail_fields.items()
+                ]
+
         tabs = list(tabs)
         # Inject "standard" tabs
         tabs.append(ObjectDetailAdvancedTab())
@@ -443,8 +450,9 @@ class TemplatePanel(Panel):
 
 class ObjectFieldsPanel(Panel):
 
-    def __init__(self, *, fields="__all__", **kwargs):
+    def __init__(self, *, fields="__all__", field_transforms=None, **kwargs):
         self.fields = fields
+        self.field_transforms = field_transforms or {}
         super().__init__(**kwargs)
 
     def render(self, request, instance):
@@ -470,35 +478,47 @@ class ObjectFieldsPanel(Panel):
 
     def render_content(self, request, instance):
         result = format_html("")
-        for field in instance._meta.get_fields():
-            if not (self.fields == "__all__" or field.name in self.fields):
-                continue
-            if field.hidden or field.name.startswith("_"):
-                continue
-            if field.name in ("id", "created", "last_updated"):
-                # Handled elsewhere in the detail view
-                continue
-            if field.is_relation and (field.many_to_many or field.one_to_many):
-                continue
+        fields = self.fields
+        if fields == "__all__":
+            fields = []
+            for field in instance._meta.get_fields():
+                if field.hidden or field.name.startswith("_"):
+                    continue
+                if field.name in ("id", "created", "last_updated"):
+                    # Handled elsewhere in the detail view
+                    continue
+                if field.is_relation and (field.many_to_many or field.one_to_many):
+                    continue
+                fields.append(field.name)
 
-            field_name = bettertitle(field.verbose_name)
+        for field_name in fields:
+            field = instance._meta.get_field(field_name)
+            field_label = bettertitle(field.verbose_name)
             field_value = getattr(instance, field.name)
-            if field.is_relation:
+            if field_name in self.field_transforms:
+                field_display = field_value
+                for transform in self.field_transforms[field_name]:
+                    field_display = transform(field_display)
+            elif field.is_relation:
                 if hasattr(field_value, "color"):
-                    field_value = hyperlinked_object_with_color(field_value)
+                    field_display = hyperlinked_object_with_color(field_value)
                 else:
-                    field_value = hyperlinked_object(field_value)
+                    field_display = hyperlinked_object(field_value)
+
+                if isinstance(field_value, Tenant) and field_value.tenant_group is not None:
+                    field_display = format_html("{} / {}", hyperlinked_object(field_value.tenant_group), field_display)
             else:
-                field_value = placeholder(field_value)
+                field_display = placeholder(field_value)
             # TODO: apply additional formatting such as JSON/Markdown rendering, etc.
 
+            # TODO: add a copy button on hover to all field_display items
             result += format_html(
                 """<tr>
-            <td>{field_name}</td>
-            <td>{field_value}</td>
+            <td>{field_label}</td>
+            <td>{field_display}</td>
         </tr>""",
-                field_name=field_name,
-                field_value=field_value,
+                field_label=field_label,
+                field_display=field_display,
             )
 
         return result

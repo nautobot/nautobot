@@ -120,7 +120,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             "content_type": content_type,
             "verbose_name": self.queryset.model._meta.verbose_name,
             "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-            "object_detail_content": self.object_detail_content
+            "object_detail_content": self.object_detail_content,
             **common_detail_view_context(request, instance),
             **self.get_extra_context(request, instance),
         }

@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django_tables2 import RequestConfig
 
 from nautobot.core.forms import ConfirmationForm
+from nautobot.core.templatetags.helpers import humanize_speed, placeholder, render_markdown
 from nautobot.core.ui.object_detail import ObjectDetailContent
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
@@ -128,7 +129,16 @@ class CircuitUIViewSet(NautobotUIViewSet):
     queryset = Circuit.objects.all()
     serializer_class = serializers.CircuitSerializer
     table_class = tables.CircuitTable
-    object_detail_content = ObjectDetailContent()
+    object_detail_content = ObjectDetailContent(
+        detail_fields={
+            "Circuit": [
+                "status", "provider", "cid", "circuit_type", "tenant", "install_date", "commit_rate", "description"
+            ],
+            "Comments": ["comments"],
+        },
+        field_transforms={"commit_rate": [humanize_speed, placeholder], "comments": [render_markdown, placeholder]}
+        # TODO: add right panels for circuit terminations
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
