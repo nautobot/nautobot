@@ -371,7 +371,6 @@ def get_celery_queues():
         celery_queues = cache.get("nautobot.extras.utils.get_celery_queues")
 
     if celery_queues is None:
-        celery_queues = {}
         celery_inspect = app.control.inspect()
         active_queues = celery_inspect.active_queues()
         if active_queues is None:

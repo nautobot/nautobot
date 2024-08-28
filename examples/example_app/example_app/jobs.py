@@ -114,6 +114,11 @@ class ExampleLoggingJob(Job):
     class Meta:
         name = "Example logging job."
         description = "I log stuff to demonstrate how UI logging works."
+        task_queues = [
+            settings.CELERY_TASK_DEFAULT_QUEUE,
+            "priority",
+            "bulk",
+        ]
 
     def run(self, interval):
         self.logger.debug("Running for %s seconds.", interval)
