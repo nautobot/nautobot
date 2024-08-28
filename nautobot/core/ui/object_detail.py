@@ -6,9 +6,10 @@ from django.conf import settings
 from django.middleware import csrf
 from django.shortcuts import render
 from django.template import RequestContext, Template
+from django.template.loader import render_to_string
 from django.utils.html import format_html, format_html_join
 
-from nautobot.core.templatetags.helpers import bettertitle, hyperlinked_object, hyperlinked_object_with_color, placeholder
+from nautobot.core.templatetags.helpers import badge, bettertitle, hyperlinked_object, hyperlinked_object_with_color, placeholder
 from nautobot.extras.templatetags.plugins import plugin_full_width_page, plugin_left_page, plugin_right_page
 
 # ObjectDetailContent
@@ -100,7 +101,9 @@ class ObjectDetailContent:
         tabs = list(tabs)
         # Inject "standard" tabs
         tabs.append(ObjectDetailAdvancedTab())
-        # TODO: contacts, groups, object-metadata tabs
+        tabs.append(ObjectDetailContactsTab())
+        tabs.append(ObjectDetailGroupsTab())
+        tabs.append(ObjectDetailMetadataTab())
         self.tabs = tabs
 
     def render_tabs(self, request, instance):
@@ -185,12 +188,136 @@ class ObjectDetailAdvancedTab(Tab):
                 LayoutTwoColumn(
                     include_template_extensions=False,
                     left_panels=(
+                        # TODO
                         TemplatePanel(label="Object Details", template_string="Object Details"),
                         TemplatePanel(label="Data Provenance", template_string="Data Provenance")
                     ),
                 ),
                 LayoutFullWidth(include_template_extensions=False),
             )
+        )
+
+
+class ObjectDetailContactsTab(Tab):
+
+    tab_id = "contacts"
+
+    def __init__(self):
+        super().__init__(
+            layouts=(
+                LayoutFullWidth(
+                    include_template_extensions=False,
+                    panels=(
+                        # TODO
+                        TemplatePanel(label="Contact Associations", template_string="Contact Associations Table"),
+                    ),
+                ),
+            ),
+        )
+
+    def render_tab(self, request, instance):
+        if not instance.is_contact_associable_model:
+            return ""
+        return super().render_tab(request, instance)
+
+    def render_content(self, request, instance):
+        if not instance.is_contact_associable_model:
+            return ""
+        return super().render_content(request, instance)
+
+    @property
+    def tab_label(self):
+        return format_html(
+            "Contacts {}",
+            render_to_string("utilities/templatetags/badge.html", badge(self.instance.associated_contacts.count())),
+        )
+
+
+class ObjectDetailGroupsTab(Tab):
+
+    tab_id = "dynamic_groups"
+
+    def __init__(self):
+        super().__init__(
+            layouts=(
+                LayoutFullWidth(
+                    include_template_extensions=False,
+                    panels=(
+                        # TODO
+                        TemplatePanel(label="Dynamic Groups", template_string="Dynamic Groups Table"),
+                    ),
+                ),
+            ),
+        )
+
+    def render_tab(self, request, instance):
+        if not (
+            instance.is_dynamic_group_associable_model
+            and request.user.has_perm("extras.view_dynamicgroup")
+            and instance.dynamic_groups.exists()
+        ):
+            return ""
+        return super().render_tab(request, instance)
+
+    def render_content(self, request, instance):
+        if not (
+            instance.is_dynamic_group_associable_model
+            and request.user.has_perm("extras.view_dynamicgroup")
+            and instance.dynamic_groups.exists()
+        ):
+            return ""
+        return super().render_content(request, instance)
+
+    @property
+    def tab_label(self):
+        return format_html(
+            "Dynamic Groups {}",
+            render_to_string("utilities/templatetags/badge.html", badge(self.instance.dynamic_groups.count())),
+        )
+
+
+class ObjectDetailMetadataTab(Tab):
+
+    tab_id = "object_metadata"
+
+    def __init__(self):
+        super().__init__(
+            layouts=(
+                LayoutFullWidth(
+                    include_template_extensions=False,
+                    panels=(
+                        # TODO
+                        TemplatePanel(label="Object Metadata", template_string="Object Metadata Table"),
+                    ),
+                ),
+            ),
+        )
+
+    def render_tab(self, request, instance):
+        if not (
+            instance.is_metadata_associable_model
+            and request.user.has_perm("extras.view_objectmetadata")
+            and instance.associated_object_metadata.exists()
+        ):
+            return ""
+        return super().render_tab(request, instance)
+
+    def render_content(self, request, instance):
+        if not (
+            instance.is_metadata_associable_model
+            and request.user.has_perm("extras.view_object_metadata")
+            and instance.associated_object_metadata.exists()
+        ):
+            return ""
+        return super().render_content(request, instance)
+
+    @property
+    def tab_label(self):
+        return format_html(
+            "Object Metadata {}",
+            render_to_string(
+                "utilities/templatetags/badge.html", badge(self.instance.associated_object_metadata.count())
+            ),
         )
 
 
