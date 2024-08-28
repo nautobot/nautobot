@@ -472,7 +472,7 @@ class BaseJob:
             job_model = JobModel.objects.get_for_class_path(cls.class_path)
             dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else cls.dryrun_default
             # Initialize job_queue choices
-            form.fields["job_queue"] = DynamicModelChoiceField(
+            form.fields["_job_queue"] = DynamicModelChoiceField(
                 queryset=JobQueue.objects.all(),
                 query_params={"jobs": [job_model.pk]},
                 required=False,

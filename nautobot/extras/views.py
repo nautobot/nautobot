@@ -1312,9 +1312,9 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     # for example "?kwargs_from_job_result=<UUID>&integervar=22"
                     explicit_initial = initial
                     initial = job_result.task_kwargs.copy()
-                    task_queue = job_result.celery_kwargs.get("queue", None)
-                    if task_queue is not None:
-                        initial["_task_queue"] = task_queue
+                    job_queue = job_result.celery_kwargs.get("queue", None)
+                    if job_queue is not None:
+                        initial["_job_queue"] = job_queue
                     initial["_profile"] = job_result.celery_kwargs.get("nautobot_job_profile", False)
                     initial.update(explicit_initial)
                 except JobResult.DoesNotExist:
@@ -1353,7 +1353,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         job_class = get_job(job_model.class_path, reload=True)
         job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
         schedule_form = forms.JobScheduleForm(request.POST)
-        task_queue = request.POST.get("_task_queue")
+        job_queue = request.POST.get("_job_queue")
 
         return_url = request.POST.get("_return_url")
         if return_url is not None and url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
@@ -1362,7 +1362,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             return_url = None
 
         # Allow execution only if a worker process is running and the job is runnable.
-        if not get_worker_count(queue=task_queue):
+        if not get_worker_count(queue=job_queue):
             messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
         elif not job_model.installed or job_class is None:
             messages.error(request, "Unable to run or schedule job: Job is not presently installed.")
@@ -1381,7 +1381,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                 "One of these two flags must be removed before this job can be scheduled or run.",
             )
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
-            task_queue = job_form.cleaned_data.pop("_task_queue", None)
+            job_queue = job_form.cleaned_data.pop("_job_queue", None)
             dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
             profile = job_form.cleaned_data.pop("_profile")
@@ -1396,7 +1396,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     interval=schedule_type,
                     crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
                     approval_required=job_model.approval_required,
-                    task_queue=task_queue,
+                    task_queue=job_queue,
                     profile=profile,
                     **job_class.serialize_data(job_form.cleaned_data),
                 )
@@ -1415,7 +1415,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     job_model,
                     request.user,
                     profile=profile,
-                    task_queue=task_queue,
+                    task_queue=job_queue,
                     **job_class.serialize_data(job_kwargs),
                 )
 
@@ -1527,7 +1527,7 @@ class JobApprovalRequestView(generic.ObjectView):
         if job_class is not None:
             # Render the form with all fields disabled
             initial = instance.kwargs
-            initial["_task_queue"] = instance.queue
+            initial["_job_queue"] = instance.queue
             initial["_profile"] = instance.celery_kwargs.get("profile", False)
             job_form = job_class().as_form(initial=initial, approval_view=True)
         else:
