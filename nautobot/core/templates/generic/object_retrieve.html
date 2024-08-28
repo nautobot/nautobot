@@ -8,6 +8,7 @@
 {% load plugins %}
 {% load static %}
 {% load tz %}
+{% load ui_framework %}
 
 {% block header %}
     <div class="row noprint">
@@ -69,52 +70,55 @@
 
     <ul id="tabs" class="nav nav-tabs">
     {% block nav_tabs %}
-        <li role="presentation"{% if active_tab == "main" or request.GET.tab == "main" %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-toggle="tab">
-                {{ verbose_name|bettertitle }}
-            </a>
-        </li>
-        <li role="presentation"{% if request.GET.tab == 'advanced' %} class="active"{% endif %}>
-            <a href="{{ object.get_absolute_url }}#advanced" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-toggle="tab">
-                Advanced
-            </a>
-        </li>
-        {% if object.is_contact_associable_model %}
-            <li role="presentation"{% if request.GET.tab == 'contacts' %} class="active"{% endif %}>
-                <a href="{{ object.get_absolute_url }}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">
-                    Contacts
+        {% if object_detail_content %}
+            {% object_detail_tabs %}
+        {% else %}
+            <li role="presentation"{% if active_tab == "main" or request.GET.tab == "main" %} class="active"{% endif %}>
+                <a href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-toggle="tab">
+                    {{ verbose_name|bettertitle }}
                 </a>
             </li>
+            <li role="presentation"{% if request.GET.tab == 'advanced' %} class="active"{% endif %}>
+                <a href="{{ object.get_absolute_url }}#advanced" onclick="switch_tab(this.href)" aria-controls="advanced" role="tab" data-toggle="tab">
+                    Advanced
+                </a>
+            </li>
+            {% if object.is_contact_associable_model %}
+                <li role="presentation"{% if request.GET.tab == 'contacts' %} class="active"{% endif %}>
+                    <a href="{{ object.get_absolute_url }}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">
+                        Contacts
+                    </a>
+                </li>
+            {% endif %}
+            {% if object.is_dynamic_group_associable_model and perms.extras.view_dynamicgroup %}
+                {% with object.dynamic_groups.count as dg_count %}
+                    {% if dg_count %}
+                        <li role="presentation"{% if request.GET.tab == 'dynamic_groups' %} class="active"{% endif %}>
+                            <a href="{{ object.get_absolute_url }}#dynamic_groups" onclick="switch_tab(this.href)" aria-controls="dynamic_groups" role="tab" data-toggle="tab">
+                                Dynamic Groups {% badge dg_count %}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endwith %}
+            {% endif %}
+            {% if object.is_metadata_associable_model and perms.extras.view_objectmetadata %}
+                {% with object.associated_object_metadata.count as om_count %}
+                    {% if om_count %}
+                        <li role="presentation"{% if request.GET.tab == 'object_metadata' %} class="active"{% endif %}>
+                            <a href="{{ object.get_absolute_url }}#object_metadata" onclick="switch_tab(this.href)" aria-controls="object_metadata" role="tab" data-toggle="tab">
+                                Object Metadata {% badge om_count %}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endwith %}
+            {% endif %}
         {% endif %}
-        {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
         {% if perms.extras.view_note %}
             {% if active_tab != 'notes' and object.get_notes_url or active_tab == 'notes' %}
                 <li role="presentation"{% if active_tab == 'notes' %} class="active"{% endif %}>
                     <a href="{{ object.get_notes_url }}">Notes</a>
                 </li>
             {% endif %}
-        {% endif %}
-        {% if object.is_dynamic_group_associable_model and perms.extras.view_dynamicgroup %}
-            {% with object.dynamic_groups.count as dg_count %}
-                {% if dg_count %}
-                    <li role="presentation"{% if request.GET.tab == 'dynamic_groups' %} class="active"{% endif %}>
-                        <a href="{{ object.get_absolute_url }}#dynamic_groups" onclick="switch_tab(this.href)" aria-controls="dynamic_groups" role="tab" data-toggle="tab">
-                            Dynamic Groups {% badge dg_count %}
-                        </a>
-                    </li>
-                {% endif %}
-            {% endwith %}
-        {% endif %}
-        {% if object.is_metadata_associable_model and perms.extras.view_objectmetadata %}
-            {% with object.associated_object_metadata.count as om_count %}
-                {% if om_count %}
-                    <li role="presentation"{% if request.GET.tab == 'object_metadata' %} class="active"{% endif %}>
-                        <a href="{{ object.get_absolute_url }}#object_metadata" onclick="switch_tab(this.href)" aria-controls="object_metadata" role="tab" data-toggle="tab">
-                            Object Metadata {% badge om_count %}
-                        </a>
-                    </li>
-                {% endif %}
-            {% endwith %}
         {% endif %}
         {% if perms.extras.view_objectchange %}
             {% if active_tab != 'changelog' and object.get_changelog_url or active_tab == 'changelog' %}
@@ -123,6 +127,7 @@
                 </li>
             {% endif %}
         {% endif %}
+        {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
     {% endblock nav_tabs %}
     {% plugin_object_detail_tabs object %}
     </ul>
@@ -130,142 +135,146 @@
 
 {% block content %}
     <div class="tab-content">
-        <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
-            <div class="row">
-                <div class="col-md-6">
-                    {% block content_left_page %}{% endblock content_left_page %}
-                    {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields=object.get_computed_fields_grouping_basic computed_fields_advanced_ui=False %}
-                    {% include 'inc/relationships_panel.html' %}
-                    {% include 'extras/inc/tags_panel.html' %}
-                    {% plugin_left_page object %}
+        {% if object_detail_content %}
+            {% object_detail_tabs_content %}
+        {% else %}
+            <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
+                <div class="row">
+                    <div class="col-md-6">
+                        {% block content_left_page %}{% endblock content_left_page %}
+                        {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields=object.get_computed_fields_grouping_basic computed_fields_advanced_ui=False %}
+                        {% include 'inc/relationships_panel.html' %}
+                        {% include 'extras/inc/tags_panel.html' %}
+                        {% plugin_left_page object %}
+                    </div>
+                    <div class="col-md-6">
+                        {% block content_right_page %}{% endblock content_right_page %}
+                        {% plugin_right_page object %}
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    {% block content_right_page %}{% endblock content_right_page %}
-                    {% plugin_right_page object %}
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-12">
-                    {% block content_full_width_page %}{% endblock content_full_width_page %}
-                    {% plugin_full_width_page object %}
-                </div>
-            </div>
-        </div>
-        <div id="advanced" role="tabpanel" class="tab-pane {% if request.GET.tab == 'advanced' %}active{% else %}fade{% endif %}">
-            <div class="row">
-                <div class="col-md-6">
-                    {% include 'inc/object_details_advanced_panel.html' %}
-                    {% block advanced_content_left_page %}{% endblock advanced_content_left_page %}
-                </div>
-                <div class="col-md-6">
-                    {% block advanced_content_right_page %}{% endblock advanced_content_right_page %}
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-12">
-                    {% block advanced_content_full_width_page %}{% endblock advanced_content_full_width_page %}
-                </div>
-            </div>
-        </div>
-        {% if object.is_contact_associable_model %}
-            <div id="contacts" role="tabpanel" class="tab-pane {% if request.GET.tab == 'contacts' %}active{% else %}fade{% endif %}">
                 <div class="row">
                     <div class="col-md-12">
-                        <form method="post">
-                            {% csrf_token %}
-                            <div class="panel panel-default">
-                                <div class="panel-heading">
-                                    <strong>Contact Associations</strong>
-                                    <div class="pull-right noprint">
-                                        <!-- Insert table config button here -->
-                                    </div>
-                                </div>
-                                <div class="table-responsive">
-                                    {% render_table associated_contacts_table 'inc/table.html' %}
-                                </div>
-                                {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
-                                    <div class="panel-footer noprint">
-                                        {% if perms.extras.change_contactassociation %}
-                                            <button type="submit" name="_edit" formaction="{% url 'extras:contactassociation_bulk_edit' %}?return_url={{return_url}}" class="btn btn-warning btn-xs">
-                                                <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
-                                            </button>
-                                        {% endif %}
-                                        {% if perms.extras.delete_contactassociation %}
-                                            <button type="submit" formaction="{% url 'extras:contactassociation_bulk_delete' %}?return_url={{return_url}}" class="btn btn-danger btn-xs">
-                                                <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
-                                            </button>
-                                        {% endif %}
-                                            {% if perms.extras.add_contactassociation %}
-                                                <div class="pull-right">
-                                                <a href="{% url 'extras:object_contact_team_assign' %}?return_url={{return_url}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" class="btn btn-primary btn-xs">
-                                                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contact
-                                                </a>
-                                            </div>
-                                        {% endif %}
-                                        <div class="clearfix"></div>
-                                    </div>
-                                {% endwith %}
-                            </div>
-                        </form>
+                        {% block content_full_width_page %}{% endblock content_full_width_page %}
+                        {% plugin_full_width_page object %}
                     </div>
                 </div>
             </div>
-        {% endif %}
-        {% if object.is_dynamic_group_associable_model and perms.extras.view_dynamicgroup %}
-            <div id="dynamic_groups" role="tabpanel" class="tab-pane {% if request.GET.tab == 'dynamic_groups' %}active{% else %}fade{% endif %}">
+            <div id="advanced" role="tabpanel" class="tab-pane {% if request.GET.tab == 'advanced' %}active{% else %}fade{% endif %}">
+                <div class="row">
+                    <div class="col-md-6">
+                        {% include 'inc/object_details_advanced_panel.html' %}
+                        {% block advanced_content_left_page %}{% endblock advanced_content_left_page %}
+                    </div>
+                    <div class="col-md-6">
+                        {% block advanced_content_right_page %}{% endblock advanced_content_right_page %}
+                    </div>
+                </div>
                 <div class="row">
                     <div class="col-md-12">
-                        <div class="alert alert-warning">
-                            Dynamic group membership is cached for performance reasons,
-                            therefore this table may not always be up-to-date.
-                            <br>You can refresh the membership of any specific group by navigating to it from the list below
-                            or from the <a href="{% url 'extras:dynamicgroup_list' %}">Dynamic Groups list view</a>.
-                            <br>You can also refresh the membership of all groups by running the
-                            <a href="{% url 'extras:job_run_by_class_path' class_path='nautobot.core.jobs.groups.RefreshDynamicGroupCaches' %}">Refresh Dynamic Group Caches job</a>.
+                        {% block advanced_content_full_width_page %}{% endblock advanced_content_full_width_page %}
+                    </div>
+                </div>
+            </div>
+            {% if object.is_contact_associable_model %}
+                <div id="contacts" role="tabpanel" class="tab-pane {% if request.GET.tab == 'contacts' %}active{% else %}fade{% endif %}">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">
+                                        <strong>Contact Associations</strong>
+                                        <div class="pull-right noprint">
+                                            <!-- Insert table config button here -->
+                                        </div>
+                                    </div>
+                                    <div class="table-responsive">
+                                        {% render_table associated_contacts_table 'inc/table.html' %}
+                                    </div>
+                                    {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
+                                        <div class="panel-footer noprint">
+                                            {% if perms.extras.change_contactassociation %}
+                                                <button type="submit" name="_edit" formaction="{% url 'extras:contactassociation_bulk_edit' %}?return_url={{return_url}}" class="btn btn-warning btn-xs">
+                                                    <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
+                                                </button>
+                                            {% endif %}
+                                            {% if perms.extras.delete_contactassociation %}
+                                                <button type="submit" formaction="{% url 'extras:contactassociation_bulk_delete' %}?return_url={{return_url}}" class="btn btn-danger btn-xs">
+                                                    <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
+                                                </button>
+                                            {% endif %}
+                                                {% if perms.extras.add_contactassociation %}
+                                                    <div class="pull-right">
+                                                    <a href="{% url 'extras:object_contact_team_assign' %}?return_url={{return_url}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" class="btn btn-primary btn-xs">
+                                                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contact
+                                                    </a>
+                                                </div>
+                                            {% endif %}
+                                            <div class="clearfix"></div>
+                                        </div>
+                                    {% endwith %}
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-md-12">
-                        <form method="post">
-                            {% csrf_token %}
-                            <div class="panel panel-default">
-                                <div class="panel-heading">
-                                    <strong>Dynamic Groups</strong>
-                                    <div class="pull-right noprint">
-                                        <!-- Insert table config button here -->
+            {% endif %}
+            {% if object.is_dynamic_group_associable_model and perms.extras.view_dynamicgroup %}
+                <div id="dynamic_groups" role="tabpanel" class="tab-pane {% if request.GET.tab == 'dynamic_groups' %}active{% else %}fade{% endif %}">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="alert alert-warning">
+                                Dynamic group membership is cached for performance reasons,
+                                therefore this table may not always be up-to-date.
+                                <br>You can refresh the membership of any specific group by navigating to it from the list below
+                                or from the <a href="{% url 'extras:dynamicgroup_list' %}">Dynamic Groups list view</a>.
+                                <br>You can also refresh the membership of all groups by running the
+                                <a href="{% url 'extras:job_run_by_class_path' class_path='nautobot.core.jobs.groups.RefreshDynamicGroupCaches' %}">Refresh Dynamic Group Caches job</a>.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">
+                                        <strong>Dynamic Groups</strong>
+                                        <div class="pull-right noprint">
+                                            <!-- Insert table config button here -->
+                                        </div>
+                                    </div>
+                                    <div class="table-responsive">
+                                        {% render_table associated_dynamic_groups_table 'inc/table.html' %}
                                     </div>
                                 </div>
-                                <div class="table-responsive">
-                                    {% render_table associated_dynamic_groups_table 'inc/table.html' %}
-                                </div>
-                            </div>
-                        </form>
+                            </form>
+                        </div>
                     </div>
                 </div>
-            </div>
-        {% endif %}
-        {% if object.is_metadata_associable_model and perms.extras.view_objectmetadata %}
-            <div id="object_metadata" role="tabpanel" class="tab-pane {% if request.GET.tab == 'object_metadata' %}active{% else %}fade{% endif %}">
-                <div class="row">
-                    <div class="col-md-12">
-                        <form method="post">
-                            {% csrf_token %}
-                            <div class="panel panel-default">
-                                <div class="panel-heading">
-                                    <strong>Object Metadata</strong>
-                                    <div class="pull-right noprint">
-                                        <!-- Insert table config button here -->
+            {% endif %}
+            {% if object.is_metadata_associable_model and perms.extras.view_objectmetadata %}
+                <div id="object_metadata" role="tabpanel" class="tab-pane {% if request.GET.tab == 'object_metadata' %}active{% else %}fade{% endif %}">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">
+                                        <strong>Object Metadata</strong>
+                                        <div class="pull-right noprint">
+                                            <!-- Insert table config button here -->
+                                        </div>
+                                    </div>
+                                    <div class="table-responsive">
+                                        {% render_table associated_object_metadata_table 'inc/table.html' %}
                                     </div>
                                 </div>
-                                <div class="table-responsive">
-                                    {% render_table associated_object_metadata_table 'inc/table.html' %}
-                                </div>
-                            </div>
-                        </form>
+                            </form>
+                        </div>
                     </div>
                 </div>
-            </div>
+            {% endif %}
         {% endif %}
         {% block extra_tab_content %}{% endblock extra_tab_content %}
     </div>

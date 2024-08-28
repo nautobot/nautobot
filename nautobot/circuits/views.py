@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django_tables2 import RequestConfig
 
 from nautobot.core.forms import ConfirmationForm
+from nautobot.core.ui.object_detail import ObjectDetailContent
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
@@ -127,8 +128,7 @@ class CircuitUIViewSet(NautobotUIViewSet):
     queryset = Circuit.objects.all()
     serializer_class = serializers.CircuitSerializer
     table_class = tables.CircuitTable
-    # NOTE: This is how `NautobotUIViewSet` would define use_new_ui attr
-    # use_new_ui = ["list", "retrieve"]
+    object_detail_content = ObjectDetailContent()
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

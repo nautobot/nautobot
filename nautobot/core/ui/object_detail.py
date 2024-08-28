@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 
 from django.conf import settings
+from django.middleware import csrf
 from django.shortcuts import render
 from django.template import RequestContext, Template
 from django.utils.html import format_html, format_html_join
@@ -99,10 +100,14 @@ class ObjectDetailContent:
         tabs = list(tabs)
         # Inject "standard" tabs
         tabs.append(ObjectDetailAdvancedTab())
+        # TODO: contacts, groups, object-metadata tabs
         self.tabs = tabs
 
     def render_tabs(self, request, instance):
-        return format_html_join("\n", "{}", (tab.render_tab(request, instance) for tab in self.tabs))
+        return format_html_join("\n", "{}", ([tab.render_tab(request, instance)] for tab in self.tabs))
+
+    def render_content(self, request, instance):
+        return format_html_join("\n", "{}", ([tab.render_content(request, instance)] for tab in self.tabs))
 
 
 class Tab(ABC):
@@ -110,7 +115,7 @@ class Tab(ABC):
     tab_id: str
     tab_label: str
 
-    def init(self, layouts=None):
+    def __init__(self, layouts=None):
         if layouts is None:
             layouts = []
         self.layouts = list(layouts)
@@ -126,10 +131,10 @@ class Tab(ABC):
         {tab_label}
     </a>
 </li>""",
-            active_class=' class="active"' if request.GET.tab == self.tab_id else "",
+            active_class=' class="active"' if request.GET.get("tab", None) == self.tab_id else "",
             url=instance.get_absolute_url(),
             tab_id=self.tab_id,
-            label=self.tab_label,
+            tab_label=self.tab_label,
         )
 
     def render_content(self, request, instance):
@@ -142,8 +147,8 @@ class Tab(ABC):
     {layouts}
 </div>""",
             tab_id=self.tab_id,
-            active_or_fade="active" if request.GET.tab == self.tab_id else "fade",
-            layouts=format_html_join("\n", "{}", (layout.render(request, instance) for layout in self.layouts)),
+            active_or_fade="active" if request.GET.get("tab", None) == self.tab_id else "fade",
+            layouts=format_html_join("\n", "{}", ([layout.render(request, instance)] for layout in self.layouts)),
         )
 
 
@@ -178,12 +183,13 @@ class ObjectDetailAdvancedTab(Tab):
         super().__init__(
             layouts=(
                 LayoutTwoColumn(
+                    include_template_extensions=False,
                     left_panels=(
                         TemplatePanel(label="Object Details", template_string="Object Details"),
                         TemplatePanel(label="Data Provenance", template_string="Data Provenance")
                     ),
                 ),
-                LayoutFullWidth(),
+                LayoutFullWidth(include_template_extensions=False),
             )
         )
 
@@ -192,6 +198,14 @@ class Layout(ABC):
 
     def __init__(self, *, include_template_extensions=True):
         self.include_template_extensions = include_template_extensions
+
+    def _request_context(self, request):
+        return {
+            "request": request,
+            "settings": settings,
+            "csrf_token": csrf.get_token(request),
+            "perms": [],  # TODO!
+        }
 
     @abstractmethod
     def render(self, request, instance):
@@ -217,17 +231,17 @@ class LayoutTwoColumn(Layout):
 <div class="row">
     <div class="col-md-6">
         {left_panels}
-        {left_template_extensions}
+        {plugin_left_page}
     </div>
     <div class="col-md-6">
         {right_panels}
-        {right_template_extensions}
+        {plugin_right_page}
     </div>
 </div>""",
-            left_panels=format_html_join("\n", "{}", (panel.render(request, instance) for panel in self.left_panels)),
-            right_panels=format_html_join("\n", "{}", (panel.render(request, instance) for panel in self.right_panels)),
-            left_template_extensions=plugin_left_page(RequestContext(request), instance) if self.include_template_extensions else "",
-            right_template_extensions=plugin_right_page(RequestContext(request), instance) if self.include_template_extensions else "",
+            left_panels=format_html_join("\n", "{}", ([panel.render(request, instance)] for panel in self.left_panels)),
+            right_panels=format_html_join("\n", "{}", ([panel.render(request, instance)] for panel in self.right_panels)),
+            plugin_left_page=plugin_left_page(self._request_context(request), instance) if self.include_template_extensions else "",
+            plugin_right_page=plugin_right_page(self._request_context(request), instance) if self.include_template_extensions else "",
         )
 
 
@@ -247,11 +261,11 @@ class LayoutFullWidth(Layout):
 <div class="row">
     <div class="col-md-12">
         {panels}
-        {template_extensions}
+        {plugin_full_width_page}
     </div>
 </div>""",
-            panels=format_html_join("\n", "{}", (panel.render(request, instance) for panel in self.panels)),
-            template_extensions=plugin_full_width_page(RequestContext(request), instance) if self.include_template_extensions else "",
+            panels=format_html_join("\n", "{}", ([panel.render(request, instance)] for panel in self.panels)),
+            plugin_full_width_page=plugin_full_width_page(self._request_context(request), instance) if self.include_template_extensions else "",
         )
 
 class Panel(ABC):
@@ -295,7 +309,7 @@ class TemplatePanel(Panel):
         super().__init__(**kwargs)
 
     def render_content(self, request, instance):
-        if self.template is not None:
+        if self.template_string is not None:
             return Template(self.template_string).render(RequestContext(request, {"object": instance}))
         return render(request, self.template_path, {"object": instance})
 
