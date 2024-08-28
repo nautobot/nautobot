@@ -957,17 +957,12 @@ class JobForm(BootstrapMixin, forms.Form):
         label="Profile job execution",
         help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
     )
-    _task_queue = forms.ChoiceField(
-        required=False,
-        help_text="The task queue to route this job to",
-        label="Task queue",
-    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Move special fields to the end of the form
-        for field in ["_task_queue", "_profile"]:
+        for field in ["_profile"]:
             value = self.fields.pop(field)
             self.fields[field] = value
 
@@ -1001,8 +996,6 @@ class JobEditForm(NautobotModelForm):
             "time_limit",
             "has_sensitive_variables_override",
             "has_sensitive_variables",
-            "task_queues_override",
-            "task_queues",
             "job_queues",
             "tags",
         ]
@@ -1071,10 +1064,11 @@ class JobBulkEditForm(NautobotBulkEditForm):
         help_text="Maximum runtime in seconds before the job will be forcibly terminated."
         "<br>Set to 0 to use Nautobot system default",
     )
-    task_queues = JSONArrayFormField(
-        base_field=forms.CharField(max_length=CHARFIELD_MAX_LENGTH),
-        help_text="Comma separated list of task queues that this job can run on. A blank list will use the default queue",
+    job_queues = DynamicModelMultipleChoiceField(
+        label="Job Queues",
+        queryset=JobQueue.objects.all(),
         required=False,
+        help_text="Job Queue instances that this job can run on",
     )
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
     # Text field overrides
@@ -1093,10 +1087,6 @@ class JobBulkEditForm(NautobotBulkEditForm):
     clear_time_limit_override = forms.BooleanField(
         required=False,
         help_text="If checked, time limits will be reverted to the default values defined in each Job's source code",
-    )
-    clear_task_queues_override = forms.BooleanField(
-        required=False,
-        help_text="If checked, task queue overrides will be reverted to the default values defined in each Job's source code",
     )
     # Boolean overrides
     clear_approval_required_override = forms.BooleanField(
