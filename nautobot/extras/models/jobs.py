@@ -302,7 +302,9 @@ class Job(PrimaryModel):
         if isinstance(value, str):
             value = value.split(",")
         for queue in value:
-            job_queue, _ = JobQueue.objects.get_or_create(name=queue, queue_type=JobQueueTypeChoices.TYPE_CELERY)
+            job_queue, _ = JobQueue.objects.get_or_create(
+                name=queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+            )
             JobQueueAssignment.objects.get_or_create(job_queue=job_queue, job=self)
 
     def clean(self):
@@ -1136,8 +1138,9 @@ class ScheduledJob(BaseModel):
     @queue.setter
     def queue(self, value):
         if value:
-            job_queue = JobQueue.objects.get_or_create(name=value, queue_type=JobQueueTypeChoices.TYPE_CELERY)
-            self.job_queue = job_queue
+            self.job_queue = JobQueue.objects.get_or_create(
+                name=value, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+            )
 
     @staticmethod
     def earliest_possible_time():

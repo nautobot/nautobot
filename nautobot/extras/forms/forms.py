@@ -1230,6 +1230,7 @@ class JobQueueFilterForm(NautobotFilterForm):
     model = JobQueue
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False)
+    jobs = DynamicModelMultipleChoiceField(queryset=Job.objects.all(), required=False)
     queue_type = forms.MultipleChoiceField(
         choices=JobQueueTypeChoices,
         required=False,

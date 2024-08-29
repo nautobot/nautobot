@@ -105,6 +105,7 @@ class BaseJob:
         - soft_time_limit (int)
         - time_limit (int)
         - has_sensitive_variables (bool)
+        - task_queues (list)
         """
 
     def __init__(self):
@@ -391,6 +392,11 @@ class BaseJob:
 
     @final
     @classproperty
+    def task_queues(cls) -> list:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("task_queues", [], expected_type=(list, tuple))
+
+    @final
+    @classproperty
     def properties_dict(cls) -> dict:  # pylint: disable=no-self-argument
         """
         Return all relevant classproperties as a dict.
@@ -406,6 +412,7 @@ class BaseJob:
             "soft_time_limit": cls.soft_time_limit,
             "time_limit": cls.time_limit,
             "has_sensitive_variables": cls.has_sensitive_variables,
+            "task_queues": cls.task_queues,
         }
 
     @final

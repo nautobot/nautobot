@@ -1339,36 +1339,6 @@ class JobTest(
 
     model = Job
     choices_fields = None
-    update_data = {
-        # source, module_name, job_class_name, installed are NOT editable
-        "grouping_override": True,
-        "grouping": "Overridden grouping",
-        "name_override": True,
-        "name": "Overridden name",
-        "description_override": True,
-        "description": "This is an overridden description.",
-        "enabled": True,
-        "approval_required_override": True,
-        "approval_required": True,
-        "dryrun_default_override": True,
-        "dryrun_default": True,
-        "hidden_override": True,
-        "hidden": True,
-        "soft_time_limit_override": True,
-        "soft_time_limit": 350.1,
-        "time_limit_override": True,
-        "time_limit": 650,
-        "has_sensitive_variables": False,
-        "has_sensitive_variables_override": True,
-        "job_queues": [],
-    }
-    bulk_update_data = {
-        "enabled": True,
-        "approval_required_override": True,
-        "approval_required": True,
-        "has_sensitive_variables": False,
-        "has_sensitive_variables_override": True,
-    }
 
     def setUp(self):
         super().setUp()
@@ -1378,6 +1348,41 @@ class JobTest(
         self.job_model = Job.objects.get_for_class_path(self.default_job_name)
         self.job_model.enabled = True
         self.job_model.validated_save()
+
+    @classmethod
+    def setUpTestData(cls):
+        job_queues = JobQueue.objects.all()[:3]
+        cls.update_data = {
+            # source, module_name, job_class_name, installed are NOT editable
+            "grouping_override": True,
+            "grouping": "Overridden grouping",
+            "name_override": True,
+            "name": "Overridden name",
+            "description_override": True,
+            "description": "This is an overridden description.",
+            "enabled": True,
+            "approval_required_override": True,
+            "approval_required": True,
+            "dryrun_default_override": True,
+            "dryrun_default": True,
+            "hidden_override": True,
+            "hidden": True,
+            "soft_time_limit_override": True,
+            "soft_time_limit": 350.1,
+            "time_limit_override": True,
+            "time_limit": 650,
+            "has_sensitive_variables": False,
+            "has_sensitive_variables_override": True,
+            "job_queues": [queue.pk for queue in job_queues],
+        }
+        cls.bulk_update_data = {
+            "enabled": True,
+            "approval_required_override": True,
+            "approval_required": True,
+            "has_sensitive_variables": False,
+            "has_sensitive_variables_override": True,
+            "job_queues": [queue.pk for queue in job_queues],
+        }
 
     run_success_response_status = status.HTTP_201_CREATED
 

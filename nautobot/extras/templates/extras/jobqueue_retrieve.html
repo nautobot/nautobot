@@ -11,25 +11,28 @@
                 <tr>
                     <td>Name</td>
                     <td>
-                        <span>{{ object.name }}</span>
+                        {{ object.name }}
                     </td>
                 </tr>
                 <tr>
                     <td>Queue Type</td>
                     <td>
-                        <span>{{ object.queue_type }}</span>
+                        {{ object.get_queue_type_display }}
                     </td>
                 </tr>
                 <tr>
                     <td>Description</td>
                     <td>
-                        <span>{{ object.description | placeholder }}</span>
+                        {{ object.description|placeholder }}
                     </td>
                 </tr>
                 <tr>
                     <td>Tenant</td>
                     <td>
-                        <span>{{ object.tenant | hyperlinked_object }}</span>
+                        {% if object.tenant and object.tenant.tenant_group %}
+	                        {{ object.tenant.tenant_group|hyperlinked_object }} /
+	                    {% endif %}
+	                    {{ object.tenant|hyperlinked_object }}
                     </td>
                 </tr>
                 <tr>
@@ -37,7 +40,7 @@
                     <td>
                         <ul>
                             {% for job in object.jobs.all %}
-                                <li><a href="{% url 'extras:job' pk=job.pk %}">{{ job }}</a></li>
+                                <li>{{ job|hyperlinked_object }}</li>
                             {% endfor %}
                         </ul>
                     </td>

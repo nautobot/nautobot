@@ -924,6 +924,10 @@ class JobQueueFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         queryset=Job.objects.all(),
         label="Job (name or ID)",
     )
+    has_jobs = RelatedMembershipBooleanFilter(
+        field_name="jobs",
+        label="Has jobs",
+    )
 
     class Meta:
         model = JobQueue

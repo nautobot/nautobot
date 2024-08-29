@@ -826,9 +826,7 @@ class JobLogEntryTable(BaseTable):
 class JobQueueTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    queue_type = tables.Column()
-    tenant = tables.Column(linkify=True)
-    description = tables.Column()
+    tenant = TenantColumn()
 
     class Meta(BaseTable.Meta):
         model = JobQueue
