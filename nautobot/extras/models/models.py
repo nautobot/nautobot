@@ -19,7 +19,9 @@ from graphql.error import GraphQLSyntaxError
 from graphql.language.ast import OperationDefinition
 from jsonschema.exceptions import SchemaError, ValidationError as JSONSchemaValidationError
 from jsonschema.validators import Draft7Validator
+import requests
 from rest_framework.utils.encoders import JSONEncoder
+import urllib3
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
@@ -28,12 +30,15 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.data import deepmerge, render_jinja2
 from nautobot.extras.choices import (
     ButtonClassChoices,
+    SecretsGroupAccessTypeChoices,
+    SecretsGroupSecretTypeChoices,
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
 from nautobot.extras.models.relationships import RelationshipModel
+from nautobot.extras.models.secrets import Secret, SecretsGroup
 from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
 
@@ -516,6 +521,75 @@ class ExternalIntegration(PrimaryModel):
 
     class Meta:
         ordering = ["name"]
+
+    def get_http_session(
+        self,
+        accept="application/json",
+        include_auth=True,
+        authorization_header="Authorization",
+        authorization_prefix="Bearer ",
+    ) -> requests.Session:
+        """Get a requests.Session object that has been initialized for this external integration.
+
+        The configuration will include SSL verification/CA file path options as well as optional
+        authentication parameters. If `include_auth` is `True` then the secrets group for this
+        external integration is obtained and either token or username/password authentication is
+        setup in the session headers. The session will prefer token authentication if the secrets
+        group has both token and username/password. If found, the token will be added to the
+        session headers using the `authorization_header` header key. The key value will be prefixed by the
+        `authorization_prefix` value.
+
+        If `include_auth` is `True` and no token is found, then username and password secrets
+        are retrieved and set for the session's basic auth values.
+
+        If `include_auth` is `True` and no valid secrets are found then a ValueError is raised.
+
+        Args:
+            accept (str): The content-type to accept from the remote endpoint.
+            include_auth (bool, optional): Whether or not to set basic auth or token auth
+                values in the session. Defaults to True.
+            authorization_header (str, optional): Used if `include_auth` is set. Sets the token header
+                key in the session. Defaults to "Authorization".
+            authorization_prefix (str, optional): Used if `include_auth` is set. Adds a prefix
+                to the token value in the HTTP request header. Defaults to "Bearer ".
+
+        Raises:
+            ValueError: If `include_auth` is set and no appropriate secrets are found.
+
+        Returns:
+            requests.Session: The session object with all the configured attributes.
+        """
+        session = requests.Session()
+        session.verify = self.ca_file_path or self.verify_ssl
+        if session.verify is False:
+            urllib3.disable_warnings(category=urllib3.exceptions.InsecureRequestWarning)
+
+        session.header["Accept"] = accept
+
+        if include_auth:
+            secrets_group: SecretsGroup = self.secrets_group
+            try:
+                token = secrets_group.get_secret_value(
+                    SecretsGroupAccessTypeChoices.TYPE_HTTP, SecretsGroupSecretTypeChoices.TYPE_TOKEN
+                )
+                session.headers[authorization_header] = f"{authorization_prefix}{token}"
+            except Secret.DoesNotExist:
+                try:
+                    username = secrets_group.get_secret_value(
+                        SecretsGroupAccessTypeChoices.TYPE_HTTP, SecretsGroupSecretTypeChoices.TYPE_USERNAME
+                    )
+                    password = secrets_group.get_secret_value(
+                        SecretsGroupAccessTypeChoices.TYPE_HTTP, SecretsGroupSecretTypeChoices.TYPE_PASSWORD
+                    )
+                    session.auth = (
+                        username,
+                        password,
+                    )
+                except Secret.DoesNotExist:
+                    raise ValueError(
+                        f"Secrets group {secrets_group.name} does not have username/password or token HTTP secrets."
+                    )
+        return session
 
     def render_headers(self, context):
         """
