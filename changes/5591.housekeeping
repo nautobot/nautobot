@@ -1,0 +1,2 @@
+Added `watchmedo` to `celery_beat` development container.
+Added `time-machine` as a development environment (test execution) dependency.
