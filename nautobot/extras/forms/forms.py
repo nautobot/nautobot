@@ -1286,6 +1286,13 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         required=False,
         widget=StaticSelect2Multiple(),
     )
+    scheduled_job = DynamicModelMultipleChoiceField(
+        label="Scheduled Job",
+        queryset=ScheduledJob.objects.all(),
+        required=False,
+        to_field_name="name",
+        widget=APISelectMultiple(api_url="/api/extras/scheduled-jobs/"),
+    )
 
 
 class ScheduledJobFilterForm(BootstrapMixin, forms.Form):

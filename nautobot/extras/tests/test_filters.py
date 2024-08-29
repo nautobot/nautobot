@@ -93,6 +93,7 @@ from nautobot.extras.models import (
     RelationshipAssociation,
     Role,
     SavedView,
+    ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
@@ -1125,12 +1126,14 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
         jobs = Job.objects.all()[:3]
         cls.jobs = jobs
         user = UserFactory.create()
+        scheduled_job = ScheduledJob.objects.first()
         for job in jobs:
             JobResult.objects.create(
                 job_model=job,
                 name=job.class_path,
                 user=user,
                 status=JobResultStatusChoices.STATUS_STARTED,
+                scheduled_job=scheduled_job,
             )
 
     def test_job_model(self):
@@ -1143,6 +1146,11 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(job_model__in=jobs).distinct()
             )
+
+    def test_scheduled_job(self):
+        job_results = list(JobResult.objects.all()[:3])
+        scheduled_jobs = list(ScheduledJob.objects.all())
+        self.assertEqual(scheduled_jobs[0], job_results[1].scheduled_job)
 
 
 class JobHookFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):

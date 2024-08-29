@@ -41,6 +41,7 @@ from nautobot.extras.models import (
     ObjectMetadata,
     Role,
     SavedView,
+    ScheduledJob,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -200,6 +201,25 @@ class JobResultFactory(BaseModelFactory):
             else:
                 # TODO, should we create "in progress" job results without a date_done value as well?
                 self.date_done = self.date_created + timedelta(minutes=faker.Faker().random_int())
+
+
+class ScheduledJobFactory(BaseModelFactory):
+    """ScheduledJob model factory."""
+
+    class Meta:
+        model = ScheduledJob
+
+    class Params:
+        has_user = NautobotBoolIterator(chance_of_getting_true=80)
+        has_task_args = NautobotBoolIterator(chance_of_getting_true=10)
+        has_task_kwargs = NautobotBoolIterator(chance_of_getting_true=90)
+
+    name = factory.Sequence(lambda n: f"Scheduled Job {n}")
+    interval = factory.Faker('random_element', elements=['hourly', 'daily', 'weekly'])
+    start_time = factory.Faker('future_datetime', end_date='+30d')
+    enabled = factory.Faker('boolean', chance_of_getting_true=90)
+    user = factory.Maybe("has_user", random_instance(get_user_model()), None)
+    task = factory.Faker("word")
 
 
 class MetadataChoiceFactory(BaseModelFactory):
