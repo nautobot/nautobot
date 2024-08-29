@@ -582,13 +582,8 @@ class TimeZoneTestCase(TestCase):
         self.user.save()
         self.client.force_login(self.user)
 
-        timezone_choices = ["US/Eastern", "US/Hawaii"]
         timezone_name = timezone.get_current_timezone_name()
-        if timezone_name == timezone_choices[0]:
-            new_timezone_name = timezone_choices[1]
-        else:
-            new_timezone_name = timezone_choices[0]
-
+        new_timezone_name = "US/Eastern"
         form_data = {"request_profiling": False, "timezone": new_timezone_name}
         url = reverse("user:advanced_settings_edit")
         request = {
