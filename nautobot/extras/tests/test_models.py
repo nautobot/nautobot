@@ -14,8 +14,15 @@ from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import override_settings
 from django.test.utils import isolate_apps
-from django.utils.timezone import now
+from django.utils.timezone import get_default_timezone, now
+from django_celery_beat.tzcrontab import TzAwareCrontab
 from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
+import time_machine
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:  # python 3.8
+    from backports.zoneinfo import ZoneInfo
 
 from nautobot.circuits.models import CircuitType
 from nautobot.core.choices import ColorChoices
@@ -30,6 +37,7 @@ from nautobot.dcim.models import (
     Platform,
 )
 from nautobot.extras.choices import (
+    JobExecutionType,
     JobResultStatusChoices,
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
@@ -65,6 +73,7 @@ from nautobot.extras.models import (
     ObjectMetadata,
     Role,
     SavedView,
+    ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
@@ -1788,6 +1797,295 @@ class SavedViewTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.device_global_sv.is_shared, True)
         self.assertEqual(self.location_global_sv.is_shared, True)
         self.assertEqual(self.ipaddress_global_sv.is_shared, True)
+
+
+@override_settings(TIME_ZONE="UTC")
+class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
+    """Tests for the `ScheduledJob` model class."""
+
+    model = ScheduledJob
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="scheduledjobuser")
+        self.job_model = JobModel.objects.get(name="TestPass")
+
+        self.daily_utc_job = ScheduledJob.objects.create(
+            name="Daily UTC Job",
+            task="pass.TestPass",
+            job_model=self.job_model,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        self.daily_est_job = ScheduledJob.objects.create(
+            name="Daily EST Job",
+            task="pass.TestPass",
+            job_model=self.job_model,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=ZoneInfo("America/New_York")),
+            time_zone=ZoneInfo("America/New_York"),
+        )
+        self.crontab_utc_job = ScheduledJob.create_schedule(
+            job_model=self.job_model,
+            user=self.user,
+            name="Crontab UTC Job",
+            interval=JobExecutionType.TYPE_CUSTOM,
+            crontab="0 17 * * *",
+        )
+        self.crontab_est_job = ScheduledJob.objects.create(
+            name="Crontab EST Job",
+            task="pass.TestPass",
+            job_model=self.job_model,
+            interval=JobExecutionType.TYPE_CUSTOM,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=ZoneInfo("America/New_York")),
+            time_zone=ZoneInfo("America/New_York"),
+            crontab="0 17 * * *",
+        )
+        self.one_off_utc_job = ScheduledJob.objects.create(
+            name="One-off UTC Job",
+            task="pass.TestPass",
+            job_model=self.job_model,
+            interval=JobExecutionType.TYPE_FUTURE,
+            start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("UTC")),
+            time_zone=ZoneInfo("UTC"),
+        )
+        self.one_off_est_job = ScheduledJob.create_schedule(
+            job_model=self.job_model,
+            user=self.user,
+            name="One-off EST Job",
+            interval=JobExecutionType.TYPE_FUTURE,
+            start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("America/New_York")),
+        )
+
+    def test_schedule(self):
+        """Test the schedule property."""
+        with self.subTest("Test TYPE_DAILY schedules"):
+            daily_utc_schedule = self.daily_utc_job.schedule
+            daily_est_schedule = self.daily_est_job.schedule
+            self.assertIsInstance(daily_utc_schedule, TzAwareCrontab)
+            self.assertIsInstance(daily_est_schedule, TzAwareCrontab)
+            self.assertNotEqual(daily_utc_schedule, daily_est_schedule)
+            # Crontabs are validated in test_to_cron()
+
+        with self.subTest("Test TYPE_CUSTOM schedules"):
+            crontab_utc_schedule = self.crontab_utc_job.schedule
+            crontab_est_schedule = self.crontab_est_job.schedule
+            self.assertIsInstance(crontab_utc_schedule, TzAwareCrontab)
+            self.assertIsInstance(crontab_est_schedule, TzAwareCrontab)
+            self.assertNotEqual(crontab_utc_schedule, crontab_est_schedule)
+            # Crontabs are validated in test_to_cron()
+
+        with self.subTest("Test TYPE_FUTURE schedules"):
+            # TYPE_FUTURE schedules are one off, not cron tabs:
+            self.assertEqual(self.one_off_utc_job.schedule.clocked_time, self.one_off_utc_job.start_time)
+            self.assertEqual(self.one_off_est_job.schedule.clocked_time, self.one_off_est_job.start_time)
+            self.assertEqual(
+                self.one_off_est_job.schedule.clocked_time - self.one_off_utc_job.schedule.clocked_time,
+                timedelta(hours=5),
+            )
+
+    def test_to_cron(self):
+        """Test the to_cron() method and its interaction with time zone variants."""
+
+        with self.subTest("Test TYPE_DAILY schedule with UTC time zone and UTC schedule time zone"):
+            self.daily_utc_job.refresh_from_db()
+            daily_utc_schedule = self.daily_utc_job.to_cron()
+            self.assertEqual(daily_utc_schedule.tz, ZoneInfo("UTC"))
+            self.assertEqual(daily_utc_schedule.hour, {17})
+            self.assertEqual(daily_utc_schedule.minute, {0})
+            last_run = datetime(2050, 1, 21, 17, 0, tzinfo=ZoneInfo("UTC"))
+            with time_machine.travel("2050-01-22 16:59 +0000"):
+                is_due, _ = daily_utc_schedule.is_due(last_run_at=last_run)
+                self.assertFalse(is_due)
+            with time_machine.travel("2050-01-22 17:00 +0000"):
+                is_due, _ = daily_utc_schedule.is_due(last_run_at=last_run)
+                self.assertTrue(is_due)
+
+        with self.subTest("Test TYPE_DAILY schedule with UTC time zone and EST schedule time zone"):
+            self.daily_est_job.refresh_from_db()
+            daily_est_schedule = self.daily_est_job.to_cron()
+            self.assertEqual(daily_est_schedule.tz, ZoneInfo("America/New_York"))
+            self.assertEqual(daily_est_schedule.hour, {17})
+            self.assertEqual(daily_est_schedule.minute, {0})
+            last_run = datetime(2050, 1, 21, 22, 0, tzinfo=ZoneInfo("UTC"))
+            with time_machine.travel("2050-01-22 21:59 +0000"):
+                is_due, _ = daily_est_schedule.is_due(last_run_at=last_run)
+                self.assertFalse(is_due)
+            with time_machine.travel("2050-01-22 22:00 +0000"):
+                is_due, _ = daily_est_schedule.is_due(last_run_at=last_run)
+                self.assertTrue(is_due)
+
+        with self.subTest("Test TYPE_CUSTOM schedule with UTC time zone and UTC schedule time zone"):
+            self.crontab_utc_job.refresh_from_db()
+            crontab_utc_schedule = self.crontab_utc_job.to_cron()
+            self.assertEqual(crontab_utc_schedule.tz, ZoneInfo("UTC"))
+            self.assertEqual(crontab_utc_schedule.hour, {17})
+            self.assertEqual(crontab_utc_schedule.minute, {0})
+
+        with self.subTest("Test TYPE_CUSTOM schedule with UTC time zone and EST schedule time zone"):
+            self.crontab_est_job.refresh_from_db()
+            crontab_est_schedule = self.crontab_est_job.to_cron()
+            self.assertEqual(crontab_est_schedule.tz, ZoneInfo("America/New_York"))
+            self.assertEqual(crontab_est_schedule.hour, {17})
+            self.assertEqual(crontab_est_schedule.minute, {0})
+
+        with self.subTest("Test TYPE_FUTURE schedules do not map to cron"):
+            with self.assertRaises(ValueError):
+                self.one_off_utc_job.to_cron()
+            with self.assertRaises(ValueError):
+                self.one_off_est_job.to_cron()
+
+        with override_settings(TIME_ZONE="America/New_York"):
+            with self.subTest("Test TYPE_DAILY schedule with EST time zone and UTC schedule time zone"):
+                self.daily_utc_job.refresh_from_db()
+                daily_utc_schedule = self.daily_utc_job.to_cron()
+                self.assertEqual(daily_utc_schedule.tz, ZoneInfo("UTC"))
+                self.assertEqual(daily_utc_schedule.hour, {17})
+                self.assertEqual(daily_utc_schedule.minute, {0})
+                last_run = datetime(2050, 1, 21, 12, 0, tzinfo=ZoneInfo("America/New_York"))
+                with time_machine.travel("2050-01-22 11:59 -0500"):
+                    is_due, _ = daily_utc_schedule.is_due(last_run_at=last_run)
+                    self.assertFalse(is_due)
+                with time_machine.travel("2050-01-22 12:00 -0500"):
+                    is_due, _ = daily_utc_schedule.is_due(last_run_at=last_run)
+                    self.assertTrue(is_due)
+
+            with self.subTest("Test TYPE_DAILY schedule with EST time zone and EST schedule time zone"):
+                self.daily_est_job.refresh_from_db()
+                daily_est_schedule = self.daily_est_job.to_cron()
+                self.assertEqual(daily_est_schedule.tz, ZoneInfo("America/New_York"))
+                self.assertEqual(daily_est_schedule.hour, {17})
+                self.assertEqual(daily_est_schedule.minute, {0})
+                last_run = datetime(2050, 1, 21, 22, 0, tzinfo=ZoneInfo("America/New_York"))
+                with time_machine.travel("2050-01-22 16:59 -0500"):
+                    is_due, _ = daily_est_schedule.is_due(last_run_at=last_run)
+                    self.assertFalse(is_due)
+                with time_machine.travel("2050-01-22 17:00 -0500"):
+                    is_due, _ = daily_est_schedule.is_due(last_run_at=last_run)
+                    self.assertTrue(is_due)
+
+            with self.subTest("Test TYPE_CUSTOM schedule with EST time zone and UTC schedule time zone"):
+                self.crontab_utc_job.refresh_from_db()
+                crontab_utc_schedule = self.crontab_utc_job.to_cron()
+                self.assertEqual(crontab_utc_schedule.tz, ZoneInfo("UTC"))
+                self.assertEqual(crontab_utc_schedule.hour, {17})
+                self.assertEqual(crontab_utc_schedule.minute, {0})
+
+            with self.subTest("Test TYPE_CUSTOM schedule with EST time zone and EST schedule time zone"):
+                self.crontab_est_job.refresh_from_db()
+                crontab_est_schedule = self.crontab_est_job.to_cron()
+                self.assertEqual(crontab_est_schedule.tz, ZoneInfo("America/New_York"))
+                self.assertEqual(crontab_est_schedule.hour, {17})
+                self.assertEqual(crontab_est_schedule.minute, {0})
+
+    def test_crontab_dst(self):
+        """Test that TYPE_CUSTOM behavior around DST is as expected."""
+        cronjob = ScheduledJob.objects.create(
+            name="DST Aware Cronjob",
+            task="pass.TestPass",
+            job_model=self.job_model,
+            enabled=False,
+            interval=JobExecutionType.TYPE_CUSTOM,
+            start_time=datetime(year=2024, month=1, day=1, hour=17, minute=0, tzinfo=ZoneInfo("America/New_York")),
+            crontab="0 17 * * *",  # 5 PM local time
+            time_zone=ZoneInfo("America/New_York"),
+        )
+
+        # Before DST takes effect
+        with self.subTest("Test UTC time zone with EST job"):
+            cronjob.refresh_from_db()
+            crontab = cronjob.to_cron()
+            with time_machine.travel("2024-03-09 21:59 +0000"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 8, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertFalse(is_due)
+            with time_machine.travel("2024-03-09 22:00 +0000"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 8, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertTrue(is_due)
+
+        with self.subTest("Test EST time zone with EST job"), override_settings(TIME_ZONE="America/New_York"):
+            cronjob.refresh_from_db()
+            crontab = cronjob.to_cron()
+            with time_machine.travel("2024-03-09 16:59 -0500"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 8, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertFalse(is_due)
+            with time_machine.travel("2024-03-09 17:00 -0500"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 8, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertTrue(is_due)
+
+        # Day that DST takes effect
+        with self.subTest("Test UTC time zone with EDT job"):
+            cronjob.refresh_from_db()
+            crontab = cronjob.to_cron()
+            with time_machine.travel("2024-03-10 20:59 +0000"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertFalse(is_due)
+            with time_machine.travel("2024-03-10 21:00 +0000"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertTrue(is_due)
+
+        with self.subTest("Test EDT time zone with EDT job"), override_settings(TIME_ZONE="America/New_York"):
+            cronjob.refresh_from_db()
+            crontab = cronjob.to_cron()
+            with time_machine.travel("2024-03-10 16:59 -0400"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertFalse(is_due)
+            with time_machine.travel("2024-03-10 17:00 -0400"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertTrue(is_due)
+
+    def test_daily_dst(self):
+        """Test the interaction of TYPE_DAILY around DST."""
+        daily = ScheduledJob.objects.create(
+            name="Daily Job",
+            task="pass.TestPass",
+            job_model=self.job_model,
+            enabled=False,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2024, month=1, day=1, hour=17, minute=0, tzinfo=ZoneInfo("America/New_York")),
+            time_zone=ZoneInfo("America/New_York"),
+        )
+
+        # Before DST takes effect
+        with self.subTest("Test UTC time zone with EST job"):
+            daily.refresh_from_db()
+            crontab = daily.to_cron()
+            with time_machine.travel("2024-03-09 21:59 +0000"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 8, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertFalse(is_due)
+            with time_machine.travel("2024-03-09 22:00 +0000"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 8, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertTrue(is_due)
+
+        with self.subTest("Test EST time zone with EST job"), override_settings(TIME_ZONE="America/New_York"):
+            daily.refresh_from_db()
+            crontab = daily.to_cron()
+            with time_machine.travel("2024-03-09 16:59 -0500"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 8, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertFalse(is_due)
+            with time_machine.travel("2024-03-09 17:00 -0500"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 8, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertTrue(is_due)
+
+        # Day that DST takes effect
+        with self.subTest("Test UTC time zone with EDT job"):
+            daily.refresh_from_db()
+            crontab = daily.to_cron()
+            with time_machine.travel("2024-03-10 20:59 +0000"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertFalse(is_due)
+            with time_machine.travel("2024-03-10 21:00 +0000"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertTrue(is_due)
+
+        with self.subTest("Test EDT time zone with EDT job"), override_settings(TIME_ZONE="America/New_York"):
+            daily.refresh_from_db()
+            crontab = daily.to_cron()
+            with time_machine.travel("2024-03-10 16:59 -0400"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertFalse(is_due)
+            with time_machine.travel("2024-03-10 17:00 -0400"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertTrue(is_due)
 
 
 class SecretTest(ModelTestCases.BaseModelTestCase):
