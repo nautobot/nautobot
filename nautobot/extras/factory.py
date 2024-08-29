@@ -215,9 +215,9 @@ class ScheduledJobFactory(BaseModelFactory):
         has_task_kwargs = NautobotBoolIterator(chance_of_getting_true=90)
 
     name = factory.Sequence(lambda n: f"Scheduled Job {n}")
-    interval = factory.Faker('random_element', elements=['hourly', 'daily', 'weekly'])
-    start_time = factory.Faker('future_datetime', end_date='+30d')
-    enabled = factory.Faker('boolean', chance_of_getting_true=90)
+    interval = factory.Faker("random_element", elements=["hourly", "daily", "weekly"])
+    start_time = factory.Faker("future_datetime", end_date="+30d")
+    enabled = factory.Faker("boolean", chance_of_getting_true=90)
     user = factory.Maybe("has_user", random_instance(get_user_model()), None)
     task = factory.Faker("word")
 
