@@ -163,5 +163,4 @@ class UserDefinedTimeZoneMiddleware:
                 timezone.activate(ZoneInfo(tzname))
             else:
                 timezone.deactivate()
-            # print("====> ", timezone.get_current_timezone())
         return self.get_response(request)
