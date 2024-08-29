@@ -1038,16 +1038,28 @@ class NoteTable(BaseTable):
 
 class ScheduledJobTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.LinkColumn()
+    name = tables.Column(linkify=True)
     job_model = tables.Column(verbose_name="Job", linkify=True)
     interval = tables.Column(verbose_name="Execution Type")
-    start_time = tables.Column(verbose_name="First Run")
-    last_run_at = tables.Column(verbose_name="Most Recent Run")
+    start_time = tables.DateTimeColumn(verbose_name="First Run", format=settings.SHORT_DATETIME_FORMAT)
+    last_run_at = tables.DateTimeColumn(verbose_name="Most Recent Run", format=settings.SHORT_DATETIME_FORMAT)
+    crontab = tables.Column()
     total_run_count = tables.Column(verbose_name="Total Run Count")
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob
-        fields = ("pk", "name", "job_model", "interval", "start_time", "last_run_at")
+        fields = (
+            "pk",
+            "name",
+            "total_run_count",
+            "job_model",
+            "interval",
+            "start_time",
+            "last_run_at",
+            "crontab",
+            "time_zone",
+        )
+        default_columns = ("pk", "name", "job_model", "interval", "last_run_at")
 
 
 class ScheduledJobApprovalQueueTable(BaseTable):
