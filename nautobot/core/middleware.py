@@ -6,6 +6,7 @@ from django.urls import resolve
 from django.urls.exceptions import Resolver404
 from django.utils import timezone
 from django.utils.deprecation import MiddlewareMixin
+from zoneinfo import ZoneInfo
 
 from nautobot.core.api.utils import is_api_request, rest_api_server_error
 from nautobot.core.authentication import (
@@ -17,7 +18,6 @@ from nautobot.core.settings_funcs import (
     remote_auth_enabled,
     sso_auth_enabled,
 )
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.views import server_error
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
@@ -158,10 +158,10 @@ class UserDefinedTimeZoneMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # tzname = request.session.get("django_timezone")
-        tzname = get_settings_or_config("DEFAULT_TIMEZONE")
-        if tzname:
-            timezone.activate(tzname)
-        else:
-            timezone.deactivate()
+        if request.user.is_authenticated:
+            if tzname := request.user.get_config("timezone"):
+                timezone.activate(ZoneInfo(tzname))
+            else:
+                timezone.deactivate()
+            # print("====> ", timezone.get_current_timezone())
         return self.get_response(request)

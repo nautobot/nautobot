@@ -14,6 +14,7 @@ from prometheus_client.parser import text_string_to_metric_families
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
+from nautobot.core.testing.utils import post_data
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
@@ -577,15 +578,25 @@ class SilkUIAccessTestCase(TestCase):
 
 class TimeZoneTestCase(TestCase):
     def test_timezone_change(self):
-        # Login as superuser
         self.user.is_superuser = True
         self.user.save()
         self.client.force_login(self.user)
 
-        # Attempt to access the view
-        with override_settings(DEFAULT_TIMEZONE="UTC"):
-            response = self.client.get(reverse("home"))
-            default_timezone = timezone.get_current_timezone_name()
-            print(default_timezone)
-            # default_datetime = timezone.now().astimezone(default_timezone)
-            self.assertEqual(response.status_code, 201)
+        timezone_choices = ["US/Eastern", "US/Hawaii"]
+        timezone_name = timezone.get_current_timezone_name()
+        if timezone_name == timezone_choices[0]:
+            new_timezone_name = timezone_choices[1]
+        else:
+            new_timezone_name = timezone_choices[0]
+
+        form_data = {"request_profiling": False, "timezone": new_timezone_name}
+        url = reverse("user:advanced_settings_edit")
+        request = {
+            "path": url,
+            "data": post_data(form_data),
+        }
+        response = self.client.post(**request)
+        response = self.client.get(url)
+        self.assertEqual(timezone.get_current_timezone_name(), new_timezone_name)
+        self.assertNotEqual(timezone_name, new_timezone_name)
+        self.assertHttpStatus(response, 200)

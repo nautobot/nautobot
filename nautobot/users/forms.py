@@ -3,8 +3,10 @@ from django.contrib.auth.forms import (
     AuthenticationForm,
     PasswordChangeForm as DjangoPasswordChangeForm,
 )
+from timezone_field import TimeZoneFormField
 
 from nautobot.core.forms import BootstrapMixin, DateTimePicker
+from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.utils.config import get_settings_or_config
 
 from .models import Token
@@ -48,6 +50,7 @@ class AdvancedProfileSettingsForm(BootstrapMixin, forms.Form):
         "This is for debugging purposes and should only be enabled when "
         "instructed by an administrator.",
     )
+    timezone = TimeZoneFormField(required=False, help_text="Set your default timezone", widget=StaticSelect2)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

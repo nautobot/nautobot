@@ -13,6 +13,7 @@ from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.encoding import iri_to_uri
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.timezone import get_default_timezone_name
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
@@ -341,7 +342,8 @@ class AdvancedProfileSettingsEditView(GenericView):
 
     def get(self, request):
         silk_record_requests = request.session.get("silk_record_requests", False)
-        form = AdvancedProfileSettingsForm(initial={"request_profiling": silk_record_requests})
+        tzname = request.user.get_config("timezone", get_default_timezone_name())
+        form = AdvancedProfileSettingsForm(initial={"request_profiling": silk_record_requests, "timezone": tzname})
 
         return render(
             request,
@@ -359,6 +361,8 @@ class AdvancedProfileSettingsEditView(GenericView):
 
         if form.is_valid():
             silk_record_requests = form.cleaned_data["request_profiling"]
+            if timezone := form.cleaned_data["timezone"]:
+                request.user.set_config("timezone", str(timezone), commit=True)
 
             # Set the value for `silk_record_requests` in the session
             request.session["silk_record_requests"] = silk_record_requests
