@@ -835,6 +835,10 @@ class JobResultTable(BaseTable):
         orderable=False,
         attrs={"td": {"class": "text-nowrap report-stats"}},
     )
+    scheduled_job = tables.Column(
+        linkify=True,
+        verbose_name="Scheduled Job",
+    )
     actions = tables.TemplateColumn(
         template_code="""
             {% load helpers %}
@@ -884,6 +888,7 @@ class JobResultTable(BaseTable):
             "date_created",
             "name",
             "job_model",
+            "scheduled_job",
             "duration",
             "date_done",
             "user",
