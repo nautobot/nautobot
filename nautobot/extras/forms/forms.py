@@ -1291,7 +1291,6 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         queryset=ScheduledJob.objects.all(),
         required=False,
         to_field_name="name",
-        widget=APISelectMultiple(api_url="/api/extras/scheduled-jobs/"),
     )
 
 
