@@ -524,7 +524,6 @@ class ExternalIntegration(PrimaryModel):
 
     def get_http_session(
         self,
-        accept="application/json",
         include_auth=True,
         authorization_header="Authorization",
         authorization_prefix="Bearer ",
@@ -545,7 +544,6 @@ class ExternalIntegration(PrimaryModel):
         If `include_auth` is `True` and no valid secrets are found then a ValueError is raised.
 
         Args:
-            accept (str): The content-type to accept from the remote endpoint.
             include_auth (bool, optional): Whether or not to set basic auth or token auth
                 values in the session. Defaults to True.
             authorization_header (str, optional): Used if `include_auth` is set. Sets the token header
@@ -564,7 +562,7 @@ class ExternalIntegration(PrimaryModel):
         if session.verify is False:
             urllib3.disable_warnings(category=urllib3.exceptions.InsecureRequestWarning)
 
-        session.header["Accept"] = accept
+        session.headers.update(self.render_headers({}))
 
         if include_auth:
             secrets_group: SecretsGroup = self.secrets_group
