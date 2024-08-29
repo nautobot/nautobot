@@ -115,7 +115,6 @@ class JobTest(TestCase):
         form = job_class().as_form()
         self.assertEqual(form.fields["dryrun"].initial, job_model.dryrun_default)
 
-
     def test_supports_dryrun(self):
         """
         Test job class supports_dryrun field and job model supports_dryrun field
@@ -848,9 +847,7 @@ class JobButtonReceiverTest(TestCase):
         name = "TestJobButtonReceiverSimple"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
-        self.assertSequenceEqual(
-            list(form.fields.keys()), ["object_pk", "object_model_name", "_profile", "_job_queue"]
-        )
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_pk", "object_model_name", "_profile", "_job_queue"])
 
     def test_hidden(self):
         module = "job_button_receiver"

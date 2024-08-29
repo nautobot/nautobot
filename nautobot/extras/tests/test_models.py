@@ -1146,7 +1146,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             "has_sensitive_variables": not self.job_containing_sensitive_variables.has_sensitive_variables,
             "soft_time_limit": 350,
             "time_limit": 650,
-            "task_queues": ["overridden", "worker", "queues"],
         }
 
         # Override values to non-defaults and ensure they are preserved

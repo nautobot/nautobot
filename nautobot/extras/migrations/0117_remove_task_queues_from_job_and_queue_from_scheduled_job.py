@@ -4,22 +4,21 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('extras', '0116_task_queue_to_job_queue_migration'),
+        ("extras", "0116_task_queue_to_job_queue_migration"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='job',
-            name='task_queues',
+            model_name="job",
+            name="task_queues",
         ),
         migrations.RemoveField(
-            model_name='job',
-            name='task_queues_override',
+            model_name="job",
+            name="task_queues_override",
         ),
         migrations.RemoveField(
-            model_name='scheduledjob',
-            name='queue',
+            model_name="scheduledjob",
+            name="queue",
         ),
     ]

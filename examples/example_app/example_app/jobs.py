@@ -1,7 +1,6 @@
 import sys
 import time
 
-from django.conf import settings
 from django.db import transaction
 
 from nautobot.apps.jobs import (

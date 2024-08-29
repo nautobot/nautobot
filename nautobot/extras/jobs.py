@@ -49,7 +49,7 @@ from nautobot.extras.models import (
     ObjectChange,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.utils import change_logged_models_queryset, task_queues_as_choices # noqa: F401
+from nautobot.extras.utils import change_logged_models_queryset, task_queues_as_choices  # noqa: F401
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
