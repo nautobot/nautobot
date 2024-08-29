@@ -7,12 +7,13 @@ import traceback
 
 from db_file_storage.model_utils import delete_file
 from db_file_storage.storage import DatabaseFileStorage
+from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.storage import get_storage_class
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models.signals import m2m_changed, post_delete, post_migrate, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -437,6 +438,143 @@ def dynamic_group_update_cached_members(sender, instance, **kwargs):
 
 post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroup)
 post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroupMembership)
+
+
+def apply_dynamic_group_table_triggers(sender, **kwargs):
+    """
+    Upon post_migrate, apply table triggers to call the dirty flag function for affected dynamic groups.
+
+    The reason this is done here, instead of during migration, is to ensure coverage for any new or
+    removed tables over time.
+
+    The basic premise of this business logic is to implement a layer of optimization for updating dynamic
+    group membership caching, specifically in the StaticGroupAssociation model.
+
+    This is accomplished in two main parts:
+
+        1.  The DynamicGroup model identifies and stores an array of table names involved in the compiled
+            query for that group. This array defines the scope of possible source data tables that could
+            result in the cache for that group being invalidated. Additionally, the DynamicGroup stores a
+            dirty flag, which signals that the group's cache should be refreshed. If the flag is false, we
+            are certain there have not been any changes in any of the source data tables for that group.
+        2.  Database triggers are used to automatically call a database function/procedure that will mark
+            relevant DynamicGroups as dirty. Using database triggers guarantees that we always act on any
+            changes to the source data (at least those changes enacted via SQL).
+
+    This signal is responsible for creating or updating the triggers and functions. Each eligible table
+    (identified by ORM models) gets three triggers registered, one each for INSERT, UPDATE, and DELETE
+    statement event types. This is because both PostgreSQL and MySQL limit triggers to a single table and
+    action type pairing. Each trigger calls a single function that is centrally defined and implements the
+    business logic of updating the dirty flag on any group that references the trigger-sourced table as an
+    involved table.
+
+    The obvious downside to this approach is that we do not scope the trigger events to specific data since
+    all we can reasonably know about are the table names involved in a dynamic group’s queryset. This means
+    we fire the trigger for any events related to the table and look for relevant groups to update. At first
+    glance, this seems inefficient; however, because these are triggers run directly by the database, they
+    are, in fact, very fast, and the actual update query is simple. We can scope the triggers in PostgreSQL
+    to statement-based execution, but MySQL only offers row-based execution. Currently, this distinction is
+    irrelevant because Nautobot rarely modifies more than a single row per statement.
+    """
+    with connection.cursor() as cursor:
+        db_vendor = connection.vendor
+
+        # PostgreSQL specific trigger creation
+        if db_vendor == 'postgresql':
+            trigger_function_sql = """
+            CREATE OR REPLACE FUNCTION set_group_dirty_flag() RETURNS TRIGGER AS $$
+                BEGIN
+                    UPDATE extras_dynamicgroup
+                    SET _maybe_dirty = true
+                    WHERE _involved_tables @> to_jsonb(TG_TABLE_NAME)::jsonb;
+                    RETURN NULL;
+                END;
+            $$ LANGUAGE plpgsql;
+            """
+
+            trigger_sql_template = """
+            DROP TRIGGER IF EXISTS tr_i_group_dirty_{table_name} ON {table_name};
+            CREATE TRIGGER tr_i_group_dirty_{table_name}
+            AFTER INSERT ON {table_name}
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION set_group_dirty_flag();
+
+            DROP TRIGGER IF EXISTS tr_u_group_dirty_{table_name} ON {table_name};
+            CREATE TRIGGER tr_u_group_dirty_{table_name}
+            AFTER UPDATE ON {table_name}
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION set_group_dirty_flag();
+
+            DROP TRIGGER IF EXISTS tr_d_group_dirty_{table_name} ON {table_name};
+            CREATE TRIGGER tr_d_group_dirty_{table_name}
+            AFTER DELETE ON {table_name}
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION set_group_dirty_flag();
+            """
+
+        # MySQL specific trigger creation
+        elif db_vendor == 'mysql':
+            trigger_function_sql = """
+            DROP PROCEDURE IF EXISTS set_group_dirty_flag;
+            DELIMITER $$
+            CREATE PROCEDURE set_group_dirty_flag(IN table_name VARCHAR(255))
+                BEGIN
+                    UPDATE extras_dynamicgroup
+                    SET _maybe_dirty = 1
+                    WHERE JSON_CONTAINS(_involved_tables, JSON_QUOTE(table_name), '$');
+                END $$
+            DELIMITER ;
+            """
+
+            trigger_sql_template = """
+            DROP TRIGGER IF EXISTS tr_i_group_dirty_{table_name} ON {table_name};
+            CREATE TRIGGER IF NOT EXISTS tr_i_group_dirty_{table_name}
+            AFTER INSERT ON {table_name}
+            FOR EACH ROW
+            BEGIN
+                CALL set_group_dirty_flag('{table_name}');
+            END;
+
+            DROP TRIGGER IF EXISTS tr_u_group_dirty_{table_name} ON {table_name};
+            CREATE TRIGGER IF NOT EXISTS tr_u_group_dirty_{table_name}
+            AFTER UPDATE ON {table_name}
+            FOR EACH ROW
+            BEGIN
+                CALL set_group_dirty_flag('{table_name}');
+            END;
+
+            DROP TRIGGER IF EXISTS tr_d_group_dirty_{table_name} ON {table_name};
+            CREATE TRIGGER IF NOT EXISTS tr_d_group_dirty_{table_name}
+            AFTER DELETE ON {table_name}
+            FOR EACH ROW
+            BEGIN
+                CALL set_group_dirty_flag('{table_name}');
+            END;
+            """
+
+        else:
+            # Unsupported database
+            raise Exception(f"Unsupported database backend {db_vendor}")
+
+        # Declare models we absolutely do not want triggers to fire for, mostly because they are out of scope of DGs
+        # anyway, and they tend to have a lot of data churn.
+        exculuded_models = [
+            ("extras", "jobresult"),
+            ("extras", "objectchange"),
+            ("extras", "dynamicgroup"),  # avoid an infinant loop of trigger executions when a group is updated :)
+            ("extras", "staticgroupassociation"),
+        ]
+
+        # Get a list of tables for which you want to ensure the trigger exists
+
+        tables = [t._meta.db_table for t in apps.get_models() if (t._meta.app_label, t._meta.model_name) not in exculuded_models]
+
+        # Create the stored procedure
+        cursor.execute(trigger_function_sql)
+
+        # Create triggers for each scoped table
+        for table_name in tables:
+            cursor.execute(trigger_sql_template.format(table_name=table_name))
 
 
 #

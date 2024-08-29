@@ -16,6 +16,7 @@ from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import DynamicModelChoiceField
 from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.models import BaseManager, BaseModel
+from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import is_uuid
@@ -71,6 +72,13 @@ class DynamicGroup(PrimaryModel):
         through_fields=("parent_group", "group"),
         related_name="parents",
     )
+    _maybe_dirty = models.BooleanField(default=True)  # Flag the membership cache is possibly out of date
+    _involved_tables = JSONArrayField(
+        base_field=models.CharField(
+            max_length=4096  # We are storing Model._meta.db_table names here, so this seems future proof.
+        ),
+        default=list
+    )  # List of all models (by table name) referenced in the compiled query
 
     objects = BaseManager.from_queryset(DynamicGroupQuerySet)()
     is_dynamic_group_associable_model = False
@@ -95,6 +103,14 @@ class DynamicGroup(PrimaryModel):
 
     def __str__(self):
         return self.name
+    
+    def save(self, *args, **kwargs):
+        # Ensure we set self._involved_tables
+        self._set_involved_tables()
+        for parent in self.parents.all():
+            parent.save()
+
+        super().save(*args, **kwargs)
 
     @property
     def model(self):
@@ -336,6 +352,10 @@ class DynamicGroup(PrimaryModel):
                     to_add.append(candidate)
             self._add_members(to_add)
 
+        # Finally, reset the dirty flag
+        self._maybe_dirty = False
+        self.save()
+
         return self.members
 
     def add_members(self, objects_to_add):
@@ -412,25 +432,31 @@ class DynamicGroup(PrimaryModel):
         """Deprecated  - use `members()` instead."""
         return self.members
 
-    def update_cached_members(self, members=None):
+    def update_cached_members(self, members=None, force=False):
         """
         Update the cached members of this group and return the resulting members.
         """
-        if members is None:
-            if self.group_type in (
-                DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
-                DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
-            ):
-                members = self._get_group_queryset()
-            elif self.group_type == DynamicGroupTypeChoices.TYPE_STATIC:
-                return self.members  # nothing to do
+
+        if self.group_type in (
+            DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        ):
+            if self._maybe_dirty or force:
+                self._set_members(self._get_group_queryset())
+                logger.debug("Refreshed cache for %s, now with %d members", self, self.count)
             else:
-                raise RuntimeError(f"Unknown/invalid group_type {self.group_type}")
+                logger.debug("Returning unmodfied cache for %s, because it is not marked dirty")
 
-        self._set_members(members)
-        logger.debug("Refreshed cache for %s, now with %d members", self, self.count)
+        elif self.group_type == DynamicGroupTypeChoices.TYPE_STATIC:
+            if members:
+                self._set_members(members)
+                return members
+            else:
+                logger.debug("Returning unmodfied cache for %s, because it is a static group")
+        else:
+            raise RuntimeError(f"Unknown/invalid group_type {self.group_type}")
 
-        return members
+        return self.members
 
     def has_member(self, obj, use_cache=False):
         """
@@ -1034,6 +1060,36 @@ class DynamicGroup(PrimaryModel):
             Ordered list of primary keys
         """
         return self._ordered_filter(self.__class__.objects, ["pk"], pk_list)
+    
+    def get_involved_models(self):
+        """
+        Generates the list of a all models which are in some way involved in the compiled query for the group.
+        """
+        query = self._get_group_queryset().query
+        involved_models = set()
+
+        # The alias_map stores information about all the tables involved in the query
+        for alias, join_info in query.alias_map.items():
+            if hasattr(join_info, 'join_field'):  # This will be True for Join objects
+                model = join_info.join_field.related_model
+            else:  # This handles BaseTable objects
+                # Get the model associated with the BaseTable
+                model = query.get_meta().model
+            involved_models.add(model)
+        else:
+            # Special case when an emply group filter is defined, the query will be blank, so we return BaseTable
+            model = query.get_meta().model
+            involved_models.add(model)
+
+        return list(involved_models)
+
+    def _set_involved_tables(self):
+        """
+        Using the output of self.get_involved_models(), derive the table names and set the value of self._involved_tables
+        """
+        model_list = self.get_involved_models()
+        table_names = [m._meta.db_table for m in model_list]
+        self._involved_tables = table_names
 
 
 class DynamicGroupMembership(BaseModel):

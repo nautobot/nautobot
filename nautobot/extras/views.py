@@ -724,7 +724,7 @@ class DynamicGroupView(generic.ObjectView):
 
         if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
             # Ensure that members cache is up-to-date for this specific group
-            members = instance.update_cached_members()
+            members = instance.update_cached_members(force=True)  # This ensures we always have a way to update, no matter what
             messages.success(request, f"Refreshed cached members list for {instance}")
         else:
             members = instance.members
