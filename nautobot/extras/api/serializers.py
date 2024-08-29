@@ -535,6 +535,8 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
 
 class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    task_queues = serializers.JSONField(read_only=True, required=False)
+
     class Meta:
         model = Job
         fields = "__all__"
@@ -595,6 +597,7 @@ class JobVariableSerializer(serializers.Serializer):
 
 class ScheduledJobSerializer(BaseModelSerializer):
     # start_time = serializers.DateTimeField(format=None, required=False)
+    queue = serializers.CharField(read_only=True, required=False)
 
     class Meta:
         model = ScheduledJob

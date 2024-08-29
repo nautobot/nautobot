@@ -293,7 +293,10 @@ class Job(PrimaryModel):
 
     @property
     def task_queues(self):
-        return self.job_queues.all().values_list("name", flat=True)
+        result = []
+        for queue in self.job_queues.all():
+            result.append(queue.display)
+        return result
 
     @task_queues.setter
     def task_queues(self, value):
