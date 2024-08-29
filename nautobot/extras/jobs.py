@@ -49,7 +49,7 @@ from nautobot.extras.models import (
     ObjectChange,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.utils import change_logged_models_queryset, task_queues_as_choices  # noqa: F401
+from nautobot.extras.utils import change_logged_models_queryset
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -473,7 +473,7 @@ class BaseJob:
             dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else cls.dryrun_default
             # Initialize job_queue choices
             form.fields["_job_queue"] = DynamicModelChoiceField(
-                queryset=JobQueue.objects.all(),
+                queryset=JobQueue.objects.filter(jobs=job_model),
                 query_params={"jobs": [job_model.pk]},
                 required=False,
                 help_text="The job queue to route this job to",

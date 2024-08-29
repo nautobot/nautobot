@@ -2589,7 +2589,7 @@ class JobTestCase(
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
-    @mock.patch("nautobot.extras.jobs.task_queues_as_choices")
+    @mock.patch("nautobot.extras.utils.task_queues_as_choices")
     def test_rerun_job(self, mock_task_queues_as_choices):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_jobresult")
@@ -2731,10 +2731,10 @@ class JobTestCase(
         self.test_pass.task_queues = []
         self.test_pass.task_queues_override = True
         self.test_pass.validated_save()
-
+        job_queue = JobQueue.objects.create(name="invalid", queue_type=JobQueueTypeChoices.TYPE_CELERY)
         data = {
             "_schedule_type": "immediately",
-            "job_queue": "invalid",
+            "_job_queue": job_queue.pk,
         }
 
         for run_url in self.run_urls:
@@ -2744,7 +2744,7 @@ class JobTestCase(
             errors = extract_form_failures(response.content.decode(response.charset))
             self.assertEqual(
                 errors,
-                ["job_queue: Select a valid choice. invalid is not one of the available choices."],
+                ["_job_queue: Select a valid choice. That choice is not one of the available choices."],
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)

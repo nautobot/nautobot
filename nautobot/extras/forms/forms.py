@@ -25,7 +25,6 @@ from nautobot.core.forms import (
     DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
-    JSONArrayFormField,
     JSONField,
     LaxURLField,
     MultipleContentTypeField,
