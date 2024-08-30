@@ -112,7 +112,6 @@ class Command(BaseCommand):
                 ObjectMetadataFactory,
                 RoleFactory,
                 SavedViewFactory,
-                ScheduledJobFactory,
                 StatusFactory,
                 TagFactory,
                 TeamFactory,
