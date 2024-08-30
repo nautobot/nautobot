@@ -166,7 +166,13 @@ class JobQueueAssignmentFactory(BaseModelFactory):
         model = JobQueueAssignment
 
     job = random_instance(Job, allow_null=True)
-    job_queue = random_instance(JobQueue, allow_null=True)
+
+    @factory.lazy_attribute
+    def job_queue(self):
+        job_queue = factory.random.randgen.choice(JobQueue.objects.all())
+        while JobQueueAssignment.objects.filter(job=self.job, job_queue=job_queue).exists():
+            job_queue = factory.random.randgen.choice(JobQueue.objects.all())
+        return job_queue
 
 
 class JobResultFactory(BaseModelFactory):
