@@ -65,7 +65,13 @@ from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 
 from . import filters, forms, tables
 from .api import serializers
-from .choices import DynamicGroupTypeChoices, JobExecutionType, JobResultStatusChoices, LogLevelChoices
+from .choices import (
+    DynamicGroupTypeChoices,
+    JobExecutionType,
+    JobQueueTypeChoices,
+    JobResultStatusChoices,
+    LogLevelChoices,
+)
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
     enqueue_pull_git_repository_and_refresh_data,
@@ -1314,7 +1320,8 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     initial = job_result.task_kwargs.copy()
                     job_queue = job_result.celery_kwargs.get("queue", None)
                     if job_queue is not None:
-                        initial["_job_queue"] = job_queue
+                        jq, _ = JobQueue.objects.get_or_create(name=job_queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY})
+                        initial["_job_queue"] = jq
                     initial["_profile"] = job_result.celery_kwargs.get("nautobot_job_profile", False)
                     initial.update(explicit_initial)
                 except JobResult.DoesNotExist:

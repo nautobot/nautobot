@@ -2589,18 +2589,16 @@ class JobTestCase(
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
-    @mock.patch("nautobot.extras.utils.task_queues_as_choices")
-    def test_rerun_job(self, mock_task_queues_as_choices):
+    def test_rerun_job(self):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_jobresult")
 
-        mock_task_queues_as_choices.return_value = [("default", ""), ("queue1", ""), ("uniquequeue", "")]
         job_queue = JobQueue.objects.create(name="uniquequeue", queue_type=JobQueueTypeChoices.TYPE_CELERY)
         job_celery_kwargs = {
             "nautobot_job_job_model_id": self.test_required_args.id,
             "nautobot_job_profile": True,
             "nautobot_job_user_id": self.user.id,
-            "queue": job_queue.pk,
+            "queue": job_queue.name,
         }
         self.test_required_args.job_queues.set([job_queue])
         previous_result = JobResult.objects.create(
