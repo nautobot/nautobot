@@ -166,6 +166,7 @@ class JobResultFactory(BaseModelFactory):
         ],
     )
     worker = factory.LazyAttribute(lambda obj: f"celery@{faker.Faker().hostname()}")
+    scheduled_job = factory.Maybe("has_scheduled_job", random_instance(ScheduledJob), None)
     task_args = factory.Maybe("has_task_args", factory.Faker("pyiterable"), "")
     task_kwargs = factory.Maybe("has_task_kwargs", factory.Faker("pydict"), {})
     # TODO celery_kwargs?
@@ -211,15 +212,14 @@ class ScheduledJobFactory(BaseModelFactory):
 
     class Params:
         has_user = NautobotBoolIterator(chance_of_getting_true=80)
-        has_task_args = NautobotBoolIterator(chance_of_getting_true=10)
-        has_task_kwargs = NautobotBoolIterator(chance_of_getting_true=90)
 
     name = factory.Sequence(lambda n: f"Scheduled Job {n}")
-    interval = factory.Faker("random_element", elements=["hourly", "daily", "weekly"])
+    interval = factory.Faker("random_element", elements=["immediately", "daily", "weekly"])
     start_time = factory.Faker("future_datetime", end_date="+30d")
     enabled = factory.Faker("boolean", chance_of_getting_true=90)
     user = factory.Maybe("has_user", random_instance(get_user_model()), None)
-    task = factory.Faker("word")
+    # task = factory.Faker("word")
+    task = random_instance(Job)
 
 
 class MetadataChoiceFactory(BaseModelFactory):

@@ -1125,15 +1125,16 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         jobs = Job.objects.all()[:3]
         cls.jobs = jobs
+        scheduled_jobs = ScheduledJob.objects.all()[:3]
+        cls.scheduled_jobs = scheduled_jobs
         user = UserFactory.create()
-        scheduled_job = ScheduledJob.objects.first()
-        for job in jobs:
+        for idx, job in enumerate(jobs):
             JobResult.objects.create(
                 job_model=job,
                 name=job.class_path,
                 user=user,
                 status=JobResultStatusChoices.STATUS_STARTED,
-                scheduled_job=scheduled_job,
+                scheduled_job=scheduled_jobs[idx],
             )
 
     def test_job_model(self):
@@ -1148,9 +1149,15 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
             )
 
     def test_scheduled_job(self):
-        job_results = list(JobResult.objects.all()[:3])
-        scheduled_jobs = list(ScheduledJob.objects.all())
-        self.assertEqual(scheduled_jobs[0], job_results[1].scheduled_job)
+        scheduled_jobs = list(self.scheduled_jobs[:2])
+        filter_params = [
+            {"scheduled_job": [scheduled_jobs[0].pk, scheduled_jobs[1].name]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(scheduled_job__in=scheduled_jobs).distinct(),
+            )
 
 
 class JobHookFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
