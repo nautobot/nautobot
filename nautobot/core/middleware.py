@@ -6,7 +6,11 @@ from django.urls import resolve
 from django.urls.exceptions import Resolver404
 from django.utils import timezone
 from django.utils.deprecation import MiddlewareMixin
-from zoneinfo import ZoneInfo
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:  # python 3.8
+    from backports.zoneinfo import ZoneInfo
 
 from nautobot.core.api.utils import is_api_request, rest_api_server_error
 from nautobot.core.authentication import (

@@ -9,6 +9,7 @@ from django.core.validators import MinValueValidator
 from django.db.models.fields import TextField
 from django.forms import inlineformset_factory, ModelMultipleChoiceField
 from django.urls.base import reverse
+from django.utils.timezone import get_current_timezone_name
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
@@ -1223,7 +1224,6 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
         required=False,
         label="Starting date and time",
         widget=DateTimePicker(),
-        help_text=f"The scheduled time is relative to the Nautobot configured timezone: {settings.TIME_ZONE}.",
     )
     _recurrence_custom_time = forms.CharField(
         required=False,
@@ -1259,6 +1259,16 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
                     ScheduledJob.get_crontab(cleaned_data.get("_recurrence_custom_time"))
                 except Exception as e:
                     raise ValidationError({"_recurrence_custom_time": e})
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # setting the help_text for `_schedule_start_time` here instead of in the field definition
+        # because Django needs to be fully initialized before we can accurately retrieve the current timezone.
+        self.fields[
+            "_schedule_start_time"
+        ].help_text = (
+            f"The scheduled time is relative to the Nautobot configured timezone: {get_current_timezone_name()}."
+        )
 
 
 class JobResultFilterForm(BootstrapMixin, forms.Form):
