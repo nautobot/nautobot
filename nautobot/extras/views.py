@@ -1391,6 +1391,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             )
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             job_queue = job_form.cleaned_data.pop("_job_queue", None)
+            job_queue = JobQueue.objects.get(pk=job_queue)
             dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
             profile = job_form.cleaned_data.pop("_profile")
@@ -1405,7 +1406,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     interval=schedule_type,
                     crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
                     approval_required=job_model.approval_required,
-                    task_queue=job_queue,
+                    task_queue=job_queue.name,
                     profile=profile,
                     **job_class.serialize_data(job_form.cleaned_data),
                 )
@@ -1424,7 +1425,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     job_model,
                     request.user,
                     profile=profile,
-                    task_queue=job_queue,
+                    task_queue=job_queue.name,
                     **job_class.serialize_data(job_kwargs),
                 )
 

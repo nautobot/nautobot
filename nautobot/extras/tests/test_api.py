@@ -2048,13 +2048,14 @@ class JobTest(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
-    def test_run_job_with_default_queue_with_empty_job_model_task_queues(self, _):
+    def test_run_job_with_default_queue_with_empty_job_model_job_queues(self, _):
         self.add_permissions("extras.run_job")
         data = {
             "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
         }
 
         job_model = Job.objects.get_for_class_path("pass.TestPass")
+        job_model.job_queues.set([])
         job_model.enabled = True
         job_model.validated_save()
         url = self.get_run_url("pass.TestPass")
@@ -2351,6 +2352,7 @@ class JobQueueAssignmentTestCase(APIViewTestCases.APIViewTestCase):
         super().setUp()
         jobs = Job.objects.all()[:3]
         job_queues = JobQueue.objects.all()[:3]
+        JobQueueAssignment.objects.all().delete()
         JobQueueAssignment.objects.create(job=jobs[0], job_queue=job_queues[0])
         JobQueueAssignment.objects.create(job=jobs[1], job_queue=job_queues[1])
         JobQueueAssignment.objects.create(job=jobs[2], job_queue=job_queues[2])
