@@ -89,6 +89,7 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualChassis,
 )
+from nautobot.dcim.models.device_components import VDC
 from nautobot.extras.filters import (
     LocalContextModelFilterSetMixin,
     NautobotFilterSet,
@@ -2103,4 +2104,45 @@ class ModuleBayFilterSet(NautobotFilterSet):
 
     class Meta:
         model = ModuleBay
+        fields = "__all__"
+
+
+class VDCFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin, StatusModelFilterSetMixin):
+    q = SearchFilter(
+        filter_predicates={
+            "device__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "tenant__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+        }
+    )
+    tenant = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Tenant.objects.all(),
+        to_field_name="name",
+        label="Tenant (name or ID)",
+    )
+    has_tenant = RelatedMembershipBooleanFilter(
+        field_name="tenant",
+        label="Has tenant",
+    )
+    has_primary_ip = RelatedMembershipBooleanFilter(
+        field_name="primary_ip",
+        label="Has Primary IP",
+    )
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Device (name or ID)",
+    )
+
+    class Meta:
+        model = VDC
         fields = "__all__"

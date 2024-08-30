@@ -94,6 +94,7 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualChassis,
 )
+from nautobot.dcim.models.device_components import VDC
 from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
@@ -1188,4 +1189,10 @@ class ModuleSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 class ModuleTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = ModuleType
+        fields = "__all__"
+
+
+class VDCSerializer(NautobotModelSerializer):
+    class Meta:
+        model = VDC
         fields = "__all__"

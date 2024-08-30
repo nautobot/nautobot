@@ -1277,3 +1277,28 @@ class ModuleBay(PrimaryModel):
 
         if not (self.parent_device or self.parent_module):
             raise ValidationError("Either parent_device or parent_module must be set")
+
+
+#
+# Virtual Device Contexts
+#
+
+
+class VDC(PrimaryModel):
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    device = models.ForeignKey("dcim.Device", on_delete=models.CASCADE, related_name="vdcs")
+    status = StatusField(blank=False, null=False)
+    primary_ip = models.ForeignKey(
+        to="ipam.IPAddress",
+        on_delete=models.SET_NULL,
+        related_name="primary_ip_for",
+        blank=True,
+        null=True,
+        verbose_name="Primary IPv4 or IPv6",
+    )
+    tenant = models.ForeignKey("tenancy.Tenant", on_delete=models.SET_NULL, related_name="vdcs", blank=True, null=True)
+    description = models.TextField()
+
+    class Meta:
+        # unique_together = ["device", "id"]
+        ordering = ("name",)

@@ -68,6 +68,7 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualChassis,
 )
+from nautobot.dcim.models.device_components import VDC
 from nautobot.extras.api.views import (
     ConfigContextQuerySetMixin,
     NautobotModelViewSet,
@@ -883,3 +884,9 @@ class ModuleTypeViewSet(NautobotModelViewSet):
     queryset = ModuleType.objects.select_related("manufacturer").prefetch_related("tags", "modules")
     serializer_class = serializers.ModuleTypeSerializer
     filterset_class = filters.ModuleTypeFilterSet
+
+
+class VDCViewSet(NautobotModelViewSet):
+    queryset = VDC.objects.select_related("device", "tenant", "primary_ip")
+    serializer_class = serializers.VDCSerializer
+    filterset_class = filters.VDCFilterSet
