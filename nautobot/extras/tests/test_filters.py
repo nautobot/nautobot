@@ -926,6 +926,14 @@ class JobQueueFilterSetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.
         ["name"],
     ]
 
+    @classmethod
+    def setUpTestData(cls):
+        # create some job queues that do not have jobs attached to them
+        # for has_jobs boolean filter
+        JobQueue.objects.create(name="Empty Job Queue 1", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+        JobQueue.objects.create(name="Empty Job Queue 2", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+        JobQueue.objects.create(name="Empty Job Queue 3", queue_type=JobQueueTypeChoices.TYPE_KUBERNETES)
+
     def test_queue_type(self):
         # we cannot add this test to self.generic_filter_tests because JobQueueTypeChoices only has two values.
         # self.generic_filter_tests needs at least three.
