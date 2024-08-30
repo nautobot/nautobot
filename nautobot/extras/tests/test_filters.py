@@ -950,14 +950,6 @@ class JobQueueAssignmentFilterSetTestCase(FilterTestCases.FilterTestCase):
         ("job_queue", "job_queue__name"),
     ]
 
-    @classmethod
-    def setUpTestData(cls):
-        jobs = Job.objects.all()[:3]
-        job_queues = JobQueue.objects.all()[:3]
-        for job in jobs:
-            for queue in job_queues:
-                JobQueueAssignment.objects.create(job=job, job_queue=queue)
-
 
 class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = JobResult.objects.all()
