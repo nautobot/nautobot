@@ -123,8 +123,12 @@ class JobTest(TestCase):
         module = "task_queues"
         name = "TestWorkerQueues"
         job_class, job_model = get_job_class_and_model(module, name)
-        jq_1, _ = models.JobQueue.objects.get_or_create(name="celery", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY})
-        jq_2, _ = models.JobQueue.objects.get_or_create(name="irrelevant", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY})
+        jq_1, _ = models.JobQueue.objects.get_or_create(
+            name="celery", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+        )
+        jq_2, _ = models.JobQueue.objects.get_or_create(
+            name="irrelevant", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+        )
         job_model.job_queues.set([jq_1, jq_2])
         form = job_class().as_form()
         self.assertQuerySetEqual(

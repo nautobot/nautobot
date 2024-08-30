@@ -1320,7 +1320,9 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     initial = job_result.task_kwargs.copy()
                     job_queue = job_result.celery_kwargs.get("queue", None)
                     if job_queue is not None:
-                        jq, _ = JobQueue.objects.get_or_create(name=job_queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY})
+                        jq, _ = JobQueue.objects.get_or_create(
+                            name=job_queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+                        )
                         initial["_job_queue"] = jq
                     initial["_profile"] = job_result.celery_kwargs.get("nautobot_job_profile", False)
                     initial.update(explicit_initial)
