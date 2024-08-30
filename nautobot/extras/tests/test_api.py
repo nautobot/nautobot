@@ -1565,7 +1565,7 @@ class JobTest(
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(
-            response.data["detail"], "Unable to process request: No celery workers running on queue default."
+            response.data["detail"].title(), "Unable To Process Request: No Celery Workers Running On Queue Default."
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

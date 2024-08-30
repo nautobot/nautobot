@@ -30,6 +30,7 @@ from nautobot.dcim.models import Device, Location, LocationType
 from nautobot.extras import models
 from nautobot.extras.choices import (
     JobExecutionType,
+    JobQueueTypeChoices,
     JobResultStatusChoices,
     LogLevelChoices,
     ObjectChangeEventContextChoices,
@@ -114,6 +115,23 @@ class JobTest(TestCase):
         job_model.save()
         form = job_class().as_form()
         self.assertEqual(form.fields["dryrun"].initial, job_model.dryrun_default)
+
+
+    def test_job_class_job_queues(self):
+        """
+        Test job form with custom task queues defined on the job class
+        """
+        module = "task_queues"
+        name = "TestWorkerQueues"
+        job_class, job_model = get_job_class_and_model(module, name)
+        jq_1, _ = models.JobQueue.objects.get_or_create(name="celery", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+        jq_2, _ = models.JobQueue.objects.get_or_create(name="irrelevant", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+        job_model.job_queues.set([jq_1, jq_2])
+        form = job_class().as_form()
+        self.assertQuerySetEqual(
+            form.fields["_job_queue"].queryset,
+            models.JobQueue.objects.filter(jobs=job_model),
+        )
 
     def test_supports_dryrun(self):
         """
