@@ -204,24 +204,6 @@ class JobResultFactory(BaseModelFactory):
                 self.date_done = self.date_created + timedelta(minutes=faker.Faker().random_int())
 
 
-class ScheduledJobFactory(BaseModelFactory):
-    """ScheduledJob model factory."""
-
-    class Meta:
-        model = ScheduledJob
-
-    class Params:
-        has_user = NautobotBoolIterator(chance_of_getting_true=80)
-
-    name = factory.Sequence(lambda n: f"Scheduled Job {n}")
-    interval = factory.Faker("random_element", elements=["immediately", "daily", "weekly"])
-    start_time = factory.Faker("future_datetime", end_date="+30d")
-    enabled = factory.Faker("boolean", chance_of_getting_true=90)
-    user = factory.Maybe("has_user", random_instance(get_user_model()), None)
-    # task = factory.Faker("word")
-    task = random_instance(Job)
-
-
 class MetadataChoiceFactory(BaseModelFactory):
     """MetadataChoice model factory."""
 
