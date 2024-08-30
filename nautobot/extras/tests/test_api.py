@@ -1351,7 +1351,6 @@ class JobTest(
 
     @classmethod
     def setUpTestData(cls):
-        job_queues = JobQueue.objects.all()[:3]
         cls.update_data = {
             # source, module_name, job_class_name, installed are NOT editable
             "grouping_override": True,
@@ -1373,7 +1372,6 @@ class JobTest(
             "time_limit": 650,
             "has_sensitive_variables": False,
             "has_sensitive_variables_override": True,
-            "job_queues": [queue.pk for queue in job_queues],
         }
         cls.bulk_update_data = {
             "enabled": True,
@@ -1381,7 +1379,6 @@ class JobTest(
             "approval_required": True,
             "has_sensitive_variables": False,
             "has_sensitive_variables_override": True,
-            "job_queues": [queue.pk for queue in job_queues],
         }
 
     run_success_response_status = status.HTTP_201_CREATED

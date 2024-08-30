@@ -36,6 +36,7 @@ from nautobot.extras.models import (
     Job,
     JobLogEntry,
     JobQueue,
+    JobQueueAssignment,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -156,6 +157,16 @@ class JobQueueFactory(PrimaryModelFactory):
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
     queue_type = factory.Iterator(JobQueueTypeChoices.CHOICES, getter=lambda choice: choice[0])
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
+
+
+class JobQueueAssignmentFactory(BaseModelFactory):
+    """JobQueueAssignment Factory"""
+
+    class Meta:
+        model = JobQueueAssignment
+
+    job = random_instance(Job, allow_null=True)
+    job_queue = random_instance(JobQueue, allow_null=True)
 
 
 class JobResultFactory(BaseModelFactory):
