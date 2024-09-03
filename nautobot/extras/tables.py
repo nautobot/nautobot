@@ -110,6 +110,10 @@ JOB_BUTTONS = """
 <a href="{% url 'extras:jobresult_list' %}?job_model={{ record.name | urlencode }}" class="btn btn-default btn-xs" title="Job Results"><i class="mdi mdi-format-list-bulleted" aria-hidden="true"></i></a>
 """
 
+SCHEDULED_JOB_BUTTONS = """
+<a href="{% url 'extras:jobresult_list' %}?scheduled_job={{ record.name | urlencode }}" class="btn btn-default btn-xs" title="Job Results"><i class="mdi mdi-format-list-bulleted" aria-hidden="true"></i></a>
+"""
+
 OBJECTCHANGE_OBJECT = """
 {% if record.changed_object and record.changed_object.get_absolute_url %}
     <a href="{{ record.changed_object.get_absolute_url }}">{{ record.object_repr }}</a>
@@ -835,6 +839,10 @@ class JobResultTable(BaseTable):
         orderable=False,
         attrs={"td": {"class": "text-nowrap report-stats"}},
     )
+    scheduled_job = tables.Column(
+        linkify=True,
+        verbose_name="Scheduled Job",
+    )
     actions = tables.TemplateColumn(
         template_code="""
             {% load helpers %}
@@ -884,6 +892,7 @@ class JobResultTable(BaseTable):
             "date_created",
             "name",
             "job_model",
+            "scheduled_job",
             "duration",
             "date_done",
             "user",
@@ -1045,6 +1054,7 @@ class ScheduledJobTable(BaseTable):
     last_run_at = tables.DateTimeColumn(verbose_name="Most Recent Run", format=settings.SHORT_DATETIME_FORMAT)
     crontab = tables.Column()
     total_run_count = tables.Column(verbose_name="Total Run Count")
+    actions = ButtonsColumn(ScheduledJob, buttons=("delete"), prepend_template=SCHEDULED_JOB_BUTTONS)
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob
@@ -1058,8 +1068,16 @@ class ScheduledJobTable(BaseTable):
             "last_run_at",
             "crontab",
             "time_zone",
+            "actions",
         )
-        default_columns = ("pk", "name", "job_model", "interval", "last_run_at")
+        default_columns = (
+            "pk",
+            "name",
+            "job_model",
+            "interval",
+            "last_run_at",
+            "actions",
+        )
 
 
 class ScheduledJobApprovalQueueTable(BaseTable):

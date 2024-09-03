@@ -912,6 +912,7 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "job_model__name": "icontains",
             "name": "icontains",
             "user__username": "icontains",
+            "scheduled_job__name": "icontains",
         },
     )
     job_model = NaturalKeyOrPKMultipleChoiceFilter(
@@ -923,11 +924,16 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         queryset=Job.objects.all(),
         label="Job (ID) - Deprecated (use job_model filter)",
     )
+    scheduled_job = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
+        queryset=ScheduledJob.objects.all(),
+        label="Scheduled Job (name or ID)",
+    )
     status = django_filters.MultipleChoiceFilter(choices=JobResultStatusChoices, null_value=None)
 
     class Meta:
         model = JobResult
-        fields = ["id", "date_created", "date_done", "name", "status", "user"]
+        fields = ["id", "date_created", "date_done", "name", "status", "user", "scheduled_job"]
 
 
 class JobLogEntryFilterSet(BaseFilterSet):

@@ -1,3 +1,4 @@
+from datetime import datetime
 import uuid
 
 from django.contrib.auth import get_user_model
@@ -5,6 +6,12 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import Q
 from django.test import override_settings, RequestFactory
+from django.utils.timezone import now
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:  # Python 3.8
+    from backports.zoneinfo import ZoneInfo
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.testing import FilterTestCases
@@ -22,6 +29,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     DynamicGroupTypeChoices,
+    JobExecutionType,
     JobResultStatusChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
@@ -93,6 +101,7 @@ from nautobot.extras.models import (
     RelationshipAssociation,
     Role,
     SavedView,
+    ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
@@ -1124,13 +1133,49 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         jobs = Job.objects.all()[:3]
         cls.jobs = jobs
+        user = User.objects.create(username="user1", is_active=True)
+        job_model = Job.objects.get_for_class_path("pass.TestPass")
+        scheduled_jobs = [
+            ScheduledJob.objects.create(
+                name="test1",
+                task="pass.TestPass",
+                job_model=job_model,
+                interval=JobExecutionType.TYPE_IMMEDIATELY,
+                user=user,
+                approval_required=True,
+                start_time=now(),
+            ),
+            ScheduledJob.objects.create(
+                name="test2",
+                task="pass.TestPass",
+                job_model=job_model,
+                interval=JobExecutionType.TYPE_DAILY,
+                user=user,
+                approval_required=True,
+                start_time=datetime(2020, 1, 23, 12, 34, 56, tzinfo=ZoneInfo("America/New_York")),
+                time_zone=ZoneInfo("America/New_York"),
+            ),
+            ScheduledJob.objects.create(
+                name="test3",
+                task="pass.TestPass",
+                job_model=job_model,
+                interval=JobExecutionType.TYPE_CUSTOM,
+                crontab="34 12 * * *",
+                enabled=False,
+                user=user,
+                approval_required=True,
+                start_time=now(),
+            ),
+        ]
+        cls.scheduled_jobs = scheduled_jobs
         user = UserFactory.create()
-        for job in jobs:
+        for idx, job in enumerate(jobs):
             JobResult.objects.create(
                 job_model=job,
                 name=job.class_path,
                 user=user,
                 status=JobResultStatusChoices.STATUS_STARTED,
+                scheduled_job=scheduled_jobs[idx],
             )
 
     def test_job_model(self):
@@ -1142,6 +1187,17 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
         for params in filter_params:
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(job_model__in=jobs).distinct()
+            )
+
+    def test_scheduled_job(self):
+        scheduled_jobs = list(self.scheduled_jobs[:2])
+        filter_params = [
+            {"scheduled_job": [scheduled_jobs[0].pk, scheduled_jobs[1].name]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(scheduled_job__in=scheduled_jobs).distinct(),
             )
 
 

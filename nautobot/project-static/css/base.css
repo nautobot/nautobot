@@ -862,6 +862,12 @@ td span.hover_copy:hover .hover_copy_button {
 .collapse-icon {
     float: right;
     cursor: pointer !important;
+    transition: transform 0.3s ease;
+}
+
+/* Rotates element 180 degrees */
+.rotated180 {
+    transform: rotate(180deg);
 }
 
 /* Draggable homepage panels fade in effect on page load */
