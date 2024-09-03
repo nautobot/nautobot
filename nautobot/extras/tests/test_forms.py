@@ -388,6 +388,7 @@ class RelationshipModelFormTestCase(TestCase):
         cls.vlangroup_form_base_data = {
             "location": cls.location.pk,
             "name": "New VLAN Group",
+            "range": "1-4094",
         }
 
     def test_create_relationship_associations_valid_1(self):
@@ -665,6 +666,7 @@ class RelationshipModelFormTestCase(TestCase):
             data={
                 "name": self.vlangroup_1.name,
                 "location": self.location,
+                "range": "1-4094",
                 f"cr_{self.relationship_2.key}__source": self.device_2.pk,
             },
         )

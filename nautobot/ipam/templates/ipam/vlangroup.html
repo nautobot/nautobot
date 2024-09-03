@@ -18,6 +18,10 @@
                     <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
                 </tr>
                 <tr>
+                    <td>Range</td>
+                    <td>{{ object.range }}</td>
+                </tr>
+                <tr>
                     <td>VLANs</td>
                     <td>
                         <a href="{% url 'ipam:vlan_list' %}?vlan_group={{ object.pk }}">{{ vlans_count }}</a>
