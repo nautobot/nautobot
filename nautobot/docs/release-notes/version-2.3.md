@@ -121,8 +121,10 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 
 ### Added
 
+- [#5180](https://github.com/nautobot/nautobot/issues/5180) - Add filtering Job Results by Scheduled Job.
 - [#5591](https://github.com/nautobot/nautobot/issues/5591) - Added `time_zone` field to `ScheduledJob` model.
 - [#6120](https://github.com/nautobot/nautobot/issues/6120) - Added Status Field to VRF model.
+- [#6129](https://github.com/nautobot/nautobot/issues/6129) - Added collapsible icon rotation to homepage panels.
 
 ### Fixed
 
@@ -131,6 +133,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6123](https://github.com/nautobot/nautobot/issues/6123) - Fixed cable status coloring for `DeviceModule*Table` rows in dark mode.
 - [#6131](https://github.com/nautobot/nautobot/issues/6131) - Fixed a regression in which IP addresses and prefixes created through the `/api/ipam/prefixes/<uuid>/available-ips/` and `/api/ipam/prefixes/<uuid>/available-prefixes/` REST API endpoints could not be assigned custom field data during their creation.
 - [#6146](https://github.com/nautobot/nautobot/issues/6146) - Added missing DynamicGroup content to Device Detail View and Software Image File Detail View.
+- [#6175](https://github.com/nautobot/nautobot/issues/6175) - Prevented some `AttributeError` exceptions from being raised when an App contains a model that doesn't inherit from `BaseModel`.
 
 ### Housekeeping
 
