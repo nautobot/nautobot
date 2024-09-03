@@ -1,0 +1,1 @@
+Prevented some `AttributeError` exceptions from being raised when an App contains a model that doesn't inherit from `BaseModel`.

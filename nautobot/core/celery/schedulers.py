@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from datetime import datetime
 import logging
 from pathlib import Path
 
@@ -20,7 +21,10 @@ class NautobotScheduleEntry(ModelEntry):
 
     def __init__(self, model, app=None):
         """Initialize the model entry."""
+        # copy-paste from django_celery_beat.schedulers
         self.app = app or current_app._get_current_object()
+
+        # Nautobot-specific logic
         self.name = f"{model.name}_{model.pk}"
         self.task = "nautobot.extras.jobs.run_job"
         try:
@@ -33,6 +37,8 @@ class NautobotScheduleEntry(ModelEntry):
         except (TypeError, ValueError) as exc:
             logger.exception("Removing schedule %s for argument deserialization error: %s", self.name, exc)
             self._disable(model)
+
+        # copy-paste from django_celery_beat.schedulers
         try:
             self.schedule = model.schedule
         except model.DoesNotExist:
@@ -42,6 +48,7 @@ class NautobotScheduleEntry(ModelEntry):
             )
             self._disable(model)
 
+        # Nautobot-specific logic
         self.options = {"nautobot_job_scheduled_job_id": model.id, "headers": {}}
 
         if model.user:
@@ -65,13 +72,24 @@ class NautobotScheduleEntry(ModelEntry):
         if isinstance(model.celery_kwargs, Mapping):
             self.options.update(model.celery_kwargs)
 
+        # copy-paste from django_celery_beat.schedulers
         self.total_run_count = model.total_run_count
         self.model = model
 
         if not model.last_run_at:
             model.last_run_at = self._default_now()
+            # if last_run_at is not set and
+            # model.start_time last_run_at should be in way past.
+            # This will trigger the job to run at start_time
+            # and avoid the heap block.
+            if model.start_time:
+                model.last_run_at = model.last_run_at - datetime.timedelta(days=365 * 30)
 
         self.last_run_at = model.last_run_at
+
+    def _default_now(self):
+        """Instead of using self.app.timezone, use the timezone specific to this schedule entry."""
+        return datetime.now(self.model.time_zone)
 
 
 class NautobotDatabaseScheduler(DatabaseScheduler):
