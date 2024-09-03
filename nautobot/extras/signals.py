@@ -11,7 +11,7 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.files.storage import get_storage_class
 from django.db import connection, transaction
 from django.db.models.signals import m2m_changed, post_delete, post_migrate, post_save, pre_delete, pre_save
@@ -436,8 +436,9 @@ def dynamic_group_update_cached_members(sender, instance, **kwargs):
         ancestor.update_cached_members()
 
 
-post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroup)
+# post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroup)  # TODO(john) revisit this and the pattern of just doing it in the save method directly, to avoid duplicate cache update calls
 post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroupMembership)
+# post_save.connect(dynamic_group_update_cached_members, sender=ConfigContext.dynamic_groups.through)
 
 
 def apply_dynamic_group_table_triggers(sender, **kwargs):
@@ -469,7 +470,7 @@ def apply_dynamic_group_table_triggers(sender, **kwargs):
     involved table.
 
     The obvious downside to this approach is that we do not scope the trigger events to specific data since
-    all we can reasonably know about are the table names involved in a dynamic group’s queryset. This means
+    all we can reasonably know about are the table names involved in a dynamic group's queryset. This means
     we fire the trigger for any events related to the table and look for relevant groups to update. At first
     glance, this seems inefficient; however, because these are triggers run directly by the database, they
     are, in fact, very fast, and the actual update query is simple. We can scope the triggers in PostgreSQL
@@ -480,7 +481,7 @@ def apply_dynamic_group_table_triggers(sender, **kwargs):
         db_vendor = connection.vendor
 
         # PostgreSQL specific trigger creation
-        if db_vendor == 'postgresql':
+        if db_vendor == "postgresql":
             trigger_function_sql = """
             CREATE OR REPLACE FUNCTION set_group_dirty_flag() RETURNS TRIGGER AS $$
                 BEGIN
@@ -513,7 +514,7 @@ def apply_dynamic_group_table_triggers(sender, **kwargs):
             """
 
         # MySQL specific trigger creation
-        elif db_vendor == 'mysql':
+        elif db_vendor == "mysql":
             trigger_function_sql = """
             DROP PROCEDURE IF EXISTS set_group_dirty_flag;
             DELIMITER $$
@@ -554,7 +555,7 @@ def apply_dynamic_group_table_triggers(sender, **kwargs):
 
         else:
             # Unsupported database
-            raise Exception(f"Unsupported database backend {db_vendor}")
+            raise ImproperlyConfigured(f"Unsupported database backend {db_vendor}")
 
         # Declare models we absolutely do not want triggers to fire for, mostly because they are out of scope of DGs
         # anyway, and they tend to have a lot of data churn.
@@ -567,7 +568,11 @@ def apply_dynamic_group_table_triggers(sender, **kwargs):
 
         # Get a list of tables for which you want to ensure the trigger exists
 
-        tables = [t._meta.db_table for t in apps.get_models() if (t._meta.app_label, t._meta.model_name) not in exculuded_models]
+        tables = [
+            t._meta.db_table
+            for t in apps.get_models()
+            if (t._meta.app_label, t._meta.model_name) not in exculuded_models
+        ]
 
         # Create the stored procedure
         cursor.execute(trigger_function_sql)
@@ -593,7 +598,7 @@ def job_result_delete_associated_files(instance, **kwargs):
             file_proxy.file.delete()
 
 
-def refresh_job_models(sender, *, apps, **kwargs):
+def refresh_job_models(sender, *, apps, **kwargs):  # pylint: disable=redefined-outer-name
     """
     Callback for the nautobot_database_ready signal; updates Jobs in the database based on Job source file availability.
     """

@@ -599,8 +599,12 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         dynamic_group_context_2.dynamic_groups.add(self.dynamic_group_2)
 
         # Refresh caches
-        self.dynamic_groups.update_cached_members()
-        self.dynamic_group_2.update_cached_members()
+        self.dynamic_groups.update_cached_members(
+            force=True  # TODO(john) triggers are not currently installed on the test DB
+        )
+        self.dynamic_group_2.update_cached_members(
+            force=True  # TODO(john) triggers are not currently installed on the test DB
+        )
 
         self.assertIn("dynamic context 1", self.device.get_config_context().values())
         self.assertNotIn("dynamic context 2", self.device.get_config_context().values())

@@ -77,7 +77,8 @@ class DynamicGroup(PrimaryModel):
         base_field=models.CharField(
             max_length=4096  # We are storing Model._meta.db_table names here, so this seems future proof.
         ),
-        default=list
+        default=list,
+        blank=True,
     )  # List of all models (by table name) referenced in the compiled query
 
     objects = BaseManager.from_queryset(DynamicGroupQuerySet)()
@@ -103,14 +104,17 @@ class DynamicGroup(PrimaryModel):
 
     def __str__(self):
         return self.name
-    
-    def save(self, *args, **kwargs):
+
+    def save(self, *args, update_cache=True, **kwargs):
         # Ensure we set self._involved_tables
         self._set_involved_tables()
         for parent in self.parents.all():
             parent.save()
 
         super().save(*args, **kwargs)
+
+        if update_cache:
+            self.update_cached_members(force=True)
 
     @property
     def model(self):
@@ -354,7 +358,7 @@ class DynamicGroup(PrimaryModel):
 
         # Finally, reset the dirty flag
         self._maybe_dirty = False
-        self.save()
+        self.save(update_cache=False)  # Avoid save() calling for another cache update
 
         return self.members
 
@@ -436,16 +440,15 @@ class DynamicGroup(PrimaryModel):
         """
         Update the cached members of this group and return the resulting members.
         """
-
         if self.group_type in (
             DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
             DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
         ):
             if self._maybe_dirty or force:
                 self._set_members(self._get_group_queryset())
-                logger.debug("Refreshed cache for %s, now with %d members", self, self.count)
+                logger.debug("Refreshed cache for %s, now with %d members, force=%r", self, self.count, force)
             else:
-                logger.debug("Returning unmodfied cache for %s, because it is not marked dirty")
+                logger.debug("Returning unmodfied cache for %s, because it is not marked dirty", self)
 
         elif self.group_type == DynamicGroupTypeChoices.TYPE_STATIC:
             if members:
@@ -1060,26 +1063,24 @@ class DynamicGroup(PrimaryModel):
             Ordered list of primary keys
         """
         return self._ordered_filter(self.__class__.objects, ["pk"], pk_list)
-    
+
     def get_involved_models(self):
         """
         Generates the list of a all models which are in some way involved in the compiled query for the group.
         """
+        if self.group_type == DynamicGroupTypeChoices.TYPE_STATIC:
+            return [self.model]
+
         query = self._get_group_queryset().query
-        involved_models = set()
+
+        # Start with the group model (queryset BaseTable)
+        model = query.get_meta().model
+        involved_models = set([model])
 
         # The alias_map stores information about all the tables involved in the query
-        for alias, join_info in query.alias_map.items():
-            if hasattr(join_info, 'join_field'):  # This will be True for Join objects
-                model = join_info.join_field.related_model
-            else:  # This handles BaseTable objects
-                # Get the model associated with the BaseTable
-                model = query.get_meta().model
-            involved_models.add(model)
-        else:
-            # Special case when an emply group filter is defined, the query will be blank, so we return BaseTable
-            model = query.get_meta().model
-            involved_models.add(model)
+        for join_info in query.alias_map.values():
+            if hasattr(join_info, "join_field"):  # This will be True for Join objects
+                involved_models.add(join_info.join_field.related_model)
 
         return list(involved_models)
 

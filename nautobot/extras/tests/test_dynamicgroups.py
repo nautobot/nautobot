@@ -1213,3 +1213,37 @@ class DynamicGroupMembershipFilterTest(DynamicGroupTestBase, FilterTestCases.Fil
         for value, cnt in tests.items():
             params = {"q": value}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), cnt)
+
+
+class DynamicGroupMembershipInvolvedTablesTest(DynamicGroupTestBase):
+    """
+    Test the logic related to idenfitying storing involved DB tables on groups
+    """
+
+    def test_involed_models_method(self):
+        """
+        For each group verify the correct response from group.get_involved_models()
+        """
+        group = DynamicGroup(group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER, content_type=self.device_ct)
+        self.assertCountEqual(group.get_involved_models(), [Device])
+
+        group = DynamicGroup(
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            content_type=self.device_ct,
+            filter={"name": "foobar"},
+        )
+        self.assertCountEqual(group.get_involved_models(), [Device])
+
+        group = DynamicGroup(
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            content_type=self.device_ct,
+            filter={"status": self.status_1.name},
+        )
+        self.assertCountEqual(group.get_involved_models(), [Device, Status])
+
+        group = DynamicGroup(
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            content_type=self.device_ct,
+            filter={"status": [self.status_1.name], "location": [self.locations[0].name], "name": "foobar"},
+        )
+        self.assertCountEqual(group.get_involved_models(), [Device, Status, Location])
