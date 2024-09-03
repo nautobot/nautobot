@@ -41,7 +41,6 @@ from nautobot.extras.models import (
     ObjectMetadata,
     Role,
     SavedView,
-    ScheduledJob,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -166,7 +165,6 @@ class JobResultFactory(BaseModelFactory):
         ],
     )
     worker = factory.LazyAttribute(lambda obj: f"celery@{faker.Faker().hostname()}")
-    scheduled_job = factory.Maybe("has_scheduled_job", random_instance(ScheduledJob), None)
     task_args = factory.Maybe("has_task_args", factory.Faker("pyiterable"), "")
     task_kwargs = factory.Maybe("has_task_kwargs", factory.Faker("pydict"), {})
     # TODO celery_kwargs?
