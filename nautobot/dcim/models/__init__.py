@@ -26,6 +26,7 @@ from .device_components import (
     PowerOutlet,
     PowerPort,
     RearPort,
+    VirtualDeviceContext,
 )
 from .devices import (
     Controller,
@@ -95,4 +96,5 @@ __all__ = (
     "SoftwareImageFile",
     "SoftwareVersion",
     "VirtualChassis",
+    "VirtualDeviceContext",
 )

@@ -66,6 +66,7 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualChassis,
 )
+from nautobot.dcim.models.device_components import VirtualDeviceContext
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
@@ -3365,4 +3366,43 @@ class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
         }
         cls.bulk_update_data = {
             "weight": 300,
+        }
+
+
+class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
+    model = VirtualDeviceContext
+
+    @classmethod
+    def setUpTestData(cls):
+        devices = Device.objects.all()
+        status = Status.objects.get_for_model(VirtualDeviceContext)[0]
+        tenants = Tenant.objects.all()
+
+        cls.create_data = [
+            {
+                "name": "VirtualDeviceContext 1",
+                "device": devices[0].pk,
+                "identifier": 100,
+                "status": status.pk,
+                "tenant": tenants[0].pk,
+            },
+            {
+                "name": "VirtualDeviceContext 2",
+                "identifier": 200,
+                "status": status.pk,
+                "tenant": tenants[1].pk,
+            },
+            {
+                "name": "VirtualDeviceContext 3",
+                "device": devices[2].pk,
+                "status": status.pk,
+                "tenant": tenants[2].pk,
+            },
+        ]
+        # changing controller is error-prone since a child group must have the same controller as its parent
+        cls.update_data = {
+            "tenant": tenants[3].pk,
+        }
+        cls.bulk_update_data = {
+            "tenant": tenants[4].pk,
         }

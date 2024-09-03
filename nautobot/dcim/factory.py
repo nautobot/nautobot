@@ -59,6 +59,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
 )
+from nautobot.dcim.models.device_components import VirtualDeviceContext
 from nautobot.extras.models import ExternalIntegration, Role, Status
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import Prefix, VLAN, VLANGroup
@@ -945,3 +946,31 @@ class ModuleBayTemplateFactory(ModularDeviceComponentTemplateFactory):
         factory.LazyAttribute(lambda o: o.device_type.module_bay_templates.count() + 1),
         factory.LazyAttribute(lambda o: o.module_type.module_bay_templates.count() + 1),
     )
+
+
+class VirtualDeviceContextFactory(PrimaryModelFactory):
+    class Meta:
+        model = VirtualDeviceContext
+        exclude = (
+            # "has_device",
+            # "has_tenant",
+        )
+
+    status = random_instance(
+        lambda: Status.objects.get_for_model(VirtualDeviceContext),
+        allow_null=False,
+    )
+    identifier = factory.Sequence(lambda n: n + 100)
+    name = factory.Sequence(lambda n: f"VirtualDeviceContext {n}")
+    # has_device = NautobotBoolIterator()
+    # device = factory.Maybe(
+    #     "has_device",
+    #     random_instance(Device, allow_null=False),
+    #     None,
+    # )
+    # has_tenant = NautobotBoolIterator()
+    # tenant = factory.Maybe(
+    #     "has_tenant",
+    #     random_instance(Tenant, allow_null=False),
+    #     None,
+    # )
