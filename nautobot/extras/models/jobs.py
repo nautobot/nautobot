@@ -1138,7 +1138,7 @@ class ScheduledJob(BaseModel):
     @queue.setter
     def queue(self, value):
         if value:
-            self.job_queue = JobQueue.objects.get_or_create(
+            self.job_queue, _ = JobQueue.objects.get_or_create(
                 name=value, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
             )
 

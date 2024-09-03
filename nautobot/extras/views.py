@@ -2,6 +2,7 @@ import logging
 from urllib.parse import parse_qs
 
 from celery import chain
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
@@ -1391,7 +1392,12 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             )
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             job_queue = job_form.cleaned_data.pop("_job_queue", None)
-            job_queue = JobQueue.objects.get(pk=job_queue)
+            if job_queue is None:
+                job_queue, _ = JobQueue.objects.get_or_create(
+                    name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+                )
+            else:
+                job_queue = JobQueue.objects.get(pk=job_queue)
             dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
             profile = job_form.cleaned_data.pop("_profile")
