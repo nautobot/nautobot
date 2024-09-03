@@ -535,6 +535,7 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
 
 class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    # task_queues is added to maintain backward compatibility with versions pre v2.4.
     task_queues = serializers.JSONField(read_only=True, required=False)
 
     class Meta:
@@ -597,6 +598,7 @@ class JobVariableSerializer(serializers.Serializer):
 
 class ScheduledJobSerializer(BaseModelSerializer):
     # start_time = serializers.DateTimeField(format=None, required=False)
+    # queue is added to maintain backward compatibility with versions pre v2.4.
     queue = serializers.CharField(read_only=True, required=False)
 
     class Meta:

@@ -1570,7 +1570,7 @@ class JobTest(
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(
-            response.data["detail"].title(), "Unable To Process Request: No Celery Workers Running On Queue Default."
+            response.data["detail"], "Unable to process request: No celery workers running on queue default."
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1678,6 +1678,7 @@ class JobTest(
         # This handles things like ObjectVar fields looked up by non-UUID
         # Jobs are executed with deserialized data
         deserialized_data = self.job_class.deserialize_data(job_data)
+        self.job_model.job_queues.set([])
 
         self.assertEqual(
             deserialized_data,
@@ -2046,7 +2047,10 @@ class JobTest(
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
         }
-
+        jq, _ = JobQueue.objects.get_or_create(
+            name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+        )
+        self.job_model.job_queues.set([jq])
         url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)

@@ -474,6 +474,12 @@ class BaseJob:
         """
 
         form = cls.as_form_class()(data, files, initial=initial)
+        form.fields["_profile"] = forms.BooleanField(
+            required=False,
+            initial=False,
+            label="Profile job execution",
+            help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
+        )
 
         try:
             job_model = JobModel.objects.get_for_class_path(cls.class_path)
@@ -504,6 +510,11 @@ class BaseJob:
             # Set `disabled=True` on all fields
             for _, field in form.fields.items():
                 field.disabled = True
+
+        for field in ["_profile", "_job_queue"]:
+            if field in form.fields:
+                value = form.fields.pop(field)
+                form.fields[field] = value
 
         return form
 

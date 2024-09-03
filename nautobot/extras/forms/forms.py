@@ -950,21 +950,6 @@ class JobForm(BootstrapMixin, forms.Form):
     controlled by the job definition. See `nautobot.extras.jobs.BaseJob.as_form`
     """
 
-    _profile = forms.BooleanField(
-        required=False,
-        initial=False,
-        label="Profile job execution",
-        help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
-    )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Move special fields to the end of the form
-        for field in ["_profile"]:
-            value = self.fields.pop(field)
-            self.fields[field] = value
-
 
 class JobEditForm(NautobotModelForm):
     job_queues = DynamicModelMultipleChoiceField(
@@ -1223,6 +1208,7 @@ class JobQueueBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         model = JobQueue
         nullable_fields = [
             "description",
+            "tenant",
         ]
 
 
