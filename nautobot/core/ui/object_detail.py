@@ -397,12 +397,8 @@ class LayoutTwoColumn(Layout):
     def __init__(self, *, left_panels=None, right_panels=None, **kwargs):
         """Define a two-column layout with the given left column and right column of panels."""
         super().__init__(**kwargs)
-        if left_panels is None:
-            left_panels = []
-        if right_panels is None:
-            right_panels = []
-        self.left_panels = list(left_panels)
-        self.right_panels = list(right_panels)
+        self.left_panels = list(left_panels) if left_panels is not None else []
+        self.right_panels = list(right_panels) if right_panels is not None else []
 
     def render(self, request, instance):
         return format_html(
@@ -436,9 +432,7 @@ class LayoutFullWidth(Layout):
     def __init__(self, *, panels=None, **kwargs):
         """Define a full-width layout containing the given panels."""
         super().__init__(**kwargs)
-        if panels is None:
-            panels = []
-        self.panels = list(panels)
+        self.panels = list(panels) if panels is not None else []
 
     def render(self, request, instance):
         return format_html(
