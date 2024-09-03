@@ -23,6 +23,11 @@
                         <a href="{% url 'ipam:vlan_list' %}?vlan_group={{ object.pk }}">{{ vlans_count }}</a>
                     </td>
                 </tr>
+                <tr>
+                    <td>Ranges</td>
+                    <td>{{ object.range_str }}</td>
+                </tr>
+
             </table>
         </div>
 {% endblock content_left_page %}

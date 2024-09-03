@@ -1295,6 +1295,20 @@ class VLANGroup(OrganizationalModel):
     )
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
+    range = JSONArrayField(
+        base_field=models.PositiveIntegerField(
+            validators=[
+                MinValueValidator(constants.VLAN_VID_MIN),
+                MaxValueValidator(constants.VLAN_VID_MAX),
+            ]
+        ),
+        verbose_name="Allowed vlan identifiers",
+    )
+
+    @property
+    def range_str(self):
+        return array_to_string(self.range)
+
     class Meta:
         ordering = ("name",)
         verbose_name = "VLAN group"
@@ -1309,6 +1323,12 @@ class VLANGroup(OrganizationalModel):
                 raise ValidationError(
                     {"location": f'VLAN groups may not associate to locations of type "{self.location.location_type}".'}
                 )
+
+        # Validate ranges for related VLANs.
+        if self.vlans.all() and any([_vlan.vid for _vlan in self.vlans.all()]) not in self.range:
+            raise ValidationError(
+                {"vlans": "VLAN group range may not be re-sized due to existing VLANs."}
+            )
 
     def __str__(self):
         return self.name
@@ -1439,6 +1459,15 @@ class VLAN(PrimaryModel):
     def get_vminterfaces(self):
         # Return all VM interfaces assigned to this VLAN
         return VMInterface.objects.filter(Q(untagged_vlan_id=self.pk) | Q(tagged_vlans=self.pk)).distinct()
+
+    def clean(self):
+        super().clean()
+
+        # Validate Vlan Group Range
+        if self.vid not in self.vlan_group.range:
+            raise ValidationError({
+                "vid": "Vlan ID is not contained in Vlan Group Range"
+            })
 
 
 @extras_features("graphql")
