@@ -517,6 +517,7 @@ INSTALLED_APPS = [
     "nautobot.tenancy",
     "nautobot.users",
     "nautobot.virtualization",
+    "nautobot.wireless",
     "drf_spectacular",
     "drf_spectacular_sidecar",
     "graphene_django",
