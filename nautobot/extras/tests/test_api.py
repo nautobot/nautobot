@@ -1549,6 +1549,11 @@ class JobTest(
         """Job run cannot be requested if Celery is not running."""
         mock_get_worker_count.return_value = 0
         self.add_permissions("extras.run_job")
+        class_path="api_test_job.APITestJob"
+        job_model = Job.objects.get_for_class_path(class_path)
+        # Make sure no queues are associated with it so it is using the celery default queue.
+        # And the error message is deterministic on line 1573
+        job_model.job_queues.set([])
         device_role = Role.objects.get_for_model(Device).first()
         job_data = {
             "var1": "FooBar",
