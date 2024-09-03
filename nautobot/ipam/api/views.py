@@ -6,12 +6,14 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
 from rest_framework.response import Response
+from rest_framework.serializers import IntegerField, ListSerializer
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.models import Location
 from nautobot.extras.api.views import NautobotModelViewSet
 from nautobot.ipam import filters
+from nautobot.ipam.api import serializers
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressToInterface,
@@ -28,8 +30,6 @@ from nautobot.ipam.models import (
     VRFDeviceAssignment,
     VRFPrefixAssignment,
 )
-
-from . import serializers
 
 #
 # Namespace
@@ -390,6 +390,51 @@ class VLANGroupViewSet(NautobotModelViewSet):
     queryset = VLANGroup.objects.select_related("location").annotate(vlan_count=count_related(VLAN, "vlan_group"))
     serializer_class = serializers.VLANGroupSerializer
     filterset_class = filters.VLANGroupFilterSet
+
+    @action(
+        detail=True,
+        name="Available VLAN IDs",
+        url_path="available-vlans",
+        methods=["get"],
+        filterset_class=None,
+    )
+    def available_vlans(self, request, pk=None):
+        """
+        A convenience method for listing available VLAN IDs within a VLANGroup.
+
+        By default, the number of VIDs returned will be equivalent to PAGINATE_COUNT.
+        An arbitrary limit (up to MAX_PAGE_SIZE, if set) may be passed, however results will not be paginated.
+        """
+        obj = get_object_or_404(self.queryset, pk=pk)
+
+        try:
+            limit = int(request.query_params.get("limit", get_settings_or_config("PAGINATE_COUNT")))
+        except ValueError:
+            limit = get_settings_or_config("PAGINATE_COUNT")
+
+        if get_settings_or_config("MAX_PAGE_SIZE"):
+            limit = min(limit, get_settings_or_config("MAX_PAGE_SIZE"))
+
+        if isinstance(limit, int) and limit >= 0:
+            vids = obj.available_vids[0:limit]
+        else:
+            vids = obj.available_vids
+
+        serializer = ListSerializer(
+            child=IntegerField(),
+            data=vids,
+        )
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        return Response(
+            {
+                "count": len(data),
+                "next": None,
+                "previous": None,
+                "results": data,
+            }
+        )
 
 
 #

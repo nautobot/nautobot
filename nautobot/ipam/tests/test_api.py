@@ -1002,6 +1002,25 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
         ]
         return [vg.pk for vg in vlangroups]
 
+    def test_list_available_vlans(self):
+        """
+        Test retrieval of all available VLAN IDs within a VLANGroup.
+        """
+        vg = VLANGroup.objects.create(name="Test", range="5-10,15-20")
+        VLAN.objects.create(name="vlan_5", vid=5, status=Status.objects.first(), vlan_group=vg)
+        VLAN.objects.create(name="vlan_10", vid=10, status=Status.objects.first(), vlan_group=vg)
+        VLAN.objects.create(name="vlan_17", vid=17, status=Status.objects.first(), vlan_group=vg)
+        unused_vids = [6, 7, 8, 9, 15, 16, 18, 19, 20]
+
+        url = reverse("ipam-api:vlangroup-available-vlans", kwargs={"pk": vg.pk})
+        self.add_permissions("ipam.view_vlangroup")
+
+        # Retrieve all available VLAN IDs
+        response = self.client.get(url, **self.header)
+
+        self.assertEqual(response.data["results"], unused_vids)
+        self.assertEqual(response.data["count"], len(unused_vids))
+
 
 class VLANTest(APIViewTestCases.APIViewTestCase):
     model = VLAN
