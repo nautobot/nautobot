@@ -7,7 +7,7 @@ import nautobot.core.models.fields
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0114_computedfield_grouping"),
+        ("extras", "0115_scheduledjob_time_zone"),
     ]
 
     operations = [

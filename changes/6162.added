@@ -1,0 +1,1 @@
+Added optimizations to dynamic group caching by tracking circumstances under which groups need to be updated.
