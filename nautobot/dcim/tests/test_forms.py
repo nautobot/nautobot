@@ -289,9 +289,20 @@ class InterfaceTestCase(TestCase):
 
     def test_interface_form_clean_vlan_location_fail(self):
         """Assert that form validation fails when no matching locations are associated to tagged VLAN"""
-        self.vlan.locations.set(list(Location.objects.exclude(pk=self.device.location.pk))[:2])
+        location = self.device.location
+        location_ids = [ancestor.id for ancestor in location.ancestors()]
+        self.vlan.locations.set(list(Location.objects.exclude(pk__in=location_ids))[:2])
+        self.data["tagged_vlans"] = [self.vlan]
         form = InterfaceForm(data=self.data, instance=self.interface)
         self.assertFalse(form.is_valid())
+        self.vlan.locations.set([location.id])
+        self.data["tagged_vlans"] = [self.vlan]
+        form = InterfaceForm(data=self.data, instance=self.interface)
+        self.assertTrue(form.is_valid())
+        self.vlan.locations.set(location_ids[:2])
+        self.data["tagged_vlans"] = [self.vlan]
+        form = InterfaceForm(data=self.data, instance=self.interface)
+        self.assertTrue(form.is_valid())
 
     def test_interface_vlan_location_clean_multiple_locations_pass(self):
         """Assert that form validation passes when multiple locations are associated to tagged VLAN with one matching"""

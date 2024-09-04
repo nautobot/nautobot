@@ -799,7 +799,7 @@ class InterfaceSerializer(
         device = self.instance.device if self.instance else data.get("device")
         location = device.location
         if location:
-            location_ids =[ancestor.id for ancestor in location.ancestors()]
+            location_ids = [ancestor.id for ancestor in location.ancestors()]
             location_ids.append(location.id)
         else:
             location_ids = []
@@ -807,7 +807,7 @@ class InterfaceSerializer(
             if vlan.locations.exists() and not vlan.locations.filter(pk__in=location_ids).exists():
                 raise serializers.ValidationError(
                     {
-                        "tagged_vlans": f"VLAN {vlan} must have a common location as the interface's parent device, or "
+                        "tagged_vlans": f"VLAN {vlan} must have the same location as the interface's parent device, or is in one of the parents of the interface's parent device's location, or "
                         f"it must be global."
                     }
                 )

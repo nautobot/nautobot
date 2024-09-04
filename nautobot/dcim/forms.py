@@ -218,7 +218,7 @@ class InterfaceCommonForm(forms.Form):
         elif mode == InterfaceModeChoices.MODE_TAGGED:
             location = self.cleaned_data[parent_field].location
             if location:
-                location_ids =[ancestor.id for ancestor in location.ancestors()]
+                location_ids = [ancestor.id for ancestor in location.ancestors()]
                 location_ids.append(location.id)
             else:
                 location_ids = []
