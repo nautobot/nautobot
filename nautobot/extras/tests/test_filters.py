@@ -1041,6 +1041,7 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 self.queryset.filter(scheduled_job__in=scheduled_jobs).distinct(),
             )
 
+
 class JobHookFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = JobHook.objects.all()
     filterset = JobHookFilterSet
