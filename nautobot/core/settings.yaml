@@ -1830,9 +1830,9 @@ properties:
       The time zone Nautobot will use when dealing with dates and times. It is recommended to use UTC time unless you have a specific need to use a local time zone. Please see the [list of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
     details: |-
       !!! warning
-          Scheduled jobs will run in the time zone configured in this setting. If you change this setting from the
-          default UTC, you must change it on the Celery Beat server and all Nautobot web servers or your scheduled
-          jobs may run in the wrong time zone.
+          Scheduled jobs will default to running in the time zone configured in this setting.
+          If you change this setting from the default UTC, it must be set consistently on the Celery Beat server
+          and all Nautobot web servers, or else your scheduled jobs may run in the wrong time zone.
     environment_variable: "NAUTOBOT_TIME_ZONE"
     see_also:
       "Time Zones documentation": "./time-zones.md"
