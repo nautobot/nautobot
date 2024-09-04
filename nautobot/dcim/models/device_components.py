@@ -14,7 +14,6 @@ from nautobot.core.models.generics import BaseModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
 from nautobot.core.models.tree_queries import TreeModel
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
@@ -1279,63 +1278,3 @@ class ModuleBay(PrimaryModel):
 
         if not (self.parent_device or self.parent_module):
             raise ValidationError("Either parent_device or parent_module must be set")
-
-
-#
-# Virtual Device Contexts
-#
-
-
-@extras_features(
-    "custom_links",
-    "custom_validators",
-    "export_templates",
-    "graphql",
-    "statuses",
-    "webhooks",
-)
-class VirtualDeviceContext(PrimaryModel):
-    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
-    device = models.ForeignKey("dcim.Device", on_delete=models.PROTECT, related_name="vdcs", blank=True, null=True)
-    identifier = models.PositiveSmallIntegerField(
-        help_text="Unique identifier provided by the platform being virtualized (Example: Nexus VDC Identifier)",
-        blank=True,
-        null=True,
-    )
-    status = StatusField(blank=False, null=False)
-    primary_ip4 = models.OneToOneField(
-        to="ipam.IPAddress",
-        on_delete=models.SET_NULL,
-        related_name="ip4_vdcs",
-        blank=True,
-        null=True,
-        verbose_name="Primary IPv4",
-    )
-    primary_ip6 = models.OneToOneField(
-        to="ipam.IPAddress",
-        on_delete=models.SET_NULL,
-        related_name="ip6_vdcs",
-        blank=True,
-        null=True,
-        verbose_name="Primary IPv6",
-    )
-    tenant = models.ForeignKey("tenancy.Tenant", on_delete=models.PROTECT, related_name="vdcs", blank=True, null=True)
-    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
-
-    class Meta:
-        ordering = ("name",)
-        unique_together = (("device", "identifier"),)
-
-    def __str__(self):
-        return self.name
-
-    @property
-    def primary_ip(self):
-        if get_settings_or_config("PREFER_IPV4") and self.primary_ip4:
-            return self.primary_ip4
-        elif self.primary_ip6:
-            return self.primary_ip6
-        elif self.primary_ip4:
-            return self.primary_ip4
-        else:
-            return None

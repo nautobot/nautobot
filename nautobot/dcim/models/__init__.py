@@ -26,7 +26,6 @@ from .device_components import (
     PowerOutlet,
     PowerPort,
     RearPort,
-    VirtualDeviceContext,
 )
 from .devices import (
     Controller,
@@ -43,6 +42,7 @@ from .devices import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 from .locations import Location, LocationType
 from .power import PowerFeed, PowerPanel

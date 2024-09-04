@@ -67,8 +67,8 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
-from nautobot.dcim.models.device_components import VirtualDeviceContext
 from nautobot.extras.api.views import (
     ConfigContextQuerySetMixin,
     NautobotModelViewSet,

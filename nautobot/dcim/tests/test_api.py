@@ -65,8 +65,8 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
-from nautobot.dcim.models.device_components import VirtualDeviceContext
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
@@ -3384,16 +3384,17 @@ class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
                 "device": devices[0].pk,
                 "identifier": 100,
                 "status": status.pk,
-                "tenant": tenants[0].pk,
             },
             {
                 "name": "VirtualDeviceContext 2",
+                "device": devices[1].pk,
                 "identifier": 200,
                 "status": status.pk,
                 "tenant": tenants[1].pk,
             },
             {
                 "name": "VirtualDeviceContext 3",
+                "identifier": 300,
                 "device": devices[2].pk,
                 "status": status.pk,
                 "tenant": tenants[2].pk,

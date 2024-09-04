@@ -156,12 +156,7 @@ class Command(BaseCommand):
         populate_role_choices(verbosity=0, using=db_name)
         _create_batch(RoleFactory, 20)
         populate_status_choices(verbosity=0, using=db_name)
-        _create_batch(StatusFactory, 10)
-        from nautobot.dcim.models import VirtualDeviceContext
-        from nautobot.extras.models import Status
-
-        st = Status.objects.create(name="Sample")
-        st.content_types.add(ContentType.objects.get_for_model(VirtualDeviceContext))
+        _create_batch(StatusFactory, 15)
         # Ensure that we have some tags that are applicable to all relevant content-types
         _create_batch(
             TagFactory, 5, description="on all content-types", content_types=TaggableClassesQuery().as_queryset()
@@ -218,7 +213,6 @@ class Command(BaseCommand):
         _create_batch(ConsoleServerPortTemplateFactory, 30)
         _create_batch(RearPortTemplateFactory, 30)
         _create_batch(FrontPortTemplateFactory, 30)
-        _create_batch(VirtualDeviceContextFactory, 30)
         _create_batch(InterfaceTemplateFactory, 30)
         _create_batch(PowerPortTemplateFactory, 30)
         _create_batch(PowerOutletTemplateFactory, 30)
@@ -226,6 +220,7 @@ class Command(BaseCommand):
         _create_batch(ManufacturerFactory, 2, description="without Platforms or DeviceTypes")  # Last 2 hard-coded
         _create_batch(DeviceRedundancyGroupFactory, 20)
         _create_batch(DeviceFactory, 20)
+        _create_batch(VirtualDeviceContextFactory, 30)
         _create_batch(ModuleFactory, 20)
         _create_batch(SoftwareVersionFactory, 5, description="without Devices")
         _create_batch(SoftwareImageFileFactory, 5, description="without DeviceTypes")
