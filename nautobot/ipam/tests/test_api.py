@@ -443,6 +443,25 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         for i, p in enumerate(response.data):
             self.assertEqual(p["prefix"], str(available_prefixes[i]))
 
+    def test_prefix_display_value(self):
+        """
+        Test that the `display` field is correctly populated.
+        """
+        prefix = (
+            Prefix.objects.filter(ip_version=6)
+            .filter(prefix_length__lt=128)
+            .exclude(type=choices.PrefixTypeChoices.TYPE_CONTAINER)
+            .first()
+        )
+        if prefix is None:
+            self.fail("Suitable prefix fixture not found")
+        url = reverse("ipam-api:prefix-list") #, kwargs={"pk": prefix.pk})
+        self.add_permissions("ipam.view_prefix")
+
+        response = self.client.get(url, **self.header, QUERY_STRING="depth=1")
+        for p in response.data["results"]:
+            self.assertEqual(p["display"], f'{p["prefix"]}: {p["namespace"]["name"]}')
+
     def test_create_single_available_prefix(self):
         """
         Test retrieval of the first available prefix within a parent prefix.
