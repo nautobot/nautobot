@@ -119,6 +119,10 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 <!-- towncrier release notes start -->
 ## v2.3.2 (2024-09-03)
 
+### Security
+
+- [#6182](https://github.com/nautobot/nautobot/issues/6182) - Updated `cryptography` to `43.0.1` to address `GHSA-h4gh-qq45-vh27`. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
 ### Added
 
 - [#5180](https://github.com/nautobot/nautobot/issues/5180) - Add filtering Job Results by Scheduled Job.
