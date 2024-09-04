@@ -26,4 +26,4 @@ Conversely, you can access the Job Queues that a Job instance is assigned to thr
 <RestrictedQuerySet [<JobQueue: celery: celery Job Queue - 2>, <JobQueue: celery: celery Job Queue - 6>, <JobQueue: celery: default>]>
 ```
 
-JobQueueAssignment is a concrete through table model that represents the relationships between Jobs and Job Queues. Check out its [documentation](./jobqueueassignment.md) for more details.
+Job Queue Assignments represent the many-to-many relationships between [Jobs](./index.md) and [Job Queues](./jobqueue.md). It has `job` and `job_queue` as required attributes and each Job Queue Assignment must have a unique combination of `job` and `job_queue`.
