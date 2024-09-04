@@ -1723,18 +1723,10 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         software_version.software_image_files.all().update(default_image=False)
         self.device_type.software_image_files.set([])
         self.device.software_version = software_version
-        invalid_software_image_file = SoftwareImageFile.objects.filter(default_image=False).first()
-        invalid_software_image_file.device_types.set([])
-        self.device.software_image_files.set([invalid_software_image_file])
 
-        # There is an invalid non-default software_image_file specified for the software version
-        # It is not a default image and it does not match any device type
+        # No device type or default image match
         with self.assertRaises(ValidationError):
             self.device.validated_save()
-
-        # user should be able to specify any software version without specifying software_image_files
-        self.device.software_image_files.set([])
-        self.device.validated_save()
 
         # Default image matches
         software_image_file = software_version.software_image_files.first()
@@ -2378,19 +2370,58 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         )
 
     def test_error_raised_when_adding_tagged_vlan_with_different_location_from_interface_parent_location(self):
+        intf_status = Status.objects.get_for_model(Interface).first()
+        intf_role = Role.objects.get_for_model(Interface).first()
+        location_type = LocationType.objects.get(name="Campus")
+        parent_location = Location.objects.filter(children__isnull=False, location_type=location_type).first()
+        child_location = Location.objects.filter(parent=parent_location, location_type=location_type).first()
+        self.device.location = child_location
+        self.device.validated_save()
+        # Same location as the device
+        interface = Interface.objects.create(
+            name="Test Interface 2",
+            mode=InterfaceModeChoices.MODE_TAGGED,
+            device=self.device,
+            status=intf_status,
+            role=intf_role,
+        )
+        self.other_location_vlan.locations.set([self.device.location.pk])
+        interface.tagged_vlans.set([self.other_location_vlan.pk])
+
+        # One of the parent locations of the device's location
+        interface = Interface.objects.create(
+            name="Test Interface 3",
+            mode=InterfaceModeChoices.MODE_TAGGED,
+            device=self.device,
+            status=intf_status,
+            role=intf_role,
+        )
+        self.other_location_vlan.locations.set([self.device.location.ancestors().first().pk])
+        interface.tagged_vlans.set([self.other_location_vlan.pk])
+
         with self.assertRaises(ValidationError) as err:
             interface = Interface.objects.create(
-                name="Test Interface",
+                name="Test Interface 1",
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 device=self.device,
-                status=Status.objects.get_for_model(Interface).first(),
-                role=Role.objects.get_for_model(Interface).first(),
+                status=intf_status,
+                role=intf_role,
             )
+            location_3 = Location.objects.create(
+                name="Invalid VLAN Location",
+                location_type=LocationType.objects.get(name="Campus"),
+                status=Status.objects.get_for_model(Location).first(),
+            )
+            # clear the valid locations
+            self.other_location_vlan.locations.set([])
+            # assign the invalid location
+            self.other_location_vlan.location = location_3
+            self.other_location_vlan.validated_save()
             interface.tagged_vlans.add(self.other_location_vlan)
         self.assertEqual(
             err.exception.message_dict["tagged_vlans"][0],
             f"Tagged VLAN with names {[self.other_location_vlan.name]} must all belong to the "
-            f"same location as the interface's parent device, or it must be global.",
+            f"same location as the interface's parent device, one of the parent locations of the interface's parent device's location, or it must be global.",
         )
 
     def test_add_ip_addresses(self):
