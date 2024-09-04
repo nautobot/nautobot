@@ -1030,7 +1030,6 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 scheduled_job=scheduled_jobs[idx],
             )
 
-
     def test_scheduled_job(self):
         scheduled_jobs = list(self.scheduled_jobs[:2])
         filter_params = [
