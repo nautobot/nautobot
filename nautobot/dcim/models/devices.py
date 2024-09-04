@@ -1900,7 +1900,7 @@ class VirtualDeviceContext(PrimaryModel):
             return None
 
     def clean(self):
-        from nautobot.ipam import models as ipam_models  # circular import workaround
+        from nautobot.ipam.models import IPAddressToInterface  # circular import workaround
 
         super().clean()
 
@@ -1914,13 +1914,11 @@ class VirtualDeviceContext(PrimaryModel):
                 else:
                     if ip.ip_version != 6:
                         raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
-                if ipam_models.IPAddressToInterface.objects.filter(
-                    ip_address=ip, interface__in=all_interfaces
-                ).exists():
+                if IPAddressToInterface.objects.filter(ip_address=ip, interface__in=all_interfaces).exists():
                     pass
                 elif (
                     ip.nat_inside is not None
-                    and ipam_models.IPAddressToInterface.objects.filter(
+                    and IPAddressToInterface.objects.filter(
                         ip_address=ip.nat_inside, interface__in=all_interfaces
                     ).exists()
                 ):
