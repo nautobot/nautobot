@@ -1081,6 +1081,10 @@ class JobBulkEditForm(NautobotBulkEditForm):
         required=False,
         help_text="If checked, the values of dryrun default will be reverted to the default values defined in each Job's source code",
     )
+    clear_job_queues_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, job queue overrides will be reverted to the default values defined in each Job's source code",
+    )
     clear_hidden_override = forms.BooleanField(
         required=False,
         help_text="If checked, the values of hidden will be reverted to the default values defined in each Job's source code",

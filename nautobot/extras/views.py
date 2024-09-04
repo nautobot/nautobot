@@ -1502,6 +1502,21 @@ class JobBulkEditView(generic.BulkEditView):
                 setattr(obj, override_field, True)
                 setattr(obj, overridable_field, override_value)
 
+        # Handle job queues
+        clear_override_field = "clear_job_queues_override"
+        reset_override = cleaned_data.get(clear_override_field, False)
+        if reset_override:
+            meta_task_queues = obj.job_class.task_queues
+            pk_list = []
+            for queue in meta_task_queues:
+                try:
+                    jq = JobQueue.objects.get(name=queue, queue_type=JobQueueTypeChoices.TYPE_CELERY)
+                    pk_list.append(jq.pk)
+                except JobQueue.DoesNotExist:
+                    # Do we want to create the Job Queue for the users here if we do not have it in the database?
+                    pass
+            obj.job_queues.set(JobQueue.objects.filter(pk__in=pk_list).values_list("pk", flat=True))
+
         obj.validated_save()
 
 
