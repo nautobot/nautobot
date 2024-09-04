@@ -39,6 +39,7 @@ from nautobot.extras.choices import (
     DynamicGroupOperatorChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
+    JobQueueTypeChoices,
     JobResultStatusChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
@@ -67,6 +68,8 @@ from nautobot.extras.models import (
     ImageAttachment,
     Job,
     JobLogEntry,
+    JobQueue,
+    JobQueueAssignment,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -2314,6 +2317,61 @@ class JobLogEntryTest(
         url = reverse("extras-api:jobresult-logs", kwargs={"pk": self.job_result.pk})
         response = self.client.get(url, **self.header)
         self.assertEqual(len(response.json()), JobLogEntry.objects.filter(job_result=self.job_result).count())
+
+
+class JobQueueTestCase(APIViewTestCases.APIViewTestCase):
+    model = JobQueue
+    choices_fields = ["queue_type"]
+
+    def setUp(self):
+        super().setUp()
+        self.create_data = [
+            {
+                "name": "Test API Job Queue 1",
+                "queue_type": JobQueueTypeChoices.TYPE_CELERY,
+                "description": "Job Queue 1 for API Testing",
+                "tenant": Tenant.objects.first().pk,
+            },
+            {
+                "name": "Test API Job Queue 2",
+                "queue_type": JobQueueTypeChoices.TYPE_KUBERNETES,
+                "description": "Job Queue 2 for API Testing",
+                "tenant": Tenant.objects.first().pk,
+            },
+            {
+                "name": "Test API Job Queue 3",
+                "queue_type": JobQueueTypeChoices.TYPE_CELERY,
+                "description": "Job Queue 3 for API Testing",
+                "tenant": Tenant.objects.last().pk,
+                "tags": [tag.pk for tag in Tag.objects.get_for_model(JobQueue)],
+            },
+        ]
+
+
+class JobQueueAssignmentTestCase(APIViewTestCases.APIViewTestCase):
+    model = JobQueueAssignment
+
+    def setUp(self):
+        super().setUp()
+        jobs = Job.objects.all()[:3]
+        job_queues = JobQueue.objects.all()[:3]
+        JobQueueAssignment.objects.create(job=jobs[0], job_queue=job_queues[0])
+        JobQueueAssignment.objects.create(job=jobs[1], job_queue=job_queues[1])
+        JobQueueAssignment.objects.create(job=jobs[2], job_queue=job_queues[2])
+        self.create_data = [
+            {
+                "job": jobs[0].pk,
+                "job_queue": job_queues[1].pk,
+            },
+            {
+                "job": jobs[1].pk,
+                "job_queue": job_queues[2].pk,
+            },
+            {
+                "job": jobs[0].pk,
+                "job_queue": job_queues[2].pk,
+            },
+        ]
 
 
 class SavedViewTest(APIViewTestCases.APIViewTestCase):

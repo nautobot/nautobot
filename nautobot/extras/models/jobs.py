@@ -32,6 +32,7 @@ from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import (
     ButtonClassChoices,
     JobExecutionType,
+    JobQueueTypeChoices,
     JobResultStatusChoices,
     LogLevelChoices,
 )
@@ -216,6 +217,13 @@ class Job(PrimaryModel):
     task_queues_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    job_queues = models.ManyToManyField(
+        to="extras.JobQueue",
+        related_name="jobs",
+        verbose_name="Job Queues",
+        help_text="The job queues that this job can be run on",
+        through="extras.JobQueueAssignment",
     )
 
     objects = BaseManager.from_queryset(JobQuerySet)()
@@ -468,6 +476,67 @@ class JobLogEntry(BaseModel):
         ordering = ["created"]
         get_latest_by = "created"
         verbose_name_plural = "job log entries"
+
+
+#
+# Job Queues
+#
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class JobQueue(PrimaryModel):
+    """
+    A Job Queue represents a structure that is used to manage, organize and schedule jobs for Nautobot workers.
+    """
+
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    queue_type = models.CharField(
+        max_length=50,
+        choices=JobQueueTypeChoices,
+    )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="job_queues",
+        blank=True,
+        null=True,
+    )
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.queue_type}: {self.name}"
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+)
+class JobQueueAssignment(BaseModel):
+    """
+    Through table model that represents the m2m relationship between jobs and job queues.
+    """
+
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name="job_queue_assignments")
+    job_queue = models.ForeignKey(JobQueue, on_delete=models.CASCADE, related_name="job_assignments")
+    is_metadata_associable_model = False
+
+    class Meta:
+        unique_together = ["job", "job_queue"]
+        ordering = ["job", "job_queue"]
+
+    def __str__(self):
+        return f"{self.job}: {self.job_queue}"
 
 
 #
@@ -926,6 +995,14 @@ class ScheduledJob(BaseModel):
         verbose_name="Queue Override",
         help_text="Queue defined in CELERY_TASK_QUEUES. Leave empty for default queuing.",
         db_index=True,
+    )
+    job_queue = models.ForeignKey(
+        to="extras.JobQueue",
+        on_delete=models.SET_NULL,
+        related_name="scheduled_jobs",
+        null=True,
+        blank=True,
+        verbose_name="Job Queue Override",
     )
     one_off = models.BooleanField(
         default=False,

@@ -1,12 +1,14 @@
 import random
 import string
+from typing import ClassVar, Iterable
 
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Count, Q
+from django.db.models import Count, Q, QuerySet
 from django.db.models.fields import CharField, TextField
 from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.test import tag
+from django_filters import FilterSet
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.filters import (
@@ -18,6 +20,7 @@ from nautobot.core.filters import (
 )
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Tag, Team
 from nautobot.tenancy import models
 
@@ -68,8 +71,8 @@ class FilterTestCases:
     class FilterTestCase(BaseFilterTestCase):
         """Add common tests for all FilterSets."""
 
-        queryset = None
-        filterset = None
+        queryset: ClassVar[QuerySet]
+        filterset: ClassVar[FilterSet]
 
         # filter predicate fields that should be excluded from q test case
         exclude_q_filter_predicates = []
@@ -81,18 +84,17 @@ class FilterTestCases:
         #       ["filter1"],
         #       ["filter2", "field2__name"],
         #   ]
-        generic_filter_tests = []
+        generic_filter_tests: ClassVar[Iterable]
+
+        def setUp(self):
+            for attr in ["queryset", "filterset", "generic_filter_tests"]:
+                if not hasattr(self, attr):
+                    raise NotImplementedError(f'{self} is missing a value for required attribute "{attr}"')
+            super().setUp()
 
         def get_q_filter(self):
             """Helper method to return q filter."""
             return self.filterset.declared_filters["q"].filter_predicates
-
-        def test_id(self):
-            """Verify that the filterset supports filtering by id."""
-            params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
-            filterset = self.filterset(params, self.queryset)
-            self.assertTrue(filterset.is_valid())
-            self.assertEqual(filterset.qs.count(), 2)
 
         def test_invalid_filter(self):
             """Verify that the filterset reports as invalid when initialized with an unsupported filter parameter."""
@@ -122,15 +124,22 @@ class FilterTestCases:
                     )
                 This expects a field named `devices` on the model and a filter named `devices` on the filterset.
             """
+            if not any(test[0] == "id" for test in self.generic_filter_tests):
+                self.generic_filter_tests = (["id"], *self.generic_filter_tests)
+
             if getattr(self.queryset.model, "is_contact_associable_model", False):
-                for generic_filter_test in (
-                    ["contacts", "associated_contacts__contact__name"],
-                    ["contacts", "associated_contacts__contact__id"],
-                    ["teams", "associated_contacts__team__name"],
-                    ["teams", "associated_contacts__team__id"],
-                ):
-                    if generic_filter_test not in self.generic_filter_tests:
-                        self.generic_filter_tests = (*self.generic_filter_tests, generic_filter_test)
+                if not any(test[0] == "contacts" for test in self.generic_filter_tests):
+                    self.generic_filter_tests = (
+                        *self.generic_filter_tests,
+                        ["contacts", "associated_contacts__contact__name"],
+                        ["contacts", "associated_contacts__contact__id"],
+                    )
+                if not any(test[0] == "teams" for test in self.generic_filter_tests):
+                    self.generic_filter_tests = (
+                        *self.generic_filter_tests,
+                        ["teams", "associated_contacts__team__name"],
+                        ["teams", "associated_contacts__team__id"],
+                    )
 
                 # Make sure we have at least 3 contacts and 3 teams in the database
                 if Contact.objects.count() < 3:
@@ -157,9 +166,6 @@ class FilterTestCases:
                         role=Role.objects.get_for_model(ContactAssociation).last(),
                         status=Status.objects.get_for_model(ContactAssociation).last(),
                     )
-
-            if not self.generic_filter_tests:
-                self.skipTest("No generic_filter_tests defined?")
 
             for test in self.generic_filter_tests:
                 filter_name = test[0]
@@ -218,10 +224,6 @@ class FilterTestCases:
             # Tags is an AND filter not an OR filter
             qs_result = self.queryset.filter(tags=tags[0]).filter(tags=tags[1]).distinct()
             self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
-
-        def test_q_filter_exists(self):
-            """Test the `q` filter exists on a filterset, does not validate the filter works as expected."""
-            self.assertIn("q", self.filterset.declared_filters)
 
         def _assert_valid_filter_predicates(self, obj, field_name):
             self.assertTrue(
@@ -358,27 +360,27 @@ class FilterTestCases:
                         filter_field, (ContentTypeFilter, ContentTypeMultipleChoiceFilter, ContentTypeChoiceFilter)
                     )
 
+    # Test cases should just explicitly include `name` as a generic_filter_tests entry
+    @class_deprecated_in_favor_of(FilterTestCase)  # pylint: disable=undefined-variable
     class NameOnlyFilterTestCase(FilterTestCase):
         """Add simple tests for filtering by name."""
 
-        def test_name(self):
-            """Verify that the filterset supports filtering by name."""
-            params = {"name": list(self.queryset.values_list("name", flat=True)[:2])}
-            filterset = self.filterset(params, self.queryset)
-            self.assertTrue(filterset.is_valid())
-            self.assertQuerysetEqualAndNotEmpty(
-                filterset.qs.order_by("name"), self.queryset.filter(name__in=params["name"]).order_by("name")
-            )
+        def test_filters_generic(self):
+            if not any(test[0] == "name" for test in self.generic_filter_tests):
+                self.generic_filter_tests = (["name"], *self.generic_filter_tests)
+            super().test_filters_generic()
 
-    class NameSlugFilterTestCase(NameOnlyFilterTestCase):
+    # Test cases should just explicitly include `name` and `slug` as generic_filter_tests entries
+    @class_deprecated_in_favor_of(FilterTestCase)  # pylint: disable=undefined-variable
+    class NameSlugFilterTestCase(FilterTestCase):
         """Add simple tests for filtering by name and by slug."""
 
-        def test_slug(self):
-            """Verify that the filterset supports filtering by slug."""
-            params = {"slug": self.queryset.values_list("slug", flat=True)[:2]}
-            filterset = self.filterset(params, self.queryset)
-            self.assertTrue(filterset.is_valid())
-            self.assertEqual(filterset.qs.count(), 2)
+        def test_filters_generic(self):
+            if not any(test[0] == "slug" for test in self.generic_filter_tests):
+                self.generic_filter_tests = (["slug"], *self.generic_filter_tests)
+            if not any(test[0] == "name" for test in self.generic_filter_tests):
+                self.generic_filter_tests = (["name"], *self.generic_filter_tests)
+            super().test_filters_generic()
 
     class TenancyFilterTestCaseMixin(views.TestCase):
         """Add test cases for tenant and tenant-group filters."""

@@ -66,6 +66,8 @@ from nautobot.extras.models import (
     JobButton,
     JobHook,
     JobLogEntry,
+    JobQueue,
+    JobQueueAssignment,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -556,6 +558,18 @@ class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                 raise serializers.ValidationError(errors)
 
         return super().validate(data)
+
+
+class JobQueueSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    class Meta:
+        model = JobQueue
+        fields = "__all__"
+
+
+class JobQueueAssignmentSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = JobQueueAssignment
+        fields = "__all__"
 
 
 class JobVariableSerializer(serializers.Serializer):
