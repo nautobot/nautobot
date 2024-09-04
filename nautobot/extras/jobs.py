@@ -37,7 +37,12 @@ from nautobot.core.forms import (
 )
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_model_from_name
-from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from nautobot.extras.choices import (
+    JobQueueTypeChoices,
+    JobResultStatusChoices,
+    ObjectChangeActionChoices,
+    ObjectChangeEventContextChoices,
+)
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.forms import JobForm
 from nautobot.extras.models import (
@@ -484,18 +489,28 @@ class BaseJob:
         try:
             job_model = JobModel.objects.get_for_class_path(cls.class_path)
             dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else cls.dryrun_default
-            # Initialize job_queue choices
-            form.fields["_job_queue"] = DynamicModelChoiceField(
-                queryset=JobQueue.objects.filter(jobs=job_model),
-                query_params={"jobs": [job_model.pk]},
-                required=False,
-                help_text="The job queue to route this job to",
-                label="Job queue",
-            )
+            job_queue_queryset = JobQueue.objects.filter(jobs=job_model)
+            job_queue_params = {"jobs": [job_model.pk]}
         except JobModel.DoesNotExist:
             logger.error("No Job instance found in the database corresponding to %s", cls.class_path)
             dryrun_default = cls.dryrun_default
+            pk_list = []
+            for queue in cls.task_queues:
+                job_queue, _ = JobQueue.objects.get_or_create(
+                    name=queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+                )
+                pk_list.append(job_queue.pk)
+            job_queue_queryset = JobQueue.objects.filter(pk__in=pk_list)
+            job_queue_params = {"id": pk_list}
 
+        # Initialize job_queue choices
+        form.fields["_job_queue"] = DynamicModelChoiceField(
+            queryset=job_queue_queryset,
+            query_params=job_queue_params,
+            required=False,
+            help_text="The job queue to route this job to",
+            label="Job queue",
+        )
         if cls.supports_dryrun and (not initial or "dryrun" not in initial):
             # Set initial "dryrun" checkbox state based on the Meta parameter
             form.fields["dryrun"].initial = dryrun_default
