@@ -74,6 +74,10 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 <!-- towncrier release notes start -->
 ## v1.6.27 (2024-09-03)
 
+### Security
+
+- [#6182](https://github.com/nautobot/nautobot/issues/6182) - Updated `cryptography` to `43.0.1` to address `GHSA-h4gh-qq45-vh27`. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
 ### Fixed
 
 - [#6081](https://github.com/nautobot/nautobot/issues/6081) - Fixed AttributeError during pre_migrate when permission constraints are applied to custom fields.
