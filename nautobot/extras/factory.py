@@ -159,10 +159,7 @@ class JobQueueFactory(PrimaryModelFactory):
 
     @factory.post_generation
     def jobs(self, create, extracted, **kwargs):
-        jobs = Job.objects.all()[:3]
-        for job in jobs:
-            job.job_queues.add(self)
-
+        self.jobs.set(get_random_instances(Job))
 
 class JobResultFactory(BaseModelFactory):
     """JobResult model factory."""
