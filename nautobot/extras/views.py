@@ -1325,11 +1325,13 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     explicit_initial = initial
                     initial = job_result.task_kwargs.copy()
                     job_queue = job_result.celery_kwargs.get("queue", None)
+                    jq = None
                     if job_queue is not None:
-                        jq, _ = JobQueue.objects.get_or_create(
-                            name=job_queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
-                        )
-                        initial["_job_queue"] = jq
+                        try:
+                            jq = JobQueue.objects.get(name=job_queue, queue_type=JobQueueTypeChoices.TYPE_CELERY)
+                        except JobQueue.DoesNotExist:
+                            pass
+                    initial["_job_queue"] = jq
                     initial["_profile"] = job_result.celery_kwargs.get("nautobot_job_profile", False)
                     initial.update(explicit_initial)
                 except JobResult.DoesNotExist:
@@ -1397,12 +1399,13 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             )
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
             job_queue = job_form.cleaned_data.pop("_job_queue", None)
-            if job_queue is None:
-                job_queue, _ = JobQueue.objects.get_or_create(
-                    name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
-                )
-            else:
-                job_queue = JobQueue.objects.get(pk=job_queue)
+            jq = None
+            if job_queue is not None:
+                try:
+                    jq = JobQueue.objects.get(pk=job_queue)
+                except JobQueue.DoesNotExist:
+                    pass
+
             dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
             profile = job_form.cleaned_data.pop("_profile")
@@ -1417,7 +1420,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     interval=schedule_type,
                     crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
                     approval_required=job_model.approval_required,
-                    task_queue=job_queue.name,
+                    task_queue=jq.name if jq else None,
                     profile=profile,
                     **job_class.serialize_data(job_form.cleaned_data),
                 )
@@ -1436,7 +1439,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     job_model,
                     request.user,
                     profile=profile,
-                    task_queue=job_queue.name,
+                    task_queue=jq.name if jq else None,
                     **job_class.serialize_data(job_kwargs),
                 )
 
