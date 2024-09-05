@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from django.conf import settings
 from django.middleware import csrf
 from django.shortcuts import render
-from django.template import RequestContext, Template
+from django.template import Template
 from django.template.loader import render_to_string
 from django.utils.html import format_html, format_html_join
 
@@ -139,13 +139,13 @@ class ObjectDetailContent:
         tabs.append(ObjectDetailMetadataTab())
         self.tabs = tabs
 
-    def render_tabs(self, request, instance):
+    def render_tabs(self, context):
         """Render the tabs (as opposed to their contents) for each of `self.tabs`."""
-        return format_html_join("\n", "{}", ([tab.render_tab(request, instance)] for tab in self.tabs))
+        return format_html_join("\n", "{}", ([tab.render_tab(context)] for tab in self.tabs))
 
-    def render_content(self, request, instance):
+    def render_content(self, context):
         """Render the tab content for each of `self.tabs`."""
-        return format_html_join("\n", "{}", ([tab.render_content(request, instance)] for tab in self.tabs))
+        return format_html_join("\n", "{}", ([tab.render_content(context)] for tab in self.tabs))
 
 
 class Tab(ABC):
@@ -165,10 +165,9 @@ class Tab(ABC):
             layouts = []
         self.layouts = list(layouts)
 
-    def render_tab(self, request, instance):
+    def render_tab(self, context):
         """Render the tab (as opposed to its contents) to HTML."""
-        self.request = request
-        self.instance = instance
+        self.context = context
 
         return format_html(
             """\
@@ -177,16 +176,15 @@ class Tab(ABC):
         {tab_label}
     </a>
 </li>""",
-            active_class=' class="active"' if request.GET.get("tab", None) == self.tab_id else "",
-            url=instance.get_absolute_url(),
+            active_class=' class="active"' if context["request"].GET.get("tab", None) == self.tab_id else "",
+            url=context["object"].get_absolute_url(),
             tab_id=self.tab_id,
             tab_label=self.tab_label,
         )
 
-    def render_content(self, request, instance):
+    def render_content(self, context):
         """Render the tab contents to HTML."""
-        self.request = request
-        self.instance = instance
+        self.context = context
 
         return format_html(
             """\
@@ -194,8 +192,8 @@ class Tab(ABC):
     {layouts}
 </div>""",
             tab_id=self.tab_id,
-            active_or_fade="active" if request.GET.get("tab", None) == self.tab_id else "fade",
-            layouts=format_html_join("\n", "{}", ([layout.render(request, instance)] for layout in self.layouts)),
+            active_or_fade="active" if context["request"].GET.get("tab", None) == self.tab_id else "fade",
+            layouts=format_html_join("\n", "{}", ([layout.render(context)] for layout in self.layouts)),
         )
 
 
@@ -207,7 +205,7 @@ class ObjectDetailMainTab(Tab):
     @property
     def tab_label(self):
         """Use the `verbose_name` of the given instance's Model as the tab label by default."""
-        return bettertitle(self.instance._meta.verbose_name)
+        return bettertitle(self.context["object"]._meta.verbose_name)
 
     def __init__(self, layouts=None):
         """Default to two-column layout at top (containing a left `ObjectFieldsPanel`) with full-width layout below."""
@@ -261,21 +259,23 @@ class ObjectDetailContactsTab(Tab):
             ),
         )
 
-    def render_tab(self, request, instance):
-        if not instance.is_contact_associable_model:
+    def render_tab(self, context):
+        if not context["object"].is_contact_associable_model:
             return ""
-        return super().render_tab(request, instance)
+        return super().render_tab(context)
 
-    def render_content(self, request, instance):
-        if not instance.is_contact_associable_model:
+    def render_content(self, context):
+        if not context["object"].is_contact_associable_model:
             return ""
-        return super().render_content(request, instance)
+        return super().render_content(context)
 
     @property
     def tab_label(self):
         return format_html(
             "Contacts {}",
-            render_to_string("utilities/templatetags/badge.html", badge(self.instance.associated_contacts.count())),
+            render_to_string(
+                "utilities/templatetags/badge.html", badge(self.context["object"].associated_contacts.count())
+            ),
         )
 
 
@@ -296,29 +296,33 @@ class ObjectDetailGroupsTab(Tab):
             ),
         )
 
-    def render_tab(self, request, instance):
+    def render_tab(self, context):
+        instance = context["object"]
+        request = context["request"]
         if not (
             instance.is_dynamic_group_associable_model
             and request.user.has_perm("extras.view_dynamicgroup")
             and instance.dynamic_groups.exists()
         ):
             return ""
-        return super().render_tab(request, instance)
+        return super().render_tab(context)
 
-    def render_content(self, request, instance):
+    def render_content(self, context):
+        instance = context["object"]
+        request = context["request"]
         if not (
             instance.is_dynamic_group_associable_model
             and request.user.has_perm("extras.view_dynamicgroup")
             and instance.dynamic_groups.exists()
         ):
             return ""
-        return super().render_content(request, instance)
+        return super().render_content(context)
 
     @property
     def tab_label(self):
         return format_html(
             "Dynamic Groups {}",
-            render_to_string("utilities/templatetags/badge.html", badge(self.instance.dynamic_groups.count())),
+            render_to_string("utilities/templatetags/badge.html", badge(self.context["object"].dynamic_groups.count())),
         )
 
 
@@ -339,30 +343,34 @@ class ObjectDetailMetadataTab(Tab):
             ),
         )
 
-    def render_tab(self, request, instance):
+    def render_tab(self, context):
+        instance = context["object"]
+        request = context["request"]
         if not (
             instance.is_metadata_associable_model
             and request.user.has_perm("extras.view_objectmetadata")
             and instance.associated_object_metadata.exists()
         ):
             return ""
-        return super().render_tab(request, instance)
+        return super().render_tab(context)
 
-    def render_content(self, request, instance):
+    def render_content(self, context):
+        instance = context["object"]
+        request = context["request"]
         if not (
             instance.is_metadata_associable_model
             and request.user.has_perm("extras.view_object_metadata")
             and instance.associated_object_metadata.exists()
         ):
             return ""
-        return super().render_content(request, instance)
+        return super().render_content(context)
 
     @property
     def tab_label(self):
         return format_html(
             "Object Metadata {}",
             render_to_string(
-                "utilities/templatetags/badge.html", badge(self.instance.associated_object_metadata.count())
+                "utilities/templatetags/badge.html", badge(self.context["object"].associated_object_metadata.count())
             ),
         )
 
@@ -388,7 +396,7 @@ class Layout(ABC):
         }
 
     @abstractmethod
-    def render(self, request, instance): ...
+    def render(self, context): ...
 
 
 class LayoutTwoColumn(Layout):
@@ -400,7 +408,9 @@ class LayoutTwoColumn(Layout):
         self.left_panels = list(left_panels) if left_panels is not None else []
         self.right_panels = list(right_panels) if right_panels is not None else []
 
-    def render(self, request, instance):
+    def render(self, context):
+        request = context["request"]
+        instance = context["object"]
         return format_html(
             """\
 <div class="row">
@@ -413,10 +423,8 @@ class LayoutTwoColumn(Layout):
         {plugin_right_page}
     </div>
 </div>""",
-            left_panels=format_html_join("\n", "{}", ([panel.render(request, instance)] for panel in self.left_panels)),
-            right_panels=format_html_join(
-                "\n", "{}", ([panel.render(request, instance)] for panel in self.right_panels)
-            ),
+            left_panels=format_html_join("\n", "{}", ([panel.render(context)] for panel in self.left_panels)),
+            right_panels=format_html_join("\n", "{}", ([panel.render(context)] for panel in self.right_panels)),
             plugin_left_page=plugin_left_page(self._request_context(request), instance)
             if self.include_template_extensions
             else "",
@@ -434,7 +442,9 @@ class LayoutFullWidth(Layout):
         super().__init__(**kwargs)
         self.panels = list(panels) if panels is not None else []
 
-    def render(self, request, instance):
+    def render(self, context):
+        request = context["request"]
+        instance = context["object"]
         return format_html(
             """\
 <div class="row">
@@ -443,7 +453,7 @@ class LayoutFullWidth(Layout):
         {plugin_full_width_page}
     </div>
 </div>""",
-            panels=format_html_join("\n", "{}", ([panel.render(request, instance)] for panel in self.panels)),
+            panels=format_html_join("\n", "{}", ([panel.render(context)] for panel in self.panels)),
             plugin_full_width_page=plugin_full_width_page(self._request_context(request), instance)
             if self.include_template_extensions
             else "",
@@ -453,35 +463,37 @@ class LayoutFullWidth(Layout):
 class Panel(ABC):
     """Abstract base class for defining an individual display panel within a Layout within a Tab."""
 
-    def __init__(self, *, label=None):
+    DEFAULT_CONTENT_WRAPPER = '<div class="panel-body">{}</div>'
+    ATTR_TABLE_CONTENT_WRAPPER = '<table class="table table-hover panel-body attr-table">{}</table>'
+
+    def __init__(self, *, label=None, content_wrapper=None):
         """
         Instantiate a Panel.
 
         Args:
             label (str): The label to display at the top of the panel.
+            content_wrapper (str): HTML format string to wrap the rendered content in.
+                Defaults to `<div class="panel-body">{}</div>`.
         """
         self.label = label
+        self.content_wrapper = content_wrapper or self.DEFAULT_CONTENT_WRAPPER
 
-    def render(self, request, instance):
+    def render(self, context):
         return format_html(
             """\
 <div class="panel panel-default">
-    <div class="panel-heading">
-        <strong>{label}</strong>
-    </div>
-    <div class="panel-body">
-        {content}
-    </div>
+    <div class="panel-heading"><strong>{label}</strong></div>
+    {wrapped_content}
 </div>""",
-            label=self.render_label(request, instance),
-            content=self.render_content(request, instance),
+            label=self.render_label(context),
+            wrapped_content=format_html(self.content_wrapper, self.render_content(context)),
         )
 
-    def render_label(self, request, instance):
+    def render_label(self, context):
         return self.label
 
     @abstractmethod
-    def render_content(self, request, instance):
+    def render_content(self, context):
         pass
 
 
@@ -497,10 +509,10 @@ class TemplatePanel(Panel):
         self.template_path = template_path
         super().__init__(**kwargs)
 
-    def render_content(self, request, instance):
+    def render_content(self, context):
         if self.template_string is not None:
-            return Template(self.template_string).render(RequestContext(request, {"object": instance}))
-        return render(request, self.template_path, {"object": instance})
+            return Template(self.template_string).render(context)
+        return render(context["request"], self.template_path, context)
 
 
 class ObjectFieldsPanel(Panel):
@@ -517,33 +529,19 @@ class ObjectFieldsPanel(Panel):
         """
         self.fields = fields
         self.field_transforms = field_transforms or {}
+        kwargs.setdefault("content_wrapper", self.ATTR_TABLE_CONTENT_WRAPPER)
         super().__init__(**kwargs)
 
-    def render(self, request, instance):
-        """Override Panel.render() to render an attr-table as the panel body."""
-        return format_html(
-            """\
-<div class="panel panel-default">
-    <div class="panel-heading">
-        <strong>{label}</strong>
-    </div>
-    <table class="table table-hover panel-body attr-table">
-        {content}
-    </table>
-</div>""",
-            label=self.render_label(request, instance),
-            content=self.render_content(request, instance),
-        )
-
-    def render_label(self, request, instance):
+    def render_label(self, context):
         if self.label is None:
-            return bettertitle(instance._meta.verbose_name)
-        return super().render_label(request, instance)
+            return bettertitle(context["object"]._meta.verbose_name)
+        return super().render_label(context)
 
-    def render_content(self, request, instance):
+    def render_content(self, context):
         """Render the table rows corresponding to the specified fields, applying field_transforms as specified."""
         result = format_html("")
         fields = self.fields
+        instance = context["object"]
 
         if fields == "__all__":
             # Derive the list of fields from the instance, skipping certain fields by default.

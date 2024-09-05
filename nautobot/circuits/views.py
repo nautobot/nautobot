@@ -6,7 +6,14 @@ from django_tables2 import RequestConfig
 
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.templatetags.helpers import humanize_speed, placeholder, render_markdown
-from nautobot.core.ui.object_detail import ObjectDetailContent
+from nautobot.core.ui.object_detail import (
+    LayoutFullWidth,
+    LayoutTwoColumn,
+    ObjectDetailContent,
+    ObjectDetailMainTab,
+    ObjectFieldsPanel,
+    TemplatePanel,
+)
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
@@ -130,21 +137,50 @@ class CircuitUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.CircuitSerializer
     table_class = tables.CircuitTable
     object_detail_content = ObjectDetailContent(
-        detail_fields={
-            "Circuit": [
-                "status",
-                "provider",
-                "cid",
-                "circuit_type",
-                "tenant",
-                "install_date",
-                "commit_rate",
-                "description",
-            ],
-            "Comments": ["comments"],
-        },
-        field_transforms={"commit_rate": [humanize_speed, placeholder], "comments": [render_markdown, placeholder]},
-        # TODO: add right panels for circuit terminations
+        tabs=[
+            ObjectDetailMainTab(
+                layouts=[
+                    LayoutTwoColumn(
+                        include_template_extensions=True,
+                        left_panels=(
+                            ObjectFieldsPanel(
+                                fields=[
+                                    "status",
+                                    "provider",
+                                    "cid",
+                                    "circuit_type",
+                                    "tenant",
+                                    "install_date",
+                                    "commit_rate",
+                                    "description",
+                                ],
+                                field_transforms={"commit_rate": [humanize_speed, placeholder]},
+                            ),
+                            ObjectFieldsPanel(
+                                label="Comments",
+                                fields=["comments"],
+                                field_transforms={"comments": [render_markdown, placeholder]},
+                            ),
+                        ),
+                        right_panels=(
+                            TemplatePanel(
+                                label="Termination - A Side",
+                                # TODO: edit/swap/delete/detail buttons in panel header
+                                content_wrapper=TemplatePanel.ATTR_TABLE_CONTENT_WRAPPER,
+                                template_string="{% include 'circuits/inc/circuit_termination_fragment.html' with termination=circuit_termination_a %}",
+                            ),
+                            TemplatePanel(
+                                label="Termination - Z Side",
+                                # TODO: edit/swap/delete/detail buttons in panel header
+                                content_wrapper=TemplatePanel.ATTR_TABLE_CONTENT_WRAPPER,
+                                template_string="{% include 'circuits/inc/circuit_termination_fragment.html' with termination=circuit_termination_z %}",
+                            ),
+                        ),
+                    ),
+                    LayoutFullWidth(include_template_extensions=True),
+                ],
+            ),
+        ]
     )
 
     def get_extra_context(self, request, instance):
