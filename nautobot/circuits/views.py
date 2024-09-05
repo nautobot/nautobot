@@ -144,16 +144,8 @@ class CircuitUIViewSet(NautobotUIViewSet):
                         include_template_extensions=True,
                         left_panels=(
                             ObjectFieldsPanel(
-                                fields=[
-                                    "status",
-                                    "provider",
-                                    "cid",
-                                    "circuit_type",
-                                    "tenant",
-                                    "install_date",
-                                    "commit_rate",
-                                    "description",
-                                ],
+                                fields="__all__",
+                                exclude_fields=["comments", "circuit_termination_a", "circuit_termination_z"],
                                 field_transforms={"commit_rate": [humanize_speed, placeholder]},
                             ),
                             ObjectFieldsPanel(

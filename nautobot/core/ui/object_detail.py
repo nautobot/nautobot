@@ -518,16 +518,20 @@ class TemplatePanel(Panel):
 class ObjectFieldsPanel(Panel):
     """A panel that renders a table of object instance attributes."""
 
-    def __init__(self, *, fields="__all__", field_transforms=None, **kwargs):
+    def __init__(self, *, fields="__all__", exclude_fields=None, field_transforms=None, **kwargs):
         """
         Instantiate an ObjectFieldsPanel.
 
         Args:
             fields (str, list): The string "__all__", or an ordered list of field names to display.
+            exclude_fields (list): Optional list of field names to exclude from `__all__`.
             field_transforms (dict): A dict of `{field_name: [transform_functions]}` that can be used to customize the
                                      display string for any given field.
         """
         self.fields = fields
+        self.exclude_fields = exclude_fields or []
+        if self.exclude_fields and self.fields != "__all__":
+            raise ValueError("exclude_fields can only be set in combination with fields='__all__'")
         self.field_transforms = field_transforms or {}
         kwargs.setdefault("content_wrapper", self.ATTR_TABLE_CONTENT_WRAPPER)
         super().__init__(**kwargs)
@@ -555,8 +559,12 @@ class ObjectFieldsPanel(Panel):
                 if field.is_relation and (field.many_to_many or field.one_to_many):
                     continue
                 fields.append(field.name)
+            # TODO: apply a default ordering "smarter" than declaration order? Alphabetical? By field type?
+            # TODO: allow model to specify an alternative field ordering?
 
         for field_name in fields:
+            if field_name in self.exclude_fields:
+                continue
             field = instance._meta.get_field(field_name)
             field_label = bettertitle(field.verbose_name)
             field_value = getattr(instance, field.name)
