@@ -337,7 +337,7 @@ def common_detail_view_context(request, instance):
     context["created_by"] = created_by
     context["last_updated_by"] = last_updated_by
 
-    if instance.is_contact_associable_model:
+    if getattr(instance, "is_contact_associable_model", False):
         paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
         associations = instance.associated_contacts.restrict(request.user, "view").order_by("role__name")
         associations_table = AssociatedContactsTable(associations, orderable=False)
@@ -347,7 +347,7 @@ def common_detail_view_context(request, instance):
     else:
         context["associated_contacts_table"] = None
 
-    if instance.is_dynamic_group_associable_model:
+    if getattr(instance, "is_dynamic_group_associable_model", False):
         paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
         dynamic_groups = instance.dynamic_groups.restrict(request.user, "view")
         dynamic_groups_table = DynamicGroupTable(dynamic_groups, orderable=False)
@@ -358,7 +358,7 @@ def common_detail_view_context(request, instance):
     else:
         context["associated_dynamic_groups_table"] = None
 
-    if instance.is_metadata_associable_model:
+    if getattr(instance, "is_metadata_associable_model", False):
         paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
         object_metadata = instance.associated_object_metadata.restrict(request.user, "view").order_by(
             "metadata_type", "scoped_fields"

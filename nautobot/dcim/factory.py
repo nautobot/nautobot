@@ -110,7 +110,7 @@ NETWORK_DRIVERS = {
     "Palo Alto": ["paloalto_panos"],
 }
 
-TIME_ZONES = {timezone for timezone, _ in TimeZoneFormField().choices}
+TIME_ZONES = sorted(timezone for timezone, _ in TimeZoneFormField().choices)
 
 
 # Retrieve correct rack reservation units
@@ -296,7 +296,7 @@ class DeviceTypeFactory(PrimaryModelFactory):
         while not unused_models:
             unused_models = {f"{device_type} {count}" for device_type in device_types}.difference(current_models)
             count += 1
-        return factory.random.randgen.choice(list(unused_models))
+        return factory.random.randgen.choice(sorted(unused_models))
 
     has_part_number = NautobotBoolIterator()
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
@@ -784,7 +784,7 @@ class ModuleTypeFactory(PrimaryModelFactory):
         while not unused_models:
             unused_models = {f"{module_type} {count}" for module_type in module_types}.difference(current_models)
             count += 1
-        return factory.random.randgen.choice(list(unused_models))
+        return factory.random.randgen.choice(sorted(unused_models))
 
 
 class ModuleFactory(PrimaryModelFactory):

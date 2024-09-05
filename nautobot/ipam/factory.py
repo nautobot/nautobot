@@ -84,6 +84,7 @@ class VRFFactory(PrimaryModelFactory):
         model = VRF
         exclude = (
             "has_description",
+            "has_status",
             "has_tenant",
         )
 
@@ -102,6 +103,11 @@ class VRFFactory(PrimaryModelFactory):
 
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
+
+    has_status = NautobotBoolIterator()
+    status = factory.Maybe(
+        "has_status", random_instance(lambda: Status.objects.get_for_model(VRF), allow_null=False), None
+    )
 
     namespace = random_instance(Namespace, allow_null=False)
 

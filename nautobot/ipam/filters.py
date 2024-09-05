@@ -66,7 +66,7 @@ class NamespaceFilterSet(NautobotFilterSet):
         fields = "__all__"
 
 
-class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
+class VRFFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
