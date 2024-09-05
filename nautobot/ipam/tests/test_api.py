@@ -450,7 +450,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         url = reverse("ipam-api:prefix-list")
         self.add_permissions("ipam.view_prefix")
 
-        response = self.client.get(url, **self.header, QUERY_STRING="depth=1")
+        response = self.client.get(f"{url}?depth=1", **self.header)
         for p in response.data["results"]:
             self.assertEqual(p["display"], f'{p["prefix"]}: {p["namespace"]["name"]}')
 
