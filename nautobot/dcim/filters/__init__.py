@@ -2150,30 +2150,39 @@ class VirtualDeviceContextFilterSet(NautobotFilterSet, TenancyModelFilterSetMixi
 
     class Meta:
         model = VirtualDeviceContext
-        fields = ["identifier", "name", "device", "tenant", "primary_ip4", "primary_ip6", "has_primary_ip", "status"]
+        fields = [
+            "identifier",
+            "name",
+            "device",
+            "tenant",
+            "primary_ip4",
+            "primary_ip6",
+            "has_primary_ip",
+            "status",
+            "tags",
+            "description",
+        ]
 
     # TODO(timizuo): Make a mixin for ip filterset fields to reduce code duplication
+    # VirtualMachineFilterSet,
     def generate_query__has_primary_ip(self, value):
         query = Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)
-        if not value:
-            return ~query
-        return query
+        return ~query if not value else query
 
     def _has_primary_ip(self, queryset, name, value):
         params = self.generate_query__has_primary_ip(value)
         return queryset.filter(params)
 
-    # 2.0 TODO(jathan): Eliminate these methods.
-    def filter_primary_ip4(self, queryset, name, value):
-        pk_values = set(item for item in value if is_uuid(item))
-        addresses = set(item for item in value if item not in pk_values)
+    def get_ip_queryset(self, value):
+        pk_values = {item for item in value if is_uuid(item)}
+        addresses = {item for item in value if item not in pk_values}
 
-        ip_queryset = IPAddress.objects.filter_address_or_pk_in(addresses, pk_values)
+        return IPAddress.objects.filter_address_or_pk_in(addresses, pk_values)
+
+    def filter_primary_ip4(self, queryset, name, value):
+        ip_queryset = self.get_ip_queryset(value)
         return queryset.filter(primary_ip4__in=ip_queryset)
 
     def filter_primary_ip6(self, queryset, name, value):
-        pk_values = set(item for item in value if is_uuid(item))
-        addresses = set(item for item in value if item not in pk_values)
-
-        ip_queryset = IPAddress.objects.filter_address_or_pk_in(addresses, pk_values)
+        ip_queryset = self.get_ip_queryset(value)
         return queryset.filter(primary_ip6__in=ip_queryset)

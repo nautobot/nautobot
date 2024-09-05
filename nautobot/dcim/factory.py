@@ -951,7 +951,7 @@ class ModuleBayTemplateFactory(ModularDeviceComponentTemplateFactory):
 class VirtualDeviceContextFactory(PrimaryModelFactory):
     class Meta:
         model = VirtualDeviceContext
-        exclude = ("has_tenant",)
+        exclude = ("has_tenant", "has_description")
 
     status = random_instance(
         lambda: Status.objects.get_for_model(VirtualDeviceContext),
@@ -966,3 +966,5 @@ class VirtualDeviceContextFactory(PrimaryModelFactory):
         random_instance(Tenant, allow_null=False),
         None,
     )
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
