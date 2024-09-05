@@ -455,7 +455,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         )
         if prefix is None:
             self.fail("Suitable prefix fixture not found")
-        url = reverse("ipam-api:prefix-list") #, kwargs={"pk": prefix.pk})
+        url = reverse("ipam-api:prefix-list")
         self.add_permissions("ipam.view_prefix")
 
         response = self.client.get(url, **self.header, QUERY_STRING="depth=1")
