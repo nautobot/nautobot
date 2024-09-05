@@ -24,6 +24,11 @@ from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:  # python 3.8
+    from backports.zoneinfo import ZoneInfo
+
 from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
@@ -1958,6 +1963,7 @@ class ScheduledJobView(generic.ObjectView):
         return {
             "labels": labels,
             "job_class_found": (job_class is not None),
+            "default_time_zone": ZoneInfo(settings.TIME_ZONE),
             **super().get_extra_context(request, instance),
         }
 

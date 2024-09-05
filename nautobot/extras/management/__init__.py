@@ -32,6 +32,7 @@ STATUS_CHOICESET_MAP = {
     "ipam.IPAddress": ipam_choices.IPAddressStatusChoices,
     "ipam.Prefix": ipam_choices.PrefixStatusChoices,
     "ipam.VLAN": ipam_choices.VLANStatusChoices,
+    "ipam.VRF": ipam_choices.VRFStatusChoices,
     "virtualization.VirtualMachine": vm_choices.VirtualMachineStatusChoices,
     "virtualization.VMInterface": vm_choices.VMInterfaceStatusChoices,
 }
@@ -48,6 +49,7 @@ STATUS_COLOR_MAP = {
     "Decommissioning": ColorChoices.COLOR_AMBER,
     "Deprecated": ColorChoices.COLOR_RED,
     "Deprovisioning": ColorChoices.COLOR_AMBER,
+    "Down": ColorChoices.COLOR_AMBER,
     "End-of-Life": ColorChoices.COLOR_RED,
     "Extended Support": ColorChoices.COLOR_CYAN,
     "Failed": ColorChoices.COLOR_RED,
@@ -76,6 +78,7 @@ STATUS_DESCRIPTION_MAP = {
     "Decommissioning": "Unit is being decommissioned",
     "Deprecated": "Unit has been deprecated",
     "Deprovisioning": "Circuit is being deprovisioned",
+    "Down": "VRF is down",
     "End-of-Life": "Unit has reached end-of-life",
     "Extended Support": "Software is in extended support",
     "Failed": "Unit has failed",

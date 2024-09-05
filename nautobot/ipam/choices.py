@@ -103,6 +103,23 @@ class IPAddressTypeChoices(ChoiceSet):
 
 
 #
+# VRFs
+#
+
+
+class VRFStatusChoices(ChoiceSet):
+    STATUS_ACTIVE = "active"
+    STATUS_DOWN = "down"
+    STATUS_DEPRECATED = "deprecated"
+
+    CHOICES = (
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_DOWN, "Down"),
+        (STATUS_DEPRECATED, "Deprecated"),
+    )
+
+
+#
 # VLANs
 #
 
