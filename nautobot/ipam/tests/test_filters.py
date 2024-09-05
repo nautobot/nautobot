@@ -985,8 +985,9 @@ class VLANGroupTestCase(FilterTestCases.FilterTestCase):
     filterset = VLANGroupFilterSet
     generic_filter_tests = (
         ("description",),
-        ("location", "location__id"),
-        ("location", "location__name"),
+        # NOTE: No generic logic in place yet to test TreeNodeMultipleChoiceFilter
+        # ("location", "location__id"),
+        # ("location", "location__name"),
         ("name",),
     )
 
