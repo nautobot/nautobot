@@ -447,14 +447,6 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         """
         Test that the `display` field is correctly populated.
         """
-        prefix = (
-            Prefix.objects.filter(ip_version=6)
-            .filter(prefix_length__lt=128)
-            .exclude(type=choices.PrefixTypeChoices.TYPE_CONTAINER)
-            .first()
-        )
-        if prefix is None:
-            self.fail("Suitable prefix fixture not found")
         url = reverse("ipam-api:prefix-list")
         self.add_permissions("ipam.view_prefix")
 
