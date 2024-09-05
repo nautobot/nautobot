@@ -5,7 +5,7 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0116_task_queue_to_job_queue_migration"),
+        ("extras", "0117_task_queue_to_job_queue_migration"),
     ]
 
     operations = [

@@ -161,6 +161,7 @@ class JobQueueFactory(PrimaryModelFactory):
     def jobs(self, create, extracted, **kwargs):
         self.jobs.set(get_random_instances(Job))
 
+
 class JobResultFactory(BaseModelFactory):
     """JobResult model factory."""
 
