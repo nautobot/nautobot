@@ -6,6 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
+from timezone_field.rest_framework import TimeZoneSerializerField
 
 from nautobot.core.api import (
     BaseModelSerializer,
@@ -595,6 +596,7 @@ class JobVariableSerializer(serializers.Serializer):
 
 class ScheduledJobSerializer(BaseModelSerializer):
     # start_time = serializers.DateTimeField(format=None, required=False)
+    time_zone = TimeZoneSerializerField(required=False)
 
     class Meta:
         model = ScheduledJob

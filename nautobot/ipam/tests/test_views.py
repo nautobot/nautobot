@@ -73,6 +73,7 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         tenants = Tenant.objects.all()[:2]
         namespace = Prefix.objects.first().namespace
         prefixes = Prefix.objects.filter(namespace=namespace)
+        vrf_statuses = Status.objects.get_for_model(VRF)
 
         cls.form_data = {
             "name": "VRF X",
@@ -82,9 +83,11 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "A new VRF",
             "prefixes": [prefixes[1].id],
             "tags": [t.pk for t in Tag.objects.get_for_model(VRF)],
+            "status": vrf_statuses.first().pk,
         }
 
         cls.bulk_edit_data = {
+            "status": vrf_statuses.first().pk,
             "tenant": tenants[1].pk,
             "description": "New description",
             "namespace": prefixes[0].namespace.id,

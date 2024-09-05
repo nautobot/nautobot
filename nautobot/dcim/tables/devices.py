@@ -396,7 +396,7 @@ class DeviceModuleConsolePortTable(ConsolePortTable):
             "actions",
         )
         row_attrs = {
-            "style": cable_status_color_css,
+            "class": cable_status_color_css,
         }
 
 
@@ -460,7 +460,7 @@ class DeviceModuleConsoleServerPortTable(ConsoleServerPortTable):
             "actions",
         )
         row_attrs = {
-            "style": cable_status_color_css,
+            "class": cable_status_color_css,
         }
 
 
@@ -535,7 +535,7 @@ class DeviceModulePowerPortTable(PowerPortTable):
             "connection",
             "actions",
         )
-        row_attrs = {"style": cable_status_color_css}
+        row_attrs = {"class": cable_status_color_css}
 
 
 class PowerOutletTable(ModularDeviceComponentTable, PathEndpointTable):
@@ -613,7 +613,7 @@ class DeviceModulePowerOutletTable(PowerOutletTable):
             "connection",
             "actions",
         )
-        row_attrs = {"style": cable_status_color_css}
+        row_attrs = {"class": cable_status_color_css}
 
 
 class BaseInterfaceTable(BaseTable):
@@ -739,7 +739,7 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "actions",
         ]
         row_attrs = {
-            "style": cable_status_color_css,
+            "class": cable_status_color_css,
             "data-name": lambda record: record.name,
         }
 
@@ -815,7 +815,7 @@ class DeviceModuleFrontPortTable(FrontPortTable):
             "cable_peer",
             "actions",
         )
-        row_attrs = {"style": cable_status_color_css}
+        row_attrs = {"class": cable_status_color_css}
 
 
 class RearPortTable(ModularDeviceComponentTable, CableTerminationTable):
@@ -874,7 +874,7 @@ class DeviceModuleRearPortTable(RearPortTable):
             "cable_peer",
             "actions",
         )
-        row_attrs = {"style": cable_status_color_css}
+        row_attrs = {"class": cable_status_color_css}
 
 
 class DeviceBayTable(DeviceComponentTable):

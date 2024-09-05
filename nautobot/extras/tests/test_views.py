@@ -1744,16 +1744,17 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             name="test2",
             task="pass.TestPass",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            interval=JobExecutionType.TYPE_DAILY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test3",
             task="pass.TestPass",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            interval=JobExecutionType.TYPE_CUSTOM,
             user=user,
             start_time=timezone.now(),
+            crontab="15 10 * * *",
         )
 
     def test_only_enabled_is_listed(self):
