@@ -251,7 +251,10 @@ class DynamicGroup(PrimaryModel):
             # Skip filter fields that have methods defined. They are not reversible.
             if skip_method_filters and filterset_field.method is not None:
                 # Don't skip method fields that also have a "generate_query_" method
-                if hasattr(filterset, "generate_query_" + filterset_field.method):
+                query_attr = (
+                    filterset_field.method.__name__ if callable(filterset_field.method) else filterset_field.method
+                )
+                if hasattr(filterset, f"generate_query_{query_attr}"):
                     logger.debug(
                         "Keeping %s for filterform: has a `generate_query_` filter method", filterset_field_name
                     )
