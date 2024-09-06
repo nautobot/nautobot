@@ -1283,7 +1283,6 @@ class IPAddressToInterface(BaseModel):
         else:
             return f"{self.ip_address!s} {self.vm_interface.virtual_machine.name} {self.vm_interface.name}"
 
-from django.contrib.postgres.fields import IntegerRangeField
 
 @extras_features(
     "custom_validators",
