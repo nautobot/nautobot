@@ -2,11 +2,11 @@
 
 from abc import ABC, abstractmethod
 
-from django.conf import settings
-from django.middleware import csrf
+from django.core.exceptions import FieldDoesNotExist
 from django.shortcuts import render
 from django.template import Template
 from django.template.loader import render_to_string
+from django.templatetags.l10n import localize
 from django.utils.html import format_html, format_html_join
 
 from nautobot.core.templatetags.helpers import (
@@ -107,7 +107,7 @@ class ObjectDetailContent:
     This currently defines the tabs and their contents, but currently does NOT define the page title, breadcrumbs, etc.
     """
 
-    def __init__(self, tabs=None, detail_fields=None, field_transforms=None):
+    def __init__(self, tabs=None):
         """
         Create an ObjectDetailContent.
 
@@ -115,28 +115,13 @@ class ObjectDetailContent:
             tabs (list): Optional list of `Tab` instances; if unset, the default `ObjectDetailMainTab` will be used.
                          Standard extras Tabs (advanced, contacts, dynamic-groups, metadata, etc.) do not need to be
                          specified as they will be automatically included regardless.
-            detail_fields (dict): Optional dict of {panel_name: [list of object field names], ...}.
-                                  This addresses the common case where a detail view doesn't care to define custom tabs,
-                                  layouts, or panels, but wants some control over how the default `ObjectDetailMainTab`
-                                  presents the object's fields in an ObjectFieldsPanel(s).
-            field_transforms (dict): Optional dict of {field_name: [list of transform functions], ...}.
-                                     This can be used to provide custom rendering of given field(s) within the automatic
-                                     `ObjectDetailMainTab` class, for example `{"commit_rate": [humanize_speed]}`.
         """
-        if tabs is None:
-            tabs = [ObjectDetailMainTab()]
-            if detail_fields is not None:
-                tabs[0].layouts[0].left_panels = [
-                    ObjectFieldsPanel(label=label, fields=fields, field_transforms=field_transforms)
-                    for label, fields in detail_fields.items()
-                ]
-
-        tabs = list(tabs)
-        # Inject "standard" tabs
-        tabs.append(ObjectDetailAdvancedTab())
-        tabs.append(ObjectDetailContactsTab())
-        tabs.append(ObjectDetailGroupsTab())
-        tabs.append(ObjectDetailMetadataTab())
+        tabs = list(tabs) if tabs is not None else [ObjectDetailMainTab()]
+        # Inject "standard" extra tabs
+        tabs.append(_ObjectDetailAdvancedTab())
+        tabs.append(_ObjectDetailContactsTab())
+        tabs.append(_ObjectDetailGroupsTab())
+        tabs.append(_ObjectDetailMetadataTab())
         self.tabs = tabs
 
     def render_tabs(self, context):
@@ -154,19 +139,23 @@ class Tab(ABC):
     tab_id: str
     tab_label: str
 
-    def __init__(self, layouts=None):
+    def __init__(self, *, layouts):
         """
         Create a Tab containing the given layouts of data.
 
         Args:
             layouts (list): List of `Layout` instances contained in this tab.
         """
-        if layouts is None:
-            layouts = []
         self.layouts = list(layouts)
+
+    def should_render(self, context):
+        return True
 
     def render_tab(self, context):
         """Render the tab (as opposed to its contents) to HTML."""
+        if not self.should_render(context):
+            return ""
+
         self.context = context
 
         return format_html(
@@ -184,6 +173,9 @@ class Tab(ABC):
 
     def render_content(self, context):
         """Render the tab contents to HTML."""
+        if not self.should_render(context):
+            return ""
+
         self.context = context
 
         return format_html(
@@ -202,11 +194,6 @@ class ObjectDetailMainTab(Tab):
 
     tab_id = "main"
 
-    @property
-    def tab_label(self):
-        """Use the `verbose_name` of the given instance's Model as the tab label by default."""
-        return bettertitle(self.context["object"]._meta.verbose_name)
-
     def __init__(self, layouts=None):
         """Default to two-column layout at top (containing a left `ObjectFieldsPanel`) with full-width layout below."""
         if layouts is None:
@@ -220,8 +207,13 @@ class ObjectDetailMainTab(Tab):
         # TODO: autoinject standard panels (custom fields, relationships, tags, etc.) even if layouts was customized
         super().__init__(layouts=layouts)
 
+    @property
+    def tab_label(self):
+        """Use the `verbose_name` of the given instance's Model as the tab label by default."""
+        return bettertitle(self.context["object"]._meta.verbose_name)
 
-class ObjectDetailAdvancedTab(Tab):
+
+class _ObjectDetailAdvancedTab(Tab):
     """Built-in class for a Tab displaying "advanced" information such as PKs and data provenance."""
 
     tab_id = "advanced"
@@ -233,8 +225,18 @@ class ObjectDetailAdvancedTab(Tab):
                 LayoutTwoColumn(
                     left_panels=(
                         # TODO
-                        TemplatePanel(label="Object Details", template_string="Object Details"),
-                        TemplatePanel(label="Data Provenance", template_string="Data Provenance"),
+                        ObjectFieldsPanel(
+                            label="Object Details",
+                            fields=["id", "natural_slug", "slug"],
+                            ignore_nonexistent_fields=True,
+                        ),
+                        ObjectFieldsPanel(
+                            label="Data Provenance",
+                            fields=["created", "last_updated"],
+                            ignore_nonexistent_fields=True,
+                            # TODO add created_by/last_updated_by derived fields and link to REST API
+                        ),
+                        # TODO add advanced_ui custom fields and relationships
                     ),
                 ),
                 LayoutFullWidth(),
@@ -242,7 +244,7 @@ class ObjectDetailAdvancedTab(Tab):
         )
 
 
-class ObjectDetailContactsTab(Tab):
+class _ObjectDetailContactsTab(Tab):
     """Built-in class for a Tab displaying information about contact/team associations."""
 
     tab_id = "contacts"
@@ -259,15 +261,8 @@ class ObjectDetailContactsTab(Tab):
             ),
         )
 
-    def render_tab(self, context):
-        if not context["object"].is_contact_associable_model:
-            return ""
-        return super().render_tab(context)
-
-    def render_content(self, context):
-        if not context["object"].is_contact_associable_model:
-            return ""
-        return super().render_content(context)
+    def should_render(self, context):
+        return context["object"].is_contact_associable_model
 
     @property
     def tab_label(self):
@@ -279,7 +274,7 @@ class ObjectDetailContactsTab(Tab):
         )
 
 
-class ObjectDetailGroupsTab(Tab):
+class _ObjectDetailGroupsTab(Tab):
     """Built-in class for a Tab displaying information about associated dynamic groups."""
 
     tab_id = "dynamic_groups"
@@ -296,27 +291,12 @@ class ObjectDetailGroupsTab(Tab):
             ),
         )
 
-    def render_tab(self, context):
-        instance = context["object"]
-        request = context["request"]
-        if not (
-            instance.is_dynamic_group_associable_model
-            and request.user.has_perm("extras.view_dynamicgroup")
-            and instance.dynamic_groups.exists()
-        ):
-            return ""
-        return super().render_tab(context)
-
-    def render_content(self, context):
-        instance = context["object"]
-        request = context["request"]
-        if not (
-            instance.is_dynamic_group_associable_model
-            and request.user.has_perm("extras.view_dynamicgroup")
-            and instance.dynamic_groups.exists()
-        ):
-            return ""
-        return super().render_content(context)
+    def should_render(self, context):
+        return (
+            context["object"].is_dynamic_group_associable_model
+            and context["request"].user.has_perm("extras.view_dynamicgroup")
+            and context["object"].dynamic_groups.exists()
+        )
 
     @property
     def tab_label(self):
@@ -326,7 +306,7 @@ class ObjectDetailGroupsTab(Tab):
         )
 
 
-class ObjectDetailMetadataTab(Tab):
+class _ObjectDetailMetadataTab(Tab):
     """Built-in class for a Tab displaying information about associated object metadata."""
 
     tab_id = "object_metadata"
@@ -343,27 +323,12 @@ class ObjectDetailMetadataTab(Tab):
             ),
         )
 
-    def render_tab(self, context):
-        instance = context["object"]
-        request = context["request"]
-        if not (
-            instance.is_metadata_associable_model
-            and request.user.has_perm("extras.view_objectmetadata")
-            and instance.associated_object_metadata.exists()
-        ):
-            return ""
-        return super().render_tab(context)
-
-    def render_content(self, context):
-        instance = context["object"]
-        request = context["request"]
-        if not (
-            instance.is_metadata_associable_model
-            and request.user.has_perm("extras.view_object_metadata")
-            and instance.associated_object_metadata.exists()
-        ):
-            return ""
-        return super().render_content(context)
+    def should_render(self, context):
+        return (
+            context["object"].is_metadata_associable_model
+            and context["request"].user.has_perm("extras.view_objectmetadata")
+            and context["object"].associated_object_metadata.exists()
+        )
 
     @property
     def tab_label(self):
@@ -387,14 +352,6 @@ class Layout(ABC):
         """
         self.include_template_extensions = include_template_extensions
 
-    def _request_context(self, request):
-        return {
-            "request": request,
-            "settings": settings,
-            "csrf_token": csrf.get_token(request),
-            "perms": [],  # TODO!
-        }
-
     @abstractmethod
     def render(self, context): ...
 
@@ -409,7 +366,6 @@ class LayoutTwoColumn(Layout):
         self.right_panels = list(right_panels) if right_panels is not None else []
 
     def render(self, context):
-        request = context["request"]
         instance = context["object"]
         return format_html(
             """\
@@ -425,12 +381,8 @@ class LayoutTwoColumn(Layout):
 </div>""",
             left_panels=format_html_join("\n", "{}", ([panel.render(context)] for panel in self.left_panels)),
             right_panels=format_html_join("\n", "{}", ([panel.render(context)] for panel in self.right_panels)),
-            plugin_left_page=plugin_left_page(self._request_context(request), instance)
-            if self.include_template_extensions
-            else "",
-            plugin_right_page=plugin_right_page(self._request_context(request), instance)
-            if self.include_template_extensions
-            else "",
+            plugin_left_page=plugin_left_page(context, instance) if self.include_template_extensions else "",
+            plugin_right_page=plugin_right_page(context, instance) if self.include_template_extensions else "",
         )
 
 
@@ -443,7 +395,6 @@ class LayoutFullWidth(Layout):
         self.panels = list(panels) if panels is not None else []
 
     def render(self, context):
-        request = context["request"]
         instance = context["object"]
         return format_html(
             """\
@@ -454,7 +405,7 @@ class LayoutFullWidth(Layout):
     </div>
 </div>""",
             panels=format_html_join("\n", "{}", ([panel.render(context)] for panel in self.panels)),
-            plugin_full_width_page=plugin_full_width_page(self._request_context(request), instance)
+            plugin_full_width_page=plugin_full_width_page(context, instance)
             if self.include_template_extensions
             else "",
         )
@@ -493,8 +444,7 @@ class Panel(ABC):
         return self.label
 
     @abstractmethod
-    def render_content(self, context):
-        pass
+    def render_content(self, context): ...
 
 
 class TemplatePanel(Panel):
@@ -518,7 +468,15 @@ class TemplatePanel(Panel):
 class ObjectFieldsPanel(Panel):
     """A panel that renders a table of object instance attributes."""
 
-    def __init__(self, *, fields="__all__", exclude_fields=None, field_transforms=None, **kwargs):
+    def __init__(
+        self,
+        *,
+        fields="__all__",
+        exclude_fields=None,
+        field_transforms=None,
+        ignore_nonexistent_fields=False,
+        **kwargs,
+    ):
         """
         Instantiate an ObjectFieldsPanel.
 
@@ -533,6 +491,7 @@ class ObjectFieldsPanel(Panel):
         if self.exclude_fields and self.fields != "__all__":
             raise ValueError("exclude_fields can only be set in combination with fields='__all__'")
         self.field_transforms = field_transforms or {}
+        self.ignore_nonexistent_fields = ignore_nonexistent_fields
         kwargs.setdefault("content_wrapper", self.ATTR_TABLE_CONTENT_WRAPPER)
         super().__init__(**kwargs)
 
@@ -565,15 +524,25 @@ class ObjectFieldsPanel(Panel):
         for field_name in fields:
             if field_name in self.exclude_fields:
                 continue
-            field = instance._meta.get_field(field_name)
-            field_label = bettertitle(field.verbose_name)
-            field_value = getattr(instance, field.name)
+            try:
+                field = instance._meta.get_field(field_name)
+                field_label = bettertitle(field.verbose_name)
+                field_value = getattr(instance, field.name)
+            except FieldDoesNotExist:
+                try:
+                    field_value = getattr(instance, field_name)
+                except AttributeError:
+                    if self.ignore_nonexistent_fields:
+                        continue
+                    raise
+                field = None
+                field_label = bettertitle(field_name.replace("_", " "))
 
             if field_name in self.field_transforms:
                 field_display = field_value
                 for transform in self.field_transforms[field_name]:
                     field_display = transform(field_display)
-            elif field.is_relation:
+            elif getattr(field, "is_relation", False):
                 if hasattr(field_value, "color"):
                     field_display = hyperlinked_object_with_color(field_value)
                 else:
@@ -582,7 +551,7 @@ class ObjectFieldsPanel(Panel):
                 if isinstance(field_value, Tenant) and field_value.tenant_group is not None:
                     field_display = format_html("{} / {}", hyperlinked_object(field_value.tenant_group), field_display)
             else:
-                field_display = placeholder(field_value)
+                field_display = placeholder(localize(field_value))
             # TODO: apply additional formatting such as JSON/Markdown rendering, etc.
 
             # TODO: add a copy button on hover to all field_display items
