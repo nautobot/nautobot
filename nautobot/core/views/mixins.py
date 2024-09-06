@@ -600,6 +600,8 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
     UI mixin to retrieve a model instance.
     """
 
+    object_detail_content = None
+
     def retrieve(self, request, *args, **kwargs):
         """
         Retrieve a model instance.
