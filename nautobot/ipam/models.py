@@ -1308,11 +1308,22 @@ class VLANGroup(OrganizationalModel):
 
     @property
     def normalized_range(self):
+        """Normalize range into a common format.
+
+        Normalized examples are:
+        - 1
+        - 1-5
+        - 1-5,7
+        """
         converted_ranges = convert_to_ranges(self.expanded_range)
         return ",".join([f"{x[0]}" if x[0] == x[1] else f"{x[0]}-{x[1]}" for x in converted_ranges])
 
     @property
     def expanded_range(self):
+        """Expand VLAN range.
+
+        '0-3,5' => [0, 1, 2, 3, 5]
+        """
         return parse_numeric_range(self.range)
 
     class Meta:
