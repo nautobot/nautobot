@@ -303,9 +303,10 @@ class Job(PrimaryModel):
         if isinstance(value, str):
             value = value.split(",")
         for queue in value:
-            job_queue, _ = JobQueue.objects.get_or_create(
-                name=queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
-            )
+            try:
+                job_queue = JobQueue.objects.get(name=queue)
+            except JobQueue.DoesNotExist:
+                raise ValidationError(f"Job Queue {queue} does not exist in the database.")
             JobQueueAssignment.objects.get_or_create(job_queue=job_queue, job=self)
 
     def clean(self):
@@ -1145,9 +1146,11 @@ class ScheduledJob(BaseModel):
     @queue.setter
     def queue(self, value):
         if value:
-            self.job_queue, _ = JobQueue.objects.get_or_create(
-                name=value, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
-            )
+            try:
+                job_queue = JobQueue.objects.get(name=value)
+                self.job_queue = job_queue
+            except JobQueue.DoesNotExist:
+                raise ValidationError(f"Job Queue {value} does not exist in the database.")
 
     @staticmethod
     def earliest_possible_time():

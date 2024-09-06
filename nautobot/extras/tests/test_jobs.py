@@ -12,6 +12,7 @@ from constance.test import override_config
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -115,6 +116,17 @@ class JobTest(TestCase):
         job_model.save()
         form = job_class().as_form()
         self.assertEqual(form.fields["dryrun"].initial, job_model.dryrun_default)
+
+    def test_job_task_queues_setter(self):
+        """Test the task_queues property setter on Job."""
+        module = "dry_run"
+        name = "TestDryRun"
+        _, job_model = get_job_class_and_model(module, name)
+        invalid_queue = "Invalid job Queue"
+        with self.assertRaises(ValidationError) as cm:
+            job_model.task_queues = [invalid_queue]
+            job_model.validated_save()
+        self.assertIn(f"Job Queue {invalid_queue} does not exist in the database.", str(cm.exception))
 
     def test_job_class_job_queues(self):
         """

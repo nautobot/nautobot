@@ -1856,6 +1856,14 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("America/New_York")),
         )
 
+    def test_scheduled_job_queue_setter(self):
+        """Test the queue property setter on ScheduledJob."""
+        invalid_queue = "Invalid job Queue"
+        with self.assertRaises(ValidationError) as cm:
+            self.daily_utc_job.queue = invalid_queue
+            self.daily_utc_job.validated_save()
+        self.assertIn(f"Job Queue {invalid_queue} does not exist in the database.", str(cm.exception))
+
     def test_schedule(self):
         """Test the schedule property."""
         with self.subTest("Test TYPE_DAILY schedules"):

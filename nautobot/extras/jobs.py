@@ -486,22 +486,10 @@ class BaseJob:
             help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
         )
 
-        try:
-            job_model = JobModel.objects.get_for_class_path(cls.class_path)
-            dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else cls.dryrun_default
-            job_queue_queryset = JobQueue.objects.filter(jobs=job_model)
-            job_queue_params = {"jobs": [job_model.pk]}
-        except JobModel.DoesNotExist:
-            logger.error("No Job instance found in the database corresponding to %s", cls.class_path)
-            dryrun_default = cls.dryrun_default
-            pk_list = []
-            for queue in cls.task_queues:
-                job_queue, _ = JobQueue.objects.get_or_create(
-                    name=queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
-                )
-                pk_list.append(job_queue.pk)
-            job_queue_queryset = JobQueue.objects.filter(pk__in=pk_list)
-            job_queue_params = {"id": pk_list}
+        job_model = JobModel.objects.get_for_class_path(cls.class_path)
+        dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else cls.dryrun_default
+        job_queue_queryset = JobQueue.objects.filter(jobs=job_model)
+        job_queue_params = {"jobs": [job_model.pk]}
 
         # Initialize job_queue choices
         form.fields["_job_queue"] = DynamicModelChoiceField(
