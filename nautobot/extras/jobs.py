@@ -38,7 +38,6 @@ from nautobot.core.forms import (
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_model_from_name
 from nautobot.extras.choices import (
-    JobQueueTypeChoices,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
