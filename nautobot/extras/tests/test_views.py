@@ -2903,6 +2903,9 @@ class JobButtonRenderingTestCase(TestCase):
         Ensure that the job button respects the job class' task_queues and the job class task_queues[0]/default is passed as a hidden form input.
         """
         self.job.task_queues_override = True
+        task_queues = ["overriden_queue", "default", "priority"]
+        for queue in task_queues:
+            JobQueue.objects.get_or_create(name=queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY})
         self.job.task_queues = ["overriden_queue", "default", "priority"]
         self.job.save()
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
@@ -2910,8 +2913,7 @@ class JobButtonRenderingTestCase(TestCase):
         content = extract_page_body(response.content.decode(response.charset))
         job_queues = self.job.job_queues.all().values_list("name", flat=True)
         self.assertIn(f'<input type="hidden" name="_job_queue" value="{job_queues[0]}">', content, content)
-        self.job.task_queues_override = False
-        self.job.save()
+        self.job.job_queues.set([])
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
