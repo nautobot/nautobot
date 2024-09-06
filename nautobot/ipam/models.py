@@ -1,3 +1,4 @@
+import itertools
 import logging
 import operator
 
@@ -10,6 +11,7 @@ from django.utils.functional import cached_property
 import netaddr
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.forms.utils import parse_numeric_range
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -44,6 +46,13 @@ __all__ = (
 
 
 logger = logging.getLogger(__name__)
+
+# TODO: move location
+def convert_to_ranges(iterable):
+    iterable = sorted(set(iterable))
+    for _, grp in itertools.groupby(enumerate(iterable), lambda t: t[1] - t[0]):
+        grp = list(grp)
+        yield grp[0][1], grp[-1][1]
 
 
 @extras_features(
@@ -1274,6 +1283,7 @@ class IPAddressToInterface(BaseModel):
         else:
             return f"{self.ip_address!s} {self.vm_interface.virtual_machine.name} {self.vm_interface.name}"
 
+from django.contrib.postgres.fields import IntegerRangeField
 
 @extras_features(
     "custom_validators",
@@ -1295,19 +1305,16 @@ class VLANGroup(OrganizationalModel):
     )
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
-    range = JSONArrayField(
-        base_field=models.PositiveIntegerField(
-            validators=[
-                MinValueValidator(constants.VLAN_VID_MIN),
-                MaxValueValidator(constants.VLAN_VID_MAX),
-            ]
-        ),
-        verbose_name="Allowed vlan identifiers",
-    )
+    range = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=False, default="1-4094")
 
     @property
-    def range_str(self):
-        return array_to_string(self.range)
+    def normalized_range(self):
+        converted_ranges = convert_to_ranges(self.expanded_range)
+        return ",".join([f"{x[0]}" if x[0] == x[1] else f"{x[0]}-{x[1]}" for x in converted_ranges])
+
+    @property
+    def expanded_range(self):
+        return parse_numeric_range(self.range)
 
     class Meta:
         ordering = ("name",)
@@ -1316,7 +1323,6 @@ class VLANGroup(OrganizationalModel):
 
     def clean(self):
         super().clean()
-
         # Validate location
         if self.location is not None:
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
@@ -1324,11 +1330,26 @@ class VLANGroup(OrganizationalModel):
                     {"location": f'VLAN groups may not associate to locations of type "{self.location.location_type}".'}
                 )
 
-        # Validate ranges for related VLANs.
-        if self.vlans.all() and any([_vlan.vid for _vlan in self.vlans.all()]) not in self.range:
+        # Validate range boundaries
+        _valid_range = range(constants.VLAN_VID_MIN, constants.VLAN_VID_MAX + 1)
+        if (self.expanded_range[0] not in _valid_range) or (self.expanded_range[-1] not in _valid_range):
             raise ValidationError(
-                {"vlans": "VLAN group range may not be re-sized due to existing VLANs."}
+                {"range": f"VLAN group range is outside of allowed {constants.VLAN_VID_MIN}-{constants.VLAN_VID_MAX} "
+                          f"range."}
             )
+
+        # Validate ranges for related VLANs.
+        if self.vlans.all() and any([_vlan.vid not in self.expanded_range for _vlan in self.vlans.all()]):
+            raise ValidationError(
+                {"range": "VLAN group range may not be re-sized due to existing VLANs."}
+            )
+
+    def save(self, *args, **kwargs):
+        # Compress the range
+        self.range = self.normalized_range
+
+        super().save(*args, **kwargs)
+
 
     def __str__(self):
         return self.name
@@ -1464,7 +1485,7 @@ class VLAN(PrimaryModel):
         super().clean()
 
         # Validate Vlan Group Range
-        if self.vid not in self.vlan_group.range:
+        if self.vid not in self.vlan_group.expanded_range:
             raise ValidationError({
                 "vid": "Vlan ID is not contained in Vlan Group Range"
             })

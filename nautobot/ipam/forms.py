@@ -722,10 +722,6 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
 
 
 class VLANGroupForm(LocatableModelFormMixin, NautobotModelForm):
-    range = NumericArrayField(
-        base_field=forms.IntegerField(),
-        help_text="Comma-separated list of numeric Vlan IDs. A range may be specified using a hyphen.",
-    )
 
     class Meta:
         model = VLANGroup
