@@ -12,7 +12,7 @@ def migrate_task_queues_to_job_queues(apps, schema):
     ScheduledJob = apps.get_model("extras", "ScheduledJob")
     JobQueue = apps.get_model("extras", "JobQueue")
 
-    default_job_queue, _ = JobQueue.object.get_or_create(
+    default_job_queue, _ = JobQueue.objects.get_or_create(
         name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
     )
 
