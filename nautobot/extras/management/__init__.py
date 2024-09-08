@@ -19,6 +19,7 @@ STATUS_CHOICESET_MAP = {
     "dcim.Cable": dcim_choices.CableStatusChoices,
     "dcim.Controller": dcim_choices.DeviceStatusChoices,
     "dcim.Device": dcim_choices.DeviceStatusChoices,
+    "dcim.VirtualDeviceContext": dcim_choices.VirtualDeviceContextStatusChoices,
     "dcim.Interface": dcim_choices.InterfaceStatusChoices,
     "dcim.Location": dcim_choices.LocationStatusChoices,
     "dcim.Module": dcim_choices.ModuleStatusChoices,

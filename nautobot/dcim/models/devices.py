@@ -1855,7 +1855,7 @@ class Module(PrimaryModel):
 )
 class VirtualDeviceContext(PrimaryModel):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
-    device = models.ForeignKey("dcim.Device", on_delete=models.PROTECT, related_name="vdcs")
+    device = models.ForeignKey("dcim.Device", on_delete=models.CASCADE, related_name="virtual_device_contexts")
     identifier = models.PositiveSmallIntegerField(
         help_text="Unique identifier provided by the platform being virtualized (Example: Nexus VDC Identifier)",
         blank=True,
@@ -1878,7 +1878,9 @@ class VirtualDeviceContext(PrimaryModel):
         null=True,
         verbose_name="Primary IPv6",
     )
-    tenant = models.ForeignKey("tenancy.Tenant", on_delete=models.PROTECT, related_name="vdcs", blank=True, null=True)
+    tenant = models.ForeignKey(
+        "tenancy.Tenant", on_delete=models.CASCADE, related_name="virtual_device_contexts", blank=True, null=True
+    )
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:

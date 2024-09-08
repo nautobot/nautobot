@@ -3375,7 +3375,7 @@ class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         devices = Device.objects.all()
-        status = Status.objects.get_for_model(VirtualDeviceContext)[0]
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext)[0]
         tenants = Tenant.objects.all()
 
         cls.create_data = [
@@ -3383,20 +3383,20 @@ class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
                 "name": "VirtualDeviceContext 1",
                 "device": devices[0].pk,
                 "identifier": 100,
-                "status": status.pk,
+                "status": vdc_status.pk,
             },
             {
                 "name": "VirtualDeviceContext 2",
                 "device": devices[1].pk,
                 "identifier": 200,
-                "status": status.pk,
+                "status": vdc_status.pk,
                 "tenant": tenants[1].pk,
             },
             {
                 "name": "VirtualDeviceContext 3",
                 "identifier": 300,
                 "device": devices[2].pk,
-                "status": status.pk,
+                "status": vdc_status.pk,
                 "tenant": tenants[2].pk,
             },
         ]

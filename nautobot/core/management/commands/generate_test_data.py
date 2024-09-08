@@ -156,7 +156,7 @@ class Command(BaseCommand):
         populate_role_choices(verbosity=0, using=db_name)
         _create_batch(RoleFactory, 20)
         populate_status_choices(verbosity=0, using=db_name)
-        _create_batch(StatusFactory, 15)
+        _create_batch(StatusFactory, 10)
         # Ensure that we have some tags that are applicable to all relevant content-types
         _create_batch(
             TagFactory, 5, description="on all content-types", content_types=TaggableClassesQuery().as_queryset()

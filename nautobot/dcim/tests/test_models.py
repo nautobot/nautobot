@@ -2364,6 +2364,30 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
                 address=f"1.1.1.{last_octet}/32", status=ip_address_status, namespace=cls.namespace
             )
 
+    def test_vdcs_validation_logic(self):
+        """Assert Interface raises error when adding vdcs that do not belong to same device as the Interface device."""
+        interface = Interface.objects.create(
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=self.device,
+            status=Status.objects.get_for_model(Interface).first(),
+            role=Role.objects.get_for_model(Interface).first(),
+        )
+        vdc = VirtualDeviceContext.objects.create(
+            name="Sample VDC",
+            device=Device.objects.exclude(pk=self.device.pk).first(),
+            identifier=100,
+            status=Status.objects.get_for_model(VirtualDeviceContext).first(),
+        )
+
+        with self.assertRaises(ValidationError) as err:
+            interface.vdcs.add(vdc)
+        self.assertEqual(
+            err.exception.message_dict["vdcs"][0],
+            f"Virtual Device Context with names {[vdc.name]} must all belong to the "
+            f"same device as the interface's device.",
+        )
+
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
         interface = Interface.objects.create(
             name="Int1",
