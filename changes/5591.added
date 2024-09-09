@@ -1,1 +1,0 @@
-Added `time_zone` field to `ScheduledJob` model.

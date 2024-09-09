@@ -1,2 +1,0 @@
-Corrected several bugs around handling of `ScheduledJob` execution when `settings.TIME_ZONE` is other than "UTC".
-Added missing `Meta.ordering` definition to `ScheduledJob` model.
