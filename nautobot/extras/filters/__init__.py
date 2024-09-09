@@ -6,6 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 import django_filters
 from drf_spectacular.utils import extend_schema_field
+from timezone_field import TimeZoneField
 
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
@@ -962,6 +963,7 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "job_model__name": "icontains",
             "name": "icontains",
             "user__username": "icontains",
+            "scheduled_job__name": "icontains",
         },
     )
     job_model = NaturalKeyOrPKMultipleChoiceFilter(
@@ -973,11 +975,16 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         queryset=Job.objects.all(),
         label="Job (ID) - Deprecated (use job_model filter)",
     )
+    scheduled_job = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
+        queryset=ScheduledJob.objects.all(),
+        label="Scheduled Job (name or ID)",
+    )
     status = django_filters.MultipleChoiceFilter(choices=JobResultStatusChoices, null_value=None)
 
     class Meta:
         model = JobResult
-        fields = ["id", "date_created", "date_done", "name", "status", "user"]
+        fields = ["id", "date_created", "date_done", "name", "status", "user", "scheduled_job"]
 
 
 class JobLogEntryFilterSet(BaseFilterSet):
@@ -1011,10 +1018,15 @@ class ScheduledJobFilterSet(BaseFilterSet):
         queryset=Job.objects.all(),
         label="Job (ID) - Deprecated (use job_model filter)",
     )
+    time_zone = django_filters.MultipleChoiceFilter(
+        choices=[(str(obj), name) for obj, name in TimeZoneField().choices],
+        label="Time zone",
+        null_value="",
+    )
 
     class Meta:
         model = ScheduledJob
-        fields = ["id", "name", "total_run_count", "start_time", "last_run_at"]
+        fields = ["id", "name", "total_run_count", "start_time", "last_run_at", "time_zone"]
 
 
 #
