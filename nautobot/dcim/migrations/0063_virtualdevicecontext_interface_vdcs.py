@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("ipam", "0047_alter_ipaddress_role_alter_ipaddress_status_and_more"),
         ("tenancy", "0009_update_all_charfields_max_length_to_255"),
-        ("extras", "0116_task_queue_to_job_queue_migration"),
+        ("extras", "0117_task_queue_to_job_queue_migration"),
         ("dcim", "0062_module_data_migration"),
     ]
 
