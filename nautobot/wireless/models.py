@@ -6,7 +6,12 @@ from nautobot.core.models import BaseModel
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.extras.utils import extras_features
-from nautobot.wireless.choices import RadioFrequencyChoices, RadioStandardChoices, WirelessAuthTypeChoices, WirelessDeploymentModeChoices
+from nautobot.wireless.choices import (
+    RadioFrequencyChoices,
+    RadioStandardChoices,
+    WirelessAuthTypeChoices,
+    WirelessDeploymentModeChoices,
+)
 
 
 @extras_features(
@@ -51,7 +56,9 @@ class DataRate(PrimaryModel):
     A DataRates represents a data rate that can be used by a Radio.
     """
 
-    standard = models.CharField(max_length=CHARFIELD_MAX_LENGTH, choices=RadioStandardChoices, default=RadioStandardChoices.A)
+    standard = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, choices=RadioStandardChoices, default=RadioStandardChoices.A
+    )
     rate = models.FloatField(
         validators=[MinValueValidator(1)],
         help_text="Enter rate in Mbps.",
