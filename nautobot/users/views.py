@@ -20,7 +20,7 @@ from django.views.generic import View
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.views.generic import GenericView
 
-from .forms import AdvancedProfileSettingsForm, LoginForm, PasswordChangeForm, TokenForm
+from .forms import AdvancedProfileSettingsForm, LoginForm, PasswordChangeForm, PreferenceProfileSettingsForm, TokenForm
 from .models import Token
 
 #
@@ -137,28 +137,51 @@ class UserConfigView(GenericView):
     template_name = "users/preferences.html"
 
     def get(self, request):
+        tzname = request.user.get_config("timezone", get_default_timezone_name())
+        form = PreferenceProfileSettingsForm(initial={"timezone": tzname})
         return render(
             request,
             self.template_name,
             {
                 "preferences": request.user.all_config(),
+                "form": form,
                 "active_tab": "preferences",
                 "is_django_auth_user": is_django_auth_user(request),
             },
         )
 
     def post(self, request):
-        user = request.user
-        data = user.all_config()
+        is_preference_update_post = "_update_preference_form" in request.POST
+        if is_preference_update_post:
+            form = PreferenceProfileSettingsForm(request.POST)
+            if form.is_valid():
+                if timezone := form.cleaned_data["timezone"]:
+                    request.user.set_config("timezone", str(timezone), commit=True)
+                return redirect("user:preferences")
 
-        # Delete selected preferences
-        for key in request.POST.getlist("pk"):
-            if key in data:
-                user.clear_config(key)
-        user.save()
-        messages.success(request, "Your preferences have been updated.")
+            return render(
+                request,
+                self.template_name,
+                {
+                    "preferences": request.user.all_config(),
+                    "form": form,
+                    "active_tab": "preferences",
+                    "is_django_auth_user": is_django_auth_user(request),
+                },
+            )
 
-        return redirect("user:preferences")
+        else:
+            user = request.user
+            data = user.all_config()
+
+            # Delete selected preferences
+            for key in request.POST.getlist("pk"):
+                if key in data:
+                    user.clear_config(key)
+            user.save()
+            messages.success(request, "Your preferences have been updated.")
+
+            return redirect("user:preferences")
 
 
 class ChangePasswordView(GenericView):
@@ -342,8 +365,7 @@ class AdvancedProfileSettingsEditView(GenericView):
 
     def get(self, request):
         silk_record_requests = request.session.get("silk_record_requests", False)
-        tzname = request.user.get_config("timezone", get_default_timezone_name())
-        form = AdvancedProfileSettingsForm(initial={"request_profiling": silk_record_requests, "timezone": tzname})
+        form = AdvancedProfileSettingsForm(initial={"request_profiling": silk_record_requests})
 
         return render(
             request,
@@ -361,8 +383,6 @@ class AdvancedProfileSettingsEditView(GenericView):
 
         if form.is_valid():
             silk_record_requests = form.cleaned_data["request_profiling"]
-            if timezone := form.cleaned_data["timezone"]:
-                request.user.set_config("timezone", str(timezone), commit=True)
 
             # Set the value for `silk_record_requests` in the session
             request.session["silk_record_requests"] = silk_record_requests

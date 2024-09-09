@@ -50,7 +50,6 @@ class AdvancedProfileSettingsForm(BootstrapMixin, forms.Form):
         "This is for debugging purposes and should only be enabled when "
         "instructed by an administrator.",
     )
-    timezone = TimeZoneFormField(required=False, help_text="Set your default timezone", widget=StaticSelect2)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -67,3 +66,7 @@ class AdvancedProfileSettingsForm(BootstrapMixin, forms.Form):
             raise forms.ValidationError(
                 {"request_profiling": "Request profiling has been globally disabled by an administrator."}
             )
+
+
+class PreferenceProfileSettingsForm(BootstrapMixin, forms.Form):
+    timezone = TimeZoneFormField(required=False, help_text="Set your default timezone", widget=StaticSelect2)

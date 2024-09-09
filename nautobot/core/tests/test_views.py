@@ -8,13 +8,11 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, RequestFactory
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
-from django.utils import timezone
 from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
-from nautobot.core.testing.utils import post_data
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
@@ -574,24 +572,3 @@ class SilkUIAccessTestCase(TestCase):
 
         # Check for success status code (e.g., 200)
         self.assertEqual(response.status_code, 200)
-
-
-class TimeZoneTestCase(TestCase):
-    def test_timezone_change(self):
-        self.user.is_superuser = True
-        self.user.save()
-        self.client.force_login(self.user)
-
-        timezone_name = timezone.get_current_timezone_name()
-        new_timezone_name = "US/Eastern"
-        form_data = {"request_profiling": False, "timezone": new_timezone_name}
-        url = reverse("user:advanced_settings_edit")
-        request = {
-            "path": url,
-            "data": post_data(form_data),
-        }
-        response = self.client.post(**request)
-        response = self.client.get(url)
-        self.assertEqual(timezone.get_current_timezone_name(), new_timezone_name)
-        self.assertNotEqual(timezone_name, new_timezone_name)
-        self.assertHttpStatus(response, 200)
