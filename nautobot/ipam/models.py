@@ -1323,9 +1323,10 @@ class VLANGroup(OrganizationalModel):
             )
 
         # Validate ranges for related VLANs.
-        if self.vlans.all() and any([_vlan.vid not in _expanded_range for _vlan in self.vlans.all()]):
+        out_of_range_vids = [_vlan.vid for _vlan in self.vlans.all() if _vlan.vid not in _expanded_range]
+        if out_of_range_vids:
             raise ValidationError(
-                {"range": "VLAN group range may not be re-sized due to existing VLANs."}
+                {"range": f"VLAN group range may not be re-sized due to existing VLANs (IDs: {','.join(map(str, out_of_range_vids))})."}
             )
 
     def __str__(self):
@@ -1462,10 +1463,12 @@ class VLAN(PrimaryModel):
         super().clean()
 
         # Validate Vlan Group Range
-        if self.vid not in self.vlan_group.expanded_range:
-            raise ValidationError({
-                "vid": "Vlan ID is not contained in Vlan Group Range"
-            })
+        if self.vlan_group:
+            _vlan_group_expanded_range = self.vlan_group._meta.get_field("range").expanded
+            if self.vid not in _vlan_group_expanded_range:
+                raise ValidationError({
+                    "vid": f"Vlan ID is not contained in Vlan Group Range ({self.vlan_group.range})"
+                })
 
 
 @extras_features("graphql")
