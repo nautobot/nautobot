@@ -11,9 +11,8 @@ from django.utils.functional import cached_property
 import netaddr
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
-from nautobot.core.forms.utils import parse_numeric_range
 from nautobot.core.models import BaseManager, BaseModel
-from nautobot.core.models.fields import JSONArrayField
+from nautobot.core.models.fields import JSONArrayField, PositiveRangeNumberTextField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.data import UtilizationData
@@ -46,13 +45,6 @@ __all__ = (
 
 
 logger = logging.getLogger(__name__)
-
-# TODO: move location
-def convert_to_ranges(iterable):
-    iterable = sorted(set(iterable))
-    for _, grp in itertools.groupby(enumerate(iterable), lambda t: t[1] - t[0]):
-        grp = list(grp)
-        yield grp[0][1], grp[-1][1]
 
 
 @extras_features(
@@ -1304,27 +1296,7 @@ class VLANGroup(OrganizationalModel):
     )
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
-    range = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=False, default="1-4094")
-
-    @property
-    def normalized_range(self):
-        """Normalize range into a common format.
-
-        Normalized examples are:
-        - 1
-        - 1-5
-        - 1-5,7
-        """
-        converted_ranges = convert_to_ranges(self.expanded_range)
-        return ",".join([f"{x[0]}" if x[0] == x[1] else f"{x[0]}-{x[1]}" for x in converted_ranges])
-
-    @property
-    def expanded_range(self):
-        """Expand VLAN range.
-
-        '0-3,5' => [0, 1, 2, 3, 5]
-        """
-        return parse_numeric_range(self.range)
+    range = PositiveRangeNumberTextField(blank=False, default="1-4094")
 
     class Meta:
         ordering = ("name",)
@@ -1340,26 +1312,21 @@ class VLANGroup(OrganizationalModel):
                     {"location": f'VLAN groups may not associate to locations of type "{self.location.location_type}".'}
                 )
 
+        # Get expanded range from Field's value
+        _expanded_range = self._meta.get_field("range").expanded
+
         # Validate range boundaries
-        _valid_range = range(constants.VLAN_VID_MIN, constants.VLAN_VID_MAX + 1)
-        if (self.expanded_range[0] not in _valid_range) or (self.expanded_range[-1] not in _valid_range):
+        if _expanded_range[0] < constants.VLAN_VID_MIN or _expanded_range[-1] > constants.VLAN_VID_MAX:
             raise ValidationError(
                 {"range": f"VLAN group range is outside of allowed {constants.VLAN_VID_MIN}-{constants.VLAN_VID_MAX} "
                           f"range."}
             )
 
         # Validate ranges for related VLANs.
-        if self.vlans.all() and any([_vlan.vid not in self.expanded_range for _vlan in self.vlans.all()]):
+        if self.vlans.all() and any([_vlan.vid not in _expanded_range for _vlan in self.vlans.all()]):
             raise ValidationError(
                 {"range": "VLAN group range may not be re-sized due to existing VLANs."}
             )
-
-    def save(self, *args, **kwargs):
-        # Compress the range
-        self.range = self.normalized_range
-
-        super().save(*args, **kwargs)
-
 
     def __str__(self):
         return self.name

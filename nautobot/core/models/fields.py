@@ -11,6 +11,7 @@ from taggit.managers import TaggableManager
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import fields, widgets
+from nautobot.core.forms.utils import parse_numeric_range
 from nautobot.core.models import ordering
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.validators import EnhancedURLValidator
@@ -415,3 +416,40 @@ class TagsField(TaggableManager):
         kwargs.setdefault("required", False)
         kwargs.setdefault("query_params", {"content_types": self.model._meta.label_lower})
         return super().formfield(form_class=form_class, **kwargs)
+
+
+
+# TODO: move location
+def convert_to_ranges(iterable):
+    import itertools
+    iterable = sorted(set(iterable))
+    for _, grp in itertools.groupby(enumerate(iterable), lambda t: t[1] - t[0]):
+        grp = list(grp)
+        yield grp[0][1], grp[-1][1]
+
+
+class PositiveRangeNumberTextField(models.TextField):
+    default_error_messages = {
+        "invalid": "Invalid value. Specify a value using positive integers in a range format (i.e. '10-20').",
+    }
+
+    # default_validators = [RegexValidator]
+    description = "A text based representation of positive number range."
+
+    def to_python(self, value):
+        if value is None:
+            return None
+
+        try:
+            self.expanded = parse_numeric_range(value)
+        except (ValueError, AttributeError):
+            raise exceptions.ValidationError(
+                self.error_messages['invalid'],
+                code='invalid',
+                params={'value': value},
+            )
+
+        converted_ranges = convert_to_ranges(self.expanded)
+        range = ",".join([f"{x[0]}" if x[0] == x[1] else f"{x[0]}-{x[1]}" for x in converted_ranges])
+
+        return range
