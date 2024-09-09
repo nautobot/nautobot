@@ -13,6 +13,26 @@ class RadioFrequencyChoices(ChoiceSet):
     )
 
 
+class RadioStandardChoices(ChoiceSet):
+    A = "802.11a"
+    B = "802.11b"
+    G = "802.11g"
+    N = "802.11n"
+    AC = "802.11ac"
+    AX = "802.11ax"
+    BE = "802.11be"
+
+    CHOICES = (
+        (A, "802.11a"),
+        (B, "802.11b"),
+        (G, "802.11g"),
+        (N, "802.11n"),
+        (AC, "802.11ac"),
+        (AX, "802.11ax"),
+        (BE, "802.11be"),
+    )
+
+
 class WirelessDeploymentModeChoices(ChoiceSet):
     CENTRAL = "Central (tunnelMode(controller managed))"
     FABRIC = "Fabric"

@@ -1,3 +1,4 @@
+from django.core.validators import MinValueValidator
 from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -5,7 +6,7 @@ from nautobot.core.models import BaseModel
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.extras.utils import extras_features
-from nautobot.wireless.choices import RadioFrequencyChoices, WirelessAuthTypeChoices, WirelessDeploymentModeChoices
+from nautobot.wireless.choices import RadioFrequencyChoices, RadioStandardChoices, WirelessAuthTypeChoices, WirelessDeploymentModeChoices
 
 
 @extras_features(
@@ -50,16 +51,19 @@ class DataRate(PrimaryModel):
     A DataRates represents a data rate that can be used by a Radio.
     """
 
-    band = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
-    rate = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    standard = models.CharField(max_length=CHARFIELD_MAX_LENGTH, choices=RadioStandardChoices, default=RadioStandardChoices.A)
+    rate = models.FloatField(
+        validators=[MinValueValidator(1)],
+        help_text="Enter rate in Mbps.",
+    )
     mcs_index = models.IntegerField(blank=True, null=True)
 
     class Meta:
-        ordering = ["band", "rate"]
-        unique_together = ["band", "rate"]
+        ordering = ["standard", "rate"]
+        unique_together = ["standard", "rate"]
 
     def __str__(self):
-        return f"{self.band}: {self.rate}"
+        return f"{self.standard}: {self.rate}"
 
 
 @extras_features(
@@ -167,10 +171,12 @@ class AccessPointGroupWirelessNetworkAssignment(BaseModel):
         on_delete=models.CASCADE,
         related_name="access_point_group_assignments",
     )
-    vlans = models.ManyToManyField(
+    vlan = models.ForeignKey(
         to="ipam.VLAN",
+        on_delete=models.SET_NULL,
         related_name="access_point_group_wireless_network_assignments",
         blank=True,
+        null=True,
     )
     is_metadata_associable_model = False
 
