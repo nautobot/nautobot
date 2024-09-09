@@ -513,10 +513,10 @@ class BaseJob:
             for _, field in form.fields.items():
                 field.disabled = True
 
-        for field in ["_profile", "_job_queue"]:
-            if field in form.fields:
-                value = form.fields.pop(field)
-                form.fields[field] = value
+        # Ensure non-Job-specific fields are still last after applying field_order
+        for field in ["_job_queue", "_profile"]:
+            value = form.fields.pop(field)
+            form.fields[field] = value
 
         return form
 

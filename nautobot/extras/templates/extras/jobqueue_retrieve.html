@@ -35,16 +35,10 @@
 	                {{ object.tenant|hyperlinked_object }}
                     </td>
                 </tr>
-                <tr>
-                    <td>Assigned Jobs</td>
-                    <td>
-                        <ul>
-                            {% for job in object.jobs.all %}
-                                <li>{{ job|hyperlinked_object }}</li>
-                            {% endfor %}
-                        </ul>
-                    </td>
-                </tr>
             </table>
         </div>
+{% endblock %}
+
+{% block content_full_width_page %}
+    {% include 'panel_table.html' with table=jobs_table heading='Assigned Jobs' %}
 {% endblock %}

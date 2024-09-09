@@ -1201,6 +1201,7 @@ class JobQueueBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         choices=JobQueueTypeChoices,
         help_text="The job can either run immediately, once in the future, or on a recurring schedule.",
         label="Type",
+        required=False,
     )
     tenant = DynamicModelChoiceField(
         queryset=Tenant.objects.all(),

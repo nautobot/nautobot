@@ -1675,6 +1675,18 @@ class JobQueueUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.JobQueueSerializer
     table_class = tables.JobQueueTable
 
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        if self.action == "retrieve":
+            jobs = instance.jobs.restrict(request.user, "view")
+            jobs_table = tables.JobTable(jobs, orderable=False)
+            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            RequestConfig(request, paginate).configure(jobs_table)
+            context["jobs_table"] = jobs_table
+
+        return context
+
 
 #
 # Saved Views

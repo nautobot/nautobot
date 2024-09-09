@@ -294,19 +294,19 @@ class Job(PrimaryModel):
 
     @property
     def task_queues(self):
-        return self.job_queues.all().values_list("name", flat=True)
+        """Deprecated backward-compatibility property for the list of Celery queues for this Job."""
+        return self.job_queues.filter(queue_type=JobQueueTypeChoices.TYPE_CELERY).values_list("name", flat=True)
 
     @task_queues.setter
     def task_queues(self, value):
         # value is going to be a comma separated list of queue names
-        # assume all queue types are celery for now
         if isinstance(value, str):
             value = value.split(",")
         for queue in value:
             try:
-                job_queue = JobQueue.objects.get(name=queue)
+                job_queue = JobQueue.objects.get(name=queue, queue_type=JobQueueTypeChoices.TYPE_CELERY)
             except JobQueue.DoesNotExist:
-                raise ValidationError(f"Job Queue {queue} does not exist in the database.")
+                raise ValidationError(f"Celery Job Queue {queue} does not exist in the database.")
             JobQueueAssignment.objects.get_or_create(job_queue=job_queue, job=self)
 
     def clean(self):
@@ -1141,16 +1141,21 @@ class ScheduledJob(BaseModel):
 
     @property
     def queue(self):
-        return self.job_queue.name if self.job_queue else ""
+        """Deprecated backward-compatibility property for the Celery queue this job is scheduled for."""
+        return (
+            self.job_queue.name
+            if self.job_queue and self.job_queue.queue_type == JobQueueTypeChoices.TYPE_CELERY
+            else ""
+        )
 
     @queue.setter
     def queue(self, value):
         if value:
             try:
-                job_queue = JobQueue.objects.get(name=value)
+                job_queue = JobQueue.objects.get(name=value, queue_type=JobQueueTypeChoices.TYPE_CELERY)
                 self.job_queue = job_queue
             except JobQueue.DoesNotExist:
-                raise ValidationError(f"Job Queue {value} does not exist in the database.")
+                raise ValidationError(f"Celery Job Queue {value} does not exist in the database.")
 
     @staticmethod
     def earliest_possible_time():
