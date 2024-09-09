@@ -39,10 +39,11 @@
                 {% for panel_name, panel_details in registry.homepage_layout.panels.items %}
                     {% if request.user|has_one_or_more_perms:panel_details.permissions %}
                         <div class="panel panel-default" id="{{ panel_name|slugify }}" style="break-inside: avoid" data-panel-weight="{{ panel_details.weight }}">
-                            <div class="panel-heading">
-                                <strong>{{ panel_name }}</strong><span id="toggle-homepanel-{{ panel_name|slugify }}" class="glyphicon glyphicon-chevron-down collapse-icon" type="button" data-toggle="collapse" data-target="#homepanel-{{ panel_name|slugify }}" aria-expanded="false" aria-controls="homepanel-{{ panel_name|slugify }}"></span>
-                            </div>
                             {% with cookie_key='homepanel-'|add:panel_name|slugify %}
+                                <div class="panel-heading">
+                                    <strong>{{ panel_name }}</strong>
+                                    <span id="collapse-icon-{{ panel_name|slugify }}" class="glyphicon glyphicon-chevron-down collapse-icon{% if request.COOKIES|default:''|get_item:cookie_key|default:'False' == 'False' %} rotated180{% endif %}" type="button" data-toggle="collapse" data-target="#homepanel-{{ panel_name|slugify }}" aria-expanded="false" aria-controls="homepanel-{{ panel_name|slugify }}"></span>
+                                </div>
                                 <div class="list-group collapse{% if request.COOKIES|default:''|get_item:cookie_key|default:'False' == 'False' %} in{% endif %} collapsible-div" id="homepanel-{{ panel_name|slugify }}" >
                             {% endwith %}
                                 {% if panel_details.rendered_html %}

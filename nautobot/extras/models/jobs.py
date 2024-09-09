@@ -4,7 +4,6 @@ import contextlib
 from datetime import timedelta
 import logging
 
-from celery import schedules
 from celery.exceptions import NotRegistered
 from celery.utils.log import get_logger, LoggingProxy
 from django.conf import settings
@@ -16,7 +15,9 @@ from django.db.models import signals
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django_celery_beat.clockedschedule import clocked
+from django_celery_beat.tzcrontab import TzAwareCrontab
 from prometheus_client import Histogram
+from timezone_field import TimeZoneField
 
 from nautobot.core.celery import (
     app,
@@ -935,6 +936,9 @@ class ScheduledJob(BaseModel):
         verbose_name="Start Datetime",
         help_text="Datetime when the schedule should begin triggering the task to run",
     )
+    # Django always stores DateTimeField as UTC internally, but we want scheduled jobs to respect DST and similar,
+    # so we need to store the time zone the job was scheduled under as well.
+    time_zone = TimeZoneField(default=timezone.get_default_timezone_name)
     # todoindex:
     enabled = models.BooleanField(
         default=True,
@@ -1005,12 +1009,15 @@ class ScheduledJob(BaseModel):
     def __str__(self):
         return f"{self.name}: {self.interval}"
 
+    class Meta:
+        ordering = ["name"]
+
     def save(self, *args, **kwargs):
         self.queue = self.queue or ""
         # make sure non-valid crontab doesn't get saved
         if self.interval == JobExecutionType.TYPE_CUSTOM:
             try:
-                self.get_crontab(self.crontab)
+                self.get_crontab(self.crontab, tz=self.time_zone)
             except Exception as e:
                 raise ValidationError({"crontab": e})
         if not self.enabled:
@@ -1055,7 +1062,7 @@ class ScheduledJob(BaseModel):
         return timezone.now() + timedelta(seconds=15)
 
     @classmethod
-    def get_crontab(cls, crontab):
+    def get_crontab(cls, crontab, tz=None):
         """
         Wrapper method translates crontab syntax to Celery crontab.
 
@@ -1068,13 +1075,17 @@ class ScheduledJob(BaseModel):
 
         No support for Last (L), Weekday (W), Number symbol (#), Question mark (?), and special @ strings.
         """
+        if not tz:
+            tz = timezone.get_default_timezone()
         minute, hour, day_of_month, month_of_year, day_of_week = crontab.split(" ")
-        return schedules.crontab(
+
+        return TzAwareCrontab(
             minute=minute,
             hour=hour,
             day_of_month=day_of_month,
             month_of_year=month_of_year,
             day_of_week=day_of_week,
+            tz=tz,
         )
 
     @classmethod
@@ -1116,13 +1127,13 @@ class ScheduledJob(BaseModel):
         """
 
         if interval == JobExecutionType.TYPE_IMMEDIATELY:
-            start_time = timezone.now()
+            start_time = timezone.localtime()
             name = name or f"{job_model.name} - {start_time}"
         elif interval == JobExecutionType.TYPE_CUSTOM:
             if start_time is None:
                 # "start_time" is checked against models.ScheduledJob.earliest_possible_time()
                 # which returns timezone.now() + timedelta(seconds=15)
-                start_time = timezone.now() + timedelta(seconds=20)
+                start_time = timezone.localtime() + timedelta(seconds=20)
 
         celery_kwargs = {
             "nautobot_job_profile": profile,
@@ -1145,6 +1156,7 @@ class ScheduledJob(BaseModel):
             task=job_model.class_path,
             job_model=job_model,
             start_time=start_time,
+            time_zone=start_time.tzinfo,
             description=f"Nautobot job {name} scheduled by {user} for {start_time}",
             kwargs=job_kwargs,
             celery_kwargs=celery_kwargs,
@@ -1159,15 +1171,16 @@ class ScheduledJob(BaseModel):
         return scheduled_job
 
     def to_cron(self):
-        t = self.start_time
+        tz = self.time_zone
+        t = self.start_time.astimezone(tz)
         if self.interval == JobExecutionType.TYPE_HOURLY:
-            return schedules.crontab(minute=t.minute)
+            return TzAwareCrontab(minute=t.minute, tz=tz)
         elif self.interval == JobExecutionType.TYPE_DAILY:
-            return schedules.crontab(minute=t.minute, hour=t.hour)
+            return TzAwareCrontab(minute=t.minute, hour=t.hour, tz=tz)
         elif self.interval == JobExecutionType.TYPE_WEEKLY:
-            return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.strftime("%w"))
+            return TzAwareCrontab(minute=t.minute, hour=t.hour, day_of_week=t.strftime("%w"), tz=tz)
         elif self.interval == JobExecutionType.TYPE_CUSTOM:
-            return self.get_crontab(self.crontab)
+            return self.get_crontab(self.crontab, tz=tz)
         raise ValueError(f"I do not know to convert {self.interval} to a Cronjob!")
 
 

@@ -174,7 +174,7 @@ class DynamicGroupModelFormMixin(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self._meta.model.is_dynamic_group_associable_model:
+        if getattr(self._meta.model, "is_dynamic_group_associable_model", False):
             self.fields["dynamic_groups"] = DynamicModelMultipleChoiceField(
                 required=False,
                 initial=self.instance.dynamic_groups if self.instance else None,
@@ -193,7 +193,7 @@ class DynamicGroupModelFormMixin(forms.ModelForm):
 
     def save(self, commit=True):
         obj = super().save(commit=commit)
-        if commit and obj.is_dynamic_group_associable_model:
+        if commit and getattr(obj, "is_dynamic_group_associable_model", False):
             current_groups = set(obj.dynamic_groups.filter(group_type=DynamicGroupTypeChoices.TYPE_STATIC))
             for dynamic_group in set(self.cleaned_data.get("dynamic_groups")).difference(current_groups):
                 dynamic_group.add_members([obj])

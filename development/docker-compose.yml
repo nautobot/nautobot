@@ -47,7 +47,7 @@ services:
     tty: true
   celery_beat:
     image: "local/nautobot-dev:local-py${PYTHON_VER}"
-    entrypoint: "nautobot-server celery beat -l INFO"
+    entrypoint: "watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery beat -l INFO"
     healthcheck:
       interval: 5s
       timeout: 5s

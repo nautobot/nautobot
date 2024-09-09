@@ -226,6 +226,8 @@ selenium = "~4.22.0"
 splinter = "~0.21.0"
 # Serialization of tracebacks - used when running unittest with --parallel flag
 tblib = "~3.0.0"
+# Time travel for testing, used in ScheduledJob tests etc.
+time-machine = "~2.15.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"

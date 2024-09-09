@@ -217,7 +217,7 @@ class NamespaceTable(BaseTable):
 #
 
 
-class VRFTable(BaseTable):
+class VRFTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     # rd = tables.Column(verbose_name="RD")
@@ -232,6 +232,7 @@ class VRFTable(BaseTable):
             "pk",
             "name",
             # "rd",
+            "status",
             "namespace",
             "tenant",
             "description",
@@ -240,7 +241,7 @@ class VRFTable(BaseTable):
             "tags",
         )
         # default_columns = ("pk", "name", "rd", "namespace", "tenant", "description")
-        default_columns = ("pk", "name", "namespace", "tenant", "description")
+        default_columns = ("pk", "name", "status", "namespace", "tenant", "description")
 
 
 class VRFDeviceAssignmentTable(BaseTable):
