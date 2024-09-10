@@ -9,8 +9,8 @@ from django.db.models import Q
 from django.utils.functional import cached_property
 import netaddr
 
-from nautobot.core.forms.utils import parse_numeric_range
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.forms.utils import parse_numeric_range
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import JSONArrayField, PositiveRangeNumberTextField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -1306,7 +1306,9 @@ class VLANGroup(OrganizationalModel):
     @property
     def available_vids(self):
         _group_expanded_vids = parse_numeric_range(self.range)
-        available = sorted([vid for vid in _group_expanded_vids if vid not in self.vlans.all().values_list("vid", flat=True)])
+        available = sorted(
+            [vid for vid in _group_expanded_vids if vid not in self.vlans.all().values_list("vid", flat=True)]
+        )
 
         return available
 
@@ -1320,20 +1322,24 @@ class VLANGroup(OrganizationalModel):
                 )
 
         # Get expanded range from Field's value
-        _expanded_range = self._meta.get_field("range").expanded
+        _expanded_range = parse_numeric_range(self.range)
 
         # Validate range boundaries
         if _expanded_range[0] < constants.VLAN_VID_MIN or _expanded_range[-1] > constants.VLAN_VID_MAX:
             raise ValidationError(
-                {"range": f"VLAN group range is outside of allowed {constants.VLAN_VID_MIN}-{constants.VLAN_VID_MAX} "
-                          f"range."}
+                {
+                    "range": f"VLAN group range is outside of allowed {constants.VLAN_VID_MIN}-{constants.VLAN_VID_MAX} "
+                    f"range."
+                }
             )
 
         # Validate ranges for related VLANs.
         out_of_range_vids = [_vlan.vid for _vlan in self.vlans.all() if _vlan.vid not in _expanded_range]
         if out_of_range_vids:
             raise ValidationError(
-                {"range": f"VLAN group range may not be re-sized due to existing VLANs (IDs: {','.join(map(str, out_of_range_vids))})."}
+                {
+                    "range": f"VLAN group range may not be re-sized due to existing VLANs (IDs: {','.join(map(str, out_of_range_vids))})."
+                }
             )
 
     def __str__(self):
@@ -1469,9 +1475,9 @@ class VLAN(PrimaryModel):
         if self.vlan_group:
             _vlan_group_expanded_range = self.vlan_group._meta.get_field("range").expanded
             if self.vid not in _vlan_group_expanded_range:
-                raise ValidationError({
-                    "vid": f"Vlan ID is not contained in Vlan Group Range ({self.vlan_group.range})"
-                })
+                raise ValidationError(
+                    {"vid": f"Vlan ID is not contained in Vlan Group Range ({self.vlan_group.range})"}
+                )
 
 
 @extras_features("graphql")

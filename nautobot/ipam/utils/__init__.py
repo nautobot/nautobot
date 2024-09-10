@@ -86,11 +86,14 @@ def add_available_vlans(vlan_group, vlans):
     """
     Create fake records for all gaps between used VLANs
     """
-    fake_vlans = [{
-        "vid": t[0],
-        "available": t[1] - t[0] + 1,
-        "range": f"{t[0]}" if t[0]==t[1] else f"{t[0]}-{t[1]}",
-    } for t in compress_range(vlan_group.available_vids)]
+    fake_vlans = [
+        {
+            "vid": t[0],
+            "available": t[1] - t[0] + 1,
+            "range": f"{t[0]}" if t[0] == t[1] else f"{t[0]}-{t[1]}",
+        }
+        for t in compress_range(vlan_group.available_vids)
+    ]
 
     vlans = list(vlans) + fake_vlans
 

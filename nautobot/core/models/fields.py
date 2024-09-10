@@ -2,9 +2,9 @@ import json
 import re
 
 from django.core import exceptions
-from django.forms.widgets import TextInput
 from django.core.validators import MaxLengthValidator, RegexValidator
 from django.db import models
+from django.forms.widgets import TextInput
 from django.utils.text import slugify
 from django_extensions.db.fields import AutoSlugField as _AutoSlugField
 from netaddr import AddrFormatError, EUI, mac_unix_expanded
@@ -15,8 +15,8 @@ from nautobot.core.forms import fields, widgets
 from nautobot.core.forms.utils import parse_numeric_range
 from nautobot.core.models import ordering
 from nautobot.core.models.managers import TagsManager
-from nautobot.core.models.validators import EnhancedURLValidator
 from nautobot.core.models.utils import compress_range
+from nautobot.core.models.validators import EnhancedURLValidator
 
 
 class mac_unix_expanded_uppercase(mac_unix_expanded):
@@ -436,9 +436,9 @@ class PositiveRangeNumberTextField(models.TextField):
             _expanded = parse_numeric_range(value)
         except (ValueError, AttributeError):
             raise exceptions.ValidationError(
-                self.error_messages['invalid'],
-                code='invalid',
-                params={'value': value},
+                self.error_messages["invalid"],
+                code="invalid",
+                params={"value": value},
             )
 
         converted_ranges = compress_range(_expanded)
@@ -452,7 +452,9 @@ class PositiveRangeNumberTextField(models.TextField):
         # will be validated twice. This is considered acceptable since we want
         # the value in the form field (to pass into widget for example).
         return super().formfield(
-            **{"max_length": self.max_length,
-            **{"widget": TextInput},
-            **kwargs,
-        })
+            **{
+                "max_length": self.max_length,
+                "widget": TextInput,
+                **kwargs,
+            }
+        )
