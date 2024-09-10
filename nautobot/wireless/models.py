@@ -70,7 +70,7 @@ class DataRate(PrimaryModel):
         unique_together = ["standard", "rate"]
 
     def __str__(self):
-        return f"{self.standard}: {self.rate}"
+        return f"{self.standard}: {self.rate} Mbps"
 
 
 @extras_features(
