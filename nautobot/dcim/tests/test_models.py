@@ -3199,6 +3199,9 @@ class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
 class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
     model = VirtualDeviceContext
 
+    def test_get_docs_url(self):
+        """No docs for this through table model."""
+
     def test_assigning_primary_ip(self):
         device = Device.objects.first()
         intf_status = Status.objects.get_for_model(Interface).first()
