@@ -442,9 +442,9 @@ class PositiveRangeNumberTextField(models.TextField):
             )
 
         converted_ranges = compress_range(_expanded)
-        range = ",".join([f"{x[0]}" if x[0] == x[1] else f"{x[0]}-{x[1]}" for x in converted_ranges])
+        normalized_range = ",".join([f"{x[0]}" if x[0] == x[1] else f"{x[0]}-{x[1]}" for x in converted_ranges])
 
-        return range
+        return normalized_range
 
     def formfield(self, **kwargs):
         # Use TextInput and TextField instead of limited (255) CharField.
