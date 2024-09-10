@@ -1,0 +1,1 @@
+Fixed a performance regression observed when change logging resulted in a large number of ObjectChange records (such as in an SSOT Job).
