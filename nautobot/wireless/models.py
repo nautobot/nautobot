@@ -139,7 +139,6 @@ class WirelessNetwork(PrimaryModel):
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
         on_delete=models.SET_NULL,
-        default=None,
         blank=True,
         null=True,
     )
