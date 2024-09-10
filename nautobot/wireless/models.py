@@ -119,7 +119,7 @@ class RadioProfile(PrimaryModel):
 )
 class WirelessNetwork(PrimaryModel):
     """
-    A WirelessNetwork represents a wireless network that can be broadcast by an AccessPoint.
+    A WirelessNetwork represents a wireless network that can be broadcast by an access point.
     """
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
