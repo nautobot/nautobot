@@ -2,7 +2,6 @@ import logging
 from urllib.parse import parse_qs
 
 from celery import chain
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
@@ -19,15 +18,11 @@ from django.utils import timezone
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.timezone import get_current_timezone
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
-
-try:
-    from zoneinfo import ZoneInfo
-except ImportError:  # python 3.8
-    from backports.zoneinfo import ZoneInfo
 
 from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
@@ -1922,7 +1917,7 @@ class ScheduledJobView(generic.ObjectView):
         return {
             "labels": labels,
             "job_class_found": (job_class is not None),
-            "default_time_zone": ZoneInfo(settings.TIME_ZONE),
+            "default_time_zone": get_current_timezone(),
             **super().get_extra_context(request, instance),
         }
 
