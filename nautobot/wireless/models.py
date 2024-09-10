@@ -23,8 +23,8 @@ from nautobot.wireless.choices import (
 )
 class AccessPointGroup(PrimaryModel):
     """
-    An AccessPointGroup is a collection of AccessPoints. It is used to apply common configuration to multiple
-    AccessPoints at once.
+    An AccessPointGroup is a collection of access points. It is used to apply common configuration to multiple
+    access points at once.
     """
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
