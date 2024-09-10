@@ -1,0 +1,1 @@
+Added `display` property to Prefix to display namespace along with the prefix to allow differentiation of prefixes in a UI selector

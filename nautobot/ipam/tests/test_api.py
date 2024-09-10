@@ -443,6 +443,17 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         for i, p in enumerate(response.data):
             self.assertEqual(p["prefix"], str(available_prefixes[i]))
 
+    def test_prefix_display_value(self):
+        """
+        Test that the `display` field is correctly populated.
+        """
+        url = reverse("ipam-api:prefix-list")
+        self.add_permissions("ipam.view_prefix")
+
+        response = self.client.get(f"{url}?depth=1", **self.header)
+        for p in response.data["results"]:
+            self.assertEqual(p["display"], f'{p["prefix"]}: {p["namespace"]["name"]}')
+
     def test_create_single_available_prefix(self):
         """
         Test retrieval of the first available prefix within a parent prefix.
