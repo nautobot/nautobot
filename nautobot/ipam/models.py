@@ -1341,13 +1341,9 @@ class VLANGroup(OrganizationalModel):
 
     def get_next_available_vid(self):
         """
-        Return the first available VLAN ID (1-4094) in the group.
+        Return the first available VLAN ID in the group's range.
         """
-        vlan_ids = VLAN.objects.filter(vlan_group=self).values_list("vid", flat=True)
-        for i in range(1, 4095):
-            if i not in vlan_ids:
-                return i
-        return None
+        return self.available_vids[0] if self.available_vids else None
 
 
 @extras_features(
