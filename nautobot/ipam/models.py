@@ -1473,7 +1473,7 @@ class VLAN(PrimaryModel):
 
         # Validate Vlan Group Range
         if self.vlan_group:
-            _vlan_group_expanded_range = self.vlan_group._meta.get_field("range").expanded
+            _vlan_group_expanded_range = parse_numeric_range(self.vlan_group.range)
             if self.vid not in _vlan_group_expanded_range:
                 raise ValidationError(
                     {"vid": f"Vlan ID is not contained in Vlan Group Range ({self.vlan_group.range})"}
