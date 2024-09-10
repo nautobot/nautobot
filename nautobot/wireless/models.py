@@ -53,7 +53,7 @@ class AccessPointGroup(PrimaryModel):
 )
 class DataRate(PrimaryModel):
     """
-    A DataRates represents a data rate that can be used by a Radio.
+    A DataRate represents a data rate that can be used by an access point radio.
     """
 
     standard = models.CharField(
