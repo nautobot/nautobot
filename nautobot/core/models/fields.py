@@ -2,6 +2,7 @@ import json
 import re
 
 from django.core import exceptions
+from django.forms.widgets import TextInput
 from django.core.validators import MaxLengthValidator, RegexValidator
 from django.db import models
 from django.utils.text import slugify
@@ -15,6 +16,7 @@ from nautobot.core.forms.utils import parse_numeric_range
 from nautobot.core.models import ordering
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.validators import EnhancedURLValidator
+from nautobot.core.models.utils import compress_range
 
 
 class mac_unix_expanded_uppercase(mac_unix_expanded):
@@ -418,16 +420,6 @@ class TagsField(TaggableManager):
         return super().formfield(form_class=form_class, **kwargs)
 
 
-
-# TODO: move location
-def convert_to_ranges(iterable):
-    import itertools
-    iterable = sorted(set(iterable))
-    for _, grp in itertools.groupby(enumerate(iterable), lambda t: t[1] - t[0]):
-        grp = list(grp)
-        yield grp[0][1], grp[-1][1]
-
-
 class PositiveRangeNumberTextField(models.TextField):
     default_error_messages = {
         "invalid": "Invalid value. Specify a value using positive integers in a range format (i.e. '10-20').",
@@ -441,7 +433,7 @@ class PositiveRangeNumberTextField(models.TextField):
             return None
 
         try:
-            self.expanded = parse_numeric_range(value)
+            _expanded = parse_numeric_range(value)
         except (ValueError, AttributeError):
             raise exceptions.ValidationError(
                 self.error_messages['invalid'],
@@ -449,7 +441,18 @@ class PositiveRangeNumberTextField(models.TextField):
                 params={'value': value},
             )
 
-        converted_ranges = convert_to_ranges(self.expanded)
+        converted_ranges = compress_range(_expanded)
         range = ",".join([f"{x[0]}" if x[0] == x[1] else f"{x[0]}-{x[1]}" for x in converted_ranges])
 
         return range
+
+    def formfield(self, **kwargs):
+        # Use TextInput and TextField instead of limited (255) CharField.
+        # Passing max_length to forms.CharField means that the value's length
+        # will be validated twice. This is considered acceptable since we want
+        # the value in the form field (to pass into widget for example).
+        return super().formfield(
+            **{"max_length": self.max_length,
+            **{"widget": TextInput},
+            **kwargs,
+        })

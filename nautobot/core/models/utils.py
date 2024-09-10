@@ -260,3 +260,13 @@ def construct_natural_slug(values, pk=None):
     # Replace any emojis with their string name, and then slugify that.
     values = (slugify(emoji.replace_emoji(value, unicodedata.name)) for value in values)
     return constants.NATURAL_SLUG_SEPARATOR.join(values)
+
+
+def compress_range(iterable):
+    """
+    Generates compressed range from an expanded range.
+    """
+    iterable = sorted(set(iterable))
+    for _, grp in groupby(enumerate(iterable), lambda t: t[1] - t[0]):
+        grp = list(grp)
+        yield grp[0][1], grp[-1][1]

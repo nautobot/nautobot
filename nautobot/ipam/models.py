@@ -1,4 +1,3 @@
-import itertools
 import logging
 import operator
 
@@ -10,6 +9,7 @@ from django.db.models import Q
 from django.utils.functional import cached_property
 import netaddr
 
+from nautobot.core.forms.utils import parse_numeric_range
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import JSONArrayField, PositiveRangeNumberTextField
@@ -1302,6 +1302,13 @@ class VLANGroup(OrganizationalModel):
         ordering = ("name",)
         verbose_name = "VLAN group"
         verbose_name_plural = "VLAN groups"
+
+    @property
+    def available_vids(self):
+        _group_expanded_vids = parse_numeric_range(self.range)
+        available = sorted([vid for vid in _group_expanded_vids if vid not in self.vlans.all().values_list("vid", flat=True)])
+
+        return available
 
     def clean(self):
         super().clean()
