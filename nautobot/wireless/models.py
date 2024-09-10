@@ -123,7 +123,7 @@ class WirelessNetwork(PrimaryModel):
     """
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     ssid = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     mode = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
