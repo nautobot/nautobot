@@ -130,9 +130,9 @@ psycopg2-binary = "~2.9.9"
 # A Python slugify application that handles unicode.
 python-slugify = "~8.0.3"
 # The uWSGI WSGI HTTP server as a Python module
-pyuwsgi = "~2.0.23"
+pyuwsgi = "~2.0.26"
 # YAML parsing and rendering
-PyYAML = "~6.0"
+PyYAML = "~6.0.2"
 # Social authentication core
 # Note that social-auth-app-django (below) is *not* an optional dependency, and it requires social-auth-core in turn.
 # The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
@@ -164,7 +164,7 @@ example-app = {path = "examples/example_app", develop = true}
 # Nautobot test App used for testing core view overrides
 example-app-with-view-override = {path = "examples/example_app_with_view_override", develop = true}
 # Random data generation
-factory-boy = "~3.3.0"
+factory-boy = "~3.3.1"
 # Factory Boy dependency. Don't upgrade to v26.x until breaking change is fixed https://github.com/joke2k/faker/issues/2070
 faker = ">=0.7.0,<26.0.0"
 # Alternative to Make, CLI based on `tasks.py`
@@ -174,7 +174,7 @@ rich = "~13.7.1"
 # Change log management and generation
 towncrier = "~23.11.0"
 # Watch files for celery and mkdocs reload
-watchdog = "~4.0.1"
+watchdog = "~4.0.2"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
@@ -193,7 +193,7 @@ mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see optional-settings.md and required-settings.md
 mkdocs-macros-plugin = "~1.0.5"
 # Material for mkdocs theme
-mkdocs-material = "~9.5.31"
+mkdocs-material = "~9.5.33"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.1"
 # Automatically handle index pages for docs sections
@@ -209,7 +209,7 @@ pylint = "~3.2.5"
 # Pylint extensions for Django
 pylint-django = "~2.5.3"
 # Combination linter and code formatter
-ruff = "~0.5.6"
+ruff = "~0.5.7"
 # YAML linting
 yamllint = "~1.35.1"
 
