@@ -1890,6 +1890,10 @@ class VirtualDeviceContext(PrimaryModel):
     def __str__(self):
         return self.name
 
+    def get_absolute_url(self, api=False):
+        # TODO: Remove when API for this model is added
+        pass
+
     @property
     def primary_ip(self):
         if get_settings_or_config("PREFER_IPV4") and self.primary_ip4:

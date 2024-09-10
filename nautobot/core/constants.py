@@ -165,7 +165,6 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
     "objectchange",
     "objectmetadata",
     "platform",
-    "virtualdevicecontext",
     "poweroutlet",
     "poweroutlettemplate",
     "powerpanel",

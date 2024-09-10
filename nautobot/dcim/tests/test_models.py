@@ -3199,6 +3199,7 @@ class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
 class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
     model = VirtualDeviceContext
 
+    # TODO: Remove when VirtualDeviceContext API is created
     def test_get_docs_url(self):
         """No docs for this through table model."""
 
