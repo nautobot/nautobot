@@ -10,7 +10,6 @@ from django.db import connections, DEFAULT_DB_ALIAS
 from django.utils.crypto import get_random_string
 
 from nautobot.core.settings_funcs import is_truthy
-from nautobot.extras.choices import JobQueueTypeChoices
 
 
 class Command(BaseCommand):
@@ -331,19 +330,6 @@ class Command(BaseCommand):
         )
         _create_batch(MetadataChoiceFactory, 100)
         _create_batch(ObjectChangeFactory, 100)
-        _create_batch(
-            JobQueueFactory,
-            1,
-            description="with name default and queue type celery",
-            name="default",
-            queue_type=JobQueueTypeChoices.TYPE_CELERY,
-        )
-        _create_batch(
-            JobQueueFactory,
-            10,
-            description="with queue type celery",
-            queue_type=JobQueueTypeChoices.TYPE_CELERY,
-        )
         _create_batch(JobQueueFactory, 10)
         _create_batch(JobResultFactory, 20)
         _create_batch(JobLogEntryFactory, 100)

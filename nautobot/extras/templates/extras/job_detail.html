@@ -269,6 +269,18 @@
                         {% endfor %}
                     </ul>
                 </td>
+                <td>
+                    {% if object.job_queues_override %}
+                        <span class="text-muted">
+                            overridden; default is:<br>
+                            {% if object.installed %}
+                                {% include 'extras/inc/json_data.html' with data=object.job_class.task_queues format="json" %}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
             </tr>
         </table>
     </div>

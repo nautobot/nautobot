@@ -14,10 +14,6 @@ class Migration(migrations.Migration):
             name="task_queues",
         ),
         migrations.RemoveField(
-            model_name="job",
-            name="task_queues_override",
-        ),
-        migrations.RemoveField(
             model_name="scheduledjob",
             name="queue",
         ),

@@ -21,7 +21,7 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
-from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.choices import JobQueueTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import (
     CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL,
     EXTRAS_FEATURES,
@@ -432,13 +432,17 @@ def task_queues_as_choices(task_queues):
     return choices
 
 
-def refresh_job_model_from_job_class(job_model_class, job_class):
+def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class=None):
     """
     Create or update a job_model record based on the metadata of the provided job_class.
 
-    Note that job_model_class is a parameter (rather than doing a "from nautobot.extras.models import Job") because
+    Note that `job_model_class` and `job_queue_class` are parameters rather than local imports because
     this function may be called from various initialization processes (such as the "nautobot_database_ready" signal)
     and in that case we need to not import models ourselves.
+
+    The `job_queue_class` parameter really should be required, but for some reason we decided to make this function
+    part of the `nautobot.apps.utils` API surface and so we need it to stay backwards-compatible with Apps that might
+    be calling the two-argument form of this function.
     """
     from nautobot.extras.jobs import (
         JobButtonReceiver,
@@ -537,6 +541,19 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
                 if not getattr(job_model, f"{field_name}_override", False):
                     # It was inherited and not overridden
                     setattr(job_model, field_name, getattr(job_class, field_name))
+
+            # Special case for backward compatibility
+            # Note that the `job_model.task_queues` setter does NOT auto-create Celery JobQueue records;
+            # this is a special case where we DO want to do so.
+            if job_queue_class is not None and not job_model.job_queues_override:
+                job_queues = []
+                task_queues = job_class.task_queues or [settings.CELERY_TASK_DEFAULT_QUEUE]
+                for task_queue in task_queues:
+                    job_queue, _ = job_queue_class.objects.get_or_create(
+                        name=task_queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+                    )
+                    job_queues.append(job_queue)
+                job_model.job_queues.set(job_queues)
 
             if not created:
                 # Mark it as installed regardless

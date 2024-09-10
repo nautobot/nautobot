@@ -208,6 +208,10 @@ class Job(PrimaryModel):
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
+    job_queues_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
     job_queues = models.ManyToManyField(
         to="extras.JobQueue",
         related_name="jobs",
@@ -294,20 +298,29 @@ class Job(PrimaryModel):
 
     @property
     def task_queues(self):
-        """Deprecated backward-compatibility property for the list of Celery queues for this Job."""
-        return self.job_queues.filter(queue_type=JobQueueTypeChoices.TYPE_CELERY).values_list("name", flat=True)
+        """Deprecated backward-compatibility property for the list of queue names for this Job."""
+        return self.job_queues.values_list("name", flat=True)
 
     @task_queues.setter
     def task_queues(self, value):
+        job_queues = []
         # value is going to be a comma separated list of queue names
         if isinstance(value, str):
             value = value.split(",")
         for queue in value:
             try:
-                job_queue = JobQueue.objects.get(name=queue, queue_type=JobQueueTypeChoices.TYPE_CELERY)
+                job_queues.append(JobQueue.objects.get(name=queue))
             except JobQueue.DoesNotExist:
-                raise ValidationError(f"Celery Job Queue {queue} does not exist in the database.")
-            JobQueueAssignment.objects.get_or_create(job_queue=job_queue, job=self)
+                raise ValidationError(f"Job Queue {queue} does not exist in the database.")
+        self.job_queues.set(job_queues)
+
+    @property
+    def task_queues_override(self):
+        return self.job_queues_override
+
+    @task_queues_override.setter
+    def task_queues_override(self, value):
+        self.job_queues_override = value
 
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
@@ -318,6 +331,9 @@ class Job(PrimaryModel):
             for field_name in JOB_OVERRIDABLE_FIELDS:
                 if not getattr(self, f"{field_name}_override", False):
                     setattr(self, field_name, getattr(job_class, field_name))
+
+            if not self.job_queues_override:
+                self.task_queues = job_class.task_queues or [settings.CELERY_TASK_DEFAULT_QUEUE]
 
         # Protect against invalid input when auto-creating Job records
         if len(self.module_name) > JOB_MAX_NAME_LENGTH:
@@ -1141,21 +1157,16 @@ class ScheduledJob(BaseModel):
 
     @property
     def queue(self):
-        """Deprecated backward-compatibility property for the Celery queue this job is scheduled for."""
-        return (
-            self.job_queue.name
-            if self.job_queue and self.job_queue.queue_type == JobQueueTypeChoices.TYPE_CELERY
-            else ""
-        )
+        """Deprecated backward-compatibility property for the queue name this job is scheduled for."""
+        return self.job_queue.name if self.job_queue else ""
 
     @queue.setter
     def queue(self, value):
         if value:
             try:
-                job_queue = JobQueue.objects.get(name=value, queue_type=JobQueueTypeChoices.TYPE_CELERY)
-                self.job_queue = job_queue
+                self.job_queue = JobQueue.objects.get(name=value)
             except JobQueue.DoesNotExist:
-                raise ValidationError(f"Celery Job Queue {value} does not exist in the database.")
+                raise ValidationError(f"Job Queue {value} does not exist in the database.")
 
     @staticmethod
     def earliest_possible_time():
