@@ -1,5 +1,6 @@
 {% extends 'generic/object_detail.html' %}
 {% load helpers %}
+{% load static %}
 
 {% block title %}{{ object }}{% endblock %}
 
@@ -119,8 +120,13 @@
                             {% endif %}
                         </span>
                     {% else %}
-                        <pre class="diff-removed">{{ diff_removed|render_json }}</pre>
-                        <pre class="diff-added">{{ diff_added|render_json }}</pre>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="diff-viewer-wrapper">
+                                    <div id="diff-viewer" class="diff-viewer"></div>
+                                </div>
+                            </div>
+                        </div>
                     {% endif %}
                 </div>
             </div>
@@ -146,4 +152,72 @@
             {% endif %}
         </div>
     </div>
+{% endblock %}
+
+{% block javascript %}
+{{ block.super }}
+<script src="{% static 'react-16.14.0/react.production.min.js' %}"></script>
+<script src="{% static 'react-dom-16.14.0/react-dom.production.min.js' %}"></script>
+<script src="{% static 'react-diff-viewer-3.1.1/index.umd.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const diffContainer = document.getElementById('diff-viewer');
+
+    if (!diffContainer) {
+        return;
+    }
+
+    const ReactDiffViewer = window.ReactDiffViewer.default;
+
+    const oldValue = '{{ diff_removed|render_json:False|escapejs }}';
+    const newValue = '{{ diff_added|render_json:False|escapejs }}';
+
+    // Check if the site is in dark mode
+    const isDarkMode = document.documentElement.dataset.theme === 'dark';
+
+    try {
+        ReactDOM.render(
+            React.createElement(ReactDiffViewer, {
+                oldValue: oldValue,
+                newValue: newValue,
+                splitView: false,
+                useDarkTheme: isDarkMode,
+                hideLineNumbers: true,
+                showDiffOnly: false,
+            }),
+            diffContainer
+        );
+    } catch (error) {
+        console.error('Error rendering diff:', error);
+        diffContainer.innerHTML = '<p>Error rendering diff view. Please check the console for more information.</p>';
+    }
+});
+</script>
+{% endblock %}
+
+{% block extra_styles %}
+{{ block.super }}
+<style>
+    .diff-viewer {
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 12px;
+        line-height: 1.2;
+        max-width: 100%;
+        overflow-x: auto;
+    }
+    .diff-viewer pre {
+        background-color: transparent !important;
+        border: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .diff-viewer-wrapper {
+        /* Prevent the site's dark mode filter from affecting the diff viewer */
+        filter: none !important;
+    }
+    html[data-theme="dark"] .diff-viewer-wrapper {
+        /* Cancel out the site's dark mode inversion for the diff viewer */
+        filter: invert(1) hue-rotate(180deg) !important;
+    }
+</style>
 {% endblock %}
