@@ -234,6 +234,19 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(lookup.get_model_from_name("dcim.device"), dcim_models.Device)
         self.assertEqual(lookup.get_model_from_name("dcim.location"), dcim_models.Location)
 
+    def test_get_model_for_view_name(self):
+        """
+        Test the util function `get_model_for_view_name` returns the appropriate Model, if the colon separated view name provided.
+        """
+        with self.subTest("Test core view."):
+            self.assertEqual(lookup.get_model_for_view_name("dcim:device_list"), dcim_models.Device)
+        with self.subTest("Test app view."):
+            self.assertEqual(lookup.get_model_for_view_name("plugins:example_app:examplemodel_list"), ExampleModel)
+        with self.subTest("Test unexpected view."):
+            with self.assertRaises(ValueError) as err:
+                lookup.get_model_for_view_name("unknown:plugins:example_app:examplemodel_list")
+            self.assertEqual(str(err.exception), "Unexpected View Name: unknown:plugins:example_app:examplemodel_list")
+
 
 class IsTaggableTest(TestCase):
     def test_is_taggable_true(self):
