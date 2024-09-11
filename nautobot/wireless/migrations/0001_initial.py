@@ -60,7 +60,7 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.CreateModel(
-            name="DataRate",
+            name="SupportedDataRate",
             fields=[
                 (
                     "id",

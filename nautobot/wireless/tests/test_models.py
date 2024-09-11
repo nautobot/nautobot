@@ -6,8 +6,8 @@ class AccessPointGroupTestCase(ModelTestCases.BaseModelTestCase):
     model = models.AccessPointGroup
 
 
-class DataRateTestCase(ModelTestCases.BaseModelTestCase):
-    model = models.DataRate
+class SupportedDataRateTestCase(ModelTestCases.BaseModelTestCase):
+    model = models.SupportedDataRate
 
 
 class RadioProfileTestCase(ModelTestCases.BaseModelTestCase):

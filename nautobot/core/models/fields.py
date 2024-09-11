@@ -1,6 +1,7 @@
 import json
 import re
 
+from django import forms
 from django.core import exceptions
 from django.core.validators import MaxLengthValidator, RegexValidator
 from django.db import models
@@ -381,6 +382,23 @@ class JSONArrayField(models.JSONField):
             }
         )
 
+
+class ChoiceArrayField(JSONArrayField):
+    """
+    An ArrayField implementation backed JSON storage.
+    Replicates ArrayField's base field validation.
+    Allows for choices to be passed in.
+    """
+
+    def formfield(self, **kwargs):
+        return super().formfield(
+            **{
+                "form_class": forms.MultipleChoiceField,
+                "base_field": self.base_field.formfield(),
+                "choices": self.base_field.choices,
+                **kwargs,
+            }
+        )
 
 class LaxURLField(models.URLField):
     """Like models.URLField, but using validators.EnhancedURLValidator and forms.LaxURLField."""

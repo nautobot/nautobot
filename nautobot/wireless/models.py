@@ -3,12 +3,14 @@ from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseModel
-from nautobot.core.models.fields import JSONArrayField
+from nautobot.core.models.fields import ChoiceArrayField, JSONArrayField
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.extras.utils import extras_features
 from nautobot.wireless.choices import (
+    ChannelWidthChoices,
     RadioFrequencyChoices,
     RadioStandardChoices,
+    RegulatoryDomainChoices,
     WirelessAuthTypeChoices,
     WirelessDeploymentModeChoices,
 )
@@ -39,6 +41,7 @@ class AccessPointGroup(PrimaryModel):
 
     class Meta:
         ordering = ["name"]
+        unique_together = ["name", "controller"]
 
     def __str__(self):
         return self.name
@@ -51,19 +54,23 @@ class AccessPointGroup(PrimaryModel):
     "graphql",
     "webhooks",
 )
-class DataRate(PrimaryModel):
+class SupportedDataRate(PrimaryModel):
     """
-    A DataRate represents a data rate that can be used by an access point radio.
+    A SupportedDataRate represents a data rate that can be used by an access point radio.
     """
 
     standard = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH, choices=RadioStandardChoices, default=RadioStandardChoices.A
+        max_length=CHARFIELD_MAX_LENGTH, choices=RadioStandardChoices
     )
     rate = models.FloatField(
         validators=[MinValueValidator(1)],
         help_text="Enter rate in Mbps.",
     )
-    mcs_index = models.IntegerField(blank=True, null=True)
+    mcs_index = models.IntegerField(
+        blank=True,
+        null=True,
+        help_text="The Modulation and Coding Scheme (MCS) index is a value used in wireless communications to define the modulation type, coding rate, and number of spatial streams used in a transmission.",
+    )
 
     class Meta:
         ordering = ["standard", "rate"]
@@ -82,7 +89,7 @@ class DataRate(PrimaryModel):
 )
 class RadioProfile(PrimaryModel):
     """
-    A RadioProfile is a collection of settings that can be applied to a Radio.
+    A RadioProfile is a collection of settings that can be applied to an access point radio.
     """
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
@@ -93,14 +100,14 @@ class RadioProfile(PrimaryModel):
     )
     tx_power_min = models.IntegerField()
     tx_power_max = models.IntegerField()
-    channel_width = JSONArrayField(base_field=models.IntegerField())
+    channel_width = ChoiceArrayField(base_field=models.IntegerField(), default=list, choices=ChannelWidthChoices)
     allowed_channel_list = JSONArrayField(base_field=models.IntegerField(), default=list)
     supported_data_rates = models.ManyToManyField(
-        to="wireless.DataRate",
+        to="wireless.SupportedDataRate",
         related_name="radio_profiles",
         blank=True,
     )
-    regulatory_domain = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    regulatory_domain = models.CharField(max_length=CHARFIELD_MAX_LENGTH, choices=RegulatoryDomainChoices)
     rx_power_min = models.IntegerField()
 
     class Meta:
@@ -128,13 +135,11 @@ class WirelessNetwork(PrimaryModel):
     mode = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         choices=WirelessDeploymentModeChoices,
-        default=WirelessDeploymentModeChoices.CENTRAL,
     )
     enabled = models.BooleanField(default=True)
     authentication = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         choices=WirelessAuthTypeChoices,
-        default=WirelessAuthTypeChoices.OPEN,
     )
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
@@ -143,11 +148,6 @@ class WirelessNetwork(PrimaryModel):
         null=True,
     )
     hidden = models.BooleanField(default=False)
-    vlans = models.ManyToManyField(
-        to="ipam.VLAN",
-        related_name="wireless_networks",
-        blank=True,
-    )
 
     class Meta:
         ordering = ["name"]
@@ -179,7 +179,7 @@ class AccessPointGroupWirelessNetworkAssignment(BaseModel):
     )
     vlan = models.ForeignKey(
         to="ipam.VLAN",
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name="access_point_group_wireless_network_assignments",
         blank=True,
         null=True,
