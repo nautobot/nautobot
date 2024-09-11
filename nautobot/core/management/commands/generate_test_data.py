@@ -331,7 +331,13 @@ class Command(BaseCommand):
         )
         _create_batch(MetadataChoiceFactory, 100)
         _create_batch(ObjectChangeFactory, 100)
-        _create_batch(JobQueueFactory, 1, description="with name default and type celery", name="default", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+        _create_batch(
+            JobQueueFactory,
+            1,
+            description="with name default and type celery",
+            name="default",
+            queue_type=JobQueueTypeChoices.TYPE_CELERY,
+        )
         _create_batch(JobQueueFactory, 10)
         _create_batch(JobResultFactory, 20)
         _create_batch(JobLogEntryFactory, 100)
