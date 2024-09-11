@@ -3008,6 +3008,7 @@ class JobCustomTemplateTestCase(TestCase):
         cls.run_url = reverse("extras:job_run", kwargs={"pk": cls.example_job.pk})
 
     def test_rendering_custom_template(self):
+        self.assertIsNotNone(self.example_job.job_class)
         obj_perm = ObjectPermission(name="Test permission", actions=["view", "run"])
         obj_perm.save()
         obj_perm.users.add(self.user)

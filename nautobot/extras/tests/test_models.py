@@ -1091,12 +1091,15 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         cls.app_job = JobModel.objects.get(job_class_name="ExampleJob")
 
     def test_job_class(self):
+        self.assertIsNotNone(self.local_job.job_class)
         self.assertEqual(self.local_job.job_class.description, "Validate job import")
 
+        self.assertIsNotNone(self.app_job.job_class)
         self.assertEqual(self.app_job.job_class, ExampleJob)
 
     def test_class_path(self):
         self.assertEqual(self.local_job.class_path, "pass.TestPass")
+        self.assertIsNotNone(self.local_job.job_class)
         self.assertEqual(self.local_job.class_path, self.local_job.job_class.class_path)
 
         self.assertEqual(self.app_job.class_path, "example_app.jobs.ExampleJob")
@@ -1118,6 +1121,7 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
                         self.assertTrue(job_model.enabled)
                     else:
                         self.assertFalse(job_model.enabled)
+                    self.assertIsNotNone(job_model.job_class)
                     for field_name in JOB_OVERRIDABLE_FIELDS:
                         if field_name == "name" and "duplicate_name" in job_model.job_class.__module__:
                             pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
@@ -1173,6 +1177,7 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             setattr(self.job_containing_sensitive_variables, f"{field_name}_override", False)
         self.job_containing_sensitive_variables.validated_save()
         self.job_containing_sensitive_variables.refresh_from_db()
+        self.assertIsNotNone(self.job_containing_sensitive_variables.job_class)
         for field_name in overridden_attrs:
             self.assertEqual(
                 getattr(self.job_containing_sensitive_variables, field_name),
