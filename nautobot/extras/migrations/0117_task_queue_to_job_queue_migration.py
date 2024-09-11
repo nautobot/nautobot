@@ -12,6 +12,8 @@ def migrate_task_queues_to_job_queues(apps, schema):
     ScheduledJob = apps.get_model("extras", "ScheduledJob")
     JobQueue = apps.get_model("extras", "JobQueue")
 
+    # should always create default job queue
+    JobQueue.objects.get_or_create(name="default", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY})
     for job in Job.objects.all():
         task_queues = job.task_queues or [settings.CELERY_TASK_DEFAULT_QUEUE]
         # remove duplicates?
