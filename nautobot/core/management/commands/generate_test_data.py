@@ -334,8 +334,14 @@ class Command(BaseCommand):
         _create_batch(
             JobQueueFactory,
             1,
-            description="with name default and type celery",
+            description="with name default and queue type celery",
             name="default",
+            queue_type=JobQueueTypeChoices.TYPE_CELERY,
+        )
+        _create_batch(
+            JobQueueFactory,
+            10,
+            description="with queue type celery",
             queue_type=JobQueueTypeChoices.TYPE_CELERY,
         )
         _create_batch(JobQueueFactory, 10)
