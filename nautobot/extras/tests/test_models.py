@@ -38,6 +38,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import (
     JobExecutionType,
+    JobQueueTypeChoices,
     JobResultStatusChoices,
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
@@ -66,6 +67,7 @@ from nautobot.extras.models import (
     GitRepository,
     Job as JobModel,
     JobLogEntry,
+    JobQueue,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -1862,7 +1864,13 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError) as cm:
             self.daily_utc_job.queue = invalid_queue
             self.daily_utc_job.validated_save()
-        self.assertIn(f"Job Queue {invalid_queue} does not exist in the database.", str(cm.exception))
+        self.assertIn(f"Celery Job Queue {invalid_queue} does not exist in the database.", str(cm.exception))
+
+        invalid_queue = JobQueue.objects.exclude(queue_type=JobQueueTypeChoices.TYPE_CELERY).first().name
+        with self.assertRaises(ValidationError) as cm:
+            self.daily_utc_job.queue = invalid_queue
+            self.daily_utc_job.validated_save()
+        self.assertIn(f"Celery Job Queue {invalid_queue} does not exist in the database.", str(cm.exception))
 
     def test_schedule(self):
         """Test the schedule property."""

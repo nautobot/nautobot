@@ -73,7 +73,7 @@ class JobTest(TestCase):
         name = "TestFieldOrder"
         job_class = get_job(f"{module}.{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_profile", "_job_queue"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_job_queue", "_profile"])
 
     def test_no_field_order(self):
         """
@@ -83,7 +83,7 @@ class JobTest(TestCase):
         name = "TestNoFieldOrder"
         job_class = get_job(f"{module}.{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_profile", "_job_queue"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_job_queue", "_profile"])
 
     def test_no_field_order_inherited_variable(self):
         """
@@ -95,7 +95,7 @@ class JobTest(TestCase):
         form = job_class().as_form()
         self.assertSequenceEqual(
             list(form.fields.keys()),
-            ["testvar1", "b_testvar2", "a_testvar3", "_profile", "_job_queue"],
+            ["testvar1", "b_testvar2", "a_testvar3", "_job_queue", "_profile"],
         )
 
     def test_dryrun_default(self):
@@ -122,11 +122,18 @@ class JobTest(TestCase):
         module = "dry_run"
         name = "TestDryRun"
         _, job_model = get_job_class_and_model(module, name)
+
         invalid_queue = "Invalid job Queue"
         with self.assertRaises(ValidationError) as cm:
             job_model.task_queues = [invalid_queue]
             job_model.validated_save()
-        self.assertIn(f"Job Queue {invalid_queue} does not exist in the database.", str(cm.exception))
+        self.assertIn(f"Celery Job Queue {invalid_queue} does not exist in the database.", str(cm.exception))
+
+        invalid_queue = models.JobQueue.objects.exclude(queue_type=JobQueueTypeChoices.TYPE_CELERY).first().name
+        with self.assertRaises(ValidationError) as cm:
+            job_model.task_queues = [invalid_queue]
+            job_model.validated_save()
+        self.assertIn(f"Celery Job Queue {invalid_queue} does not exist in the database.", str(cm.exception))
 
     def test_job_class_job_queues(self):
         """
@@ -880,7 +887,7 @@ class JobButtonReceiverTest(TestCase):
         name = "TestJobButtonReceiverSimple"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["object_pk", "object_model_name", "_profile", "_job_queue"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_pk", "object_model_name", "_job_queue", "_profile"])
 
     def test_hidden(self):
         module = "job_button_receiver"
@@ -943,7 +950,7 @@ class JobHookReceiverTest(TestCase):
         name = "TestJobHookReceiverLog"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_profile", "_job_queue"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_job_queue", "_profile"])
 
     def test_hidden(self):
         module = "job_hook_receiver"
