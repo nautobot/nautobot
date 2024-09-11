@@ -59,9 +59,7 @@ class SupportedDataRate(PrimaryModel):
     A SupportedDataRate represents a data rate that can be used by an access point radio.
     """
 
-    standard = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH, choices=RadioStandardChoices
-    )
+    standard = models.CharField(max_length=CHARFIELD_MAX_LENGTH, choices=RadioStandardChoices)
     rate = models.FloatField(
         validators=[MinValueValidator(1)],
         help_text="Enter rate in Mbps.",
@@ -96,7 +94,6 @@ class RadioProfile(PrimaryModel):
     frequency = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         choices=RadioFrequencyChoices,
-        default=RadioFrequencyChoices.FREQUENCY_24G,
     )
     tx_power_min = models.IntegerField()
     tx_power_max = models.IntegerField()

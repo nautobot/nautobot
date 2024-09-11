@@ -400,6 +400,7 @@ class ChoiceArrayField(JSONArrayField):
             }
         )
 
+
 class LaxURLField(models.URLField):
     """Like models.URLField, but using validators.EnhancedURLValidator and forms.LaxURLField."""
 
