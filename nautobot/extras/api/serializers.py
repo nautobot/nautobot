@@ -751,6 +751,7 @@ class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default=dict)
     schedule = JobCreationSerializer(required=False)
     task_queue = serializers.CharField(required=False, allow_blank=True)
+    job_queue = serializers.CharField(required=False, allow_blank=True)
 
 
 class JobMultiPartInputSerializer(serializers.Serializer):
@@ -761,6 +762,7 @@ class JobMultiPartInputSerializer(serializers.Serializer):
     _schedule_interval = ChoiceField(choices=JobExecutionType, required=False)
     _schedule_crontab = serializers.CharField(required=False, allow_blank=True)
     _task_queue = serializers.CharField(required=False, allow_blank=True)
+    _job_queue = serializers.CharField(required=False, allow_blank=True)
 
     def validate(self, data):
         data = super().validate(data)

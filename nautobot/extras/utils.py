@@ -402,6 +402,8 @@ def get_job_queue_worker_count(request=None, job_queue=None):
     Return a count of the active Celery workers in a specified queue. Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
     Same as get_worker_count() method above, but job_queue is an actual JobQueue model instance.
     """
+    # TODO currently this method is only retrieve celery specific queues and their respective worker counts
+    # Refactor it to support retrieving kubernetes queues as well.
     celery_queues = get_celery_queues()
     if not job_queue:
         queue = settings.CELERY_TASK_DEFAULT_QUEUE
