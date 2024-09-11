@@ -38,6 +38,13 @@ class AccessPointGroup(PrimaryModel):
         blank=True,
         null=True,
     )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="access_point_groups",
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         ordering = ["name"]
@@ -60,10 +67,7 @@ class SupportedDataRate(PrimaryModel):
     """
 
     standard = models.CharField(max_length=CHARFIELD_MAX_LENGTH, choices=RadioStandardChoices)
-    rate = models.FloatField(
-        validators=[MinValueValidator(1)],
-        help_text="Enter rate in Mbps.",
-    )
+    rate = models.PositiveIntegerField(verbose_name="Rate (Kbps)")
     mcs_index = models.IntegerField(
         blank=True,
         null=True,
@@ -97,7 +101,7 @@ class RadioProfile(PrimaryModel):
     )
     tx_power_min = models.IntegerField()
     tx_power_max = models.IntegerField()
-    channel_width = ChoiceArrayField(base_field=models.IntegerField(), default=list, choices=ChannelWidthChoices)
+    channel_width = ChoiceArrayField(base_field=models.IntegerField(choices=ChannelWidthChoices), default=list)
     allowed_channel_list = JSONArrayField(base_field=models.IntegerField(), default=list)
     supported_data_rates = models.ManyToManyField(
         to="wireless.SupportedDataRate",
@@ -145,6 +149,13 @@ class WirelessNetwork(PrimaryModel):
         null=True,
     )
     hidden = models.BooleanField(default=False)
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="wireless_networks",
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         ordering = ["name"]
