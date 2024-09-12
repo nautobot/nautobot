@@ -1893,7 +1893,8 @@ class VirtualDeviceContext(PrimaryModel):
     # TODO: Remove when UI View for this model is added
     def get_absolute_url(self, api=False):
         if api:
-            return super().get_absolute_url(api)
+            return super().get_absolute_url(api=api)
+        return None  # TODO
 
     @property
     def primary_ip(self):
