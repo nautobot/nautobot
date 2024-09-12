@@ -16,7 +16,7 @@ from nautobot.core.templatetags.helpers import (
     hyperlinked_object_with_color,
     placeholder,
 )
-from nautobot.core.ui import constants
+from nautobot.core.ui.choices import LayoutChoices, SectionChoices
 from nautobot.extras.templatetags.plugins import plugin_full_width_page, plugin_left_page, plugin_right_page
 from nautobot.tenancy.models import Tenant
 
@@ -108,14 +108,14 @@ class ObjectDetailContent:
     This currently defines the tabs and their contents, but currently does NOT define the page title, breadcrumbs, etc.
     """
 
-    def __init__(self, *, panels=None, layout=constants.LAYOUT_DEFAULT, extra_tabs=None):
+    def __init__(self, *, panels=None, layout=LayoutChoices.DEFAULT, extra_tabs=None):
         """
         Create an ObjectDetailContent.
 
         Args:
             panels (list): List of `Panel` instances to include in this layout by default. Standard `extras` Panels
                 (custom fields, relationships, etc.) do not need to be specified as they will be automatically included.
-            layout (str): One of the LAYOUT constants from nautobot.core.ui.constants. Default is LAYOUT_DEFAULT.
+            layout (str): One of the LayoutChoices values from nautobot.core.ui.choices.
             extra_tabs (list): Optional list of `Tab` instances. Standard `extras` Tabs (advanced, contacts,
                 dynamic-groups, metadata, etc.) do not need to be specified as they will be automatically included.
         """
@@ -157,16 +157,16 @@ class Tab(ABC):
     tab_id: str
     tab_label: str
 
-    def __init__(self, *, panels, layout=constants.LAYOUT_DEFAULT, weight=100):
+    def __init__(self, *, panels, layout=LayoutChoices.DEFAULT, weight=100):
         """
         Create a Tab containing the given panels and layout.
 
         Args:
             panels (list): List of `Panel` instances to include in this layout by default.
-            layout (str): One of the LAYOUT constants from nautobot.core.ui.constants. Default is LAYOUT_DEFAULT.
+            layout (str): One of the LayoutChoices values from nautobot.core.ui.choices.
             weight (int): Influences order of the tabs within a page (lower weights appear first).
         """
-        if layout not in constants.LAYOUT_OPTIONS:
+        if layout not in LayoutChoices.values():
             raise RuntimeError(f"Unknown layout {layout}")
         self.layout = layout
         self.panels = panels
@@ -209,20 +209,20 @@ class Tab(ABC):
         tab_content = None
         panel_data = {
             "left_half_panels": format_html_join(
-                "\n", "{}", ([panel.render(context)] for panel in self.panels_for_section(constants.SECTION_LEFT_HALF))
+                "\n", "{}", ([panel.render(context)] for panel in self.panels_for_section(SectionChoices.LEFT_HALF))
             ),
             "plugin_left_page": plugin_left_page(context, instance) if self.tab_id == "main" else "",
             "right_half_panels": format_html_join(
-                "\n", "{}", ([panel.render(context)] for panel in self.panels_for_section(constants.SECTION_RIGHT_HALF))
+                "\n", "{}", ([panel.render(context)] for panel in self.panels_for_section(SectionChoices.RIGHT_HALF))
             ),
             "plugin_right_page": plugin_right_page(context, instance) if self.tab_id == "main" else "",
             "full_width_panels": format_html_join(
-                "\n", "{}", ([panel.render(context)] for panel in self.panels_for_section(constants.SECTION_FULL_WIDTH))
+                "\n", "{}", ([panel.render(context)] for panel in self.panels_for_section(SectionChoices.FULL_WIDTH))
             ),
             "plugin_full_width_page": plugin_full_width_page(context, instance) if self.tab_id == "main" else "",
         }
 
-        if self.layout == constants.LAYOUT_2_OVER_1:
+        if self.layout == LayoutChoices.TWO_OVER_ONE:
             tab_content = format_html(
                 """\
     <div class="row">
@@ -239,6 +239,27 @@ class Tab(ABC):
         <div class="col-md-12">
             {full_width_panels}
             {plugin_full_width_page}
+        </div>
+    </div>""",
+                **panel_data,
+            )
+        elif self.layout == LayoutChoices.ONE_OVER_TWO:
+            tab_content = format_html(
+                """\
+    <div class="row">
+        <div class="col-md-12">
+            {full_width_panels}
+            {plugin_full_width_page}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            {left_half_panels}
+            {plugin_left_page}
+        </div>
+        <div class="col-md-6">
+            {right_half_panels}
+            {plugin_right_page}
         </div>
     </div>""",
                 **panel_data,
@@ -285,14 +306,14 @@ class _ObjectDetailAdvancedTab(Tab):
             [
                 ObjectFieldsPanel(
                     label="Object Details",
-                    section=constants.SECTION_LEFT_HALF,
+                    section=SectionChoices.LEFT_HALF,
                     weight=100,
                     fields=["id", "natural_slug", "slug"],
                     ignore_nonexistent_fields=True,
                 ),
                 ObjectFieldsPanel(
                     label="Data Provenance",
-                    section=constants.SECTION_LEFT_HALF,
+                    section=SectionChoices.LEFT_HALF,
                     weight=200,
                     fields=["created", "last_updated"],
                     ignore_nonexistent_fields=True,
@@ -403,20 +424,20 @@ class Panel(ABC):
     DEFAULT_CONTENT_WRAPPER = '<div class="panel-body">{}</div>'
     ATTR_TABLE_CONTENT_WRAPPER = '<table class="table table-hover panel-body attr-table">{}</table>'
 
-    def __init__(self, *, label=None, weight=100, section=constants.SECTION_FULL_WIDTH, content_wrapper=None):
+    def __init__(self, *, label=None, weight=100, section=SectionChoices.FULL_WIDTH, content_wrapper=None):
         """
         Instantiate a Panel.
 
         Args:
             label (str): The label to display at the top of the panel.
             weight (int): Influences relative position of panels within a section. Lower weights are toward the top.
-            section (str): One of the SECTION constants in `nautobot.core.ui.constants`.
+            section (str): One of the SectionChoices values in `nautobot.core.ui.choices`.
             content_wrapper (str): HTML format string to wrap the rendered content in.
                 Defaults to `<div class="panel-body">{}</div>`.
         """
         self.label = label
         self.weight = weight
-        if section not in constants.SECTION_OPTIONS:
+        if section not in SectionChoices.values():
             raise RuntimeError(f"Unknown section {section}")
         self.section = section
         self.content_wrapper = content_wrapper or self.DEFAULT_CONTENT_WRAPPER

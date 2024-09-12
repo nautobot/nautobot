@@ -6,7 +6,7 @@ from django_tables2 import RequestConfig
 
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.templatetags.helpers import humanize_speed, placeholder, render_markdown
-from nautobot.core.ui import constants as ui_constants
+from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
     ObjectFieldsPanel,
@@ -137,7 +137,7 @@ class CircuitUIViewSet(NautobotUIViewSet):
     object_detail_content = ObjectDetailContent(
         panels=(
             ObjectFieldsPanel(
-                section=ui_constants.SECTION_LEFT_HALF,
+                section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields="__all__",
                 exclude_fields=["comments", "circuit_termination_a", "circuit_termination_z"],
@@ -146,13 +146,13 @@ class CircuitUIViewSet(NautobotUIViewSet):
             ObjectFieldsPanel(
                 label="Comments",
                 weight=200,
-                section=ui_constants.SECTION_LEFT_HALF,
+                section=SectionChoices.LEFT_HALF,
                 fields=["comments"],
                 field_transforms={"comments": [render_markdown, placeholder]},
             ),
             TemplatePanel(
                 label="Termination - A Side",
-                section=ui_constants.SECTION_RIGHT_HALF,
+                section=SectionChoices.RIGHT_HALF,
                 weight=100,
                 # TODO: edit/swap/delete/detail buttons in panel header
                 content_wrapper=TemplatePanel.ATTR_TABLE_CONTENT_WRAPPER,
@@ -160,7 +160,7 @@ class CircuitUIViewSet(NautobotUIViewSet):
             ),
             TemplatePanel(
                 label="Termination - Z Side",
-                section=ui_constants.SECTION_RIGHT_HALF,
+                section=SectionChoices.RIGHT_HALF,
                 weight=200,
                 # TODO: edit/swap/delete/detail buttons in panel header
                 content_wrapper=TemplatePanel.ATTR_TABLE_CONTENT_WRAPPER,
