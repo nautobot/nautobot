@@ -264,7 +264,7 @@ class AccessPointGroupRadioProfileAssignment(BaseModel):
 )
 class AccessPointGroupDeviceAssignment(BaseModel):
     """
-    An AccessPointGroupDevicesAssignment represents the assignment of a Device to an AccessPointGroup.
+    An AccessPointGroupDeviceAssignment represents the assignment of a Device to an AccessPointGroup.
     """
 
     access_point_group = models.ForeignKey(
