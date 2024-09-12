@@ -37,18 +37,23 @@ from nautobot.core.forms import (
 )
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_model_from_name
-from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from nautobot.extras.choices import (
+    JobResultStatusChoices,
+    ObjectChangeActionChoices,
+    ObjectChangeEventContextChoices,
+)
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.forms import JobForm
 from nautobot.extras.models import (
     FileProxy,
     Job as JobModel,
     JobHook,
+    JobQueue,
     JobResult,
     ObjectChange,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.utils import change_logged_models_queryset, task_queues_as_choices
+from nautobot.extras.utils import change_logged_models_queryset
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -473,19 +478,26 @@ class BaseJob:
         """
 
         form = cls.as_form_class()(data, files, initial=initial)
+        form.fields["_profile"] = forms.BooleanField(
+            required=False,
+            initial=False,
+            label="Profile job execution",
+            help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
+        )
 
-        try:
-            job_model = JobModel.objects.get_for_class_path(cls.class_path)
-            dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else cls.dryrun_default
-            task_queues = job_model.task_queues if job_model.task_queues_override else cls.task_queues
-        except JobModel.DoesNotExist:
-            logger.error("No Job instance found in the database corresponding to %s", cls.class_path)
-            dryrun_default = cls.dryrun_default
-            task_queues = cls.task_queues
+        job_model = JobModel.objects.get_for_class_path(cls.class_path)
+        dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else cls.dryrun_default
+        job_queue_queryset = JobQueue.objects.filter(jobs=job_model)
+        job_queue_params = {"jobs": [job_model.pk]}
 
-        # Update task queue choices
-        form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
-
+        # Initialize job_queue choices
+        form.fields["_job_queue"] = DynamicModelChoiceField(
+            queryset=job_queue_queryset,
+            query_params=job_queue_params,
+            required=False,
+            help_text="The job queue to route this job to",
+            label="Job queue",
+        )
         if cls.supports_dryrun and (not initial or "dryrun" not in initial):
             # Set initial "dryrun" checkbox state based on the Meta parameter
             form.fields["dryrun"].initial = dryrun_default
@@ -500,6 +512,11 @@ class BaseJob:
             # Set `disabled=True` on all fields
             for _, field in form.fields.items():
                 field.disabled = True
+
+        # Ensure non-Job-specific fields are still last after applying field_order
+        for field in ["_job_queue", "_profile"]:
+            value = form.fields.pop(field)
+            form.fields[field] = value
 
         return form
 

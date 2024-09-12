@@ -157,6 +157,13 @@ class JobQueueFactory(PrimaryModelFactory):
     queue_type = factory.Iterator(JobQueueTypeChoices.CHOICES, getter=lambda choice: choice[0])
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
 
+    @factory.post_generation
+    def jobs(self, create, extracted, **kwargs):
+        for job in get_random_instances(Job):
+            self.jobs.add(job)
+            job.job_queues_override = True
+            job.validated_save()
+
 
 class JobResultFactory(BaseModelFactory):
     """JobResult model factory."""

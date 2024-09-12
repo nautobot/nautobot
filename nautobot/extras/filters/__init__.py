@@ -921,6 +921,14 @@ class JobQueueFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         },
     )
     queue_type = django_filters.MultipleChoiceFilter(choices=JobQueueTypeChoices, null_value=None)
+    jobs = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Job.objects.all(),
+        label="Job (name or ID)",
+    )
+    has_jobs = RelatedMembershipBooleanFilter(
+        field_name="jobs",
+        label="Has jobs",
+    )
 
     class Meta:
         model = JobQueue

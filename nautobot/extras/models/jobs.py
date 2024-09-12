@@ -26,7 +26,6 @@ from nautobot.core.celery import (
 )
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
-from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import (
@@ -50,6 +49,7 @@ from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     extras_features,
+    get_job_queue_worker_count,
 )
 
 from .customfields import CustomFieldModel
@@ -165,12 +165,6 @@ class Job(PrimaryModel):
         help_text="Maximum runtime in seconds before the job will be forcibly terminated."
         "<br>Set to 0 to use Nautobot system default",
     )
-    task_queues = JSONArrayField(
-        base_field=models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True),
-        default=list,
-        blank=True,
-        help_text="Comma separated list of task queues that this job can run on. A blank list will use the default queue",
-    )
     supports_dryrun = models.BooleanField(
         default=False,
         editable=False,
@@ -214,7 +208,7 @@ class Job(PrimaryModel):
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
-    task_queues_override = models.BooleanField(
+    job_queues_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
@@ -302,6 +296,38 @@ class Job(PrimaryModel):
         except TypeError as err:  # keep 2.0-2.2.2 exception behavior
             raise NotRegistered from err
 
+    @property
+    def task_queues(self):
+        """Deprecated backward-compatibility property for the list of queue names for this Job."""
+        return self.job_queues.values_list("name", flat=True)
+
+    @task_queues.setter
+    def task_queues(self, value):
+        job_queues = []
+        # value is going to be a comma separated list of queue names
+        if isinstance(value, str):
+            value = value.split(",")
+        for queue in value:
+            try:
+                job_queues.append(JobQueue.objects.get(name=queue))
+            except JobQueue.DoesNotExist:
+                raise ValidationError(f"Job Queue {queue} does not exist in the database.")
+        self.job_queues.set(job_queues)
+
+    @property
+    def task_queues_override(self):
+        return self.job_queues_override
+
+    @task_queues_override.setter
+    def task_queues_override(self, value):
+        if isinstance(value, bool):
+            raise ValidationError(
+                {
+                    "task_queues_override": f"{value} is invalid for field task_queues_override, use a boolean value instead"
+                }
+            )
+        self.job_queues_override = value
+
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
         from nautobot.extras.jobs import get_job
@@ -311,6 +337,9 @@ class Job(PrimaryModel):
             for field_name in JOB_OVERRIDABLE_FIELDS:
                 if not getattr(self, f"{field_name}_override", False):
                     setattr(self, field_name, getattr(job_class, field_name))
+
+            if not self.job_queues_override:
+                self.task_queues = job_class.task_queues or [settings.CELERY_TASK_DEFAULT_QUEUE]
 
         # Protect against invalid input when auto-creating Job records
         if len(self.module_name) > JOB_MAX_NAME_LENGTH:
@@ -514,6 +543,12 @@ class JobQueue(PrimaryModel):
 
     def __str__(self):
         return f"{self.queue_type}: {self.name}"
+
+    @property
+    def display(self):
+        worker_count = get_job_queue_worker_count(job_queue=self)
+        workers = "worker" if worker_count == 1 else "workers"
+        return f"{self.queue_type}: {self.name} ({worker_count} {workers})"
 
 
 @extras_features(
@@ -988,14 +1023,6 @@ class ScheduledJob(BaseModel):
     args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
     kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
     celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
-    queue = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        blank=True,
-        default="",
-        verbose_name="Queue Override",
-        help_text="Queue defined in CELERY_TASK_QUEUES. Leave empty for default queuing.",
-        db_index=True,
-    )
     job_queue = models.ForeignKey(
         to="extras.JobQueue",
         on_delete=models.SET_NULL,
@@ -1133,6 +1160,19 @@ class ScheduledJob(BaseModel):
             return clocked(clocked_time=self.start_time)
 
         return self.to_cron()
+
+    @property
+    def queue(self):
+        """Deprecated backward-compatibility property for the queue name this job is scheduled for."""
+        return self.job_queue.name if self.job_queue else ""
+
+    @queue.setter
+    def queue(self, value):
+        if value:
+            try:
+                self.job_queue = JobQueue.objects.get(name=value)
+            except JobQueue.DoesNotExist:
+                raise ValidationError(f"Job Queue {value} does not exist in the database.")
 
     @staticmethod
     def earliest_possible_time():
