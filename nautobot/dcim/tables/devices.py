@@ -1411,3 +1411,36 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "tags",
             "actions",
         )
+
+
+class VirtualDeviceContextTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    tenant = TenantColumn()
+    device = tables.Column(linkify=True)
+    primary_ip = tables.Column(linkify=True, order_by=("primary_ip6", "primary_ip4"), verbose_name="IP Address")
+    primary_ip4 = tables.Column(linkify=True, verbose_name="IPv4 Address")
+    primary_ip6 = tables.Column(linkify=True, verbose_name="IPv6 Address")
+    tags = TagColumn(url_name="dcim:device_list")
+
+    class Meta(BaseTable.Meta):
+        model = Device
+        fields = (
+            "pk",
+            "name",
+            "device",
+            "status",
+            "tenant",
+            "primary_ip",
+            "primary_ip4",
+            "primary_ip6",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "device",
+            "status",
+            "tenant",
+            "primary_ip",
+        )

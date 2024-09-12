@@ -37,6 +37,7 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
+from nautobot.dcim.models.devices import VirtualDeviceContext
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,
@@ -2936,6 +2937,14 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
             "device": "$device",
         },
     )
+    virtual_device_contexts = DynamicModelMultipleChoiceField(
+        queryset=VirtualDeviceContext.objects.all(),
+        required=False,
+        label="Virtual Device Contexts",
+        query_params={
+            "device": "$device",
+        },
+    )
 
     class Meta:
         model = Interface
@@ -2959,6 +2968,7 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
             "mode",
             "untagged_vlan",
             "tagged_vlans",
+            "virtual_device_contexts",
             "tags",
             "status",
         ]
@@ -3026,6 +3036,14 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
             "device": "$device",
         },
     )
+    virtual_device_contexts = DynamicModelMultipleChoiceField(
+        queryset=VirtualDeviceContext.objects.all(),
+        required=False,
+        label="Virtual Device Contexts",
+        query_params={
+            "device": "$device",
+        },
+    )
     mac_address = forms.CharField(required=False, label="MAC Address")
     mgmt_only = forms.BooleanField(
         required=False,
@@ -3070,6 +3088,7 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
         "lag",
         "mtu",
         "vrf",
+        "virtual_device_contexts",
         "mac_address",
         "description",
         "mgmt_only",
@@ -5157,3 +5176,122 @@ class ControllerManagedDeviceGroupBulkEditForm(TagsBulkEditFormMixin, NautobotBu
             "weight",
             "tags",
         )
+
+
+#
+# Virtual Device Context
+#
+
+
+class VirtualDeviceContextForm(NautobotModelForm):
+    device = DynamicModelChoiceField(
+        queryset=Device.objects.all(),
+    )
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+    )
+
+    class Meta:
+        model = VirtualDeviceContext
+        fields = [
+            "name",
+            "device",
+            "status",
+            "identifier",
+            "primary_ip4",
+            "primary_ip6",
+            "tenant",
+            "description",
+            "tags",
+        ]
+        widgets = {
+            "primary_ip4": StaticSelect2(),
+            "primary_ip6": StaticSelect2(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance.present_in_database:
+            # Compile list of choices for primary IPv4 and IPv6 addresses
+            for ip_version in [4, 6]:
+                ip_choices = [(None, "---------")]
+
+                # Gather PKs of all interfaces belonging to this Device or a peer VirtualChassis member
+                interface_ids = self.instance.interfaces.values_list("pk", flat=True)
+
+                # Collect interface IPs
+                interface_ip_assignments = IPAddressToInterface.objects.filter(
+                    interface__in=interface_ids
+                ).select_related("ip_address")
+                if interface_ip_assignments.exists():
+                    ip_list = [
+                        (
+                            assignment.ip_address.id,
+                            f"{assignment.ip_address.address} ({assignment.interface})",
+                        )
+                        for assignment in interface_ip_assignments
+                        if assignment.ip_address.ip_version == ip_version
+                    ]
+                    ip_choices.append(("Interface IPs", ip_list))
+                self.fields[f"primary_ip{ip_version}"].choices = ip_choices
+        else:
+            # An object that doesn't exist yet can't have any IPs assigned to it
+            self.fields["primary_ip4"].choices = []
+            self.fields["primary_ip4"].widget.attrs["readonly"] = True
+            self.fields["primary_ip6"].choices = []
+            self.fields["primary_ip6"].widget.attrs["readonly"] = True
+
+
+class VirtualDeviceContextBulkEditForm(
+    TagsBulkEditFormMixin,
+    StatusModelBulkEditFormMixin,
+    NautobotBulkEditForm,
+):
+    pk = forms.ModelMultipleChoiceField(queryset=VirtualDeviceContext.objects.all(), widget=forms.MultipleHiddenInput())
+    device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+
+    class Meta:
+        model = VirtualDeviceContext
+        nullable_fields = [
+            "tenant",
+            "device",
+        ]
+
+
+class VirtualDeviceContextFilterForm(
+    NautobotFilterForm,
+    StatusModelFilterFormMixin,
+):
+    model = VirtualDeviceContext
+    field_order = [
+        "q",
+        "device",
+        "status",
+        "tenant",
+        "has_primary_ip",
+    ]
+    q = forms.CharField(required=False, label="Search")
+    device = DynamicModelMultipleChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        label="Device",
+    )
+    tenant = DynamicModelMultipleChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+        label="Tenant",
+    )
+    has_primary_ip = forms.NullBooleanField(
+        required=False,
+        label="Has a primary IP",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    has_tenant = forms.NullBooleanField(
+        required=False,
+        label="Has Tenant",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    tags = TagFilterField(model)

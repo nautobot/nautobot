@@ -109,6 +109,7 @@ from .models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 
 logger = logging.getLogger(__name__)
@@ -2873,6 +2874,9 @@ class InterfaceView(generic.ObjectView):
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
 
         redundancy_table = self._get_interface_redundancy_groups_table(request, instance)
+        virtual_device_contexts_table = tables.VirtualDeviceContextTable(
+            instance.virtual_device_contexts.all(), orderable=False, exclude=("device",)
+        )
 
         return {
             "ipaddress_table": ipaddress_table,
@@ -2881,6 +2885,7 @@ class InterfaceView(generic.ObjectView):
             "module_breadcrumb_url": "dcim:module_interfaces",
             "child_interfaces_table": child_interfaces_tables,
             "redundancy_table": redundancy_table,
+            "virtual_device_contexts_table": virtual_device_contexts_table,
             **super().get_extra_context(request, instance),
         }
 
@@ -4230,3 +4235,18 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
             context["devices_table"] = devices_table
 
         return context
+
+
+#
+# Virtual Device Context
+#
+
+
+class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.VirtualDeviceContextFilterSet
+    filterset_form_class = forms.VirtualDeviceContextFilterForm
+    form_class = forms.VirtualDeviceContextForm
+    bulk_update_form_class = forms.VirtualDeviceContextBulkEditForm
+    queryset = VirtualDeviceContext.objects.all()
+    serializer_class = serializers.VirtualDeviceContextSerializer
+    table_class = tables.VirtualDeviceContextTable

@@ -1890,11 +1890,6 @@ class VirtualDeviceContext(PrimaryModel):
     def __str__(self):
         return self.name
 
-    # TODO: Remove when UI View for this model is added
-    def get_absolute_url(self, api=False):
-        if api:
-            return super().get_absolute_url(api)
-
     @property
     def primary_ip(self):
         if get_settings_or_config("PREFER_IPV4") and self.primary_ip4:
