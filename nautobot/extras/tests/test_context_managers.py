@@ -1,3 +1,5 @@
+from unittest import mock
+
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
@@ -72,7 +74,9 @@ class WebRequestContextTestCase(TestCase):
         self.assertEqual(oc_list[0].changed_object, location)
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
 
-    def test_create_then_delete(self):
+    @mock.patch("nautobot.extras.jobs.enqueue_job_hooks")
+    @mock.patch("nautobot.extras.context_managers.enqueue_webhooks")
+    def test_create_then_delete(self, mock_enqueue_webhooks, mock_enqueue_job_hooks):
         """Test that a create followed by a delete is logged as two changes"""
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
@@ -88,6 +92,8 @@ class WebRequestContextTestCase(TestCase):
         self.assertEqual(len(oc_list), 2)
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_DELETE)
         self.assertEqual(oc_list[1].action, ObjectChangeActionChoices.ACTION_CREATE)
+        mock_enqueue_job_hooks.assert_has_calls([mock.call(oc_list[0]), mock.call(oc_list[1])])
+        mock_enqueue_webhooks.assert_has_calls([mock.call(oc_list[0]), mock.call(oc_list[1])])
 
     def test_update_then_delete(self):
         """Test that an update followed by a delete is logged as a single delete"""
@@ -179,21 +185,30 @@ class WebRequestContextTestCase(TestCase):
         with self.subTest():
             self.assertEqual(oc_list[0].change_context_detail, "test_change_log_context")
 
-    def test_change_webhook_enqueued(self):
+    @mock.patch("nautobot.extras.webhooks.process_webhook.apply_async")
+    def test_change_webhook_enqueued(self, mock_apply_async):
         """Test that the webhook resides on the queue"""
-        # TODO(john): come back to this with a way to actually do it without a running worker
-        # The celery inspection API expects to be able to communicate with at least 1 running
-        # worker and there does not appear to be an easy way to look into the queues directly.
-        # with web_request_context(self.user):
-        #    site = Site(name="Test Site 2")
-        #    site.save()
+        with web_request_context(self.user):
+            location = Location(
+                name="Test Location 2",
+                location_type=LocationType.objects.get(name="Campus"),
+                status=Status.objects.get_for_model(Location).first(),
+            )
+            location.save()
 
         # Verify that a job was queued for the object creation webhook
-        # site = Site.objects.get(name="Test Site 2")
-
-        # self.assertEqual(job.args[0], Webhook.objects.get(type_create=True))
-        # self.assertEqual(job.args[1]["id"], str(site.pk))
-        # self.assertEqual(job.args[2], "site")
+        oc_list = get_changes_for_model(location)
+        mock_apply_async.assert_called_once()
+        call_args = mock_apply_async.call_args.kwargs["args"]
+        self.assertEqual(8, len(call_args), call_args)
+        self.assertEqual(call_args[0], Webhook.objects.get(type_create=True).pk)
+        self.assertEqual(call_args[1], oc_list[0].object_data_v2)
+        self.assertEqual(call_args[2], "location")
+        self.assertEqual(call_args[3], "create")
+        self.assertIsInstance(call_args[4], str)  # str(timezone.now())
+        self.assertEqual(call_args[5], self.user.username)
+        self.assertEqual(call_args[6], oc_list[0].request_id)
+        self.assertEqual(call_args[7], oc_list[0].get_snapshots())
 
 
 class WebRequestContextTransactionTestCase(TransactionTestCase):
@@ -282,7 +297,8 @@ class BulkEditDeleteChangeLogging(TestCase):
         self.assertIsNone(snapshots["differences"]["removed"])
         self.assertEqual(snapshots["differences"]["added"]["description"], "changed")
 
-    def test_bulk_edit(self):
+    @mock.patch("nautobot.extras.jobs.import_jobs")
+    def test_bulk_edit(self, mock_import_jobs):
         """Test that edits to multiple objects are correctly logged"""
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
@@ -308,6 +324,9 @@ class BulkEditDeleteChangeLogging(TestCase):
             self.assertIsNotNone(snapshots["postchange"])
             self.assertIsNone(snapshots["differences"]["removed"])
             self.assertEqual(snapshots["differences"]["added"]["description"], "changed")
+
+        # Check for regression of https://github.com/nautobot/nautobot/issues/6203
+        mock_import_jobs.assert_called_once()
 
     def test_bulk_edit_device_type_software_image_file(self):
         """Test that bulk edits to null does not cause integrity error"""

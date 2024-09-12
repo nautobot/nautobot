@@ -175,11 +175,12 @@ def web_request_context(
     :param user: User object
     :param context_detail: Optional extra details about the transaction (ex: the plugin name that initiated the change)
     :param change_id: Optional uuid object to uniquely identify the transaction. One will be generated if not supplied
-    :param context: Optional string value of the generated change log entries' "change_context" field, defaults to ObjectChangeEventContextChoices.CONTEXT_ORM.
-        Valid choices are in nautobot.extras.choices.ObjectChangeEventContextChoices
+    :param context: Optional string value of the generated change log entries' "change_context" field.
+        Defaults to `ObjectChangeEventContextChoices.CONTEXT_ORM`.
+        Valid choices are in `nautobot.extras.choices.ObjectChangeEventContextChoices`.
     :param request: Optional web request instance, one will be generated if not supplied
     """
-    from nautobot.extras.jobs import enqueue_job_hooks  # prevent circular import
+    from nautobot.extras.jobs import enqueue_job_hooks, get_jobs  # prevent circular import
 
     valid_contexts = {
         ObjectChangeEventContextChoices.CONTEXT_JOB: JobChangeContext,
@@ -202,9 +203,15 @@ def web_request_context(
         with change_logging(change_context):
             yield request
     finally:
+        jobs_refreshed = False
         # enqueue jobhooks and webhooks, use change_context.change_id in case change_id was not supplied
         for object_change in ObjectChange.objects.filter(request_id=change_context.change_id).iterator():
-            enqueue_job_hooks(object_change)
+            if context != ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
+                # Make sure JobHooks are up to date (once) before calling them
+                if not jobs_refreshed:
+                    get_jobs(reload=True)
+                    jobs_refreshed = True
+                enqueue_job_hooks(object_change)
             enqueue_webhooks(object_change)
 
 
