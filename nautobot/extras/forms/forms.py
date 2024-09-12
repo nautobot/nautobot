@@ -981,6 +981,7 @@ class JobEditForm(NautobotModelForm):
             "time_limit",
             "has_sensitive_variables_override",
             "has_sensitive_variables",
+            "job_queues_override",
             "job_queues",
             "tags",
         ]
@@ -997,6 +998,8 @@ class JobEditForm(NautobotModelForm):
             for field_name in JOB_OVERRIDABLE_FIELDS:
                 if not cleaned_data.get(f"{field_name}_override", False):
                     cleaned_data[field_name] = getattr(job_class, field_name)
+            if not cleaned_data.get("job_queues_override", False):
+                cleaned_data["job_queues"] = JobQueue.objects.filter(name__in=getattr(job_class.task_queues, []))
         return cleaned_data
 
 
@@ -1073,6 +1076,10 @@ class JobBulkEditForm(NautobotBulkEditForm):
         required=False,
         help_text="If checked, time limits will be reverted to the default values defined in each Job's source code",
     )
+    clear_job_queues_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, the selected job queues will be reverted to the default values defined in each Job's source code",
+    )
     # Boolean overrides
     clear_approval_required_override = forms.BooleanField(
         required=False,
@@ -1081,10 +1088,6 @@ class JobBulkEditForm(NautobotBulkEditForm):
     clear_dryrun_default_override = forms.BooleanField(
         required=False,
         help_text="If checked, the values of dryrun default will be reverted to the default values defined in each Job's source code",
-    )
-    clear_job_queues_override = forms.BooleanField(
-        required=False,
-        help_text="If checked, job queue overrides will be reverted to the default values defined in each Job's source code",
     )
     clear_hidden_override = forms.BooleanField(
         required=False,

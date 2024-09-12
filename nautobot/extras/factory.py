@@ -159,10 +159,10 @@ class JobQueueFactory(PrimaryModelFactory):
 
     @factory.post_generation
     def jobs(self, create, extracted, **kwargs):
-        # TODO assign jobs to only celery queue for now
-        # because queue and task_queue value setter are looking for celery type only
-        if self.queue_type == JobQueueTypeChoices.TYPE_CELERY:
-            self.jobs.set(get_random_instances(Job))
+        for job in get_random_instances(Job):
+            self.jobs.add(job)
+            job.job_queues_override = True
+            job.validated_save()
 
 
 class JobResultFactory(BaseModelFactory):

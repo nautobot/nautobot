@@ -127,13 +127,7 @@ class JobTest(TestCase):
         with self.assertRaises(ValidationError) as cm:
             job_model.task_queues = [invalid_queue]
             job_model.validated_save()
-        self.assertIn(f"Celery Job Queue {invalid_queue} does not exist in the database.", str(cm.exception))
-
-        invalid_queue = models.JobQueue.objects.exclude(queue_type=JobQueueTypeChoices.TYPE_CELERY).first().name
-        with self.assertRaises(ValidationError) as cm:
-            job_model.task_queues = [invalid_queue]
-            job_model.validated_save()
-        self.assertIn(f"Celery Job Queue {invalid_queue} does not exist in the database.", str(cm.exception))
+        self.assertIn(f"Job Queue {invalid_queue} does not exist in the database.", str(cm.exception))
 
     def test_job_class_job_queues(self):
         """

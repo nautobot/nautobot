@@ -61,11 +61,12 @@ An administrator or user with `extras.change_job` permission can also edit a Job
 * `hidden`
 * `soft_time_limit`
 * `time_limit`
+* `job_queues`
 
 This is done by setting the corresponding "override" flag (`grouping_override`, `name_override`, etc.) to `True` then providing a new value for the attribute in question. An overridden attribute will remain set to its overridden value even if the underlying Job class definition changes and `nautobot-server <migrate|post_upgrade>` gets run again. Conversely, clearing the "override" flag for an attribute and saving the database record will revert the attribute to the underlying value defined within the Job class source code.
 
 +/- 2.4.0 "Job queues"
-    In Nautobot v2.4 and later, users can no longer override the `task_queues` attribute. Instead, they must assign [Job Queues](./jobqueue.md) to Jobs to specify the eligible queues for running those Jobs. Previously, users could define the order of queues by listing queue names in a comma-separated string, but this is no longer possible in v2.4. Now, Job Queues are sorted alphabetically by name and cannot be reordered.
+    In Nautobot v2.4 and later, the `task_queues` attribute is deprecated and replaced with `job_queues`, which instead of a list of strings is now a set of [Job Queues](./jobqueue.md) specifying the eligible queues for running a Job. Note that as a consequence, per-Job ordering of queues is no longer possible; Job Queues are always sorted alphabetically and cannot be reordered.
 
 ### Deleting Jobs
 

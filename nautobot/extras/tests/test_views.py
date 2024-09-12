@@ -2361,6 +2361,7 @@ class JobTestCase(
             "has_sensitive_variables": False,
             "has_sensitive_variables_override": True,
             "job_queues": [queue.pk for queue in job_queues],
+            "job_queues_override": True,
         }
         # This form is emulating the non-conventional JobBulkEditForm
         cls.bulk_edit_data = {
@@ -2382,6 +2383,7 @@ class JobTestCase(
             "has_sensitive_variables": False,
             "clear_has_sensitive_variables_override": False,
             "job_queues": [queue.pk for queue in job_queues],
+            "clear_job_queues_override": False,
         }
 
     def validate_job_data_after_bulk_edit(self, pk_list, old_data):
@@ -2415,6 +2417,10 @@ class JobTestCase(
                     else:
                         self.assertEqual(getattr(instance, overridable_field), old_data[instance.pk][overridable_field])
                         self.assertEqual(getattr(instance, override_field), old_data[instance.pk][overridable_field])
+                # Special case for task queues/job queues
+                override_value = self.bulk_edit_data.get("job_queues")
+                self.assertEqual(list(instance.job_queues.values_list("pk", flat=True)), override_value)
+                self.assertEqual(instance.job_queues_override, True)
 
     def validate_object_data_after_bulk_edit(self, pk_list):
         instances = self._get_queryset().filter(pk__in=pk_list)
@@ -2728,7 +2734,7 @@ class JobTestCase(
         self.add_permissions("extras.view_jobresult")
 
         self.test_pass.task_queues = []
-        self.test_pass.task_queues_override = True
+        self.test_pass.job_queues_override = True
         self.test_pass.validated_save()
         job_queue = JobQueue.objects.create(name="invalid", queue_type=JobQueueTypeChoices.TYPE_CELERY)
         data = {
@@ -2902,7 +2908,7 @@ class JobButtonRenderingTestCase(TestCase):
         """
         Ensure that the job button respects the job class' task_queues and the job class task_queues[0]/default is passed as a hidden form input.
         """
-        self.job.task_queues_override = True
+        self.job.job_queues_override = True
         task_queues = ["overriden_queue", "default", "priority"]
         for queue in task_queues:
             JobQueue.objects.get_or_create(name=queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY})
@@ -2913,6 +2919,9 @@ class JobButtonRenderingTestCase(TestCase):
         content = extract_page_body(response.content.decode(response.charset))
         job_queues = self.job.job_queues.all().values_list("name", flat=True)
         self.assertIn(f'<input type="hidden" name="_job_queue" value="{job_queues[0]}">', content, content)
+
+        self.job.job_queues_override = False
+        self.job.save()
         self.job.job_queues.set([])
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)

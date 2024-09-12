@@ -536,8 +536,9 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
 
 class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    # task_queues is added to maintain backward compatibility with versions pre v2.4.
+    # task_queues and task_queues_override are added to maintain backward compatibility with versions pre v2.4.
     task_queues = serializers.JSONField(read_only=True, required=False)
+    task_queues_override = serializers.BooleanField(read_only=True, required=False)
 
     class Meta:
         model = Job
