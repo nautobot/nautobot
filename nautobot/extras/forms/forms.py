@@ -956,7 +956,6 @@ class JobEditForm(NautobotModelForm):
     job_queues = DynamicModelMultipleChoiceField(
         label="Job Queues",
         queryset=JobQueue.objects.all(),
-        required=False,  # needed due to job_queues_override checkbox behavior
     )
 
     class Meta:
@@ -998,12 +997,9 @@ class JobEditForm(NautobotModelForm):
             for field_name in JOB_OVERRIDABLE_FIELDS:
                 if not cleaned_data.get(f"{field_name}_override", False):
                     cleaned_data[field_name] = getattr(job_class, field_name)
-            if cleaned_data.get("job_queues_override", False):
-                if not cleaned_data["job_queues"]:
-                    raise ValidationError({"job_queues": "Please select at least one job queue"})
-            else:
+            if not cleaned_data.get("job_queues_override", False):
                 cleaned_data["job_queues"] = JobQueue.objects.filter(
-                    name__in=getattr(job_class, "task_queues", [settings.CELERY_TASK_DEFAULT_QUEUE])
+                    name__in=getattr(job_class, "task_queues", []) or [settings.CELERY_TASK_DEFAULT_QUEUE]
                 )
         return cleaned_data
 
