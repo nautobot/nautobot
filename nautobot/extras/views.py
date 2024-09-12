@@ -1517,7 +1517,11 @@ class JobBulkEditView(generic.BulkEditView):
                 except JobQueue.DoesNotExist:
                     # Do we want to create the Job Queue for the users here if we do not have it in the database?
                     pass
+            obj.job_queues_override = False
             obj.job_queues.set(job_queues)
+        else:
+            obj.job_queues_override = True
+            obj.job_queues.set(cleaned_data["job_queues"])
 
         obj.validated_save()
 

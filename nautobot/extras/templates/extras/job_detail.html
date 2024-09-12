@@ -48,12 +48,10 @@
             <tr>
                 <td>Is Job Hook Receiver</td>
                 <td>{{ object.is_job_hook_receiver | render_boolean }}</td>
-                <td></td>
             </tr>
             <tr>
                 <td>Is Job Button Receiver</td>
                 <td>{{ object.is_job_button_receiver | render_boolean }}</td>
-                <td></td>
             </tr>
         </table>
     </div>
@@ -263,11 +261,15 @@
             <tr>
                 <td>Job Queues</td>
                 <td>
-                    <ul>
-                        {% for queue in object.job_queues.all %}
-                            <li>{{ queue|hyperlinked_object }}</li>
-                        {% endfor %}
-                    </ul>
+                    {% if object.job_queues.exists %}
+                        <ul>
+                            {% for queue in object.job_queues.all %}
+                                <li>{{ queue|hyperlinked_object }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        {{ None|placeholder }}
+                    {% endif %}
                 </td>
                 <td>
                     {% if object.job_queues_override %}
