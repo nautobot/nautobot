@@ -2365,7 +2365,7 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
             )
 
     def test_vdcs_validation_logic(self):
-        """Assert Interface raises error when adding vdcs that do not belong to same device as the Interface device."""
+        """Assert Interface raises error when adding virtual_device_contexts that do not belong to same device as the Interface device."""
         interface = Interface.objects.create(
             name="Int1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
@@ -2381,9 +2381,9 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         )
 
         with self.assertRaises(ValidationError) as err:
-            interface.vdcs.add(vdc)
+            interface.virtual_device_contexts.add(vdc)
         self.assertEqual(
-            err.exception.message_dict["vdcs"][0],
+            err.exception.message_dict["virtual_device_contexts"][0],
             f"Virtual Device Context with names {[vdc.name]} must all belong to the "
             f"same device as the interface's device.",
         )
@@ -3219,34 +3219,34 @@ class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
         )
         vdc.validated_save()
 
-        ips_v4 = IPAddress.objects.filter(ip_version=4).first()
-        ips_v6 = IPAddress.objects.filter(ip_version=6).first()
+        ip_v4 = IPAddress.objects.filter(ip_version=4).first()
+        ip_v6 = IPAddress.objects.filter(ip_version=6).first()
 
-        vdc.primary_ip4 = ips_v6
+        vdc.primary_ip4 = ip_v6
         with self.assertRaises(ValidationError) as err:
             vdc.validated_save()
         self.assertIn(
-            f"{ips_v6} is not an IPv4 address",
+            f"{ip_v6} is not an IPv4 address",
             str(err.exception),
         )
 
         vdc.primary_ip4 = None
-        vdc.primary_ip6 = ips_v4
+        vdc.primary_ip6 = ip_v4
         with self.assertRaises(ValidationError) as err:
             vdc.validated_save()
         self.assertIn(
-            f"{ips_v4} is not an IPv6 address",
+            f"{ip_v4} is not an IPv6 address",
             str(err.exception),
         )
 
-        vdc.primary_ip6 = ips_v6
+        vdc.primary_ip6 = ip_v6
         with self.assertRaises(ValidationError) as err:
             vdc.validated_save()
         self.assertIn(
-            f"The specified IP address ({ips_v6}) is not assigned to this Virtual Device Context.",
+            f"The specified IP address ({ip_v6}) is not assigned to this Virtual Device Context.",
             str(err.exception),
         )
-        interface.vdcs.add(vdc)
-        interface.add_ip_addresses([ips_v4, ips_v6])
-        vdc.primary_ip4 = ips_v4
+        interface.virtual_device_contexts.add(vdc)
+        interface.add_ip_addresses([ip_v4, ip_v6])
+        vdc.primary_ip4 = ip_v4
         vdc.validated_save()

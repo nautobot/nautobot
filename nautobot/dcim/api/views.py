@@ -601,7 +601,9 @@ class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
         "status",
         "cable",
         "untagged_vlan",
-    ).prefetch_related("tags", "_path__destination", "_cable_peer", "ip_addresses", "tagged_vlans", "vdcs")
+    ).prefetch_related(
+        "tags", "_path__destination", "_cable_peer", "ip_addresses", "tagged_vlans", "virtual_device_contexts"
+    )
     serializer_class = serializers.InterfaceSerializer
     filterset_class = filters.InterfaceFilterSet
 

@@ -107,7 +107,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="interface",
-            name="vdcs",
+            name="virtual_device_contexts",
             field=models.ManyToManyField(blank=True, related_name="interfaces", to="dcim.virtualdevicecontext"),
         ),
     ]

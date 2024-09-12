@@ -1131,7 +1131,7 @@ class InterfaceFilterSet(
         queryset=InterfaceRedundancyGroup.objects.all(),
         to_field_name="name",
     )
-    vdcs = NaturalKeyOrPKMultipleChoiceFilter(
+    virtual_device_contexts = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualDeviceContext.objects.all(),
         to_field_name="name",
         label="Virtual Device Context (name or ID)",
@@ -1150,7 +1150,7 @@ class InterfaceFilterSet(
             "description",
             "label",
             "tags",
-            "vdcs",
+            "virtual_device_contexts",
             "interface_redundancy_groups",
         ]
 

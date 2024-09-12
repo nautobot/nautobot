@@ -642,7 +642,7 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         blank=True,
         verbose_name="IP Addresses",
     )
-    vdcs = models.ManyToManyField(
+    virtual_device_contexts = models.ManyToManyField(
         to="dcim.VirtualDeviceContext",
         related_name="interfaces",
         blank=True,
