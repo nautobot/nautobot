@@ -1,9 +1,5 @@
 import factory
-from nautobot.dcim.models import Controller, Device
-from nautobot.ipam.models import VLAN
-from nautobot.tenancy.models import Tenant
-from nautobot.wireless import models
-from nautobot.wireless.choices import RadioFrequencyChoices, RadioStandardChoices, ChannelWidthChoices, RegulatoryDomainChoices, WirelessAuthTypeChoices, WirelessDeploymentModeChoices
+
 from nautobot.core.factory import (
     BaseModelFactory,
     get_random_instances,
@@ -11,6 +7,18 @@ from nautobot.core.factory import (
     PrimaryModelFactory,
     random_instance,
     UniqueFaker,
+)
+from nautobot.dcim.models import Controller, Device
+from nautobot.ipam.models import VLAN
+from nautobot.tenancy.models import Tenant
+from nautobot.wireless import models
+from nautobot.wireless.choices import (
+    ChannelWidthChoices,
+    RadioFrequencyChoices,
+    RadioStandardChoices,
+    RegulatoryDomainChoices,
+    WirelessAuthTypeChoices,
+    WirelessDeploymentModeChoices,
 )
 
 
@@ -35,6 +43,7 @@ class SupportedDataRateFactory(PrimaryModelFactory):
     rate = factory.Faker("pyint", min_value=1000, max_value=164000, step=1000)
     mcs_index = factory.Faker("pyint", min_value=0, max_value=9)
 
+
 class RadioProfileFactory(PrimaryModelFactory):
     class Meta:
         model = models.RadioProfile
@@ -48,15 +57,14 @@ class RadioProfileFactory(PrimaryModelFactory):
     tx_power_max = factory.Faker("pyint", min_value=6, max_value=30)
     rx_power_min = factory.Faker("pyint", min_value=1, max_value=10)
     allowed_channel_list = factory.Faker("random_elements", elements=[1, 6, 11, 36, 161, 165])
+
     @factory.post_generation
     def supported_data_rates(self, create, extracted, **kwargs):
         if create:
             if extracted:
                 self.supported_data_rates.set(extracted)
             else:
-                self.supported_data_rates.set(
-                    get_random_instances(models.SupportedDataRate, minimum=1)
-                )
+                self.supported_data_rates.set(get_random_instances(models.SupportedDataRate, minimum=1))
 
 
 class WirelessNetworkFactory(PrimaryModelFactory):
@@ -99,9 +107,9 @@ class AccessPointGroupRadioProfileAssignmentFactory(BaseModelFactory):
     radio_profile = random_instance(models.RadioProfile)
 
 
-class AccessPointGroupDevicesAssignmentFactory(BaseModelFactory):
+class AccessPointGroupDeviceAssignmentFactory(BaseModelFactory):
     class Meta:
         model = models.AccessPointGroupDevicesAssignment
 
     access_point_group = random_instance(models.AccessPointGroup)
-    access_point = random_instance(Device)
+    device = random_instance(Device)

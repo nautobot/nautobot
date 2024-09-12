@@ -132,7 +132,15 @@ class Command(BaseCommand):
             )
             from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
             from nautobot.users.factory import UserFactory
-            from nautobot.wireless.factory import AccessPointGroupFactory, SupportedDataRateFactory, RadioProfileFactory, WirelessNetworkFactory, AccessPointGroupDevicesAssignmentFactory, AccessPointGroupRadioProfileAssignmentFactory, AccessPointGroupWirelessNetworkAssignmentFactory
+            from nautobot.wireless.factory import (
+                AccessPointGroupDeviceAssignmentFactory,
+                AccessPointGroupFactory,
+                AccessPointGroupRadioProfileAssignmentFactory,
+                AccessPointGroupWirelessNetworkAssignmentFactory,
+                RadioProfileFactory,
+                SupportedDataRateFactory,
+                WirelessNetworkFactory,
+            )
         except ImportError as err:
             raise CommandError('Unable to load data factories. Is the "factory-boy" package installed?') from err
 
@@ -350,12 +358,13 @@ class Command(BaseCommand):
             description="with teams",
         )
         _create_batch(
-            AccessPointGroupFactory, 20,
+            AccessPointGroupFactory,
+            20,
         )
         _create_batch(SupportedDataRateFactory, 20)
         _create_batch(RadioProfileFactory, 20)
         _create_batch(WirelessNetworkFactory, 20)
-        _create_batch(AccessPointGroupDevicesAssignmentFactory, 10)
+        _create_batch(AccessPointGroupDeviceAssignmentFactory, 10)
         _create_batch(AccessPointGroupRadioProfileAssignmentFactory, 10)
         _create_batch(AccessPointGroupWirelessNetworkAssignmentFactory, 10)
 

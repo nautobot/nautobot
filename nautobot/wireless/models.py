@@ -1,4 +1,3 @@
-from django.core.validators import MinValueValidator
 from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -46,11 +45,11 @@ class AccessPointGroup(PrimaryModel):
         null=True,
     )
 
-    access_points = models.ManyToManyField(
+    devices = models.ManyToManyField(
         to="dcim.Device",
         related_name="access_point_groups",
-        through="wireless.AccessPointGroupDevicesAssignment",
-        through_fields=("access_point_group", "access_point"),
+        through="wireless.AccessPointGroupDeviceAssignment",
+        through_fields=("access_point_group", "device"),
         blank=True,
     )
 
@@ -263,7 +262,7 @@ class AccessPointGroupRadioProfileAssignment(BaseModel):
     "export_templates",
     "graphql",
 )
-class AccessPointGroupDevicesAssignment(BaseModel):
+class AccessPointGroupDeviceAssignment(BaseModel):
     """
     An AccessPointGroupDevicesAssignment represents the assignment of a Device to an AccessPointGroup.
     """
@@ -271,9 +270,9 @@ class AccessPointGroupDevicesAssignment(BaseModel):
     access_point_group = models.ForeignKey(
         to="wireless.AccessPointGroup",
         on_delete=models.CASCADE,
-        related_name="access_points_assignments",
+        related_name="device_assignments",
     )
-    access_point = models.ForeignKey(
+    device = models.ForeignKey(
         to="dcim.Device",
         on_delete=models.CASCADE,
         related_name="access_point_group_assignments",
@@ -281,8 +280,8 @@ class AccessPointGroupDevicesAssignment(BaseModel):
     is_metadata_associable_model = False
 
     class Meta:
-        unique_together = ["access_point_group", "access_point"]
-        ordering = ["access_point_group", "access_point"]
+        unique_together = ["access_point_group", "device"]
+        ordering = ["access_point_group", "device"]
 
     def __str__(self):
-        return f"{self.access_point_group}: {self.access_point}"
+        return f"{self.access_point_group}: {self.device}"
