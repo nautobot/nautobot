@@ -128,7 +128,7 @@ class Migration(migrations.Migration):
             name='AccessPointGroupDevicesAssignment',
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('access_point', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='access_point_groups_assignments', to='dcim.device')),
+                ('access_point', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='access_point_group_assignments', to='dcim.device')),
                 ('access_point_group', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='access_points_assignments', to='wireless.accesspointgroup')),
             ],
             options={

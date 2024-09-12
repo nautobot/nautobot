@@ -276,7 +276,7 @@ class AccessPointGroupDevicesAssignment(BaseModel):
     access_point = models.ForeignKey(
         to="dcim.Device",
         on_delete=models.CASCADE,
-        related_name="access_point_groups_assignments",
+        related_name="access_point_group_assignments",
     )
     is_metadata_associable_model = False
 
