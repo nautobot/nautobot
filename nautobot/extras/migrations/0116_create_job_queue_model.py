@@ -94,6 +94,11 @@ class Migration(migrations.Migration):
                 related_name="jobs", through="extras.JobQueueAssignment", to="extras.jobqueue"
             ),
         ),
+        migrations.RenameField(
+            model_name="job",
+            old_name="task_queues_override",
+            new_name="job_queues_override",
+        ),
         migrations.AddField(
             model_name="scheduledjob",
             name="job_queue",

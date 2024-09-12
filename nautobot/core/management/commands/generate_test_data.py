@@ -330,7 +330,7 @@ class Command(BaseCommand):
         )
         _create_batch(MetadataChoiceFactory, 100)
         _create_batch(ObjectChangeFactory, 100)
-        _create_batch(JobQueueFactory, 10)
+        _create_batch(JobQueueFactory, 30)
         _create_batch(JobResultFactory, 20)
         _create_batch(JobLogEntryFactory, 100)
         _create_batch(ObjectMetadataFactory, 100)

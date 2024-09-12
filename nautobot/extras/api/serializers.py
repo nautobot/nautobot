@@ -536,6 +536,10 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
 
 class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    # task_queues and task_queues_override are added to maintain backward compatibility with versions pre v2.4.
+    task_queues = serializers.JSONField(read_only=True, required=False)
+    task_queues_override = serializers.BooleanField(read_only=True, required=False)
+
     class Meta:
         model = Job
         fields = "__all__"
@@ -596,6 +600,8 @@ class JobVariableSerializer(serializers.Serializer):
 
 class ScheduledJobSerializer(BaseModelSerializer):
     # start_time = serializers.DateTimeField(format=None, required=False)
+    # queue is added to maintain backward compatibility with versions pre v2.4.
+    queue = serializers.CharField(read_only=True, required=False)
     time_zone = TimeZoneSerializerField(required=False)
 
     class Meta:
@@ -746,6 +752,7 @@ class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default=dict)
     schedule = JobCreationSerializer(required=False)
     task_queue = serializers.CharField(required=False, allow_blank=True)
+    job_queue = serializers.CharField(required=False, allow_blank=True)
 
 
 class JobMultiPartInputSerializer(serializers.Serializer):
@@ -756,6 +763,7 @@ class JobMultiPartInputSerializer(serializers.Serializer):
     _schedule_interval = ChoiceField(choices=JobExecutionType, required=False)
     _schedule_crontab = serializers.CharField(required=False, allow_blank=True)
     _task_queue = serializers.CharField(required=False, allow_blank=True)
+    _job_queue = serializers.CharField(required=False, allow_blank=True)
 
     def validate(self, data):
         data = super().validate(data)
