@@ -335,8 +335,34 @@ class _ObjectDetailContactsTab(Tab):
         kwargs.setdefault(
             "panels",
             [
-                # TODO
-                TemplatePanel(label="Contact Associations", template_string="Contact Associations Table"),
+                ObjectsTablePanel(
+                    table_name="associated_contacts_table",
+                    # TODO: this is ugly - we should abstract this away and provide a standard way of including
+                    # bulk actions and other buttons in the footer
+                    footer_template_string="""\
+{% load perms %}
+{% with request.path|add:"?tab=contacts"|urlencode as return_url %}
+    {% if perms.extras.change_contactassociation %}
+        <button type="submit" name="_edit" formaction="{% url 'extras:contactassociation_bulk_edit' %}?return_url={{return_url}}" class="btn btn-warning btn-xs">
+            <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
+        </button>
+    {% endif %}
+    {% if perms.extras.delete_contactassociation %}
+        <button type="submit" formaction="{% url 'extras:contactassociation_bulk_delete' %}?return_url={{return_url}}" class="btn btn-danger btn-xs">
+            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
+        </button>
+    {% endif %}
+        {% if perms.extras.add_contactassociation %}
+            <div class="pull-right">
+            <a href="{% url 'extras:object_contact_team_assign' %}?return_url={{return_url}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" class="btn btn-primary btn-xs">
+                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contact
+            </a>
+        </div>
+    {% endif %}
+    <div class="clearfix"></div>
+{% endwith %}
+""",
+                ),
             ],
         )
         super().__init__(**kwargs)
@@ -361,13 +387,7 @@ class _ObjectDetailGroupsTab(Tab):
 
     def __init__(self, **kwargs):
         kwargs.setdefault("weight", 1200)
-        kwargs.setdefault(
-            "panels",
-            [
-                # TODO
-                TemplatePanel(label="Dynamic Groups", template_string="Dynamic Groups Table"),
-            ],
-        )
+        kwargs.setdefault("panels", [ObjectsTablePanel(table_name="associated_dynamic_groups_table")])
         super().__init__(**kwargs)
 
     def should_render(self, context):
@@ -392,13 +412,7 @@ class _ObjectDetailMetadataTab(Tab):
 
     def __init__(self, **kwargs):
         kwargs.setdefault("weight", 1300)
-        kwargs.setdefault(
-            "panels",
-            [
-                # TODO
-                TemplatePanel(label="Object Metadata", template_string="Object Metadata Table"),
-            ],
-        )
+        kwargs.setdefault("panels", [ObjectsTablePanel(table_name="associated_object_metadata_table")])
         super().__init__(**kwargs)
 
     def should_render(self, context):
@@ -423,8 +437,17 @@ class Panel(ABC):
 
     DEFAULT_CONTENT_WRAPPER = '<div class="panel-body">{}</div>'
     ATTR_TABLE_CONTENT_WRAPPER = '<table class="table table-hover panel-body attr-table">{}</table>'
+    TABLE_CONTENT_WRAPPER = '<div class="table-responsive">{}</div>'
 
-    def __init__(self, *, label=None, weight=100, section=SectionChoices.FULL_WIDTH, content_wrapper=None):
+    def __init__(
+        self,
+        *,
+        label=None,
+        weight=100,
+        section=SectionChoices.FULL_WIDTH,
+        content_wrapper=None,
+        footer_template_string=None,
+    ):
         """
         Instantiate a Panel.
 
@@ -434,6 +457,7 @@ class Panel(ABC):
             section (str): One of the SectionChoices values in `nautobot.core.ui.choices`.
             content_wrapper (str): HTML format string to wrap the rendered content in.
                 Defaults to `<div class="panel-body">{}</div>`.
+            footer_template_string (str): HTML template string to render into the panel footer.
         """
         self.label = label
         self.weight = weight
@@ -441,17 +465,20 @@ class Panel(ABC):
             raise RuntimeError(f"Unknown section {section}")
         self.section = section
         self.content_wrapper = content_wrapper or self.DEFAULT_CONTENT_WRAPPER
+        self.footer_template_string = footer_template_string
 
     def render(self, context):
-        return format_html(
-            """\
-<div class="panel panel-default">
-    <div class="panel-heading"><strong>{label}</strong></div>
-    {wrapped_content}
-</div>""",
-            label=self.render_label(context),
-            wrapped_content=format_html(self.content_wrapper, self.render_content(context)),
-        )
+        template = format_html('<div class="panel panel-default">')
+        label = self.render_label(context)
+        if label:
+            template += format_html('<div class="panel-heading"><strong>{}</strong></div>', label)
+        template += format_html(self.content_wrapper, self.render_content(context))
+        if self.footer_template_string:
+            template += format_html(
+                '<div class="panel-footer">{}</div>', Template(self.footer_template_string).render(context)
+            )
+        template += format_html("</div>")
+        return template
 
     def render_label(self, context):
         return self.label
@@ -476,6 +503,29 @@ class TemplatePanel(Panel):
         if self.template_string is not None:
             return Template(self.template_string).render(context)
         return render(context["request"], self.template_path, context)
+
+
+class ObjectsTablePanel(TemplatePanel):
+    """A panel that renders a table of objects (typically related objects, rather than the main context object)."""
+
+    def __init__(
+        self,
+        *,
+        table_name,
+        **kwargs,
+    ):
+        """
+        Instantiate an ObjectsTablePanel.
+
+        Args:
+            table_name (str): The render context key under which the table in question will be found.
+        """
+        kwargs.setdefault("content_wrapper", self.TABLE_CONTENT_WRAPPER)
+        kwargs.setdefault(
+            "template_string",
+            "{% load render_table from django_tables2 %}{% render_table " + table_name + " 'inc/table.html' %}",
+        )
+        super().__init__(**kwargs)
 
 
 class ObjectFieldsPanel(Panel):
