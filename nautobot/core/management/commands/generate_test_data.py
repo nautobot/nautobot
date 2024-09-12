@@ -10,7 +10,6 @@ from django.db import connections, DEFAULT_DB_ALIAS
 from django.utils.crypto import get_random_string
 
 from nautobot.core.settings_funcs import is_truthy
-from nautobot.extras.choices import JobQueueTypeChoices
 
 
 class Command(BaseCommand):
