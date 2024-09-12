@@ -344,7 +344,7 @@ class Command(BaseCommand):
             description="with queue type celery",
             queue_type=JobQueueTypeChoices.TYPE_CELERY,
         )
-        _create_batch(JobQueueFactory, 10)
+        _create_batch(JobQueueFactory, 20)
         _create_batch(JobResultFactory, 20)
         _create_batch(JobLogEntryFactory, 100)
         _create_batch(ObjectMetadataFactory, 100)
