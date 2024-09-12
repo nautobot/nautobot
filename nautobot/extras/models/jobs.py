@@ -321,7 +321,11 @@ class Job(PrimaryModel):
     @task_queues_override.setter
     def task_queues_override(self, value):
         if type(value) is not bool:
-            raise ValidationError({"task_queues_override": f"{value} is invalid for field task_queues_override, use a boolean value instead"})
+            raise ValidationError(
+                {
+                    "task_queues_override": f"{value} is invalid for field task_queues_override, use a boolean value instead"
+                }
+            )
         self.job_queues_override = value
 
     def clean(self):
