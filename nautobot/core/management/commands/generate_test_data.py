@@ -132,7 +132,7 @@ class Command(BaseCommand):
             )
             from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
             from nautobot.users.factory import UserFactory
-            from nautobot.wireless.factory import AccessPointGroupFactory, SupportedDataRateFactory, RadioProfileFactory, WirelessNetworkFactory
+            from nautobot.wireless.factory import AccessPointGroupFactory, SupportedDataRateFactory, RadioProfileFactory, WirelessNetworkFactory, AccessPointGroupDevicesAssignmentFactory, AccessPointGroupRadioProfileAssignmentFactory, AccessPointGroupWirelessNetworkAssignmentFactory
         except ImportError as err:
             raise CommandError('Unable to load data factories. Is the "factory-boy" package installed?') from err
 
@@ -355,6 +355,9 @@ class Command(BaseCommand):
         _create_batch(SupportedDataRateFactory, 20)
         _create_batch(RadioProfileFactory, 20)
         _create_batch(WirelessNetworkFactory, 20)
+        _create_batch(AccessPointGroupDevicesAssignmentFactory, 10)
+        _create_batch(AccessPointGroupRadioProfileAssignmentFactory, 10)
+        _create_batch(AccessPointGroupWirelessNetworkAssignmentFactory, 10)
 
     def handle(self, *args, **options):
         if options["flush"]:

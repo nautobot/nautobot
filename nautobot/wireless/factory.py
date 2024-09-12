@@ -1,9 +1,11 @@
 import factory
-from nautobot.dcim.models import Controller
+from nautobot.dcim.models import Controller, Device
+from nautobot.ipam.models import VLAN
 from nautobot.tenancy.models import Tenant
 from nautobot.wireless import models
 from nautobot.wireless.choices import RadioFrequencyChoices, RadioStandardChoices, ChannelWidthChoices, RegulatoryDomainChoices, WirelessAuthTypeChoices, WirelessDeploymentModeChoices
 from nautobot.core.factory import (
+    BaseModelFactory,
     get_random_instances,
     NautobotBoolIterator,
     PrimaryModelFactory,
@@ -15,7 +17,7 @@ from nautobot.core.factory import (
 class AccessPointGroupFactory(PrimaryModelFactory):
     class Meta:
         model = models.AccessPointGroup
-        exclude = ("has_description",)
+        exclude = ("has_description", "has_tenant")
 
     name = UniqueFaker("company")
     has_description = NautobotBoolIterator()
@@ -60,7 +62,7 @@ class RadioProfileFactory(PrimaryModelFactory):
 class WirelessNetworkFactory(PrimaryModelFactory):
     class Meta:
         model = models.WirelessNetwork
-        exclude = ("has_description",)
+        exclude = ("has_description", "has_tenant")
 
     name = UniqueFaker("word")
     has_description = NautobotBoolIterator()
@@ -78,3 +80,28 @@ class WirelessNetworkFactory(PrimaryModelFactory):
     hidden = NautobotBoolIterator()
     has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
+
+
+class AccessPointGroupWirelessNetworkAssignmentFactory(BaseModelFactory):
+    class Meta:
+        model = models.AccessPointGroupWirelessNetworkAssignment
+
+    access_point_group = random_instance(models.AccessPointGroup)
+    wireless_network = random_instance(models.WirelessNetwork)
+    vlan = random_instance(VLAN, allow_null=True)
+
+
+class AccessPointGroupRadioProfileAssignmentFactory(BaseModelFactory):
+    class Meta:
+        model = models.AccessPointGroupRadioProfileAssignment
+
+    access_point_group = random_instance(models.AccessPointGroup)
+    radio_profile = random_instance(models.RadioProfile)
+
+
+class AccessPointGroupDevicesAssignmentFactory(BaseModelFactory):
+    class Meta:
+        model = models.AccessPointGroupDevicesAssignment
+
+    access_point_group = random_instance(models.AccessPointGroup)
+    access_point = random_instance(Device)

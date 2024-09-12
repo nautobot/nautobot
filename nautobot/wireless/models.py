@@ -46,6 +46,30 @@ class AccessPointGroup(PrimaryModel):
         null=True,
     )
 
+    access_points = models.ManyToManyField(
+        to="dcim.Device",
+        related_name="access_point_groups",
+        through="wireless.AccessPointGroupDevicesAssignment",
+        through_fields=("access_point_group", "access_point"),
+        blank=True,
+    )
+
+    radio_profiles = models.ManyToManyField(
+        to="wireless.RadioProfile",
+        related_name="access_point_groups",
+        through="wireless.AccessPointGroupRadioProfileAssignment",
+        through_fields=("access_point_group", "radio_profile"),
+        blank=True,
+    )
+
+    wireless_networks = models.ManyToManyField(
+        to="wireless.WirelessNetwork",
+        related_name="access_point_groups",
+        through="wireless.AccessPointGroupWirelessNetworkAssignment",
+        through_fields=("access_point_group", "wireless_network"),
+        blank=True,
+    )
+
     class Meta:
         ordering = ["name"]
         unique_together = ["name", "controller"]
@@ -208,7 +232,7 @@ class AccessPointGroupWirelessNetworkAssignment(BaseModel):
     "export_templates",
     "graphql",
 )
-class AccessPointGroupRadioProfile(BaseModel):
+class AccessPointGroupRadioProfileAssignment(BaseModel):
     """
     An AccessPointGroupRadioProfile represents the assignment of a RadioProfile to an AccessPointGroup.
     """
@@ -247,18 +271,18 @@ class AccessPointGroupDevicesAssignment(BaseModel):
     access_point_group = models.ForeignKey(
         to="wireless.AccessPointGroup",
         on_delete=models.CASCADE,
-        related_name="access_points",
+        related_name="access_points_assignments",
     )
-    device = models.ForeignKey(
+    access_point = models.ForeignKey(
         to="dcim.Device",
         on_delete=models.CASCADE,
-        related_name="access_point_groups",
+        related_name="access_point_groups_assignments",
     )
     is_metadata_associable_model = False
 
     class Meta:
-        unique_together = ["access_point_group", "device"]
-        ordering = ["access_point_group", "device"]
+        unique_together = ["access_point_group", "access_point"]
+        ordering = ["access_point_group", "access_point"]
 
     def __str__(self):
-        return f"{self.access_point_group}: {self.device}"
+        return f"{self.access_point_group}: {self.access_point}"

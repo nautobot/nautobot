@@ -2180,6 +2180,7 @@ class DeviceFilterForm(
         "has_software_version",
         "software_version",
         "has_primary_ip",
+        "is_controller",
     ]
     q = forms.CharField(required=False, label="Search")
     rack_group = DynamicModelMultipleChoiceField(
@@ -2283,6 +2284,11 @@ class DeviceFilterForm(
     has_rear_ports = forms.NullBooleanField(
         required=False,
         label="Has rear ports",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    is_controller = forms.NullBooleanField(
+        required=False,
+        label="Is a controller",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     tags = TagFilterField(model)
