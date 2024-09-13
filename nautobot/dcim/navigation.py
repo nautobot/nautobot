@@ -190,7 +190,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:virtualdevicecontext_list",
-                        name="Virtual Device Context",
+                        name="Virtual Device Contexts",
                         weight=700,
                         permissions=[
                             "dcim.view_virtualdevicecontext",
