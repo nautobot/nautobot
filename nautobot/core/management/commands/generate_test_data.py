@@ -132,6 +132,15 @@ class Command(BaseCommand):
             )
             from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
             from nautobot.users.factory import UserFactory
+            from nautobot.wireless.factory import (
+                AccessPointGroupFactory,
+                AccessPointGroupWithMembersFactory,
+                RadioProfileFactory,
+                RadioProfilesWithMembersFactory,
+                SupportedDataRateFactory,
+                WirelessNetworkFactory,
+                WirelessNetworksWithMembersFactory,
+            )
         except ImportError as err:
             raise CommandError('Unable to load data factories. Is the "factory-boy" package installed?') from err
 
@@ -305,6 +314,16 @@ class Command(BaseCommand):
         _create_batch(ExternalIntegrationFactory, 20)
         _create_batch(ControllerFactory, 10, description="with Devices or DeviceRedundancyGroups")
         _create_batch(ControllerManagedDeviceGroupFactory, 5, description="without any Devices")
+        _create_batch(
+            AccessPointGroupFactory,
+            20,
+        )
+        _create_batch(SupportedDataRateFactory, 20)
+        _create_batch(RadioProfileFactory, 20)
+        _create_batch(WirelessNetworkFactory, 20)
+        _create_batch(AccessPointGroupWithMembersFactory, 2, description="with members")
+        _create_batch(RadioProfilesWithMembersFactory, 2, description="with members")
+        _create_batch(WirelessNetworksWithMembersFactory, 2, description="with members")
         # make sure we have some tenants that have null relationships to make filter tests happy
         _create_batch(TenantFactory, 10, description="without any associated objects")
         # TODO: nautobot.tenancy.tests.test_filters currently calls the following additional factories:
