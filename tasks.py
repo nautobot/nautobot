@@ -771,8 +771,6 @@ def unittest(
     for item in pattern or []:
         command += f" -k='{item}'"
 
-    print("hey")
-    print(command)
     run_command(context, command)
 
     unittest_coverage(context)
