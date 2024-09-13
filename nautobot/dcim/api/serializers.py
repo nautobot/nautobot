@@ -93,6 +93,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
@@ -1188,4 +1189,10 @@ class ModuleSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 class ModuleTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = ModuleType
+        fields = "__all__"
+
+
+class VirtualDeviceContextSerializer(NautobotModelSerializer):
+    class Meta:
+        model = VirtualDeviceContext
         fields = "__all__"

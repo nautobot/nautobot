@@ -66,6 +66,7 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualChassis,
 )
+from nautobot.dcim.models.devices import VirtualDeviceContext
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
@@ -3366,3 +3367,80 @@ class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
         cls.bulk_update_data = {
             "weight": 300,
         }
+
+
+class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
+    model = VirtualDeviceContext
+
+    @classmethod
+    def setUpTestData(cls):
+        devices = Device.objects.all()
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext)[0]
+        tenants = Tenant.objects.all()
+
+        cls.create_data = [
+            {
+                "name": "Virtual Device Context 1",
+                "device": devices[0].pk,
+                "identifier": 100,
+                "status": vdc_status.pk,
+            },
+            {
+                "name": "Virtual Device Context 2",
+                "device": devices[1].pk,
+                "identifier": 200,
+                "status": vdc_status.pk,
+                "tenant": tenants[1].pk,
+            },
+            {
+                "name": "Virtual Device Context 3",
+                "identifier": 300,
+                "device": devices[2].pk,
+                "status": vdc_status.pk,
+                "tenant": tenants[2].pk,
+            },
+        ]
+        cls.update_data = {
+            "tenant": tenants[3].pk,
+        }
+        cls.bulk_update_data = {
+            "tenant": tenants[4].pk,
+        }
+
+    def test_patching_primary_ip_success(self):
+        """
+        Validate we can set primary_ip on a Virtual Device Context using a PATCH.
+        """
+        # Add object-level permission
+        self.add_permissions("dcim.change_virtualdevicecontext")
+        vdc = VirtualDeviceContext.objects.first()
+        device = vdc.device
+        intf_status = Status.objects.get_for_model(Interface).first()
+        intf_role = Role.objects.get_for_model(Interface).first()
+        interface = Interface.objects.create(
+            name="Int1",
+            device=device,
+            status=intf_status,
+            role=intf_role,
+            type=InterfaceTypeChoices.TYPE_100GE_CFP,
+        )
+        ip_v4 = IPAddress.objects.filter(ip_version=4).first()
+        ip_v6 = IPAddress.objects.filter(ip_version=6).first()
+        interface.virtual_device_contexts.add(vdc)
+        interface.add_ip_addresses([ip_v4, ip_v6])
+
+        with self.subTest("Patch Primary ip4"):
+            patch_data = {"primary_ip4": ip_v4.pk}
+
+            response = self.client.patch(self._get_detail_url(vdc), patch_data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            vdc.refresh_from_db()
+            self.assertEqual(vdc.primary_ip4, ip_v4)
+
+        with self.subTest("Patch Primary ip6"):
+            patch_data = {"primary_ip6": ip_v6.pk}
+
+            response = self.client.patch(self._get_detail_url(vdc), patch_data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            vdc.refresh_from_db()
+            self.assertEqual(vdc.primary_ip6, ip_v6)

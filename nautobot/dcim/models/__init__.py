@@ -42,6 +42,7 @@ from .devices import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 from .locations import Location, LocationType
 from .power import PowerFeed, PowerPanel
@@ -95,4 +96,5 @@ __all__ = (
     "SoftwareImageFile",
     "SoftwareVersion",
     "VirtualChassis",
+    "VirtualDeviceContext",
 )

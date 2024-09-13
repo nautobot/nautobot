@@ -290,6 +290,30 @@ def prevent_adding_tagged_vlans_with_incorrect_mode_or_site(sender, instance, ac
 
 
 #
+# Interface tagged VLAMs
+#
+
+
+@receiver(m2m_changed, sender=Interface.virtual_device_contexts.through)
+@disable_for_loaddata
+def prevent_adding_vdcs_with_incorrect_device(sender, instance, action, **kwargs):
+    if action != "pre_add":
+        return
+
+    pk_set = kwargs["pk_set"]
+    vdcs = kwargs["model"].objects.filter(pk__in=pk_set).exclude(device__in=[instance.device])
+    if vdcs.count():
+        raise ValidationError(
+            {
+                "virtual_device_contexts": (
+                    f"Virtual Device Context with names {list(vdcs.values_list('name', flat=True))} must all belong to the "
+                    f"same device as the interface's device."
+                )
+            }
+        )
+
+
+#
 # ControllerManagedDeviceGroup
 #
 
