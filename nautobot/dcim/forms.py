@@ -5218,7 +5218,6 @@ class VirtualDeviceContextForm(NautobotModelForm):
             for ip_version in [4, 6]:
                 ip_choices = [(None, "---------")]
 
-                # Gather PKs of all interfaces belonging to this Device or a peer VirtualChassis member
                 interface_ids = self.instance.interfaces.values_list("pk", flat=True)
 
                 # Collect interface IPs
