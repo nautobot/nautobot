@@ -1,0 +1,1 @@
+Refactored SavedViewUIViewSet to take into account of `permissions_class` attribute.

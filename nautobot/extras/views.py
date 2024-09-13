@@ -4,7 +4,6 @@ from urllib.parse import parse_qs
 from celery import chain
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
@@ -1676,15 +1675,17 @@ class SavedViewUIViewSet(
 
     def check_permissions(self, request):
         """
-        Override this method to not check any permissions.
+        Override this method to not check only if user is authenticated.
         Since users with <app_label>.view_<model_name> permissions should be able to view saved views related to this model.
         And those permissions will be enforced in the related view.
         """
-
-    def dispatch(self, request, *args, **kwargs):
-        if isinstance(request.user, AnonymousUser):
-            return self.handle_no_permission()
-        return super().dispatch(request, *args, **kwargs)
+        for permission in self.get_permissions():
+            if not permission.has_permission(request, self):
+                self.permission_denied(
+                    request,
+                    message=getattr(permission, 'message', None),
+                    code=getattr(permission, 'code', None)
+                )
 
     def extra_message_context(self, obj):
         """
