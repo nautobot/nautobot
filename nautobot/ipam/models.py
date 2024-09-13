@@ -1296,7 +1296,9 @@ class VLANGroup(OrganizationalModel):
     )
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
-    range = PositiveRangeNumberTextField(blank=False, default="1-4094")
+    range = PositiveRangeNumberTextField(
+        blank=False, default="1-4094", help_text="Vlan range, default 1-4094 if left blank."
+    )
 
     class Meta:
         ordering = ("name",)

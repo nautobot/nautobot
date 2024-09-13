@@ -352,6 +352,89 @@ class PrettyPrintQueryTest(TestCase):
                 self.assertEqual(models_utils.pretty_print_query(query), expected)
 
 
+class CompressRangeTest(TestCase):
+    """Tests for compress_range()."""
+
+    def test_compress_range_sparse(self):
+        values = [1500, 200, 10, 2222, 3000, 4096]
+        self.assertEqual(
+            list(models_utils.compress_range(values)),
+            [
+                (10, 10),
+                (200, 200),
+                (1500, 1500),
+                (2222, 2222),
+                (3000, 3000),
+                (4096, 4096),
+            ],
+        )
+
+    def test_compress_range_dense(self):
+        values = [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            100,
+            101,
+            102,
+            103,
+            104,
+            105,
+            1100,
+            1101,
+            1102,
+            1103,
+            1104,
+            1105,
+            1106,
+        ]
+        self.assertEqual(
+            list(models_utils.compress_range(values)),
+            [(1, 10), (100, 105), (1100, 1106)],
+        )
+
+    def test_compress_range_complex(self):
+        values = [
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            100,
+            200,
+            210,
+            211,
+            212,
+            222,
+            500,
+            501,
+            502,
+            503,
+            600,
+        ]
+        self.assertEqual(
+            list(models_utils.compress_range(values)),
+            [
+                (10, 15),
+                (100, 100),
+                (200, 200),
+                (210, 212),
+                (222, 222),
+                (500, 503),
+                (600, 600),
+            ],
+        )
+
+
+
 class SlugifyFunctionsTest(TestCase):
     """Test custom slugify functions."""
 

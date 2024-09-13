@@ -264,7 +264,14 @@ def construct_natural_slug(values, pk=None):
 
 def compress_range(iterable):
     """
-    Generates compressed range from an expanded range.
+    Generates compressed range from an un-sorted expanded range.
+    For example:
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 101, 102, 103, 104, 105, 1000, 1100, 1101, 1102, 1103, 1104, 1105, 1106]
+        =>
+        iter1: (1, 10)
+        iter2: (100, 105)
+        iter3: (1000, 1000)
+        iter4: (1100, 1106)
     """
     iterable = sorted(set(iterable))
     for _, grp in groupby(enumerate(iterable), lambda t: t[1] - t[0]):

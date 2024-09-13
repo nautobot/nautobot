@@ -722,6 +722,8 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
 
 
 class VLANGroupForm(LocatableModelFormMixin, NautobotModelForm):
+    # range = forms.CharField(required=False, help_text="Vlan range, default 1-4094 if left blank.")
+
     class Meta:
         model = VLANGroup
         fields = [
