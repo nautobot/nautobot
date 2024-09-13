@@ -4,7 +4,6 @@ import netaddr
 from nautobot.core.models.utils import compress_range
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import RelationshipAssociation
-from nautobot.ipam.constants import VLAN_VID_MAX, VLAN_VID_MIN
 from nautobot.ipam.models import Prefix, VLAN
 from nautobot.ipam.querysets import IPAddressQuerySet
 from nautobot.virtualization.models import VMInterface
