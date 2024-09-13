@@ -21,7 +21,7 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
-from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.choices import JobQueueTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import (
     CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL,
     EXTRAS_FEATURES,
@@ -366,17 +366,23 @@ def get_celery_queues():
     """
     from nautobot.core.celery import app  # prevent circular import
 
-    celery_queues = {}
+    celery_queues = None
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        celery_queues = cache.get("nautobot.extras.utils.get_celery_queues")
 
-    celery_inspect = app.control.inspect()
-    active_queues = celery_inspect.active_queues()
-    if active_queues is None:
-        return celery_queues
-    for task_queue_list in active_queues.values():
-        distinct_queues = {q["name"] for q in task_queue_list}
-        for queue in distinct_queues:
-            celery_queues.setdefault(queue, 0)
-            celery_queues[queue] += 1
+    if celery_queues is None:
+        celery_queues = {}
+        celery_inspect = app.control.inspect()
+        active_queues = celery_inspect.active_queues()
+        if active_queues is None:
+            return celery_queues
+        for task_queue_list in active_queues.values():
+            distinct_queues = {q["name"] for q in task_queue_list}
+            for queue in distinct_queues:
+                celery_queues.setdefault(queue, 0)
+                celery_queues[queue] += 1
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            cache.set("nautobot.extras.utils.get_celery_queues", celery_queues, timeout=5)
 
     return celery_queues
 
@@ -388,6 +394,21 @@ def get_worker_count(request=None, queue=None):
     celery_queues = get_celery_queues()
     if not queue:
         queue = settings.CELERY_TASK_DEFAULT_QUEUE
+    return celery_queues.get(queue, 0)
+
+
+def get_job_queue_worker_count(request=None, job_queue=None):
+    """
+    Return a count of the active Celery workers in a specified queue. Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
+    Same as get_worker_count() method above, but job_queue is an actual JobQueue model instance.
+    """
+    # TODO currently this method is only retrieve celery specific queues and their respective worker counts
+    # Refactor it to support retrieving kubernetes queues as well.
+    celery_queues = get_celery_queues()
+    if not job_queue:
+        queue = settings.CELERY_TASK_DEFAULT_QUEUE
+    else:
+        queue = job_queue.name
     return celery_queues.get(queue, 0)
 
 
@@ -411,13 +432,17 @@ def task_queues_as_choices(task_queues):
     return choices
 
 
-def refresh_job_model_from_job_class(job_model_class, job_class):
+def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class=None):
     """
     Create or update a job_model record based on the metadata of the provided job_class.
 
-    Note that job_model_class is a parameter (rather than doing a "from nautobot.extras.models import Job") because
+    Note that `job_model_class` and `job_queue_class` are parameters rather than local imports because
     this function may be called from various initialization processes (such as the "nautobot_database_ready" signal)
     and in that case we need to not import models ourselves.
+
+    The `job_queue_class` parameter really should be required, but for some reason we decided to make this function
+    part of the `nautobot.apps.utils` API surface and so we need it to stay backwards-compatible with Apps that might
+    be calling the two-argument form of this function.
     """
     from nautobot.extras.jobs import (
         JobButtonReceiver,
@@ -516,6 +541,19 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
                 if not getattr(job_model, f"{field_name}_override", False):
                     # It was inherited and not overridden
                     setattr(job_model, field_name, getattr(job_class, field_name))
+
+            # Special case for backward compatibility
+            # Note that the `job_model.task_queues` setter does NOT auto-create Celery JobQueue records;
+            # this is a special case where we DO want to do so.
+            if job_queue_class is not None and not job_model.job_queues_override:
+                job_queues = []
+                task_queues = job_class.task_queues or [settings.CELERY_TASK_DEFAULT_QUEUE]
+                for task_queue in task_queues:
+                    job_queue, _ = job_queue_class.objects.get_or_create(
+                        name=task_queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+                    )
+                    job_queues.append(job_queue)
+                job_model.job_queues.set(job_queues)
 
             if not created:
                 # Mark it as installed regardless
