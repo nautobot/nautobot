@@ -1682,9 +1682,7 @@ class SavedViewUIViewSet(
         for permission in self.get_permissions():
             if not permission.has_permission(request, self):
                 self.permission_denied(
-                    request,
-                    message=getattr(permission, 'message', None),
-                    code=getattr(permission, 'code', None)
+                    request, message=getattr(permission, "message", None), code=getattr(permission, "code", None)
                 )
 
     def extra_message_context(self, obj):

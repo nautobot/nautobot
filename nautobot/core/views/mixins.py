@@ -235,7 +235,9 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     serializer_class = None
     table_class = None
     notes_form_class = NoteForm
-    permission_classes = [IsAuthenticated,]
+    permission_classes = [
+        IsAuthenticated,
+    ]
 
     def get_permissions_for_model(self, model, actions):
         """
