@@ -158,7 +158,7 @@
 {{ block.super }}
 <script src="{% static 'react-16.14.0/react.production.min.js' %}"></script>
 <script src="{% static 'react-dom-16.14.0/react-dom.production.min.js' %}"></script>
-<script src="{% static 'react-diff-viewer-3.1.1/index.umd.js' %}"></script>
+<script src="{% static 'react-diff-viewer-continued-3.4.0/index.umd.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const diffContainer = document.getElementById('diff-viewer');
@@ -219,5 +219,6 @@ document.addEventListener('DOMContentLoaded', function() {
         /* Cancel out the site's dark mode inversion for the diff viewer */
         filter: invert(1) hue-rotate(180deg) !important;
     }
+  
 </style>
 {% endblock %}
