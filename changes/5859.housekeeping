@@ -1,0 +1,2 @@
+Changed `--cache-test-fixtures` and `--keepdb` flags from opt-in to opt-out for `inv unittest` and `inv integration-test` commands.
+Changed `inv unittest` to automatically include `--parallel` flag when running the entire unit test suite.

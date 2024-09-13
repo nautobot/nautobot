@@ -707,8 +707,8 @@ def check_schema(context, api_version=None):
 )
 def unittest(
     context,
-    cache_test_fixtures=False,
-    keepdb=False,
+    cache_test_fixtures=True,
+    keepdb=True,
     label="nautobot",
     pattern=None,
     failfast=False,
@@ -750,7 +750,7 @@ def unittest(
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
-    if parallel:
+    if parallel or label == "nautobot":
         command += " --parallel"
         if parallel_workers:
             command += f"={parallel_workers}"
@@ -771,6 +771,8 @@ def unittest(
     for item in pattern or []:
         command += f" -k='{item}'"
 
+    print("hey")
+    print(command)
     run_command(context, command)
 
     unittest_coverage(context)
@@ -805,8 +807,8 @@ def unittest_coverage(context):
 )
 def integration_test(
     context,
-    cache_test_fixtures=False,
-    keepdb=False,
+    cache_test_fixtures=True,
+    keepdb=True,
     label="nautobot",
     failfast=False,
     buffer=True,
