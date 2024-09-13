@@ -2,16 +2,16 @@ from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseModel
-from nautobot.core.models.fields import ChoiceArrayField, JSONArrayField
+from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.extras.utils import extras_features
 from nautobot.wireless.choices import (
-    ChannelWidthChoices,
-    RadioFrequencyChoices,
-    RadioStandardChoices,
-    RegulatoryDomainChoices,
-    WirelessAuthTypeChoices,
-    WirelessDeploymentModeChoices,
+    RadioProfileChannelWidthChoices,
+    RadioProfileFrequencyChoices,
+    RadioProfileRegulatoryDomainChoices,
+    SupportedDataRateStandardChoices,
+    WirelessNetworkAuthenticationChoices,
+    WirelessNetworkModeChoices,
 )
 
 
@@ -89,7 +89,7 @@ class SupportedDataRate(PrimaryModel):
     A SupportedDataRate represents a data rate that can be used by an access point radio.
     """
 
-    standard = models.CharField(max_length=CHARFIELD_MAX_LENGTH, choices=RadioStandardChoices)
+    standard = models.CharField(max_length=CHARFIELD_MAX_LENGTH, choices=SupportedDataRateStandardChoices)
     rate = models.PositiveIntegerField(verbose_name="Rate (Kbps)")
     mcs_index = models.IntegerField(
         blank=True,
@@ -120,18 +120,20 @@ class RadioProfile(PrimaryModel):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     frequency = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
-        choices=RadioFrequencyChoices,
+        choices=RadioProfileFrequencyChoices,
     )
     tx_power_min = models.IntegerField()
     tx_power_max = models.IntegerField()
-    channel_width = ChoiceArrayField(base_field=models.IntegerField(choices=ChannelWidthChoices), default=list)
+    channel_width = JSONArrayField(
+        base_field=models.IntegerField(choices=RadioProfileChannelWidthChoices), default=list
+    )
     allowed_channel_list = JSONArrayField(base_field=models.IntegerField(), default=list)
     supported_data_rates = models.ManyToManyField(
         to="wireless.SupportedDataRate",
         related_name="radio_profiles",
         blank=True,
     )
-    regulatory_domain = models.CharField(max_length=CHARFIELD_MAX_LENGTH, choices=RegulatoryDomainChoices)
+    regulatory_domain = models.CharField(max_length=CHARFIELD_MAX_LENGTH, choices=RadioProfileRegulatoryDomainChoices)
     rx_power_min = models.IntegerField()
 
     class Meta:
@@ -158,16 +160,17 @@ class WirelessNetwork(PrimaryModel):
     ssid = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     mode = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
-        choices=WirelessDeploymentModeChoices,
+        choices=WirelessNetworkModeChoices,
     )
     enabled = models.BooleanField(default=True)
     authentication = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
-        choices=WirelessAuthTypeChoices,
+        choices=WirelessNetworkAuthenticationChoices,
     )
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
+        related_name="wireless_networks",
         blank=True,
         null=True,
     )

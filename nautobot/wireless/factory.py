@@ -8,17 +8,18 @@ from nautobot.core.factory import (
     random_instance,
     UniqueFaker,
 )
-from nautobot.dcim.models import Controller, Device
+from nautobot.dcim.factory import DeviceFactory
+from nautobot.dcim.models import Controller
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.models import Tenant
 from nautobot.wireless import models
 from nautobot.wireless.choices import (
-    ChannelWidthChoices,
-    RadioFrequencyChoices,
-    RadioStandardChoices,
-    RegulatoryDomainChoices,
-    WirelessAuthTypeChoices,
-    WirelessDeploymentModeChoices,
+    RadioProfileChannelWidthChoices,
+    RadioProfileFrequencyChoices,
+    RadioProfileRegulatoryDomainChoices,
+    SupportedDataRateStandardChoices,
+    WirelessNetworkAuthenticationChoices,
+    WirelessNetworkModeChoices,
 )
 
 
@@ -39,8 +40,8 @@ class SupportedDataRateFactory(PrimaryModelFactory):
     class Meta:
         model = models.SupportedDataRate
 
-    standard = factory.Faker("random_element", elements=RadioStandardChoices.values())
-    rate = factory.Faker("pyint", min_value=1000, max_value=164000, step=1000)
+    standard = factory.Faker("random_element", elements=SupportedDataRateStandardChoices.values())
+    rate = UniqueFaker("pyint", min_value=1000, max_value=164000, step=1000)
     mcs_index = factory.Faker("pyint", min_value=0, max_value=9)
 
 
@@ -50,9 +51,9 @@ class RadioProfileFactory(PrimaryModelFactory):
         exclude = ("has_description",)
 
     name = UniqueFaker("word")
-    frequency = factory.Faker("random_element", elements=RadioFrequencyChoices.values())
-    channel_width = factory.Faker("random_elements", elements=ChannelWidthChoices.values())
-    regulatory_domain = factory.Faker("random_element", elements=RegulatoryDomainChoices.values())
+    frequency = factory.Faker("random_element", elements=RadioProfileFrequencyChoices.values())
+    channel_width = factory.Faker("random_elements", elements=RadioProfileChannelWidthChoices.values())
+    regulatory_domain = factory.Faker("random_element", elements=RadioProfileRegulatoryDomainChoices.values())
     tx_power_min = factory.Faker("pyint", min_value=1, max_value=5)
     tx_power_max = factory.Faker("pyint", min_value=6, max_value=30)
     rx_power_min = factory.Faker("pyint", min_value=1, max_value=10)
@@ -76,9 +77,9 @@ class WirelessNetworkFactory(PrimaryModelFactory):
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
     ssid = factory.Faker("word")
-    mode = factory.Faker("random_element", elements=WirelessDeploymentModeChoices.values())
+    mode = factory.Faker("random_element", elements=WirelessNetworkModeChoices.values())
     enabled = NautobotBoolIterator()
-    authentication = factory.Faker("random_element", elements=WirelessAuthTypeChoices.values())
+    authentication = factory.Faker("random_element", elements=WirelessNetworkAuthenticationChoices.values())
     # TODO: once SecretsGroupFactory is implemented:
     # has_secrets_group = NautobotBoolIterator()
     # secrets_group = factory.Maybe(
@@ -94,8 +95,8 @@ class AccessPointGroupWirelessNetworkAssignmentFactory(BaseModelFactory):
     class Meta:
         model = models.AccessPointGroupWirelessNetworkAssignment
 
-    access_point_group = random_instance(models.AccessPointGroup)
-    wireless_network = random_instance(models.WirelessNetwork)
+    access_point_group = factory.SubFactory(AccessPointGroupFactory)
+    wireless_network = factory.SubFactory(WirelessNetworkFactory)
     vlan = random_instance(VLAN, allow_null=True)
 
 
@@ -103,13 +104,48 @@ class AccessPointGroupRadioProfileAssignmentFactory(BaseModelFactory):
     class Meta:
         model = models.AccessPointGroupRadioProfileAssignment
 
-    access_point_group = random_instance(models.AccessPointGroup)
-    radio_profile = random_instance(models.RadioProfile)
+    access_point_group = factory.SubFactory(AccessPointGroupFactory)
+    radio_profile = factory.SubFactory(RadioProfileFactory)
 
 
 class AccessPointGroupDeviceAssignmentFactory(BaseModelFactory):
     class Meta:
-        model = models.AccessPointGroupDevicesAssignment
+        model = models.AccessPointGroupDeviceAssignment
 
-    access_point_group = random_instance(models.AccessPointGroup)
-    device = random_instance(Device)
+    access_point_group = factory.SubFactory(AccessPointGroupFactory)
+    device = factory.SubFactory(DeviceFactory)
+
+
+class AccessPointGroupWithMembersFactory(AccessPointGroupFactory):
+    wireless1 = factory.RelatedFactory(
+        AccessPointGroupWirelessNetworkAssignmentFactory, factory_related_name="access_point_group"
+    )
+    wireless2 = factory.RelatedFactory(
+        AccessPointGroupWirelessNetworkAssignmentFactory, factory_related_name="access_point_group"
+    )
+    radio1 = factory.RelatedFactory(
+        AccessPointGroupRadioProfileAssignmentFactory, factory_related_name="access_point_group"
+    )
+    radio2 = factory.RelatedFactory(
+        AccessPointGroupRadioProfileAssignmentFactory, factory_related_name="access_point_group"
+    )
+    device1 = factory.RelatedFactory(AccessPointGroupDeviceAssignmentFactory, factory_related_name="access_point_group")
+    device2 = factory.RelatedFactory(AccessPointGroupDeviceAssignmentFactory, factory_related_name="access_point_group")
+
+
+class RadioProfilesWithMembersFactory(RadioProfileFactory):
+    access_point_group1 = factory.RelatedFactory(
+        AccessPointGroupRadioProfileAssignmentFactory, factory_related_name="radio_profile"
+    )
+    access_point_group2 = factory.RelatedFactory(
+        AccessPointGroupRadioProfileAssignmentFactory, factory_related_name="radio_profile"
+    )
+
+
+class WirelessNetworksWithMembersFactory(WirelessNetworkFactory):
+    access_point_group1 = factory.RelatedFactory(
+        AccessPointGroupWirelessNetworkAssignmentFactory, factory_related_name="wireless_network"
+    )
+    access_point_group2 = factory.RelatedFactory(
+        AccessPointGroupWirelessNetworkAssignmentFactory, factory_related_name="wireless_network"
+    )

@@ -279,6 +279,8 @@ class JSONArrayField(models.JSONField):
     """
     An ArrayField implementation backed JSON storage.
     Replicates ArrayField's base field validation.
+
+    Supports choices in the base field.
     """
 
     _default_hint = ("list", "[]")
@@ -374,31 +376,16 @@ class JSONArrayField(models.JSONField):
 
     def formfield(self, **kwargs):
         """Return a django.forms.Field instance for this field."""
-        return super().formfield(
-            **{
-                "form_class": fields.JSONArrayFormField,
-                "base_field": self.base_field.formfield(),
-                **kwargs,
-            }
-        )
-
-
-class ChoiceArrayField(JSONArrayField):
-    """
-    An ArrayField implementation backed JSON storage.
-    Replicates ArrayField's base field validation.
-    Allows for choices to be passed in.
-    """
-
-    def formfield(self, **kwargs):
-        return super().formfield(
-            **{
-                "form_class": forms.MultipleChoiceField,
-                "base_field": self.base_field.formfield(),
-                "choices": self.base_field.choices,
-                **kwargs,
-            }
-        )
+        defaults = {
+            "form_class": fields.JSONArrayFormField,
+            "base_field": self.base_field.formfield(),
+        }
+        # If the base field has choices, pass them to the form field and use a MultipleChoiceField.
+        if self.base_field.choices:
+            defaults["choices"] = self.base_field.choices
+            defaults["form_class"] = forms.MultipleChoiceField
+        defaults.update(**kwargs)
+        return super().formfield(**defaults)
 
 
 class LaxURLField(models.URLField):

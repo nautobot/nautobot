@@ -1,7 +1,7 @@
 from nautobot.core.choices import ChoiceSet
 
 
-class ChannelWidthChoices(ChoiceSet):
+class RadioProfileChannelWidthChoices(ChoiceSet):
     WIDTH_20MHZ = 20
     WIDTH_40MHZ = 40
     WIDTH_80MHZ = 80
@@ -15,7 +15,7 @@ class ChannelWidthChoices(ChoiceSet):
     )
 
 
-class RadioFrequencyChoices(ChoiceSet):
+class RadioProfileFrequencyChoices(ChoiceSet):
     FREQUENCY_2_4G = "2.4GHz"
     FREQUENCY_5G = "5GHz"
     FREQUENCY_6G = "6GHz"
@@ -27,7 +27,7 @@ class RadioFrequencyChoices(ChoiceSet):
     )
 
 
-class RadioStandardChoices(ChoiceSet):
+class SupportedDataRateStandardChoices(ChoiceSet):
     A = "802.11a"
     B = "802.11b"
     G = "802.11g"
@@ -47,7 +47,7 @@ class RadioStandardChoices(ChoiceSet):
     )
 
 
-class WirelessDeploymentModeChoices(ChoiceSet):
+class WirelessNetworkModeChoices(ChoiceSet):
     CENTRAL = "Central (tunnelMode(controller managed))"
     FABRIC = "Fabric"
     STANDALONE = "Standalone (Autonomous)"
@@ -65,7 +65,7 @@ class WirelessDeploymentModeChoices(ChoiceSet):
     )
 
 
-class WirelessAuthTypeChoices(ChoiceSet):
+class WirelessNetworkAuthenticationChoices(ChoiceSet):
     OPEN = "Open"
     WPA2_PERSONAL = "WPA2 Personal"
     WPA2_ENTERPRISE = "WPA2 Enterprise"
@@ -87,7 +87,7 @@ class WirelessAuthTypeChoices(ChoiceSet):
     )
 
 
-class RegulatoryDomainChoices(ChoiceSet):
+class RadioProfileRegulatoryDomainChoices(ChoiceSet):
     AD = "AD"
     AE = "AE"
     AL = "AL"
