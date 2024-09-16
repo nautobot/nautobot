@@ -324,12 +324,12 @@ properties:
           LOCATION:
             default: "redis://localhost:6379/1"
             environment_variables:
-              - "NAUTOBOT_REDIS_SCHEME"
-              - "NAUTOBOT_REDIS_SSL"
-              - "NAUTOBOT_REDIS_USERNAME"
-              - "NAUTOBOT_REDIS_PASSWORD"
-              - "NAUTOBOT_REDIS_HOST"
-              - "NAUTOBOT_REDIS_PORT"
+            - "NAUTOBOT_REDIS_SCHEME"
+            - "NAUTOBOT_REDIS_SSL"
+            - "NAUTOBOT_REDIS_USERNAME"
+            - "NAUTOBOT_REDIS_PASSWORD"
+            - "NAUTOBOT_REDIS_HOST"
+            - "NAUTOBOT_REDIS_PORT"
             format: "uri"
             type: "string"
           OPTIONS:
@@ -379,13 +379,13 @@ properties:
       influenced by the various `NAUTOBOT_REDIS_*` environment variables instead, which is often preferable as those
       variables also influence the [`CACHES`](#caches) configuration as well.
     environment_variables:
-      - "NAUTOBOT_CELERY_BROKER_URL"
-      - "NAUTOBOT_REDIS_SCHEME"
-      - "NAUTOBOT_REDIS_SSL"
-      - "NAUTOBOT_REDIS_USERNAME"
-      - "NAUTOBOT_REDIS_PASSWORD"
-      - "NAUTOBOT_REDIS_HOST"
-      - "NAUTOBOT_REDIS_PORT"
+    - "NAUTOBOT_CELERY_BROKER_URL"
+    - "NAUTOBOT_REDIS_SCHEME"
+    - "NAUTOBOT_REDIS_SSL"
+    - "NAUTOBOT_REDIS_USERNAME"
+    - "NAUTOBOT_REDIS_PASSWORD"
+    - "NAUTOBOT_REDIS_HOST"
+    - "NAUTOBOT_REDIS_PORT"
     format: "uri"
     type: "string"
   CELERY_BROKER_USE_SSL:
