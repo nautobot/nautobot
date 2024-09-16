@@ -121,7 +121,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 
 ### Fixed
 
-- [#6184](https://github.com/nautobot/nautobot/issues/6184) - Fixed string concatenation in `extras.models.groups._map_filter_fields` method.
+- [#6184](https://github.com/nautobot/nautobot/issues/6184) - Fixed an exception in `extras.models.groups._map_filter_fields` method when certain App `filter_extensions` were present.
 - [#6190](https://github.com/nautobot/nautobot/issues/6190) - Added `display` property to Prefix to display namespace along with the prefix to allow differentiation of prefixes in a UI selector
 - [#6197](https://github.com/nautobot/nautobot/issues/6197) - Fixed view name split in `core.utils.lookup.get_model_for_view_name` function.
 - [#6203](https://github.com/nautobot/nautobot/issues/6203) - Fixed a performance regression observed when change logging resulted in a large number of ObjectChange records (such as in an SSOT Job).
