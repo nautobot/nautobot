@@ -22,6 +22,7 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 
 try:
     from zoneinfo import ZoneInfo
@@ -1649,6 +1650,9 @@ class SavedViewUIViewSet(
     serializer_class = serializers.SavedViewSerializer
     table_class = tables.SavedViewTable
     action_buttons = ("export",)
+    permission_classes = [
+        IsAuthenticated,
+    ]
 
     def alter_queryset(self, request):
         """
