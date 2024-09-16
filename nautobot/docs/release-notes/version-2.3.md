@@ -119,6 +119,10 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 <!-- towncrier release notes start -->
 ## v2.3.3 (2024-09-16)
 
+### Security
+
+- [#6212](https://github.com/nautobot/nautobot/issues/6212) - Updated `Django` to `~4.2.16` to address `CVE-2024-45230` and `CVE-2024-45231`.
+
 ### Fixed
 
 - [#6184](https://github.com/nautobot/nautobot/issues/6184) - Fixed an exception in `extras.models.groups._map_filter_fields` method when certain App `filter_extensions` were present.
@@ -136,6 +140,8 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6084](https://github.com/nautobot/nautobot/issues/6084) - Updated development dependencies `factory-boy` to `~3.3.1`, `ruff` to `~0.5.7`, and `watchdog` to `~4.0.2`.
 - [#6084](https://github.com/nautobot/nautobot/issues/6084) - Updated documentation dependency `mkdocs-material` to `~9.5.33`.
 - [#6155](https://github.com/nautobot/nautobot/issues/6155) - Updated the invoke.yml.example dev file to use latest values.
+- [#6212](https://github.com/nautobot/nautobot/issues/6212) - Updated documentation dependencies `mkdocs` to `~1.6.1`, `mkdocs-material` to `~9.5.34`, and `mkdocstrings-python` to `~1.10.9`.
+- [#6212](https://github.com/nautobot/nautobot/issues/6212) - Updated development dependency `pylint` to `~3.2.7`.
 
 ## v2.3.2 (2024-09-03)
 
