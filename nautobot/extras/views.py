@@ -22,6 +22,7 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 
 try:
     from zoneinfo import ZoneInfo
@@ -1649,6 +1650,9 @@ class SavedViewUIViewSet(
     serializer_class = serializers.SavedViewSerializer
     table_class = tables.SavedViewTable
     action_buttons = ("export",)
+    permission_classes = [
+        IsAuthenticated,
+    ]
 
     def alter_queryset(self, request):
         """
@@ -1673,13 +1677,17 @@ class SavedViewUIViewSet(
         """
         return self.queryset.all()
 
-    def get_required_permission(self):
+    def check_permissions(self, request):
         """
-        Override this method to not check any permissions.
+        Override this method to not check only if user is authenticated.
         Since users with <app_label>.view_<model_name> permissions should be able to view saved views related to this model.
         And those permissions will be enforced in the related view.
         """
-        return []
+        for permission in self.get_permissions():
+            if not permission.has_permission(request, self):
+                self.permission_denied(
+                    request, message=getattr(permission, "message", None), code=getattr(permission, "code", None)
+                )
 
     def extra_message_context(self, obj):
         """
