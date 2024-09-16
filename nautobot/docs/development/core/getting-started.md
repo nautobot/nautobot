@@ -636,11 +636,11 @@ Unit tests are run using the `invoke unittest` command (if using the Docker deve
 
 The `invoke unittest` command supports a number of optional parameters to influence its behavior. Careful use of these parameters can greatly reduce the time it takes to run and re-run tests during development.
 
-* `--cache-test-fixtures` - Cache [test factory data](./testing.md#factory-caching) to disk, or if a cache is already present, load from that cache when initializing the test environment. Can significantly improve the initial startup time of the test suite after your first test run. This parameter is automatically included when running any unit tests. To not use cached data, include the `--no-cache-test-fixtures` parameter.
 * `--failfast` - Fail as soon as any test failure or error condition is encountered, instead of running to completion.
-* `--keepdb` - Save and reuse the initialized test database between test runs. Can significantly improve the initial startup time of the test suite after your first test run. This parameter is automatically included when running unit tests. To not use the saved test database, include the `--no-keepdb` parameter. **The `--no-keepdb` option is mandatory if you're actively making changes to model definitions or migrations.**
 * `--label <module.path>` - Only run the specific subset of tests. Can be broad (`--label nautobot.core.tests`) or specific (`--label nautobot.core.tests.test_graphql.GraphQLQueryTestCase`).
 * `--no-buffer` - Allow stdout/stderr output from the test to be seen in your terminal, instead of being hidden. **If you're debugging code with `breakpoint()`, you should use this option, as otherwise you'll never see the breakpoint happen.**
+* `--no-cache-test-fixtures` - Prevent caching [test factory data](./testing.md#factory-caching) to disk, or if a cache is already present, prevent loading from that cache when initializing the test environment.
+* `--no-keepdb` - Prevent saving and reusing the initialized test database between test runs. **The `--no-keepdb` option is mandatory if you're actively making changes to model definitions or migrations.**
 * `--parallel` - Split the tests across multiple parallel subprocesses. Can greatly reduce the runtime of the entire test suite when used. Auto-detects the number of workers if not specified with `--parallel-workers`. This parameter is automatically included if no `--label` is specified.
 * `--parallel-workers` - Specify the number of workers to use when running tests in parallel. Implies `--parallel`.
 * `--pattern` - Only run tests which match the given substring. Can be used multiple times.
