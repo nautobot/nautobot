@@ -125,6 +125,7 @@ class SettingsJSONSchemaTestCase(TestCase):
             "CONSTANCE_BACKEND",
             "CONSTANCE_CONFIG",
             "CONSTANCE_CONFIG_FIELDSETS",
+            "CONSTANCE_DATABASE_CACHE_AUTOFILL_TIMEOUT",
             "CONSTANCE_DATABASE_CACHE_BACKEND",
             "CONSTANCE_DATABASE_PREFIX",
             "CSRF_FAILURE_VIEW",
