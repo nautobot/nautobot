@@ -35,10 +35,13 @@ SETTINGS_DOCUMENTATION_SCHEMA = {
         "environment_variable": {
             "type": "string",
         },
-        "is_constance_config": {
-            "type": "boolean",
+        "environment_variables": {
+            "type": "array",
+            "items": {
+                "type": "string",
+            },
         },
-        "is_required_setting": {
+        "is_constance_config": {
             "type": "boolean",
         },
         "see_also": {

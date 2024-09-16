@@ -350,7 +350,7 @@ As Python 3.6 has reached end-of-life, and many of Nautobot's dependencies have 
 
 ### Security
 
-- [#1715](https://github.com/nautobot/nautobot/issues/1715) - Add [`SANITIZER_PATTERNS` optional setting](../user-guide/administration/configuration/optional-settings.md#sanitizer_patterns) and `nautobot.utilities.logging.sanitize` function and use it for redaction of Job log entries.
+- [#1715](https://github.com/nautobot/nautobot/issues/1715) - Add [`SANITIZER_PATTERNS` optional setting](../user-guide/administration/configuration/settings.md#sanitizer_patterns) and `nautobot.utilities.logging.sanitize` function and use it for redaction of Job log entries.
 
 ### Added
 
