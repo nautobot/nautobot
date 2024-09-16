@@ -4781,7 +4781,7 @@ class VirtualDeviceContextTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        devices = Device.objects.all()
+        devices = Device.objects.filter(interfaces__isnull=False)
         vdc_status = Status.objects.get_for_model(VirtualDeviceContext)[0]
         tenants = Tenant.objects.all()
 
@@ -4791,8 +4791,8 @@ class VirtualDeviceContextTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "identifier": 100,
             "status": vdc_status.pk,
             "tenant": tenants[0].pk,
-            "primary_ip4": None,
-            "primary_ip6": None,
+            "interfaces": [interface.pk for interface in devices[0].all_interfaces[:3]],
+            "description": "Sample Description",
         }
 
         cls.bulk_edit_data = {

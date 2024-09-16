@@ -33,6 +33,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 from nautobot.dcim.utils import cable_status_color_css
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
@@ -94,6 +95,7 @@ __all__ = (
     "SoftwareImageFileTable",
     "SoftwareVersionTable",
     "VirtualChassisTable",
+    "VirtualDeviceContextTable",
 )
 
 
@@ -1413,7 +1415,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
         )
 
 
-class VirtualDeviceContextTable(BaseTable):
+class VirtualDeviceContextTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     tenant = TenantColumn()
@@ -1421,13 +1423,19 @@ class VirtualDeviceContextTable(BaseTable):
     primary_ip = tables.Column(linkify=True, order_by=("primary_ip6", "primary_ip4"), verbose_name="IP Address")
     primary_ip4 = tables.Column(linkify=True, verbose_name="IPv4 Address")
     primary_ip6 = tables.Column(linkify=True, verbose_name="IPv6 Address")
+    interfaces_count = LinkedCountColumn(
+        viewname="dcim:interface_list",
+        url_params={"virtual_device_contexts": "pk"},
+        verbose_name="Interfaces",
+    )
     tags = TagColumn(url_name="dcim:device_list")
 
     class Meta(BaseTable.Meta):
-        model = Device
+        model = VirtualDeviceContext
         fields = (
             "pk",
             "name",
+            "identifier",
             "device",
             "status",
             "tenant",
@@ -1439,8 +1447,10 @@ class VirtualDeviceContextTable(BaseTable):
         default_columns = (
             "pk",
             "name",
+            "identifier",
             "device",
             "status",
             "tenant",
             "primary_ip",
+            "interfaces_count",
         )

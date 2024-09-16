@@ -4250,3 +4250,13 @@ class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
     queryset = VirtualDeviceContext.objects.all()
     serializer_class = serializers.VirtualDeviceContextSerializer
     table_class = tables.VirtualDeviceContextTable
+
+    def get_extra_context(self, request, instance):
+        if instance:
+            interfaces_table = tables.InterfaceTable(instance.interfaces.all(), orderable=False, exclude=("device",))
+
+            return {
+                "interfaces_table": interfaces_table,
+                **super().get_extra_context(request, instance),
+            }
+        return super().get_extra_context(request, instance)

@@ -37,7 +37,6 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
-from nautobot.dcim.models.devices import VirtualDeviceContext
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,
@@ -143,6 +142,7 @@ from .models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 
 logger = logging.getLogger(__name__)
@@ -5191,6 +5191,15 @@ class VirtualDeviceContextForm(NautobotModelForm):
         queryset=Tenant.objects.all(),
         required=False,
     )
+    interfaces = DynamicModelMultipleChoiceField(
+        queryset=Interface.objects.all(), required=False, query_params={"device": "$device"}
+    )
+    primary_ip4 = DynamicModelChoiceField(
+        queryset=IPAddress.objects.all(), required=False, query_params={"ip_version": 4, "interfaces": "$interfaces"}
+    )
+    primary_ip6 = DynamicModelChoiceField(
+        queryset=IPAddress.objects.all(), required=False, query_params={"ip_version": 6, "interfaces": "$interfaces"}
+    )
 
     class Meta:
         model = VirtualDeviceContext
@@ -5199,48 +5208,31 @@ class VirtualDeviceContextForm(NautobotModelForm):
             "device",
             "status",
             "identifier",
+            "interfaces",
             "primary_ip4",
             "primary_ip6",
             "tenant",
             "description",
             "tags",
         ]
-        widgets = {
-            "primary_ip4": StaticSelect2(),
-            "primary_ip6": StaticSelect2(),
-        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
+        # If instance is provided and it's not a new instance, populate the field
         if self.instance.present_in_database:
-            # Compile list of choices for primary IPv4 and IPv6 addresses
-            for ip_version in [4, 6]:
-                ip_choices = [(None, "---------")]
-
-                interface_ids = self.instance.interfaces.values_list("pk", flat=True)
-
-                # Collect interface IPs
-                interface_ip_assignments = IPAddressToInterface.objects.filter(
-                    interface__in=interface_ids
-                ).select_related("ip_address")
-                if interface_ip_assignments.exists():
-                    ip_list = [
-                        (
-                            assignment.ip_address.id,
-                            f"{assignment.ip_address.address} ({assignment.interface})",
-                        )
-                        for assignment in interface_ip_assignments
-                        if assignment.ip_address.ip_version == ip_version
-                    ]
-                    ip_choices.append(("Interface IPs", ip_list))
-                self.fields[f"primary_ip{ip_version}"].choices = ip_choices
+            # We need to set the initial value for 'interfaces' because, by default,
+            # ModelForms only handle fields directly defined on the model (e.g., the 'name' field).
+            self.fields["interfaces"].initial = self.instance.interfaces.all()
         else:
-            # An object that doesn't exist yet can't have any IPs assigned to it
-            self.fields["primary_ip4"].choices = []
-            self.fields["primary_ip4"].widget.attrs["readonly"] = True
-            self.fields["primary_ip6"].choices = []
-            self.fields["primary_ip6"].widget.attrs["readonly"] = True
+            # An object that doesn't exist yet can't have any Primary IPs
+            self.fields["primary_ip4"].widget.attrs["disabled"] = True
+            self.fields["primary_ip6"].widget.attrs["disabled"] = True
+
+    def save(self, commit=True):
+        data = super().save(commit)
+        interfaces = self.cleaned_data["interfaces"]
+        self.instance.interfaces.set(interfaces)
+        return data
 
 
 class VirtualDeviceContextBulkEditForm(
