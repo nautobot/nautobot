@@ -1,0 +1,2 @@
+Updated development dependencies `factory-boy` to `~3.3.1`, `ruff` to `~0.5.7`, and `watchdog` to `~4.0.2`.
+Updated documentation dependency `mkdocs-material` to `~9.5.33`.

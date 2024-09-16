@@ -1744,16 +1744,17 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             name="test2",
             task="pass.TestPass",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            interval=JobExecutionType.TYPE_DAILY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test3",
             task="pass.TestPass",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            interval=JobExecutionType.TYPE_CUSTOM,
             user=user,
             start_time=timezone.now(),
+            crontab="15 10 * * *",
         )
 
     def test_only_enabled_is_listed(self):
@@ -3007,6 +3008,7 @@ class JobCustomTemplateTestCase(TestCase):
         cls.run_url = reverse("extras:job_run", kwargs={"pk": cls.example_job.pk})
 
     def test_rendering_custom_template(self):
+        self.assertIsNotNone(self.example_job.job_class)
         obj_perm = ObjectPermission(name="Test permission", actions=["view", "run"])
         obj_perm.save()
         obj_perm.users.add(self.user)

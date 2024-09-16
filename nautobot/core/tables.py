@@ -49,7 +49,7 @@ class BaseTable(django_tables2.Table):
         # Add custom field columns
         model = self._meta.model
 
-        if model.is_dynamic_group_associable_model:
+        if getattr(model, "is_dynamic_group_associable_model", False):
             self.base_columns["dynamic_group_count"] = LinkedCountColumn(
                 viewname="extras:dynamicgroup_list",
                 url_params={"member_id": "pk"},

@@ -12,6 +12,8 @@ from nautobot.dcim.models import (
     Manufacturer,
     Platform,
     Rack,
+    SoftwareImageFile,
+    SoftwareVersion,
 )
 from nautobot.extras.models import Role, SecretsGroup, Status
 from nautobot.ipam.models import VLAN
@@ -43,6 +45,15 @@ class DeviceTestCase(FormTestCases.BaseFormTestCase):
         cls.manufacturer = cls.device_type.manufacturer
         cls.platform = Platform.objects.filter(manufacturer=cls.device_type.manufacturer).first()
         cls.device_role = Role.objects.get_for_model(Device).first()
+        cls.software_version_contains_no_valid_image_for_device_type = SoftwareVersion.objects.create(
+            platform=cls.platform,
+            version="New version 1.0.0",
+            status=Status.objects.get_for_model(SoftwareVersion).first(),
+        )
+        cls.software_version = SoftwareVersion.objects.first()
+        cls.software_image_files = SoftwareImageFile.objects.exclude(software_version=cls.software_version).exclude(
+            default_image=True
+        )
 
         Device.objects.create(
             name="Device 1",
@@ -133,6 +144,49 @@ class DeviceTestCase(FormTestCases.BaseFormTestCase):
         )
         self.assertFalse(form.is_valid())
         self.assertIn("face", form.errors)
+
+    def test_no_software_image_file_specified_is_valid(self):
+        form = DeviceForm(
+            data={
+                "name": "New Device",
+                "role": self.device_role.pk,
+                "tenant": None,
+                "manufacturer": self.manufacturer.pk,
+                "device_type": self.device_type.pk,
+                "location": self.location.pk,
+                "rack": None,
+                "face": None,
+                "position": None,
+                "platform": self.platform.pk,
+                "status": self.device_status.pk,
+                "secrets_group": SecretsGroup.objects.first().pk,
+                "software_version": self.software_version_contains_no_valid_image_for_device_type.pk,
+                "software_image_files": [],
+            }
+        )
+        self.assertTrue(form.is_valid())
+
+    def test_invalid_software_image_file_specified(self):
+        form = DeviceForm(
+            data={
+                "name": "New Device",
+                "role": self.device_role.pk,
+                "tenant": None,
+                "manufacturer": self.manufacturer.pk,
+                "device_type": self.device_type.pk,
+                "location": self.location.pk,
+                "rack": None,
+                "face": None,
+                "position": None,
+                "platform": self.platform.pk,
+                "status": self.device_status.pk,
+                "secrets_group": SecretsGroup.objects.first().pk,
+                "software_version": self.software_version.pk,
+                "software_image_files": list(self.software_image_files.values_list("pk", flat=True)),
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("software_image_files", form.errors)
 
     def test_non_racked_device_with_position(self):
         form = DeviceForm(
