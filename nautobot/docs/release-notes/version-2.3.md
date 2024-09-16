@@ -117,6 +117,26 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
+## v2.3.3 (2024-09-16)
+
+### Fixed
+
+- [#6184](https://github.com/nautobot/nautobot/issues/6184) - Fixed string concatenation in `extras.models.groups._map_filter_fields` method.
+- [#6190](https://github.com/nautobot/nautobot/issues/6190) - Added `display` property to Prefix to display namespace along with the prefix to allow differentiation of prefixes in a UI selector
+- [#6197](https://github.com/nautobot/nautobot/issues/6197) - Fixed view name split in `core.utils.lookup.get_model_for_view_name` function.
+- [#6203](https://github.com/nautobot/nautobot/issues/6203) - Fixed a performance regression observed when change logging resulted in a large number of ObjectChange records (such as in an SSOT Job).
+
+### Dependencies
+
+- [#6084](https://github.com/nautobot/nautobot/issues/6084) - Updated `pyuwsgi` to `~2.0.26` and `PyYAML` to `~6.0.2`.
+
+### Housekeeping
+
+- [#5376](https://github.com/nautobot/nautobot/issues/5376) - Disabled `coverage` during initial test database setup to improve test performance.
+- [#6084](https://github.com/nautobot/nautobot/issues/6084) - Updated development dependencies `factory-boy` to `~3.3.1`, `ruff` to `~0.5.7`, and `watchdog` to `~4.0.2`.
+- [#6084](https://github.com/nautobot/nautobot/issues/6084) - Updated documentation dependency `mkdocs-material` to `~9.5.33`.
+- [#6155](https://github.com/nautobot/nautobot/issues/6155) - Updated the invoke.yml.example dev file to use latest values.
+
 ## v2.3.2 (2024-09-03)
 
 ### Security
