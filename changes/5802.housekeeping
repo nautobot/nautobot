@@ -1,1 +1,1 @@
-Refactored SavedViewUIViewSet to take into account of `permissions_class` attribute.
+Override `get_required_permission()` in SavedViewUIViewSet to achieve the intended behavior.
