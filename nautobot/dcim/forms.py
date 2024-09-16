@@ -5200,6 +5200,11 @@ class VirtualDeviceContextForm(NautobotModelForm):
     primary_ip6 = DynamicModelChoiceField(
         queryset=IPAddress.objects.all(), required=False, query_params={"ip_version": 6, "interfaces": "$interfaces"}
     )
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        required=True,
+        query_params={"content_types": VirtualDeviceContext._meta.label_lower},
+    )
 
     class Meta:
         model = VirtualDeviceContext
@@ -5218,7 +5223,6 @@ class VirtualDeviceContextForm(NautobotModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # If instance is provided and it's not a new instance, populate the field
         if self.instance.present_in_database:
             # We need to set the initial value for 'interfaces' because, by default,
             # ModelForms only handle fields directly defined on the model (e.g., the 'name' field).
