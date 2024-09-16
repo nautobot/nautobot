@@ -38,7 +38,7 @@ python = ">=3.8,<3.13"
 # Background task processing
 celery = "~5.3.6"
 # Fundamental web framework for Nautobot
-Django = "~4.2.15"
+Django = "~4.2.16"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -178,7 +178,7 @@ watchdog = "~4.0.2"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
-mkdocs = "~1.6.0"
+mkdocs = "~1.6.1"
 # Embedding YAML files into Markdown documents as tables
 markdown-data-tables = "~1.0.0"
 # Render custom markdown for version added/changed/remove notes
@@ -193,7 +193,7 @@ mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see optional-settings.md and required-settings.md
 mkdocs-macros-plugin = "~1.0.5"
 # Material for mkdocs theme
-mkdocs-material = "~9.5.33"
+mkdocs-material = "~9.5.34"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.1"
 # Automatically handle index pages for docs sections
@@ -201,11 +201,11 @@ mkdocs-section-index = "~0.3.9"
 # Automatic documentation from sources, for MkDocs
 mkdocstrings = "~0.25.2"
 # Python-specific extension to mkdocstrings
-mkdocstrings-python = "~1.10.8"
+mkdocstrings-python = "~1.10.9"
 
 [tool.poetry.group.linting.dependencies]
 # Code static analysis
-pylint = "~3.2.5"
+pylint = "~3.2.7"
 # Pylint extensions for Django
 pylint-django = "~2.5.3"
 # Combination linter and code formatter
