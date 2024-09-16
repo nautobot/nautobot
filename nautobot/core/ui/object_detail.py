@@ -157,14 +157,22 @@ class Tab(ABC):
     tab_id: str
     tab_label: str
 
-    def __init__(self, *, panels, layout=LayoutChoices.DEFAULT, weight=100):
+    WEIGHT_MAIN_TAB = 100
+    WEIGHT_ADVANCED_TAB = 200
+    WEIGHT_CONTACTS_TAB = 300
+    WEIGHT_GROUPS_TAB = 400
+    WEIGHT_METADATA_TAB = 500
+    WEIGHT_NOTES_TAB = 600  # reserved, not yet using this framework
+    WEIGHT_CHANGELOG_TAB = 700  # reserved, not yet using this framework
+
+    def __init__(self, *, panels, weight, layout=LayoutChoices.DEFAULT):
         """
         Create a Tab containing the given panels and layout.
 
         Args:
             panels (list): List of `Panel` instances to include in this layout by default.
-            layout (str): One of the LayoutChoices values from nautobot.core.ui.choices.
             weight (int): Influences order of the tabs within a page (lower weights appear first).
+            layout (str): One of the LayoutChoices values from nautobot.core.ui.choices.
         """
         if layout not in LayoutChoices.values():
             raise RuntimeError(f"Unknown layout {layout}")
@@ -283,7 +291,7 @@ class _ObjectDetailMainTab(Tab):
 
     def __init__(self, **kwargs):
         """Default to two-column layout at top (containing a left `ObjectFieldsPanel`) with full-width layout below."""
-        kwargs.setdefault("weight", 0)
+        kwargs.setdefault("weight", self.WEIGHT_MAIN_TAB)
         super().__init__(**kwargs)
         # TODO: inject standard panels (custom fields, relationships, tags, etc.) even if kwargs["panels"] is customized
 
@@ -300,7 +308,7 @@ class _ObjectDetailAdvancedTab(Tab):
     tab_label = "Advanced"
 
     def __init__(self, **kwargs):
-        kwargs.setdefault("weight", 1000)
+        kwargs.setdefault("weight", self.WEIGHT_ADVANCED_TAB)
         kwargs.setdefault(
             "panels",
             [
@@ -331,7 +339,7 @@ class _ObjectDetailContactsTab(Tab):
     tab_id = "contacts"
 
     def __init__(self, **kwargs):
-        kwargs.setdefault("weight", 1100)
+        kwargs.setdefault("weight", self.WEIGHT_CONTACTS_TAB)
         kwargs.setdefault(
             "panels",
             [
@@ -352,8 +360,8 @@ class _ObjectDetailContactsTab(Tab):
             <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
         </button>
     {% endif %}
-        {% if perms.extras.add_contactassociation %}
-            <div class="pull-right">
+    {% if perms.extras.add_contactassociation %}
+        <div class="pull-right">
             <a href="{% url 'extras:object_contact_team_assign' %}?return_url={{return_url}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" class="btn btn-primary btn-xs">
                 <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contact
             </a>
@@ -386,7 +394,7 @@ class _ObjectDetailGroupsTab(Tab):
     tab_id = "dynamic_groups"
 
     def __init__(self, **kwargs):
-        kwargs.setdefault("weight", 1200)
+        kwargs.setdefault("weight", self.WEIGHT_GROUPS_TAB)
         kwargs.setdefault("panels", [ObjectsTablePanel(table_name="associated_dynamic_groups_table")])
         super().__init__(**kwargs)
 
@@ -411,7 +419,7 @@ class _ObjectDetailMetadataTab(Tab):
     tab_id = "object_metadata"
 
     def __init__(self, **kwargs):
-        kwargs.setdefault("weight", 1300)
+        kwargs.setdefault("weight", self.WEIGHT_METADATA_TAB)
         kwargs.setdefault("panels", [ObjectsTablePanel(table_name="associated_object_metadata_table")])
         super().__init__(**kwargs)
 
