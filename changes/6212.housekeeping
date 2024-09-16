@@ -1,0 +1,2 @@
+Updated documentation dependencies `mkdocs` to `~1.6.1`, `mkdocs-material` to `~9.5.34`, and `mkdocstrings-python` to `~1.10.9`.
+Updated development dependency `pylint` to `~3.2.7`.
