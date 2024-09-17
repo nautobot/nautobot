@@ -234,27 +234,29 @@ nautobot-server init
     ```
 
 +++ 1.6.0 "Installation metrics selection"
-    The `nautobot-server init` command will now prompt you to set the initial value for the [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled) setting. See the [`send_installation_metrics`](../tools/nautobot-server.md#send_installation_metrics) command for more information about the feature that this setting toggles.
+    The `nautobot-server init` command will now prompt you to set the initial value for the [`INSTALLATION_METRICS_ENABLED`](../configuration/settings.md#installation_metrics_enabled) setting. See the [`send_installation_metrics`](../tools/nautobot-server.md#send_installation_metrics) command for more information about the feature that this setting toggles.
 
 ### Required Settings
 
-Your `nautobot_config.py` provides sane defaults for all of the configuration settings. You will inevitably need to update the settings for your environment, most notably the [`DATABASES`](../configuration/required-settings.md#databases) setting. If you do not wish to modify the config, by default, many of these configuration settings can also be specified by environment variables. Please see [Required Settings](../configuration/required-settings.md) for further details.
+Your `nautobot_config.py` provides sane defaults for most configuration settings, but in the longer term, you will inevitably need to update the settings for your environment. For a more complete guide to supported configuration settings in Nautobot, you can refer to [Settings](../configuration/settings.md) later.
 
-Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../configuration/required-settings.md) to tweak your required settings. At a minimum, you'll need to update the following settings:
+!!! tip "Environment variables"
+    If you do not wish to modify the config file directly, many of these configuration settings can also be specified by environment variables, such as `NAUTOBOT_ALLOWED_HOSTS`, `NAUTOBOT_DB_USER`, etc.
 
-* [`ALLOWED_HOSTS`](../configuration/required-settings.md#allowed_hosts): You must set this value. This can be set to `["*"]` for a quick start, but this value is not suitable for production deployment.
-* [`DATABASES`](../configuration/required-settings.md#databases): Database connection parameters, see below.
-* [Redis settings](../configuration/required-settings.md#redis-settings): Redis configuration requires multiple settings, if different from the defaults. If you installed Redis on the same system as Nautobot, you most likely do not need to change these settings.
+Edit `$NAUTOBOT_ROOT/nautobot_config.py`. At a minimum, you'll need to update the following settings:
+
+* [`ALLOWED_HOSTS`](../configuration/settings.md#allowed_hosts): You must set this value. This can be set to `["*"]` for a quick start, but this value is not suitable for production deployment.
+* [`DATABASES`](../configuration/settings.md#databases): Database connection parameters, see below.
 
 === "PostgreSQL"
 
-    - At a minimum, you'll need to update the `"USER"` and `"PASSWORD"` fields under `DATABASES`. Depending on your security posture, you may wish to set these via environment variables (`NAUTOBOT_DB_USER` and `NAUTOBOT_DB_PASSWORD`) rather than writing them directly into your `nautobot_config.py`. Most Nautobot configuration settings can be set by environment variables if preferred.
+    - At a minimum, you'll need to update the `"USER"` and `"PASSWORD"` fields under `DATABASES`. Depending on your security posture, you may wish to set these via environment variables (`NAUTOBOT_DB_USER` and `NAUTOBOT_DB_PASSWORD`) rather than writing them directly into your `nautobot_config.py`.
 
 === "MySQL"
 
-    - At a minimum, you'll need to update the `"USER"` and `"PASSWORD"` fields under `DATABASES`. Depending on your security posture, you may wish to set these via environment variables (`NAUTOBOT_DB_USER` and `NAUTOBOT_DB_PASSWORD`) rather than writing them directly into your `nautobot_config.py`. Most Nautobot configuration settings can be set by environment variables if preferred.
+    - At a minimum, you'll need to update the `"USER"` and `"PASSWORD"` fields under `DATABASES`. Depending on your security posture, you may wish to set these via environment variables (`NAUTOBOT_DB_USER` and `NAUTOBOT_DB_PASSWORD`) rather than writing them directly into your `nautobot_config.py`.
     - Additionally, since Nautobot's configuration defaults to assuming PostgreSQL, you must change the `"ENGINE"` setting from `django.db.backends.postgresql` to `django.db.backends.mysql`.
-    - If you want to enable support for Unicode text, including emojis, please make sure to include `"OPTIONS": {"charset": "utf8mb4"}`. Refer to the [configuration guide on MySQL Unicode settings](../configuration/required-settings.md#databases) for more information.
+    - If you want to enable support for Unicode text, including emojis, please make sure to include `"OPTIONS": {"charset": "utf8mb4"}`. Refer to the [configuration guide on MySQL Unicode settings](../configuration/settings.md#databases) for more information.
 
 !!! warning
     You absolutely must update your required settings in your `nautobot_config.py` or Nautobot will not work.
@@ -275,7 +277,7 @@ If you decide to use any [Nautobot Apps](../../../apps/index.md), they should be
 
     <a name="napalm"><h4>NAPALM</h4></a>
 
-    Nautobot provides built-in support for the [NAPALM automation](https://github.com/napalm-automation/napalm/) library, which allows Nautobot to fetch live data from devices and return it to a requester via its REST API. The [`NAPALM_USERNAME`](../configuration/optional-settings.md#napalm_username) and [`NAPALM_PASSWORD`](../configuration/optional-settings.md#napalm_password) configuration parameters define the credentials to be used when connecting to a device.
+    Nautobot provides built-in support for the [NAPALM automation](https://github.com/napalm-automation/napalm/) library, which allows Nautobot to fetch live data from devices and return it to a requester via its REST API. The [`NAPALM_USERNAME`](../configuration/settings.md#napalm_username) and [`NAPALM_PASSWORD`](../configuration/settings.md#napalm_password) configuration parameters define the credentials to be used when connecting to a device.
 
     To use NAPALM, add `nautobot[napalm]` to your `local_requirements.txt` so that it can be installed and kept up to date:
 
@@ -285,7 +287,7 @@ If you decide to use any [Nautobot Apps](../../../apps/index.md), they should be
 
     <a name="remote-file-storage"><h4>Remote File Storage</h4></a>
 
-    By default, Nautobot will use the local filesystem to store uploaded files. To use a remote filesystem, install the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) library and configure your [desired storage backend](../configuration/optional-settings.md#storage_backend) in `nautobot_config.py`.
+    By default, Nautobot will use the local filesystem to store uploaded files. To use a remote filesystem, install the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) library and configure your [desired storage backend](../configuration/settings.md#storage_backend) in `nautobot_config.py`.
 
     To use remote file storage, add `nautobot[remote_storage]` to your `local_requirements.txt` so that it can be installed and kept up to date:
 
@@ -327,8 +329,8 @@ Nautobot relies upon many static files including:
 
 * `git` - For storing [Git repositories](../../platform-functionality/gitrepository.md)
 * `jobs` - For storing [custom Jobs](../../platform-functionality/jobs/index.md)
-* `media` - For storing [uploaded images and attachments](../configuration/optional-settings.md#media_root) (such as device type images)
-* `static` - The home for [CSS, JavaScript, and images](../configuration/optional-settings.md#static_root) used to serve the web interface
+* `media` - For storing [uploaded images and attachments](../configuration/settings.md#media_root) (such as device type images)
+* `static` - The home for [CSS, JavaScript, and images](../configuration/settings.md#static_root) used to serve the web interface
 
 Each of these have their own corresponding setting that defined in `nautobot_config.py`, but by default they will all be placed in `NAUTOBOT_ROOT` unless you tell Nautobot otherwise by customizing their unique variable.
 

@@ -102,7 +102,7 @@ To improve performance of the Dynamic Groups feature, a number of changes have b
 Cleanup of the change log (deletion of `ObjectChange` records older than a given cutoff) is now handled by the new `LogsCleanup` system Job, rather than occurring at random as a side effect of new change log records being created. Admins desiring automatic cleanup are encouraged to schedule this job to run at an appropriate interval suitable to your deployment's needs.
 
 !!! info
-    Setting [`CHANGELOG_RETENTION`](../user-guide/administration/configuration/optional-settings.md#changelog_retention) in your Nautobot configuration by itself no longer directly results in periodic cleanup of `ObjectChange` records. You must run (or schedule to periodically run) the `LogsCleanup` Job for this to occur.
+    Setting [`CHANGELOG_RETENTION`](../user-guide/administration/configuration/settings.md#changelog_retention) in your Nautobot configuration by itself no longer directly results in periodic cleanup of `ObjectChange` records. You must run (or schedule to periodically run) the `LogsCleanup` Job for this to occur.
 
 As an additional enhancement, the `LogsCleanup` Job can also be used to cleanup `JobResult` records if desired as well.
 
@@ -117,6 +117,32 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
+## v2.3.3 (2024-09-16)
+
+### Security
+
+- [#6212](https://github.com/nautobot/nautobot/issues/6212) - Updated `Django` to `~4.2.16` to address `CVE-2024-45230` and `CVE-2024-45231`.
+
+### Fixed
+
+- [#6184](https://github.com/nautobot/nautobot/issues/6184) - Fixed an exception in `extras.models.groups._map_filter_fields` method when certain App `filter_extensions` were present.
+- [#6190](https://github.com/nautobot/nautobot/issues/6190) - Added `display` property to Prefix to display its namespace along with the prefix to allow differentiation between prefixes in the UI.
+- [#6197](https://github.com/nautobot/nautobot/issues/6197) - Fixed an exception in `core.utils.lookup.get_model_for_view_name` function when rendering certain App object list views.
+- [#6203](https://github.com/nautobot/nautobot/issues/6203) - Fixed a performance regression observed when change logging resulted in a large number of ObjectChange records (such as in an SSOT Job).
+
+### Dependencies
+
+- [#6084](https://github.com/nautobot/nautobot/issues/6084) - Updated `pyuwsgi` to `~2.0.26` and `PyYAML` to `~6.0.2`.
+
+### Housekeeping
+
+- [#5376](https://github.com/nautobot/nautobot/issues/5376) - Disabled `coverage` during initial test database setup to improve test performance.
+- [#6084](https://github.com/nautobot/nautobot/issues/6084) - Updated development dependencies `factory-boy` to `~3.3.1`, `ruff` to `~0.5.7`, and `watchdog` to `~4.0.2`.
+- [#6084](https://github.com/nautobot/nautobot/issues/6084) - Updated documentation dependency `mkdocs-material` to `~9.5.33`.
+- [#6155](https://github.com/nautobot/nautobot/issues/6155) - Updated the invoke.yml.example dev file to use latest values.
+- [#6212](https://github.com/nautobot/nautobot/issues/6212) - Updated documentation dependencies `mkdocs` to `~1.6.1`, `mkdocs-material` to `~9.5.34`, and `mkdocstrings-python` to `~1.10.9`.
+- [#6212](https://github.com/nautobot/nautobot/issues/6212) - Updated development dependency `pylint` to `~3.2.7`.
+
 ## v2.3.2 (2024-09-03)
 
 ### Security

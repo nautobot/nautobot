@@ -1185,7 +1185,6 @@ def enqueue_job_hooks(object_change):
     job_hooks = JobHook.objects.filter(content_types=content_type, enabled=True, **{action_flag: True})
 
     # Enqueue the jobs related to the job_hooks
-    get_jobs(reload=True)
     for job_hook in job_hooks:
         job_model = job_hook.job
         if not job_model.installed or not job_model.enabled:

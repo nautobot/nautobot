@@ -746,7 +746,7 @@ def unittest(
         command += " --keepdb"
     if failfast:
         command += " --failfast"
-    if buffer and not parallel:  # Django 3.x doesn't support '--parallel --buffer'; can remove this after Django 4.x
+    if buffer:
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
