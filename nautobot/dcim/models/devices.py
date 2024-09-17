@@ -52,6 +52,8 @@ __all__ = (
     "Manufacturer",
     "Platform",
     "VirtualChassis",
+    "VirtualDeviceContext",
+    "VirtualDeviceContextInterfaceAssignment",
 )
 
 
@@ -1881,6 +1883,12 @@ class VirtualDeviceContext(PrimaryModel):
     tenant = models.ForeignKey(
         "tenancy.Tenant", on_delete=models.CASCADE, related_name="virtual_device_contexts", blank=True, null=True
     )
+    interfaces = models.ManyToManyField(
+        blank=True,
+        related_name="virtual_device_contexts",
+        to="dcim.VirtualDeviceContext",
+        through="dcim.VirtualDeviceContextInterfaceAssignment",
+    )
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:
@@ -1935,3 +1943,20 @@ class VirtualDeviceContext(PrimaryModel):
                     raise ValidationError(
                         {f"{field}": f"The specified IP address ({ip}) is not assigned to this Virtual Device Context."}
                     )
+
+
+@extras_features("graphql")
+class VirtualDeviceContextInterfaceAssignment(BaseModel):
+    virtual_device_context = models.ForeignKey(
+        VirtualDeviceContext, on_delete=models.CASCADE, related_name="interface_assignments"
+    )
+    interface = models.ForeignKey(
+        Interface, on_delete=models.CASCADE, related_name="virtual_device_context_assignments"
+    )
+
+    class Meta:
+        unique_together = ["virtual_device_context", "interface"]
+        ordering = ["virtual_device_context", "interface"]
+
+    def __str__(self):
+        return f"{self.virtual_device_context}: {self.interface}"

@@ -2186,3 +2186,35 @@ class VirtualDeviceContextFilterSet(NautobotFilterSet, TenancyModelFilterSetMixi
     def filter_primary_ip6(self, queryset, name, value):
         ip_queryset = self.get_ip_queryset(value)
         return queryset.filter(primary_ip6__in=ip_queryset)
+
+
+class VirtualDeviceContextInterfaceAssignmentFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "interface__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "virtual_device_context__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+        }
+    )
+    virtual_device_context = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VirtualDeviceContext.objects.all(),
+        to_field_name="name",
+        label="Virtual Device Context (name or ID)",
+    )
+    interface = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.all(),
+        to_field_name="name",
+        label="Interface (name or ID)",
+    )
+
+    class Meta:
+        model = VirtualDeviceContext
+        fields = [
+            "interface",
+            "virtual_device_context",
+        ]

@@ -68,6 +68,7 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualChassis,
     VirtualDeviceContext,
+    VirtualDeviceContextInterfaceAssignment,
 )
 from nautobot.extras.api.views import (
     ConfigContextQuerySetMixin,
@@ -892,3 +893,9 @@ class VirtualDeviceContextViewSet(NautobotModelViewSet):
     queryset = VirtualDeviceContext.objects.select_related("device", "tenant", "primary_ip4", "primary_ip6")
     serializer_class = serializers.VirtualDeviceContextSerializer
     filterset_class = filters.VirtualDeviceContextFilterSet
+
+
+class VirtualDeviceContextInterfaceAssignmentViewSet(NautobotModelViewSet):
+    queryset = VirtualDeviceContextInterfaceAssignment.objects.select_related("virtual_device_context", "interface")
+    serializer_class = serializers.VirtualDeviceContextInterfaceAssignmentSerializer
+    filterset_class = filters.VirtualDeviceContextInterfaceAssignmentFilterSet

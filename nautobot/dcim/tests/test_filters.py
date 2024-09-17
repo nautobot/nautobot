@@ -68,6 +68,7 @@ from nautobot.dcim.filters import (
     SoftwareVersionFilterSet,
     VirtualChassisFilterSet,
     VirtualDeviceContextFilterSet,
+    VirtualDeviceContextInterfaceAssignmentFilterSet,
 )
 from nautobot.dcim.models import (
     Cable,
@@ -114,6 +115,7 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualChassis,
     VirtualDeviceContext,
+    VirtualDeviceContextInterfaceAssignment,
 )
 from nautobot.extras.models import ExternalIntegration, Role, SecretsGroup, Status, Tag
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VLANGroup
@@ -4090,3 +4092,42 @@ class VirtualDeviceContextTestCase(FilterTestCases.FilterTestCase, FilterTestCas
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, VirtualDeviceContext.objects.filter(primary_ip6=self.ips_v6[1])
         )
+
+
+class VirtualDeviceContextInterfaceAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = VirtualDeviceContextInterfaceAssignment.objects.all()
+    filterset = VirtualDeviceContextInterfaceAssignmentFilterSet
+    generic_filter_tests = [
+        ("virtual_device_context", "cloud_network__id"),
+        ("virtual_device_context", "cloud_network__name"),
+        ("interface", "cloud_network__id"),
+        ("interface", "cloud_network__name"),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        device = Device.objects.first()
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext)[0]
+        interface_status = Status.objects.get_for_model(Interface)[0]
+        interfaces = (
+            Interface.objects.create(
+                device=device,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                name=f"Interface 00{idx}",
+                status=interface_status,
+            )
+            for idx in range(3)
+        )
+        vdcs = [
+            VirtualDeviceContext.objects.create(
+                device=device,
+                status=vdc_status,
+                identifier=200 + idx,
+                name=f"Test VDC {idx}",
+            )
+            for idx in range(3)
+        ]
+        VirtualDeviceContextInterfaceAssignment.objects.create(virtual_device_context=vdcs[0], interface=interfaces[0])
+        VirtualDeviceContextInterfaceAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[0])
+        VirtualDeviceContextInterfaceAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[1])
+        VirtualDeviceContextInterfaceAssignment.objects.create(virtual_device_context=vdcs[2], interface=interfaces[2])
