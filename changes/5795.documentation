@@ -1,0 +1,5 @@
+Consolidated "Required Settings" and "Optional Settings" docs into a single unified "Settings" document.
+Consolidated "Administration: Installation Extras" docs section into the "Administration: Guides" section.
+Moved "Caching" content from the "Administration: Guides" section into the "Administration: Configuration" section as a new "Redis" document.
+Added `environment_variables` keys to `settings.yaml` to more accurately document settings that are influenced by multiple environment variables together.
+Removed `is_required_setting` keys from `settings.yaml` as no longer relevant.
