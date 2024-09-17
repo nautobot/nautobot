@@ -17,7 +17,7 @@ from django.db.models import ManyToManyField, ProtectedError, Q
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.urls import resolve, reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -155,7 +155,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         "all_filters_removed",  # indicator for if all filters have been removed from the saved view
         "clear_view",  # indicator for if the clear view button is clicked or not
     )
-    view_name = None
 
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
@@ -206,7 +205,8 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         filter_form = None
         hide_hierarchy_ui = False
         clear_view = request.GET.get("clear_view", False)
-        view_name = self.view_name or validated_viewname(model, "list")
+        resolved_path = resolve(request.path)
+        view_name = f"{resolved_path.app_name}:{resolved_path.url_name}"
 
         # If the user clicks on the clear view button, we do not check for global or user defaults
         if not clear_view and not request.GET.get("saved_view"):
