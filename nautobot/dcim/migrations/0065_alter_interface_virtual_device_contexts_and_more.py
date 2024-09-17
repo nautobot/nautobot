@@ -12,14 +12,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterField(
+        migrations.RenameField(
             model_name="interface",
-            name="virtual_device_contexts",
-            field=models.ManyToManyField(
-                blank=True,
-                related_name="+",
-                to="dcim.virtualdevicecontext",
-            ),
+            old_name="virtual_device_contexts",
+            new_name="obsolete_vdcs",
         ),
         migrations.CreateModel(
             name="VirtualDeviceContextInterfaceAssignment",
@@ -63,7 +59,7 @@ class Migration(migrations.Migration):
                 blank=True,
                 related_name="virtual_device_contexts",
                 through="dcim.VirtualDeviceContextInterfaceAssignment",
-                to="dcim.virtualdevicecontext",
+                to="dcim.Interface",
             ),
         ),
     ]

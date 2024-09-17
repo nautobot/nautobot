@@ -1886,7 +1886,7 @@ class VirtualDeviceContext(PrimaryModel):
     interfaces = models.ManyToManyField(
         blank=True,
         related_name="virtual_device_contexts",
-        to="dcim.VirtualDeviceContext",
+        to="dcim.Interface",
         through="dcim.VirtualDeviceContextInterfaceAssignment",
     )
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)

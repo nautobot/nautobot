@@ -2147,6 +2147,11 @@ class VirtualDeviceContextFilterSet(NautobotFilterSet, TenancyModelFilterSetMixi
         to_field_name="name",
         label="Device (name or ID)",
     )
+    interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.all(),
+        to_field_name="name",
+        label="Interface (name or ID)",
+    )
 
     class Meta:
         model = VirtualDeviceContext
@@ -2155,9 +2160,10 @@ class VirtualDeviceContextFilterSet(NautobotFilterSet, TenancyModelFilterSetMixi
             "name",
             "device",
             "tenant",
+            "interfaces",
+            "has_primary_ip",
             "primary_ip4",
             "primary_ip6",
-            "has_primary_ip",
             "status",
             "tags",
             "description",

@@ -11,6 +11,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RemoveField(
             model_name="interface",
-            name="virtual_device_contexts",
+            name="obsolete_vdcs",
         ),
     ]

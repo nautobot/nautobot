@@ -3,9 +3,33 @@
 from django.db import migrations
 
 
+
+def migrate_existing_vdcs_interfaces_data(apps, schema_editor):
+    """
+    Migrate the existing Interface VDC data from old field `obsolete_vdcs` to new field `virtual_device_contexts`.
+    """
+    Interface = apps.get_model("dcim", "Interface")
+    for interface in Interface.objects.filter(virtual_device_contexts__isnull=False):
+        interface.virtual_device_contexts.set(interface.obsolete_vdcs.all())
+        interface.obsolete_vdcs.clear()
+
+
+def reverse_migrate_existing_vdcs_interfaces_data(apps, schema_editor):
+    """
+    Reverse Migrated the Interface VDC data from old field `obsolete_vdcs` to new field `virtual_device_contexts`.
+    """
+    Interface = apps.get_model("dcim", "Interface")
+    for interface in Interface.objects.filter(virtual_device_contexts__isnull=False):
+        interface.obsolete_vdcs.set(interface.virtual_device_contexts.all())
+        interface.virtual_device_contexts.clear()
+
+
+
 class Migration(migrations.Migration):
     dependencies = [
         ("dcim", "0065_alter_interface_virtual_device_contexts_and_more"),
     ]
 
-    operations = []
+    operations = [
+        migrations.RunPython(migrate_existing_vdcs_interfaces_data, reverse_migrate_existing_vdcs_interfaces_data),
+    ]
