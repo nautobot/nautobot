@@ -1135,6 +1135,8 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
                                 getattr(job_model.job_class, field_name),
                                 field_name,
                             )
+                    if not job_model.job_queues_override:
+                        self.assertEqual(sorted(job_model.task_queues), sorted(job_model.job_class.task_queues))
                 except AssertionError:
                     print(list(JobModel.objects.all()))
                     print(registry["jobs"])
@@ -1159,7 +1161,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             "has_sensitive_variables": not self.job_containing_sensitive_variables.has_sensitive_variables,
             "soft_time_limit": 350,
             "time_limit": 650,
-            "task_queues": ["overridden", "worker", "queues"],
         }
 
         # Override values to non-defaults and ensure they are preserved
@@ -1861,6 +1862,14 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             interval=JobExecutionType.TYPE_FUTURE,
             start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("America/New_York")),
         )
+
+    def test_scheduled_job_queue_setter(self):
+        """Test the queue property setter on ScheduledJob."""
+        invalid_queue = "Invalid job Queue"
+        with self.assertRaises(ValidationError) as cm:
+            self.daily_utc_job.queue = invalid_queue
+            self.daily_utc_job.validated_save()
+        self.assertIn(f"Job Queue {invalid_queue} does not exist in the database.", str(cm.exception))
 
     def test_schedule(self):
         """Test the schedule property."""

@@ -4,7 +4,13 @@ from django.db import ProgrammingError
 from django.http import Http404
 from django.urls import resolve
 from django.urls.exceptions import Resolver404
+from django.utils import timezone
 from django.utils.deprecation import MiddlewareMixin
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:  # python 3.8
+    from backports.zoneinfo import ZoneInfo
 
 from nautobot.core.api.utils import is_api_request, rest_api_server_error
 from nautobot.core.authentication import (
@@ -149,3 +155,16 @@ class ExceptionHandlingMiddleware:
             return server_error(request, template_name=custom_template)
 
         return None
+
+
+class UserDefinedTimeZoneMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.user.is_authenticated:
+            if tzname := request.user.get_config("timezone"):
+                timezone.activate(ZoneInfo(tzname))
+            else:
+                timezone.deactivate()
+        return self.get_response(request)

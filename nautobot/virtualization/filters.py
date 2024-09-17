@@ -151,9 +151,13 @@ class VirtualMachineFilterSet(
         label="Cluster type (ID or name)",
         to_field_name="name",
     )
+    cluster = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Cluster.objects.all(),
+        label="Cluster (ID or name)",
+    )
     cluster_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Cluster.objects.all(),
-        label="Cluster (ID)",
+        label="Cluster (ID) - Deprecated (use cluster filter)",
     )
     location = TreeNodeMultipleChoiceFilter(
         prefers_id=True,
@@ -225,7 +229,6 @@ class VirtualMachineFilterSet(
         fields = [
             "id",
             "name",
-            "cluster",
             "vcpus",
             "memory",
             "disk",

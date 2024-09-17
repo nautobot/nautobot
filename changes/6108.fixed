@@ -1,0 +1,1 @@
+Fixed incorrect definition of `VirtualMachineFilterSet.cluster` filter.
