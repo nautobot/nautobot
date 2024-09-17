@@ -295,7 +295,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             # Construct valid actions for list view.
             valid_actions = self.validate_action_buttons(view, request)
             # Query SavedViews for dropdown button
-            list_url = validated_viewname(model, "list")
+            list_url = view.view_name or validated_viewname(model, "list")
             saved_views = None
             if model.is_saved_view_model:
                 # We are not using .restrict(request.user, "view") here

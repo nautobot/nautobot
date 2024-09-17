@@ -576,6 +576,7 @@ class RackElevationListView(generic.ObjectListView):
     filterset = filters.RackFilterSet
     action_buttons = []
     template_name = "dcim/rack_elevation_list.html"
+    view_name = "dcim:rack_elevation_list"
 
     def extra_context(self):
         racks = self.queryset

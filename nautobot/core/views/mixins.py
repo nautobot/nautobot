@@ -627,6 +627,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         "all_filters_removed",  # indicator for if all filters have been removed from the saved view
         "clear_view",  # indicator for if the clear view button is clicked or not
     )
+    view_name = None
 
     def filter_queryset(self, queryset):
         """

@@ -155,6 +155,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         "all_filters_removed",  # indicator for if all filters have been removed from the saved view
         "clear_view",  # indicator for if the clear view button is clicked or not
     )
+    view_name = None
 
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
@@ -205,12 +206,12 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         filter_form = None
         hide_hierarchy_ui = False
         clear_view = request.GET.get("clear_view", False)
+        view_name = self.view_name or validated_viewname(model, "list")
 
         # If the user clicks on the clear view button, we do not check for global or user defaults
         if not clear_view and not request.GET.get("saved_view"):
             # Check if there is a default for this view for this specific user
             app_label, model_name = model._meta.label.split(".")
-            view_name = f"{app_label}:{model_name.lower()}_list"
 
             if not isinstance(user, AnonymousUser):
                 try:
@@ -302,28 +303,30 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         table_config_form = None
         current_saved_view = None
         current_saved_view_pk = self.request.GET.get("saved_view", None)
-        list_url = validated_viewname(model, "list")
         # We are not using .restrict(request.user, "view") here
         # User should be able to see any saved view that he has the list view access to.
         if user.has_perms(["extras.view_savedview"]):
-            saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
+            saved_views = SavedView.objects.filter(view=view_name).order_by("name").only("pk", "name")
         else:
             shared_saved_views = (
-                SavedView.objects.filter(view=list_url, is_shared=True).order_by("name").only("pk", "name")
+                SavedView.objects.filter(view=view_name, is_shared=True).order_by("name").only("pk", "name")
             )
             user_owned_saved_views = (
-                SavedView.objects.filter(view=list_url, owner=user).order_by("name").only("pk", "name")
+                SavedView.objects.filter(view=view_name, owner=user).order_by("name").only("pk", "name")
             )
             saved_views = shared_saved_views | user_owned_saved_views
+
+        # Construct the objects table
+
+        if current_saved_view_pk:
+            try:
+                # We are not using .restrict(request.user, "view") here
+                # User should be able to see any saved view that he has the list view access to.
+                current_saved_view = SavedView.objects.get(view=view_name, pk=current_saved_view_pk)
+            except ObjectDoesNotExist:
+                messages.error(request, f"Saved view {current_saved_view_pk} not found")
+
         if self.table:
-            # Construct the objects table
-            if current_saved_view_pk:
-                try:
-                    # We are not using .restrict(request.user, "view") here
-                    # User should be able to see any saved view that he has the list view access to.
-                    current_saved_view = SavedView.objects.get(view=list_url, pk=current_saved_view_pk)
-                except ObjectDoesNotExist:
-                    messages.error(request, f"Saved view {current_saved_view_pk} not found")
             if self.request.GET.getlist("sort") or (
                 current_saved_view is not None and current_saved_view.config.get("sort_order")
             ):
@@ -373,7 +376,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "filter_form": filter_form,
             "dynamic_filter_form": dynamic_filter_form,
             "search_form": search_form,
-            "list_url": list_url,
+            "list_url": view_name,
             "title": bettertitle(model._meta.verbose_name_plural),
             "new_changes_not_applied": new_changes_not_applied,
             "current_saved_view": current_saved_view,
