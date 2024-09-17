@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q
@@ -136,8 +138,9 @@ class CircuitUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.CircuitSerializer
     table_class = tables.CircuitTable
 
+    @dataclass
     class CircuitTerminationPanel(KeyValueTablePanel):
-        content_template_path = "circuits/inc/circuit_termination_fragment.html"
+        content_template_path: str = "circuits/inc/circuit_termination_fragment.html"
 
         def render_header_extra_content(self, context):
             return get_template("circuits/inc/circuit_termination_header_extra_content.html").render(context)

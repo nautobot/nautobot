@@ -1,7 +1,9 @@
 """Classes and utilities for defining an object detail view through a NautobotUIViewSet."""
 
+from dataclasses import dataclass, field
+from typing import Union
+
 from django.core.exceptions import FieldDoesNotExist
-from django.shortcuts import render
 from django.template import Context, Template
 from django.template.loader import get_template, render_to_string
 from django.templatetags.l10n import localize
@@ -148,16 +150,28 @@ class ObjectDetailContent:
         return format_html_join("\n", "{}", ([tab.render_content(context)] for tab in self.tabs))
 
 
-class Tab:
+@dataclass
+class Component:
+    weight: int
+
+    def should_render(self, context):
+        return True
+
+
+@dataclass
+class Tab(Component):
     """Base class for UI framework definition of a single tabbed pane within an Object Detail (Object Retrieve) page."""
 
     tab_id: str
     tab_label: str
+    panels: tuple["Panel"] = ()
+    layout: str = LayoutChoices.DEFAULT
 
     # Overridable by subclasses if desired, hence not defined as CONSTANT
-    tab_template_path = "components/tab/tab.html"
-    content_template_path = "components/tab/content.html"
-    layout_template_paths = {
+    tab_template_path: str = "components/tab/tab.html"
+    content_template_path: str = "components/tab/content.html"
+
+    LAYOUT_TEMPLATE_PATHS = {
         LayoutChoices.TWO_OVER_ONE: "components/layout/two_over_one.html",
         LayoutChoices.ONE_OVER_TWO: "components/layout/one_over_two.html",
     }
@@ -170,26 +184,8 @@ class Tab:
     WEIGHT_NOTES_TAB = 600  # reserved, not yet using this framework
     WEIGHT_CHANGELOG_TAB = 700  # reserved, not yet using this framework
 
-    def __init__(self, *, panels, weight, layout=LayoutChoices.DEFAULT):
-        """
-        Create a Tab containing the given panels and layout.
-
-        Args:
-            panels (list): List of `Panel` instances to include in this layout by default.
-            weight (int): Influences order of the tabs within a page (lower weights appear first).
-            layout (str): One of the LayoutChoices values from nautobot.core.ui.choices.
-        """
-        if layout not in LayoutChoices.values():
-            raise RuntimeError(f"Unknown layout {layout}")
-        self.layout = layout
-        self.panels = panels
-        self.weight = weight
-
     def panels_for_section(self, section):
         return sorted((panel for panel in self.panels if panel.section == section), key=lambda panel: panel.weight)
-
-    def should_render(self, context):
-        return True
 
     def render_tab(self, context):
         """Render the tab (as opposed to its contents) to HTML."""
@@ -201,11 +197,14 @@ class Tab:
         self.context.update(
             {
                 "tab_id": self.tab_id,
-                "tab_label": self.tab_label,
+                "tab_label": self.render_tab_label(context),
             }
         )
 
         return get_template(self.tab_template_path).render(self.context)
+
+    def render_tab_label(self, context):
+        return self.tab_label
 
     def render_content(self, context):
         """Render the tab contents to HTML."""
@@ -217,7 +216,7 @@ class Tab:
         self.context.update(
             {
                 "tab_id": self.tab_id,
-                "tab_label": self.tab_label,
+                "tab_label": self.render_tab_label(context),
                 "include_plugin_content": self.tab_id == "main",
                 "left_half_panels": self.panels_for_section(SectionChoices.LEFT_HALF),
                 "right_half_panels": self.panels_for_section(SectionChoices.RIGHT_HALF),
@@ -225,207 +224,39 @@ class Tab:
             }
         )
 
-        tab_content = get_template(self.layout_template_paths[self.layout]).render(self.context)
+        tab_content = get_template(self.LAYOUT_TEMPLATE_PATHS[self.layout]).render(self.context)
 
         return get_template(self.content_template_path).render({**self.context, "tab_content": tab_content})
 
 
+@dataclass
 class _ObjectDetailMainTab(Tab):
     """Base class for a main display tab containing an overview of object fields and similar data."""
 
-    tab_id = "main"
+    tab_id: str = "main"
+    tab_label: str = ""  # see render_tab_label()
+    weight: int = Tab.WEIGHT_MAIN_TAB
 
-    def __init__(self, **kwargs):
-        """Default to two-column layout at top (containing a left `ObjectFieldsPanel`) with full-width layout below."""
-        kwargs.setdefault("weight", self.WEIGHT_MAIN_TAB)
-        super().__init__(**kwargs)
-        # TODO: inject standard panels (custom fields, relationships, tags, etc.) even if kwargs["panels"] is customized
+    # TODO: inject standard panels (custom fields, relationships, tags, etc.) even if kwargs["panels"] is customized
 
-    @property
-    def tab_label(self):
+    def render_tab_label(self, context):
         """Use the `verbose_name` of the given instance's Model as the tab label by default."""
-        return bettertitle(self.context["object"]._meta.verbose_name)
+        return bettertitle(context["object"]._meta.verbose_name)
 
 
-class _ObjectDetailAdvancedTab(Tab):
-    """Built-in class for a Tab displaying "advanced" information such as PKs and data provenance."""
+@dataclass
+class Panel(Component):
+    """Base class for defining an individual display panel within a Layout within a Tab."""
 
-    tab_id = "advanced"
-    tab_label = "Advanced"
+    label: str = ""
+    section: str = SectionChoices.FULL_WIDTH
 
-    def __init__(self, **kwargs):
-        kwargs.setdefault("weight", self.WEIGHT_ADVANCED_TAB)
-        kwargs.setdefault(
-            "panels",
-            [
-                ObjectFieldsPanel(
-                    label="Object Details",
-                    section=SectionChoices.LEFT_HALF,
-                    weight=100,
-                    fields=["id", "natural_slug", "slug"],
-                    ignore_nonexistent_fields=True,
-                ),
-                ObjectFieldsPanel(
-                    label="Data Provenance",
-                    section=SectionChoices.LEFT_HALF,
-                    weight=200,
-                    fields=["created", "last_updated"],
-                    ignore_nonexistent_fields=True,
-                    # TODO add created_by/last_updated_by derived fields and link to REST API
-                ),
-                # TODO add advanced_ui custom fields and relationships
-            ],
-        )
-        super().__init__(**kwargs)
-
-
-class _ObjectDetailContactsTab(Tab):
-    """Built-in class for a Tab displaying information about contact/team associations."""
-
-    tab_id = "contacts"
-
-    def __init__(self, **kwargs):
-        kwargs.setdefault("weight", self.WEIGHT_CONTACTS_TAB)
-        kwargs.setdefault(
-            "panels",
-            [
-                ObjectsTablePanel(
-                    table_name="associated_contacts_table",
-                    # TODO: this is ugly - we should abstract this away and provide a standard way of including
-                    # bulk actions and other buttons in the footer
-                    footer_template_string="""\
-{% load perms %}
-{% with request.path|add:"?tab=contacts"|urlencode as return_url %}
-    {% if perms.extras.change_contactassociation %}
-        <button type="submit" name="_edit" formaction="{% url 'extras:contactassociation_bulk_edit' %}?return_url={{return_url}}" class="btn btn-warning btn-xs">
-            <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
-        </button>
-    {% endif %}
-    {% if perms.extras.delete_contactassociation %}
-        <button type="submit" formaction="{% url 'extras:contactassociation_bulk_delete' %}?return_url={{return_url}}" class="btn btn-danger btn-xs">
-            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
-        </button>
-    {% endif %}
-    {% if perms.extras.add_contactassociation %}
-        <div class="pull-right">
-            <a href="{% url 'extras:object_contact_team_assign' %}?return_url={{return_url}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" class="btn btn-primary btn-xs">
-                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contact
-            </a>
-        </div>
-    {% endif %}
-    <div class="clearfix"></div>
-{% endwith %}
-""",
-                ),
-            ],
-        )
-        super().__init__(**kwargs)
-
-    def should_render(self, context):
-        return context["object"].is_contact_associable_model
-
-    @property
-    def tab_label(self):
-        return format_html(
-            "Contacts {}",
-            render_to_string(
-                "utilities/templatetags/badge.html", badge(self.context["object"].associated_contacts.count())
-            ),
-        )
-
-
-class _ObjectDetailGroupsTab(Tab):
-    """Built-in class for a Tab displaying information about associated dynamic groups."""
-
-    tab_id = "dynamic_groups"
-
-    def __init__(self, **kwargs):
-        kwargs.setdefault("weight", self.WEIGHT_GROUPS_TAB)
-        kwargs.setdefault("panels", [ObjectsTablePanel(table_name="associated_dynamic_groups_table")])
-        super().__init__(**kwargs)
-
-    def should_render(self, context):
-        return (
-            context["object"].is_dynamic_group_associable_model
-            and context["request"].user.has_perm("extras.view_dynamicgroup")
-            and context["object"].dynamic_groups.exists()
-        )
-
-    @property
-    def tab_label(self):
-        return format_html(
-            "Dynamic Groups {}",
-            render_to_string("utilities/templatetags/badge.html", badge(self.context["object"].dynamic_groups.count())),
-        )
-
-
-class _ObjectDetailMetadataTab(Tab):
-    """Built-in class for a Tab displaying information about associated object metadata."""
-
-    tab_id = "object_metadata"
-
-    def __init__(self, **kwargs):
-        kwargs.setdefault("weight", self.WEIGHT_METADATA_TAB)
-        kwargs.setdefault("panels", [ObjectsTablePanel(table_name="associated_object_metadata_table")])
-        super().__init__(**kwargs)
-
-    def should_render(self, context):
-        return (
-            context["object"].is_metadata_associable_model
-            and context["request"].user.has_perm("extras.view_objectmetadata")
-            and context["object"].associated_object_metadata.exists()
-        )
-
-    @property
-    def tab_label(self):
-        return format_html(
-            "Object Metadata {}",
-            render_to_string(
-                "utilities/templatetags/badge.html", badge(self.context["object"].associated_object_metadata.count())
-            ),
-        )
-
-
-class Panel:
-    """Abstract base class for defining an individual display panel within a Layout within a Tab."""
-
-    # Overridable by subclasses if desired, hence not defined as CONSTANT
-    template_path = "components/panel/panel.html"
-    header_template_path = "components/panel/header.html"
-    body_template_path = "components/panel/body_generic.html"
-    content_template_path = None
-    footer_template_path = "components/panel/footer.html"
-
-    def __init__(
-        self,
-        *,
-        label=None,
-        weight=100,
-        section=SectionChoices.FULL_WIDTH,
-        content_template_path=None,
-        footer_template_string=None,
-    ):
-        """
-        Instantiate a Panel.
-
-        Args:
-            label (str): The label to display at the top of the panel.
-            weight (int): Influences relative position of panels within a section. Lower weights are toward the top.
-            section (str): One of the SectionChoices values in `nautobot.core.ui.choices`.
-            content_template_path (str): Path to an HTML template to use to render the content within the panel body.
-            footer_template_string (str): HTML template string to render into the panel footer.
-        """
-        self.label = label
-        self.weight = weight
-        if section not in SectionChoices.values():
-            raise RuntimeError(f"Unknown section {section}")
-        self.section = section
-        if content_template_path:
-            self.content_template_path = content_template_path
-        self.footer_template_string = footer_template_string
-
-    def should_render(self, context):
-        return True
+    template_path: str = "components/panel/panel.html"
+    header_template_path: str = "components/panel/header.html"
+    body_template_path: str = "components/panel/body_generic.html"
+    content_template_path: str = ""
+    footer_template_path: str = "components/panel/footer.html"
+    footer_template_string: str = ""
 
     def get_extra_context(self, context):
         return {}
@@ -485,83 +316,33 @@ class Panel:
         return ""
 
 
-class TemplatePanel(Panel):
-    """A panel that renders an arbitrary HTML template, either from a string or from a template file."""
-
-    def __init__(self, *, template_string=None, template_path=None, **kwargs):
-        if template_string is None and template_path is None:
-            raise ValueError("Either template_string or template_path must be provided")
-        if template_string is not None and template_path is not None:
-            raise ValueError("template_string and template_path are mutually exclusive")
-        self.template_string = template_string
-        # TODO conflict with Panel.template_path: self.template_path = template_path
-        super().__init__(**kwargs)
-
-    def render_content(self, context):
-        if self.template_string is not None:
-            return Template(self.template_string).render(Context(context))
-        return render(context["request"], self.template_path, context)
-
-
+@dataclass
 class ObjectsTablePanel(Panel):
     """A panel that renders a table of objects (typically related objects, rather than the main context object)."""
 
-    body_template_path = "components/panel/body_table.html"
-
-    def __init__(
-        self,
-        *,
-        table_name,
-        **kwargs,
-    ):
-        """
-        Instantiate an ObjectsTablePanel.
-
-        Args:
-            table_name (str): The render context key under which the table in question will be found.
-        """
-        self.table_name = table_name
-        kwargs.setdefault("content_template_path", "components/panel/content_table.html")
-        super().__init__(**kwargs)
+    body_template_path: str = "components/panel/body_table.html"
+    content_template_path: str = "components/panel/content_table.html"
+    table_name: str = ""  # TODO: once we have a minimum of Python 3.10, we can use `kw_only` and remove the default
 
     def get_extra_context(self, context):
         return {"content_table": context[self.table_name]}
 
 
+@dataclass
 class KeyValueTablePanel(Panel):
     """A panel that displays a two-column table of keys and values."""
 
-    body_template_path = "components/panel/body_key_value_table.html"
+    body_template_path: str = "components/panel/body_key_value_table.html"
 
 
+@dataclass
 class ObjectFieldsPanel(KeyValueTablePanel):
     """A panel that renders a table of object instance attributes."""
 
-    def __init__(
-        self,
-        *,
-        fields="__all__",
-        exclude_fields=None,
-        field_transforms=None,
-        ignore_nonexistent_fields=False,
-        **kwargs,
-    ):
-        """
-        Instantiate an ObjectFieldsPanel.
-
-        Args:
-            fields (str, list): The string "__all__", or an ordered list of field names to display.
-            exclude_fields (list): Optional list of field names to exclude from `__all__`.
-            field_transforms (dict): A dict of `{field_name: [transform_functions]}` that can be used to customize the
-                                     display string for any given field.
-        """
-        self.fields = fields
-        self.exclude_fields = exclude_fields or []
-        if self.exclude_fields and self.fields != "__all__":
-            raise ValueError("exclude_fields can only be set in combination with fields='__all__'")
-        self.field_transforms = field_transforms or {}
-        self.ignore_nonexistent_fields = ignore_nonexistent_fields
-        super().__init__(**kwargs)
+    fields: Union[str, tuple] = "__all__"
+    exclude_fields: tuple = ()
+    field_transforms: dict = field(default_factory=dict)
+    ignore_nonexistent_fields: bool = False
 
     def render_label(self, context):
         if self.label is None:
@@ -615,6 +396,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
                     field_display = hyperlinked_object_with_color(field_value)
                 else:
                     field_display = hyperlinked_object(field_value)
+                # TODO: render location hierarchy for Location objects
 
                 if isinstance(field_value, Tenant) and field_value.tenant_group is not None:
                     field_display = format_html("{} / {}", hyperlinked_object(field_value.tenant_group), field_display)
@@ -633,3 +415,130 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             )
 
         return result
+
+
+@dataclass
+class _ObjectDetailAdvancedTab(Tab):
+    """Built-in class for a Tab displaying "advanced" information such as PKs and data provenance."""
+
+    tab_id: str = "advanced"
+    tab_label: str = "Advanced"
+    weight: int = Tab.WEIGHT_ADVANCED_TAB
+    panels: tuple = (
+        ObjectFieldsPanel(
+            label="Object Details",
+            section=SectionChoices.LEFT_HALF,
+            weight=100,
+            fields=["id", "natural_slug", "slug"],
+            ignore_nonexistent_fields=True,
+        ),
+        ObjectFieldsPanel(
+            label="Data Provenance",
+            section=SectionChoices.LEFT_HALF,
+            weight=200,
+            fields=["created", "last_updated"],
+            ignore_nonexistent_fields=True,
+            # TODO add created_by/last_updated_by derived fields and link to REST API
+        ),
+        # TODO add advanced_ui custom fields and relationships
+    )
+
+
+@dataclass
+class _ObjectDetailContactsTab(Tab):
+    """Built-in class for a Tab displaying information about contact/team associations."""
+
+    tab_id: str = "contacts"
+    tab_label: str = "Contacts"
+    weight: int = Tab.WEIGHT_CONTACTS_TAB
+    panels: tuple = (
+        ObjectsTablePanel(
+            weight=100,
+            table_name="associated_contacts_table",
+            # TODO: this is ugly - we should abstract this away and provide a standard way of including
+            # bulk actions and other buttons in the footer
+            footer_template_string="""\
+{% load perms %}
+{% with request.path|add:"?tab=contacts"|urlencode as return_url %}
+    {% if perms.extras.change_contactassociation %}
+        <button type="submit" name="_edit" formaction="{% url 'extras:contactassociation_bulk_edit' %}?return_url={{return_url}}" class="btn btn-warning btn-xs">
+            <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
+        </button>
+    {% endif %}
+    {% if perms.extras.delete_contactassociation %}
+        <button type="submit" formaction="{% url 'extras:contactassociation_bulk_delete' %}?return_url={{return_url}}" class="btn btn-danger btn-xs">
+            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
+        </button>
+    {% endif %}
+    {% if perms.extras.add_contactassociation %}
+        <div class="pull-right">
+            <a href="{% url 'extras:object_contact_team_assign' %}?return_url={{return_url}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" class="btn btn-primary btn-xs">
+                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contact
+            </a>
+        </div>
+    {% endif %}
+    <div class="clearfix"></div>
+{% endwith %}
+""",
+        ),
+    )
+
+    def should_render(self, context):
+        return context["object"].is_contact_associable_model
+
+    def render_tab_label(self, context):
+        return format_html(
+            "{} {}",
+            self.tab_label,
+            render_to_string("utilities/templatetags/badge.html", badge(context["object"].associated_contacts.count())),
+        )
+
+
+@dataclass
+class _ObjectDetailGroupsTab(Tab):
+    """Built-in class for a Tab displaying information about associated dynamic groups."""
+
+    tab_id: str = "dynamic_groups"
+    tab_label: str = "Dynamic Groups"
+    weight: int = Tab.WEIGHT_GROUPS_TAB
+    panels: tuple = (ObjectsTablePanel(weight=100, table_name="associated_dynamic_groups_table"),)
+
+    def should_render(self, context):
+        return (
+            context["object"].is_dynamic_group_associable_model
+            and context["request"].user.has_perm("extras.view_dynamicgroup")
+            and context["object"].dynamic_groups.exists()
+        )
+
+    def render_tab_label(self, context):
+        return format_html(
+            "{} {}",
+            self.tab_label,
+            render_to_string("utilities/templatetags/badge.html", badge(context["object"].dynamic_groups.count())),
+        )
+
+
+@dataclass
+class _ObjectDetailMetadataTab(Tab):
+    """Built-in class for a Tab displaying information about associated object metadata."""
+
+    tab_id: str = "object_metadata"
+    tab_label: str = "Object Metadata"
+    weight: int = Tab.WEIGHT_METADATA_TAB
+    panels: tuple = (ObjectsTablePanel(weight=100, table_name="associated_object_metadata_table"),)
+
+    def should_render(self, context):
+        return (
+            context["object"].is_metadata_associable_model
+            and context["request"].user.has_perm("extras.view_objectmetadata")
+            and context["object"].associated_object_metadata.exists()
+        )
+
+    def render_tab_label(self, context):
+        return format_html(
+            "{} {}",
+            self.tab_label,
+            render_to_string(
+                "utilities/templatetags/badge.html", badge(context["object"].associated_object_metadata.count())
+            ),
+        )
