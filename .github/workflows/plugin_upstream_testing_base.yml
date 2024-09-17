@@ -33,6 +33,10 @@ jobs:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "1.8.2"
           python-version: "${{ env.PYTHON_VERSION }}"
+      - name: "Constrain Nautobot version and regenerate lock file"
+        env:
+          INVOKE_NAUTOBOT_DEV_EXAMPLE_LOCAL: "true"
+        run: "poetry add --lock git+https://github.com/nautobot/nautobot.git#${{ matrix.nautobot-version }} --python ${{ env.PYTHON_VERSION }}"
       - name: "Set up Docker Buildx"
         id: "buildx"
         uses: "docker/setup-buildx-action@v1"
@@ -48,6 +52,7 @@ jobs:
           build-args: |
             NAUTOBOT_VER=${{ matrix.nautobot-version }}
             PYTHON_VER=${{ env.PYTHON_VERSION }}
+            CI=true
           outputs: "type=docker,dest=/tmp/nautobot_${{ matrix.nautobot-version }}.tar"
       - name: Upload docker image artifact
         uses: actions/upload-artifact@v4
