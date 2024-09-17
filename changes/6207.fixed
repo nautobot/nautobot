@@ -1,2 +1,2 @@
-Fixed ClusterTable for device count column link uses outdated filter pattern.
-Fixed PowerPanelTable for power feed count column link uses outdated filter pattern.
+Fixed incorrect link in ClusterTable for device count column.
+Fixed incorrect link in PowerPanelTable for power feed count column.
