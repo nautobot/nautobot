@@ -1,11 +1,9 @@
 """Classes and utilities for defining an object detail view through a NautobotUIViewSet."""
 
-from abc import ABC, abstractmethod
-
 from django.core.exceptions import FieldDoesNotExist
 from django.shortcuts import render
-from django.template import Template
-from django.template.loader import render_to_string
+from django.template import Context, Template
+from django.template.loader import get_template, render_to_string
 from django.templatetags.l10n import localize
 from django.utils.html import format_html, format_html_join
 
@@ -17,7 +15,6 @@ from nautobot.core.templatetags.helpers import (
     placeholder,
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
-from nautobot.extras.templatetags.plugins import plugin_full_width_page, plugin_left_page, plugin_right_page
 from nautobot.tenancy.models import Tenant
 
 # ObjectDetailContent
@@ -151,11 +148,19 @@ class ObjectDetailContent:
         return format_html_join("\n", "{}", ([tab.render_content(context)] for tab in self.tabs))
 
 
-class Tab(ABC):
+class Tab:
     """Base class for UI framework definition of a single tabbed pane within an Object Detail (Object Retrieve) page."""
 
     tab_id: str
     tab_label: str
+
+    # Overridable by subclasses if desired, hence not defined as CONSTANT
+    tab_template_path = "components/tab/tab.html"
+    content_template_path = "components/tab/content.html"
+    layout_template_paths = {
+        LayoutChoices.TWO_OVER_ONE: "components/layout/two_over_one.html",
+        LayoutChoices.ONE_OVER_TWO: "components/layout/one_over_two.html",
+    }
 
     WEIGHT_MAIN_TAB = 100
     WEIGHT_ADVANCED_TAB = 200
@@ -191,97 +196,38 @@ class Tab(ABC):
         if not self.should_render(context):
             return ""
 
-        self.context = context
-
-        return format_html(
-            """\
-<li role="presentation"{active_class}>
-    <a href="{url}#{tab_id}" onclick="switch_tab(this.href)" aria-controls="{tab_id}" role="tab" data-toggle="tab">
-        {tab_label}
-    </a>
-</li>""",
-            active_class=' class="active"' if context["request"].GET.get("tab", None) == self.tab_id else "",
-            url=context["object"].get_absolute_url(),
-            tab_id=self.tab_id,
-            tab_label=self.tab_label,
+        # Two steps here because self.tab_label may be dependent on self.context being defined
+        self.context = context.flatten()
+        self.context.update(
+            {
+                "tab_id": self.tab_id,
+                "tab_label": self.tab_label,
+            }
         )
+
+        return get_template(self.tab_template_path).render(self.context)
 
     def render_content(self, context):
         """Render the tab contents to HTML."""
         if not self.should_render(context):
             return ""
 
-        self.context = context
-        instance = context["object"]
-
-        tab_content = None
-        panel_data = {
-            "left_half_panels": format_html_join(
-                "\n", "{}", ([panel.render(context)] for panel in self.panels_for_section(SectionChoices.LEFT_HALF))
-            ),
-            "plugin_left_page": plugin_left_page(context, instance) if self.tab_id == "main" else "",
-            "right_half_panels": format_html_join(
-                "\n", "{}", ([panel.render(context)] for panel in self.panels_for_section(SectionChoices.RIGHT_HALF))
-            ),
-            "plugin_right_page": plugin_right_page(context, instance) if self.tab_id == "main" else "",
-            "full_width_panels": format_html_join(
-                "\n", "{}", ([panel.render(context)] for panel in self.panels_for_section(SectionChoices.FULL_WIDTH))
-            ),
-            "plugin_full_width_page": plugin_full_width_page(context, instance) if self.tab_id == "main" else "",
-        }
-
-        if self.layout == LayoutChoices.TWO_OVER_ONE:
-            tab_content = format_html(
-                """\
-    <div class="row">
-        <div class="col-md-6">
-            {left_half_panels}
-            {plugin_left_page}
-        </div>
-        <div class="col-md-6">
-            {right_half_panels}
-            {plugin_right_page}
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-12">
-            {full_width_panels}
-            {plugin_full_width_page}
-        </div>
-    </div>""",
-                **panel_data,
-            )
-        elif self.layout == LayoutChoices.ONE_OVER_TWO:
-            tab_content = format_html(
-                """\
-    <div class="row">
-        <div class="col-md-12">
-            {full_width_panels}
-            {plugin_full_width_page}
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-6">
-            {left_half_panels}
-            {plugin_left_page}
-        </div>
-        <div class="col-md-6">
-            {right_half_panels}
-            {plugin_right_page}
-        </div>
-    </div>""",
-                **panel_data,
-            )
-
-        return format_html(
-            """\
-<div id="{tab_id}" role="tabpanel" class="tab-pane {active_or_fade}">
-    {tab_content}
-</div>""",
-            tab_id=self.tab_id,
-            active_or_fade="active" if context["request"].GET.get("tab", None) == self.tab_id else "fade",
-            tab_content=tab_content,
+        # Two steps here because self.tab_label may be dependent on self.context being defined
+        self.context = context.flatten()
+        self.context.update(
+            {
+                "tab_id": self.tab_id,
+                "tab_label": self.tab_label,
+                "include_plugin_content": self.tab_id == "main",
+                "left_half_panels": self.panels_for_section(SectionChoices.LEFT_HALF),
+                "right_half_panels": self.panels_for_section(SectionChoices.RIGHT_HALF),
+                "full_width_panels": self.panels_for_section(SectionChoices.FULL_WIDTH),
+            }
         )
+
+        tab_content = get_template(self.layout_template_paths[self.layout]).render(self.context)
+
+        return get_template(self.content_template_path).render({**self.context, "tab_content": tab_content})
 
 
 class _ObjectDetailMainTab(Tab):
@@ -440,12 +386,15 @@ class _ObjectDetailMetadataTab(Tab):
         )
 
 
-class Panel(ABC):
+class Panel:
     """Abstract base class for defining an individual display panel within a Layout within a Tab."""
 
-    DEFAULT_CONTENT_WRAPPER = '<div class="panel-body">{}</div>'
-    ATTR_TABLE_CONTENT_WRAPPER = '<table class="table table-hover panel-body attr-table">{}</table>'
-    TABLE_CONTENT_WRAPPER = '<div class="table-responsive">{}</div>'
+    # Overridable by subclasses if desired, hence not defined as CONSTANT
+    template_path = "components/panel/panel.html"
+    header_template_path = "components/panel/header.html"
+    body_template_path = "components/panel/body_generic.html"
+    content_template_path = None
+    footer_template_path = "components/panel/footer.html"
 
     def __init__(
         self,
@@ -453,7 +402,7 @@ class Panel(ABC):
         label=None,
         weight=100,
         section=SectionChoices.FULL_WIDTH,
-        content_wrapper=None,
+        content_template_path=None,
         footer_template_string=None,
     ):
         """
@@ -463,8 +412,7 @@ class Panel(ABC):
             label (str): The label to display at the top of the panel.
             weight (int): Influences relative position of panels within a section. Lower weights are toward the top.
             section (str): One of the SectionChoices values in `nautobot.core.ui.choices`.
-            content_wrapper (str): HTML format string to wrap the rendered content in.
-                Defaults to `<div class="panel-body">{}</div>`.
+            content_template_path (str): Path to an HTML template to use to render the content within the panel body.
             footer_template_string (str): HTML template string to render into the panel footer.
         """
         self.label = label
@@ -472,27 +420,69 @@ class Panel(ABC):
         if section not in SectionChoices.values():
             raise RuntimeError(f"Unknown section {section}")
         self.section = section
-        self.content_wrapper = content_wrapper or self.DEFAULT_CONTENT_WRAPPER
+        if content_template_path:
+            self.content_template_path = content_template_path
         self.footer_template_string = footer_template_string
 
+    def should_render(self, context):
+        return True
+
+    def get_extra_context(self, context):
+        return {}
+
     def render(self, context):
-        template = format_html('<div class="panel panel-default">')
-        label = self.render_label(context)
-        if label:
-            template += format_html('<div class="panel-heading"><strong>{}</strong></div>', label)
-        template += format_html(self.content_wrapper, self.render_content(context))
-        if self.footer_template_string:
-            template += format_html(
-                '<div class="panel-footer">{}</div>', Template(self.footer_template_string).render(context)
-            )
-        template += format_html("</div>")
-        return template
+        if not self.should_render(context):
+            return ""
+        context = {**context.flatten(), **self.get_extra_context(context)}
+        return get_template(self.template_path).render(
+            {
+                **context,
+                "header": self.render_header(context),
+                "body": self.render_body(context),
+                "footer": self.render_footer(context),
+            }
+        )
 
     def render_label(self, context):
         return self.label
 
-    @abstractmethod
-    def render_content(self, context): ...
+    def render_header(self, context):
+        return get_template(self.header_template_path).render(
+            {
+                **context,
+                "label": self.render_label(context),
+                "extra_content": self.render_header_extra_content(context),
+            }
+        )
+
+    def render_header_extra_content(self, context):
+        return ""
+
+    def render_body(self, context):
+        return get_template(self.body_template_path).render(
+            {
+                **context,
+                "content": self.render_content(context),
+            }
+        )
+
+    def render_content(self, context):
+        if self.content_template_path:
+            return get_template(self.content_template_path).render(context)
+        return ""
+
+    def render_footer(self, context):
+        return get_template(self.footer_template_path).render(
+            {
+                **context,
+                "extra_content": self.render_footer_extra_content(context),
+            }
+        )
+
+    def render_footer_extra_content(self, context):
+        if self.footer_template_string:
+            return Template(self.footer_template_string).render(Context(context))
+        return ""
 
 
 class TemplatePanel(Panel):
@@ -504,17 +494,19 @@ class TemplatePanel(Panel):
         if template_string is not None and template_path is not None:
             raise ValueError("template_string and template_path are mutually exclusive")
         self.template_string = template_string
-        self.template_path = template_path
+        # TODO conflict with Panel.template_path: self.template_path = template_path
         super().__init__(**kwargs)
 
     def render_content(self, context):
         if self.template_string is not None:
-            return Template(self.template_string).render(context)
+            return Template(self.template_string).render(Context(context))
         return render(context["request"], self.template_path, context)
 
 
-class ObjectsTablePanel(TemplatePanel):
+class ObjectsTablePanel(Panel):
     """A panel that renders a table of objects (typically related objects, rather than the main context object)."""
+
+    body_template_path = "components/panel/body_table.html"
 
     def __init__(
         self,
@@ -528,15 +520,21 @@ class ObjectsTablePanel(TemplatePanel):
         Args:
             table_name (str): The render context key under which the table in question will be found.
         """
-        kwargs.setdefault("content_wrapper", self.TABLE_CONTENT_WRAPPER)
-        kwargs.setdefault(
-            "template_string",
-            "{% load render_table from django_tables2 %}{% render_table " + table_name + " 'inc/table.html' %}",
-        )
+        self.table_name = table_name
+        kwargs.setdefault("content_template_path", "components/panel/content_table.html")
         super().__init__(**kwargs)
 
+    def get_extra_context(self, context):
+        return {"content_table": context[self.table_name]}
 
-class ObjectFieldsPanel(Panel):
+
+class KeyValueTablePanel(Panel):
+    """A panel that displays a two-column table of keys and values."""
+
+    body_template_path = "components/panel/body_key_value_table.html"
+
+
+class ObjectFieldsPanel(KeyValueTablePanel):
     """A panel that renders a table of object instance attributes."""
 
     def __init__(
@@ -563,7 +561,6 @@ class ObjectFieldsPanel(Panel):
             raise ValueError("exclude_fields can only be set in combination with fields='__all__'")
         self.field_transforms = field_transforms or {}
         self.ignore_nonexistent_fields = ignore_nonexistent_fields
-        kwargs.setdefault("content_wrapper", self.ATTR_TABLE_CONTENT_WRAPPER)
         super().__init__(**kwargs)
 
     def render_label(self, context):

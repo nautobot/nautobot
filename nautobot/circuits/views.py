@@ -2,15 +2,16 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import get_template
 from django_tables2 import RequestConfig
 
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.templatetags.helpers import humanize_speed, placeholder, render_markdown
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
+    KeyValueTablePanel,
     ObjectDetailContent,
     ObjectFieldsPanel,
-    TemplatePanel,
 )
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
@@ -134,6 +135,21 @@ class CircuitUIViewSet(NautobotUIViewSet):
     queryset = Circuit.objects.all()
     serializer_class = serializers.CircuitSerializer
     table_class = tables.CircuitTable
+
+    class CircuitTerminationPanel(KeyValueTablePanel):
+        content_template_path = "circuits/inc/circuit_termination_fragment.html"
+
+        def render_header_extra_content(self, context):
+            return get_template("circuits/inc/circuit_termination_header_extra_content.html").render(context)
+
+    class CircuitTerminationAPanel(CircuitTerminationPanel):
+        def get_extra_context(self, context):
+            return {"termination": context["circuit_termination_a"]}
+
+    class CircuitTerminationZPanel(CircuitTerminationPanel):
+        def get_extra_context(self, context):
+            return {"termination": context["circuit_termination_z"]}
+
     object_detail_content = ObjectDetailContent(
         panels=(
             ObjectFieldsPanel(
@@ -150,21 +166,15 @@ class CircuitUIViewSet(NautobotUIViewSet):
                 fields=["comments"],
                 field_transforms={"comments": [render_markdown, placeholder]},
             ),
-            TemplatePanel(
+            CircuitTerminationAPanel(
                 label="Termination - A Side",
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
-                # TODO: edit/swap/delete/detail buttons in panel header
-                content_wrapper=TemplatePanel.ATTR_TABLE_CONTENT_WRAPPER,
-                template_string="{% include 'circuits/inc/circuit_termination_fragment.html' with termination=circuit_termination_a %}",
             ),
-            TemplatePanel(
+            CircuitTerminationZPanel(
                 label="Termination - Z Side",
                 section=SectionChoices.RIGHT_HALF,
                 weight=200,
-                # TODO: edit/swap/delete/detail buttons in panel header
-                content_wrapper=TemplatePanel.ATTR_TABLE_CONTENT_WRAPPER,
-                template_string="{% include 'circuits/inc/circuit_termination_fragment.html' with termination=circuit_termination_z %}",
             ),
         ),
     )
