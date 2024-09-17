@@ -1,0 +1,1 @@
+Changed default cache timeout for Constance configuration from 1 day to 300 seconds to match other caches.

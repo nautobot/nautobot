@@ -93,7 +93,7 @@ Groups of users can be created to provide role-based access control and simplify
 
 ### Adding Users to Groups
 
-Users can be added to groups through the Admin UI by superusers or automatically assigned to externally authenticated users through the [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../configuration/optional-settings.md#external_auth_default_permissions) settings. Nautobot groups can optionally be mapped to LDAP groups when using [LDAP authentication](../configuration/authentication/ldap.md#user-groups-for-permissions).
+Users can be added to groups through the Admin UI by superusers or automatically assigned to externally authenticated users through the [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../configuration/settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../configuration/settings.md#external_auth_default_permissions) settings. Nautobot groups can optionally be mapped to LDAP groups when using [LDAP authentication](../configuration/authentication/ldap.md#user-groups-for-permissions).
 
 ### Assigning Permissions to Groups
 
