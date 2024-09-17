@@ -6,11 +6,9 @@ from django_tables2 import RequestConfig
 
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.templatetags.helpers import humanize_speed, placeholder, render_markdown
+from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
-    LayoutFullWidth,
-    LayoutTwoColumn,
     ObjectDetailContent,
-    ObjectDetailMainTab,
     ObjectFieldsPanel,
     TemplatePanel,
 )
@@ -137,42 +135,38 @@ class CircuitUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.CircuitSerializer
     table_class = tables.CircuitTable
     object_detail_content = ObjectDetailContent(
-        tabs=[
-            ObjectDetailMainTab(
-                layouts=[
-                    LayoutTwoColumn(
-                        include_template_extensions=True,
-                        left_panels=(
-                            ObjectFieldsPanel(
-                                fields="__all__",
-                                exclude_fields=["comments", "circuit_termination_a", "circuit_termination_z"],
-                                field_transforms={"commit_rate": [humanize_speed, placeholder]},
-                            ),
-                            ObjectFieldsPanel(
-                                label="Comments",
-                                fields=["comments"],
-                                field_transforms={"comments": [render_markdown, placeholder]},
-                            ),
-                        ),
-                        right_panels=(
-                            TemplatePanel(
-                                label="Termination - A Side",
-                                # TODO: edit/swap/delete/detail buttons in panel header
-                                content_wrapper=TemplatePanel.ATTR_TABLE_CONTENT_WRAPPER,
-                                template_string="{% include 'circuits/inc/circuit_termination_fragment.html' with termination=circuit_termination_a %}",
-                            ),
-                            TemplatePanel(
-                                label="Termination - Z Side",
-                                # TODO: edit/swap/delete/detail buttons in panel header
-                                content_wrapper=TemplatePanel.ATTR_TABLE_CONTENT_WRAPPER,
-                                template_string="{% include 'circuits/inc/circuit_termination_fragment.html' with termination=circuit_termination_z %}",
-                            ),
-                        ),
-                    ),
-                    LayoutFullWidth(include_template_extensions=True),
-                ],
+        panels=(
+            ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+                exclude_fields=["comments", "circuit_termination_a", "circuit_termination_z"],
+                field_transforms={"commit_rate": [humanize_speed, placeholder]},
             ),
-        ]
+            ObjectFieldsPanel(
+                label="Comments",
+                weight=200,
+                section=SectionChoices.LEFT_HALF,
+                fields=["comments"],
+                field_transforms={"comments": [render_markdown, placeholder]},
+            ),
+            TemplatePanel(
+                label="Termination - A Side",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                # TODO: edit/swap/delete/detail buttons in panel header
+                content_wrapper=TemplatePanel.ATTR_TABLE_CONTENT_WRAPPER,
+                template_string="{% include 'circuits/inc/circuit_termination_fragment.html' with termination=circuit_termination_a %}",
+            ),
+            TemplatePanel(
+                label="Termination - Z Side",
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                # TODO: edit/swap/delete/detail buttons in panel header
+                content_wrapper=TemplatePanel.ATTR_TABLE_CONTENT_WRAPPER,
+                template_string="{% include 'circuits/inc/circuit_termination_fragment.html' with termination=circuit_termination_z %}",
+            ),
+        ),
     )
 
     def get_extra_context(self, request, instance):

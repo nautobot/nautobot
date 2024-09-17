@@ -16,6 +16,7 @@ from nautobot.core.templatetags.helpers import (
     hyperlinked_object_with_color,
     placeholder,
 )
+from nautobot.core.ui.choices import LayoutChoices, SectionChoices
 from nautobot.extras.templatetags.plugins import plugin_full_width_page, plugin_left_page, plugin_right_page
 from nautobot.tenancy.models import Tenant
 
@@ -107,22 +108,39 @@ class ObjectDetailContent:
     This currently defines the tabs and their contents, but currently does NOT define the page title, breadcrumbs, etc.
     """
 
-    def __init__(self, tabs=None):
+    def __init__(self, *, panels=None, layout=LayoutChoices.DEFAULT, extra_tabs=None):
         """
         Create an ObjectDetailContent.
 
         Args:
-            tabs (list): Optional list of `Tab` instances; if unset, the default `ObjectDetailMainTab` will be used.
-                         Standard extras Tabs (advanced, contacts, dynamic-groups, metadata, etc.) do not need to be
-                         specified as they will be automatically included regardless.
+            panels (list): List of `Panel` instances to include in this layout by default. Standard `extras` Panels
+                (custom fields, relationships, etc.) do not need to be specified as they will be automatically included.
+            layout (str): One of the LayoutChoices values from nautobot.core.ui.choices.
+            extra_tabs (list): Optional list of `Tab` instances. Standard `extras` Tabs (advanced, contacts,
+                dynamic-groups, metadata, etc.) do not need to be specified as they will be automatically included.
         """
-        tabs = list(tabs) if tabs is not None else [ObjectDetailMainTab()]
-        # Inject "standard" extra tabs
-        tabs.append(_ObjectDetailAdvancedTab())
-        tabs.append(_ObjectDetailContactsTab())
-        tabs.append(_ObjectDetailGroupsTab())
-        tabs.append(_ObjectDetailMetadataTab())
+        tabs = [
+            _ObjectDetailMainTab(
+                layout=layout,
+                panels=panels,
+            ),
+            # Inject "standard" extra tabs
+            _ObjectDetailAdvancedTab(),
+            _ObjectDetailContactsTab(),
+            _ObjectDetailGroupsTab(),
+            _ObjectDetailMetadataTab(),
+        ]
+        if extra_tabs is not None:
+            tabs.extend(extra_tabs)
         self.tabs = tabs
+
+    @property
+    def tabs(self):
+        return sorted(self._tabs, key=lambda tab: tab.weight)
+
+    @tabs.setter
+    def tabs(self, value):
+        self._tabs = value
 
     def render_tabs(self, context):
         """Render the tabs (as opposed to their contents) for each of `self.tabs`."""
@@ -139,14 +157,31 @@ class Tab(ABC):
     tab_id: str
     tab_label: str
 
-    def __init__(self, *, layouts):
+    WEIGHT_MAIN_TAB = 100
+    WEIGHT_ADVANCED_TAB = 200
+    WEIGHT_CONTACTS_TAB = 300
+    WEIGHT_GROUPS_TAB = 400
+    WEIGHT_METADATA_TAB = 500
+    WEIGHT_NOTES_TAB = 600  # reserved, not yet using this framework
+    WEIGHT_CHANGELOG_TAB = 700  # reserved, not yet using this framework
+
+    def __init__(self, *, panels, weight, layout=LayoutChoices.DEFAULT):
         """
-        Create a Tab containing the given layouts of data.
+        Create a Tab containing the given panels and layout.
 
         Args:
-            layouts (list): List of `Layout` instances contained in this tab.
+            panels (list): List of `Panel` instances to include in this layout by default.
+            weight (int): Influences order of the tabs within a page (lower weights appear first).
+            layout (str): One of the LayoutChoices values from nautobot.core.ui.choices.
         """
-        self.layouts = list(layouts)
+        if layout not in LayoutChoices.values():
+            raise RuntimeError(f"Unknown layout {layout}")
+        self.layout = layout
+        self.panels = panels
+        self.weight = weight
+
+    def panels_for_section(self, section):
+        return sorted((panel for panel in self.panels if panel.section == section), key=lambda panel: panel.weight)
 
     def should_render(self, context):
         return True
@@ -177,35 +212,88 @@ class Tab(ABC):
             return ""
 
         self.context = context
+        instance = context["object"]
+
+        tab_content = None
+        panel_data = {
+            "left_half_panels": format_html_join(
+                "\n", "{}", ([panel.render(context)] for panel in self.panels_for_section(SectionChoices.LEFT_HALF))
+            ),
+            "plugin_left_page": plugin_left_page(context, instance) if self.tab_id == "main" else "",
+            "right_half_panels": format_html_join(
+                "\n", "{}", ([panel.render(context)] for panel in self.panels_for_section(SectionChoices.RIGHT_HALF))
+            ),
+            "plugin_right_page": plugin_right_page(context, instance) if self.tab_id == "main" else "",
+            "full_width_panels": format_html_join(
+                "\n", "{}", ([panel.render(context)] for panel in self.panels_for_section(SectionChoices.FULL_WIDTH))
+            ),
+            "plugin_full_width_page": plugin_full_width_page(context, instance) if self.tab_id == "main" else "",
+        }
+
+        if self.layout == LayoutChoices.TWO_OVER_ONE:
+            tab_content = format_html(
+                """\
+    <div class="row">
+        <div class="col-md-6">
+            {left_half_panels}
+            {plugin_left_page}
+        </div>
+        <div class="col-md-6">
+            {right_half_panels}
+            {plugin_right_page}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            {full_width_panels}
+            {plugin_full_width_page}
+        </div>
+    </div>""",
+                **panel_data,
+            )
+        elif self.layout == LayoutChoices.ONE_OVER_TWO:
+            tab_content = format_html(
+                """\
+    <div class="row">
+        <div class="col-md-12">
+            {full_width_panels}
+            {plugin_full_width_page}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            {left_half_panels}
+            {plugin_left_page}
+        </div>
+        <div class="col-md-6">
+            {right_half_panels}
+            {plugin_right_page}
+        </div>
+    </div>""",
+                **panel_data,
+            )
 
         return format_html(
             """\
 <div id="{tab_id}" role="tabpanel" class="tab-pane {active_or_fade}">
-    {layouts}
+    {tab_content}
 </div>""",
             tab_id=self.tab_id,
             active_or_fade="active" if context["request"].GET.get("tab", None) == self.tab_id else "fade",
-            layouts=format_html_join("\n", "{}", ([layout.render(context)] for layout in self.layouts)),
+            tab_content=tab_content,
         )
 
 
-class ObjectDetailMainTab(Tab):
+class _ObjectDetailMainTab(Tab):
     """Base class for a main display tab containing an overview of object fields and similar data."""
 
     tab_id = "main"
 
-    def __init__(self, layouts=None):
+    def __init__(self, **kwargs):
         """Default to two-column layout at top (containing a left `ObjectFieldsPanel`) with full-width layout below."""
-        if layouts is None:
-            layouts = [
-                LayoutTwoColumn(
-                    include_template_extensions=True,
-                    left_panels=(ObjectFieldsPanel(),),
-                ),
-                LayoutFullWidth(include_template_extensions=True),
-            ]
-        # TODO: autoinject standard panels (custom fields, relationships, tags, etc.) even if layouts was customized
-        super().__init__(layouts=layouts)
+        kwargs.setdefault("weight", self.WEIGHT_MAIN_TAB)
+        super().__init__(**kwargs)
+        # TODO: inject standard panels (custom fields, relationships, tags, etc.) even if kwargs["panels"] is customized
 
     @property
     def tab_label(self):
@@ -219,29 +307,30 @@ class _ObjectDetailAdvancedTab(Tab):
     tab_id = "advanced"
     tab_label = "Advanced"
 
-    def __init__(self):
-        super().__init__(
-            layouts=(
-                LayoutTwoColumn(
-                    left_panels=(
-                        # TODO
-                        ObjectFieldsPanel(
-                            label="Object Details",
-                            fields=["id", "natural_slug", "slug"],
-                            ignore_nonexistent_fields=True,
-                        ),
-                        ObjectFieldsPanel(
-                            label="Data Provenance",
-                            fields=["created", "last_updated"],
-                            ignore_nonexistent_fields=True,
-                            # TODO add created_by/last_updated_by derived fields and link to REST API
-                        ),
-                        # TODO add advanced_ui custom fields and relationships
-                    ),
+    def __init__(self, **kwargs):
+        kwargs.setdefault("weight", self.WEIGHT_ADVANCED_TAB)
+        kwargs.setdefault(
+            "panels",
+            [
+                ObjectFieldsPanel(
+                    label="Object Details",
+                    section=SectionChoices.LEFT_HALF,
+                    weight=100,
+                    fields=["id", "natural_slug", "slug"],
+                    ignore_nonexistent_fields=True,
                 ),
-                LayoutFullWidth(),
-            )
+                ObjectFieldsPanel(
+                    label="Data Provenance",
+                    section=SectionChoices.LEFT_HALF,
+                    weight=200,
+                    fields=["created", "last_updated"],
+                    ignore_nonexistent_fields=True,
+                    # TODO add created_by/last_updated_by derived fields and link to REST API
+                ),
+                # TODO add advanced_ui custom fields and relationships
+            ],
         )
+        super().__init__(**kwargs)
 
 
 class _ObjectDetailContactsTab(Tab):
@@ -249,17 +338,42 @@ class _ObjectDetailContactsTab(Tab):
 
     tab_id = "contacts"
 
-    def __init__(self):
-        super().__init__(
-            layouts=(
-                LayoutFullWidth(
-                    panels=(
-                        # TODO
-                        TemplatePanel(label="Contact Associations", template_string="Contact Associations Table"),
-                    ),
+    def __init__(self, **kwargs):
+        kwargs.setdefault("weight", self.WEIGHT_CONTACTS_TAB)
+        kwargs.setdefault(
+            "panels",
+            [
+                ObjectsTablePanel(
+                    table_name="associated_contacts_table",
+                    # TODO: this is ugly - we should abstract this away and provide a standard way of including
+                    # bulk actions and other buttons in the footer
+                    footer_template_string="""\
+{% load perms %}
+{% with request.path|add:"?tab=contacts"|urlencode as return_url %}
+    {% if perms.extras.change_contactassociation %}
+        <button type="submit" name="_edit" formaction="{% url 'extras:contactassociation_bulk_edit' %}?return_url={{return_url}}" class="btn btn-warning btn-xs">
+            <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
+        </button>
+    {% endif %}
+    {% if perms.extras.delete_contactassociation %}
+        <button type="submit" formaction="{% url 'extras:contactassociation_bulk_delete' %}?return_url={{return_url}}" class="btn btn-danger btn-xs">
+            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
+        </button>
+    {% endif %}
+    {% if perms.extras.add_contactassociation %}
+        <div class="pull-right">
+            <a href="{% url 'extras:object_contact_team_assign' %}?return_url={{return_url}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" class="btn btn-primary btn-xs">
+                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contact
+            </a>
+        </div>
+    {% endif %}
+    <div class="clearfix"></div>
+{% endwith %}
+""",
                 ),
-            ),
+            ],
         )
+        super().__init__(**kwargs)
 
     def should_render(self, context):
         return context["object"].is_contact_associable_model
@@ -279,17 +393,10 @@ class _ObjectDetailGroupsTab(Tab):
 
     tab_id = "dynamic_groups"
 
-    def __init__(self):
-        super().__init__(
-            layouts=(
-                LayoutFullWidth(
-                    panels=(
-                        # TODO
-                        TemplatePanel(label="Dynamic Groups", template_string="Dynamic Groups Table"),
-                    ),
-                ),
-            ),
-        )
+    def __init__(self, **kwargs):
+        kwargs.setdefault("weight", self.WEIGHT_GROUPS_TAB)
+        kwargs.setdefault("panels", [ObjectsTablePanel(table_name="associated_dynamic_groups_table")])
+        super().__init__(**kwargs)
 
     def should_render(self, context):
         return (
@@ -311,17 +418,10 @@ class _ObjectDetailMetadataTab(Tab):
 
     tab_id = "object_metadata"
 
-    def __init__(self):
-        super().__init__(
-            layouts=(
-                LayoutFullWidth(
-                    panels=(
-                        # TODO
-                        TemplatePanel(label="Object Metadata", template_string="Object Metadata Table"),
-                    ),
-                ),
-            ),
-        )
+    def __init__(self, **kwargs):
+        kwargs.setdefault("weight", self.WEIGHT_METADATA_TAB)
+        kwargs.setdefault("panels", [ObjectsTablePanel(table_name="associated_object_metadata_table")])
+        super().__init__(**kwargs)
 
     def should_render(self, context):
         return (
@@ -340,105 +440,53 @@ class _ObjectDetailMetadataTab(Tab):
         )
 
 
-class Layout(ABC):
-    """Abstract base class for defining a layout of content panels within a `Tab`."""
-
-    def __init__(self, *, include_template_extensions=False):
-        """Instantiate a Layout.
-
-        Args:
-            include_template_extensions (bool): If True, this layout will include any App-defined TemplateExtension
-                                                content as a part of its rendering.
-        """
-        self.include_template_extensions = include_template_extensions
-
-    @abstractmethod
-    def render(self, context): ...
-
-
-class LayoutTwoColumn(Layout):
-    """Layout class for two side-by-side columns of half-width content each."""
-
-    def __init__(self, *, left_panels=None, right_panels=None, **kwargs):
-        """Define a two-column layout with the given left column and right column of panels."""
-        super().__init__(**kwargs)
-        self.left_panels = list(left_panels) if left_panels is not None else []
-        self.right_panels = list(right_panels) if right_panels is not None else []
-
-    def render(self, context):
-        instance = context["object"]
-        return format_html(
-            """\
-<div class="row">
-    <div class="col-md-6">
-        {left_panels}
-        {plugin_left_page}
-    </div>
-    <div class="col-md-6">
-        {right_panels}
-        {plugin_right_page}
-    </div>
-</div>""",
-            left_panels=format_html_join("\n", "{}", ([panel.render(context)] for panel in self.left_panels)),
-            right_panels=format_html_join("\n", "{}", ([panel.render(context)] for panel in self.right_panels)),
-            plugin_left_page=plugin_left_page(context, instance) if self.include_template_extensions else "",
-            plugin_right_page=plugin_right_page(context, instance) if self.include_template_extensions else "",
-        )
-
-
-class LayoutFullWidth(Layout):
-    """Layout class for full-width content."""
-
-    def __init__(self, *, panels=None, **kwargs):
-        """Define a full-width layout containing the given panels."""
-        super().__init__(**kwargs)
-        self.panels = list(panels) if panels is not None else []
-
-    def render(self, context):
-        instance = context["object"]
-        return format_html(
-            """\
-<div class="row">
-    <div class="col-md-12">
-        {panels}
-        {plugin_full_width_page}
-    </div>
-</div>""",
-            panels=format_html_join("\n", "{}", ([panel.render(context)] for panel in self.panels)),
-            plugin_full_width_page=plugin_full_width_page(context, instance)
-            if self.include_template_extensions
-            else "",
-        )
-
-
 class Panel(ABC):
     """Abstract base class for defining an individual display panel within a Layout within a Tab."""
 
     DEFAULT_CONTENT_WRAPPER = '<div class="panel-body">{}</div>'
     ATTR_TABLE_CONTENT_WRAPPER = '<table class="table table-hover panel-body attr-table">{}</table>'
+    TABLE_CONTENT_WRAPPER = '<div class="table-responsive">{}</div>'
 
-    def __init__(self, *, label=None, content_wrapper=None):
+    def __init__(
+        self,
+        *,
+        label=None,
+        weight=100,
+        section=SectionChoices.FULL_WIDTH,
+        content_wrapper=None,
+        footer_template_string=None,
+    ):
         """
         Instantiate a Panel.
 
         Args:
             label (str): The label to display at the top of the panel.
+            weight (int): Influences relative position of panels within a section. Lower weights are toward the top.
+            section (str): One of the SectionChoices values in `nautobot.core.ui.choices`.
             content_wrapper (str): HTML format string to wrap the rendered content in.
                 Defaults to `<div class="panel-body">{}</div>`.
+            footer_template_string (str): HTML template string to render into the panel footer.
         """
         self.label = label
+        self.weight = weight
+        if section not in SectionChoices.values():
+            raise RuntimeError(f"Unknown section {section}")
+        self.section = section
         self.content_wrapper = content_wrapper or self.DEFAULT_CONTENT_WRAPPER
+        self.footer_template_string = footer_template_string
 
     def render(self, context):
-        return format_html(
-            """\
-<div class="panel panel-default">
-    <div class="panel-heading"><strong>{label}</strong></div>
-    {wrapped_content}
-</div>""",
-            label=self.render_label(context),
-            wrapped_content=format_html(self.content_wrapper, self.render_content(context)),
-        )
+        template = format_html('<div class="panel panel-default">')
+        label = self.render_label(context)
+        if label:
+            template += format_html('<div class="panel-heading"><strong>{}</strong></div>', label)
+        template += format_html(self.content_wrapper, self.render_content(context))
+        if self.footer_template_string:
+            template += format_html(
+                '<div class="panel-footer">{}</div>', Template(self.footer_template_string).render(context)
+            )
+        template += format_html("</div>")
+        return template
 
     def render_label(self, context):
         return self.label
@@ -463,6 +511,29 @@ class TemplatePanel(Panel):
         if self.template_string is not None:
             return Template(self.template_string).render(context)
         return render(context["request"], self.template_path, context)
+
+
+class ObjectsTablePanel(TemplatePanel):
+    """A panel that renders a table of objects (typically related objects, rather than the main context object)."""
+
+    def __init__(
+        self,
+        *,
+        table_name,
+        **kwargs,
+    ):
+        """
+        Instantiate an ObjectsTablePanel.
+
+        Args:
+            table_name (str): The render context key under which the table in question will be found.
+        """
+        kwargs.setdefault("content_wrapper", self.TABLE_CONTENT_WRAPPER)
+        kwargs.setdefault(
+            "template_string",
+            "{% load render_table from django_tables2 %}{% render_table " + table_name + " 'inc/table.html' %}",
+        )
+        super().__init__(**kwargs)
 
 
 class ObjectFieldsPanel(Panel):
