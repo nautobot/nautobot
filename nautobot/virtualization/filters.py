@@ -155,6 +155,11 @@ class VirtualMachineFilterSet(
         queryset=Cluster.objects.all(),
         label="Cluster (ID)",
     )
+    cluster = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Cluster.objects.all(),
+        to_field_name="name",
+        label="VM cluster (name or ID)",
+    )
     location = TreeNodeMultipleChoiceFilter(
         prefers_id=True,
         queryset=Location.objects.all(),
