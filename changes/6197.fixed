@@ -1,1 +1,0 @@
-Fixed view name split in `core.utils.lookup.get_model_for_view_name` function.
