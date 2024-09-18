@@ -2937,14 +2937,6 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
             "device": "$device",
         },
     )
-    virtual_device_contexts = DynamicModelMultipleChoiceField(
-        queryset=VirtualDeviceContext.objects.all(),
-        required=False,
-        label="Virtual Device Contexts",
-        query_params={
-            "device": "$device",
-        },
-    )
 
     class Meta:
         model = Interface
@@ -2968,7 +2960,6 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
             "mode",
             "untagged_vlan",
             "tagged_vlans",
-            "virtual_device_contexts",
             "tags",
             "status",
         ]
@@ -3036,14 +3027,6 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
             "device": "$device",
         },
     )
-    virtual_device_contexts = DynamicModelMultipleChoiceField(
-        queryset=VirtualDeviceContext.objects.all(),
-        required=False,
-        label="Virtual Device Contexts",
-        query_params={
-            "device": "$device",
-        },
-    )
     mac_address = forms.CharField(required=False, label="MAC Address")
     mgmt_only = forms.BooleanField(
         required=False,
@@ -3088,7 +3071,6 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
         "lag",
         "mtu",
         "vrf",
-        "virtual_device_contexts",
         "mac_address",
         "description",
         "mgmt_only",
@@ -5192,7 +5174,9 @@ class VirtualDeviceContextForm(NautobotModelForm):
         required=False,
     )
     interfaces = DynamicModelMultipleChoiceField(
-        queryset=Interface.objects.all(), required=False, query_params={"device": "$device"}
+        queryset=Interface.objects.all(), 
+        required=False,
+        query_params={"device": "$device"}
     )
     primary_ip4 = DynamicModelChoiceField(
         queryset=IPAddress.objects.all(), required=False, query_params={"ip_version": 4, "interfaces": "$interfaces"}
@@ -5221,18 +5205,8 @@ class VirtualDeviceContextForm(NautobotModelForm):
             "tags",
         ]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.instance.present_in_database:
-            # We need to set the initial value for 'interfaces' because, by default,
-            # ModelForms only handle fields directly defined on the model (e.g., the 'name' field).
-            self.fields["interfaces"].initial = self.instance.interfaces.all()
-        else:
-            # An object that doesn't exist yet can't have any Primary IPs
-            self.fields["primary_ip4"].widget.attrs["disabled"] = True
-            self.fields["primary_ip6"].widget.attrs["disabled"] = True
-
     def save(self, commit=True):
+        # TODO(timizuo): VDC defer ip creation or saving till after interface update
         data = super().save(commit)
         interfaces = self.cleaned_data["interfaces"]
         self.instance.interfaces.set(interfaces)
@@ -5247,12 +5221,17 @@ class VirtualDeviceContextBulkEditForm(
     pk = forms.ModelMultipleChoiceField(queryset=VirtualDeviceContext.objects.all(), widget=forms.MultipleHiddenInput())
     device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    add_interfaces = DynamicModelMultipleChoiceField(
+        queryset=Interface.objects.all(), required=False, query_params={"device": "$device"}
+    )
+    remove_interfaces = DynamicModelMultipleChoiceField(
+        queryset=Interface.objects.all(), required=False, query_params={"device": "$device"}
+    )
 
     class Meta:
         model = VirtualDeviceContext
         nullable_fields = [
             "tenant",
-            "device",
         ]
 
 

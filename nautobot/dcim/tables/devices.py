@@ -1442,6 +1442,7 @@ class VirtualDeviceContextTable(StatusTableMixin, BaseTable):
             "primary_ip",
             "primary_ip4",
             "primary_ip6",
+            "interfaces_count",
             "tags",
         )
         default_columns = (

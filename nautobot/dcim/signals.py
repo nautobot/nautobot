@@ -302,6 +302,7 @@ def prevent_adding_vdcs_with_incorrect_device(sender, instance, action, **kwargs
         return
 
     pk_set = kwargs["pk_set"]
+    # TODO(timizuo): VDC I dont think i need this
     vc_interfaces_ids = instance.device.vc_interfaces.values_list("pk", flat=True)
     vdcs = (
         kwargs["model"]
