@@ -308,7 +308,7 @@ plugins:
         "models/dcim/modulebay.md": "user-guide/core-data-model/dcim/modulebay.md"
         "models/dcim/modulebaytemplate.md": "user-guide/core-data-model/dcim/modulebaytemplate.md"
         "models/dcim/moduletype.md": "user-guide/core-data-model/dcim/moduletype.md"
-        "models/dcim/virtualdevicecontextinterfaceassignment.md": "user-guide/core-data-model/dcim/virtualdevicecontextinterfaceassignment.md"
+        "models/dcim/interfacevdcassignment.md": "user-guide/core-data-model/dcim/interfacevdcassignment.md"
         "models/extras/jobqueue.md": "user-guide/platform-functionality/jobs/jobqueue.md"
         "models/extras/metadatachoice.md": "user-guide/platform-functionality/objectmetadata.md"
         "models/extras/metadatatype.md": "user-guide/platform-functionality/objectmetadata.md"
@@ -471,7 +471,7 @@ nav:
               - Software Image File: "user-guide/core-data-model/dcim/softwareimagefile.md"
               - Software Version: "user-guide/core-data-model/dcim/softwareversion.md"
               - Virtual Chassis: "user-guide/core-data-model/dcim/virtualchassis.md"
-              - Virtual Device Context Interface Assignment: "user-guide/core-data-model/dcim/virtualdevicecontextinterfaceassignment.md.md"
+              - Interface VDC Assignment: "user-guide/core-data-model/dcim/interfacevdcassignment.md"
               - Controller: "user-guide/core-data-model/dcim/controller.md"
               - Controller Managed Device Group: "user-guide/core-data-model/dcim/controllermanageddevicegroup.md"
           - Extras:

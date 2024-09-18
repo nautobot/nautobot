@@ -53,7 +53,7 @@ __all__ = (
     "Platform",
     "VirtualChassis",
     "VirtualDeviceContext",
-    "VirtualDeviceContextInterfaceAssignment",
+    "InterfaceVDCAssignment",
 )
 
 
@@ -1887,7 +1887,7 @@ class VirtualDeviceContext(PrimaryModel):
         blank=True,
         related_name="virtual_device_contexts",
         to="dcim.Interface",
-        through="dcim.VirtualDeviceContextInterfaceAssignment",
+        through="dcim.InterfaceVDCAssignment",
     )
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
@@ -1946,7 +1946,7 @@ class VirtualDeviceContext(PrimaryModel):
 
 
 @extras_features("graphql")
-class VirtualDeviceContextInterfaceAssignment(BaseModel):
+class InterfaceVDCAssignment(BaseModel):
     virtual_device_context = models.ForeignKey(
         VirtualDeviceContext, on_delete=models.CASCADE, related_name="interface_assignments"
     )

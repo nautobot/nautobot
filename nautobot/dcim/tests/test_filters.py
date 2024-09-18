@@ -44,6 +44,7 @@ from nautobot.dcim.filters import (
     InterfaceRedundancyGroupAssociationFilterSet,
     InterfaceRedundancyGroupFilterSet,
     InterfaceTemplateFilterSet,
+    InterfaceVDCAssignmentFilterSet,
     InventoryItemFilterSet,
     LocationFilterSet,
     LocationTypeFilterSet,
@@ -68,7 +69,6 @@ from nautobot.dcim.filters import (
     SoftwareVersionFilterSet,
     VirtualChassisFilterSet,
     VirtualDeviceContextFilterSet,
-    VirtualDeviceContextInterfaceAssignmentFilterSet,
 )
 from nautobot.dcim.models import (
     Cable,
@@ -91,6 +91,7 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
+    InterfaceVDCAssignment,
     InventoryItem,
     Location,
     LocationType,
@@ -115,7 +116,6 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualChassis,
     VirtualDeviceContext,
-    VirtualDeviceContextInterfaceAssignment,
 )
 from nautobot.extras.models import ExternalIntegration, Role, SecretsGroup, Status, Tag
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VLANGroup
@@ -4077,10 +4077,10 @@ class VirtualDeviceContextTestCase(FilterTestCases.FilterTestCase, FilterTestCas
             )
             for idx in range(3)
         ]
-        VirtualDeviceContextInterfaceAssignment.objects.create(virtual_device_context=vdcs[0], interface=interfaces[0])
-        VirtualDeviceContextInterfaceAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[0])
-        VirtualDeviceContextInterfaceAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[1])
-        VirtualDeviceContextInterfaceAssignment.objects.create(virtual_device_context=vdcs[2], interface=interfaces[2])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[0], interface=interfaces[0])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[0])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[1])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[2], interface=interfaces[2])
 
     def test_has_primary_ip(self):
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
@@ -4110,9 +4110,9 @@ class VirtualDeviceContextTestCase(FilterTestCases.FilterTestCase, FilterTestCas
         )
 
 
-class VirtualDeviceContextInterfaceAssignmentTestCase(FilterTestCases.FilterTestCase):
-    queryset = VirtualDeviceContextInterfaceAssignment.objects.all()
-    filterset = VirtualDeviceContextInterfaceAssignmentFilterSet
+class InterfaceVDCAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = InterfaceVDCAssignment.objects.all()
+    filterset = InterfaceVDCAssignmentFilterSet
     generic_filter_tests = [
         ("virtual_device_context", "virtual_device_context__id"),
         ("virtual_device_context", "virtual_device_context__name"),
@@ -4143,7 +4143,7 @@ class VirtualDeviceContextInterfaceAssignmentTestCase(FilterTestCases.FilterTest
             )
             for idx in range(3)
         ]
-        VirtualDeviceContextInterfaceAssignment.objects.create(virtual_device_context=vdcs[0], interface=interfaces[0])
-        VirtualDeviceContextInterfaceAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[0])
-        VirtualDeviceContextInterfaceAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[1])
-        VirtualDeviceContextInterfaceAssignment.objects.create(virtual_device_context=vdcs[2], interface=interfaces[2])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[0], interface=interfaces[0])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[0])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[1])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[2], interface=interfaces[2])

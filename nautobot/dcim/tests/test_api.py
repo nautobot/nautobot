@@ -42,6 +42,7 @@ from nautobot.dcim.models import (
     Interface,
     InterfaceRedundancyGroup,
     InterfaceTemplate,
+    InterfaceVDCAssignment,
     InventoryItem,
     Location,
     LocationType,
@@ -65,7 +66,6 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
-    VirtualDeviceContextInterfaceAssignment,
 )
 from nautobot.dcim.models.devices import VirtualDeviceContext
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
@@ -3447,8 +3447,8 @@ class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
             self.assertEqual(vdc.primary_ip6, ip_v6)
 
 
-class VirtualDeviceContextInterfaceAssignmentTestCase(APIViewTestCases.APIViewTestCase):
-    model = VirtualDeviceContextInterfaceAssignment
+class InterfaceVDCAssignmentTestCase(APIViewTestCases.APIViewTestCase):
+    model = InterfaceVDCAssignment
 
     @classmethod
     def setUpTestData(cls):

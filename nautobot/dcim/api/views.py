@@ -44,6 +44,7 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
+    InterfaceVDCAssignment,
     InventoryItem,
     Location,
     LocationType,
@@ -68,7 +69,6 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualChassis,
     VirtualDeviceContext,
-    VirtualDeviceContextInterfaceAssignment,
 )
 from nautobot.extras.api.views import (
     ConfigContextQuerySetMixin,
@@ -895,7 +895,7 @@ class VirtualDeviceContextViewSet(NautobotModelViewSet):
     filterset_class = filters.VirtualDeviceContextFilterSet
 
 
-class VirtualDeviceContextInterfaceAssignmentViewSet(NautobotModelViewSet):
-    queryset = VirtualDeviceContextInterfaceAssignment.objects.select_related("virtual_device_context", "interface")
-    serializer_class = serializers.VirtualDeviceContextInterfaceAssignmentSerializer
-    filterset_class = filters.VirtualDeviceContextInterfaceAssignmentFilterSet
+class InterfaceVDCAssignmentViewSet(NautobotModelViewSet):
+    queryset = InterfaceVDCAssignment.objects.select_related("virtual_device_context", "interface")
+    serializer_class = serializers.InterfaceVDCAssignmentSerializer
+    filterset_class = filters.InterfaceVDCAssignmentFilterSet

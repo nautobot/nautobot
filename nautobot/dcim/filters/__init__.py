@@ -65,6 +65,7 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
+    InterfaceVDCAssignment,
     InventoryItem,
     Location,
     LocationType,
@@ -2152,6 +2153,10 @@ class VirtualDeviceContextFilterSet(NautobotFilterSet, TenancyModelFilterSetMixi
         to_field_name="name",
         label="Interface (name or ID)",
     )
+    has_interfaces = django_filters.BooleanFilter(
+        field_name="interfaces",
+        label="Has Interfaces",
+    )
 
     class Meta:
         model = VirtualDeviceContext
@@ -2161,6 +2166,7 @@ class VirtualDeviceContextFilterSet(NautobotFilterSet, TenancyModelFilterSetMixi
             "device",
             "tenant",
             "interfaces",
+            "has_interfaces",
             "has_primary_ip",
             "primary_ip4",
             "primary_ip6",
@@ -2194,7 +2200,7 @@ class VirtualDeviceContextFilterSet(NautobotFilterSet, TenancyModelFilterSetMixi
         return queryset.filter(primary_ip6__in=ip_queryset)
 
 
-class VirtualDeviceContextInterfaceAssignmentFilterSet(NautobotFilterSet):
+class InterfaceVDCAssignmentFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "interface__name": {
@@ -2213,13 +2219,14 @@ class VirtualDeviceContextInterfaceAssignmentFilterSet(NautobotFilterSet):
         label="Virtual Device Context (name or ID)",
     )
     interface = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Interface.objects.all(),
         to_field_name="name",
         label="Interface (name or ID)",
     )
 
     class Meta:
-        model = VirtualDeviceContext
+        model = InterfaceVDCAssignment
         fields = [
             "interface",
             "virtual_device_context",

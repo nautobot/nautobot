@@ -69,6 +69,7 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
+    InterfaceVDCAssignment,
     InventoryItem,
     Location,
     LocationType,
@@ -94,7 +95,6 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualChassis,
     VirtualDeviceContext,
-    VirtualDeviceContextInterfaceAssignment,
 )
 from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
@@ -1199,7 +1199,7 @@ class VirtualDeviceContextSerializer(NautobotModelSerializer):
         fields = "__all__"
 
 
-class VirtualDeviceContextInterfaceAssignmentSerializer(ValidatedModelSerializer):
+class InterfaceVDCAssignmentSerializer(ValidatedModelSerializer):
     class Meta:
-        model = VirtualDeviceContextInterfaceAssignment
+        model = InterfaceVDCAssignment
         fields = "__all__"

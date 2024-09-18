@@ -35,6 +35,7 @@ from .devices import (
     DeviceRedundancyGroup,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
+    InterfaceVDCAssignment,
     Manufacturer,
     Module,
     ModuleType,
@@ -43,7 +44,6 @@ from .devices import (
     SoftwareVersion,
     VirtualChassis,
     VirtualDeviceContext,
-    VirtualDeviceContextInterfaceAssignment,
 )
 from .locations import Location, LocationType
 from .power import PowerFeed, PowerPanel
@@ -98,5 +98,5 @@ __all__ = (
     "SoftwareVersion",
     "VirtualChassis",
     "VirtualDeviceContext",
-    "VirtualDeviceContextInterfaceAssignment",
+    "InterfaceVDCAssignment",
 )

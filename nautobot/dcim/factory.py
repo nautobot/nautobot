@@ -976,4 +976,4 @@ class VirtualDeviceContextFactory(PrimaryModelFactory):
             if extracted:
                 self.interfaces.set(extracted)
             else:
-                self.interfaces.set(get_random_instances(Interface.objects.filter(device=self.device)))  # noqa: F821
+                self.interfaces.set(get_random_instances(Interface.objects.filter(device=self.device)))
