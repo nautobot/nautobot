@@ -136,12 +136,11 @@ class CircuitUIViewSet(NautobotUIViewSet):
     table_class = tables.CircuitTable
 
     class CircuitTerminationPanel(ObjectFieldsPanel):
-        # TODO: provide fields as key-value data directly rather than using a custom content-template
         def __init__(self, **kwargs):
             super().__init__(
                 fields=(
                     "location",  # TODO: render location hierarchy
-                    "cable",  # TODO: render cable peer and connect/disconnect buttons, hide if no location
+                    "cable",
                     "provider_network",
                     "cloud_network",
                     "port_speed",
@@ -157,9 +156,13 @@ class CircuitUIViewSet(NautobotUIViewSet):
                     "upstream_speed": [humanize_speed],
                 },
                 hide_if_unset=("location", "provider_network", "cloud_network", "upstream_speed"),
-                ignore_nonexistent_fields=True,  # ip_addresses may be unset
+                ignore_nonexistent_fields=True,  # ip_addresses may be undefined
+                header_extra_content_template_path="circuits/inc/circuit_termination_header_extra_content.html",
                 **kwargs,
             )
+
+        def get_extra_context(self, context):
+            return {"termination": context[self.context_object_key]}
 
         def render_value(self, key, value, context):
             if key == "cable":
@@ -167,10 +170,6 @@ class CircuitUIViewSet(NautobotUIViewSet):
                     return ""
                 return get_template("circuits/inc/circuit_termination_cable_fragment.html").render(context)
             return super().render_value(key, value, context)
-
-        def render_header_extra_content(self, context):
-            context["termination"] = context[self.context_object_key]
-            return get_template("circuits/inc/circuit_termination_header_extra_content.html").render(context)
 
     object_detail_content = ObjectDetailContent(
         panels=(
