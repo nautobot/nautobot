@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from django.contrib import messages
 from django.db import transaction
@@ -11,7 +11,6 @@ from nautobot.core.forms import ConfirmationForm
 from nautobot.core.templatetags.helpers import humanize_speed, placeholder, render_markdown
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
-    KeyValueTablePanel,
     ObjectDetailContent,
     ObjectFieldsPanel,
 )
@@ -139,19 +138,38 @@ class CircuitUIViewSet(NautobotUIViewSet):
     table_class = tables.CircuitTable
 
     @dataclass
-    class CircuitTerminationPanel(KeyValueTablePanel):
-        content_template_path: str = "circuits/inc/circuit_termination_fragment.html"
+    class CircuitTerminationPanel(ObjectFieldsPanel):
+        # TODO: provide fields as key-value data directly rather than using a custom content-template
+        fields: tuple = (
+            "location",  # TODO: render location hierarchy, hide if unset
+            "cable",  # TODO: render cable peer and connect/disconnect buttons, hide if no location
+            "provider_network",
+            "cloud_network",
+            "port_speed",
+            "upstream_speed",
+            # TODO: connected_endpoint.ip_addresses
+            "xconnect_id",
+            "pp_info",
+            "description",
+            # TODO: relationships, custom fields?
+        )
+        value_transforms: dict = field(
+            default_factory=lambda: {
+                "port_speed": [humanize_speed, placeholder],
+                "upstream_speed": [humanize_speed],
+            }
+        )
+        hide_unset_fields: tuple = ("location", "provider_network", "cloud_network", "upstream_speed")
+
+        def render_value(self, key, value, context):
+            # if key == "cable":
+            #     termination = context[self.context_object_key]
+            #     return get_template("circuits/inc/circuit_termination_cable_fragment.html").render(context)
+            return super().render_value(key, value, context)
 
         def render_header_extra_content(self, context):
+            context["termination"] = context[self.context_object_key]
             return get_template("circuits/inc/circuit_termination_header_extra_content.html").render(context)
-
-    class CircuitTerminationAPanel(CircuitTerminationPanel):
-        def get_extra_context(self, context):
-            return {"termination": context["circuit_termination_a"]}
-
-    class CircuitTerminationZPanel(CircuitTerminationPanel):
-        def get_extra_context(self, context):
-            return {"termination": context["circuit_termination_z"]}
 
     object_detail_content = ObjectDetailContent(
         panels=(
@@ -160,24 +178,26 @@ class CircuitUIViewSet(NautobotUIViewSet):
                 weight=100,
                 fields="__all__",
                 exclude_fields=["comments", "circuit_termination_a", "circuit_termination_z"],
-                field_transforms={"commit_rate": [humanize_speed, placeholder]},
+                value_transforms={"commit_rate": [humanize_speed, placeholder]},
             ),
             ObjectFieldsPanel(
                 label="Comments",
                 weight=200,
                 section=SectionChoices.LEFT_HALF,
                 fields=["comments"],
-                field_transforms={"comments": [render_markdown, placeholder]},
+                value_transforms={"comments": [render_markdown, placeholder]},
             ),
-            CircuitTerminationAPanel(
+            CircuitTerminationPanel(
                 label="Termination - A Side",
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
+                context_object_key="circuit_termination_a",
             ),
-            CircuitTerminationZPanel(
+            CircuitTerminationPanel(
                 label="Termination - Z Side",
                 section=SectionChoices.RIGHT_HALF,
                 weight=200,
+                context_object_key="circuit_termination_z",
             ),
         ),
     )

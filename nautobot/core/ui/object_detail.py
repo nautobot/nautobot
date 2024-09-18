@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Union
 
 from django.core.exceptions import FieldDoesNotExist
+from django.db import models
 from django.template import Context, Template
 from django.template.loader import get_template, render_to_string
 from django.templatetags.l10n import localize
@@ -192,16 +193,16 @@ class Tab(Component):
         if not self.should_render(context):
             return ""
 
-        # Two steps here because self.tab_label may be dependent on self.context being defined
-        self.context = context.flatten()
-        self.context.update(
+        # Two steps here because self.tab_label may be dependent on context being defined
+        context = context.flatten()
+        context.update(
             {
                 "tab_id": self.tab_id,
                 "tab_label": self.render_tab_label(context),
             }
         )
 
-        return get_template(self.tab_template_path).render(self.context)
+        return get_template(self.tab_template_path).render(context)
 
     def render_tab_label(self, context):
         return self.tab_label
@@ -211,9 +212,9 @@ class Tab(Component):
         if not self.should_render(context):
             return ""
 
-        # Two steps here because self.tab_label may be dependent on self.context being defined
-        self.context = context.flatten()
-        self.context.update(
+        # Two steps here because self.tab_label may be dependent on context being defined
+        context = context.flatten()
+        context.update(
             {
                 "tab_id": self.tab_id,
                 "tab_label": self.render_tab_label(context),
@@ -224,9 +225,9 @@ class Tab(Component):
             }
         )
 
-        tab_content = get_template(self.LAYOUT_TEMPLATE_PATHS[self.layout]).render(self.context)
+        tab_content = get_template(self.LAYOUT_TEMPLATE_PATHS[self.layout]).render(context)
 
-        return get_template(self.content_template_path).render({**self.context, "tab_content": tab_content})
+        return get_template(self.content_template_path).render({**context, "tab_content": tab_content})
 
 
 @dataclass
@@ -333,6 +334,54 @@ class KeyValueTablePanel(Panel):
     """A panel that displays a two-column table of keys and values."""
 
     body_template_path: str = "components/panel/body_key_value_table.html"
+    data: dict = field(default_factory=dict)
+    hide_unset_fields: tuple = ()
+    value_transforms: dict = field(default_factory=dict)
+
+    def get_data(self, context):
+        return self.data
+
+    def render_key(self, key, value, context):
+        return bettertitle(key.replace("_", " "))
+
+    def render_value(self, key, value, context):
+        display = value
+        if key in self.value_transforms:
+            for transform in self.value_transforms[key]:
+                display = transform(display)
+        elif key in self.hide_unset_fields:
+            return ""
+        elif value is None:
+            display = placeholder(value)
+        elif isinstance(value, models.Model):
+            if hasattr(value, "color"):
+                display = hyperlinked_object_with_color(value)
+            else:
+                display = hyperlinked_object(value)
+            # TODO: render location hierarchy for Location objects - maybe in hyperlinked_object directly?
+
+            if isinstance(value, Tenant) and value.tenant_group is not None:
+                display = format_html("{} / {}", hyperlinked_object(value.tenant_group), display)
+        else:
+            display = placeholder(localize(value))
+        # TODO: apply additional formatting such as JSON/Markdown rendering, etc.
+        return display
+
+    def render_content(self, context):
+        data = self.get_data(context)
+
+        if not data:
+            return format_html('<tr><td colspan="2">{}</td></tr>', placeholder(data))
+
+        result = format_html("")
+        for key, value in data.items():
+            key_display = self.render_key(key, value, context)
+            value_display = self.render_value(key, value, context)
+            if value_display:
+                # TODO: add a copy button on hover to all display items
+                result += format_html("<tr><td>{key}</td><td>{value}</td></tr>", key=key_display, value=value_display)
+
+        return result
 
 
 @dataclass
@@ -341,7 +390,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
     fields: Union[str, tuple] = "__all__"
     exclude_fields: tuple = ()
-    field_transforms: dict = field(default_factory=dict)
+    context_object_key: str = "object"
     ignore_nonexistent_fields: bool = False
 
     def render_label(self, context):
@@ -349,11 +398,12 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             return bettertitle(context["object"]._meta.verbose_name)
         return super().render_label(context)
 
-    def render_content(self, context):
-        """Render the table rows corresponding to the specified fields, applying field_transforms as specified."""
-        result = format_html("")
+    def get_data(self, context):
         fields = self.fields
-        instance = context["object"]
+        instance = context.get(self.context_object_key, None)
+
+        if instance is None:
+            return {}
 
         if fields == "__all__":
             # Derive the list of fields from the instance, skipping certain fields by default.
@@ -370,51 +420,32 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             # TODO: apply a default ordering "smarter" than declaration order? Alphabetical? By field type?
             # TODO: allow model to specify an alternative field ordering?
 
+        data = {}
         for field_name in fields:
             if field_name in self.exclude_fields:
                 continue
             try:
-                field = instance._meta.get_field(field_name)
-                field_label = bettertitle(field.verbose_name)
-                field_value = getattr(instance, field.name)
+                field_value = getattr(instance, field_name)
+            except AttributeError:
+                if self.ignore_nonexistent_fields:
+                    continue
+                raise
+
+            data[field_name] = field_value
+
+        return data
+
+    def render_key(self, key, value, context):
+        instance = context.get(self.context_object_key, None)
+
+        if instance is not None:
+            try:
+                field = instance._meta.get_field(key)
+                return bettertitle(field.verbose_name)
             except FieldDoesNotExist:
-                try:
-                    field_value = getattr(instance, field_name)
-                except AttributeError:
-                    if self.ignore_nonexistent_fields:
-                        continue
-                    raise
-                field = None
-                field_label = bettertitle(field_name.replace("_", " "))
+                pass
 
-            if field_name in self.field_transforms:
-                field_display = field_value
-                for transform in self.field_transforms[field_name]:
-                    field_display = transform(field_display)
-            elif getattr(field, "is_relation", False):
-                if hasattr(field_value, "color"):
-                    field_display = hyperlinked_object_with_color(field_value)
-                else:
-                    field_display = hyperlinked_object(field_value)
-                # TODO: render location hierarchy for Location objects
-
-                if isinstance(field_value, Tenant) and field_value.tenant_group is not None:
-                    field_display = format_html("{} / {}", hyperlinked_object(field_value.tenant_group), field_display)
-            else:
-                field_display = placeholder(localize(field_value))
-            # TODO: apply additional formatting such as JSON/Markdown rendering, etc.
-
-            # TODO: add a copy button on hover to all field_display items
-            result += format_html(
-                """<tr>
-            <td>{field_label}</td>
-            <td>{field_display}</td>
-        </tr>""",
-                field_label=field_label,
-                field_display=field_display,
-            )
-
-        return result
+        return super().render_key(key, value, context)
 
 
 @dataclass
