@@ -33,9 +33,8 @@ jobs:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "1.8.2"
           python-version: "${{ env.PYTHON_VERSION }}"
+      # This deviates from the app CI since we can't force invoke to run locally using the `INVOKE_APPNAME_LOCAL` environment variable
       - name: "Constrain Nautobot version and regenerate lock file"
-        env:
-          INVOKE_NAUTOBOT_DEV_EXAMPLE_LOCAL: "true"
         run: "poetry add --lock git+https://github.com/nautobot/nautobot.git#${{ matrix.nautobot-version }} --python ${{ env.PYTHON_VERSION }}"
       - name: "Set up Docker Buildx"
         id: "buildx"
