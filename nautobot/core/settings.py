@@ -375,6 +375,11 @@ SPECTACULAR_SETTINGS = {
         #    enum naming encountered a non-optimally resolvable collision for fields named "protocol".
         "InterfaceRedundancyGroupProtocolChoices": "nautobot.dcim.choices.InterfaceRedundancyGroupProtocolChoices",
         "ServiceProtocolChoices": "nautobot.ipam.choices.ServiceProtocolChoices",
+        # These choice enums need to be overridden because they get assigned to the `mode` field and
+        # result in this error:
+        #    enum naming encountered a non-optimally resolvable collision for fields named "mode".
+        "InterfaceModeChoices": "nautobot.dcim.choices.InterfaceModeChoices",
+        "WirelessNetworkModeChoices": "nautobot.wireless.choices.WirelessNetworkModeChoices",
     },
     # Create separate schema components for PATCH requests (fields generally are not `required` on PATCH)
     "COMPONENT_SPLIT_PATCH": True,
