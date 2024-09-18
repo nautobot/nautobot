@@ -206,7 +206,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         hide_hierarchy_ui = False
         clear_view = request.GET.get("clear_view", False)
         resolved_path = resolve(request.path)
-        view_name = f"{resolved_path.app_name}:{resolved_path.url_name}"
+        list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
 
         # If the user clicks on the clear view button, we do not check for global or user defaults
         if not clear_view and not request.GET.get("saved_view"):
@@ -214,7 +214,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             if not isinstance(user, AnonymousUser):
                 try:
                     user_default_saved_view_pk = UserSavedViewAssociation.objects.get(
-                        user=user, view_name=view_name
+                        user=user, view_name=list_url
                     ).saved_view.pk
                     # Saved view should either belong to the user or be public
                     SavedView.objects.get(
@@ -228,7 +228,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
             # Check if there is a global default for this view
             try:
-                global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
+                global_saved_view = SavedView.objects.get(view=list_url, is_global_default=True)
                 return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
             except ObjectDoesNotExist:
                 pass
@@ -304,26 +304,25 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         # We are not using .restrict(request.user, "view") here
         # User should be able to see any saved view that he has the list view access to.
         if user.has_perms(["extras.view_savedview"]):
-            saved_views = SavedView.objects.filter(view=view_name).order_by("name").only("pk", "name")
+            saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
         else:
             shared_saved_views = (
-                SavedView.objects.filter(view=view_name, is_shared=True).order_by("name").only("pk", "name")
+                SavedView.objects.filter(view=list_url, is_shared=True).order_by("name").only("pk", "name")
             )
             user_owned_saved_views = (
-                SavedView.objects.filter(view=view_name, owner=user).order_by("name").only("pk", "name")
+                SavedView.objects.filter(view=list_url, owner=user).order_by("name").only("pk", "name")
             )
             saved_views = shared_saved_views | user_owned_saved_views
-
-        # Construct the objects table
 
         if current_saved_view_pk:
             try:
                 # We are not using .restrict(request.user, "view") here
                 # User should be able to see any saved view that he has the list view access to.
-                current_saved_view = SavedView.objects.get(view=view_name, pk=current_saved_view_pk)
+                current_saved_view = SavedView.objects.get(view=list_url, pk=current_saved_view_pk)
             except ObjectDoesNotExist:
                 messages.error(request, f"Saved view {current_saved_view_pk} not found")
 
+        # Construct the objects table
         if self.table:
             if self.request.GET.getlist("sort") or (
                 current_saved_view is not None and current_saved_view.config.get("sort_order")
@@ -374,7 +373,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "filter_form": filter_form,
             "dynamic_filter_form": dynamic_filter_form,
             "search_form": search_form,
-            "list_url": view_name,
+            "list_url": list_url,
             "title": bettertitle(model._meta.verbose_name_plural),
             "new_changes_not_applied": new_changes_not_applied,
             "current_saved_view": current_saved_view,
