@@ -35,6 +35,7 @@ from .devices import (
     DeviceRedundancyGroup,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
+    InterfaceVDCAssignment,
     Manufacturer,
     Module,
     ModuleType,
@@ -97,4 +98,5 @@ __all__ = (
     "SoftwareVersion",
     "VirtualChassis",
     "VirtualDeviceContext",
+    "InterfaceVDCAssignment",
 )

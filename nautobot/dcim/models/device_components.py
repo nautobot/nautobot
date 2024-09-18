@@ -642,11 +642,6 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         blank=True,
         verbose_name="IP Addresses",
     )
-    virtual_device_contexts = models.ManyToManyField(
-        to="dcim.VirtualDeviceContext",
-        related_name="interfaces",
-        blank=True,
-    )
 
     class Meta(ModularComponentModel.Meta):
         ordering = ("device", "module", CollateAsChar("_name"))

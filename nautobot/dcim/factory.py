@@ -40,6 +40,7 @@ from nautobot.dcim.models import (
     DeviceRedundancyGroup,
     DeviceType,
     FrontPortTemplate,
+    Interface,
     InterfaceTemplate,
     Location,
     LocationType,
@@ -968,3 +969,11 @@ class VirtualDeviceContextFactory(PrimaryModelFactory):
     )
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+
+    @factory.post_generation
+    def interfaces(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.interfaces.set(extracted)
+            else:
+                self.interfaces.set(get_random_instances(Interface.objects.filter(device=self.device)))

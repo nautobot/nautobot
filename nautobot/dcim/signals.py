@@ -20,6 +20,7 @@ from .models import (
     Rack,
     RackGroup,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 from .utils import validate_interface_tagged_vlans
 
@@ -290,11 +291,11 @@ def prevent_adding_tagged_vlans_with_incorrect_mode_or_site(sender, instance, ac
 
 
 #
-# Interface tagged VLAMs
+# VirtualDeviceContext Interfaces
 #
 
 
-@receiver(m2m_changed, sender=Interface.virtual_device_contexts.through)
+@receiver(m2m_changed, sender=VirtualDeviceContext.interfaces.through)
 @disable_for_loaddata
 def prevent_adding_vdcs_with_incorrect_device(sender, instance, action, **kwargs):
     if action != "pre_add":
