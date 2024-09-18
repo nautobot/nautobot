@@ -1,7 +1,6 @@
 """Classes and utilities for defining an object detail view through a NautobotUIViewSet."""
 
-from dataclasses import dataclass, field
-from typing import Union
+from dataclasses import dataclass
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
@@ -151,26 +150,35 @@ class ObjectDetailContent:
         return format_html_join("\n", "{}", ([tab.render_content(context)] for tab in self.tabs))
 
 
-@dataclass
 class Component:
-    weight: int
+    def __init__(self, *, weight, **kwargs):
+        self.weight = weight
 
     def should_render(self, context):
         return True
 
 
-@dataclass
 class Tab(Component):
     """Base class for UI framework definition of a single tabbed pane within an Object Detail (Object Retrieve) page."""
 
-    tab_id: str
-    tab_label: str
-    panels: tuple["Panel"] = ()
-    layout: str = LayoutChoices.DEFAULT
-
-    # Overridable by subclasses if desired, hence not defined as CONSTANT
-    tab_template_path: str = "components/tab/tab.html"
-    content_template_path: str = "components/tab/content.html"
+    def __init__(
+        self,
+        *,
+        tab_id,
+        tab_label,
+        panels=(),
+        layout=LayoutChoices.DEFAULT,
+        tab_template_path="components/tab/tab.html",
+        content_template_path="components/tab/content.html",
+        **kwargs,
+    ):
+        self.tab_id = tab_id
+        self.tab_label = tab_label
+        self.panels = panels
+        self.layout = layout
+        self.tab_template_path = tab_template_path
+        self.content_template_path = content_template_path
+        super().__init__(**kwargs)
 
     LAYOUT_TEMPLATE_PATHS = {
         LayoutChoices.TWO_OVER_ONE: "components/layout/two_over_one.html",
@@ -230,34 +238,50 @@ class Tab(Component):
         return get_template(self.content_template_path).render({**context, "tab_content": tab_content})
 
 
-@dataclass
 class _ObjectDetailMainTab(Tab):
     """Base class for a main display tab containing an overview of object fields and similar data."""
 
-    tab_id: str = "main"
-    tab_label: str = ""  # see render_tab_label()
-    weight: int = Tab.WEIGHT_MAIN_TAB
-
-    # TODO: inject standard panels (custom fields, relationships, tags, etc.) even if kwargs["panels"] is customized
+    def __init__(
+        self,
+        *,
+        tab_id="main",
+        tab_label="",  # see render_tab_label()
+        weight=Tab.WEIGHT_MAIN_TAB,
+        **kwargs,
+    ):
+        # TODO: inject standard panels (custom fields, relationships, tags, etc.) even if kwargs["panels"] is customized
+        super().__init__(tab_id=tab_id, tab_label=tab_label, weight=weight, **kwargs)
 
     def render_tab_label(self, context):
         """Use the `verbose_name` of the given instance's Model as the tab label by default."""
         return bettertitle(context["object"]._meta.verbose_name)
 
 
-@dataclass
 class Panel(Component):
     """Base class for defining an individual display panel within a Layout within a Tab."""
 
-    label: str = ""
-    section: str = SectionChoices.FULL_WIDTH
-
-    template_path: str = "components/panel/panel.html"
-    header_template_path: str = "components/panel/header.html"
-    body_template_path: str = "components/panel/body_generic.html"
-    content_template_path: str = ""
-    footer_template_path: str = "components/panel/footer.html"
-    footer_template_string: str = ""
+    def __init__(
+        self,
+        *,
+        label="",
+        section=SectionChoices.FULL_WIDTH,
+        template_path="components/panel/panel.html",
+        header_template_path="components/panel/header.html",
+        body_template_path="components/panel/body_generic.html",
+        content_template_path=None,
+        footer_template_path="components/panel/footer.html",
+        footer_template_string=None,
+        **kwargs,
+    ):
+        self.label = label
+        self.section = section
+        self.template_path = template_path
+        self.header_template_path = header_template_path
+        self.body_template_path = body_template_path
+        self.content_template_path = content_template_path
+        self.footer_template_path = footer_template_path
+        self.footer_template_string = footer_template_string
+        super().__init__(**kwargs)
 
     def get_extra_context(self, context):
         return {}
@@ -317,26 +341,44 @@ class Panel(Component):
         return ""
 
 
-@dataclass
 class ObjectsTablePanel(Panel):
     """A panel that renders a table of objects (typically related objects, rather than the main context object)."""
 
-    body_template_path: str = "components/panel/body_table.html"
-    content_template_path: str = "components/panel/content_table.html"
-    table_name: str = ""  # TODO: once we have a minimum of Python 3.10, we can use `kw_only` and remove the default
+    def __init__(
+        self,
+        *,
+        table_name,
+        body_template_path="components/panel/body_table.html",
+        content_template_path="components/panel/content_table.html",
+        **kwargs,
+    ):
+        self.table_name = table_name
+        super().__init__(body_template_path=body_template_path, content_template_path=content_template_path, **kwargs)
 
     def get_extra_context(self, context):
         return {"content_table": context[self.table_name]}
 
 
-@dataclass
 class KeyValueTablePanel(Panel):
     """A panel that displays a two-column table of keys and values."""
 
     body_template_path: str = "components/panel/body_key_value_table.html"
-    data: dict = field(default_factory=dict)
-    hide_unset_fields: tuple = ()
-    value_transforms: dict = field(default_factory=dict)
+    hide_if_unset: tuple = ()
+    value_transforms: dict = {}
+
+    def __init__(
+        self,
+        *,
+        data,
+        hide_if_unset=(),
+        value_transforms=None,
+        body_template_path="components/panel/body_key_value_table.html",
+        **kwargs,
+    ):
+        self.data = data
+        self.hide_if_unset = hide_if_unset
+        self.value_transforms = value_transforms or {}
+        super().__init__(body_template_path=body_template_path, **kwargs)
 
     def get_data(self, context):
         return self.data
@@ -349,19 +391,31 @@ class KeyValueTablePanel(Panel):
         if key in self.value_transforms:
             for transform in self.value_transforms[key]:
                 display = transform(display)
-        elif key in self.hide_unset_fields:
-            return ""
         elif value is None:
-            display = placeholder(value)
+            if key in self.hide_if_unset:
+                display = ""
+            else:
+                display = placeholder(value)
         elif isinstance(value, models.Model):
             if hasattr(value, "color"):
                 display = hyperlinked_object_with_color(value)
             else:
                 display = hyperlinked_object(value)
-            # TODO: render location hierarchy for Location objects - maybe in hyperlinked_object directly?
+            # TODO: render location hierarchy for Location objects
 
             if isinstance(value, Tenant) and value.tenant_group is not None:
                 display = format_html("{} / {}", hyperlinked_object(value.tenant_group), display)
+        elif isinstance(value, models.QuerySet):
+            if not value.exists():
+                display = placeholder(None)
+            else:
+                # Display up to 3 records as a list
+                display = format_html("<ul>")
+                for record in value[:3]:
+                    display += format_html("<li>{}</li>", self.render_value(key, record, context))
+                if value.count() > 3:
+                    display += format_html("<li>...and {} more (total {})</li>", value.count() - 3, value.count())
+                display += format_html("</ul>")
         else:
             display = placeholder(localize(value))
         # TODO: apply additional formatting such as JSON/Markdown rendering, etc.
@@ -384,14 +438,24 @@ class KeyValueTablePanel(Panel):
         return result
 
 
-@dataclass
 class ObjectFieldsPanel(KeyValueTablePanel):
     """A panel that renders a table of object instance attributes."""
 
-    fields: Union[str, tuple] = "__all__"
-    exclude_fields: tuple = ()
-    context_object_key: str = "object"
-    ignore_nonexistent_fields: bool = False
+    def __init__(
+        self,
+        *,
+        fields="__all__",
+        exclude_fields=(),
+        context_object_key="object",
+        ignore_nonexistent_fields=False,
+        label=None,
+        **kwargs,
+    ):
+        self.fields = fields
+        self.exclude_fields = exclude_fields
+        self.context_object_key = context_object_key
+        self.ignore_nonexistent_fields = ignore_nonexistent_fields
+        super().__init__(data=None, label=label, **kwargs)
 
     def render_label(self, context):
         if self.label is None:
@@ -448,47 +512,61 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         return super().render_key(key, value, context)
 
 
-@dataclass
 class _ObjectDetailAdvancedTab(Tab):
     """Built-in class for a Tab displaying "advanced" information such as PKs and data provenance."""
 
-    tab_id: str = "advanced"
-    tab_label: str = "Advanced"
-    weight: int = Tab.WEIGHT_ADVANCED_TAB
-    panels: tuple = (
-        ObjectFieldsPanel(
-            label="Object Details",
-            section=SectionChoices.LEFT_HALF,
-            weight=100,
-            fields=["id", "natural_slug", "slug"],
-            ignore_nonexistent_fields=True,
-        ),
-        ObjectFieldsPanel(
-            label="Data Provenance",
-            section=SectionChoices.LEFT_HALF,
-            weight=200,
-            fields=["created", "last_updated"],
-            ignore_nonexistent_fields=True,
-            # TODO add created_by/last_updated_by derived fields and link to REST API
-        ),
-        # TODO add advanced_ui custom fields and relationships
-    )
+    def __init__(
+        self,
+        *,
+        tab_id="advanced",
+        tab_label="Advanced",
+        weight=Tab.WEIGHT_ADVANCED_TAB,
+        panels=None,
+        **kwargs,
+    ):
+        if not panels:
+            panels = (
+                ObjectFieldsPanel(
+                    label="Object Details",
+                    section=SectionChoices.LEFT_HALF,
+                    weight=100,
+                    fields=["id", "natural_slug", "slug"],
+                    ignore_nonexistent_fields=True,
+                ),
+                ObjectFieldsPanel(
+                    label="Data Provenance",
+                    section=SectionChoices.LEFT_HALF,
+                    weight=200,
+                    fields=["created", "last_updated"],
+                    ignore_nonexistent_fields=True,
+                    # TODO add created_by/last_updated_by derived fields and link to REST API
+                ),
+                # TODO add advanced_ui custom fields and relationships
+            )
+
+        super().__init__(tab_id=tab_id, tab_label=tab_label, weight=weight, panels=panels, **kwargs)
 
 
-@dataclass
 class _ObjectDetailContactsTab(Tab):
     """Built-in class for a Tab displaying information about contact/team associations."""
 
-    tab_id: str = "contacts"
-    tab_label: str = "Contacts"
-    weight: int = Tab.WEIGHT_CONTACTS_TAB
-    panels: tuple = (
-        ObjectsTablePanel(
-            weight=100,
-            table_name="associated_contacts_table",
-            # TODO: this is ugly - we should abstract this away and provide a standard way of including
-            # bulk actions and other buttons in the footer
-            footer_template_string="""\
+    def __init__(
+        self,
+        *,
+        tab_id="contacts",
+        tab_label="Contacts",
+        weight=Tab.WEIGHT_CONTACTS_TAB,
+        panels=None,
+        **kwargs,
+    ):
+        if panels is None:
+            panels = (
+                ObjectsTablePanel(
+                    weight=100,
+                    table_name="associated_contacts_table",
+                    # TODO: this is ugly - we should abstract this away and provide a standard way of including
+                    # bulk actions and other buttons in the footer
+                    footer_template_string="""\
 {% load perms %}
 {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
     {% if perms.extras.change_contactassociation %}
@@ -511,8 +589,9 @@ class _ObjectDetailContactsTab(Tab):
     <div class="clearfix"></div>
 {% endwith %}
 """,
-        ),
-    )
+                ),
+            )
+        super().__init__(tab_id=tab_id, tab_label=tab_label, weight=weight, panels=panels, **kwargs)
 
     def should_render(self, context):
         return context["object"].is_contact_associable_model
@@ -529,10 +608,18 @@ class _ObjectDetailContactsTab(Tab):
 class _ObjectDetailGroupsTab(Tab):
     """Built-in class for a Tab displaying information about associated dynamic groups."""
 
-    tab_id: str = "dynamic_groups"
-    tab_label: str = "Dynamic Groups"
-    weight: int = Tab.WEIGHT_GROUPS_TAB
-    panels: tuple = (ObjectsTablePanel(weight=100, table_name="associated_dynamic_groups_table"),)
+    def __init__(
+        self,
+        *,
+        tab_id="dynamic_groups",
+        tab_label="Dynamic Groups",
+        weight=Tab.WEIGHT_GROUPS_TAB,
+        panels=None,
+        **kwargs,
+    ):
+        if panels is None:
+            panels = (ObjectsTablePanel(weight=100, table_name="associated_dynamic_groups_table"),)
+        super().__init__(tab_id=tab_id, tab_label=tab_label, weight=weight, panels=panels, **kwargs)
 
     def should_render(self, context):
         return (

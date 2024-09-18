@@ -1,5 +1,3 @@
-from dataclasses import dataclass, field
-
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q
@@ -137,34 +135,37 @@ class CircuitUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.CircuitSerializer
     table_class = tables.CircuitTable
 
-    @dataclass
     class CircuitTerminationPanel(ObjectFieldsPanel):
         # TODO: provide fields as key-value data directly rather than using a custom content-template
-        fields: tuple = (
-            "location",  # TODO: render location hierarchy, hide if unset
-            "cable",  # TODO: render cable peer and connect/disconnect buttons, hide if no location
-            "provider_network",
-            "cloud_network",
-            "port_speed",
-            "upstream_speed",
-            # TODO: connected_endpoint.ip_addresses
-            "xconnect_id",
-            "pp_info",
-            "description",
-            # TODO: relationships, custom fields?
-        )
-        value_transforms: dict = field(
-            default_factory=lambda: {
-                "port_speed": [humanize_speed, placeholder],
-                "upstream_speed": [humanize_speed],
-            }
-        )
-        hide_unset_fields: tuple = ("location", "provider_network", "cloud_network", "upstream_speed")
+        def __init__(self, **kwargs):
+            super().__init__(
+                fields=(
+                    "location",  # TODO: render location hierarchy
+                    "cable",  # TODO: render cable peer and connect/disconnect buttons, hide if no location
+                    "provider_network",
+                    "cloud_network",
+                    "port_speed",
+                    "upstream_speed",
+                    "ip_addresses",
+                    "xconnect_id",
+                    "pp_info",
+                    "description",
+                    # TODO: relationships, custom fields?
+                ),
+                value_transforms={
+                    "port_speed": [humanize_speed, placeholder],
+                    "upstream_speed": [humanize_speed],
+                },
+                hide_if_unset=("location", "provider_network", "cloud_network", "upstream_speed"),
+                ignore_nonexistent_fields=True,  # ip_addresses may be unset
+                **kwargs,
+            )
 
         def render_value(self, key, value, context):
-            # if key == "cable":
-            #     termination = context[self.context_object_key]
-            #     return get_template("circuits/inc/circuit_termination_cable_fragment.html").render(context)
+            if key == "cable":
+                if not context[self.context_object_key].location:
+                    return ""
+                return get_template("circuits/inc/circuit_termination_cable_fragment.html").render(context)
             return super().render_value(key, value, context)
 
         def render_header_extra_content(self, context):
