@@ -122,6 +122,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 ### Added
 
 - [#5795](https://github.com/nautobot/nautobot/issues/5795) - Added support for `NAUTOBOT_CACHES_TIMEOUT` environment variable.
+- [#6207](https://github.com/nautobot/nautobot/issues/6207) - Added the ability to filter virtual machines by their `cluster` names or IDs.
 
 ### Changed
 
@@ -129,6 +130,8 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 
 ### Fixed
 
+- [#6207](https://github.com/nautobot/nautobot/issues/6207) - Fixed incorrect link in ClusterTable for device count column.
+- [#6207](https://github.com/nautobot/nautobot/issues/6207) - Fixed incorrect link in PowerPanelTable for power feed count column.
 - [#6230](https://github.com/nautobot/nautobot/issues/6230) - Fixed an issue with Celery Scheduler around datetime imports.
 
 ### Documentation
@@ -141,7 +144,10 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 
 ### Housekeeping
 
+- [#5859](https://github.com/nautobot/nautobot/issues/5859) - Changed `--cache-test-fixtures` and `--keepdb` flags from opt-in to opt-out for `invoke unittest` and `invoke integration-test` commands.
+- [#5859](https://github.com/nautobot/nautobot/issues/5859) - Changed `invoke unittest` to automatically include `--parallel` flag when running the entire unit test suite.
 - [#6222](https://github.com/nautobot/nautobot/issues/6222) - Fixed `plugin_upstream_testing_base.yml` to work with app cookiecutter v2.3 Dockerfile.
+- [#6227](https://github.com/nautobot/nautobot/issues/6227) - Fixed typo in app upstream testing workflow.
 
 ## v2.3.3 (2024-09-16)
 
