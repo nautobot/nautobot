@@ -462,6 +462,7 @@ def refresh_job_models(sender, *, apps, **kwargs):
     from nautobot.extras.jobs import get_jobs  # avoid circular import
 
     Job = apps.get_model("extras", "Job")
+    JobQueue = apps.get_model("extras", "JobQueue")
 
     # To make reverse migrations safe
     if not hasattr(Job, "job_class_name"):
@@ -473,7 +474,9 @@ def refresh_job_models(sender, *, apps, **kwargs):
     job_models = []
 
     for job_class in get_jobs().values():
-        job_model, _ = refresh_job_model_from_job_class(Job, job_class)
+        job_model, _ = refresh_job_model_from_job_class(
+            job_model_class=Job, job_class=job_class, job_queue_class=JobQueue
+        )
         if job_model is not None:
             job_models.append(job_model)
 

@@ -98,6 +98,7 @@ class Command(BaseCommand):
                 RearPortTemplateFactory,
                 SoftwareImageFileFactory,
                 SoftwareVersionFactory,
+                VirtualDeviceContextFactory,
             )
             from nautobot.extras.choices import MetadataTypeDataTypeChoices
             from nautobot.extras.factory import (
@@ -105,6 +106,7 @@ class Command(BaseCommand):
                 DynamicGroupFactory,
                 ExternalIntegrationFactory,
                 JobLogEntryFactory,
+                JobQueueFactory,
                 JobResultFactory,
                 MetadataChoiceFactory,
                 MetadataTypeFactory,
@@ -218,6 +220,7 @@ class Command(BaseCommand):
         _create_batch(ManufacturerFactory, 2, description="without Platforms or DeviceTypes")  # Last 2 hard-coded
         _create_batch(DeviceRedundancyGroupFactory, 20)
         _create_batch(DeviceFactory, 20)
+        _create_batch(VirtualDeviceContextFactory, 30)
         _create_batch(ModuleFactory, 20)
         _create_batch(SoftwareVersionFactory, 5, description="without Devices")
         _create_batch(SoftwareImageFileFactory, 5, description="without DeviceTypes")
@@ -329,6 +332,7 @@ class Command(BaseCommand):
         )
         _create_batch(MetadataChoiceFactory, 100)
         _create_batch(ObjectChangeFactory, 100)
+        _create_batch(JobQueueFactory, 30)
         _create_batch(JobResultFactory, 20)
         _create_batch(JobLogEntryFactory, 100)
         _create_batch(ObjectMetadataFactory, 100)

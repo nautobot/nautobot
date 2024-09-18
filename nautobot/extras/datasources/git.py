@@ -31,6 +31,7 @@ from nautobot.extras.models import (
     ExportTemplate,
     GitRepository,
     Job,
+    JobQueue,
     JobResult,
     Role,
     Tag,
@@ -767,7 +768,9 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
                 if not job_class_path.startswith(f"{repository_record.slug}.jobs."):
                     continue
                 found_jobs = True
-                job_model, created = refresh_job_model_from_job_class(Job, job_class)
+                job_model, created = refresh_job_model_from_job_class(
+                    job_model_class=Job, job_class=job_class, job_queue_class=JobQueue
+                )
 
                 if job_model is None:
                     msg = "Failed to create Job record; check Nautobot logs for details"

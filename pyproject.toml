@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.3.5b1"
+version = "2.4.0a1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -374,7 +374,7 @@ order-by-type = false
 [tool.towncrier]
 package = "nautobot"
 directory = "changes"
-filename = "nautobot/docs/release-notes/version-2.3.md"
+filename = "nautobot/docs/release-notes/version-2.4.md"
 template = "development/towncrier_template.j2"
 start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"

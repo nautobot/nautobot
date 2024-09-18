@@ -67,6 +67,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 from nautobot.extras.api.views import (
     ConfigContextQuerySetMixin,
@@ -600,7 +601,9 @@ class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
         "status",
         "cable",
         "untagged_vlan",
-    ).prefetch_related("tags", "_path__destination", "_cable_peer", "ip_addresses", "tagged_vlans")
+    ).prefetch_related(
+        "tags", "_path__destination", "_cable_peer", "ip_addresses", "tagged_vlans", "virtual_device_contexts"
+    )
     serializer_class = serializers.InterfaceSerializer
     filterset_class = filters.InterfaceFilterSet
 
@@ -883,3 +886,9 @@ class ModuleTypeViewSet(NautobotModelViewSet):
     queryset = ModuleType.objects.select_related("manufacturer").prefetch_related("tags", "modules")
     serializer_class = serializers.ModuleTypeSerializer
     filterset_class = filters.ModuleTypeFilterSet
+
+
+class VirtualDeviceContextViewSet(NautobotModelViewSet):
+    queryset = VirtualDeviceContext.objects.select_related("device", "tenant", "primary_ip4", "primary_ip6")
+    serializer_class = serializers.VirtualDeviceContextSerializer
+    filterset_class = filters.VirtualDeviceContextFilterSet

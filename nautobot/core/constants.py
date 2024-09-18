@@ -152,6 +152,8 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
     "jobbutton",
     "jobhook",
     "joblogentry",
+    "jobqueue",
+    "jobqueueassignment",
     "jobresult",
     "locationtype",
     "manufacturer",

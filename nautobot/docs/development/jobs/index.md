@@ -95,7 +95,7 @@ Similarly, only the `jobs` module is loaded from Git repositories. If you're usi
 
 If not using submodules, you should register your job in the file where your job is defined.
 
-Examples of the different directory structures when registering jobs in Git repositories:  
+Examples of the different directory structures when registering jobs in Git repositories:
 
 !!! note
     Take note of the `__init__.py` at the root of the repository.  This is required to register jobs in a Git repository.
@@ -309,7 +309,10 @@ class ExampleJobWithSoftTimeLimit(Job):
 
 Default: `[]`
 
-A list of task queue names that the job can be routed to. An empty list will default to only allowing the user to select the [default queue](../../user-guide/administration/configuration/settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The first queue in the list will be used if a queue is not specified in a job run API call.
+A list of Job Queue names that the job can be routed to. An empty list will default to only allowing the user to select the [default Celery queue](../../user-guide/administration/configuration/settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The alphabetically first queue in this list will be used if a queue is not specified in a job run API call.
+
++/- 2.4.0 "Changed default queue selection"
+    As a result of the addition of Job Queues, the default queue when running a Job without explicitly selecting a queue is now the alphabetically first queue of those listed, rather than the first queue specified in this list.
 
 !!! note
     A worker must be listening on the requested queue or the job will not run. See the documentation on [task queues](../../user-guide/administration/guides/celery-queues.md) for more information.

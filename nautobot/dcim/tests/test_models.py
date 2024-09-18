@@ -61,6 +61,7 @@ from nautobot.dcim.models import (
     RearPortTemplate,
     SoftwareImageFile,
     SoftwareVersion,
+    VirtualDeviceContext,
 )
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -2363,6 +2364,30 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
                 address=f"1.1.1.{last_octet}/32", status=ip_address_status, namespace=cls.namespace
             )
 
+    def test_vdcs_validation_logic(self):
+        """Assert Interface raises error when adding virtual_device_contexts that do not belong to same device as the Interface device."""
+        interface = Interface.objects.create(
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=self.device,
+            status=Status.objects.get_for_model(Interface).first(),
+            role=Role.objects.get_for_model(Interface).first(),
+        )
+        vdc = VirtualDeviceContext.objects.create(
+            name="Sample VDC",
+            device=Device.objects.exclude(pk=self.device.pk).first(),
+            identifier=100,
+            status=Status.objects.get_for_model(VirtualDeviceContext).first(),
+        )
+
+        with self.assertRaises(ValidationError) as err:
+            interface.virtual_device_contexts.add(vdc)
+        self.assertEqual(
+            err.exception.message_dict["virtual_device_contexts"][0],
+            f"Virtual Device Context with names {[vdc.name]} must all belong to the "
+            f"same device as the interface's device.",
+        )
+
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
         interface = Interface.objects.create(
             name="Int1",
@@ -3169,3 +3194,59 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
 
 class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
     model = ModuleType
+
+
+class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
+    model = VirtualDeviceContext
+
+    # TODO: Remove when VirtualDeviceContext UI View / Docs is created
+    def test_get_docs_url(self):
+        """No docs for this through table model."""
+
+    def test_assigning_primary_ip(self):
+        device = Device.objects.first()
+        intf_status = Status.objects.get_for_model(Interface).first()
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext).first()
+        intf_role = Role.objects.get_for_model(Interface).first()
+        interface = Interface.objects.create(
+            name="Int1", device=device, status=intf_status, role=intf_role, type=InterfaceTypeChoices.TYPE_100GE_CFP
+        )
+        vdc = VirtualDeviceContext(
+            device=device,
+            status=vdc_status,
+            identifier=100,
+            name="Test VDC 1",
+        )
+        vdc.validated_save()
+
+        ip_v4 = IPAddress.objects.filter(ip_version=4).first()
+        ip_v6 = IPAddress.objects.filter(ip_version=6).first()
+
+        vdc.primary_ip4 = ip_v6
+        with self.assertRaises(ValidationError) as err:
+            vdc.validated_save()
+        self.assertIn(
+            f"{ip_v6} is not an IPv4 address",
+            str(err.exception),
+        )
+
+        vdc.primary_ip4 = None
+        vdc.primary_ip6 = ip_v4
+        with self.assertRaises(ValidationError) as err:
+            vdc.validated_save()
+        self.assertIn(
+            f"{ip_v4} is not an IPv6 address",
+            str(err.exception),
+        )
+
+        vdc.primary_ip6 = ip_v6
+        with self.assertRaises(ValidationError) as err:
+            vdc.validated_save()
+        self.assertIn(
+            f"The specified IP address ({ip_v6}) is not assigned to this Virtual Device Context.",
+            str(err.exception),
+        )
+        interface.virtual_device_contexts.add(vdc)
+        interface.add_ip_addresses([ip_v4, ip_v6])
+        vdc.primary_ip4 = ip_v4
+        vdc.validated_save()
