@@ -1,0 +1,2 @@
+Changed `--cache-test-fixtures` and `--keepdb` flags from opt-in to opt-out for `invoke unittest` and `invoke integration-test` commands.
+Changed `invoke unittest` to automatically include `--parallel` flag when running the entire unit test suite.
