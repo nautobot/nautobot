@@ -121,20 +121,25 @@ class RadioProfile(PrimaryModel):
     frequency = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         choices=RadioProfileFrequencyChoices,
+        blank=True,
     )
-    tx_power_min = models.IntegerField()
-    tx_power_max = models.IntegerField()
+    tx_power_min = models.IntegerField(blank=True, null=True)
+    tx_power_max = models.IntegerField(blank=True, null=True)
     channel_width = JSONArrayField(
-        base_field=models.IntegerField(choices=RadioProfileChannelWidthChoices), default=list
+        base_field=models.IntegerField(choices=RadioProfileChannelWidthChoices),
+        default=list,
+        blank=True,
     )
-    allowed_channel_list = JSONArrayField(base_field=models.IntegerField(), default=list)
+    allowed_channel_list = JSONArrayField(
+        base_field=models.IntegerField(blank=True, null=True), default=list, blank=True, null=True
+    )
     supported_data_rates = models.ManyToManyField(
         to="wireless.SupportedDataRate",
         related_name="radio_profiles",
         blank=True,
     )
     regulatory_domain = models.CharField(max_length=CHARFIELD_MAX_LENGTH, choices=RadioProfileRegulatoryDomainChoices)
-    rx_power_min = models.IntegerField()
+    rx_power_min = models.IntegerField(blank=True, null=True)
 
     class Meta:
         ordering = ["name"]

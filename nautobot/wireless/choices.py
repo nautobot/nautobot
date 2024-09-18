@@ -222,7 +222,7 @@ class RadioProfileRegulatoryDomainChoices(ChoiceSet):
         (AM, "Armenia"),
         (AU, "Australia"),
         (AR, "Argentina"),
-        (AT, "Australia"),
+        (AT, "Austria"),
         (AZ, "Azerbaijan"),
         (BA, "Bosnia and Herzegovina"),
         (BE, "Belgium"),
