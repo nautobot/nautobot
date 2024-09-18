@@ -25,7 +25,7 @@ from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
 from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
 
 logger = logging.getLogger(__name__)
@@ -244,6 +244,18 @@ class RelationshipModel(models.Model):
             if relation.skip_required(cls, opposite_side):
                 continue
 
+            if getattr(relation, f"{relation.required_on}_filter") and instance:
+                filterset = get_filterset_for_model(cls)
+                if filterset:
+                    filter_params = getattr(relation, f"{relation.required_on}_filter")
+                    # If the relationship is required on the model, but the object is not in the filter,
+                    # we should allow the object to be saved, as the object is not part of the relationship.
+                    # Example: We want a Device with a Role of Switch to be required to have a relationship
+                    # with a Device that has a Role of Router. A Device with a Role of Printer should
+                    # be exempt from the requirement.
+                    if not filterset(filter_params, cls.objects.filter(id=instance.id)).qs.exists():
+                        continue
+
             if relation.has_many(opposite_side):
                 num_required_verbose = "at least one"
             else:
@@ -404,7 +416,14 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
         )
 
 
-class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
+class Relationship(
+    ChangeLoggedModel,
+    ContactMixin,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
     label = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, unique=True, help_text="Label of the relationship as displayed to users"
     )

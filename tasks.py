@@ -66,7 +66,7 @@ namespace.configure(
     {
         "nautobot": {
             "project_name": "nautobot",
-            "python_ver": "3.8",
+            "python_ver": "3.12",
             "local": False,
             "compose_dir": os.path.join(BASE_DIR, "development/"),
             "compose_files": [
@@ -408,7 +408,7 @@ def stop(context, service=None):
     """Stop Nautobot and its dependencies."""
     print("Stopping Nautobot...")
     if not service:
-        docker_compose(context, "down")
+        docker_compose(context, "--profile '*' down")
     else:
         docker_compose(context, "stop", service=service)
 
@@ -626,7 +626,7 @@ def yamllint(context):
 
 @task
 def serve_docs(context):
-    """Runs local instance of mkdocs serve (ctrl-c to stop)."""
+    """Runs local instance of mkdocs serve on port 8001 (ctrl-c to stop)."""
     if is_truthy(context.nautobot.local):
         run_command(context, "mkdocs serve")
     else:
@@ -746,7 +746,7 @@ def unittest(
         command += " --keepdb"
     if failfast:
         command += " --failfast"
-    if buffer and not parallel:  # Django 3.x doesn't support '--parallel --buffer'; can remove this after Django 4.x
+    if buffer:
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"

@@ -346,6 +346,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 memory=3,
                 disk=3,
                 comments="This is VM 4",
+                software_version=None,
             ),
             VirtualMachine.objects.create(
                 name="Virtual Machine 5",
@@ -358,6 +359,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 memory=3,
                 disk=3,
                 comments="This is VM 5",
+                software_version=None,
             ),
             VirtualMachine.objects.create(
                 name="Virtual Machine 6",
@@ -370,24 +372,28 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 memory=3,
                 disk=3,
                 comments="This is VM 6",
+                software_version=cls.software_versions[1],
             ),
         )
         vms[0].software_image_files.set(cls.software_versions[1].software_image_files.all())
         vms[1].software_image_files.set(cls.software_versions[0].software_image_files.all())
 
         int_status = Status.objects.get_for_model(VMInterface).first()
+        int_role = Role.objects.get_for_model(VMInterface).first()
         cls.interfaces = (
             VMInterface.objects.create(
                 virtual_machine=vms[0],
                 name="Interface 1",
                 mac_address="00-00-00-00-00-01",
                 status=int_status,
+                role=int_role,
             ),
             VMInterface.objects.create(
                 virtual_machine=vms[1],
                 name="Interface 2",
                 mac_address="00-00-00-00-00-02",
                 status=int_status,
+                role=int_role,
             ),
             VMInterface.objects.create(
                 virtual_machine=vms[2],
@@ -434,6 +440,15 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
         vms[0].tags.set(Tag.objects.get_for_model(VirtualMachine))
         vms[1].tags.set(Tag.objects.get_for_model(VirtualMachine)[:3])
+
+    def test_filters_generic(self):
+        # Assign more than 2 different software versions to VirtualMachine before we test generic filters
+        software_versions = list(SoftwareVersion.objects.all())
+        virtual_machines = list(VirtualMachine.objects.all())
+        for i in range(4):
+            virtual_machines[i].software_version = software_versions[i]
+            virtual_machines[i].save()
+        return super().test_filters_generic()
 
     def test_name(self):
         params = {"name": ["Virtual Machine 1", "Virtual Machine 2"]}
@@ -594,6 +609,8 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         ["mac_address"],
         ["mtu"],
         ["name"],
+        ("role", "role__id"),
+        ("role", "role__name"),
         ["parent_interface"],
         ["tagged_vlans", "tagged_vlans__pk"],
         ["tagged_vlans", "tagged_vlans__vid"],
@@ -625,6 +642,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         )
 
         statuses = Status.objects.get_for_model(VMInterface)
+        roles = Role.objects.get_for_model(VMInterface)
 
         vlans = VLAN.objects.filter()[:2]
         vlans[0].locations.clear()
@@ -640,6 +658,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
                 enabled=True,
                 mtu=100,
                 mac_address="00-00-00-00-00-01",
+                role=roles[0],
                 status=statuses[0],
                 description="This is a description of Interface1",
                 mode=InterfaceModeChoices.MODE_ACCESS,
@@ -651,6 +670,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
                 enabled=True,
                 mtu=200,
                 mac_address="00-00-00-00-00-02",
+                role=roles[1],
                 status=statuses[0],
                 description="This is a description of Interface2",
                 mode=InterfaceModeChoices.MODE_ACCESS,
@@ -676,6 +696,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
                 enabled=False,
                 mtu=300,
                 mac_address="00-00-00-00-00-04",
+                role=roles[0],
                 status=statuses[1],
                 description="This is a description of Interface4",
                 mode=InterfaceModeChoices.MODE_TAGGED,
@@ -688,6 +709,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
                 enabled=False,
                 mtu=300,
                 mac_address="00-00-00-00-00-05",
+                role=roles[1],
                 status=statuses[2],
                 description="This is a description of Interface5",
                 mode=InterfaceModeChoices.MODE_TAGGED_ALL,

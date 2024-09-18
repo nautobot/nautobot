@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.forms import ValidationError as FormsValidationError
@@ -56,19 +54,25 @@ from nautobot.extras.models import (
     JobHook,
     JobLogEntry,
     JobResult,
+    MetadataChoice,
+    MetadataType,
     Note,
     ObjectChange,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroupAssociation,
     Status,
     Tag,
     TaggedItem,
     Team,
+    UserSavedViewAssociation,
     Webhook,
 )
 from nautobot.extras.secrets.exceptions import SecretError
@@ -304,13 +308,13 @@ class DynamicGroupViewSet(NotesViewSetMixin, ModelViewSet):
     # @extend_schema(methods=["get"], responses={200: member_response})
     @action(detail=True, methods=["get"])
     def members(self, request, pk, *args, **kwargs):
-        """List member objects of the same type as the `content_type` for this dynamic group."""
+        """List the member objects of this dynamic group."""
         instance = get_object_or_404(self.queryset, pk=pk)
 
         # Retrieve the serializer for the content_type and paginate the results
         member_model_class = instance.content_type.model_class()
         member_serializer_class = get_serializer_for_model(member_model_class)
-        members = self.paginate_queryset(instance.members)
+        members = self.paginate_queryset(instance.members.restrict(request.user, "view"))
         member_serializer = member_serializer_class(members, many=True, context={"request": request})
         return self.get_paginated_response(member_serializer.data)
 
@@ -323,6 +327,43 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
     queryset = DynamicGroupMembership.objects.select_related("group", "parent_group")
     serializer_class = serializers.DynamicGroupMembershipSerializer
     filterset_class = filters.DynamicGroupMembershipFilterSet
+
+
+#
+# Saved Views
+#
+
+
+class SavedViewViewSet(ModelViewSet):
+    queryset = SavedView.objects.select_related("owner")
+    serializer_class = serializers.SavedViewSerializer
+    filterset_class = filters.SavedViewFilterSet
+
+
+class UserSavedViewAssociationViewSet(ModelViewSet):
+    queryset = UserSavedViewAssociation.objects.select_related("user", "saved_view")
+    serializer_class = serializers.UserSavedViewAssociationSerializer
+    filterset_class = filters.UserSavedViewAssociationFilterSet
+
+
+class StaticGroupAssociationViewSet(NautobotModelViewSet):
+    """
+    Manage Static Group Associations through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = StaticGroupAssociation.objects.select_related("associated_object_type", "dynamic_group")
+    serializer_class = serializers.StaticGroupAssociationSerializer
+    filterset_class = filters.StaticGroupAssociationFilterSet
+
+    def get_queryset(self):
+        if (
+            hasattr(self, "request")
+            and self.request is not None
+            and "dynamic_group" in self.request.GET
+            and self.action in ["list", "retrieve"]
+        ):
+            self.queryset = StaticGroupAssociation.all_objects.select_related("associated_object_type", "dynamic_group")
+        return super().get_queryset()
 
 
 #
@@ -447,59 +488,6 @@ class ImageAttachmentViewSet(ModelViewSet):
 #
 # Jobs
 #
-
-
-def _create_schedule(serializer, data, job_model, user, approval_required, task_queue=None):
-    """
-    This is an internal function to create a scheduled job from API data.
-    It has to handle both once-offs (i.e. of type TYPE_FUTURE) and interval
-    jobs.
-    """
-    type_ = serializer["interval"]
-    if type_ == JobExecutionType.TYPE_IMMEDIATELY:
-        time = timezone.now()
-        name = serializer.get("name") or f"{job_model.name} - {time}"
-    elif type_ == JobExecutionType.TYPE_CUSTOM:
-        time = serializer.get("start_time")  # doing .get("key", "default") returns None instead of "default"
-        if time is None:
-            # "start_time" is checked against models.ScheduledJob.earliest_possible_time()
-            # which returns timezone.now() + timedelta(seconds=15)
-            time = timezone.now() + timedelta(seconds=20)
-        name = serializer["name"]
-    else:
-        time = serializer["start_time"]
-        name = serializer["name"]
-    crontab = serializer.get("crontab", "")
-
-    celery_kwargs = {
-        "nautobot_job_profile": False,
-        "queue": task_queue,
-    }
-
-    # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
-    #
-    # We pass in task and job_model here partly for forward/backward compatibility logic, and
-    # part fallback safety. It's mildly useful to store both the task module/class name and the JobModel
-    # FK on the ScheduledJob, as in the case where the JobModel gets deleted (and the FK becomes
-    # null) you still have a bit of context on the ScheduledJob as to what it was originally
-    # scheduled for.
-    scheduled_job = ScheduledJob(
-        name=name,
-        task=job_model.class_path,
-        job_model=job_model,
-        start_time=time,
-        description=f"Nautobot job {name} scheduled by {user} for {time}",
-        kwargs=data,
-        celery_kwargs=celery_kwargs,
-        interval=type_,
-        one_off=(type_ == JobExecutionType.TYPE_FUTURE),
-        user=user,
-        approval_required=approval_required,
-        crontab=crontab,
-        queue=task_queue,
-    )
-    scheduled_job.validated_save()
-    return scheduled_job
 
 
 class JobViewSetBase(
@@ -701,13 +689,16 @@ class JobViewSetBase(
 
         # Try to create a ScheduledJob, or...
         if schedule_data:
-            schedule = _create_schedule(
-                schedule_data,
-                job_class.serialize_data(cleaned_data),
+            schedule = ScheduledJob.create_schedule(
                 job_model,
                 request.user,
-                approval_required,
+                name=schedule_data.get("name"),
+                start_time=schedule_data.get("start_time"),
+                interval=schedule_data.get("interval"),
+                crontab=schedule_data.get("crontab", ""),
+                approval_required=approval_required,
                 task_queue=input_serializer.validated_data.get("task_queue", None),
+                **job_class.serialize_data(cleaned_data),
             )
         else:
             schedule = None
@@ -982,6 +973,29 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})
 
         return Response(serializer.data)
+
+
+#
+# Metadata
+#
+
+
+class MetadataTypeViewSet(NautobotModelViewSet):
+    queryset = MetadataType.objects.all()
+    serializer_class = serializers.MetadataTypeSerializer
+    filterset_class = filters.MetadataTypeFilterSet
+
+
+class MetadataChoiceViewSet(ModelViewSet):
+    queryset = MetadataChoice.objects.select_related("metadata_type")
+    serializer_class = serializers.MetadataChoiceSerializer
+    filterset_class = filters.MetadataChoiceFilterSet
+
+
+class ObjectMetadataViewSet(NautobotModelViewSet):
+    queryset = ObjectMetadata.objects.all()
+    serializer_class = serializers.ObjectMetadataSerializer
+    filterset_class = filters.ObjectMetadataFilterSet
 
 
 #

@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from copy import deepcopy
 import logging
 import uuid
@@ -7,9 +6,11 @@ from django import forms as django_forms
 from django.conf import settings
 from django.db import models
 from django.forms.utils import ErrorDict, ErrorList
+from django.utils.encoding import force_str
+from django.utils.text import capfirst
 import django_filters
 from django_filters.constants import EMPTY_VALUES
-from django_filters.utils import get_model_field, resolve_field
+from django_filters.utils import get_model_field, label_for_filter, resolve_field, verbose_lookup_expr
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 
@@ -123,8 +124,8 @@ class MultiValueUUIDFilter(django_filters.UUIDFilter, django_filters.MultipleCho
 
 class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
     """
-    BooleanFilter for related objects that will explicitly perform `exclude=True` and `isnull`
-    lookups. The `field_name` argument is required and must be set to the related field on the
+    BooleanFilter for related objects that will explicitly perform `isnull` lookups.
+    The `field_name` argument is required and must be set to the related field on the
     model.
 
     This should be used instead of a default `BooleanFilter` paired `method=`
@@ -132,15 +133,33 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
 
     Example:
 
-        has_interfaces = RelatedMembershipBooleanFilter(
-            field_name="interfaces",
-            label="Has interfaces",
+        has_modules = RelatedMembershipBooleanFilter(
+            field_name="module_bays__installed_module",
+            label="Has modules",
         )
+
+        This would generate a filter that returns instances that have at least one module
+        bay with an installed module. The `has_modules=False` filter would exclude instances
+        with at least one module bay with an installed module.
+
+        Set `exclude=True` to reverse the behavior of the filter. This __may__ be useful
+        for filtering on null directly related fields but this filter is not smart enough
+        to differentiate between `fieldA__fieldB__isnull` and `fieldA__isnull` so it's not
+        suitable for cases like the `has_empty_module_bays` filter where an instance may
+        not have any module bays.
+
+        See the below table for more information:
+
+        | value       | exclude          | Result
+        |-------------|------------------|-------
+        | True        | False (default)  | Return instances with at least one non-null match -- qs.filter(field_name__isnull=False)
+        | False       | False (default)  | Exclude instances with at least one non-null match -- qs.exclude(field_name__isnull=False)
+        | True        | True             | Return instances with at least one null match -- qs.filter(field_name__isnull=True)
+        | False       | True             | Exclude instances with at least one null match -- qs.exclude(field_name__isnull=True)
+
     """
 
-    def __init__(
-        self, field_name=None, lookup_expr="isnull", *, label=None, method=None, distinct=False, exclude=True, **kwargs
-    ):
+    def __init__(self, field_name=None, lookup_expr="isnull", *, label=None, method=None, distinct=True, **kwargs):
         if field_name is None:
             raise ValueError(f"Field name is required for {self.__class__.__name__}")
 
@@ -150,10 +169,22 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
             label=label,
             method=method,
             distinct=distinct,
-            exclude=exclude,
             widget=forms.StaticSelect2(choices=forms.BOOLEAN_CHOICES),
             **kwargs,
         )
+
+    def filter(self, qs, value):
+        if value in EMPTY_VALUES:
+            return qs
+        if self.distinct:
+            qs = qs.distinct()
+        lookup = f"{self.field_name}__{self.lookup_expr}"
+        if bool(value):
+            # if self.exclude=False, return instances with field populated
+            return qs.filter(**{lookup: self.exclude})
+        else:
+            # if self.exclude=False, exclude instances with field populated
+            return qs.exclude(**{lookup: self.exclude})
 
 
 class NumericArrayFilter(django_filters.NumberFilter):
@@ -175,6 +206,9 @@ class ContentTypeFilterMixin:
     def filter(self, qs, value):
         if value in EMPTY_VALUES:
             return qs
+
+        if value.isdigit():
+            return qs.filter(**{f"{self.field_name}__pk": value})
 
         try:
             app_label, model = value.lower().split(".")
@@ -242,6 +276,9 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
             if self.conjoined:
                 qs = ContentTypeFilter.filter(self, qs, v)
             else:
+                if v.isdigit():
+                    q |= models.Q(**{f"{self.field_name}__pk": value})
+                    continue
                 # Similar to the ContentTypeFilter.filter() call above, but instead of narrowing the query each time
                 # (a AND b AND c ...) we broaden the query each time (a OR b OR c ...).
                 # Specifically, we're mapping a value like ['dcim.device', 'ipam.vlan'] to a query like
@@ -395,12 +432,22 @@ class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilte
     Filter that supports filtering on values matching the `pk` field and another
     field of a foreign-key related object. The desired field is set using the `to_field_name`
     keyword argument on filter initialization (defaults to `name`).
+
+    NOTE that the `to_field_name` field does not have to be a "true" natural key (ie. unique), it
+    was just the best name we could come up with for this filter
+
     """
 
     field_class = forms.MultiMatchModelMultipleChoiceField
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, prefers_id=False, **kwargs):
+        """Initialize the NaturalKeyOrPKMultipleChoiceFilter.
+
+        Args:
+            prefers_id (bool, optional): Prefer PK (ID) over the 'to_field_name'. Defaults to False.
+        """
         self.natural_key = kwargs.setdefault("to_field_name", "name")
+        self.prefers_id = prefers_id
         super().__init__(*args, **kwargs)
 
     def get_filter_predicate(self, v):
@@ -675,6 +722,18 @@ class BaseFilterSet(django_filters.FilterSet):
                 # Of course setting the negation of the existing filter's exclude attribute handles both cases
                 new_filter.exclude = not filter_field.exclude
 
+            # If the base filter_field has a custom label, django_filters won't adjust it for the new_filter lookup,
+            # so we have to do it.
+            if filter_field.label and filter_field.label != label_for_filter(
+                cls.Meta.model, filter_field.field_name, filter_field.lookup_expr, filter_field.exclude
+            ):
+                # Lightly adjusted from label_for_filter() implementation:
+                verbose_expression = ["exclude", filter_field.label] if new_filter.exclude else [filter_field.label]
+                if isinstance(lookup_expr, str):
+                    verbose_expression.append(verbose_lookup_expr(lookup_expr))
+                verbose_expression = [force_str(part) for part in verbose_expression if part]
+                new_filter.label = capfirst(" ".join(verbose_expression))
+
             magic_filters[new_filter_name] = new_filter
 
         return magic_filters
@@ -705,8 +764,8 @@ class BaseFilterSet(django_filters.FilterSet):
     def get_fields(cls):
         fields = super().get_fields()
         if "id" not in fields and (cls._meta.exclude is None or "id" not in cls._meta.exclude):
-            # Add "id" as the first key in the `fields` OrderedDict
-            fields = OrderedDict(id=[django_filters.conf.settings.DEFAULT_LOOKUP_EXPR], **fields)
+            # Add "id" as the first key in the `fields` dict
+            fields = {"id": [django_filters.conf.settings.DEFAULT_LOOKUP_EXPR], **fields}
         return fields
 
     @classmethod
@@ -716,8 +775,56 @@ class BaseFilterSet(django_filters.FilterSet):
         """
         filters = super().get_filters()
 
+        # Remove any filters that may have been auto-generated from private model attributes
+        for filter_name in list(filters.keys()):
+            if filter_name.startswith("_"):
+                del filters[filter_name]
+
+        if getattr(cls._meta.model, "is_contact_associable_model", False):
+            # Add "contacts" and "teams" filters
+            from nautobot.extras.models import Contact, Team
+
+            if "contacts" not in filters:
+                filters["contacts"] = NaturalKeyOrPKMultipleChoiceFilter(
+                    queryset=Contact.objects.all(),
+                    field_name="associated_contacts__contact",
+                    to_field_name="name",
+                    label="Contacts (name or ID)",
+                )
+
+            if "teams" not in filters:
+                filters["teams"] = NaturalKeyOrPKMultipleChoiceFilter(
+                    queryset=Team.objects.all(),
+                    field_name="associated_contacts__team",
+                    to_field_name="name",
+                    label="Teams (name or ID)",
+                )
+
+        if "dynamic_groups" not in filters and getattr(cls._meta.model, "is_dynamic_group_associable_model", False):
+            if not hasattr(cls._meta.model, "static_group_association_set"):
+                logger.warning(
+                    "Model %s has 'is_dynamic_group_associable_model = True' but lacks "
+                    "a 'static_group_association_set' attribute. Perhaps this is due to it inheriting from "
+                    "the deprecated DynamicGroupMixin class instead of the preferred DynamicGroupsModelMixin?",
+                    cls._meta.model,
+                )
+            else:
+                # Add "dynamic_groups" field as the last key
+                from nautobot.extras.models import DynamicGroup
+
+                filters["dynamic_groups"] = NaturalKeyOrPKMultipleChoiceFilter(
+                    queryset=DynamicGroup.objects.all(),
+                    field_name="static_group_association_set__dynamic_group",
+                    to_field_name="name",
+                    query_params={"content_type": cls._meta.model._meta.label_lower},
+                    label="Dynamic groups (name or ID)",
+                )
+
         # django-filters has no concept of "abstract" filtersets, so we have to fake it
         if cls._meta.model is not None:
+            if "tags" in filters and isinstance(filters["tags"], TagFilter):
+                filters["tags"].extra["query_params"] = {"content_types": [cls._meta.model._meta.label_lower]}
+
             new_filters = {}
             for existing_filter_name, existing_filter in filters.items():
                 new_filters.update(

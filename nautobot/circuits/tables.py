@@ -4,6 +4,7 @@ from django_tables2.utils import Accessor
 from nautobot.core.tables import (
     BaseTable,
     ButtonsColumn,
+    LinkedCountColumn,
     TagColumn,
     ToggleColumn,
 )
@@ -18,6 +19,8 @@ CIRCUIT_TERMINATION_PARENT = """
 {{ value.provider_network|hyperlinked_object }}
 {% elif value.location %}
 {{ value.location|hyperlinked_object }}
+{% elif value.cloud_network %}
+{{ value.cloud_network|hyperlinked_object }}
 {% else %}
 {{ None|placeholder }}
 {% endif %}
@@ -48,7 +51,11 @@ class ProviderNetworkTable(BaseTable):
 class ProviderTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    circuit_count = tables.Column(accessor=Accessor("count_circuits"), verbose_name="Circuits")
+    circuit_count = LinkedCountColumn(
+        viewname="circuits:circuit_list",
+        url_params={"provider": "pk"},
+        verbose_name="Circuits",
+    )
     tags = TagColumn(url_name="circuits:provider_list")
 
     class Meta(BaseTable.Meta):
@@ -75,7 +82,11 @@ class ProviderTable(BaseTable):
 class CircuitTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    circuit_count = tables.Column(verbose_name="Circuits")
+    circuit_count = LinkedCountColumn(
+        viewname="circuits:circuit_list",
+        url_params={"circuit_type": "pk"},
+        verbose_name="Circuits",
+    )
     actions = ButtonsColumn(CircuitType)
 
     class Meta(BaseTable.Meta):
@@ -155,6 +166,7 @@ class CircuitTerminationTable(BaseTable):
     term_side = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     provider_network = tables.Column(linkify=True)
+    cloud_network = tables.Column(linkify=True)
     cable = tables.Column(linkify=True)
 
     class Meta(BaseTable.Meta):
@@ -165,6 +177,7 @@ class CircuitTerminationTable(BaseTable):
             "term_side",
             "location",
             "provider_network",
+            "cloud_network",
             "cable",
             "port_speed",
             "upstream_speed",
@@ -179,4 +192,5 @@ class CircuitTerminationTable(BaseTable):
             "term_side",
             "location",
             "provider_network",
+            "cloud_network",
         )

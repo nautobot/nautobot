@@ -1,23 +1,46 @@
 from nautobot.core.apps import HomePageItem, HomePagePanel
 from nautobot.extras.choices import JobResultStatusChoices
-from nautobot.extras.models import GitRepository, JobResult, ObjectChange
+from nautobot.extras.models import DynamicGroup, GitRepository, JobResult, ObjectChange
 
 
 def get_job_results(request):
     """Callback function to collect job history for panel."""
     return (
         JobResult.objects.filter(status__in=JobResultStatusChoices.READY_STATES)
-        .defer("result")
+        .restrict(request.user, "view")
+        .only("id", "name", "status", "date_done", "user")
         .order_by("-date_done")[:10]
     )
 
 
 def get_changelog(request):
     """Callback function to collect changelog for panel."""
-    return ObjectChange.objects.restrict(request.user, "view")[:15]
+    return ObjectChange.objects.restrict(request.user, "view").only(
+        "id",
+        "action",
+        "changed_object",
+        "changed_object_id",
+        "changed_object_type",
+        "object_repr",
+        "user_name",
+        "time",
+    )[:15]
 
 
 layout = (
+    HomePagePanel(
+        name="Organization",
+        items=(
+            HomePageItem(
+                name="Dynamic Groups",
+                link="extras:dynamicgroup_list",
+                model=DynamicGroup,
+                description="Groups of related objects",
+                permissions=["extras.view_dynamicgroup"],
+                weight=300,
+            ),
+        ),
+    ),
     HomePagePanel(
         name="Data Sources",
         weight=700,

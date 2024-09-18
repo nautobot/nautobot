@@ -1,6 +1,6 @@
 # Device Types
 
-A device type represents a particular make and model of hardware that exists in the real world. Device types define the physical attributes of a device (rack height and depth) and its individual components (console, power, network interfaces, and so on).
+A device type represents a particular make and model of hardware that exists in the real world. Device types define the physical attributes of a [device](device.md) (rack height and depth) and its individual components ([console](consoleporttemplate.md), [power](powerporttemplate.md), network [interfaces](interfacetemplate.md), and so on).
 
 Device types are instantiated as devices installed within locations and/or equipment racks. For example, you might define a device type to represent a Juniper EX4300-48T network switch with 48 Ethernet interfaces. You can then create multiple _instances_ of this type named "switch1", "switch2", and so on. Each device will automatically inherit the components (such as interfaces) of its device type at the time of creation. However, changes made to a device type will **not** apply to instances of that device type retroactively.
 
@@ -28,6 +28,7 @@ Each device type is assigned a number of component templates which define the ph
 * Front ports
 * Rear ports
 * Device bays (which house child devices)
+* Module bays (which house modules)
 
 Whenever a new device is created, its components are automatically created per the templates assigned to its device type. For example, a Juniper EX4300-48T device type might have the following component templates defined:
 
@@ -48,3 +49,6 @@ Once component templates have been created, every new device that you create as 
 
 +++ 2.2.0
     The [Software Image File](softwareimagefile.md) model has been introduced to represent a software image file that can be installed on a device. One or more software image files can be optionally assigned to a device type. The device type must be associated to a software image file before devices of that type can associate to that image.
+
++++ 2.3.0
+    The [ModuleBay](modulebay.md) and [ModuleBayTemplate](modulebaytemplate.md) models have been introduced to represent a space or slot within a parent [Device](device.md) or [Module](module.md) in which a module may be installed. This is used to model modular components within a device, such as line cards, supervisor modules, network modules, or transceivers.

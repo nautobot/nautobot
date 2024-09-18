@@ -20,7 +20,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import ContentFile
-from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import RegexValidator
 from django.db.models import Model
 from django.db.models.query import QuerySet
@@ -539,7 +539,7 @@ class BaseJob:
             elif isinstance(value, Model):
                 return_data[field_name] = value.pk
             # FileVar (Save each FileVar as a FileProxy)
-            elif isinstance(value, InMemoryUploadedFile):
+            elif isinstance(value, UploadedFile):
                 return_data[field_name] = BaseJob._save_file_to_proxy(value)
             # IPAddressVar, IPAddressWithMaskVar, IPNetworkVar
             elif isinstance(value, netaddr.ip.BaseIP):
@@ -1170,4 +1170,11 @@ def enqueue_job_hooks(object_change):
     # Enqueue the jobs related to the job_hooks
     for job_hook in job_hooks:
         job_model = job_hook.job
-        JobResult.enqueue_job(job_model, object_change.user, object_change=object_change.pk)
+        if not job_model.installed or not job_model.enabled:
+            logger.warning(
+                "JobHook %s is enabled, but the underlying Job %s is not installed and enabled", job_hook, job_model
+            )
+        elif get_job(job_model.class_path) is None:
+            logger.error("JobHook %s is enabled, but the underlying Job implementation is missing", job_hook)
+        else:
+            JobResult.enqueue_job(job_model, object_change.user, object_change=object_change.pk)

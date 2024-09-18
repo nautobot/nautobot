@@ -19,6 +19,7 @@ __all__ = (
     "BaseManager",
     "BaseModel",
     "CompositeKeyQuerySetMixin",
+    "ContentTypeRelatedQuerySet",
     "RestrictedQuerySet",
     "construct_composite_key",
     "construct_natural_slug",
@@ -46,16 +47,19 @@ class BaseModel(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True, editable=False)
 
-    # Reverse relation so that deleting a BaseModel automatically deletes any ContactAssociations related to it.
-    associated_contacts = GenericRelation(
-        "extras.ContactAssociation",
-        content_type_field="associated_object_type",
-        object_id_field="associated_object_id",
-        related_query_name="associated_contacts_%(app_label)s_%(class)s",  # e.g. 'associated_contacts_dcim_device'
-    )
-
     objects = BaseManager.from_queryset(RestrictedQuerySet)()
-    is_contact_associable_model = True
+    is_contact_associable_model = False  # ContactMixin overrides this to default True
+    is_dynamic_group_associable_model = False  # DynamicGroupMixin overrides this to default True
+    is_metadata_associable_model = True
+    is_saved_view_model = False  # SavedViewMixin overrides this to default True
+    is_cloud_resource_type_model = False  # CloudResourceTypeMixin overrides this to default True
+
+    associated_object_metadata = GenericRelation(
+        "extras.ObjectMetadata",
+        content_type_field="assigned_object_type",
+        object_id_field="assigned_object_id",
+        related_query_name="associated_object_metadata_%(app_label)s_%(class)s",  # e.g. 'associated_object_metadata_dcim_device'
+    )
 
     class Meta:
         abstract = True
@@ -295,3 +299,24 @@ class BaseModel(models.Model):
                 f"expected no more than {len(natural_key_field_lookups)} but got {len(args)}."
             )
         return dict(zip(natural_key_field_lookups, args))
+
+
+class ContentTypeRelatedQuerySet(RestrictedQuerySet):
+    def get_for_model(self, model):
+        """
+        Return all `self.model` instances assigned to the given model.
+        """
+        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
+        return self.filter(content_types=content_type)
+
+    # TODO(timizuo): Merge into get_for_model; Cant do this now cause it would require alot
+    #  of refactoring
+    def get_for_models(self, models_):
+        """
+        Return all `self.model` instances assigned to the given `_models`.
+        """
+        q = models.Q()
+        for model in models_:
+            q |= models.Q(app_label=model._meta.app_label, model=model._meta.model_name)
+        content_types = ContentType.objects.filter(q)
+        return self.filter(content_types__in=content_types)

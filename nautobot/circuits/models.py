@@ -205,6 +205,13 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
         blank=True,
         null=True,
     )
+    cloud_network = models.ForeignKey(
+        to="cloud.CloudNetwork",
+        on_delete=models.PROTECT,
+        related_name="circuit_terminations",
+        blank=True,
+        null=True,
+    )
     port_speed = models.PositiveIntegerField(verbose_name="Port speed (Kbps)", blank=True, null=True)
     upstream_speed = models.PositiveIntegerField(
         blank=True,
@@ -221,16 +228,22 @@ class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
         unique_together = ["circuit", "term_side"]
 
     def __str__(self):
-        return f"Termination {self.term_side}: {self.location or self.provider_network}"
+        return f"Termination {self.term_side}: {self.location or self.provider_network or self.cloud_network}"
 
     def clean(self):
         super().clean()
 
         # Must define either location *or* provider network
-        if self.location is None and self.provider_network is None:
-            raise ValidationError("A circuit termination must attach to either a location or a provider network.")
+        if self.location is None and self.provider_network is None and self.cloud_network is None:
+            raise ValidationError(
+                "A circuit termination must attach to a location, a provider network or a cloud network."
+            )
         if self.location and self.provider_network:
             raise ValidationError("A circuit termination cannot attach to both a location and a provider network.")
+        elif self.location and self.cloud_network:
+            raise ValidationError("A circuit termination cannot attach to both a location and a cloud network.")
+        elif self.provider_network and self.cloud_network:
+            raise ValidationError("A circuit termination cannot attach to both a provider network and a cloud network.")
         # A valid location for contenttype CircuitTermination must be assigned.
         if self.location is not None:
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():

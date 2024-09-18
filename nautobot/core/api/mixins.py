@@ -6,7 +6,7 @@ from django.core.exceptions import (
     MultipleObjectsReturned,
     ObjectDoesNotExist,
 )
-from django.db.models import AutoField
+from django.db.models import AutoField, Model
 from rest_framework.exceptions import ValidationError
 
 from nautobot.core.api.utils import dict_to_filter_params
@@ -69,6 +69,11 @@ class WritableSerializerMixin:
         if is_url(data):
             # Strip the trailing slash and split on slashes, taking the last value as the PK.
             data = data.rstrip("/").split("/")[-1]
+
+        # If we're passing the validated_data from one serializer as input to another serializer,
+        # data might already be a model instance:
+        if isinstance(data, Model):
+            return {"pk": data.pk}
 
         try:
             # The int case here is taking into account for the User model we inherit from django

@@ -37,6 +37,7 @@ from nautobot.extras.forms import (
     NautobotModelForm,
     RoleModelBulkEditFormMixin,
     RoleModelFilterFormMixin,
+    RoleNotRequiredModelFormMixin,
     StatusModelBulkEditFormMixin,
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
@@ -62,6 +63,12 @@ class ClusterTypeForm(NautobotModelForm):
         ]
 
 
+class ClusterTypeFilterForm(NautobotFilterForm):
+    model = ClusterType
+    q = forms.CharField(required=False, label="Search")
+    clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), to_field_name="name", required=False)
+
+
 #
 # Cluster groups
 #
@@ -74,6 +81,12 @@ class ClusterGroupForm(NautobotModelForm):
             "name",
             "description",
         ]
+
+
+class ClusterGroupFilterForm(NautobotFilterForm):
+    model = ClusterGroup
+    q = forms.CharField(required=False, label="Search")
+    clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), to_field_name="name", required=False)
 
 
 #
@@ -450,6 +463,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         fields = [
             "virtual_machine",
             "name",
+            "role",
             "enabled",
             "parent_interface",
             "bridge",
@@ -485,11 +499,12 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         # Add current location to VLANs query params
         location = virtual_machine.location
         if location:
-            self.fields["untagged_vlan"].widget.add_query_param("location", location.pk)
-            self.fields["tagged_vlans"].widget.add_query_param("location", location.pk)
+            self.fields["untagged_vlan"].widget.add_query_param("locations", location.pk)
+            self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
 
 
-class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
+class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm, RoleNotRequiredModelFormMixin):
+    model = VMInterface
     virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())
     name_pattern = ExpandableNameField(label="Name")
     enabled = forms.BooleanField(required=False, initial=True)
@@ -558,11 +573,13 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         # Add current location to VLANs query params
         location = virtual_machine.location
         if location:
-            self.fields["untagged_vlan"].widget.add_query_param("location", location.pk)
-            self.fields["tagged_vlans"].widget.add_query_param("location", location.pk)
+            self.fields["untagged_vlan"].widget.add_query_param("locations", location.pk)
+            self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
 
 
-class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
+class VMInterfaceBulkEditForm(
+    TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, RoleModelBulkEditFormMixin, NautobotBulkEditForm
+):
     pk = forms.ModelMultipleChoiceField(queryset=VMInterface.objects.all(), widget=forms.MultipleHiddenInput())
     virtual_machine = forms.ModelChoiceField(
         queryset=VirtualMachine.objects.all(),
@@ -628,8 +645,8 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
             location = getattr(parent_obj.cluster, "location", None)
             if location is not None:
                 # Add current location to VLANs query params
-                self.fields["untagged_vlan"].widget.add_query_param("location", location.pk)
-                self.fields["tagged_vlans"].widget.add_query_param("location", location.pk)
+                self.fields["untagged_vlan"].widget.add_query_param("locations", location.pk)
+                self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
 
         self.fields["parent_interface"].choices = ()
         self.fields["parent_interface"].widget.attrs["disabled"] = True
@@ -641,7 +658,7 @@ class VMInterfaceBulkRenameForm(BulkRenameForm):
     pk = forms.ModelMultipleChoiceField(queryset=VMInterface.objects.all(), widget=forms.MultipleHiddenInput())
 
 
-class VMInterfaceFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
+class VMInterfaceFilterForm(NautobotFilterForm, RoleModelFilterFormMixin, StatusModelFilterFormMixin):
     model = VMInterface
     cluster_id = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False, label="Cluster")
     virtual_machine_id = DynamicModelMultipleChoiceField(
@@ -670,7 +687,9 @@ class VirtualMachineBulkAddComponentForm(CustomFieldModelBulkEditFormMixin, Boot
 class VMInterfaceBulkCreateForm(
     form_from_model(VMInterface, ["enabled", "mtu", "description", "mode", "tags"]),
     VirtualMachineBulkAddComponentForm,
+    RoleNotRequiredModelFormMixin,
 ):
+    model = VMInterface
     status = DynamicModelChoiceField(
         queryset=Status.objects.all(),
         query_params={"content_types": VMInterface._meta.label_lower},
@@ -679,6 +698,7 @@ class VMInterfaceBulkCreateForm(
     field_order = (
         "name_pattern",
         "status",
+        "role",
         "enabled",
         "mtu",
         "description",

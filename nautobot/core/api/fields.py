@@ -2,15 +2,18 @@ from collections import OrderedDict
 import logging
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.validators import URLValidator
 from django.db.models import Model
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.fields import URLField
 from rest_framework.relations import PrimaryKeyRelatedField, RelatedField
 from timezone_field.rest_framework import TimeZoneSerializerField as TimeZoneSerializerField_
 
 from nautobot.core.api.mixins import WritableSerializerMixin
 from nautobot.core.models.utils import deconstruct_composite_key
+from nautobot.core.models.validators import EnhancedURLValidator
 from nautobot.core.utils.data import is_url, is_uuid
 from nautobot.core.utils.lookup import get_route_for_model
 
@@ -122,6 +125,16 @@ class ContentTypeField(RelatedField):
 
     def to_representation(self, obj):
         return f"{obj.app_label}.{obj.model}"
+
+
+class LaxURLField(URLField):
+    def __init__(self, validators=None, **kwargs):
+        super().__init__(**kwargs)
+        # Discard default URLValidator added by URLField
+        self.validators = [v for v in self.validators if not isinstance(v, URLValidator)]
+        if validators is not None:
+            self.validators.extend(validators)
+        self.validators.append(EnhancedURLValidator(message=self.error_messages["invalid"]))
 
 
 @extend_schema_field(

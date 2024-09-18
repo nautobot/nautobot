@@ -20,6 +20,10 @@
                     <td>{{ object.tenant|hyperlinked_object }}</td>
                 </tr>
                 <tr>
+                    <td>Status</td>
+                    <td>{{ object.status|hyperlinked_object_with_color }}</td>
+                </tr>
+                <tr>
                     <td>Description</td>
                     <td>{{ object.description|placeholder }}</td>
                 </tr>

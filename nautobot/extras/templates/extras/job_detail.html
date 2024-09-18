@@ -115,6 +115,17 @@
                 <td>{{ object.enabled | render_boolean }}</td>
                 <td></td>
             </tr>
+            <tr>
+                <td>Job Results</td>
+                <td>
+                    {% if object.job_results.exists %}
+                        <a href="{% url 'extras:jobresult_list' %}?job_model={{ object.name | urlencode }}">{{ object.job_results.count }}</a>
+                    {% else %}
+                        {{ None|placeholder }}
+                    {% endif %}
+                </td>
+                <td></td>
+            </tr>
         </table>
     </div>
 {% endblock content_left_page %}

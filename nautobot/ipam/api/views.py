@@ -121,8 +121,6 @@ class PrefixViewSet(NautobotModelViewSet):
     filterset_class = filters.PrefixFilterSet
 
     def get_serializer_class(self):
-        if self.action == "available_prefixes" and self.request.method == "POST":
-            return serializers.PrefixLengthSerializer
         if (
             not getattr(self, "swagger_fake_view", False)
             and self.request.major_version == 2
@@ -159,7 +157,11 @@ class PrefixViewSet(NautobotModelViewSet):
             raise self.LocationIncompatibleLegacyBehavior from e
 
     @extend_schema(methods=["get"], responses={200: serializers.AvailablePrefixSerializer(many=True)})
-    @extend_schema(methods=["post"], responses={201: serializers.PrefixSerializer(many=False)})
+    @extend_schema(
+        methods=["post"],
+        request=serializers.PrefixLengthSerializer,
+        responses={201: serializers.PrefixSerializer(many=True)},
+    )
     @action(
         detail=True,
         name="Available Prefixes",
@@ -169,10 +171,10 @@ class PrefixViewSet(NautobotModelViewSet):
     )
     def available_prefixes(self, request, pk=None):
         """
-        A convenience method for returning available child prefixes within a parent.
+        A convenience method for listing and/or allocating available child prefixes within a parent.
 
-        The advisory lock decorator uses a PostgreSQL advisory lock to prevent this API from being
-        invoked in parallel, which results in a race condition where multiple insertions can occur.
+        This uses a Redis lock to prevent this API from being invoked in parallel, in order to avoid a race condition
+        if multiple clients tried to simultaneously request allocation from the same parent prefix.
         """
         prefix = get_object_or_404(self.queryset, pk=pk)
         if request.method == "POST":
@@ -200,7 +202,7 @@ class PrefixViewSet(NautobotModelViewSet):
                         if requested_prefix["prefix_length"] >= available_prefix.prefixlen:
                             allocated_prefix = f"{available_prefix.network}/{requested_prefix['prefix_length']}"
                             requested_prefix["prefix"] = allocated_prefix
-                            requested_prefix["namespace"] = prefix.namespace.pk
+                            requested_prefix["namespace"] = prefix.namespace
                             break
                     else:
                         return Response(
@@ -208,15 +210,19 @@ class PrefixViewSet(NautobotModelViewSet):
                             status=status.HTTP_204_NO_CONTENT,
                         )
 
+                    # The serializer usage above has mapped "custom_fields" dict to "_custom_field_data".
+                    # We need to convert it back to "custom_fields" as we're going to deserialize it a second time below
+                    requested_prefix["custom_fields"] = requested_prefix.pop("_custom_field_data", {})
+
                     # Remove the allocated prefix from the list of available prefixes
                     available_prefixes.remove(allocated_prefix)
 
                 # Initialize the serializer with a list or a single object depending on what was requested
                 context = {"request": request, "depth": 0}
                 if isinstance(request.data, list):
-                    serializer = serializers.PrefixSerializer(data=requested_prefixes, many=True, context=context)
+                    serializer = self.get_serializer_class()(data=requested_prefixes, many=True, context=context)
                 else:
-                    serializer = serializers.PrefixSerializer(data=requested_prefixes[0], context=context)
+                    serializer = self.get_serializer_class()(data=requested_prefixes[0], context=context)
 
                 # Create the new Prefix(es)
                 serializer.is_valid(raise_exception=True)
@@ -238,8 +244,8 @@ class PrefixViewSet(NautobotModelViewSet):
     @extend_schema(methods=["get"], responses={200: serializers.AvailableIPSerializer(many=True)})
     @extend_schema(
         methods=["post"],
-        responses={201: serializers.AvailableIPSerializer(many=True)},
-        request=serializers.AvailableIPSerializer(many=True),
+        responses={201: serializers.IPAddressSerializer(many=True)},
+        request=serializers.IPAllocationSerializer(many=True),
     )
     @action(
         detail=True,
@@ -251,12 +257,13 @@ class PrefixViewSet(NautobotModelViewSet):
     )
     def available_ips(self, request, pk=None):
         """
-        A convenience method for returning available IP addresses within a prefix. By default, the number of IPs
-        returned will be equivalent to PAGINATE_COUNT. An arbitrary limit (up to MAX_PAGE_SIZE, if set) may be passed,
-        however results will not be paginated.
+        A convenience method for listing and/or allocating available IP addresses within a prefix.
 
-        The advisory lock decorator uses a PostgreSQL advisory lock to prevent this API from being
-        invoked in parallel, which results in a race condition where multiple insertions can occur.
+        By default, the number of IPs returned will be equivalent to PAGINATE_COUNT.
+        An arbitrary limit (up to MAX_PAGE_SIZE, if set) may be passed, however results will not be paginated.
+
+        This uses a Redis lock to prevent this API from being invoked in parallel, in order to avoid a race condition
+        if multiple clients tried to simultaneously request allocation from the same parent prefix.
         """
         prefix = get_object_or_404(Prefix.objects.restrict(request.user), pk=pk)
 
@@ -266,7 +273,17 @@ class PrefixViewSet(NautobotModelViewSet):
                 "nautobot.ipam.api.views.available_ips", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT
             ):
                 # Normalize to a list of objects
-                requested_ips = request.data if isinstance(request.data, list) else [request.data]
+                serializer = serializers.IPAllocationSerializer(
+                    data=request.data if isinstance(request.data, list) else [request.data],
+                    many=True,
+                    context={
+                        "request": request,
+                        "prefix": prefix,
+                    },
+                )
+                serializer.is_valid(raise_exception=True)
+
+                requested_ips = serializer.validated_data
 
                 # Determine if the requested number of IPs is available
                 available_ips = prefix.get_available_ips()
@@ -286,7 +303,10 @@ class PrefixViewSet(NautobotModelViewSet):
                 prefix_length = prefix.prefix.prefixlen
                 for requested_ip in requested_ips:
                     requested_ip["address"] = f"{next(available_ips)}/{prefix_length}"
-                    requested_ip["namespace"] = prefix.namespace.pk
+                    requested_ip["namespace"] = prefix.namespace
+                    # The serializer usage above has mapped "custom_fields" dict to "_custom_field_data".
+                    # We need to convert it back to "custom_fields" as we're going to deserialize it a second time below
+                    requested_ip["custom_fields"] = requested_ip.pop("_custom_field_data", {})
 
                 # Initialize the serializer with a list or a single object depending on what was requested
                 context = {"request": request, "depth": 0}

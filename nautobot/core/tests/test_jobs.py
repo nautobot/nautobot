@@ -1,12 +1,29 @@
+from datetime import timedelta
 from pathlib import Path
 
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
+from django.core.files.base import ContentFile
+from django.utils import timezone
 import yaml
 
+from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
-from nautobot.dcim.models import DeviceType, Manufacturer
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
-from nautobot.extras.models import ExportTemplate, JobLogEntry, Status
+from nautobot.extras.factory import JobResultFactory, ObjectChangeFactory
+from nautobot.extras.models import (
+    Contact,
+    ContactAssociation,
+    ExportTemplate,
+    FileProxy,
+    JobLogEntry,
+    JobResult,
+    ObjectChange,
+    Role,
+    Status,
+)
+from nautobot.ipam.models import Prefix
 from nautobot.users.models import ObjectPermission
 
 
@@ -204,6 +221,76 @@ class ImportObjectsTestCase(TransactionTestCase):
         )
         self.assertEqual(4, Status.objects.filter(name__startswith="test_status").count())
 
+    def test_csv_import_with_utf_8_with_bom_encoding(self):
+        """
+        A superuser running the job with a .csv file with utf_8 with bom encoding should successfully create all specified objects.
+        Test for bug fix https://github.com/nautobot/nautobot/issues/5812 and https://github.com/nautobot/nautobot/issues/5985
+        """
+
+        status = Status.objects.get(name="Active").pk
+        content = f"prefix,status\n192.168.1.1/32,{status}"
+        content = content.encode("utf-8-sig")
+        filename = "test.csv"
+        csv_file = FileProxy.objects.create(name=filename, file=ContentFile(content, name=filename))
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            content_type=ContentType.objects.get_for_model(Prefix).pk,
+            csv_file=csv_file.id,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        )
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
+        )
+        self.assertEqual(
+            1, Prefix.objects.filter(status=Status.objects.get(name="Active"), prefix="192.168.1.1/32").count()
+        )
+        mfr = Manufacturer.objects.create(name="Test Cisco Manufacturer")
+        device_type = DeviceType.objects.create(
+            manufacturer=mfr,
+            model="Cisco CSR1000v",
+            u_height=0,
+        )
+        location_type = LocationType.objects.create(name="Test Location Type")
+        location_type.content_types.set([ContentType.objects.get_for_model(Device)])
+        location = Location.objects.create(
+            name="Device Location",
+            location_type=location_type,
+            status=Status.objects.get_for_model(Location).first(),
+        )
+        role = Role.objects.create(name="Device Status")
+        role.content_types.set([ContentType.objects.get_for_model(Device)])
+        content = "\n".join(
+            [
+                "serial,asset_tag,device_type,location,status,name,role",
+                f"1021C4,CA211,{device_type.pk},{location.pk},{status},Test-AC-01,{role}",
+                f"1021C5,CA212,{device_type.pk},{location.pk},{status},Test-AC-02,{role}",
+            ]
+        )
+        content = content.encode("utf-8-sig")
+        filename = "test.csv"
+        csv_file = FileProxy.objects.create(name=filename, file=ContentFile(content, name=filename))
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            content_type=ContentType.objects.get_for_model(Device).pk,
+            csv_file=csv_file.id,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        )
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
+        )
+        device_1 = Device.objects.get(name="Test-AC-01")
+        device_2 = Device.objects.get(name="Test-AC-02")
+        self.assertEqual(device_1.serial, "1021C4")
+        self.assertEqual(device_2.serial, "1021C5")
+
     def test_csv_import_bad_row(self):
         """A row of incorrect data should fail validation for that object but import all others successfully if `roll_back_if_error` is False."""
         csv_data = self.csv_data.split("\n")
@@ -256,3 +343,195 @@ class ImportObjectsTestCase(TransactionTestCase):
             self.assertEqual(log_successes[3].message, 'Row 5: Created record "test_status4"')
             self.assertTrue(Status.objects.filter(name="test_status4").exists())
             self.assertEqual(log_successes[4].message, "Created 4 status object(s) from 5 row(s) of data")
+
+    def test_csv_import_contact_assignment(self):
+        location_types_csv = "\n".join(["name", "ContactAssignmentImportTestLocationType"])
+        locations_csv = "\n".join(
+            [
+                "location_type__name,name,status__name",
+                "ContactAssignmentImportTestLocationType,ContactAssignmentImportTestLocation1,Active",
+                "ContactAssignmentImportTestLocationType,ContactAssignmentImportTestLocation2,Active",
+            ]
+        )
+        roles_csv = "\n".join(
+            [
+                "name,content_types",
+                "ContactAssignmentImportTestLocation-On Site,extras.contactassociation",
+            ]
+        )
+        contacts_csv = "\n".join(["name,email", "Bob-ContactAssignmentImportTestLocation,bob@example.com"])
+
+        location_types_job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            content_type=ContentType.objects.get_for_model(LocationType).pk,
+            csv_data=location_types_csv,
+        )
+        self.assertEqual(location_types_job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+
+        location_type_count = LocationType.objects.filter(name="ContactAssignmentImportTestLocationType").count()
+        self.assertEqual(location_type_count, 1, f"Unexpected count of LocationTypes {location_type_count}")
+
+        locations_job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            content_type=ContentType.objects.get_for_model(Location).pk,
+            csv_data=locations_csv,
+        )
+        self.assertEqual(locations_job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+
+        location_count = Location.objects.filter(location_type__name="ContactAssignmentImportTestLocationType").count()
+        self.assertEqual(location_count, 2, f"Unexpected count of Locations {location_count}")
+
+        contacts_job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            content_type=ContentType.objects.get_for_model(Contact).pk,
+            csv_data=contacts_csv,
+        )
+        self.assertEqual(contacts_job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+
+        contact_count = Contact.objects.filter(name="Bob-ContactAssignmentImportTestLocation").count()
+        self.assertEqual(contact_count, 1, f"Unexpected number of contacts {contact_count}")
+
+        roles_job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            content_type=ContentType.objects.get_for_model(Role).pk,
+            csv_data=roles_csv,
+        )
+        self.assertEqual(roles_job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+
+        role_count = Role.objects.filter(name="ContactAssignmentImportTestLocation-On Site").count()
+        self.assertEqual(role_count, 1, f"Unexpected number of role values {role_count}")
+
+        associations = ["associated_object_id,associated_object_type,status__name,role__name,contact__name"]
+        for location in Location.objects.filter(location_type__name="ContactAssignmentImportTestLocationType"):
+            associations.append(
+                f"{location.pk},dcim.location,Active,ContactAssignmentImportTestLocation-On Site,Bob-ContactAssignmentImportTestLocation"
+            )
+        associations_csv = "\n".join(associations)
+
+        associations_job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            content_type=ContentType.objects.get_for_model(ContactAssociation).pk,
+            csv_data=associations_csv,
+        )
+
+        self.assertEqual(associations_job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+
+
+class LogsCleanupTestCase(TransactionTestCase):
+    """
+    Test the LogsCleanup system job.
+    """
+
+    databases = ("default", "job_logs")
+
+    def setUp(self):
+        super().setUp()
+        # Recall that TransactionTestCase truncates the DB after each test case...
+        cache.delete("nautobot.extras.utils.change_logged_models_queryset")
+        if ObjectChange.objects.count() < 2:
+            ObjectChangeFactory.create_batch(40)
+        if JobResult.objects.count() < 2:
+            JobResultFactory.create_batch(20)
+
+    def test_cleanup_without_permission(self):
+        """Job should enforce user permissions on the content-types being deleted."""
+        job_result_count = JobResult.objects.count()
+        job_log_entry_count = JobLogEntry.objects.count()
+        object_change_count = ObjectChange.objects.count()
+
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.cleanup",
+            "LogsCleanup",
+            username=self.user.username,
+            cleanup_types=[CleanupTypes.JOB_RESULT],
+            max_age=0,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        log_error = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(log_error.message, f'User "{self.user}" does not have permission to delete JobResult records')
+        self.assertEqual(JobResult.objects.count(), job_result_count + 1)
+        self.assertGreater(JobLogEntry.objects.count(), job_log_entry_count)
+        self.assertEqual(ObjectChange.objects.count(), object_change_count)
+
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.cleanup",
+            "LogsCleanup",
+            username=self.user.username,
+            cleanup_types=[CleanupTypes.OBJECT_CHANGE],
+            max_age=0,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        log_error = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(
+            log_error.message, f'User "{self.user}" does not have permission to delete ObjectChange records'
+        )
+        self.assertEqual(JobResult.objects.count(), job_result_count + 2)
+        self.assertGreater(JobLogEntry.objects.count(), job_log_entry_count)
+        self.assertEqual(ObjectChange.objects.count(), object_change_count)
+
+    def test_cleanup_with_constrained_permission(self):
+        """Job should only allow the user to cleanup records they have permission to delete."""
+        job_result_1 = JobResult.objects.last()
+        job_result_2 = JobResult.objects.first()
+        self.assertNotEqual(job_result_1.pk, job_result_2.pk)
+        object_change_1 = ObjectChange.objects.first()
+        object_change_2 = ObjectChange.objects.last()
+        self.assertNotEqual(object_change_1.pk, object_change_2.pk)
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk__in": [str(job_result_1.pk), str(object_change_1.pk)]},
+            actions=["delete"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(JobResult))
+        obj_perm.object_types.add(ContentType.objects.get_for_model(ObjectChange))
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.cleanup",
+            "LogsCleanup",
+            username=self.user.username,
+            cleanup_types=[CleanupTypes.JOB_RESULT, CleanupTypes.OBJECT_CHANGE],
+            max_age=0,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(job_result.result["extras.JobResult"], 1)
+        self.assertEqual(job_result.result["extras.ObjectChange"], 1)
+        with self.assertRaises(JobResult.DoesNotExist):
+            JobResult.objects.get(pk=job_result_1.pk)
+        JobResult.objects.get(pk=job_result_2.pk)
+        with self.assertRaises(ObjectChange.DoesNotExist):
+            ObjectChange.objects.get(pk=object_change_1.pk)
+        ObjectChange.objects.get(pk=object_change_2.pk)
+
+    def test_cleanup_job_results(self):
+        """With unconstrained permissions, all JobResults before the cutoff should be deleted."""
+        cutoff = timezone.now() - timedelta(days=60)
+        create_job_result_and_run_job(
+            "nautobot.core.jobs.cleanup",
+            "LogsCleanup",
+            cleanup_types=[CleanupTypes.JOB_RESULT],
+            max_age=60,
+        )
+        self.assertFalse(JobResult.objects.filter(date_done__lt=cutoff).exists())
+        self.assertTrue(JobResult.objects.filter(date_done__gte=cutoff).exists())
+        self.assertTrue(ObjectChange.objects.filter(time__lt=cutoff).exists())
+        self.assertTrue(ObjectChange.objects.filter(time__gte=cutoff).exists())
+
+    def test_cleanup_object_changes(self):
+        """With unconstrained permissions, all ObjectChanges before the cutoff should be deleted."""
+        cutoff = timezone.now() - timedelta(days=60)
+        create_job_result_and_run_job(
+            "nautobot.core.jobs.cleanup",
+            "LogsCleanup",
+            cleanup_types=[CleanupTypes.OBJECT_CHANGE],
+            max_age=60,
+        )
+        self.assertTrue(JobResult.objects.filter(date_done__lt=cutoff).exists())
+        self.assertTrue(JobResult.objects.filter(date_done__gte=cutoff).exists())
+        self.assertFalse(ObjectChange.objects.filter(time__lt=cutoff).exists())
+        self.assertTrue(ObjectChange.objects.filter(time__gte=cutoff).exists())

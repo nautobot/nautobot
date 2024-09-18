@@ -20,8 +20,8 @@ Records of this type store the following data as read-only (not modifiable via t
 * The name of the Job class
 * Whether the job class is installed presently
 * Whether the job is self-described as "read-only"
-* Whether the job is a [Job Hook Receiver](jobhook.md#job-hook-receivers)
-* Whether the job is a [Job Button Receiver](jobbutton.md#job-button-receivers)
+* Whether the job is a [Job Hook Receiver](../../../development/jobs/index.md#job-hook-receivers)
+* Whether the job is a [Job Button Receiver](../../../development/jobs/index.md#job-button-receivers)
 
 !!! note
     As presently implemented, after a job is uninstalled, when the database is next refreshed, the corresponding Job database record will *not* be deleted - only its `installed` flag will be set to False. This allows existing `JobResult` and `ScheduledJob` records to continue to reference the Job that they originated from.
@@ -63,3 +63,6 @@ Records of this type store the following data:
 
 +/- 1.2.0
     Note that prior to Nautobot 1.2, job log records were stored in the `data` field; they are now stored as distinct [`JobLogEntry`](#job-log-entry) records instead.
+
++/- 2.3.0
+    The Additional Data tab has been removed, you can now find the data in the Advanced Tab.

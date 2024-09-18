@@ -27,13 +27,19 @@ from .validators import DNSValidator
 
 __all__ = (
     "IPAddress",
+    "IPAddressToInterface",
+    "Namespace",
     "Prefix",
+    "PrefixLocationAssignment",
     "RIR",
     "RouteTarget",
     "Service",
     "VLAN",
     "VLANGroup",
+    "VLANLocationAssignment",
     "VRF",
+    "VRFDeviceAssignment",
+    "VRFPrefixAssignment",
 )
 
 
@@ -43,7 +49,6 @@ logger = logging.getLogger(__name__)
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -92,6 +97,7 @@ def get_default_namespace_pk():
     "custom_validators",
     "export_templates",
     "graphql",
+    "statuses",
     "webhooks",
 )
 class VRF(PrimaryModel):
@@ -109,6 +115,7 @@ class VRF(PrimaryModel):
         verbose_name="Route distinguisher",
         help_text="Unique route distinguisher (as defined in RFC 4364)",
     )
+    status = StatusField(blank=True, null=True)
     namespace = models.ForeignKey(
         "ipam.Namespace",
         on_delete=models.PROTECT,
@@ -275,6 +282,7 @@ class VRFDeviceAssignment(BaseModel):
         help_text="Unique route distinguisher (as defined in RFC 4364)",
     )
     name = models.CharField(blank=True, max_length=CHARFIELD_MAX_LENGTH)
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = [
@@ -312,6 +320,7 @@ class VRFDeviceAssignment(BaseModel):
 class VRFPrefixAssignment(BaseModel):
     vrf = models.ForeignKey("ipam.VRF", on_delete=models.CASCADE, related_name="+")
     prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="vrf_assignments")
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = ["vrf", "prefix"]
@@ -391,7 +400,6 @@ class RIR(OrganizationalModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -493,11 +501,6 @@ class Prefix(PrimaryModel):
         "type",
         "vlan",
     ]
-    """
-    dynamic_group_filter_fields = {
-        "vrf": "vrf_id",  # Duplicate filter fields that will be collapsed in 2.0
-    }
-    """
 
     class Meta:
         ordering = (
@@ -531,6 +534,10 @@ class Prefix(PrimaryModel):
 
     def __str__(self):
         return str(self.prefix)
+
+    @property
+    def display(self):
+        return f"{self.prefix}: {self.namespace}"
 
     def _deconstruct_prefix(self, prefix):
         if prefix:
@@ -965,6 +972,7 @@ class Prefix(PrimaryModel):
 class PrefixLocationAssignment(BaseModel):
     prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="location_assignments")
     location = models.ForeignKey("dcim.Location", on_delete=models.CASCADE, related_name="prefix_assignments")
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = ["prefix", "location"]
@@ -977,7 +985,6 @@ class PrefixLocationAssignment(BaseModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "statuses",
@@ -1011,7 +1018,7 @@ class IPAddress(PrimaryModel):
     parent = models.ForeignKey(
         "ipam.Prefix",
         blank=True,
-        null=True,
+        null=True,  # TODO remove this, it shouldn't be permitted for the database!
         related_name="ip_addresses",  # `IPAddress` to use `related_name="ip_addresses"`
         on_delete=models.PROTECT,
         help_text="The parent Prefix of this IPAddress.",
@@ -1108,7 +1115,7 @@ class IPAddress(PrimaryModel):
             raise ValidationError({"namespace": "No suitable parent Prefix exists in this Namespace"}) from e
 
     def clean(self):
-        super().clean()
+        self.address = self.address  # not a no-op - forces re-calling of self._deconstruct_address()
 
         # Validate that host is not being modified
         if self.present_in_database:
@@ -1122,8 +1129,8 @@ class IPAddress(PrimaryModel):
 
         closest_parent = self._get_closest_parent()
         # Validate `parent` can be used as the parent for this ipaddress
-        if self.parent and closest_parent:
-            if self.parent != closest_parent:
+        if closest_parent is not None:
+            if self.parent is not None and self.parent != closest_parent:
                 raise ValidationError(
                     {
                         "parent": (
@@ -1135,23 +1142,20 @@ class IPAddress(PrimaryModel):
             self.parent = closest_parent
             self._namespace = None
 
-    def save(self, *args, **kwargs):
         # 3.0 TODO: uncomment the below to enforce this constraint
         # if self.parent.type != choices.PrefixTypeChoices.TYPE_NETWORK:
         #     err_msg = f"IP addresses cannot be created in {self.parent.type} prefixes. You must create a network prefix first."
         #     raise ValidationError({"address": err_msg})
 
-        self.address = self.address  # not a no-op - forces re-calling of self._deconstruct_address()
-
         # Force dns_name to lowercase
         if not self.dns_name.islower:
             self.dns_name = self.dns_name.lower()
 
-        # Host and mask_length are required to get closest parent
-        closest_parent = self._get_closest_parent()
-        if closest_parent is not None:
-            self.parent = closest_parent
-            self._namespace = None
+        super().clean()
+
+    def save(self, *args, **kwargs):
+        self.clean()  # MUST do data fixup as above
+
         super().save(*args, **kwargs)
 
     @property
@@ -1247,6 +1251,7 @@ class IPAddressToInterface(BaseModel):
     is_primary = models.BooleanField(default=False, help_text="Is primary address on interface")
     is_secondary = models.BooleanField(default=False, help_text="Is secondary address on interface")
     is_standby = models.BooleanField(default=False, help_text="Is standby address on interface")
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = [
@@ -1444,6 +1449,7 @@ class VLAN(PrimaryModel):
 class VLANLocationAssignment(BaseModel):
     vlan = models.ForeignKey("ipam.VLAN", on_delete=models.CASCADE, related_name="location_assignments")
     location = models.ForeignKey("dcim.Location", on_delete=models.CASCADE, related_name="vlan_assignments")
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = ["vlan", "location"]

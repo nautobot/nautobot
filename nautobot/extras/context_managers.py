@@ -90,11 +90,19 @@ class ChangeContext:
             for key in self._object_change_batch(batch_size):
                 for entry in self.deferred_object_changes[key]:
                     objectchange = entry["instance"].to_objectchange(entry["action"])
-                    objectchange.user = entry["user"]
-                    objectchange.request_id = self.change_id
-                    objectchange.change_context = self.context
-                    objectchange.change_context_detail = self.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
-                    create_object_changes.append(objectchange)
+                    if objectchange is not None:
+                        objectchange.user = entry["user"]
+                        objectchange.user_name = objectchange.user.username
+                        objectchange.request_id = self.change_id
+                        objectchange.change_context = self.context
+                        objectchange.change_context_detail = self.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+                        if not objectchange.changed_object_id:  # changed_object was deleted
+                            # Clear out the GenericForeignKey to keep Django from complaining about an unsaved object:
+                            objectchange.changed_object = None
+                            # Set the component fields individually:
+                            objectchange.changed_object_id = entry.get("changed_object_id")
+                            objectchange.changed_object_type = entry.get("changed_object_type")
+                        create_object_changes.append(objectchange)
                 self.deferred_object_changes.pop(key, None)
             ObjectChange.objects.bulk_create(create_object_changes, batch_size=batch_size)
 
@@ -167,11 +175,12 @@ def web_request_context(
     :param user: User object
     :param context_detail: Optional extra details about the transaction (ex: the plugin name that initiated the change)
     :param change_id: Optional uuid object to uniquely identify the transaction. One will be generated if not supplied
-    :param context: Optional string value of the generated change log entries' "change_context" field, defaults to ObjectChangeEventContextChoices.CONTEXT_ORM.
-        Valid choices are in nautobot.extras.choices.ObjectChangeEventContextChoices
+    :param context: Optional string value of the generated change log entries' "change_context" field.
+        Defaults to `ObjectChangeEventContextChoices.CONTEXT_ORM`.
+        Valid choices are in `nautobot.extras.choices.ObjectChangeEventContextChoices`.
     :param request: Optional web request instance, one will be generated if not supplied
     """
-    from nautobot.extras.jobs import enqueue_job_hooks  # prevent circular import
+    from nautobot.extras.jobs import enqueue_job_hooks, get_jobs  # prevent circular import
 
     valid_contexts = {
         ObjectChangeEventContextChoices.CONTEXT_JOB: JobChangeContext,
@@ -194,9 +203,15 @@ def web_request_context(
         with change_logging(change_context):
             yield request
     finally:
+        jobs_refreshed = False
         # enqueue jobhooks and webhooks, use change_context.change_id in case change_id was not supplied
         for object_change in ObjectChange.objects.filter(request_id=change_context.change_id).iterator():
-            enqueue_job_hooks(object_change)
+            if context != ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
+                # Make sure JobHooks are up to date (once) before calling them
+                if not jobs_refreshed:
+                    get_jobs(reload=True)
+                    jobs_refreshed = True
+                enqueue_job_hooks(object_change)
             enqueue_webhooks(object_change)
 
 

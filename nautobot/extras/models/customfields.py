@@ -38,7 +38,7 @@ from nautobot.core.templatetags.helpers import render_markdown
 from nautobot.core.utils.data import render_jinja2
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
 from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
 
@@ -65,7 +65,14 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
 
 @extras_features("graphql")
-class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
+class ComputedField(
+    ContactMixin,
+    ChangeLoggedModel,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
     """
     Read-only rendered fields driven by a Jinja2 template that are applied to objects within a ContentType.
     """
@@ -80,6 +87,11 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
         populate_from="label",
         help_text="Internal field name. Please use underscores rather than dashes in this key.",
         slugify_function=slugify_dashes_to_underscores,
+    )
+    grouping = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=True,
+        help_text="Human-readable grouping that this computed field belongs to.",
     )
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, help_text="Name of the field as displayed to users")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
@@ -288,6 +300,55 @@ class CustomFieldModel(models.Model):
             return computed_field.render(context={"obj": self})
         return computed_field.template
 
+    def get_computed_fields_grouping_basic(self):
+        """
+        This method exists to help call get_computed_field_groupings() in templates where a function argument (advanced_ui) cannot be specified.
+        Return a dictonary of computed fields grouped by the same grouping in the form
+        {
+            <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
+            ...
+            <grouping_5>: [(cf8, <value for cf8>), (cf9, <value for cf9>), ...],
+            ...
+        }
+        which have advanced_ui set to False
+        """
+        return self.get_computed_fields_grouping(advanced_ui=False)
+
+    def get_computed_fields_grouping_advanced(self):
+        """
+        This method exists to help call get_computed_field_groupings() in templates where a function argument (advanced_ui) cannot be specified.
+        Return a dictonary of computed fields grouped by the same grouping in the form
+        {
+            <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
+            ...
+            <grouping_5>: [(cf8, <value for cf8>), (cf9, <value for cf9>), ...],
+            ...
+        }
+        which have advanced_ui set to True
+        """
+        return self.get_computed_fields_grouping(advanced_ui=True)
+
+    def get_computed_fields_grouping(self, advanced_ui=None):
+        """
+        Return a dictonary of computed fields grouped by the same grouping in the form
+        {
+            <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
+            ...
+            <grouping_5>: [(cf8, <value for cf8>), (cf9, <value for cf9>), ...],
+            ...
+        }
+        """
+        record = {}
+        computed_fields = ComputedField.objects.get_for_model(self)
+        if advanced_ui is not None:
+            computed_fields = computed_fields.filter(advanced_ui=advanced_ui)
+
+        for field in computed_fields:
+            data = (field, field.render(context={"obj": self}))
+            record.setdefault(field.grouping, []).append(data)
+        record = dict(sorted(record.items()))
+        return record
+
     def get_computed_fields(self, label_as_key=False, advanced_ui=None):
         """
         Return a dictionary of all computed fields and their rendered values for this model.
@@ -332,7 +393,14 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
 
 @extras_features("webhooks")
-class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
+class CustomField(
+    ContactMixin,
+    ChangeLoggedModel,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="custom_fields",
@@ -760,6 +828,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
     weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")
 
     documentation_static_path = "docs/user-guide/platform-functionality/customfield.html"
+    is_metadata_associable_model = False
 
     class Meta:
         ordering = ["custom_field", "weight", "value"]

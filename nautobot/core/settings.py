@@ -69,7 +69,7 @@ ALLOWED_URL_SCHEMES = [
     "xmpp",
 ]
 
-# Banners to display to users. HTML is allowed.
+# Banners to display to users. Markdown and limited HTML are allowed.
 if "NAUTOBOT_BANNER_BOTTOM" in os.environ and os.environ["NAUTOBOT_BANNER_BOTTOM"] != "":
     BANNER_BOTTOM = os.environ["NAUTOBOT_BANNER_BOTTOM"]
 if "NAUTOBOT_BANNER_LOGIN" in os.environ and os.environ["NAUTOBOT_BANNER_LOGIN"] != "":
@@ -95,13 +95,6 @@ if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID
 #
 if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"] != "":
     DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
-
-# The number of seconds to cache the member list of dynamic groups. Set this to `0` to disable caching.
-if (
-    "NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT" in os.environ
-    and os.environ["NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"] != ""
-):
-    DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT = int(os.environ["NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"])
 
 # Exclude potentially sensitive models from wildcard view exemption. These may still be exempted
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
@@ -517,6 +510,7 @@ INSTALLED_APPS = [
     "rest_framework",  # Must be after `nautobot.core` for template overrides
     "db_file_storage",
     "nautobot.circuits",
+    "nautobot.cloud",
     "nautobot.dcim",
     "nautobot.ipam",
     "nautobot.extras",
@@ -533,7 +527,6 @@ INSTALLED_APPS = [
     # "health_check.contrib.migrations",
     # "health_check.contrib.redis",
     "django_extensions",
-    "constance.backends.database",
     "django_ajax_tables",
     "silk",
 ]
@@ -648,6 +641,8 @@ LOGIN_REDIRECT_URL = "home"
 CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 CONSTANCE_DATABASE_PREFIX = "constance:nautobot:"
 CONSTANCE_DATABASE_CACHE_BACKEND = "default"
+# Constance defaults to a 24-hour timeout when autofilling its cache, which is undesirable in many cases.
+CONSTANCE_DATABASE_CACHE_AUTOFILL_TIMEOUT = int(os.getenv("NAUTOBOT_CACHES_TIMEOUT", "300"))
 CONSTANCE_IGNORE_ADMIN_VERSION_CHECK = True  # avoid potential errors in a multi-node deployment
 
 CONSTANCE_ADDITIONAL_FIELDS = {
@@ -686,15 +681,15 @@ CONSTANCE_CONFIG = {
     ),
     "BANNER_BOTTOM": ConstanceConfigItem(
         default="",
-        help_text="Custom HTML to display in a banner at the bottom of all pages.",
+        help_text="Custom Markdown or limited HTML to display in a banner at the bottom of all pages.",
     ),
     "BANNER_LOGIN": ConstanceConfigItem(
         default="",
-        help_text="Custom HTML to display in a banner at the top of the login page.",
+        help_text="Custom Markdown or limited HTML to display in a banner at the top of the login page.",
     ),
     "BANNER_TOP": ConstanceConfigItem(
         default="",
-        help_text="Custom HTML to display in a banner at the top of all pages.",
+        help_text="Custom Markdown or limited HTML to display in a banner at the top of all pages.",
     ),
     "CHANGELOG_RETENTION": ConstanceConfigItem(
         default=90,
@@ -713,14 +708,6 @@ CONSTANCE_CONFIG = {
         help_text="Randomly generated UUID used to identify this installation.\n"
         "Used for sending anonymous installation metrics, when settings.INSTALLATION_METRICS_ENABLED is set to True.",
         field_type=str,
-    ),
-    "DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT": ConstanceConfigItem(
-        default=0,
-        help_text="Dynamic Group member cache timeout in seconds. This is the amount of time that a Dynamic Group's member list "
-        "will be cached in Django cache backend. Since retrieving the member list of a Dynamic Group can be a very "
-        "expensive operation, especially in reverse, this cache is used to speed up the process of retrieving the "
-        "member list. This cache is invalidated when a Dynamic Group is saved. Set to 0 to disable caching.",
-        field_type=int,
     ),
     "JOB_CREATE_FILE_MAX_SIZE": ConstanceConfigItem(
         default=10 << 20,
@@ -815,7 +802,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Natural Keys": ["DEVICE_NAME_AS_NATURAL_KEY", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
-    "Performance": ["DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT", "JOB_CREATE_FILE_MAX_SIZE"],
+    "Performance": ["JOB_CREATE_FILE_MAX_SIZE"],
     "Rack Elevation Rendering": [
         "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT",
         "RACK_ELEVATION_DEFAULT_UNIT_WIDTH",
@@ -868,7 +855,7 @@ CACHES = {
             "django_prometheus.cache.backends.redis.RedisCache" if METRICS_ENABLED else "django_redis.cache.RedisCache",
         ),
         "LOCATION": parse_redis_connection(redis_database=1),
-        "TIMEOUT": 300,
+        "TIMEOUT": int(os.getenv("NAUTOBOT_CACHES_TIMEOUT", "300")),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "PASSWORD": "",
@@ -907,13 +894,24 @@ CELERY_TASK_TRACK_STARTED = True
 # If enabled, a `task-sent` event will be sent for every task so tasks can be tracked before they're consumed by a worker.
 CELERY_TASK_SEND_SENT_EVENT = True
 
+# How many tasks a worker is allowed to reserve for its own consumption and execution.
+# If set to zero (not recommended) a single worker can reserve all tasks even if other workers are free.
+# For short running tasks (such as webhooks) you may want to set this to a larger number to increase throughput.
+# Conversely, for long running tasks (such as SSoT or Golden-Config Jobs at scale) you may want to set this to 1
+# so that a worker executing a long-running task will not prefetch other tasks, which would block their execution
+# until the long-running task completes.
+# https://docs.celeryq.dev/en/stable/userguide/optimizing.html#prefetch-limits
+CELERY_WORKER_PREFETCH_MULTIPLIER = int(os.getenv("NAUTOBOT_CELERY_WORKER_PREFETCH_MULTIPLIER", "4"))
+
 # If enabled stdout and stderr of running jobs will be redirected to the task logger.
 CELERY_WORKER_REDIRECT_STDOUTS = is_truthy(os.getenv("NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS", "True"))
 
-# The log level of log messages generated by redirected job stdout and stderr. Can be one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`.
+# The log level of log messages generated by redirected job stdout and stderr.
+# Can be one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`.
 CELERY_WORKER_REDIRECT_STDOUTS_LEVEL = os.getenv("NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS_LEVEL", "WARNING")
 
-# Send task-related events so that tasks can be monitored using tools like flower. Sets the default value for the workers -E argument.
+# Send task-related events so that tasks can be monitored using tools like flower.
+# Sets the default value for the workers -E argument.
 CELERY_WORKER_SEND_TASK_EVENTS = True
 
 # Default celery queue name that will be used by workers and tasks if no queue is specified
@@ -972,6 +970,8 @@ BRANDING_FILEPATHS = {
         "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None
     ),  # bullet image used for various view headers
     "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None),  # bullet image used for nav menu headers
+    "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # Custom global CSS
+    "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # Custom global JavaScript
 }
 
 # Title to use in place of "Nautobot"

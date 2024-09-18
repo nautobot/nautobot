@@ -17,7 +17,7 @@ Familiarity with the basic concepts of [Jobs](../../user-guide/platform-function
 
 Jobs may be installed in one of three ways:
 
-* Manually installed as files in the [`JOBS_ROOT`](../../user-guide/administration/configuration/optional-settings.md#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`).
+* Manually installed as files in the [`JOBS_ROOT`](../../user-guide/administration/configuration/settings.md#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`).
     * Python files and subdirectories containing Python files will be dynamically loaded at Nautobot startup in order to discover and register available Job classes. For example, a job class named `MyJobClass` in `$JOBS_ROOT/my_job.py` will be loaded into Nautobot as `my_job.MyJobClass`.
     * All Python modules in this directory are imported by Nautobot and all worker processes at startup. If you have a `custom_jobs.py` and a `custom_jobs_module/__init__.py` file in your `JOBS_ROOT`, both of these files will be imported at startup.
 * Imported from an external [Git repository](../../user-guide/platform-functionality/gitrepository.md#jobs).
@@ -94,6 +94,25 @@ register_jobs(MyJob)
 Similarly, only the `jobs` module is loaded from Git repositories. If you're using submodules, you need to ensure that your jobs are either registered in the repository's `jobs/__init__.py` or that this file imports your submodules where the jobs are registered.
 
 If not using submodules, you should register your job in the file where your job is defined.
+
+Examples of the different directory structures when registering jobs in Git repositories:  
+
+!!! note
+    Take note of the `__init__.py` at the root of the repository.  This is required to register jobs in a Git repository.
+
+``` title="jobs.py"
+.
+├── __init__.py
+└── jobs.py
+```
+
+``` title="submodule"
+.
+├── __init__.py
+└── jobs
+    ├── __init__.py
+    └── my_job_module.py
+```
 
 #### Registering Jobs in an App
 
@@ -261,9 +280,9 @@ A boolean that can be set by the job author to indicate that the job does not ma
 
 +++ 1.3.0
 
-An int or float value, in seconds, which can be used to override the default [soft time limit](../../user-guide/administration/configuration/optional-settings.md#celery_task_soft_time_limit) for a job task to complete.
+An int or float value, in seconds, which can be used to override the default [soft time limit](../../user-guide/administration/configuration/settings.md#celery_task_soft_time_limit) for a job task to complete.
 
-The `celery.exceptions.SoftTimeLimitExceeded` exception will be raised when this soft time limit is exceeded. The job task can catch this to clean up before the [hard time limit](../../user-guide/administration/configuration/optional-settings.md#celery_task_time_limit) (10 minutes by default) is reached:
+The `celery.exceptions.SoftTimeLimitExceeded` exception will be raised when this soft time limit is exceeded. The job task can catch this to clean up before the [hard time limit](../../user-guide/administration/configuration/settings.md#celery_task_time_limit) (10 minutes by default) is reached:
 
 ```python
 from celery.exceptions import SoftTimeLimitExceeded
@@ -290,7 +309,7 @@ class ExampleJobWithSoftTimeLimit(Job):
 
 Default: `[]`
 
-A list of task queue names that the job can be routed to. An empty list will default to only allowing the user to select the [default queue](../../user-guide/administration/configuration/optional-settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The first queue in the list will be used if a queue is not specified in a job run API call.
+A list of task queue names that the job can be routed to. An empty list will default to only allowing the user to select the [default queue](../../user-guide/administration/configuration/settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The first queue in the list will be used if a queue is not specified in a job run API call.
 
 !!! note
     A worker must be listening on the requested queue or the job will not run. See the documentation on [task queues](../../user-guide/administration/guides/celery-queues.md) for more information.
@@ -330,7 +349,7 @@ For another example checkout [the template used in the Example App](https://gith
 +++ 1.3.0
 
 An int or float value, in seconds, which can be used to override the
-default [hard time limit](../../user-guide/administration/configuration/optional-settings.md#celery_task_time_limit) (10 minutes by default) for a job task to complete.
+default [hard time limit](../../user-guide/administration/configuration/settings.md#celery_task_time_limit) (10 minutes by default) for a job task to complete.
 
 Unlike the `soft_time_limit` above, no exceptions are raised when a `time_limit` is exceeded. The task will just terminate silently:
 
@@ -636,7 +655,7 @@ To skip writing a log entry to the database, set the `skip_db_logging` key in th
 Markdown rendering is supported for log messages, as well as [a limited subset of HTML](../../user-guide/platform-functionality/template-filters.md#render_markdown).
 
 +/- 1.3.4
-    As a security measure, the `message` passed to any of these methods will be passed through the `nautobot.core.utils.logging.sanitize()` function in an attempt to strip out information such as usernames/passwords that should not be saved to the logs. This is of course best-effort only, and Job authors should take pains to ensure that such information is not passed to the logging APIs in the first place. The set of redaction rules used by the `sanitize()` function can be configured as [settings.SANITIZER_PATTERNS](../../user-guide/administration/configuration/optional-settings.md#sanitizer_patterns).
+    As a security measure, the `message` passed to any of these methods will be passed through the `nautobot.core.utils.logging.sanitize()` function in an attempt to strip out information such as usernames/passwords that should not be saved to the logs. This is of course best-effort only, and Job authors should take pains to ensure that such information is not passed to the logging APIs in the first place. The set of redaction rules used by the `sanitize()` function can be configured as [settings.SANITIZER_PATTERNS](../../user-guide/administration/configuration/settings.md#sanitizer_patterns).
 
 +/- 2.0.0
     The Job class logging functions (example: `self.log(message)`, `self.log_success(obj=None, message=message)`, etc) have been removed. Also, the convenience method to mark a job as failed, `log_failure()`, has been removed. To replace the functionality of this method, you can log an error message with `self.logger.error()` and then raise an exception to fail the job. Note that it is no longer possible to manually set the job result status as failed without raising an exception in the job.
@@ -648,7 +667,7 @@ Markdown rendering is supported for log messages, as well as [a limited subset o
 
 +++ 2.1.0
 
-A Job can create files that will be saved and can later be downloaded by a user. (The specifics of how and where these files are stored will depend on your system's [`JOB_FILE_IO_STORAGE`](../../user-guide/administration/configuration/optional-settings.md#job_file_io_storage) configuration.) To do so, use the `Job.create_file(filename, content)` method:
+A Job can create files that will be saved and can later be downloaded by a user. (The specifics of how and where these files are stored will depend on your system's [`JOB_FILE_IO_STORAGE`](../../user-guide/administration/configuration/settings.md#job_file_io_storage) configuration.) To do so, use the `Job.create_file(filename, content)` method:
 
 ```python
 from nautobot.extras.jobs import Job
@@ -659,9 +678,9 @@ class MyJob(Job):
         self.create_file("farewell.txt", b"Goodbye for now!")  # content can be a str or bytes
 ```
 
-The above Job when run will create two files, "greeting.txt" and "farewell.txt", that will be made available for download from the JobResult detail view's "Additional Data" tab and via the REST API. These files will persist indefinitely, but can automatically be deleted if the JobResult itself is deleted; they can also be deleted manually by an administrator via the "File Proxies" link in the Admin UI.
+The above Job when run will create two files, "greeting.txt" and "farewell.txt", that will be made available for download from the JobResult detail view's "Advanced" tab and via the REST API. These files will persist indefinitely, but can automatically be deleted if the JobResult itself is deleted; they can also be deleted manually by an administrator via the "File Proxies" link in the Admin UI.
 
-The maximum size of any single created file (or in other words, the maximum number of bytes that can be passed to `self.create_file()`) is controlled by the [`JOB_CREATE_FILE_MAX_SIZE`](../../user-guide/administration/configuration/optional-settings.md#job_create_file_max_size) system setting. A `ValueError` exception will be raised if `create_file()` is called with an overly large `content` value.
+The maximum size of any single created file (or in other words, the maximum number of bytes that can be passed to `self.create_file()`) is controlled by the [`JOB_CREATE_FILE_MAX_SIZE`](../../user-guide/administration/configuration/settings.md#job_create_file_max_size) system setting. A `ValueError` exception will be raised if `create_file()` is called with an overly large `content` value.
 
 ### Marking a Job as Failed
 
@@ -785,7 +804,6 @@ from nautobot.apps.jobs import Job, StringVar, IntegerVar, ObjectVar, register_j
 from nautobot.dcim.models import Location, LocationType, Device, Manufacturer, DeviceType
 from nautobot.extras.models import Status, Role
 
-
 class NewBranch(Job):
     class Meta:
         name = "New Branch"
@@ -799,11 +817,13 @@ class NewBranch(Job):
         description="Access switch model", model=DeviceType, query_params={"manufacturer_id": "$manufacturer"}
     )
 
-    def run(self, location_name, switch_count, switch_model):
+    def run(self, *, location_name, switch_count, switch_model, manufacturer=None):
         STATUS_PLANNED = Status.objects.get(name="Planned")
 
         # Create the new location
-        root_type = LocationType.objects.get_or_create(name="Campus")
+        root_type, lt_created = LocationType.objects.get_or_create(name="Campus")
+        device_ct = ContentType.objects.get_for_model(Device)
+        root_type.content_types.add(device_ct)
         location = Location(
             name=location_name,
             location_type=root_type,
@@ -813,8 +833,7 @@ class NewBranch(Job):
         self.logger.info("Created new location", extra={"object": location})
 
         # Create access switches
-        device_ct = ContentType.objects.get_for_model(Device)
-        switch_role = Role.objects.get(name="Access Switch")
+        switch_role, r_created = Role.objects.get_or_create(name="Access Switch")
         switch_role.content_types.add(device_ct)
         for i in range(1, switch_count + 1):
             switch = Device(
@@ -834,7 +853,6 @@ class NewBranch(Job):
             output.append(",".join(attrs))
 
         return "\n".join(output)
-
 
 register_jobs(NewBranch)
 ```

@@ -4,7 +4,6 @@ import contextlib
 from datetime import timedelta
 import logging
 
-from celery import schedules
 from celery.exceptions import NotRegistered
 from celery.utils.log import get_logger, LoggingProxy
 from django.conf import settings
@@ -16,7 +15,9 @@ from django.db.models import signals
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django_celery_beat.clockedschedule import clocked
+from django_celery_beat.tzcrontab import TzAwareCrontab
 from prometheus_client import Histogram
+from timezone_field import TimeZoneField
 
 from nautobot.core.celery import (
     app,
@@ -43,7 +44,7 @@ from nautobot.extras.constants import (
 )
 from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.models import ChangeLoggedModel, GitRepository
-from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -318,6 +319,25 @@ class Job(PrimaryModel):
                 {"approval_required": "A job that may have sensitive variables cannot be marked as requiring approval"}
             )
 
+    def save(self, *args, **kwargs):
+        """When a Job is uninstalled, auto-disable all associated JobButtons, JobHooks, and ScheduledJobs."""
+        super().save(*args, **kwargs)
+        if not self.installed:
+            if self.is_job_button_receiver:
+                for jb in JobButton.objects.filter(job=self, enabled=True):
+                    logger.info("Disabling JobButton %s derived from %s", jb, self)
+                    jb.enabled = False
+                    jb.save()
+            if self.is_job_hook_receiver:
+                for jh in JobHook.objects.filter(job=self, enabled=True):
+                    logger.info("Disabling JobHook %s derived from %s", jh, self)
+                    jh.enabled = False
+                    jh.save()
+            for sj in ScheduledJob.objects.filter(job_model=self, enabled=True):
+                logger.info("Disabling ScheduledJob %s derived from %s", sj, self)
+                sj.enabled = False
+                sj.save()
+
 
 @extras_features("graphql")
 class JobHook(OrganizationalModel):
@@ -363,6 +383,9 @@ class JobHook(OrganizationalModel):
         if not self.type_create and not self.type_delete and not self.type_update:
             raise ValidationError("You must select at least one type: create, update, and/or delete.")
 
+        if self.enabled and not (self.job.installed and self.job.enabled):
+            raise ValidationError({"enabled": "The selected Job is not installed and enabled"})
+
     @classmethod
     def check_for_conflicts(
         cls, instance=None, content_types=None, job=None, type_create=None, type_update=None, type_delete=None
@@ -375,6 +398,7 @@ class JobHook(OrganizationalModel):
         """
 
         conflicts = {}
+
         job_hook_error_msg = "A job hook already exists for {action} on {content_type} to job {job}"
 
         if instance is not None and instance.present_in_database:
@@ -432,6 +456,8 @@ class JobLogEntry(BaseModel):
     # This also simplifies migration from the JobResult Data field as these were stored as strings.
     log_object = models.CharField(max_length=JOB_LOG_MAX_LOG_OBJECT_LENGTH, blank=True, default="")
     absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, blank=True, default="")
+
+    is_metadata_associable_model = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
 
@@ -770,9 +796,10 @@ class JobResult(BaseModel, CustomFieldModel):
 
 
 @extras_features("graphql")
-class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
+class JobButton(ContactMixin, ChangeLoggedModel, DynamicGroupsModelMixin, NotesMixin, BaseModel):
     """
-    A predefined button that includes all necessary information to run a Nautobot Job based on a single object as a source.
+    A predefined button that includes all information to run a Nautobot Job based on a single object as a source.
+
     The button text field accepts Jinja2 template code to be rendered with an object as context.
     """
 
@@ -783,6 +810,7 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
         help_text="The object type(s) to which this job button applies.",
     )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    enabled = models.BooleanField(default=True)
     text = models.CharField(
         max_length=500,
         help_text="Jinja2 template code for button text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.name }}</code>. Buttons which render as empty text will not be displayed.",
@@ -816,6 +844,12 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        super().clean()
+
+        if self.enabled and not (self.job.installed and self.job.enabled):
+            raise ValidationError({"enabled": "The selected Job is not installed and enabled"})
 
 
 class ScheduledJobs(models.Model):
@@ -902,6 +936,9 @@ class ScheduledJob(BaseModel):
         verbose_name="Start Datetime",
         help_text="Datetime when the schedule should begin triggering the task to run",
     )
+    # Django always stores DateTimeField as UTC internally, but we want scheduled jobs to respect DST and similar,
+    # so we need to store the time zone the job was scheduled under as well.
+    time_zone = TimeZoneField(default=timezone.get_default_timezone_name)
     # todoindex:
     enabled = models.BooleanField(
         default=True,
@@ -972,12 +1009,15 @@ class ScheduledJob(BaseModel):
     def __str__(self):
         return f"{self.name}: {self.interval}"
 
+    class Meta:
+        ordering = ["name"]
+
     def save(self, *args, **kwargs):
         self.queue = self.queue or ""
         # make sure non-valid crontab doesn't get saved
         if self.interval == JobExecutionType.TYPE_CUSTOM:
             try:
-                self.get_crontab(self.crontab)
+                self.get_crontab(self.crontab, tz=self.time_zone)
             except Exception as e:
                 raise ValidationError({"crontab": e})
         if not self.enabled:
@@ -1022,7 +1062,7 @@ class ScheduledJob(BaseModel):
         return timezone.now() + timedelta(seconds=15)
 
     @classmethod
-    def get_crontab(cls, crontab):
+    def get_crontab(cls, crontab, tz=None):
         """
         Wrapper method translates crontab syntax to Celery crontab.
 
@@ -1035,25 +1075,112 @@ class ScheduledJob(BaseModel):
 
         No support for Last (L), Weekday (W), Number symbol (#), Question mark (?), and special @ strings.
         """
+        if not tz:
+            tz = timezone.get_default_timezone()
         minute, hour, day_of_month, month_of_year, day_of_week = crontab.split(" ")
-        return schedules.crontab(
+
+        return TzAwareCrontab(
             minute=minute,
             hour=hour,
             day_of_month=day_of_month,
             month_of_year=month_of_year,
             day_of_week=day_of_week,
+            tz=tz,
         )
 
+    @classmethod
+    def create_schedule(
+        cls,
+        job_model,
+        user,
+        name=None,
+        start_time=None,
+        interval=JobExecutionType.TYPE_IMMEDIATELY,
+        crontab="",
+        profile=False,
+        approval_required=False,
+        task_queue=None,
+        **job_kwargs,
+    ):
+        """
+        Schedule a job with the specified parameters.
+
+        This method creates a schedule for a job to be executed at a specific time
+        or interval. It handles immediate execution, custom start times, and
+        crontab-based scheduling.
+
+        Parameters:
+            job_model (JobModel): The job model instance.
+            user (User): The user who is scheduling the job.
+            name (str, optional): The name of the scheduled job. Defaults to None.
+            start_time (datetime, optional): The start time for the job. Defaults to None.
+            interval (JobExecutionType, optional): The interval type for the job execution.
+                Defaults to JobExecutionType.TYPE_IMMEDIATELY.
+            crontab (str, optional): The crontab string for the schedule. Defaults to "".
+            profile (bool, optional): Flag indicating whether to profile the job. Defaults to False.
+            approval_required (bool, optional): Flag indicating if approval is required. Defaults to False.
+            task_queue (str, optional): The task queue for the job. Defaults to None, which will use the configured default celery queue.
+            **job_kwargs: Additional keyword arguments to pass to the job.
+
+        Returns:
+            ScheduledJob instance
+        """
+
+        if interval == JobExecutionType.TYPE_IMMEDIATELY:
+            start_time = timezone.localtime()
+            name = name or f"{job_model.name} - {start_time}"
+        elif interval == JobExecutionType.TYPE_CUSTOM:
+            if start_time is None:
+                # "start_time" is checked against models.ScheduledJob.earliest_possible_time()
+                # which returns timezone.now() + timedelta(seconds=15)
+                start_time = timezone.localtime() + timedelta(seconds=20)
+
+        celery_kwargs = {
+            "nautobot_job_profile": profile,
+            "queue": task_queue,
+        }
+        if job_model.soft_time_limit > 0:
+            celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
+        if job_model.time_limit > 0:
+            celery_kwargs["time_limit"] = job_model.time_limit
+
+        # 2.0 TODO: To revisit this as part of a larger Jobs cleanup in 2.0.
+        #
+        # We pass in task and job_model here partly for forward/backward compatibility logic, and
+        # part fallback safety. It's mildly useful to store both the task module/class name and the JobModel
+        # FK on the ScheduledJob, as in the case where the JobModel gets deleted (and the FK becomes
+        # null) you still have a bit of context on the ScheduledJob as to what it was originally
+        # scheduled for.
+        scheduled_job = cls(
+            name=name,
+            task=job_model.class_path,
+            job_model=job_model,
+            start_time=start_time,
+            time_zone=start_time.tzinfo,
+            description=f"Nautobot job {name} scheduled by {user} for {start_time}",
+            kwargs=job_kwargs,
+            celery_kwargs=celery_kwargs,
+            interval=interval,
+            one_off=(interval == JobExecutionType.TYPE_FUTURE),
+            user=user,
+            approval_required=approval_required,
+            crontab=crontab,
+            queue=task_queue,
+        )
+        scheduled_job.validated_save()
+        return scheduled_job
+
     def to_cron(self):
-        t = self.start_time
+        tz = self.time_zone
+        t = self.start_time.astimezone(tz)
         if self.interval == JobExecutionType.TYPE_HOURLY:
-            return schedules.crontab(minute=t.minute)
+            return TzAwareCrontab(minute=t.minute, tz=tz)
         elif self.interval == JobExecutionType.TYPE_DAILY:
-            return schedules.crontab(minute=t.minute, hour=t.hour)
+            return TzAwareCrontab(minute=t.minute, hour=t.hour, tz=tz)
         elif self.interval == JobExecutionType.TYPE_WEEKLY:
-            return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.strftime("%w"))
+            return TzAwareCrontab(minute=t.minute, hour=t.hour, day_of_week=t.strftime("%w"), tz=tz)
         elif self.interval == JobExecutionType.TYPE_CUSTOM:
-            return self.get_crontab(self.crontab)
+            return self.get_crontab(self.crontab, tz=tz)
         raise ValueError(f"I do not know to convert {self.interval} to a Cronjob!")
 
 

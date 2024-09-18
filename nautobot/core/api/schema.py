@@ -4,7 +4,7 @@ import re
 from drf_spectacular.contrib.django_filters import DjangoFilterExtension
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.openapi import AutoSchema
-from drf_spectacular.plumbing import build_array_type, build_media_type_object, get_doc, is_serializer
+from drf_spectacular.plumbing import build_array_type, build_media_type_object, get_doc, is_serializer, list_hash
 from drf_spectacular.serializers import PolymorphicProxySerializerExtension
 from rest_framework import serializers
 from rest_framework.relations import ManyRelatedField
@@ -359,6 +359,8 @@ class ChoiceFieldFix(OpenApiSerializerFieldExtension):
             return {
                 "type": value_type,
                 "enum": list(choices.keys()),
+                # Used to deduplicate enums with the same set of choices, since drf-spectacular 0.27.2
+                "x-spec-enum-id": list_hash([(k, v) for k, v in choices.items() if k not in ("", None)]),
             }
         else:
             return {

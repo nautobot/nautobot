@@ -5,6 +5,7 @@ from django.db.models import Q
 import django_filters
 import netaddr
 
+from nautobot.cloud.models import CloudNetwork
 from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueNumberFilter,
@@ -65,7 +66,7 @@ class NamespaceFilterSet(NautobotFilterSet):
         fields = "__all__"
 
 
-class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
+class VRFFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -256,15 +257,22 @@ class PrefixFilterSet(
     )
     ip_version = django_filters.NumberFilter()
     location = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         field_name="locations",
         label='Location (name or ID) (deprecated, use "locations" filter instead)',
     )
     locations = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Locations (name or ID)",
+    )
+    cloud_networks = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=CloudNetwork.objects.all(),
+        to_field_name="name",
+        label="Cloud Network (name or ID)",
     )
 
     class Meta:
@@ -334,6 +342,7 @@ class PrefixLocationAssignmentFilterSet(NautobotFilterSet):
         label="Prefix",
     )
     location = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Locations (name or ID)",
@@ -433,11 +442,19 @@ class IPAddressFilterSet(
         method="_has_interface_assignments",
         label="Has Interface Assignments",
     )
+    nat_inside = django_filters.ModelMultipleChoiceFilter(
+        queryset=IPAddress.objects.all(),
+        label="NAT (Inside)",
+    )
+    has_nat_inside = RelatedMembershipBooleanFilter(
+        field_name="nat_inside",
+        label="Has NAT Inside",
+    )
     ip_version = django_filters.NumberFilter()
 
     class Meta:
         model = IPAddress
-        fields = ["id", "dns_name", "type", "tags", "mask_length"]
+        fields = ["id", "dns_name", "type", "tags", "mask_length", "nat_inside"]
 
     def generate_query__has_interface_assignments(self, value):
         """Helper method used by DynamicGroups and by _assigned_to_interface method."""
@@ -551,12 +568,14 @@ class VLANFilterSet(
         label="VLAN Group (name or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         field_name="locations",
         label='Location (name or ID) (deprecated, use "locations" filter instead)',
     )
     locations = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Locations (name or ID)",
@@ -585,11 +604,13 @@ class VLANLocationAssignmentFilterSet(NautobotFilterSet):
         },
     )
     vlan = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="vid",
         queryset=VLAN.objects.all(),
         label="VLAN (VID or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Locations (name or ID)",

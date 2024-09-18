@@ -146,6 +146,39 @@ class HomeViewTestCase(TestCase):
         response_content = response.content.decode(response.charset).replace("\n", "")
         self.assertNotRegex(response_content, footer_hostname_version_pattern)
 
+    def test_banners_markdown(self):
+        url = reverse("home")
+        with override_settings(
+            BANNER_TOP="# Hello world",
+            BANNER_BOTTOM="[info](https://nautobot.com)",
+        ):
+            response = self.client.get(url)
+        self.assertInHTML("<h1>Hello world</h1>", response.content.decode(response.charset))
+        self.assertInHTML(
+            '<a href="https://nautobot.com" rel="noopener noreferrer">info</a>',
+            response.content.decode(response.charset),
+        )
+
+        with override_settings(BANNER_LOGIN="_Welcome to Nautobot!_"):
+            self.client.logout()
+            response = self.client.get(reverse("login"))
+        self.assertInHTML("<em>Welcome to Nautobot!</em>", response.content.decode(response.charset))
+
+    def test_banners_no_xss(self):
+        url = reverse("home")
+        with override_settings(
+            BANNER_TOP='<script>alert("Hello from above!");</script>',
+            BANNER_BOTTOM='<script>alert("Hello from below!");</script>',
+        ):
+            response = self.client.get(url)
+        self.assertNotIn("Hello from above", response.content.decode(response.charset))
+        self.assertNotIn("Hello from below", response.content.decode(response.charset))
+
+        with override_settings(BANNER_LOGIN='<script>alert("Welcome to Nautobot!");</script>'):
+            self.client.logout()
+            response = self.client.get(reverse("login"))
+        self.assertNotIn("Welcome to Nautobot!", response.content.decode(response.charset))
+
 
 @override_settings(BRANDING_TITLE="Nautobot")
 class SearchFieldsTestCase(TestCase):
@@ -241,6 +274,25 @@ class FilterFormsTestCase(TestCase):
         response_content = response.content.decode(response.charset).replace("\n", "")
         self.assertInHTML(locations[0].name, response_content)
         self.assertInHTML(locations[1].name, response_content)
+
+    def test_filtering_crafted_query_params(self):
+        """Test for reflected-XSS vulnerability GHSA-jxgr-gcj5-cqqg."""
+        self.add_permissions("dcim.view_location")
+        query_param = "?location_type=1 onmouseover=alert('hi') foo=bar"
+        url = reverse("dcim:location_list") + query_param
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_content = response.content.decode(response.charset)
+        # The important thing here is that the data-field-parent and data-field-value are correctly quoted
+        self.assertInHTML(
+            """
+<span class="filter-selection-choice-remove remove-filter-param"
+      data-field-type="child"
+      data-field-parent="location_type"
+      data-field-value="1 onmouseover=alert(&#x27;hi&#x27;) foo=bar"
+>×</span>""",  # noqa: RUF001 - ambiguous-unicode-character-string
+            response_content,
+        )
 
 
 class ForceScriptNameTestcase(TestCase):
@@ -428,9 +480,9 @@ class ErrorPagesTestCase(TestCase):
     def test_500_default_support_message(self, mock_get):
         """Nautobot's custom 500 page should be used and should include a default support message."""
         url = reverse("home")
-        with self.assertTemplateUsed("500.html"):
-            self.client.raise_request_exception = False
-            response = self.client.get(url)
+        self.client.raise_request_exception = False
+        response = self.client.get(url)
+        self.assertTemplateUsed(response, "500.html")
         self.assertContains(response, "Network to Code", status_code=500)
         response_content = response.content.decode(response.charset)
         self.assertInHTML(
@@ -445,9 +497,9 @@ class ErrorPagesTestCase(TestCase):
     def test_500_custom_support_message(self, mock_get):
         """Nautobot's custom 500 page should be used and should include a custom support message if defined."""
         url = reverse("home")
-        with self.assertTemplateUsed("500.html"):
-            self.client.raise_request_exception = False
-            response = self.client.get(url)
+        self.client.raise_request_exception = False
+        response = self.client.get(url)
+        self.assertTemplateUsed(response, "500.html")
         self.assertNotContains(response, "Network to Code", status_code=500)
         response_content = response.content.decode(response.charset)
         self.assertInHTML("Hello world!", response_content)

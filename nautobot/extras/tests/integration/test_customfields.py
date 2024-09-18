@@ -320,6 +320,7 @@ class CustomFieldTestCase(SeleniumTestCase):
         self.browser.links.find_by_partial_text("Extensibility").click()
         self.browser.links.find_by_partial_text("Custom Fields").click()
         self.browser.links.find_by_partial_text("Device Selection Field").click()
+        self.browser.find_by_id("actions-dropdown").click()
         self.browser.links.find_by_partial_text("Delete").click()
         self.browser.find_by_xpath(".//button[contains(text(), 'Confirm')]").click()
 

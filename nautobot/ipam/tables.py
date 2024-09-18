@@ -217,7 +217,7 @@ class NamespaceTable(BaseTable):
 #
 
 
-class VRFTable(BaseTable):
+class VRFTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     # rd = tables.Column(verbose_name="RD")
@@ -232,6 +232,7 @@ class VRFTable(BaseTable):
             "pk",
             "name",
             # "rd",
+            "status",
             "namespace",
             "tenant",
             "description",
@@ -240,7 +241,7 @@ class VRFTable(BaseTable):
             "tags",
         )
         # default_columns = ("pk", "name", "rd", "namespace", "tenant", "description")
-        default_columns = ("pk", "name", "namespace", "tenant", "description")
+        default_columns = ("pk", "name", "status", "namespace", "tenant", "description")
 
 
 class VRFDeviceAssignmentTable(BaseTable):
@@ -355,6 +356,9 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     location_count = LinkedCountColumn(
         viewname="dcim:location_list", url_params={"prefixes": "pk"}, verbose_name="Locations"
     )
+    cloud_networks_count = LinkedCountColumn(
+        viewname="cloud:cloudnetwork_list", url_params={"prefixes": "pk"}, verbose_name="Cloud Networks"
+    )
 
     class Meta(BaseTable.Meta):
         model = Prefix
@@ -368,6 +372,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "namespace",
             "tenant",
             "location_count",
+            "cloud_networks_count",
             "vlan",
             "role",
             "rir",
@@ -443,6 +448,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     )
     tenant = TenantColumn()
     parent__namespace = tables.Column(linkify=True)
+    # Interface, Device, and VirtualMachine tables aren't currently filterable by IP address (?) so no LinkedCountColumn
     interface_count = tables.Column(verbose_name="Interfaces")
     interface_parent_count = tables.Column(verbose_name="Devices")
     vm_interface_count = LinkedCountColumn(
@@ -473,7 +479,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
 
 class IPAddressDetailTable(IPAddressTable):
-    nat_inside = tables.Column(linkify=True, orderable=False, verbose_name="NAT (Inside)")
+    nat_inside = tables.Column(linkify=True, verbose_name="NAT (Inside)")
     tenant = TenantColumn()
     tags = TagColumn(url_name="ipam:ipaddress_list")
     assigned = BooleanColumn(accessor="assigned_count")

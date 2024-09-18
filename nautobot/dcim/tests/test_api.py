@@ -12,10 +12,13 @@ from rest_framework import status
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
 from nautobot.dcim.choices import (
+    ConsolePortTypeChoices,
     InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedTypeChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
@@ -43,6 +46,10 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
+    Module,
+    ModuleBay,
+    ModuleBayTemplate,
+    ModuleType,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -130,7 +137,7 @@ class Mixins:
         @classmethod
         def setUpTestData(cls):
             super().setUpTestData()
-            cls.device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
+            cls.device_type = DeviceType.objects.first()
             cls.manufacturer = cls.device_type.manufacturer
             cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
             cls.device_role = Role.objects.get_for_model(Device).first()
@@ -142,6 +149,8 @@ class Mixins:
                 location=cls.location,
                 status=cls.device_status,
             )
+            cls.module = Module.objects.first()
+            cls.module_type = cls.module.module_type
 
     class BasePortTestMixin(ComponentTraceMixin, BaseComponentTestMixin):
         """Mixin class for all `FooPort` tests."""
@@ -166,6 +175,166 @@ class Mixins:
                 if o not in SoftwareImageFileHashingAlgorithmChoices.as_dict().keys()
             ]
         )
+
+    class ModularDeviceComponentMixin:
+        modular_component_create_data = {}
+        device_field = "device"  # field name for the parent device
+        module_field = "module"  # field name for the parent module
+        update_data = {"label": "updated label", "description": "updated description"}
+
+        def test_module_device_validation(self):
+            """Assert that a modular component can have a module or a device but not both."""
+
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+            data = {
+                self.module_field: self.module.pk,
+                self.device_field: self.device.pk,
+                "name": "test parent module validation",
+                **self.modular_component_create_data,
+            }
+            url = self._get_list_url()
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.json(),
+                {"non_field_errors": [f"Only one of {self.device_field} or {self.module_field} must be set"]},
+            )
+
+            data.pop(self.module_field)
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+            data.pop(self.device_field)
+            data[self.module_field] = self.module.pk
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+            data.pop(self.module_field)
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.json(),
+                {"__all__": [f"Either {self.device_field} or {self.module_field} must be set"]},
+            )
+
+        def test_module_device_name_unique_validation(self):
+            """Assert uniqueness constraint is enforced for (device,name) and (module,name) fields."""
+
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+            modules = Module.objects.all()[:2]
+            data = {
+                self.module_field: modules[0].pk,
+                "name": "test modular device component parent validation",
+                **self.modular_component_create_data,
+            }
+            url = self._get_list_url()
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.json(),
+                {"non_field_errors": [f"The fields {self.module_field}, name must make a unique set."]},
+            )
+
+            # same name, different module works
+            data[self.module_field] = modules[1].pk
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+            devices = Device.objects.all()[:2]
+            data = {
+                self.device_field: devices[0].pk,
+                "name": "test modular device component parent validation",
+                **self.modular_component_create_data,
+            }
+            url = self._get_list_url()
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.json(),
+                {"non_field_errors": [f"The fields {self.device_field}, name must make a unique set."]},
+            )
+
+            # same name, different device works
+            data[self.device_field] = devices[1].pk
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+    class ModularDeviceComponentTemplateMixin:
+        modular_component_create_data = {}
+        update_data = {"label": "updated label", "description": "updated description"}
+
+        def test_module_type_device_type_validation(self):
+            """Assert that a modular component template can have a module_type or a device_type but not both."""
+
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+            data = {
+                "module_type": self.module_type.pk,
+                "device_type": self.device_type.pk,
+                "name": "test parent module_type validation",
+                **self.modular_component_create_data,
+            }
+            url = self._get_list_url()
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.json(),
+                {"non_field_errors": ["Only one of device_type or module_type must be set"]},
+            )
+
+            data.pop("module_type")
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+            data.pop("device_type")
+            data["module_type"] = self.module_type.pk
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+            data.pop("module_type")
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.json(),
+                {"__all__": ["Either device_type or module_type must be set"]},
+            )
+
+        def test_module_type_device_type_name_unique_validation(self):
+            """Assert uniqueness constraint is enforced for (device_type,name) and (module_type,name) fields."""
+
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+            module_types = ModuleType.objects.all()[:2]
+            data = {
+                "module_type": module_types[0].pk,
+                "name": "test modular device component template parent validation",
+                **self.modular_component_create_data,
+            }
+            url = self._get_list_url()
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.json(),
+                {"non_field_errors": ["The fields module_type, name must make a unique set."]},
+            )
+
+            # same name, different module_type works
+            data["module_type"] = module_types[1].pk
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+            device_types = DeviceType.objects.all()[:2]
+            data = {
+                "device_type": device_types[0].pk,
+                "name": "test modular device component template parent validation",
+                **self.modular_component_create_data,
+            }
+            url = self._get_list_url()
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.json(),
+                {"non_field_errors": ["The fields device_type, name must make a unique set."]},
+            )
+
+            # same name, different device_type works
+            data["device_type"] = device_types[1].pk
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
 
 
 class LocationTypeTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
@@ -302,7 +471,7 @@ class LocationTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelA
         # Attempt to create new location with blank time_zone attr.
         response = self.client.post(url, **self.header, data=location, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json()["time_zone"], ["A valid timezone is required."])
+        self.assertEqual(response.json()["time_zone"], ["This field may not be blank."])
 
     def test_time_zone_field_post_valid(self):
         """
@@ -802,15 +971,17 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
 
-    @classmethod
-    def setUpTestData(cls):
-        # FIXME: This has to be replaced with# `get_deletable_object` and
-        # `get_deletable_object_pks` but this is a workaround just so all of these objects are
-        # deletable for now.
-        Controller.objects.filter(controller_device__isnull=False).delete()
-        Device.objects.all().delete()
-        DeviceType.objects.all().delete()
-        Platform.objects.all().delete()
+    def get_deletable_object(self):
+        mf = Manufacturer.objects.create(name="Deletable Manufacturer")
+        return mf
+
+    def get_deletable_object_pks(self):
+        mfs = [
+            Manufacturer.objects.create(name="Deletable Manufacturer 1"),
+            Manufacturer.objects.create(name="Deletable Manufacturer 2"),
+            Manufacturer.objects.create(name="Deletable Manufacturer 3"),
+        ]
+        return [mf.pk for mf in mfs]
 
 
 class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases.APIViewTestCase):
@@ -847,16 +1018,46 @@ class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases
         ]
 
 
-class ConsolePortTemplateTest(Mixins.BasePortTemplateTestMixin):
+class ModuleTypeTest(APIViewTestCases.APIViewTestCase):
+    model = ModuleType
+    bulk_update_data = {
+        "part_number": "ABC123",
+        "comments": "changed comment",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        manufacturer_id = Manufacturer.objects.first().pk
+
+        cls.create_data = [
+            {
+                "manufacturer": manufacturer_id,
+                "model": "Module Type 1",
+                "part_number": "123456",
+                "comments": "test comment",
+            },
+            {
+                "manufacturer": manufacturer_id,
+                "model": "Module Type 2",
+            },
+            {
+                "manufacturer": manufacturer_id,
+                "model": "Module Type 3",
+            },
+            {
+                "manufacturer": manufacturer_id,
+                "model": "Module Type 4",
+            },
+        ]
+
+
+class ConsolePortTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BasePortTemplateTestMixin):
     model = ConsolePortTemplate
+    modular_component_create_data = {"type": ConsolePortTypeChoices.TYPE_RJ45}
 
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-
-        ConsolePortTemplate.objects.create(device_type=cls.device_type, name="Console Port Template 1")
-        ConsolePortTemplate.objects.create(device_type=cls.device_type, name="Console Port Template 2")
-        ConsolePortTemplate.objects.create(device_type=cls.device_type, name="Console Port Template 3")
 
         cls.create_data = [
             {
@@ -864,7 +1065,7 @@ class ConsolePortTemplateTest(Mixins.BasePortTemplateTestMixin):
                 "name": "Console Port Template 4",
             },
             {
-                "device_type": cls.device_type.pk,
+                "module_type": cls.module_type.pk,
                 "name": "Console Port Template 5",
             },
             {
@@ -874,16 +1075,13 @@ class ConsolePortTemplateTest(Mixins.BasePortTemplateTestMixin):
         ]
 
 
-class ConsoleServerPortTemplateTest(Mixins.BasePortTemplateTestMixin):
+class ConsoleServerPortTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BasePortTemplateTestMixin):
     model = ConsoleServerPortTemplate
+    modular_component_create_data = {"type": ConsolePortTypeChoices.TYPE_RJ45}
 
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-
-        ConsoleServerPortTemplate.objects.create(device_type=cls.device_type, name="Console Server Port Template 1")
-        ConsoleServerPortTemplate.objects.create(device_type=cls.device_type, name="Console Server Port Template 2")
-        ConsoleServerPortTemplate.objects.create(device_type=cls.device_type, name="Console Server Port Template 3")
 
         cls.create_data = [
             {
@@ -891,7 +1089,7 @@ class ConsoleServerPortTemplateTest(Mixins.BasePortTemplateTestMixin):
                 "name": "Console Server Port Template 4",
             },
             {
-                "device_type": cls.device_type.pk,
+                "module_type": cls.module_type.pk,
                 "name": "Console Server Port Template 5",
             },
             {
@@ -901,16 +1099,13 @@ class ConsoleServerPortTemplateTest(Mixins.BasePortTemplateTestMixin):
         ]
 
 
-class PowerPortTemplateTest(Mixins.BasePortTemplateTestMixin):
+class PowerPortTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BasePortTemplateTestMixin):
     model = PowerPortTemplate
+    modular_component_create_data = {"type": PowerPortTypeChoices.TYPE_NEMA_1030P}
 
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-
-        PowerPortTemplate.objects.create(device_type=cls.device_type, name="Power Port Template 1")
-        PowerPortTemplate.objects.create(device_type=cls.device_type, name="Power Port Template 2")
-        PowerPortTemplate.objects.create(device_type=cls.device_type, name="Power Port Template 3")
 
         cls.create_data = [
             {
@@ -918,7 +1113,7 @@ class PowerPortTemplateTest(Mixins.BasePortTemplateTestMixin):
                 "name": "Power Port Template 4",
             },
             {
-                "device_type": cls.device_type.pk,
+                "module_type": cls.module_type.pk,
                 "name": "Power Port Template 5",
             },
             {
@@ -928,17 +1123,14 @@ class PowerPortTemplateTest(Mixins.BasePortTemplateTestMixin):
         ]
 
 
-class PowerOutletTemplateTest(Mixins.BasePortTemplateTestMixin):
+class PowerOutletTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BasePortTemplateTestMixin):
     model = PowerOutletTemplate
     choices_fields = ["feed_leg", "type"]
+    modular_component_create_data = {"type": PowerOutletTypeChoices.TYPE_IEC_C13}
 
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-
-        PowerOutletTemplate.objects.create(device_type=cls.device_type, name="Power Outlet Template 1")
-        PowerOutletTemplate.objects.create(device_type=cls.device_type, name="Power Outlet Template 2")
-        PowerOutletTemplate.objects.create(device_type=cls.device_type, name="Power Outlet Template 3")
 
         cls.create_data = [
             {
@@ -946,7 +1138,7 @@ class PowerOutletTemplateTest(Mixins.BasePortTemplateTestMixin):
                 "name": "Power Outlet Template 4",
             },
             {
-                "device_type": cls.device_type.pk,
+                "module_type": cls.module_type.pk,
                 "name": "Power Outlet Template 5",
             },
             {
@@ -956,17 +1148,13 @@ class PowerOutletTemplateTest(Mixins.BasePortTemplateTestMixin):
         ]
 
 
-class InterfaceTemplateTest(Mixins.BasePortTemplateTestMixin):
+class InterfaceTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BasePortTemplateTestMixin):
     model = InterfaceTemplate
+    modular_component_create_data = {"type": InterfaceTypeChoices.TYPE_1GE_FIXED}
 
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-
-        InterfaceTemplate.objects.create(device_type=cls.device_type, name="Interface Template 1", type="1000base-t")
-        InterfaceTemplate.objects.create(device_type=cls.device_type, name="Interface Template 2", type="1000base-t")
-        InterfaceTemplate.objects.create(device_type=cls.device_type, name="Interface Template 3", type="1000base-t")
-
         cls.create_data = [
             {
                 "device_type": cls.device_type.pk,
@@ -974,7 +1162,7 @@ class InterfaceTemplateTest(Mixins.BasePortTemplateTestMixin):
                 "type": "1000base-t",
             },
             {
-                "device_type": cls.device_type.pk,
+                "module_type": cls.module_type.pk,
                 "name": "Interface Template 5",
                 "type": "1000base-t",
             },
@@ -988,61 +1176,21 @@ class InterfaceTemplateTest(Mixins.BasePortTemplateTestMixin):
 
 class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
     model = FrontPortTemplate
+    update_data = {"label": "updated label", "description": "updated description"}
 
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
 
-        rear_port_templates = (
-            RearPortTemplate.objects.create(
-                device_type=cls.device_type,
-                name="Rear Port Template 1",
-                type=PortTypeChoices.TYPE_8P8C,
-            ),
-            RearPortTemplate.objects.create(
-                device_type=cls.device_type,
-                name="Rear Port Template 2",
-                type=PortTypeChoices.TYPE_8P8C,
-            ),
-            RearPortTemplate.objects.create(
-                device_type=cls.device_type,
-                name="Rear Port Template 3",
-                type=PortTypeChoices.TYPE_8P8C,
-            ),
-            RearPortTemplate.objects.create(
-                device_type=cls.device_type,
-                name="Rear Port Template 4",
-                type=PortTypeChoices.TYPE_8P8C,
-            ),
-            RearPortTemplate.objects.create(
-                device_type=cls.device_type,
-                name="Rear Port Template 5",
-                type=PortTypeChoices.TYPE_8P8C,
-            ),
-            RearPortTemplate.objects.create(
-                device_type=cls.device_type,
-                name="Rear Port Template 6",
-                type=PortTypeChoices.TYPE_8P8C,
-            ),
+        cls.module_type = ModuleType.objects.first()
+        cls.module_rear_port_templates = (
+            RearPortTemplate.objects.create(module_type=cls.module_type, name="Test FrontPort RP1", positions=100),
+            RearPortTemplate.objects.create(module_type=cls.module_type, name="Test FrontPort RP2", positions=100),
         )
-
-        FrontPortTemplate.objects.create(
-            device_type=cls.device_type,
-            name="Front Port Template 1",
-            type=PortTypeChoices.TYPE_8P8C,
-            rear_port_template=rear_port_templates[0],
-        )
-        FrontPortTemplate.objects.create(
-            device_type=cls.device_type,
-            name="Front Port Template 2",
-            type=PortTypeChoices.TYPE_8P8C,
-            rear_port_template=rear_port_templates[1],
-        )
-        FrontPortTemplate.objects.create(
-            device_type=cls.device_type,
-            name="Front Port Template 3",
-            type=PortTypeChoices.TYPE_8P8C,
-            rear_port_template=rear_port_templates[2],
+        cls.device_type = DeviceType.objects.first()
+        cls.device_rear_port_templates = (
+            RearPortTemplate.objects.create(device_type=cls.device_type, name="Test FrontPort RP3", positions=100),
+            RearPortTemplate.objects.create(device_type=cls.device_type, name="Test FrontPort RP4", positions=100),
         )
 
         cls.create_data = [
@@ -1050,48 +1198,113 @@ class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
                 "device_type": cls.device_type.pk,
                 "name": "Front Port Template 4",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port_template": rear_port_templates[3].pk,
+                "rear_port_template": cls.device_rear_port_templates[0].pk,
                 "rear_port_position": 1,
             },
             {
                 "device_type": cls.device_type.pk,
                 "name": "Front Port Template 5",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port_template": rear_port_templates[4].pk,
+                "rear_port_template": cls.device_rear_port_templates[1].pk,
                 "rear_port_position": 1,
             },
             {
-                "device_type": cls.device_type.pk,
+                "module_type": cls.module_type.pk,
                 "name": "Front Port Template 6",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port_template": rear_port_templates[5].pk,
+                "rear_port_template": cls.module_rear_port_templates[0].pk,
                 "rear_port_position": 1,
             },
         ]
 
+    def test_module_type_device_type_validation(self):
+        """Assert that a modular component template can have a module_type or a device_type but not both."""
 
-class RearPortTemplateTest(Mixins.BasePortTemplateTestMixin):
+        self.add_permissions("dcim.add_frontporttemplate")
+        data = {
+            "module_type": self.module_type.pk,
+            "device_type": self.device_type.pk,
+            "name": "test parent module_type validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port_template": self.device_rear_port_templates[0].pk,
+            "rear_port_position": 2,
+        }
+        url = self._get_list_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["Only one of device_type or module_type must be set"]},
+        )
+
+        data.pop("module_type")
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data.pop("device_type")
+        data["module_type"] = self.module_type.pk
+        data["rear_port_template"] = self.module_rear_port_templates[0].pk
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+    def test_module_type_device_type_name_unique_validation(self):
+        """Assert uniqueness constraint is enforced for (device_type,name) and (module_type,name) fields."""
+
+        self.add_permissions("dcim.add_frontporttemplate")
+        data = {
+            "module_type": self.module_type.pk,
+            "name": "test modular device_type component parent validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port_template": self.module_rear_port_templates[0].pk,
+            "rear_port_position": 2,
+        }
+        url = self._get_list_url()
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data = {
+            "module_type": self.module_type.pk,
+            "name": "test modular device_type component parent validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port_template": self.module_rear_port_templates[1].pk,
+            "rear_port_position": 2,
+        }
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["The fields module_type, name must make a unique set."]},
+        )
+
+        data = {
+            "device_type": self.device_type.pk,
+            "name": "test modular device_type component parent validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port_template": self.device_rear_port_templates[0].pk,
+            "rear_port_position": 2,
+        }
+        url = self._get_list_url()
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data = {
+            "device_type": self.device_type.pk,
+            "name": "test modular device_type component parent validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port_template": self.device_rear_port_templates[1].pk,
+            "rear_port_position": 2,
+        }
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["The fields device_type, name must make a unique set."]},
+        )
+
+
+class RearPortTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BasePortTemplateTestMixin):
     model = RearPortTemplate
+    modular_component_create_data = {"type": PortTypeChoices.TYPE_8P8C}
 
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-
-        RearPortTemplate.objects.create(
-            device_type=cls.device_type,
-            name="Rear Port Template 1",
-            type=PortTypeChoices.TYPE_8P8C,
-        )
-        RearPortTemplate.objects.create(
-            device_type=cls.device_type,
-            name="Rear Port Template 2",
-            type=PortTypeChoices.TYPE_8P8C,
-        )
-        RearPortTemplate.objects.create(
-            device_type=cls.device_type,
-            name="Rear Port Template 3",
-            type=PortTypeChoices.TYPE_8P8C,
-        )
 
         cls.create_data = [
             {
@@ -1100,12 +1313,12 @@ class RearPortTemplateTest(Mixins.BasePortTemplateTestMixin):
                 "type": PortTypeChoices.TYPE_8P8C,
             },
             {
-                "device_type": cls.device_type.pk,
+                "module_type": cls.module_type.pk,
                 "name": "Rear Port Template 5",
                 "type": PortTypeChoices.TYPE_8P8C,
             },
             {
-                "device_type": cls.device_type.pk,
+                "module_type": cls.module_type.pk,
                 "name": "Rear Port Template 6",
                 "type": PortTypeChoices.TYPE_8P8C,
             },
@@ -1137,6 +1350,30 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
             {
                 "device_type": device_type.pk,
                 "name": "Device Bay Template 6",
+            },
+        ]
+
+
+class ModuleBayTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BaseComponentTestMixin):
+    model = ModuleBayTemplate
+    choices_fields = []
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        cls.create_data = [
+            {
+                "device_type": cls.device_type.pk,
+                "name": "Test1",
+            },
+            {
+                "module_type": cls.module_type.pk,
+                "name": "Test2",
+            },
+            {
+                "device_type": cls.device_type.pk,
+                "name": "Test3",
             },
         ]
 
@@ -1462,120 +1699,238 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
 
-class ConsolePortTest(Mixins.BasePortTestMixin):
+class ModuleTestCase(APIViewTestCases.APIViewTestCase):
+    model = Module
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.module_type = ModuleType.objects.first()
+        cls.module_bay = ModuleBay.objects.filter(installed_module__isnull=True).first()
+        cls.module_status = Status.objects.get_for_model(Module).first()
+        cls.location = Location.objects.get_for_model(Module).first()
+        cls.create_data = [
+            {
+                "module_type": cls.module_type.pk,
+                "parent_module_bay": cls.module_bay.pk,
+                "status": cls.module_status.pk,
+            },
+            {
+                "module_type": cls.module_type.pk,
+                "location": cls.location.pk,
+                "status": cls.module_status.pk,
+            },
+            {
+                "module_type": cls.module_type.pk,
+                "location": cls.location.pk,
+                "serial": "test module serial xyz",
+                "asset_tag": "test module 2",
+                "status": cls.module_status.pk,
+            },
+            {
+                "module_type": cls.module_type.pk,
+                "location": cls.location.pk,
+                "asset_tag": "Test Module 3",
+                "status": cls.module_status.pk,
+            },
+            {
+                "module_type": cls.module_type.pk,
+                "location": cls.location.pk,
+                "serial": "test module serial abc",
+                "status": cls.module_status.pk,
+            },
+        ]
+        cls.bulk_update_data = {
+            "tenant": Tenant.objects.first().pk,
+        }
+
+        cls.update_data = {
+            "serial": "new serial 789",
+            "asset_tag": "new asset tag 789",
+            "status": Status.objects.get_for_model(Module).last().pk,
+        }
+
+    def get_deletable_object_pks(self):
+        # Since Modules and ModuleBays are nestable, we need to delete Modules that don't have any child Modules
+        return Module.objects.exclude(module_bays__installed_module__isnull=False).values_list("pk", flat=True)[:3]
+
+    def test_parent_module_bay_location_validation(self):
+        """Assert that a module can have a parent_module_bay or a location but not both."""
+
+        self.add_permissions("dcim.add_module")
+        data = {
+            "module_type": self.module_type.pk,
+            "location": self.location.pk,
+            "parent_module_bay": self.module_bay.pk,
+            "status": self.module_status.pk,
+        }
+        url = self._get_list_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["Only one of parent_module_bay or location must be set"]},
+        )
+
+        data.pop("parent_module_bay")
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data.pop("location")
+        data["parent_module_bay"] = self.module_bay.pk
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data.pop("parent_module_bay")
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"__all__": ["One of location or parent_module_bay must be set"]},
+        )
+
+    def test_serial_module_type_unique_validation(self):
+        self.add_permissions("dcim.add_module")
+        data = {
+            "module_type": self.module_type.pk,
+            "location": self.location.pk,
+            "status": self.module_status.pk,
+        }
+        url = self._get_list_url()
+        # create multiple instances with null serial
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        data["serial"] = ""
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        data["serial"] = None
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data["serial"] = "xyz"
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["The fields module_type, serial must make a unique set."]},
+        )
+
+    def test_asset_tag_unique_validation(self):
+        self.add_permissions("dcim.add_module")
+        data = {
+            "module_type": self.module_type.pk,
+            "location": self.location.pk,
+            "status": self.module_status.pk,
+            "asset_tag": "xyz123",
+        }
+        url = self._get_list_url()
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"asset_tag": ["module with this Asset tag already exists."]},
+        )
+
+
+class ConsolePortTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
     model = ConsolePort
     peer_termination_type = ConsoleServerPort
+    modular_component_create_data = {"type": ConsolePortTypeChoices.TYPE_RJ45}
 
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
 
-        ConsolePort.objects.create(device=cls.device, name="Console Port 1")
-        ConsolePort.objects.create(device=cls.device, name="Console Port 2")
-        ConsolePort.objects.create(device=cls.device, name="Console Port 3")
-
         cls.create_data = [
             {
                 "device": cls.device.pk,
-                "name": "Console Port 4",
+                "name": "Console Port 1",
+            },
+            {
+                "module": cls.module.pk,
+                "name": "Console Port 2",
             },
             {
                 "device": cls.device.pk,
-                "name": "Console Port 5",
-            },
-            {
-                "device": cls.device.pk,
-                "name": "Console Port 6",
+                "name": "Console Port 3",
             },
         ]
 
 
-class ConsoleServerPortTest(Mixins.BasePortTestMixin):
+class ConsoleServerPortTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
     model = ConsoleServerPort
     peer_termination_type = ConsolePort
+    modular_component_create_data = {"type": ConsolePortTypeChoices.TYPE_RJ45}
 
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
 
-        ConsoleServerPort.objects.create(device=cls.device, name="Console Server Port 1")
-        ConsoleServerPort.objects.create(device=cls.device, name="Console Server Port 2")
-        ConsoleServerPort.objects.create(device=cls.device, name="Console Server Port 3")
-
         cls.create_data = [
             {
                 "device": cls.device.pk,
-                "name": "Console Server Port 4",
+                "name": "Console Server Port 1",
+            },
+            {
+                "module": cls.module.pk,
+                "name": "Console Server Port 2",
             },
             {
                 "device": cls.device.pk,
-                "name": "Console Server Port 5",
-            },
-            {
-                "device": cls.device.pk,
-                "name": "Console Server Port 6",
+                "name": "Console Server Port 3",
             },
         ]
 
 
-class PowerPortTest(Mixins.BasePortTestMixin):
+class PowerPortTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
     model = PowerPort
     peer_termination_type = PowerOutlet
+    modular_component_create_data = {"type": PowerPortTypeChoices.TYPE_NEMA_1030P}
 
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
 
-        PowerPort.objects.create(device=cls.device, name="Power Port 1")
-        PowerPort.objects.create(device=cls.device, name="Power Port 2")
-        PowerPort.objects.create(device=cls.device, name="Power Port 3")
-
         cls.create_data = [
             {
                 "device": cls.device.pk,
-                "name": "Power Port 4",
+                "name": "Power Port 1",
+            },
+            {
+                "module": cls.module.pk,
+                "name": "Power Port 2",
             },
             {
                 "device": cls.device.pk,
-                "name": "Power Port 5",
-            },
-            {
-                "device": cls.device.pk,
-                "name": "Power Port 6",
+                "name": "Power Port 3",
             },
         ]
 
 
-class PowerOutletTest(Mixins.BasePortTestMixin):
+class PowerOutletTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
     model = PowerOutlet
     peer_termination_type = PowerPort
     choices_fields = ["feed_leg", "type"]
+    modular_component_create_data = {"type": PowerOutletTypeChoices.TYPE_IEC_C13}
 
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
 
-        PowerOutlet.objects.create(device=cls.device, name="Power Outlet 1")
-        PowerOutlet.objects.create(device=cls.device, name="Power Outlet 2")
-        PowerOutlet.objects.create(device=cls.device, name="Power Outlet 3")
-
         cls.create_data = [
             {
                 "device": cls.device.pk,
-                "name": "Power Outlet 4",
+                "name": "Power Outlet 1",
+            },
+            {
+                "module": cls.module.pk,
+                "name": "Power Outlet 2",
             },
             {
                 "device": cls.device.pk,
-                "name": "Power Outlet 5",
-            },
-            {
-                "device": cls.device.pk,
-                "name": "Power Outlet 6",
+                "name": "Power Outlet 3",
             },
         ]
 
 
-class InterfaceTest(Mixins.BasePortTestMixin):
+class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
     model = Interface
     peer_termination_type = Interface
     choices_fields = ["mode", "type"]
@@ -1584,7 +1939,10 @@ class InterfaceTest(Mixins.BasePortTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
         interface_status = Status.objects.get_for_model(Interface).first()
-
+        cls.modular_component_create_data = {
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "status": interface_status.pk,
+        }
         cls.devices = (
             cls.device,
             Device.objects.create(
@@ -1611,48 +1969,54 @@ class InterfaceTest(Mixins.BasePortTestMixin):
 
         # Interfaces have special handling around the "Active" status so let's set our interfaces to something else.
         non_default_status = Status.objects.get_for_model(Interface).exclude(name="Active").first()
+        intf_role = Role.objects.get_for_model(Interface).first()
         cls.interfaces = (
             Interface.objects.create(
                 device=cls.devices[0],
-                name="Interface 1",
+                name="Test Interface 1",
+                type="1000base-t",
+                status=non_default_status,
+                role=intf_role,
+            ),
+            Interface.objects.create(
+                device=cls.devices[0],
+                name="Test Interface 2",
                 type="1000base-t",
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.devices[0],
-                name="Interface 2",
-                type="1000base-t",
-                status=non_default_status,
-            ),
-            Interface.objects.create(
-                device=cls.devices[0],
-                name="Interface 3",
+                name="Test Interface 3",
                 type=InterfaceTypeChoices.TYPE_BRIDGE,
                 status=non_default_status,
+                role=intf_role,
             ),
             Interface.objects.create(
                 device=cls.devices[1],
-                name="Interface 4",
+                name="Test Interface 4",
                 type=InterfaceTypeChoices.TYPE_1GE_GBIC,
                 status=non_default_status,
+                role=intf_role,
             ),
             Interface.objects.create(
                 device=cls.devices[1],
-                name="Interface 5",
+                name="Test Interface 5",
                 type=InterfaceTypeChoices.TYPE_LAG,
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.devices[2],
-                name="Interface 6",
+                name="Test Interface 6",
                 type=InterfaceTypeChoices.TYPE_LAG,
                 status=non_default_status,
+                role=intf_role,
             ),
             Interface.objects.create(
                 device=cls.devices[2],
-                name="Interface 7",
+                name="Test Interface 7",
                 type=InterfaceTypeChoices.TYPE_1GE_GBIC,
                 status=non_default_status,
+                role=intf_role,
             ),
         )
 
@@ -1670,6 +2034,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 "name": "Interface 8",
                 "type": "1000base-t",
                 "status": interface_status.pk,
+                "role": intf_role.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
                 "untagged_vlan": cls.vlans[2].pk,
@@ -1680,6 +2045,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 "name": "Interface 9",
                 "type": "1000base-t",
                 "status": interface_status.pk,
+                "role": intf_role.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "bridge": cls.interfaces[3].pk,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
@@ -1730,6 +2096,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 {
                     "device": cls.devices[0].pk,
                     "name": "interface test 1",
+                    "role": intf_role.pk,
                     "type": InterfaceTypeChoices.TYPE_VIRTUAL,
                     "status": interface_status.pk,
                     "parent_interface": cls.interfaces[6].id,  # do not belong to same device or vc
@@ -1741,6 +2108,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                     "device": cls.devices[0].pk,
                     "name": "interface test 2",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                    "role": intf_role.pk,
                     "status": interface_status.pk,
                     "bridge": cls.interfaces[6].id,  # does not belong to same device or vc
                 },
@@ -1840,6 +2208,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 type=InterfaceTypeChoices.TYPE_VIRTUAL,
                 status=Status.objects.get_for_model(Interface).first(),
+                role=Role.objects.get_for_model(Interface).first(),
             )
             interface.tagged_vlans.add(self.vlans[0])
             payload = {"mode": None, "tagged_vlans": [self.vlans[2].pk]}
@@ -1871,6 +2240,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
 class FrontPortTest(Mixins.BasePortTestMixin):
     model = FrontPort
     peer_termination_type = Interface
+    update_data = {"label": "updated label", "description": "updated description"}
 
     def test_trace(self):
         """FrontPorts don't support trace."""
@@ -1879,62 +2249,135 @@ class FrontPortTest(Mixins.BasePortTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        rear_ports = (
-            RearPort.objects.create(device=cls.device, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=cls.device, name="Rear Port 2", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=cls.device, name="Rear Port 3", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=cls.device, name="Rear Port 4", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=cls.device, name="Rear Port 5", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=cls.device, name="Rear Port 6", type=PortTypeChoices.TYPE_8P8C),
+        cls.module = Module.objects.first()
+        cls.module_rear_ports = (
+            RearPort.objects.create(module=cls.module, name="Test FrontPort RP1", positions=100),
+            RearPort.objects.create(module=cls.module, name="Test FrontPort RP2", positions=100),
         )
-
-        FrontPort.objects.create(
-            device=cls.device,
-            name="Front Port 1",
-            type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rear_ports[0],
-        )
-        FrontPort.objects.create(
-            device=cls.device,
-            name="Front Port 2",
-            type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rear_ports[1],
-        )
-        FrontPort.objects.create(
-            device=cls.device,
-            name="Front Port 3",
-            type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rear_ports[2],
+        cls.device = Device.objects.first()
+        cls.device_rear_ports = (
+            RearPort.objects.create(device=cls.device, name="Test FrontPort RP3", positions=100),
+            RearPort.objects.create(device=cls.device, name="Test FrontPort RP4", positions=100),
         )
 
         cls.create_data = [
             {
                 "device": cls.device.pk,
-                "name": "Front Port 4",
+                "name": "Front Port 1",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port": rear_ports[3].pk,
+                "rear_port": cls.device_rear_ports[0].pk,
                 "rear_port_position": 1,
             },
             {
                 "device": cls.device.pk,
-                "name": "Front Port 5",
+                "name": "Front Port 2",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port": rear_ports[4].pk,
+                "rear_port": cls.device_rear_ports[1].pk,
                 "rear_port_position": 1,
             },
             {
-                "device": cls.device.pk,
-                "name": "Front Port 6",
+                "module": cls.module.pk,
+                "name": "Front Port 3",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port": rear_ports[5].pk,
+                "rear_port": cls.module_rear_ports[0].pk,
                 "rear_port_position": 1,
             },
         ]
 
+    def test_module_device_validation(self):
+        """Assert that a modular component can have a module or a device but not both."""
 
-class RearPortTest(Mixins.BasePortTestMixin):
+        self.add_permissions("dcim.add_frontport")
+        data = {
+            "module": self.module.pk,
+            "device": self.device.pk,
+            "name": "test parent module validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port": self.device_rear_ports[0].pk,
+            "rear_port_position": 2,
+        }
+        url = self._get_list_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["Only one of device or module must be set"]},
+        )
+
+        data.pop("module")
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data.pop("device")
+        data["module"] = self.module.pk
+        data["rear_port"] = self.module_rear_ports[0].pk
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data.pop("module")
+        data["rear_port_position"] = 3
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"__all__": ["Either device or module must be set"]},
+        )
+
+    def test_module_device_name_unique_validation(self):
+        """Assert uniqueness constraint is enforced for (device,name) and (module,name) fields."""
+
+        self.add_permissions("dcim.add_frontport")
+        data = {
+            "module": self.module.pk,
+            "name": "test modular device component parent validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port": self.module_rear_ports[0].pk,
+            "rear_port_position": 2,
+        }
+        url = self._get_list_url()
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data = {
+            "module": self.module.pk,
+            "name": "test modular device component parent validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port": self.module_rear_ports[1].pk,
+            "rear_port_position": 2,
+        }
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["The fields module, name must make a unique set."]},
+        )
+
+        data = {
+            "device": self.device.pk,
+            "name": "test modular device component parent validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port": self.device_rear_ports[0].pk,
+            "rear_port_position": 2,
+        }
+        url = self._get_list_url()
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data = {
+            "device": self.device.pk,
+            "name": "test modular device component parent validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port": self.device_rear_ports[1].pk,
+            "rear_port_position": 2,
+        }
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["The fields device, name must make a unique set."]},
+        )
+
+
+class RearPortTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
     model = RearPort
     peer_termination_type = Interface
+    modular_component_create_data = {"type": PortTypeChoices.TYPE_8P8C}
 
     def test_trace(self):
         """RearPorts don't support trace."""
@@ -1943,24 +2386,20 @@ class RearPortTest(Mixins.BasePortTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        RearPort.objects.create(device=cls.device, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C)
-        RearPort.objects.create(device=cls.device, name="Rear Port 2", type=PortTypeChoices.TYPE_8P8C)
-        RearPort.objects.create(device=cls.device, name="Rear Port 3", type=PortTypeChoices.TYPE_8P8C)
-
         cls.create_data = [
             {
                 "device": cls.device.pk,
-                "name": "Rear Port 4",
+                "name": "Rear Port 1",
+                "type": PortTypeChoices.TYPE_8P8C,
+            },
+            {
+                "module": cls.module.pk,
+                "name": "Rear Port 2",
                 "type": PortTypeChoices.TYPE_8P8C,
             },
             {
                 "device": cls.device.pk,
-                "name": "Rear Port 5",
-                "type": PortTypeChoices.TYPE_8P8C,
-            },
-            {
-                "device": cls.device.pk,
-                "name": "Rear Port 6",
+                "name": "Rear Port 3",
                 "type": PortTypeChoices.TYPE_8P8C,
             },
         ]
@@ -2078,6 +2517,36 @@ class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeMode
         pass
 
 
+class ModuleBayTest(Mixins.ModularDeviceComponentMixin, Mixins.BaseComponentTestMixin):
+    model = ModuleBay
+    choices_fields = []
+    device_field = "parent_device"
+    module_field = "parent_module"
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        cls.create_data = [
+            {
+                "parent_device": cls.device.pk,
+                "name": "Test1",
+            },
+            {
+                "parent_module": cls.module.pk,
+                "name": "Test2",
+            },
+            {
+                "parent_device": cls.device.pk,
+                "name": "Test3",
+            },
+        ]
+
+    def get_deletable_object_pks(self):
+        # Since Modules and ModuleBays are nestable, we need to delete ModuleBays that don't have any child ModuleBays
+        return ModuleBay.objects.filter(installed_module__isnull=True).values_list("pk", flat=True)[:3]
+
+
 class CableTest(Mixins.BaseComponentTestMixin):
     model = Cable
     bulk_update_data = {
@@ -2111,6 +2580,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
 
         interfaces = []
         interface_status = Status.objects.get_for_model(Interface).first()
+        interface_role = Role.objects.get_for_model(Interface).first()
         for device in devices:
             for i in range(0, 10):
                 interfaces.append(
@@ -2119,6 +2589,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
                         type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                         name=f"eth{i}",
                         status=interface_status,
+                        role=interface_role,
                     )
                 )
 
@@ -2197,8 +2668,16 @@ class ConnectedDeviceTest(APITestCase):
             location=location,
         )
         interface_status = Status.objects.get_for_model(Interface).first()
-        interface1 = Interface.objects.create(device=self.device1, name="eth0", status=interface_status)
-        interface2 = Interface.objects.create(device=device2, name="eth0", status=interface_status)
+        interface1 = Interface.objects.create(
+            device=self.device1,
+            name="eth0",
+            status=interface_status,
+        )
+        interface2 = Interface.objects.create(
+            device=device2,
+            name="eth0",
+            status=interface_status,
+        )
 
         cable = Cable(termination_a=interface1, termination_b=interface2, status=cable_status)
         cable.validated_save()
@@ -2313,6 +2792,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
 
         # Create 12 interfaces per device
         interface_status = Status.objects.get_for_model(Interface).first()
+        interface_role = Role.objects.get_for_model(Interface).first()
         interfaces = []
         for i, device in enumerate(devices):
             for j in range(0, 13):
@@ -2323,6 +2803,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
                         name=f"{i%3+1}/{j}",
                         type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                         status=interface_status,
+                        role=interface_role,
                     )
                 )
 
@@ -2635,7 +3116,7 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
 
         interface_redundancy_groups = (
             InterfaceRedundancyGroup(
-                name="Interface Redundancy Group 1",
+                name="Test Interface Redundancy Group 1",
                 protocol="hsrp",
                 status=statuses[0],
                 virtual_ip=None,
@@ -2643,7 +3124,7 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
                 secrets_group=secrets_groups[0],
             ),
             InterfaceRedundancyGroup(
-                name="Interface Redundancy Group 2",
+                name="Test Interface Redundancy Group 2",
                 protocol="carp",
                 status=statuses[1],
                 virtual_ip=ips[1],
@@ -2651,7 +3132,7 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
                 secrets_group=secrets_groups[1],
             ),
             InterfaceRedundancyGroup(
-                name="Interface Redundancy Group 3",
+                name="Test Interface Redundancy Group 3",
                 protocol="vrrp",
                 status=statuses[2],
                 virtual_ip=ips[2],
@@ -2678,19 +3159,19 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
         cls.interfaces = (
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 1",
+                name="Test Interface 1",
                 type="1000base-t",
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 2",
+                name="Test Interface 2",
                 type="1000base-t",
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 3",
+                name="Test Interface 3",
                 type=InterfaceTypeChoices.TYPE_BRIDGE,
                 status=non_default_status,
             ),
@@ -2878,6 +3359,10 @@ class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
                 "weight": 200,
             },
         ]
+        # changing controller is error-prone since a child group must have the same controller as its parent
+        cls.update_data = {
+            "weight": 300,
+        }
         cls.bulk_update_data = {
             "weight": 300,
         }

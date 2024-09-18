@@ -34,7 +34,7 @@ psql -c 'create database nautobot'
 psql nautobot < nautobot.sql
 ```
 
-Keep in mind that PostgreSQL user accounts and permissions are not included with the dump: You will need to create those manually if you want to fully replicate the original database (see the [installation docs](../installation/index.md#installing-nautobot-dependencies)). When setting up a development instance of Nautobot, it's strongly recommended to use different credentials anyway.
+Keep in mind that PostgreSQL user accounts and permissions are not included with the dump: You will need to create those manually if you want to fully replicate the original database (see the [installation docs](../installation/install_system.md)). When setting up a development instance of Nautobot, it's strongly recommended to use different credentials anyway.
 
 ### Export the Database Schema
 
@@ -51,7 +51,7 @@ pg_dump -s nautobot > nautobot_schema.sql
 By default, Nautobot stores uploaded files (such as image attachments) in its media directory. To fully replicate an instance of Nautobot, you'll need to copy both the database and the media files.
 
 !!! note
-    These operations are not necessary if your installation is utilizing a [remote storage backend](../configuration/optional-settings.md#storage_backend).
+    These operations are not necessary if your installation is utilizing a [remote storage backend](../configuration/settings.md#storage_backend).
 
 ### Archive the Media Directory
 

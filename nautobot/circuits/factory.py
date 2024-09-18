@@ -3,6 +3,7 @@ import faker
 
 from nautobot.circuits import choices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
+from nautobot.cloud.models import CloudNetwork
 from nautobot.core.factory import (
     NautobotBoolIterator,
     OrganizationalModelFactory,
@@ -83,9 +84,7 @@ class ProviderNetworkFactory(PrimaryModelFactory):
         model = ProviderNetwork
         exclude = ("has_description", "has_comments")
 
-    name = factory.LazyAttribute(
-        lambda o: f"{o.provider.name} Network {faker.Faker().word(part_of_speech='noun')}"[:100]
-    )
+    name = factory.LazyAttributeSequence(lambda o, n: f"{o.provider.name} Network {n + 1}"[:100])
     provider = random_instance(Provider, allow_null=False)
 
     has_description = NautobotBoolIterator()
@@ -105,6 +104,7 @@ class CircuitTerminationFactory(PrimaryModelFactory):
             "has_xconnect_id",
             "has_pp_info",
             "has_description",
+            "has_cloud_network",
         )
 
     circuit = factory.LazyAttribute(
@@ -122,10 +122,22 @@ class CircuitTerminationFactory(PrimaryModelFactory):
         None,
     )
 
+    has_cloud_network = factory.Faker("pybool")
+
+    @factory.lazy_attribute
+    def cloud_network(self):
+        if not self.has_cloud_network:
+            return None
+        if self.has_location:
+            return None
+        return faker.Faker().random_element(elements=CloudNetwork.objects.all())
+
     @factory.lazy_attribute
     def provider_network(self):
         # location and provider_network are mutually exclusive but cannot both be null
         if self.has_location:
+            return None
+        if self.has_cloud_network:
             return None
         if ProviderNetwork.objects.filter(provider=self.circuit.provider).exists():
             return faker.Faker().random_element(elements=ProviderNetwork.objects.filter(provider=self.circuit.provider))

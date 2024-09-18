@@ -228,6 +228,10 @@ class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
 
         if "queryset" not in kwargs:
             if feature is not None:
+                from nautobot.extras.registry import registry
+
+                if feature not in registry["model_features"]:
+                    raise KeyError
                 kwargs["queryset"] = ContentType.objects.filter(
                     extras_utils.FeatureQuery(feature).get_query()
                 ).order_by("app_label", "model")
@@ -453,6 +457,7 @@ class DynamicModelChoiceMixin:
 
     filter = django_filters.ModelChoiceFilter  # 2.0 TODO(Glenn): can we rename this? pylint: disable=redefined-builtin
     widget = widgets.APISelect
+    iterator = widgets.MinimalModelChoiceIterator
 
     def __init__(
         self,
@@ -475,6 +480,7 @@ class DynamicModelChoiceMixin:
         # to_field_name is set by ModelChoiceField.__init__(), but we need to set it early for reference
         # by widget_attrs()
         self.to_field_name = kwargs.get("to_field_name")
+        self.data_queryset = kwargs.get("queryset")  # may be updated in get_bound_field()
 
         super().__init__(*args, **kwargs)
 
@@ -539,12 +545,12 @@ class DynamicModelChoiceMixin:
             field_name = getattr(self, "to_field_name") or "pk"
             filter_ = self.filter(field_name=field_name)
             try:
-                self.queryset = filter_.filter(self.queryset, data)
-            except (TypeError, ValidationError):
+                self.data_queryset = filter_.filter(self.queryset, data)
+            except (TypeError, ValueError, ValidationError):
                 # Catch any error caused by invalid initial data passed from the user
-                self.queryset = self.queryset.none()
+                self.data_queryset = self.queryset.none()
         else:
-            self.queryset = self.queryset.none()
+            self.data_queryset = self.queryset.none()
 
         # Set the data URL on the APISelect widget (if not already set)
         widget = bound_field.field.widget

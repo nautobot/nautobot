@@ -1,5 +1,4 @@
 ---
-version: "3.9"
 volumes:
   media_root:
 services:
@@ -48,7 +47,7 @@ services:
     tty: true
   celery_beat:
     image: "local/nautobot-dev:local-py${PYTHON_VER}"
-    entrypoint: "nautobot-server celery beat -l INFO"
+    entrypoint: "watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery beat -l INFO"
     healthcheck:
       interval: 5s
       timeout: 5s
@@ -78,7 +77,7 @@ services:
     env_file:
       - ./dev.env
   selenium:
-    image: selenium/standalone-firefox:4.19
+    image: selenium/standalone-firefox:4.22
     ports:
         - "4444:4444"
         - "15900:5900"

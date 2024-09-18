@@ -203,7 +203,7 @@ The `ipam.Role`, `dcim.RackRole`, and `dcim.DeviceRole` models have been removed
 The `dcim.Region` and `dcim.Site` models have been removed and replaced by `dcim.Location` model. This means that any references to the removed models in the code now use the `dcim.Location` model instead with `LocationType` "Site" and "Region".
 
 !!! important
-    If you are a Nautobot App developer, or have any Apps installed that include data models that reference `Site` or `Region`, please review the [Region and Site Related Data Model Migration Guide](./region-and-site-data-migration-guide.md#region-and-site-related-data-model-migration-guide-for-existing-nautobot-app-installations) to learn how to migrate your apps and models from `Site` and `Region` to `Location`.
+    If you are a Nautobot App developer, or have any Apps installed that include data models that reference `Site` or `Region`, please review the [Region and Site Related Data Model Migration Guide](../../../../development/apps/migration/model-updates/dcim.md) to learn how to migrate your apps and models from `Site` and `Region` to `Location`.
 
 | Removed Model     | Replaced With  |
 |-------------------|----------------|
@@ -385,7 +385,7 @@ Below is a table documenting [corrected filter field changes](../../../../releas
 
 ### Removed Filter Fields
 
-Below is a table documenting [removed filter field changes](../../../../release-notes/version-2.0.md#removed-filter-fields-2804) in v2.x.
+Below is a table documenting [removed filter field changes](../../../../release-notes/version-2.0.md#redundant-filter-fields-2804) in v2.x.
 Most removed database fields in Nautobot 2.0 fall into the following general categories:
 
 1. Removal of `*_id=<uuid>` filters as they have have been merged into filters that support both uuid and name/slug (for example, instead of `/api/circuits/circuits/?provider_id=<UUID>`, use `/api/circuits/circuits/?provider=<uuid>`).
@@ -554,8 +554,8 @@ Changed `as_form_class`, `as_form` and `validate_data` functions on `BaseJob` Mo
 
 These settings are new in Nautobot 2.0 and can be changed in your `nautobot_config.py` file or via environment variables if desired:
 
-- [`CELERY_WORKER_REDIRECT_STDOUTS` (env: `NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS`)](../../configuration/optional-settings.md#celery_worker_redirect_stdouts)
-- [`CELERY_WORKER_REDIRECT_STDOUTS_LEVEL` (env: `NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS_LEVEL`)](../../configuration/optional-settings.md#celery_worker_redirect_stdouts_level)
+- [`CELERY_WORKER_REDIRECT_STDOUTS` (env: `NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS`)](../../configuration/settings.md#celery_worker_redirect_stdouts)
+- [`CELERY_WORKER_REDIRECT_STDOUTS_LEVEL` (env: `NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS_LEVEL`)](../../configuration/settings.md#celery_worker_redirect_stdouts_level)
 
 ### Removed Settings
 
