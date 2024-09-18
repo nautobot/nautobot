@@ -418,6 +418,14 @@ class APIRootView(AuthenticatedAPIRootView):
                             format=format,
                         ),
                     ),
+                    (
+                        "wireless",
+                        reverse(
+                            "wireless-api:api-root",
+                            request=request,
+                            format=format,
+                        ),
+                    ),
                 )
             )
         )
