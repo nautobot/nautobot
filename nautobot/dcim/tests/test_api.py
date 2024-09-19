@@ -3488,3 +3488,6 @@ class InterfaceVDCAssignmentTestCase(APIViewTestCases.APIViewTestCase):
                 "interface": interfaces[2].pk,
             },
         ]
+
+    def test_docs(self):
+        """Skip: InterfaceVDCAssignment has no docs yet"""
