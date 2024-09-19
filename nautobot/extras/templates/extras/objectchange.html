@@ -1,5 +1,5 @@
 {% extends 'generic/object_detail.html' %}
-{% load helpers %}
+{% load helpers static %}
 
 {% block title %}{{ object }}{% endblock %}
 
@@ -97,6 +97,16 @@
             </div>
             <div class="panel panel-default">
                 <div class="panel-heading">
+                    <strong>Object Data</strong>
+                </div>
+                <div class="panel-body">
+                    <pre style="max-height: 300px; overflow-y: auto;">{{ object.object_data|render_json }}</pre>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-7">
+            <div class="panel panel-default">
+                <div class="panel-heading">
                     <strong>Difference</strong>
                     <div class="btn-group btn-group-xs pull-right noprint">
                         <a {% if prev_change %}href="{% url 'extras:objectchange' pk=prev_change.pk %}"{% else %}disabled{% endif %} class="btn btn-default">
@@ -119,19 +129,10 @@
                             {% endif %}
                         </span>
                     {% else %}
-                        <pre class="diff-removed">{{ diff_removed|render_json }}</pre>
-                        <pre class="diff-added">{{ diff_added|render_json }}</pre>
+                        {{ diff_removed|json_script:"diff-removed-data" }}
+                        {{ diff_added|json_script:"diff-added-data" }}
+                        <div id="objectchange-diff-viewer" class="objectchange-diff-viewer"></div>
                     {% endif %}
-                </div>
-            </div>
-        </div>
-        <div class="col-md-7">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    <strong>Object Data</strong>
-                </div>
-                <div class="panel-body">
-                    <pre>{{ object.object_data|render_json }}</pre>
                 </div>
             </div>
         </div>
@@ -146,4 +147,23 @@
             {% endif %}
         </div>
     </div>
+{% endblock %}
+
+{% block javascript %}
+    <script src="{% static 'monaco-editor-0.51.0/vs/loader.js' %}"></script>
+    <script src="{% static 'js/objectchange.js' %}"></script>
+{% endblock %}
+
+{% block extra_styles %}
+    {{ block.super }}
+    <style>
+        .objectchange-diff-viewer {
+            min-height: 50px;
+            max-height: 742px;
+        }
+
+        html[data-theme="dark"] .objectchange-diff-viewer {
+            filter: invert(1) hue-rotate(180deg);
+        }
+    </style>
 {% endblock %}
