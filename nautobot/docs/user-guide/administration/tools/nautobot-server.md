@@ -155,7 +155,7 @@ celery@worker1 v5.1.1 (sun-harmonics)
 
 `nautobot-server collectstatic`
 
-Collect static files into [`STATIC_ROOT`](../configuration/optional-settings.md#static_root).
+Collect static files into [`STATIC_ROOT`](../configuration/settings.md#static_root).
 
 ```no-highlight
 nautobot-server collectstatic
@@ -292,7 +292,7 @@ Processing ContentType dcim | location
 
 `nautobot-server generate_secret_key`
 
-Generates a new [`SECRET_KEY`](../configuration/required-settings.md#secret_key) that can be used in your `nautobot_config.py`:
+Generates a new [`SECRET_KEY`](../configuration/settings.md#secret_key) that can be used in your `nautobot_config.py`:
 
 ```no-highlight
 nautobot-server generate_secret_key
@@ -360,13 +360,13 @@ DefaultFileStorageHealthCheck ... working
 RedisBackend             ... working
 ```
 
-Please see the [healthcheck documentation](../guides/healthcheck.md) for more information.
+Please see the [health-checks documentation](../guides/health-checks.md) for more information.
 
 ### `init`
 
 `nautobot-server init [--disable-installation-metrics] [config_path]`
 
-Generates a new configuration with all of the default settings provided for you, and will also generate a unique [`SECRET_KEY`](../configuration/required-settings.md#secret_key).
+Generates a new configuration with all of the default settings provided for you, and will also generate a unique [`SECRET_KEY`](../configuration/settings.md#secret_key).
 
 By default the file will be created at `$HOME/.nautobot/nautobot_config.py`:
 
@@ -385,7 +385,7 @@ Configuration file created at /home/example/.nautobot/nautobot_config.py
 ```
 
 +++ 1.6.0
-    The `nautobot-server init` command will now prompt you to set the initial value for the [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled) setting. See the [send_installation_metrics](#send_installation_metrics) command for more information about the feature that this setting toggles.
+    The `nautobot-server init` command will now prompt you to set the initial value for the [`INSTALLATION_METRICS_ENABLED`](../configuration/settings.md#installation_metrics_enabled) setting. See the [`send_installation_metrics`](#send_installation_metrics) command for more information about the feature that this setting toggles.
 
 For more information on configuring Nautobot for the first time or on more advanced configuration patterns, please see the guide on [Nautobot Configuration](../configuration/index.md).
 
@@ -704,7 +704,7 @@ Please see the [guide on Jobs](../../platform-functionality/jobs/index.md) for m
 
 Send anonymized installation metrics to the Nautobot maintainers. This management command is called by [`post_upgrade`](#post_upgrade) and is not intended to be run manually.
 
-If the [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled) setting is `True`, this command will send a list of all installed [Apps](../../../development/apps/index.md) and their versions, as well as the currently installed Nautobot and Python versions, to the Nautobot maintainers. A randomized UUID will be generated and saved in the [`DEPLOYMENT_ID`](../configuration/optional-settings.md#deployment_id) setting to anonymously but uniquely identify this installation. The App names will be one-way hashed with SHA256 to further anonymize the data sent. This enables tracking the installation metrics of publicly released apps without disclosing the names of any private apps.
+If the [`INSTALLATION_METRICS_ENABLED`](../configuration/settings.md#installation_metrics_enabled) setting is `True`, this command will send a list of all installed [Apps](../../../development/apps/index.md) and their versions, as well as the currently installed Nautobot and Python versions, to the Nautobot maintainers. A randomized UUID will be generated and saved in the [`DEPLOYMENT_ID`](../configuration/settings.md#deployment_id) setting to anonymously but uniquely identify this installation. The App names will be one-way hashed with SHA256 to further anonymize the data sent. This enables tracking the installation metrics of publicly released apps without disclosing the names of any private apps.
 
 The following is an example of the data that is sent:
 

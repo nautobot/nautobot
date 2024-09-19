@@ -11,7 +11,7 @@ If you are a user migrating from NetBox to Nautobot, please refer to the ["Migra
 
 #### Admin Configuration UI ([#370](https://github.com/nautobot/nautobot/issues/370))
 
-The Nautobot Admin UI now includes a "Configuration" page that can be used to dynamically customize a number of [optional settings](../user-guide/administration/configuration/optional-settings.md#administratively-configurable-settings) as an alternative to editing `nautobot_config.py` and restarting the Nautobot processes.
+The Nautobot Admin UI now includes a "Configuration" page that can be used to dynamically customize a number of [optional settings](../user-guide/administration/configuration/settings.md#administratively-configurable-settings) as an alternative to editing `nautobot_config.py` and restarting the Nautobot processes.
 
 If upgrading from a previous Nautobot version where these settings were defined in your `nautobot_config.py`, you must remove those definitions in order to use this feature, as explicit configuration in `nautobot_config.py` takes precedence over values configured in the Admin UI.
 
@@ -92,7 +92,7 @@ Template rendering with Django and/or Jinja2 now supports by default all filters
 
 #### Organizational Branding ([#859](https://github.com/nautobot/nautobot/issues/859))
 
-Organizations may provide custom branding assets to change the logo, icons, and footer URLs to help Nautobot fit within their environments and user communities. Please see the [configuration documenation](../user-guide/administration/configuration/optional-settings.md#branding_filepaths) for details on how to specify the location and usage of custom branding assets.
+Organizations may provide custom branding assets to change the logo, icons, and footer URLs to help Nautobot fit within their environments and user communities. Please see the [configuration documenation](../user-guide/administration/configuration/settings.md#branding_filepaths) for details on how to specify the location and usage of custom branding assets.
 
 #### Plugin Banners ([#534](https://github.com/nautobot/nautobot/issues/534))
 
@@ -322,7 +322,7 @@ Just as with the UI, the `slug` can still always be explicitly set if desired.
 
 ### Documentation
 
-- [#1113](https://github.com/nautobot/nautobot/issues/1113) - Added [documentation](../user-guide/administration/guides/caching.md#high-availability-caching) about using Redis Sentinel with Nautobot.
+- [#1113](https://github.com/nautobot/nautobot/issues/1113) - Added [documentation](../user-guide/administration/configuration/redis.md#high-availability-using-redis-sentinel) about using Redis Sentinel with Nautobot.
 
 ### Housekeeping
 

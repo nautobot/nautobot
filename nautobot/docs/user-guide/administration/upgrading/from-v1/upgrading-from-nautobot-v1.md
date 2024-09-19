@@ -554,8 +554,8 @@ Changed `as_form_class`, `as_form` and `validate_data` functions on `BaseJob` Mo
 
 These settings are new in Nautobot 2.0 and can be changed in your `nautobot_config.py` file or via environment variables if desired:
 
-- [`CELERY_WORKER_REDIRECT_STDOUTS` (env: `NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS`)](../../configuration/optional-settings.md#celery_worker_redirect_stdouts)
-- [`CELERY_WORKER_REDIRECT_STDOUTS_LEVEL` (env: `NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS_LEVEL`)](../../configuration/optional-settings.md#celery_worker_redirect_stdouts_level)
+- [`CELERY_WORKER_REDIRECT_STDOUTS` (env: `NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS`)](../../configuration/settings.md#celery_worker_redirect_stdouts)
+- [`CELERY_WORKER_REDIRECT_STDOUTS_LEVEL` (env: `NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS_LEVEL`)](../../configuration/settings.md#celery_worker_redirect_stdouts_level)
 
 ### Removed Settings
 
