@@ -184,7 +184,7 @@ jobs:
           poetry-version: "1.8.2"
           python-version: "3.8"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --failfast --keepdb --parallel"
+        run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel"
     needs:
       - "check-migrations"
       - "check-schema"
@@ -227,7 +227,7 @@ jobs:
           poetry-version: "1.8.2"
           python-version: "3.12"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --failfast --keepdb --parallel"
+        run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel"
     needs:
       - "check-migrations"
       - "check-schema"

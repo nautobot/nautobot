@@ -3288,7 +3288,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
 
     def test_device(self):
         """Test that the device filter returns all cables for a device and its modules."""
-        interfaces = Interface.objects.filter(cable__isnull=True)[:3]
+        interfaces = list(Interface.objects.filter(cable__isnull=True)[:3])
         manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(
             manufacturer=manufacturer, model="Test Device Filter for Cable Device Type"

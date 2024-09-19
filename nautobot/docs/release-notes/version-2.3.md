@@ -117,6 +117,38 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
+## v2.3.4 (2024-09-18)
+
+### Added
+
+- [#5795](https://github.com/nautobot/nautobot/issues/5795) - Added support for `NAUTOBOT_CACHES_TIMEOUT` environment variable.
+- [#6207](https://github.com/nautobot/nautobot/issues/6207) - Added the ability to filter virtual machines by their `cluster` names or IDs.
+
+### Changed
+
+- [#5795](https://github.com/nautobot/nautobot/issues/5795) - Changed default cache timeout for Constance configuration from 1 day to 300 seconds to match other caches.
+
+### Fixed
+
+- [#6207](https://github.com/nautobot/nautobot/issues/6207) - Fixed incorrect link in ClusterTable for device count column.
+- [#6207](https://github.com/nautobot/nautobot/issues/6207) - Fixed incorrect link in PowerPanelTable for power feed count column.
+- [#6230](https://github.com/nautobot/nautobot/issues/6230) - Fixed an issue with Celery Scheduler around datetime imports.
+
+### Documentation
+
+- [#5795](https://github.com/nautobot/nautobot/issues/5795) - Consolidated "Required Settings" and "Optional Settings" docs into a single unified "Settings" document.
+- [#5795](https://github.com/nautobot/nautobot/issues/5795) - Consolidated "Administration: Installation Extras" docs section into the "Administration: Guides" section.
+- [#5795](https://github.com/nautobot/nautobot/issues/5795) - Moved "Caching" content from the "Administration: Guides" section into the "Administration: Configuration" section as a new "Redis" document.
+- [#5795](https://github.com/nautobot/nautobot/issues/5795) - Added `environment_variables` keys to `settings.yaml` to more accurately document settings that are influenced by multiple environment variables together.
+- [#5795](https://github.com/nautobot/nautobot/issues/5795) - Removed `is_required_setting` keys from `settings.yaml` as no longer relevant.
+
+### Housekeeping
+
+- [#5859](https://github.com/nautobot/nautobot/issues/5859) - Changed `--cache-test-fixtures` and `--keepdb` flags from opt-in to opt-out for `invoke unittest` and `invoke integration-test` commands.
+- [#5859](https://github.com/nautobot/nautobot/issues/5859) - Changed `invoke unittest` to automatically include `--parallel` flag when running the entire unit test suite.
+- [#6222](https://github.com/nautobot/nautobot/issues/6222) - Fixed `plugin_upstream_testing_base.yml` to work with app cookiecutter v2.3 Dockerfile.
+- [#6227](https://github.com/nautobot/nautobot/issues/6227) - Fixed typo in app upstream testing workflow.
+
 ## v2.3.3 (2024-09-16)
 
 ### Security
