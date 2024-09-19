@@ -1,1 +1,0 @@
-Fixed string concatenation in `extras.models.groups._map_filter_fields` method.

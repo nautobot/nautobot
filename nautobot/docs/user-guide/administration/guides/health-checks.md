@@ -28,6 +28,9 @@ Similarly, but not identically, the CLI command `nautobot-server health_check` s
 
 Note the differences between these two. In some situations you'll want to use both for different types of checks. More on this later in this document.
 
+??? info "Background information"
+    Nautobot uses the [django-health-check](https://github.com/KristianOellegaard/django-health-check) project and some custom health checks (database connection and cache availability). Additional health checks are available as part of that  project and can be added to the [`EXTRA_INSTALLED_APPS`](../configuration/settings.md#extra-applications) configuration variable as desired.
+
 ### Nautobot Celery Worker
 
 In addition to monitoring the existence of a given Celery worker process ID, you can use the fact that Celery provides a [`celery inspect ping` CLI command](https://docs.celeryq.dev/en/stable/reference/cli.html#celery-inspect) that sends a short message to a given Celery worker(s) and reports back on whether it receives a response(s). Nautobot wraps this with the `nautobot-server` CLI command, so in general you can run `nautobot-server celery inspect ping --destination <worker name>` to confirm whether a given worker is able to receive and respond to Celery control messages.
@@ -37,7 +40,7 @@ In addition to monitoring the existence of a given Celery worker process ID, you
 
 ### Nautobot Celery Beat
 
-In addition to monitoring the Celery Beat process ID, you can use the fact that Nautobot's custom Celery Beat scheduler respects the [`CELERY_BEAT_HEARTBEAT_FILE`](../configuration/optional-settings.md#celery_beat_heartbeat_file) configuration setting, which specifies a filesystem path that will be repeatedly [`touch`ed](https://en.wikipedia.org/wiki/Touch_(command)) to update its last-modified timestamp so long as the scheduler is running. You can check this timestamp against the current system time to detect whether the Celery Beat scheduler is firing as expected. One way is using the `find` command with it's `-mmin` parameter, and checking whether it finds the expected file with a recent enough modification time (here, 0.1 minutes, or 6 seconds) or not:
+In addition to monitoring the Celery Beat process ID, you can use the fact that Nautobot's custom Celery Beat scheduler respects the [`CELERY_BEAT_HEARTBEAT_FILE`](../configuration/settings.md#celery_beat_heartbeat_file) configuration setting, which specifies a filesystem path that will be repeatedly [`touch`ed](https://en.wikipedia.org/wiki/Touch_(command)) to update its last-modified timestamp so long as the scheduler is running. You can check this timestamp against the current system time to detect whether the Celery Beat scheduler is firing as expected. One way is using the `find` command with it's `-mmin` parameter, and checking whether it finds the expected file with a recent enough modification time (here, 0.1 minutes, or 6 seconds) or not:
 
 ```shell
 [ $(find $NAUTOBOT_CELERY_BEAT_HEARTBEAT_FILE -mmin -0.1 | wc -l) -eq 1 ] || false

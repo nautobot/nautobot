@@ -13,7 +13,7 @@ We highly recommend using UTC across all spaces to avoid any issues with dayligh
 
 ## Nautobot Application Configuration
 
-Nautobot supports the [`TIME_ZONE`](optional-settings.md#time_zone) setting, which will set the default time zone for the Nautobot service, worker, and scheduler.
+Nautobot supports the [`TIME_ZONE`](settings.md#time_zone) setting, which will set the default time zone for the Nautobot service, worker, and scheduler.
 
 A common misconfiguration is the Celery Beat and worker servers' `TIME_ZONE` setting. Since these services are running within the Nautobot process they also need this configuration set, either by setting the `NAUTOBOT_TIME_ZONE` environment variable or using the same `nautobot_config.py` file as the Nautobot server. You should also change the Database service's configured time zone to match the Nautobot server's time zone.
 

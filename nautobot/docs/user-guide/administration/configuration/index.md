@@ -4,7 +4,7 @@ This section describes how to get started with configuring Nautobot.
 
 ## Initializing the Configuration
 
-An initial configuration can be created by executing `nautobot-server init`. This will generate a new configuration with all of the default settings provided for you, and will also generate a unique [`SECRET_KEY`](required-settings.md#secret_key).
+An initial configuration can be created by executing `nautobot-server init`. This will generate a new configuration with all of the default settings provided for you, and will also generate a unique [`SECRET_KEY`](settings.md#secret_key).
 
 By default (if you haven't set [`NAUTOBOT_ROOT`](#nautobot-root-directory) to some other value), the file will be created at `$HOME/.nautobot/nautobot_config.py`:
 
@@ -77,7 +77,7 @@ This setting is also used in the [Nautobot deployment guide](../installation/nau
 
 ## File Storage
 
-Nautobot is capable of storing various types of files. This includes [Jobs](../../platform-functionality/jobs/index.md), [Git repositories](../../platform-functionality/gitrepository.md), [image attachments](../../platform-functionality/imageattachment.md), and [static files](optional-settings.md#static_root) (CSS, JavaScript, etc.).
+Nautobot is capable of storing various types of files. This includes [Jobs](../../platform-functionality/jobs/index.md), [Git repositories](../../platform-functionality/gitrepository.md), [image attachments](../../platform-functionality/imageattachment.md), and [static files](settings.md#static_root) (CSS, JavaScript, etc.).
 
 Each of the features requiring use of file storage default to being stored in `NAUTOBOT_ROOT`. If desired, you may customize each one individually. Please see each feature's respective documentation linked above for how to do that.
 
@@ -85,14 +85,11 @@ Each of the features requiring use of file storage default to being stored in `N
 
 While Nautobot has many configuration settings, only a few of them must be defined at the time of installation. These configuration parameters may be set in `nautobot_config.py` or by default many of them may also be set by environment variables. Please see the following links for more information:
 
-* [Required settings](required-settings.md)
-* [Optional settings](optional-settings.md)
-
-## Optional Authentication Configuration
-
-* [LDAP Authentication](authentication/ldap.md)
-* [Remote User Authentication](authentication/remote.md)
-* [SSO Authentication](authentication/sso.md)
+* [Settings](settings.md)
+* Optional Authentication Configuration:
+    * [LDAP Authentication](authentication/ldap.md)
+    * [Remote User Authentication](authentication/remote.md)
+    * [SSO Authentication](authentication/sso.md)
 
 ## Changing the Configuration
 
@@ -149,7 +146,7 @@ echo $NAUTOBOT_CONFIG
 ### Adding your own dependencies
 
 !!! warning
-    Be cautious not to confuse extra applications with Nautobot Apps which are installed using the [`PLUGINS`](optional-settings.md#plugins) setting. They are similar, but distinctly different!
+    Be cautious not to confuse extra applications with Nautobot Apps which are installed using the [`PLUGINS`](settings.md#plugins) setting. They are similar, but distinctly different!
 
 Nautobot, being a Django application, allows for installation of additional dependencies utilizing the [`INSTALLED_APPS`](https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-INSTALLED_APPS) settings. Due to the highly specialized nature of Nautobot, *you cannot safely do this*.
 
@@ -185,6 +182,6 @@ EXTRA_INSTALLED_APPS = [
 ]
 ```
 
-For more information on installing extra applications, please see the documentation on [Extra Applications](optional-settings.md#extra-applications).
+For more information on installing extra applications, please see the documentation on [Extra Applications](settings.md#extra-applications).
 
 For more information on installing or developing Nautobot Apps, please see the [documentation on Apps](../../../apps/index.md).

@@ -99,7 +99,7 @@ Factories for each Nautobot app's models are defined in the corresponding `nauto
 Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/testing/advanced/#defining-a-test-runner) class (`nautobot.core.tests.runner.NautobotTestRunner`) makes use of the various factories to pre-populate the test database with data before running any tests. This reduces the need for individual tests to define their own baseline data sets.
 
 !!! info
-    Because Apps also commonly use Nautobot's test runner, the base Nautobot `settings.py` currently defaults [`TEST_USE_FACTORIES`](../../user-guide/administration/configuration/optional-settings.md#test_use_factories) to `False` so as to not negatively impact App tests that may not be designed to account for the presence of pre-populated test data in the database. This configuration is overridden to `True` in `nautobot/core/tests/nautobot_config.py` for Nautobot's own tests.
+    Because Apps also commonly use Nautobot's test runner, the base Nautobot `settings.py` currently defaults [`TEST_USE_FACTORIES`](../../user-guide/administration/configuration/settings.md#test_use_factories) to `False` so as to not negatively impact App tests that may not be designed to account for the presence of pre-populated test data in the database. This configuration is overridden to `True` in `nautobot/core/tests/nautobot_config.py` for Nautobot's own tests.
 
 ### Factory Caching
 
@@ -168,7 +168,7 @@ Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_
 ```
 
 !!! info
-    To output the performance evaluation to a file for later use, i.e. as performance baselines for future test runs, do `invoke performance-test --performance-snapshot`. This command will collect the `names` of the test and their `execution_time` and store them in a .yml file default to `report.yml`. Subsequently, the data in that file will have to be manually added to the baseline file set at [`TEST_PERFORMANCE_BASELINE_FILE`](../../user-guide/administration/configuration/optional-settings.md#test_performance_baseline_file) to be used as baselines in performance tests.
+    To output the performance evaluation to a file for later use, i.e. as performance baselines for future test runs, do `invoke performance-test --performance-snapshot`. This command will collect the `names` of the test and their `execution_time` and store them in a .yml file default to `report.yml`. Subsequently, the data in that file will have to be manually added to the baseline file set at [`TEST_PERFORMANCE_BASELINE_FILE`](../../user-guide/administration/configuration/settings.md#test_performance_baseline_file) to be used as baselines in performance tests.
 
 Example output of `invoke performance-test --performance-snapshot`:
 
