@@ -83,12 +83,12 @@ class ClusterTable(BaseTable):
     cluster_group = tables.Column(linkify=True)
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
-        url_params={"cluster_id": "pk"},
+        url_params={"cluster": "pk"},
         verbose_name="Devices",
     )
     vm_count = LinkedCountColumn(
         viewname="virtualization:virtualmachine_list",
-        url_params={"cluster_id": "pk"},
+        url_params={"cluster": "pk"},
         verbose_name="VMs",
     )
     tags = TagColumn(url_name="virtualization:cluster_list")
