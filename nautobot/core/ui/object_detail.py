@@ -551,6 +551,7 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
         super().__init__(body_id=body_id, **kwargs)
 
     def render_header_extra_content(self, context):
+        """Add a "Collapse All" button to the header."""
         return format_html(
             '<button type="button" class="btn-xs btn-primary pull-right accordion-toggle-all" data-target="#{body_id}">'
             "Collapse All</button>",
@@ -558,7 +559,7 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
         )
 
     def render_body_content(self, context):
-        """Override base class to render key-value pairs directly to HTML instead of using a template."""
+        """Override base class to render groupings and key-value pairs."""
         data = self.get_data(context)
 
         if not data:
@@ -601,6 +602,11 @@ class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
         section=SectionChoices.LEFT_HALF,
         **kwargs,
     ):
+        """Instantiate this panel.
+
+        Args:
+            advanced_ui (bool): Whether this is on the "main" tab (False) or the "advanced" tab (True)
+        """
         self.advanced_ui = advanced_ui
         super().__init__(
             data=None,
@@ -612,19 +618,25 @@ class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
         )
 
     def should_render(self, context):
+        """Render only if any custom fields are present."""
+        if not hasattr(context["object"], "get_custom_field_groupings"):
+            return False
         self.custom_field_data = context["object"].get_custom_field_groupings(advanced_ui=self.advanced_ui)
         return bool(self.custom_field_data)
 
     def get_data(self, context):
+        """Remap the response from `get_custom_field_groupings()` to a nested dict as expected by the parent class."""
         data = {}
         for grouping, entries in self.custom_field_data.items():
             data[grouping] = {entry[0]: entry[1] for entry in entries}
         return data
 
     def render_key(self, key, value, context):
+        """Render the custom field's description as well as its label."""
         return format_html('<span title="{}">{}</span>', key.description, key)
 
     def render_value(self, key, value, context):
+        """Render a given custom field value appropriately depending on what type of custom field it is."""
         cf = key
         if cf.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
             return render_boolean(value)
@@ -665,6 +677,11 @@ class _ObjectComputedFieldsPanel(GroupedKeyValueTablePanel):
         section=SectionChoices.LEFT_HALF,
         **kwargs,
     ):
+        """Instantiate this panel.
+
+        Args:
+            advanced_ui (bool): Whether this is on the "main" tab (False) or the "advanced" tab (True)
+        """
         self.advanced_ui = advanced_ui
         super().__init__(
             data=None,
@@ -676,16 +693,21 @@ class _ObjectComputedFieldsPanel(GroupedKeyValueTablePanel):
         )
 
     def should_render(self, context):
+        """Render only if any relevant computed fields are defined."""
+        if not hasattr(context["object"], "get_computed_fields_grouping"):
+            return False
         self.computed_fields_data = context["object"].get_computed_fields_grouping(advanced_ui=self.advanced_ui)
         return bool(self.computed_fields_data)
 
     def get_data(self, context):
+        """Remap `get_computed_fields_grouping()` to the nested dict format expected by the base class."""
         data = {}
         for grouping, entries in self.computed_fields_data.items():
             data[grouping] = {entry[0]: entry[1] for entry in entries}
         return data
 
     def render_key(self, key, value, context):
+        """Render the computed field's description as well as its label."""
         return format_html('<span title="{}">{}</span>', key.description, key)
 
 
@@ -701,10 +723,18 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
         section=SectionChoices.LEFT_HALF,
         **kwargs,
     ):
+        """Instantiate this panel.
+
+        Args:
+            advanced_ui (bool): Whether this is on the "main" tab (False) or the "advanced" tab (True)
+        """
         self.advanced_ui = advanced_ui
         super().__init__(data=None, weight=weight, label=label, section=section, **kwargs)
 
     def should_render(self, context):
+        """Render only if any relevant relationships are defined."""
+        if not hasattr(context["object"], "get_relationships_with_related_objects"):
+            return False
         self.relationships_data = context["object"].get_relationships_with_related_objects(
             advanced_ui=self.advanced_ui, include_hidden=False
         )
@@ -715,6 +745,7 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
         )
 
     def get_data(self, context):
+        """Remap `get_relationships_with_related_objects()` to the flat dict format expected by the base class."""
         data = {}
         for side, relationships in self.relationships_data.items():
             for relationship, value in relationships.items():
@@ -724,12 +755,14 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
         return data
 
     def render_key(self, key, value, context):
+        """Render the relationship's label and key as well as the related-objects label."""
         relationship, side = key
         return format_html(
             '<span title="{} ({})">{}</span>', relationship.label, relationship.key, relationship.get_label(side)
         )
 
     def queryset_list_url_filter(self, key, value, context):
+        """Filter the list URL based on the given relationship key and side."""
         relationship, side = key
         obj = context["object"]
         return f"cr_{relationship.key}__{side}={obj.pk}"
@@ -822,7 +855,7 @@ class _ObjectDetailContactsTab(Tab):
         super().__init__(tab_id=tab_id, tab_label=tab_label, weight=weight, panels=panels, **kwargs)
 
     def should_render(self, context):
-        return context["object"].is_contact_associable_model
+        return getattr(context["object"], "is_contact_associable_model", False)
 
     def render_tab_label(self, context):
         return format_html(
@@ -851,7 +884,7 @@ class _ObjectDetailGroupsTab(Tab):
 
     def should_render(self, context):
         return (
-            context["object"].is_dynamic_group_associable_model
+            getattr(context["object"], "is_dynamic_group_associable_model", False)
             and context["request"].user.has_perm("extras.view_dynamicgroup")
             and context["object"].dynamic_groups.exists()
         )
@@ -883,7 +916,7 @@ class _ObjectDetailMetadataTab(Tab):
 
     def should_render(self, context):
         return (
-            context["object"].is_metadata_associable_model
+            getattr(context["object"], "is_metadata_associable_model", False)
             and context["request"].user.has_perm("extras.view_objectmetadata")
             and context["object"].associated_object_metadata.exists()
         )
