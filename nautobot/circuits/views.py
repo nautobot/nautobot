@@ -161,6 +161,9 @@ class CircuitUIViewSet(NautobotUIViewSet):
                 **kwargs,
             )
 
+        def should_render(self, context):
+            return True
+
         def get_extra_context(self, context):
             return {"termination": context[self.context_object_key]}
 
