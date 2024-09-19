@@ -7,6 +7,8 @@ from django.db import models
 from django.template import Context
 from django.template.loader import get_template, render_to_string
 from django.templatetags.l10n import localize
+from django.urls import reverse
+from django.urls.exceptions import NoReverseMatch
 from django.utils.html import format_html, format_html_join
 
 from nautobot.core.templatetags.helpers import (
@@ -17,6 +19,7 @@ from nautobot.core.templatetags.helpers import (
     placeholder,
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
+from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.tenancy.models import Tenant
 
 
@@ -198,27 +201,12 @@ class Tab(Component):
         return get_template(self.content_template_path).render({**context, "tab_content": tab_content})
 
 
-class _ObjectDetailMainTab(Tab):
-    """Base class for a main display tab containing an overview of object fields and similar data."""
-
-    def __init__(
-        self,
-        *,
-        tab_id="main",
-        tab_label="",  # see render_tab_label()
-        weight=Tab.WEIGHT_MAIN_TAB,
-        **kwargs,
-    ):
-        # TODO: inject standard panels (custom fields, relationships, tags, etc.) even if kwargs["panels"] is customized
-        super().__init__(tab_id=tab_id, tab_label=tab_label, weight=weight, **kwargs)
-
-    def render_tab_label(self, context):
-        """Use the `verbose_name` of the given instance's Model as the tab label by default."""
-        return bettertitle(context["object"]._meta.verbose_name)
-
-
 class Panel(Component):
     """Base class for defining an individual display panel within a Layout within a Tab."""
+
+    WEIGHT_CUSTOM_FIELDS_PANEL = 200
+    WEIGHT_RELATIONSHIPS_PANEL = 300
+    WEIGHT_TAGS_PANEL = 400
 
     def __init__(
         self,
@@ -363,6 +351,12 @@ class KeyValueTablePanel(Panel):
         """Render the provided key in human-readable form."""
         return bettertitle(key.replace("_", " "))
 
+    def queryset_list_url_filter(self, key, value, context):
+        """
+        For rendering queryset values - if provided, will be passed as a filter parameter to the corresponding list URL.
+        """
+        return None
+
     def render_value(self, key, value, context):
         """Intelligently render the provided value in human-readable form."""
         display = value
@@ -390,13 +384,38 @@ class KeyValueTablePanel(Panel):
             if not value.exists():
                 display = placeholder(None)
             else:
-                # Display up to 3 records as a list
-                display = format_html("<ul>")
-                for record in value[:3]:
-                    display += format_html("<li>{}</li>", self.render_value(key, record, context))
-                if value.count() > 3:
-                    display += format_html("<li>...and {} more (total {})</li>", value.count() - 3, value.count())
-                display += format_html("</ul>")
+                # Link to the filtered list, and display up to 3 records individually as a list
+                count = value.count()
+                model = value.model
+
+                # If we can find the list URL and the appropriate filter parameter for this listing, wrap the above
+                # in an appropriate hyperlink:
+                list_url_filter = self.queryset_list_url_filter(key, value, context)
+                if list_url_filter:
+                    list_url_name = get_route_for_model(model, "list")
+                    # TODO test for https://github.com/nautobot/nautobot/issues/2077 regression here
+                    try:
+                        list_url = f"{reverse(list_url_name)}?{list_url_filter}"
+                    except NoReverseMatch:
+                        list_url = None
+
+                display = format_html_join(
+                    ", ", "{}", ([self.render_value(key, record, context)] for record in value[:3])
+                )
+                if count > 3:
+                    if list_url:
+                        display += format_html(
+                            ', and <a href="{}">{} other {}</a>',
+                            list_url,
+                            count - 3,
+                            model._meta.verbose_name if count - 3 == 1 else model._meta.verbose_name_plural,
+                        )
+                    else:
+                        display += format_html(
+                            ", and {} other {}",
+                            count - 3,
+                            model._meta.verbose_name if count - 3 == 1 else model._meta.verbose_name_plural,
+                        )
 
         else:
             display = placeholder(localize(value))
@@ -512,6 +531,76 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         return super().render_key(key, value, context)
 
 
+class _ObjectRelationshipsPanel(KeyValueTablePanel):
+    """A panel that renders a table of object "custom" relationships."""
+
+    def __init__(
+        self,
+        *,
+        advanced_ui=False,
+        weight=Panel.WEIGHT_RELATIONSHIPS_PANEL,
+        label="Relationships",
+        section=SectionChoices.LEFT_HALF,
+        **kwargs,
+    ):
+        self.advanced_ui = advanced_ui
+        super().__init__(data=None, weight=weight, label=label, section=section, **kwargs)
+
+    def should_render(self, context):
+        self.relationships_data = context["object"].get_relationships_with_related_objects(
+            advanced_ui=self.advanced_ui, include_hidden=False
+        )
+        return bool(
+            self.relationships_data["source"]
+            or self.relationships_data["destination"]
+            or self.relationships_data["peer"]
+        )
+
+    def get_data(self, context):
+        data = {}
+        for side, relationships in self.relationships_data.items():
+            for relationship, value in relationships.items():
+                key = (relationship, side)
+                data[key] = value
+
+        return data
+
+    def render_key(self, key, value, context):
+        relationship, side = key
+        return format_html(
+            '<span title="{} ({})">{}</span>', relationship.label, relationship.key, relationship.get_label(side)
+        )
+
+    def queryset_list_url_filter(self, key, value, context):
+        relationship, side = key
+        obj = context["object"]
+        return f"cr_{relationship.key}__{side}={obj.pk}"
+
+
+class _ObjectDetailMainTab(Tab):
+    """Base class for a main display tab containing an overview of object fields and similar data."""
+
+    def __init__(
+        self,
+        *,
+        tab_id="main",
+        tab_label="",  # see render_tab_label()
+        weight=Tab.WEIGHT_MAIN_TAB,
+        panels=(),
+        **kwargs,
+    ):
+        panels = list(panels)
+        # Inject standard panels (custom fields, relationships, tags, etc.) as appropriate
+        # TODO: custom fields
+        panels.append(_ObjectRelationshipsPanel())
+
+        super().__init__(tab_id=tab_id, tab_label=tab_label, weight=weight, panels=panels, **kwargs)
+
+    def render_tab_label(self, context):
+        """Use the `verbose_name` of the given instance's Model as the tab label by default."""
+        return bettertitle(context["object"]._meta.verbose_name)
+
+
 class _ObjectDetailAdvancedTab(Tab):
     """Built-in class for a Tab displaying "advanced" information such as PKs and data provenance."""
 
@@ -536,12 +625,13 @@ class _ObjectDetailAdvancedTab(Tab):
                 ObjectFieldsPanel(
                     label="Data Provenance",
                     section=SectionChoices.LEFT_HALF,
-                    weight=200,
+                    weight=150,
                     fields=["created", "last_updated"],
                     ignore_nonexistent_fields=True,
                     # TODO add created_by/last_updated_by derived fields and link to REST API
                 ),
-                # TODO add advanced_ui custom fields and relationships
+                _ObjectRelationshipsPanel(advanced_ui=True),
+                # TODO add advanced_ui custom fields
             )
 
         super().__init__(tab_id=tab_id, tab_label=tab_label, weight=weight, panels=panels, **kwargs)
