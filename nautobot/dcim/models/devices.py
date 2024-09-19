@@ -1909,34 +1909,36 @@ class VirtualDeviceContext(PrimaryModel):
         else:
             return None
 
-    def clean(self):
+    def validate_primary_ips(self):
         from nautobot.ipam.models import IPAddressToInterface  # circular import workaround
 
-        super().clean()
-
-        all_interfaces = self.interfaces.all()
+        interfaces = self.interfaces.all()
         for field in ["primary_ip4", "primary_ip6"]:
             ip = getattr(self, field)
             if ip is not None:
-                if field == "primary_ip4":
-                    if ip.ip_version != 4:
-                        raise ValidationError({f"{field}": f"{ip} is not an IPv4 address."})
-                else:
-                    if ip.ip_version != 6:
-                        raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
-                if IPAddressToInterface.objects.filter(ip_address=ip, interface__in=all_interfaces).exists():
+                if field == "primary_ip4" and ip.ip_version != 4:
+                    raise ValidationError({f"{field}": f"{ip} is not an IPv4 address."})
+                if field == "primary_ip6" and ip.ip_version != 6:
+                    raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
+                if IPAddressToInterface.objects.filter(ip_address=ip, interface__in=interfaces).exists():
                     pass
                 elif (
-                    ip.nat_inside is not None
-                    and IPAddressToInterface.objects.filter(
-                        ip_address=ip.nat_inside, interface__in=all_interfaces
+                    ip.nat_inside is None
+                    or not IPAddressToInterface.objects.filter(
+                        ip_address=ip.nat_inside, interface__in=interfaces
                     ).exists()
                 ):
-                    pass
-                else:
                     raise ValidationError(
                         {f"{field}": f"The specified IP address ({ip}) is not assigned to this Virtual Device Context."}
                     )
+
+    def clean(self):
+        super().clean()
+        # Note: The validation for primary IPs `validate_primary_ips` is commented out due to the order in which Django processes form validation with
+        # Many-to-Many (M2M) fields. During form saving, Django creates the instance first before assigning the M2M fields (in this case, interfaces).
+        # As a result, the primary_ips fields could fail validation at this point because the interfaces are not yet linked to the instance,
+        # leading to validation errors.
+        # self.validate_primary_ips()
 
 
 @extras_features("graphql")

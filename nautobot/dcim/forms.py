@@ -5174,9 +5174,7 @@ class VirtualDeviceContextForm(NautobotModelForm):
         required=False,
     )
     interfaces = DynamicModelMultipleChoiceField(
-        queryset=Interface.objects.all(), 
-        required=False,
-        query_params={"device": "$device"}
+        queryset=Interface.objects.all(), required=False, query_params={"device": "$device"}
     )
     primary_ip4 = DynamicModelChoiceField(
         queryset=IPAddress.objects.all(), required=False, query_params={"ip_version": 4, "interfaces": "$interfaces"}
@@ -5206,11 +5204,10 @@ class VirtualDeviceContextForm(NautobotModelForm):
         ]
 
     def save(self, commit=True):
-        # TODO(timizuo): VDC defer ip creation or saving till after interface update
-        data = super().save(commit)
+        instance = super().save(commit)
         interfaces = self.cleaned_data["interfaces"]
-        self.instance.interfaces.set(interfaces)
-        return data
+        instance.interfaces.set(interfaces)
+        return instance
 
 
 class VirtualDeviceContextBulkEditForm(
