@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.template import Context
+from django.template.defaultfilters import truncatechars
 from django.template.loader import get_template, render_to_string
 from django.templatetags.l10n import localize
 from django.urls import reverse
@@ -17,9 +18,13 @@ from nautobot.core.templatetags.helpers import (
     hyperlinked_object,
     hyperlinked_object_with_color,
     placeholder,
+    render_boolean,
+    render_json,
+    render_markdown,
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
 from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.tenancy.models import Tenant
 
 
@@ -205,14 +210,16 @@ class Panel(Component):
     """Base class for defining an individual display panel within a Layout within a Tab."""
 
     WEIGHT_CUSTOM_FIELDS_PANEL = 200
-    WEIGHT_RELATIONSHIPS_PANEL = 300
-    WEIGHT_TAGS_PANEL = 400
+    WEIGHT_COMPUTED_FIELDS_PANEL = 300
+    WEIGHT_RELATIONSHIPS_PANEL = 400
+    WEIGHT_TAGS_PANEL = 500
 
     def __init__(
         self,
         *,
         label="",
         section=SectionChoices.FULL_WIDTH,
+        body_id=None,
         body_content_template_path=None,
         header_extra_content_template_path=None,
         footer_content_template_path=None,
@@ -227,6 +234,7 @@ class Panel(Component):
             label (str): Label to display for this panel. Optional; if an empty string, the panel will have no label.
             section (str): One of `nautobot.core.ui.choices.SectionChoices`, indicating which section of the layout
                 this Panel belongs to.
+            body_id (str): HTML element id to attach to the rendered body.
             body_content_template_path (str): Template path to render the content contained *within* the panel body.
             header_extra_content_template_path (str): Template path to render extra content into the panel header,
                 if any, not including its label if any.
@@ -237,6 +245,7 @@ class Panel(Component):
         """
         self.label = label
         self.section = section
+        self.body_id = body_id
         self.body_content_template_path = body_content_template_path
         self.header_extra_content_template_path = header_extra_content_template_path
         self.footer_content_template_path = footer_content_template_path
@@ -274,6 +283,7 @@ class Panel(Component):
         return get_template(self.body_template_path).render(
             {
                 **context,
+                "body_id": self.body_id,
                 "body_content": self.render_body_content(context),
             }
         )
@@ -342,6 +352,9 @@ class KeyValueTablePanel(Panel):
         self.hide_if_unset = hide_if_unset
         self.value_transforms = value_transforms or {}
         super().__init__(body_template_path=body_template_path, **kwargs)
+
+    def should_render(self, context):
+        return bool(self.get_data(context))
 
     def get_data(self, context):
         """Get the data for this panel, either from `self.data` or from the provided context."""
@@ -531,6 +544,151 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         return super().render_key(key, value, context)
 
 
+class GroupedKeyValueTablePanel(KeyValueTablePanel):
+    """A KeyValueTablePanel that displays collapsible groupings of data."""
+
+    def __init__(self, *, body_id, **kwargs):
+        super().__init__(body_id=body_id, **kwargs)
+
+    def render_header_extra_content(self, context):
+        return format_html(
+            '<button type="button" class="btn-xs btn-primary pull-right accordion-toggle-all" data-target="#{body_id}">'
+            "Collapse All</button>",
+            body_id=self.body_id,
+        )
+
+    def render_body_content(self, context):
+        """Override base class to render key-value pairs directly to HTML instead of using a template."""
+        data = self.get_data(context)
+
+        if not data:
+            return format_html('<tr><td colspan="2">{}</td></tr>', placeholder(data))
+
+        result = format_html("")
+        counter = 0
+        for grouping, entry in data.items():
+            counter += 1
+            if grouping:
+                result += get_template("components/panel/grouping_toggle.html").render(
+                    {**context, "grouping": grouping, "body_id": self.body_id, "counter": counter}
+                )
+            for key, value in entry.items():
+                key_display = self.render_key(key, value, context)
+                value_display = self.render_value(key, value, context)
+                if value_display:
+                    # TODO: add a copy button on hover to all display items
+                    result += format_html(
+                        '<tr class="collapseme-{body_id}-{counter} collapse in" data-parent="#{body_id}">'
+                        "<td>{key}</td><td>{value}</td></tr>",
+                        counter=counter,
+                        body_id=self.body_id,
+                        key=key_display,
+                        value=value_display,
+                    )
+
+        return result
+
+
+class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
+    """A panel that renders a table of object custom fields."""
+
+    def __init__(
+        self,
+        *,
+        advanced_ui=False,
+        weight=Panel.WEIGHT_CUSTOM_FIELDS_PANEL,
+        label="Custom Fields",
+        section=SectionChoices.LEFT_HALF,
+        **kwargs,
+    ):
+        self.advanced_ui = advanced_ui
+        super().__init__(
+            data=None,
+            body_id=f"custom_fields_{advanced_ui}",
+            weight=weight,
+            label=label,
+            section=section,
+            **kwargs,
+        )
+
+    def should_render(self, context):
+        self.custom_field_data = context["object"].get_custom_field_groupings(advanced_ui=self.advanced_ui)
+        return bool(self.custom_field_data)
+
+    def get_data(self, context):
+        data = {}
+        for grouping, entries in self.custom_field_data.items():
+            data[grouping] = {entry[0]: entry[1] for entry in entries}
+        return data
+
+    def render_key(self, key, value, context):
+        return format_html('<span title="{}">{}</span>', key.description, key)
+
+    def render_value(self, key, value, context):
+        cf = key
+        if cf.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
+            return render_boolean(value)
+        elif cf.type == CustomFieldTypeChoices.TYPE_URL and value:
+            return format_html('<a href="{}">{}</a>', value, truncatechars(value, 70))
+        elif cf.type == CustomFieldTypeChoices.TYPE_MULTISELECT and value:
+            return format_html_join(", ", "{}", ([v] for v in value))
+        elif cf.type == CustomFieldTypeChoices.TYPE_MARKDOWN and value:
+            return render_markdown(value)
+        elif cf.type == CustomFieldTypeChoices.TYPE_JSON and value is not None:
+            return format_html(
+                """<p>
+                    <button class="btn btn-xs btn-primary" type="button" data-toggle="collapse"
+                            data-target="#cf_{field_key}" aria-expanded="false" aria-controls="cf_{field_key}">
+                        Show/Hide
+                    </button>
+                </p>
+                <pre class="collapse" id="cf_{field_key}">{rendered_value}</pre>""",
+                field_key=cf.key,
+                rendered_value=render_json(value),
+            )
+        elif value or value == 0:
+            return format_html("{}", value)
+        elif cf.required:
+            return format_html('<span class="text-warning">Not defined</span>')
+        return placeholder(value)
+
+
+class _ObjectComputedFieldsPanel(GroupedKeyValueTablePanel):
+    """A panel that renders a table of object computed field values."""
+
+    def __init__(
+        self,
+        *,
+        advanced_ui=False,
+        weight=Panel.WEIGHT_COMPUTED_FIELDS_PANEL,
+        label="Computed Fields",
+        section=SectionChoices.LEFT_HALF,
+        **kwargs,
+    ):
+        self.advanced_ui = advanced_ui
+        super().__init__(
+            data=None,
+            body_id=f"computed_fields_{advanced_ui}",
+            weight=weight,
+            label=label,
+            section=section,
+            **kwargs,
+        )
+
+    def should_render(self, context):
+        self.computed_fields_data = context["object"].get_computed_fields_grouping(advanced_ui=self.advanced_ui)
+        return bool(self.computed_fields_data)
+
+    def get_data(self, context):
+        data = {}
+        for grouping, entries in self.computed_fields_data.items():
+            data[grouping] = {entry[0]: entry[1] for entry in entries}
+        return data
+
+    def render_key(self, key, value, context):
+        return format_html('<span title="{}">{}</span>', key.description, key)
+
+
 class _ObjectRelationshipsPanel(KeyValueTablePanel):
     """A panel that renders a table of object "custom" relationships."""
 
@@ -591,8 +749,10 @@ class _ObjectDetailMainTab(Tab):
     ):
         panels = list(panels)
         # Inject standard panels (custom fields, relationships, tags, etc.) as appropriate
-        # TODO: custom fields
+        panels.append(_ObjectCustomFieldsPanel())
+        panels.append(_ObjectComputedFieldsPanel())
         panels.append(_ObjectRelationshipsPanel())
+        # TODO: tags
 
         super().__init__(tab_id=tab_id, tab_label=tab_label, weight=weight, panels=panels, **kwargs)
 
@@ -630,8 +790,9 @@ class _ObjectDetailAdvancedTab(Tab):
                     ignore_nonexistent_fields=True,
                     # TODO add created_by/last_updated_by derived fields and link to REST API
                 ),
+                _ObjectCustomFieldsPanel(advanced_ui=True),
+                _ObjectComputedFieldsPanel(advanced_ui=True),
                 _ObjectRelationshipsPanel(advanced_ui=True),
-                # TODO add advanced_ui custom fields
             )
 
         super().__init__(tab_id=tab_id, tab_label=tab_label, weight=weight, panels=panels, **kwargs)
