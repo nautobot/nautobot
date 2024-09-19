@@ -1679,7 +1679,7 @@ class SavedViewUIViewSet(
 
     def check_permissions(self, request):
         """
-        Override this method to not check only if user is authenticated.
+        Override this method to not check any nautobot-specific object permissions and to only check if the user is authenticated.
         Since users with <app_label>.view_<model_name> permissions should be able to view saved views related to this model.
         And those permissions will be enforced in the related view.
         """
