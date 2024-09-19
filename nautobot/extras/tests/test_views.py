@@ -2391,7 +2391,7 @@ class JobTestCase(
             "data": post_data({"confirm": True}),
         }
 
-        # Try bulk delete with delete job permission
+        # Try delete with delete job permission
         self.add_permissions("extras.delete_job")
         response = self.client.post(**request, follow=True)
         self.assertHttpStatus(response, 403)
@@ -2400,7 +2400,7 @@ class JobTestCase(
         # assert Job still exists
         self.assertTrue(self._get_queryset().filter(name=job_name).exists())
 
-        # Try bulk delete as a superuser
+        # Try delete as a superuser
         self.user.is_superuser = True
         response = self.client.post(**request, follow=True)
         self.assertHttpStatus(response, 403)
