@@ -1950,7 +1950,6 @@ class VirtualDeviceContext(PrimaryModel):
     "custom_validators",
     "export_templates",
     "graphql",
-    "webhooks",
 )
 class InterfaceVDCAssignment(BaseModel):
     virtual_device_context = models.ForeignKey(
