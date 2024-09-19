@@ -73,6 +73,7 @@ __all__ = (
     "InterfaceRedundancyGroup",
     "InterfaceRedundancyGroupAssociation",
     "InterfaceTemplate",
+    "InterfaceVDCAssignment",
     "InventoryItem",
     "Location",
     "LocationType",
@@ -98,5 +99,4 @@ __all__ = (
     "SoftwareVersion",
     "VirtualChassis",
     "VirtualDeviceContext",
-    "InterfaceVDCAssignment",
 )

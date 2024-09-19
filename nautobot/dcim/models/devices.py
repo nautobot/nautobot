@@ -49,11 +49,11 @@ __all__ = (
     "Device",
     "DeviceRedundancyGroup",
     "DeviceType",
+    "InterfaceVDCAssignment",
     "Manufacturer",
     "Platform",
     "VirtualChassis",
     "VirtualDeviceContext",
-    "InterfaceVDCAssignment",
 )
 
 
@@ -1941,7 +1941,12 @@ class VirtualDeviceContext(PrimaryModel):
         # self.validate_primary_ips()
 
 
-@extras_features("graphql")
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+)
 class InterfaceVDCAssignment(BaseModel):
     virtual_device_context = models.ForeignKey(
         VirtualDeviceContext, on_delete=models.CASCADE, related_name="interface_assignments"

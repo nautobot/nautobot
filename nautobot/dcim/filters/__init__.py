@@ -2157,7 +2157,7 @@ class VirtualDeviceContextFilterSet(NautobotFilterSet, TenancyModelFilterSetMixi
         to_field_name="name",
         label="Interface (name or ID)",
     )
-    has_interfaces = django_filters.BooleanFilter(
+    has_interfaces = RelatedMembershipBooleanFilter(
         field_name="interfaces",
         label="Has Interfaces",
     )

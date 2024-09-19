@@ -15,12 +15,12 @@ from .models import (
     Device,
     DeviceRedundancyGroup,
     Interface,
+    InterfaceVDCAssignment,
     PathEndpoint,
     PowerPanel,
     Rack,
     RackGroup,
     VirtualChassis,
-    VirtualDeviceContext,
 )
 from .utils import validate_interface_tagged_vlans
 
@@ -295,7 +295,7 @@ def prevent_adding_tagged_vlans_with_incorrect_mode_or_site(sender, instance, ac
 #
 
 
-@receiver(m2m_changed, sender=VirtualDeviceContext.interfaces.through)
+@receiver(m2m_changed, sender=InterfaceVDCAssignment)
 @disable_for_loaddata
 def prevent_adding_vdcs_with_incorrect_device(sender, instance, action, **kwargs):
     if action != "pre_add":
