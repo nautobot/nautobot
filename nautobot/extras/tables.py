@@ -786,6 +786,9 @@ class JobButtonTable(BaseTable):
 
 class NoteTable(BaseTable):
     actions = ButtonsColumn(Note, pk_field="slug")
+    note = tables.Column(
+        attrs={"td": {"class": "rendered-markdown"}},
+    )
 
     class Meta(BaseTable.Meta):
         model = Note
