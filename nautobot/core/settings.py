@@ -642,6 +642,8 @@ LOGIN_REDIRECT_URL = "home"
 CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 CONSTANCE_DATABASE_PREFIX = "constance:nautobot:"
 CONSTANCE_DATABASE_CACHE_BACKEND = "default"
+# Constance defaults to a 24-hour timeout when autofilling its cache, which is undesirable in many cases.
+CONSTANCE_DATABASE_CACHE_AUTOFILL_TIMEOUT = int(os.getenv("NAUTOBOT_CACHES_TIMEOUT", "300"))
 CONSTANCE_IGNORE_ADMIN_VERSION_CHECK = True  # avoid potential errors in a multi-node deployment
 
 CONSTANCE_ADDITIONAL_FIELDS = {
@@ -854,7 +856,7 @@ CACHES = {
             "django_prometheus.cache.backends.redis.RedisCache" if METRICS_ENABLED else "django_redis.cache.RedisCache",
         ),
         "LOCATION": parse_redis_connection(redis_database=1),
-        "TIMEOUT": 300,
+        "TIMEOUT": int(os.getenv("NAUTOBOT_CACHES_TIMEOUT", "300")),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "PASSWORD": "",

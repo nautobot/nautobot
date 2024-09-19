@@ -535,6 +535,10 @@ class Prefix(PrimaryModel):
     def __str__(self):
         return str(self.prefix)
 
+    @property
+    def display(self):
+        return f"{self.prefix}: {self.namespace}"
+
     def _deconstruct_prefix(self, prefix):
         if prefix:
             if isinstance(prefix, str):

@@ -213,7 +213,13 @@ def get_model_for_view_name(view_name):
     Return the model class associated with the given view_name e.g. "circuits:circuit_detail", "dcim:device_list" and etc.
     If the app_label or model_name contained by the given view_name is invalid, this will return `None`.
     """
-    app_label, model_name = view_name.split(":")  # dcim, device_list
+    split_view_name = view_name.split(":")
+    if len(split_view_name) == 2:
+        app_label, model_name = split_view_name  # dcim, device_list
+    elif len(split_view_name) == 3:
+        _, app_label, model_name = split_view_name  # plugins, app_name, model_list
+    else:
+        raise ValueError(f"Unexpected View Name: {view_name}")
     model_name = model_name.split("_")[0]  # device
 
     try:

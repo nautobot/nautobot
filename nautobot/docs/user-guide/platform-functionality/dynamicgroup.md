@@ -432,7 +432,7 @@ Any invalid field values for valid field names will also result in a `Validation
 +/- 1.4.0
     Prior to v1.4.0, any invalid field names that are not eligible for filtering objects will be discarded upon validation.
 
-    As of v1.4.0, [strict filtering is enabled by default](../administration/configuration/optional-settings.md#strict_filtering), which causes any invalid field names to result in a `ValidationError`.
+    As of v1.4.0, [strict filtering is enabled by default](../administration/configuration/settings.md#strict_filtering), which causes any invalid field names to result in a `ValidationError`.
 
 ### Managing Dynamic Groups in the REST API
 
