@@ -257,23 +257,36 @@ class RelationshipModel(models.Model):
                             continue
 
                 # Construct the queryset for related objects for this relationship
-                remote_model = getattr(relationship, f"{peer_side}_type").model_class()
-                if not remote_model:
-                    # Maybe an uninstalled App?
-                    continue
-
-                if not relationship.symmetric:
-                    query_params = {f"{peer_side}_for_associations__relationship": relationship.pk}
-                    resp[side][relationship] = remote_model.objects.filter(**query_params)
-                    if not relationship.has_many(peer_side):
-                        resp[side][relationship] = resp[side][relationship].first()
+                remote_ct = getattr(relationship, f"{peer_side}_type")
+                remote_model = remote_ct.model_class()
+                if remote_model is not None:
+                    if not relationship.symmetric:
+                        query_params = {f"{peer_side}_for_associations__relationship": relationship.pk}
+                        resp[side][relationship] = remote_model.objects.filter(**query_params)
+                        if not relationship.has_many(peer_side):
+                            resp[side][relationship] = resp[side][relationship].first()
+                    else:
+                        resp[RelationshipSideChoices.SIDE_PEER][relationship] = remote_model.objects.filter(
+                            Q(source_for_associations__relationship=relationship.pk)
+                            | Q(destination_for_associations__relationship=relationship.pk)
+                        ).exclude(pk=self.pk)
+                        if not relationship.has_many(peer_side):
+                            resp[side][relationship] = resp[side][relationship].first()
                 else:
-                    resp[RelationshipSideChoices.SIDE_PEER][relationship] = remote_model.objects.filter(
-                        Q(source_for_associations__relationship=relationship.pk)
-                        | Q(destination_for_associations__relationship=relationship.pk)
-                    ).exclude(pk=self.pk)
-                    if not relationship.has_many(peer_side):
-                        resp[side][relationship] = resp[side][relationship].first()
+                    # Maybe an uninstalled App?
+                    # We can't provide a relevant queryset, but we can provide a descriptive string
+                    if not relationship.symmetric:
+                        count = RelationshipAssociation.objects.filter(
+                            relationship=relationship, **{f"{side}_id": self.pk}
+                        ).count()
+                        resp[side][relationship] = f"{count} {remote_ct} object(s)"
+                    else:
+                        count = (
+                            RelationshipAssociation.objects.filter(relationship=relationship)
+                            .filter(Q(source_id=self.pk) | Q(destination_id=self.pk))
+                            .count()
+                        )
+                        resp[RelationshipSideChoices.SIDE_PEER][relationship] = f"{count} {remote_ct} object(s)"
 
         return resp
 

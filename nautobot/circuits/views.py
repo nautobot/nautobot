@@ -3,10 +3,11 @@ from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import get_template
+from django.utils.html import format_html
 from django_tables2 import RequestConfig
 
 from nautobot.core.forms import ConfirmationForm
-from nautobot.core.templatetags.helpers import humanize_speed, placeholder, render_markdown
+from nautobot.core.templatetags.helpers import bettertitle, humanize_speed, placeholder, render_markdown
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
@@ -149,7 +150,6 @@ class CircuitUIViewSet(NautobotUIViewSet):
                     "xconnect_id",
                     "pp_info",
                     "description",
-                    # TODO: relationships, custom fields?
                 ),
                 value_transforms={
                     "port_speed": [humanize_speed, placeholder],
@@ -167,12 +167,65 @@ class CircuitUIViewSet(NautobotUIViewSet):
         def get_extra_context(self, context):
             return {"termination": context[self.context_object_key]}
 
+        def get_data(self, context):
+            """
+            Extend the panel data to include custom relationships on the termination.
+
+            This is done for feature parity with the existing UI, and is not a pattern we *generally* should emulate.
+            """
+            data = super().get_data(context)
+            termination = context["termination"]
+            if termination is not None:
+                for side, relationships in termination.get_relationships_with_related_objects(
+                    include_hidden=False
+                ).items():
+                    for relationship, value in relationships.items():
+                        key = (relationship, side)
+                        data[key] = value
+
+            return data
+
+        def render_key(self, key, value, context):
+            """
+            Extend the panel rendering to render custom relationship information.
+
+            This is done for feature parity with the existing UI, and is not a pattern we *generally* should emulate.
+            """
+            if isinstance(key, tuple):
+                # Copied from _ObjectRelationshipsPanel.render_key()
+                relationship, side = key
+                return format_html(
+                    '<span title="{} ({})">{}</span>',
+                    relationship.label,
+                    relationship.key,
+                    bettertitle(relationship.get_label(side)),
+                )
+            return super().render_key(key, value, context)
+
         def render_value(self, key, value, context):
+            """
+            Add custom rendering of connected cables.
+
+            TODO: this might make sense to move into the base class to handle Cable objects in general?
+            """
             if key == "cable":
-                if not context[self.context_object_key].location:
+                if not context["termination"].location:
                     return ""
                 return get_template("circuits/inc/circuit_termination_cable_fragment.html").render(context)
             return super().render_value(key, value, context)
+
+        def queryset_list_url_filter(self, key, value, context):
+            """
+            Extend the panel rendering to render custom relationship information.
+
+            This is done for feature parity with the existing UI, and is not a pattern we *generally* should emulate.
+            """
+            if isinstance(key, tuple):
+                # Copied from _ObjectRelationshipsPanel.queryset_list_url_filter()
+                relationship, side = key
+                termination = context["termination"]
+                return f"cr_{relationship.key}__{side}={termination.pk}"
+            return super().queryset_list_url_filter(key, value, context)
 
     object_detail_content = ObjectDetailContent(
         panels=(

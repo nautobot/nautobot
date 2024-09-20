@@ -759,7 +759,10 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
         """Render the relationship's label and key as well as the related-objects label."""
         relationship, side = key
         return format_html(
-            '<span title="{} ({})">{}</span>', relationship.label, relationship.key, relationship.get_label(side)
+            '<span title="{} ({})">{}</span>',
+            relationship.label,
+            relationship.key,
+            bettertitle(relationship.get_label(side)),
         )
 
     def queryset_list_url_filter(self, key, value, context):
