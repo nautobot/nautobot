@@ -1,6 +1,7 @@
 import datetime
 from decimal import Decimal
 import unittest
+import zoneinfo
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -9,7 +10,6 @@ from django.test import override_settings
 from django.urls import reverse
 from netaddr import EUI
 import yaml
-import zoneinfo
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider

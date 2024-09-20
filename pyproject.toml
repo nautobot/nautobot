@@ -341,7 +341,7 @@ signature-mutators=["unittest.mock.patch"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py38"
+target-version = "py39"
 extend-exclude = [
     # Intentionally malformed files
     "nautobot/extras/tests/git_data/02-invalid-files/jobs",
