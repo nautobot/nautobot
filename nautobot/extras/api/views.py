@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import ProtectedError
 from django.forms import ValidationError as FormsValidationError
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
@@ -728,6 +729,14 @@ class JobViewSet(
     BulkDestroyModelMixin,
 ):
     lookup_value_regex = r"[-0-9a-fA-F]+"
+
+    def perform_destroy(self, obj):
+        if obj.module_name.startswith("nautobot."):
+            raise ProtectedError(
+                f"Unable to delete Job {obj}. System Job cannot be deleted",
+                [],
+            )
+        super().perform_destroy(obj)
 
 
 @extend_schema_view(
