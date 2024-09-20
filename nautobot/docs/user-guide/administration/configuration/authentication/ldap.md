@@ -255,7 +255,7 @@ AUTH_LDAP_SECONDARY_SERVER_URI = "ldap://secondary-ad.example.com"
 
 `systemctl restart nautobot` restarts the Nautobot service, and initiates any changes made to `nautobot_config.py`. If there are syntax errors present, the Nautobot process will not spawn an instance, and errors should be logged to `/var/log/messages`.
 
-For troubleshooting LDAP user/group queries, add or merge the following [logging](../../configuration/optional-settings.md#logging) configuration to `nautobot_config.py`:
+For troubleshooting LDAP user/group queries, add or merge the following [logging](../../configuration/settings.md#logging) configuration to `nautobot_config.py`:
 
 ```python
 LOGGING = {
@@ -283,4 +283,4 @@ Ensure the file and path specified in logfile exist and are writable and executa
 
 ---
 
-Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings.md#external_auth_default_permissions) next.
+Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/settings.md#external_auth_default_permissions) next.

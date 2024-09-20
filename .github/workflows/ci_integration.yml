@@ -72,7 +72,7 @@ jobs:
           poetry-version: "1.8.2"
           python-version: "3.12"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --failfast --keepdb --parallel"
+        run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   tests-mysql:
     name: "Unit tests (MySQL and Python 3.8)"
     runs-on: "ubuntu-22.04"
@@ -108,7 +108,7 @@ jobs:
           poetry-version: "1.8.2"
           python-version: "3.8"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --failfast --keepdb --parallel"
+        run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   migration-tests-mysql:
     name: "Run migrations against test dataset (MySQL and Python 3.8)"
     runs-on: "ubuntu-20.04"

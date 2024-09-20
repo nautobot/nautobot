@@ -30,7 +30,7 @@ As of Nautobot 1.2, there are three ways to specify the authentication credentia
 
 ### Configuration Parameters
 
-By default, the [`NAPALM_USERNAME`](../administration/configuration/optional-settings.md#napalm_username) and [`NAPALM_PASSWORD`](../administration/configuration/optional-settings.md#napalm_password) configuration parameters are used for NAPALM authentication.
+By default, the [`NAPALM_USERNAME`](../administration/configuration/settings.md#napalm_username) and [`NAPALM_PASSWORD`](../administration/configuration/settings.md#napalm_password) configuration parameters are used for NAPALM authentication.
 
 ### Secrets Groups
 
