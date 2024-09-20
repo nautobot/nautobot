@@ -11,7 +11,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
-from django.db.models import signals
+from django.db.models import ProtectedError, signals
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django_celery_beat.clockedschedule import clocked
@@ -233,6 +233,14 @@ class Job(PrimaryModel):
 
     def __str__(self):
         return self.name
+
+    def delete(self):
+        if self.module_name.startswith("nautobot."):
+            raise ProtectedError(
+                f"Unable to delete Job {self}. System Job cannot be deleted",
+                [],
+            )
+        super().delete()
 
     @property
     def job_class(self):
