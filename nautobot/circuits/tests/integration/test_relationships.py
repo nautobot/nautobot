@@ -26,26 +26,18 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         power_panel_ct = ContentType.objects.get_for_model(PowerPanel)
         circuit_status = Status.objects.get_for_model(Circuit).first()
         location_status = Status.objects.get_for_model(Location).first()
-        provider1 = Provider.objects.create(
-            name="A Test Provider 1",
-        )
-        provider2 = Provider.objects.create(
-            name="A Test Provider 2",
-        )
-        provider3 = Provider.objects.create(
-            name="A Test Provider 3",
-        )
-        provider4 = Provider.objects.create(
-            name="A Test Provider 4",
-        )
-        provider5 = Provider.objects.create(
-            name="A Test Provider 5",
-        )
+        providers = [
+            Provider.objects.create(name="A Test Provider 1"),
+            Provider.objects.create(name="A Test Provider 2"),
+            Provider.objects.create(name="A Test Provider 3"),
+            Provider.objects.create(name="A Test Provider 4"),
+            Provider.objects.create(name="A Test Provider 5"),
+        ]
         circuit_type = CircuitType.objects.create(
             name="A Test Circuit Type",
         )
         circuit = Circuit.objects.create(
-            provider=provider1,
+            provider=providers[0],
             cid="123456789",
             circuit_type=circuit_type,
             status=circuit_status,
@@ -71,7 +63,7 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
             destination_type=provider_ct,
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
-        for provider in [provider1, provider2, provider3, provider4, provider5]:
+        for provider in providers:
             RelationshipAssociation.objects.create(
                 relationship=m2m,
                 source=circuit_termination,
@@ -79,7 +71,7 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
             )
         o2m = Relationship.objects.create(
             label="Termination 2 Location o2m",
-            key="termination_2_provider_o2m",
+            key="termination_2_location_o2m",
             source_type=circuit_termination_ct,
             destination_type=location_ct,
             type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,

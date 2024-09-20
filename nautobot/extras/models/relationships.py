@@ -105,7 +105,7 @@ class RelationshipModel(models.Model):
 
                 # Determine if the relationship is applicable to this object based on the filter
                 # To resolve the filter we are using the FilterSet for the given model
-                # If there is no match when we query the primary key of the device along with the filter
+                # If there is no match when we query our id along with the filter
                 # Then the relationship is not applicable to this object
                 if getattr(relationship, f"{side}_filter"):
                     filterset = get_filterset_for_model(self._meta.model)
@@ -247,7 +247,7 @@ class RelationshipModel(models.Model):
 
                 # Determine if the relationship is applicable to this object based on the filter
                 # To resolve the filter we are using the FilterSet for the given model
-                # If there is no match when we query the primary key of the device along with the filter
+                # If there is no match when we query our id along with the filter
                 # Then the relationship is not applicable to this object
                 if getattr(relationship, f"{side}_filter"):
                     filterset = get_filterset_for_model(self._meta.model)
