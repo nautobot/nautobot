@@ -593,6 +593,7 @@ class ExampleViewWithCustomPermissionsTest(TestCase):
         response = self.client.get(url, follow=True)
         self.assertHttpStatus(response, 200)
         response_body = response.content.decode(response.charset)
+        # check if the user is redirected to the login page
         self.assertIn(f'<input type="hidden" name="next" value="{url}" />', response_body)
 
         # Test IsAdmin permission
@@ -600,6 +601,7 @@ class ExampleViewWithCustomPermissionsTest(TestCase):
         response = self.client.get(url, follow=True)
         self.assertHttpStatus(response, 403)
         response_body = response.content.decode(response.charset)
+        # check if the users have to have the permission to access the page
         self.assertIn("You do not have permission to access this page.", response_body)
 
         # View should be successfully accessed

@@ -1,7 +1,6 @@
 from django.shortcuts import HttpResponse, render
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
-from rest_framework.response import Response
 
 from nautobot.apps import views
 from nautobot.circuits.models import Circuit
@@ -126,7 +125,3 @@ class ViewWithCustomPermissions(views.ObjectListViewMixin):
     queryset = ExampleModel.objects.all()
     serializer_class = serializers.ExampleModelSerializer
     table_class = tables.ExampleModelTable
-
-    def list(self, request, *args, **kwargs):
-        content = {"status": "request was permitted"}
-        return Response(content)
