@@ -1,5 +1,4 @@
-from django.test import TestCase
-from django.test import override_settings
+from django.test import override_settings, TestCase
 
 from nautobot.core import checks
 

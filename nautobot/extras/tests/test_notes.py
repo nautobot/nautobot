@@ -6,7 +6,6 @@ from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import Location
 from nautobot.extras.models import Note
 
-
 User = get_user_model()
 
 

@@ -33,7 +33,7 @@
             {% include 'inc/table.html' with table=tenant_table %}
             {% if perms.teanancy.add_tenant %}
                 <div class="panel-footer text-right noprint">
-                    <a href="{% url 'tenancy:tenant_add' %}?group={{ object.pk }}" class="btn btn-xs btn-primary">
+                    <a href="{% url 'tenancy:tenant_add' %}?tenant_group={{ object.pk }}" class="btn btn-xs btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add tenant
                     </a>
                 </div>

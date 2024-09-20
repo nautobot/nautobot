@@ -2,9 +2,10 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
+import taggit.managers
+
 import nautobot.extras.models.statuses
 import nautobot.extras.utils
-import taggit.managers
 
 
 class Migration(migrations.Migration):

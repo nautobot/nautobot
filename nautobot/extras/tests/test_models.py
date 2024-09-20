@@ -1,10 +1,12 @@
+from datetime import datetime, timedelta, timezone
 import os
 import tempfile
-from unittest import mock, expectedFailure
+from unittest import expectedFailure, mock
 import uuid
 import warnings
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -12,13 +14,19 @@ from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import override_settings
 from django.test.utils import isolate_apps
-from django.utils.timezone import now
+from django.utils.timezone import get_default_timezone, now
+from django_celery_beat.tzcrontab import TzAwareCrontab
 from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
+import time_machine
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:  # python 3.8
+    from backports.zoneinfo import ZoneInfo
 
 from nautobot.circuits.models import CircuitType
 from nautobot.core.choices import ColorChoices
 from nautobot.core.testing import TestCase
-from nautobot.core.testing.mixins import NautobotTestCaseMixin
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import (
     Device,
@@ -29,8 +37,10 @@ from nautobot.dcim.models import (
     Platform,
 )
 from nautobot.extras.choices import (
-    LogLevelChoices,
+    JobExecutionType,
     JobResultStatusChoices,
+    LogLevelChoices,
+    MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
     SecretsGroupAccessTypeChoices,
@@ -47,6 +57,7 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
     DynamicGroup,
     ExportTemplate,
     ExternalIntegration,
@@ -56,16 +67,24 @@ from nautobot.extras.models import (
     Job as JobModel,
     JobLogEntry,
     JobResult,
+    MetadataChoice,
+    MetadataType,
     ObjectChange,
+    ObjectMetadata,
     Role,
+    SavedView,
+    ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
 from nautobot.extras.models.statuses import StatusModel
+from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant
@@ -75,6 +94,10 @@ from nautobot.virtualization.models import (
     ClusterType,
     VirtualMachine,
 )
+
+from example_app.jobs import ExampleJob
+
+User = get_user_model()
 
 
 class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
@@ -252,7 +275,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             slug="test_git_repo",
             remote_url="http://localhost/git.git",
         )
-        repo.save()
+        repo.validated_save()
 
         with self.assertRaises(ValidationError):
             nonduplicate_context = ConfigContext(name="context 1", weight=300, data={"a": "22"}, owner=repo)
@@ -584,6 +607,10 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         dynamic_group_context.dynamic_groups.add(self.dynamic_groups)
         dynamic_group_context_2.dynamic_groups.add(self.dynamic_group_2)
 
+        # Refresh caches
+        self.dynamic_groups.update_cached_members()
+        self.dynamic_group_2.update_cached_members()
+
         self.assertIn("dynamic context 1", self.device.get_config_context().values())
         self.assertNotIn("dynamic context 2", self.device.get_config_context().values())
         self.assertIn("dynamic context 2", device2.get_config_context().values())
@@ -862,7 +889,7 @@ class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
             slug="test_git_repo",
             remote_url="http://localhost/git.git",
         )
-        repo.save()
+        repo.validated_save()
 
         with self.assertRaises(ValidationError):
             nonduplicate_template = ExportTemplate(
@@ -886,7 +913,7 @@ class ExternalIntegrationTest(ModelTestCases.BaseModelTestCase):
             )
             ei.validated_save()
 
-        ei.remote_url = "http://localhost"
+        ei.remote_url = "http://some-local-host"
         ei.validated_save()
 
     def test_timeout_validation(self):
@@ -1043,6 +1070,11 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
             repo.validated_save()
         self.assertIn("Please choose a different slug", str(handler.exception))
 
+    def test_remote_url_hostname(self):
+        """Confirm that a bare hostname (no domain name) can be used for a remote URL."""
+        self.repo.remote_url = "http://some-private-host/example.git"
+        self.repo.validated_save()
+
 
 class JobModelTest(ModelTestCases.BaseModelTestCase):
     """
@@ -1056,49 +1088,57 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         # JobModel instances are automatically instantiated at startup, so we just need to look them up.
         cls.local_job = JobModel.objects.get(job_class_name="TestPass")
         cls.job_containing_sensitive_variables = JobModel.objects.get(job_class_name="ExampleLoggingJob")
-        cls.plugin_job = JobModel.objects.get(job_class_name="ExampleJob")
+        cls.app_job = JobModel.objects.get(job_class_name="ExampleJob")
 
     def test_job_class(self):
+        self.assertIsNotNone(self.local_job.job_class)
         self.assertEqual(self.local_job.job_class.description, "Validate job import")
 
-        from example_plugin.jobs import ExampleJob
-
-        self.assertEqual(self.plugin_job.job_class, ExampleJob)
+        self.assertIsNotNone(self.app_job.job_class)
+        self.assertEqual(self.app_job.job_class, ExampleJob)
 
     def test_class_path(self):
         self.assertEqual(self.local_job.class_path, "pass.TestPass")
+        self.assertIsNotNone(self.local_job.job_class)
         self.assertEqual(self.local_job.class_path, self.local_job.job_class.class_path)
 
-        self.assertEqual(self.plugin_job.class_path, "example_plugin.jobs.ExampleJob")
-        self.assertEqual(self.plugin_job.class_path, self.plugin_job.job_class.class_path)
+        self.assertEqual(self.app_job.class_path, "example_app.jobs.ExampleJob")
+        self.assertEqual(self.app_job.class_path, self.app_job.job_class.class_path)
 
     def test_latest_result(self):
-        self.assertEqual(self.local_job.latest_result, None)
-        self.assertEqual(self.plugin_job.latest_result, None)
+        self.assertEqual(self.local_job.latest_result, self.local_job.job_results.only("status").first())
+        self.assertEqual(self.app_job.latest_result, self.app_job.job_results.only("status").first())
         # TODO(Glenn): create some JobResults and test that this works correctly for them as well.
 
     def test_defaults(self):
         """Verify that defaults for discovered JobModel instances are as expected."""
         for job_model in JobModel.objects.all():
-            self.assertTrue(job_model.installed)
-            # System jobs should be enabled by default, all others are disabled by default
-            if job_model.module_name.startswith("nautobot."):
-                self.assertTrue(job_model.enabled)
-            else:
-                self.assertFalse(job_model.enabled)
-            for field_name in JOB_OVERRIDABLE_FIELDS:
-                if field_name == "name" and "duplicate_name" in job_model.job_class.__module__:
-                    pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
-                else:
-                    self.assertFalse(
-                        getattr(job_model, f"{field_name}_override"),
-                        (field_name, getattr(job_model, field_name), getattr(job_model.job_class, field_name)),
-                    )
-                    self.assertEqual(
-                        getattr(job_model, field_name),
-                        getattr(job_model.job_class, field_name),
-                        field_name,
-                    )
+            with self.subTest(class_path=job_model.class_path):
+                try:
+                    self.assertTrue(job_model.installed)
+                    # System jobs should be enabled by default, all others are disabled by default
+                    if job_model.module_name.startswith("nautobot."):
+                        self.assertTrue(job_model.enabled)
+                    else:
+                        self.assertFalse(job_model.enabled)
+                    self.assertIsNotNone(job_model.job_class)
+                    for field_name in JOB_OVERRIDABLE_FIELDS:
+                        if field_name == "name" and "duplicate_name" in job_model.job_class.__module__:
+                            pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
+                        else:
+                            self.assertFalse(
+                                getattr(job_model, f"{field_name}_override"),
+                                (field_name, getattr(job_model, field_name), getattr(job_model.job_class, field_name)),
+                            )
+                            self.assertEqual(
+                                getattr(job_model, field_name),
+                                getattr(job_model.job_class, field_name),
+                                field_name,
+                            )
+                except AssertionError:
+                    print(list(JobModel.objects.all()))
+                    print(registry["jobs"])
+                    raise
 
     def test_duplicate_job_name(self):
         self.assertTrue(JobModel.objects.filter(name="TestDuplicateNameNoMeta").exists())
@@ -1137,6 +1177,7 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             setattr(self.job_containing_sensitive_variables, f"{field_name}_override", False)
         self.job_containing_sensitive_variables.validated_save()
         self.job_containing_sensitive_variables.refresh_from_db()
+        self.assertIsNotNone(self.job_containing_sensitive_variables.job_class)
         for field_name in overridden_attrs:
             self.assertEqual(
                 getattr(self.job_containing_sensitive_variables, field_name),
@@ -1195,6 +1236,38 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             handler.exception.message_dict["approval_required"][0],
             "A job that may have sensitive variables cannot be marked as requiring approval",
         )
+
+
+class MetadataChoiceTest(ModelTestCases.BaseModelTestCase):
+    model = MetadataChoice
+
+    def test_immutable_metadata_type(self):
+        instance1 = MetadataChoice.objects.first()
+        instance2 = MetadataChoice.objects.exclude(metadata_type=instance1.metadata_type).first()
+        self.assertIsNotNone(instance2)
+        with self.assertRaises(ValidationError):
+            instance1.metadata_type = instance2.metadata_type
+            instance1.validated_save()
+
+    def test_wrong_metadata_type(self):
+        with self.assertRaises(ValidationError):
+            instance = MetadataChoice(
+                metadata_type=MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_TEXT).first(),
+                value="Hello",
+                weight=100,
+            )
+            self.assertIsNotNone(instance.metadata_type)
+            instance.validated_save()
+
+
+class MetadataTypeTest(ModelTestCases.BaseModelTestCase):
+    model = MetadataType
+
+    def test_immutable_data_type(self):
+        instance = MetadataType.objects.exclude(data_type=MetadataTypeDataTypeChoices.TYPE_TEXT).first()
+        with self.assertRaises(ValidationError):
+            instance.data_type = MetadataTypeDataTypeChoices.TYPE_TEXT
+            instance.validated_save()
 
 
 class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
@@ -1271,7 +1344,408 @@ class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual("", log.absolute_url)
 
 
-class RoleTest(NautobotTestCaseMixin, ModelTestCases.BaseModelTestCase):
+class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
+    model = ObjectMetadata
+
+    def test_immutable_metadata_type(self):
+        instance1 = ObjectMetadata.objects.first()
+        instance2 = ObjectMetadata.objects.exclude(metadata_type=instance1.metadata_type).first()
+        self.assertIsNotNone(instance2)
+        with self.assertRaises(ValidationError):
+            instance1.metadata_type = instance2.metadata_type
+            instance1.validated_save()
+
+    def test_invalid_assigned_object_type_not_allowed(self):
+        type_location = MetadataType.objects.create(
+            name="Location Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT
+        )
+        type_location.content_types.add(ContentType.objects.get_for_model(Location))
+        with self.assertRaises(ValidationError):
+            obj_metadata = ObjectMetadata.objects.create(
+                metadata_type=type_location,
+                value="Invalid assigned object type",
+                scoped_fields=["status"],
+                assigned_object_type=ContentType.objects.get_for_model(IPAddress),
+                assigned_object_id=Contact.objects.filter(associated_object_metadata__isnull=True).first().pk,
+            )
+            obj_metadata.validated_save()
+
+    def test_contact_team_mutual_exclusive(self):
+        type_contact_team = MetadataType.objects.create(
+            name="TCT", data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
+        )
+        type_contact_team.content_types.add(ContentType.objects.get_for_model(Contact))
+        type_contact_team.content_types.add(ContentType.objects.get_for_model(Team))
+        instance1 = ObjectMetadata(
+            metadata_type=type_contact_team,
+            contact=Contact.objects.first(),
+            team=Team.objects.first(),
+            scoped_fields=["address"],
+            assigned_object_type=ContentType.objects.get_for_model(Contact),
+            assigned_object_id=Contact.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        instance2 = ObjectMetadata(
+            metadata_type=type_contact_team,
+            contact=None,
+            team=None,
+            scoped_fields=["phone"],
+            assigned_object_type=ContentType.objects.get_for_model(Contact),
+            assigned_object_id=Contact.objects.filter(associated_object_metadata__isnull=True).last().pk,
+        )
+        instance3 = ObjectMetadata(
+            metadata_type=type_contact_team,
+            contact=Contact.objects.first(),
+            team=None,
+            scoped_fields=["email"],
+            assigned_object_type=ContentType.objects.get_for_model(Team),
+            assigned_object_id=Team.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        with self.assertRaises(ValidationError):
+            instance1.validated_save()
+
+        with self.assertRaises(ValidationError):
+            instance2.validated_save()
+
+        with self.assertRaises(ValidationError):
+            instance3.value = "Value should be empty"
+            instance3.validated_save()
+
+    def test_text_field_value(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        text_metadata_type = MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_TEXT).first()
+        text_metadata_type.content_types.add(obj_type)
+
+        # Create an ObjectMetadata
+        obj_metadata = ObjectMetadata.objects.create(
+            metadata_type=text_metadata_type,
+            value="Some text value",
+            scoped_fields=["status", "parent"],
+            assigned_object_type=obj_type,
+            assigned_object_id=Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        obj_metadata.save()
+
+        # Assign a disallowed value (list) to obj_metadata
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = ["I", "am", "a", "list"]
+            obj_metadata.validated_save()
+        self.assertIn("Value must be a string", str(context.exception))
+
+        # Assign another disallowed value (int) to the first Location
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = 2
+            obj_metadata.validated_save()
+        self.assertIn("Value must be a string", str(context.exception))
+
+        # Assign another disallowed value (bool) to the first Location
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = True
+            obj_metadata.validated_save()
+        self.assertIn("Value must be a string", str(context.exception))
+        obj_metadata.delete()
+
+    def test_integer_field_value(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        int_metadata_type = MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_INTEGER).first()
+        int_metadata_type.content_types.add(obj_type)
+        # Create an ObjectMetadata
+        obj_metadata = ObjectMetadata.objects.create(
+            metadata_type=int_metadata_type,
+            value=15,
+            scoped_fields=["status", "parent"],
+            assigned_object_type=obj_type,
+            assigned_object_id=Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        obj_metadata.validated_save()
+
+        # Assign another disallowed value (str) to the first Location
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = "I am not an integer"
+            obj_metadata.validated_save()
+        self.assertIn("Value must be an integer", str(context.exception))
+        # Assign another disallowed value (str of a float) to the first Location
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = "2.0"
+            obj_metadata.validated_save()
+        self.assertIn("Value must be an integer", str(context.exception))
+
+        obj_metadata.value = 2.0
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, 2)
+        obj_metadata.value = 15.0
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, 15)
+        obj_metadata.value = 15.2
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, 15)
+        obj_metadata.value = 15
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, 15)
+        obj_metadata.value = "15"
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, 15)
+
+        # TODO add validation_minimum/validation_maximum tests
+        obj_metadata.delete()
+
+    def test_float_field_value(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        float_metadata_type = MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_FLOAT).first()
+        float_metadata_type.content_types.add(obj_type)
+        # Create an ObjectMetadata
+        obj_metadata = ObjectMetadata.objects.create(
+            metadata_type=float_metadata_type,
+            value=15.245,
+            scoped_fields=["status", "parent"],
+            assigned_object_type=obj_type,
+            assigned_object_id=Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        obj_metadata.validated_save()
+
+        # Assign another disallowed value (str) to the first Location
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = "I am not a float"
+            obj_metadata.validated_save()
+        self.assertIn("Value must be a float", str(context.exception))
+
+        # Assign another disallowed value (int) to the first Location
+        obj_metadata.value = 2
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, 2.0)
+        obj_metadata.value = 15
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, 15.0)
+        obj_metadata.value = 15.2
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, 15.2)
+        obj_metadata.value = "3"
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, 3.0)
+        obj_metadata.value = "15.2"
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, 15.2)
+
+        # TODO add validation_minimum/validation_maximum tests
+        obj_metadata.delete()
+
+    def test_boolean_field_value(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        bool_metadata_type = MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_BOOLEAN).first()
+        bool_metadata_type.content_types.add(obj_type)
+
+        # Create an ObjectMetadata
+        obj_metadata = ObjectMetadata.objects.create(
+            metadata_type=bool_metadata_type,
+            value=False,
+            scoped_fields=["status", "parent"],
+            assigned_object_type=obj_type,
+            assigned_object_id=Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        obj_metadata.validated_save()
+
+        # Assign a disallowed value (list) to obj_metadata
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = ["I", "am", "a", "list"]
+            obj_metadata.validated_save()
+        self.assertIn("Value must be true or false.", str(context.exception))
+
+        # Assign another disallowed value (str) to the first Location
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = "I am not an integer"
+            obj_metadata.validated_save()
+        self.assertIn("Value must be true or false.", str(context.exception))
+
+        # Assign another disallowed value (int) to the first Location
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = 2
+            obj_metadata.validated_save()
+        self.assertIn("Value must be true or false.", str(context.exception))
+        obj_metadata.delete()
+
+    def test_date_field_value(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        date_metadata_type = MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_DATE).first()
+        date_metadata_type.content_types.add(obj_type)
+
+        # Create an ObjectMetadata
+        obj_metadata = ObjectMetadata.objects.create(
+            metadata_type=date_metadata_type,
+            value="1994-01-01",
+            scoped_fields=["status", "parent"],
+            assigned_object_type=obj_type,
+            assigned_object_id=Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        obj_metadata.validated_save()
+
+        # Assign a disallowed value (invalidly formatted date) to obj_metadata
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = "01/01/1994"
+            obj_metadata.validated_save()
+        self.assertIn("Date values must be in the format YYYY-MM-DD.", str(context.exception))
+
+        # Assign another disallowed value (str) to the first Location
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = "I am not an integer"
+            obj_metadata.validated_save()
+        self.assertIn("Date values must be in the format YYYY-MM-DD.", str(context.exception))
+
+        # Assign another disallowed value (int) to the first Location
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = 2
+            obj_metadata.validated_save()
+        self.assertIn("Value must be a date or str object.", str(context.exception))
+        # TODO add validation_minimum/validation_maximum tests
+        obj_metadata.delete()
+
+    def test_datetime_field_value(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        datetime_metadata_type = MetadataType.objects.filter(
+            data_type=MetadataTypeDataTypeChoices.TYPE_DATETIME
+        ).first()
+        datetime_metadata_type.content_types.add(obj_type)
+
+        # Create an ObjectMetadata
+        obj_metadata = ObjectMetadata.objects.create(
+            metadata_type=datetime_metadata_type,
+            value="2024-06-27T17:58:47-0500",
+            scoped_fields=["status", "parent"],
+            assigned_object_type=obj_type,
+            assigned_object_id=Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        obj_metadata.validated_save()
+
+        # Test valid formats of datetime value
+        acceptable_datetime_formats = [
+            "YYYY-MM-DDTHH:MM:SS",
+            "YYYY-MM-DDTHH:MM:SS(+,-)zzzz",
+            "YYYY-MM-DDTHH:MM:SS(+,-)zz:zz",
+        ]
+        obj_metadata.value = "2024-06-27T17:58:47"
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, "2024-06-27T17:58:47+0000")
+        obj_metadata.value = "2024-06-27T17:58:47+0500"
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, "2024-06-27T17:58:47+0500")
+        obj_metadata.value = "2024-06-27T17:58:47+05:00"
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, "2024-06-27T17:58:47+05:00")
+        obj_metadata.value = datetime(2020, 11, 1, 1)
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, "2020-11-01T01:00:00+00:00")
+        obj_metadata.value = datetime(2020, 11, 1, 1, 35, 22)
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, "2020-11-01T01:35:22+00:00")
+        obj_metadata.value = datetime(2020, 11, 1, 1, 35, 22, tzinfo=timezone(timedelta(hours=3)))
+        obj_metadata.validated_save()
+        self.assertEqual(obj_metadata.value, "2020-11-01T01:35:22+03:00")
+
+        error_message = f"Datetime values must be in the following formats {acceptable_datetime_formats}"
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = "01/01/1994"
+            obj_metadata.validated_save()
+        self.assertIn(error_message, str(context.exception))
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = "2024-06-27 17:58:47+0000"
+            obj_metadata.validated_save()
+        self.assertIn(error_message, str(context.exception))
+
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = "I am not an integer"
+            obj_metadata.validated_save()
+        self.assertIn(error_message, str(context.exception))
+
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = 2
+            obj_metadata.validated_save()
+        self.assertIn("Value must be a datetime or str object", str(context.exception))
+
+        # TODO add validation_minimum/validation_maximum tests
+        obj_metadata.delete()
+
+    def test_select_field(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        select_metadata_type = MetadataType.objects.filter(data_type=MetadataTypeDataTypeChoices.TYPE_SELECT).first()
+        select_metadata_type.content_types.add(obj_type)
+
+        MetadataChoice.objects.create(metadata_type=select_metadata_type, value="Option A")
+        MetadataChoice.objects.create(metadata_type=select_metadata_type, value="Option B")
+        MetadataChoice.objects.create(metadata_type=select_metadata_type, value="Option C")
+
+        # Create an ObjectMetadata
+        obj_metadata = ObjectMetadata.objects.create(
+            metadata_type=select_metadata_type,
+            value="Option A",
+            scoped_fields=["status", "parent"],
+            assigned_object_type=obj_type,
+            assigned_object_id=Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        obj_metadata.validated_save()
+
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = "Not valid option"
+            obj_metadata.validated_save()
+        self.assertIn("Invalid choice (Not valid option)", str(context.exception))
+
+    def test_multi_select_field(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        multi_select_metadata_type = MetadataType.objects.filter(
+            data_type=MetadataTypeDataTypeChoices.TYPE_MULTISELECT
+        ).first()
+        multi_select_metadata_type.content_types.add(obj_type)
+
+        MetadataChoice.objects.create(metadata_type=multi_select_metadata_type, value="Option A")
+        MetadataChoice.objects.create(metadata_type=multi_select_metadata_type, value="Option B")
+        MetadataChoice.objects.create(metadata_type=multi_select_metadata_type, value="Option C")
+
+        # Create an ObjectMetadata
+        obj_metadata = ObjectMetadata.objects.create(
+            metadata_type=multi_select_metadata_type,
+            value=["Option A"],
+            scoped_fields=["status", "parent"],
+            assigned_object_type=obj_type,
+            assigned_object_id=Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        obj_metadata.validated_save()
+
+        invalid_options = ["Not A valid option", "NOT A VALID OPTION"]
+        with self.assertRaises(ValidationError) as context:
+            obj_metadata.value = invalid_options
+            obj_metadata.validated_save()
+        self.assertIn(f"Invalid choice(s) ({invalid_options})", str(context.exception))
+
+    def test_no_scoped_fields_overlap(self):
+        """
+        Test that overlapping scoped_fields of ObjectMetadata with same metadata_type/assigned_object is not allowed.
+        """
+        ObjectMetadata.objects.create(
+            metadata_type=MetadataType.objects.first(),
+            contact=Contact.objects.first(),
+            scoped_fields=["host", "mask_length", "type", "role", "status"],
+            assigned_object_type=ContentType.objects.get_for_model(IPAddress),
+            assigned_object_id=IPAddress.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        instance2 = ObjectMetadata.objects.create(
+            metadata_type=MetadataType.objects.first(),
+            contact=Contact.objects.first(),
+            scoped_fields=[],
+            assigned_object_type=ContentType.objects.get_for_model(IPAddress),
+            assigned_object_id=IPAddress.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        with self.assertRaises(ValidationError):
+            # try scope all fields
+            instance2.scoped_fields = []
+            instance2.validated_save()
+
+        with self.assertRaises(ValidationError):
+            instance2.scoped_fields = ["host", "mask_length"]
+            instance2.validated_save()
+
+        with self.assertRaises(ValidationError):
+            instance2.scoped_fields = ["role", "status", "type"]
+            instance2.validated_save()
+
+
+class RoleTest(ModelTestCases.BaseModelTestCase):
     """Tests for `Role` model class."""
 
     model = Role
@@ -1284,6 +1758,339 @@ class RoleTest(NautobotTestCaseMixin, ModelTestCases.BaseModelTestCase):
 
         roles = Role.objects.filter(content_types__in=[device_ct, ipaddress_ct])
         self.assertQuerysetEqualAndNotEmpty(Role.objects.get_for_models([Device, IPAddress]), roles)
+
+
+class SavedViewTest(ModelTestCases.BaseModelTestCase):
+    model = SavedView
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="Saved View test user")
+        self.sv = SavedView.objects.create(name="Saved View", owner=self.user, view="dcim:location_list")
+
+    def test_is_global_default_saved_view_is_shared_automatically(self):
+        self.sv.is_global_default = True
+        self.sv.save()
+        self.assertEqual(self.sv.is_shared, True)
+
+    def test_setting_new_global_default_saved_view_unset_old_global_default_saved_view(self):
+        self.old_global_sv = SavedView.objects.create(
+            name="Old Global Saved View", owner=self.user, view="dcim:location_list", is_global_default=True
+        )
+
+        self.new_global_sv = SavedView.objects.create(
+            name="New Global Saved View", owner=self.user, view="dcim:location_list"
+        )
+        self.new_global_sv.is_global_default = True
+        self.new_global_sv.save()
+        self.old_global_sv.refresh_from_db()
+        self.assertEqual(self.new_global_sv.is_shared, True)
+        self.assertEqual(self.old_global_sv.is_global_default, False)
+
+    def test_multiple_global_default_saved_views_can_exist_for_different_views(self):
+        self.device_global_sv = SavedView.objects.create(
+            name="Device Global Saved View", owner=self.user, view="dcim:device_list", is_global_default=True
+        )
+        self.device_global_sv.save()
+        self.location_global_sv = SavedView.objects.create(
+            name="Location Global Saved View", owner=self.user, view="dcim:location_list", is_global_default=True
+        )
+        self.location_global_sv.save()
+        self.ipaddress_global_sv = SavedView.objects.create(
+            name="IP Address Global Saved View", owner=self.user, view="ipam:ipaddress_list", is_global_default=True
+        )
+        self.ipaddress_global_sv.save()
+        self.assertEqual(self.device_global_sv.is_shared, True)
+        self.assertEqual(self.location_global_sv.is_shared, True)
+        self.assertEqual(self.ipaddress_global_sv.is_shared, True)
+
+
+@override_settings(TIME_ZONE="UTC")
+class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
+    """Tests for the `ScheduledJob` model class."""
+
+    model = ScheduledJob
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="scheduledjobuser")
+        self.job_model = JobModel.objects.get(name="TestPass")
+
+        self.daily_utc_job = ScheduledJob.objects.create(
+            name="Daily UTC Job",
+            task="pass.TestPass",
+            job_model=self.job_model,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        self.daily_est_job = ScheduledJob.objects.create(
+            name="Daily EST Job",
+            task="pass.TestPass",
+            job_model=self.job_model,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=ZoneInfo("America/New_York")),
+            time_zone=ZoneInfo("America/New_York"),
+        )
+        self.crontab_utc_job = ScheduledJob.create_schedule(
+            job_model=self.job_model,
+            user=self.user,
+            name="Crontab UTC Job",
+            interval=JobExecutionType.TYPE_CUSTOM,
+            crontab="0 17 * * *",
+        )
+        self.crontab_est_job = ScheduledJob.objects.create(
+            name="Crontab EST Job",
+            task="pass.TestPass",
+            job_model=self.job_model,
+            interval=JobExecutionType.TYPE_CUSTOM,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=ZoneInfo("America/New_York")),
+            time_zone=ZoneInfo("America/New_York"),
+            crontab="0 17 * * *",
+        )
+        self.one_off_utc_job = ScheduledJob.objects.create(
+            name="One-off UTC Job",
+            task="pass.TestPass",
+            job_model=self.job_model,
+            interval=JobExecutionType.TYPE_FUTURE,
+            start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("UTC")),
+            time_zone=ZoneInfo("UTC"),
+        )
+        self.one_off_est_job = ScheduledJob.create_schedule(
+            job_model=self.job_model,
+            user=self.user,
+            name="One-off EST Job",
+            interval=JobExecutionType.TYPE_FUTURE,
+            start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("America/New_York")),
+        )
+
+    def test_schedule(self):
+        """Test the schedule property."""
+        with self.subTest("Test TYPE_DAILY schedules"):
+            daily_utc_schedule = self.daily_utc_job.schedule
+            daily_est_schedule = self.daily_est_job.schedule
+            self.assertIsInstance(daily_utc_schedule, TzAwareCrontab)
+            self.assertIsInstance(daily_est_schedule, TzAwareCrontab)
+            self.assertNotEqual(daily_utc_schedule, daily_est_schedule)
+            # Crontabs are validated in test_to_cron()
+
+        with self.subTest("Test TYPE_CUSTOM schedules"):
+            crontab_utc_schedule = self.crontab_utc_job.schedule
+            crontab_est_schedule = self.crontab_est_job.schedule
+            self.assertIsInstance(crontab_utc_schedule, TzAwareCrontab)
+            self.assertIsInstance(crontab_est_schedule, TzAwareCrontab)
+            self.assertNotEqual(crontab_utc_schedule, crontab_est_schedule)
+            # Crontabs are validated in test_to_cron()
+
+        with self.subTest("Test TYPE_FUTURE schedules"):
+            # TYPE_FUTURE schedules are one off, not cron tabs:
+            self.assertEqual(self.one_off_utc_job.schedule.clocked_time, self.one_off_utc_job.start_time)
+            self.assertEqual(self.one_off_est_job.schedule.clocked_time, self.one_off_est_job.start_time)
+            self.assertEqual(
+                self.one_off_est_job.schedule.clocked_time - self.one_off_utc_job.schedule.clocked_time,
+                timedelta(hours=5),
+            )
+
+    def test_to_cron(self):
+        """Test the to_cron() method and its interaction with time zone variants."""
+
+        with self.subTest("Test TYPE_DAILY schedule with UTC time zone and UTC schedule time zone"):
+            self.daily_utc_job.refresh_from_db()
+            daily_utc_schedule = self.daily_utc_job.to_cron()
+            self.assertEqual(daily_utc_schedule.tz, ZoneInfo("UTC"))
+            self.assertEqual(daily_utc_schedule.hour, {17})
+            self.assertEqual(daily_utc_schedule.minute, {0})
+            last_run = datetime(2050, 1, 21, 17, 0, tzinfo=ZoneInfo("UTC"))
+            with time_machine.travel("2050-01-22 16:59 +0000"):
+                is_due, _ = daily_utc_schedule.is_due(last_run_at=last_run)
+                self.assertFalse(is_due)
+            with time_machine.travel("2050-01-22 17:00 +0000"):
+                is_due, _ = daily_utc_schedule.is_due(last_run_at=last_run)
+                self.assertTrue(is_due)
+
+        with self.subTest("Test TYPE_DAILY schedule with UTC time zone and EST schedule time zone"):
+            self.daily_est_job.refresh_from_db()
+            daily_est_schedule = self.daily_est_job.to_cron()
+            self.assertEqual(daily_est_schedule.tz, ZoneInfo("America/New_York"))
+            self.assertEqual(daily_est_schedule.hour, {17})
+            self.assertEqual(daily_est_schedule.minute, {0})
+            last_run = datetime(2050, 1, 21, 22, 0, tzinfo=ZoneInfo("UTC"))
+            with time_machine.travel("2050-01-22 21:59 +0000"):
+                is_due, _ = daily_est_schedule.is_due(last_run_at=last_run)
+                self.assertFalse(is_due)
+            with time_machine.travel("2050-01-22 22:00 +0000"):
+                is_due, _ = daily_est_schedule.is_due(last_run_at=last_run)
+                self.assertTrue(is_due)
+
+        with self.subTest("Test TYPE_CUSTOM schedule with UTC time zone and UTC schedule time zone"):
+            self.crontab_utc_job.refresh_from_db()
+            crontab_utc_schedule = self.crontab_utc_job.to_cron()
+            self.assertEqual(crontab_utc_schedule.tz, ZoneInfo("UTC"))
+            self.assertEqual(crontab_utc_schedule.hour, {17})
+            self.assertEqual(crontab_utc_schedule.minute, {0})
+
+        with self.subTest("Test TYPE_CUSTOM schedule with UTC time zone and EST schedule time zone"):
+            self.crontab_est_job.refresh_from_db()
+            crontab_est_schedule = self.crontab_est_job.to_cron()
+            self.assertEqual(crontab_est_schedule.tz, ZoneInfo("America/New_York"))
+            self.assertEqual(crontab_est_schedule.hour, {17})
+            self.assertEqual(crontab_est_schedule.minute, {0})
+
+        with self.subTest("Test TYPE_FUTURE schedules do not map to cron"):
+            with self.assertRaises(ValueError):
+                self.one_off_utc_job.to_cron()
+            with self.assertRaises(ValueError):
+                self.one_off_est_job.to_cron()
+
+        with override_settings(TIME_ZONE="America/New_York"):
+            with self.subTest("Test TYPE_DAILY schedule with EST time zone and UTC schedule time zone"):
+                self.daily_utc_job.refresh_from_db()
+                daily_utc_schedule = self.daily_utc_job.to_cron()
+                self.assertEqual(daily_utc_schedule.tz, ZoneInfo("UTC"))
+                self.assertEqual(daily_utc_schedule.hour, {17})
+                self.assertEqual(daily_utc_schedule.minute, {0})
+                last_run = datetime(2050, 1, 21, 12, 0, tzinfo=ZoneInfo("America/New_York"))
+                with time_machine.travel("2050-01-22 11:59 -0500"):
+                    is_due, _ = daily_utc_schedule.is_due(last_run_at=last_run)
+                    self.assertFalse(is_due)
+                with time_machine.travel("2050-01-22 12:00 -0500"):
+                    is_due, _ = daily_utc_schedule.is_due(last_run_at=last_run)
+                    self.assertTrue(is_due)
+
+            with self.subTest("Test TYPE_DAILY schedule with EST time zone and EST schedule time zone"):
+                self.daily_est_job.refresh_from_db()
+                daily_est_schedule = self.daily_est_job.to_cron()
+                self.assertEqual(daily_est_schedule.tz, ZoneInfo("America/New_York"))
+                self.assertEqual(daily_est_schedule.hour, {17})
+                self.assertEqual(daily_est_schedule.minute, {0})
+                last_run = datetime(2050, 1, 21, 22, 0, tzinfo=ZoneInfo("America/New_York"))
+                with time_machine.travel("2050-01-22 16:59 -0500"):
+                    is_due, _ = daily_est_schedule.is_due(last_run_at=last_run)
+                    self.assertFalse(is_due)
+                with time_machine.travel("2050-01-22 17:00 -0500"):
+                    is_due, _ = daily_est_schedule.is_due(last_run_at=last_run)
+                    self.assertTrue(is_due)
+
+            with self.subTest("Test TYPE_CUSTOM schedule with EST time zone and UTC schedule time zone"):
+                self.crontab_utc_job.refresh_from_db()
+                crontab_utc_schedule = self.crontab_utc_job.to_cron()
+                self.assertEqual(crontab_utc_schedule.tz, ZoneInfo("UTC"))
+                self.assertEqual(crontab_utc_schedule.hour, {17})
+                self.assertEqual(crontab_utc_schedule.minute, {0})
+
+            with self.subTest("Test TYPE_CUSTOM schedule with EST time zone and EST schedule time zone"):
+                self.crontab_est_job.refresh_from_db()
+                crontab_est_schedule = self.crontab_est_job.to_cron()
+                self.assertEqual(crontab_est_schedule.tz, ZoneInfo("America/New_York"))
+                self.assertEqual(crontab_est_schedule.hour, {17})
+                self.assertEqual(crontab_est_schedule.minute, {0})
+
+    def test_crontab_dst(self):
+        """Test that TYPE_CUSTOM behavior around DST is as expected."""
+        cronjob = ScheduledJob.objects.create(
+            name="DST Aware Cronjob",
+            task="pass.TestPass",
+            job_model=self.job_model,
+            enabled=False,
+            interval=JobExecutionType.TYPE_CUSTOM,
+            start_time=datetime(year=2024, month=1, day=1, hour=17, minute=0, tzinfo=ZoneInfo("America/New_York")),
+            crontab="0 17 * * *",  # 5 PM local time
+            time_zone=ZoneInfo("America/New_York"),
+        )
+
+        # Before DST takes effect
+        with self.subTest("Test UTC time zone with EST job"):
+            cronjob.refresh_from_db()
+            crontab = cronjob.to_cron()
+            with time_machine.travel("2024-03-09 21:59 +0000"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 8, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertFalse(is_due)
+            with time_machine.travel("2024-03-09 22:00 +0000"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 8, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertTrue(is_due)
+
+        with self.subTest("Test EST time zone with EST job"), override_settings(TIME_ZONE="America/New_York"):
+            cronjob.refresh_from_db()
+            crontab = cronjob.to_cron()
+            with time_machine.travel("2024-03-09 16:59 -0500"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 8, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertFalse(is_due)
+            with time_machine.travel("2024-03-09 17:00 -0500"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 8, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertTrue(is_due)
+
+        # Day that DST takes effect
+        with self.subTest("Test UTC time zone with EDT job"):
+            cronjob.refresh_from_db()
+            crontab = cronjob.to_cron()
+            with time_machine.travel("2024-03-10 20:59 +0000"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertFalse(is_due)
+            with time_machine.travel("2024-03-10 21:00 +0000"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertTrue(is_due)
+
+        with self.subTest("Test EDT time zone with EDT job"), override_settings(TIME_ZONE="America/New_York"):
+            cronjob.refresh_from_db()
+            crontab = cronjob.to_cron()
+            with time_machine.travel("2024-03-10 16:59 -0400"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertFalse(is_due)
+            with time_machine.travel("2024-03-10 17:00 -0400"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertTrue(is_due)
+
+    def test_daily_dst(self):
+        """Test the interaction of TYPE_DAILY around DST."""
+        daily = ScheduledJob.objects.create(
+            name="Daily Job",
+            task="pass.TestPass",
+            job_model=self.job_model,
+            enabled=False,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2024, month=1, day=1, hour=17, minute=0, tzinfo=ZoneInfo("America/New_York")),
+            time_zone=ZoneInfo("America/New_York"),
+        )
+
+        # Before DST takes effect
+        with self.subTest("Test UTC time zone with EST job"):
+            daily.refresh_from_db()
+            crontab = daily.to_cron()
+            with time_machine.travel("2024-03-09 21:59 +0000"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 8, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertFalse(is_due)
+            with time_machine.travel("2024-03-09 22:00 +0000"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 8, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertTrue(is_due)
+
+        with self.subTest("Test EST time zone with EST job"), override_settings(TIME_ZONE="America/New_York"):
+            daily.refresh_from_db()
+            crontab = daily.to_cron()
+            with time_machine.travel("2024-03-09 16:59 -0500"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 8, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertFalse(is_due)
+            with time_machine.travel("2024-03-09 17:00 -0500"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 8, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertTrue(is_due)
+
+        # Day that DST takes effect
+        with self.subTest("Test UTC time zone with EDT job"):
+            daily.refresh_from_db()
+            crontab = daily.to_cron()
+            with time_machine.travel("2024-03-10 20:59 +0000"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertFalse(is_due)
+            with time_machine.travel("2024-03-10 21:00 +0000"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertTrue(is_due)
+
+        with self.subTest("Test EDT time zone with EDT job"), override_settings(TIME_ZONE="America/New_York"):
+            daily.refresh_from_db()
+            crontab = daily.to_cron()
+            with time_machine.travel("2024-03-10 16:59 -0400"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertFalse(is_due)
+            with time_machine.travel("2024-03-10 17:00 -0400"):
+                is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
+                self.assertTrue(is_due)
 
 
 class SecretTest(ModelTestCases.BaseModelTestCase):
@@ -1674,6 +2481,10 @@ class SecretsGroupTest(ModelTestCases.BaseModelTestCase):
         )
 
 
+class StaticGroupAssociationTest(ModelTestCases.BaseModelTestCase):
+    model = StaticGroupAssociation
+
+
 class StatusTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `Status` model class.
@@ -1786,8 +2597,8 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
         )
         log.save()
 
-        self.assertEqual(JobLogEntry.objects.all().count(), 1)
-        log_object = JobLogEntry.objects.first()
+        self.assertEqual(JobLogEntry.objects.filter(job_result=self.job_result).count(), 1)
+        log_object = JobLogEntry.objects.filter(job_result=self.job_result).first()
         self.assertEqual(log_object.message, log.message)
         self.assertEqual(log_object.log_level, log.log_level)
         self.assertEqual(log_object.grouping, log.grouping)
@@ -1810,6 +2621,15 @@ class JobResultTestCase(TestCase):
             with self.assertRaises(TypeError) as err:
                 JobResult.objects.create(name="ExampleJob2", user=None, result=lambda: 1)
             self.assertEqual(str(err.exception), "Object of type function is not JSON serializable")
+
+    def test_get_task(self):
+        """Assert bug fix for `Cannot resolve keyword 'task_id' into field` #5440"""
+        data = {
+            "output": "valid data",
+        }
+        job_result = JobResult.objects.create(name="ExampleJob1", user=None, result=data)
+
+        self.assertEqual(JobResult.objects.get_task(job_result.pk), job_result)
 
 
 class WebhookTest(ModelTestCases.BaseModelTestCase):

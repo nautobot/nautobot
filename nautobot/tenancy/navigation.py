@@ -8,7 +8,6 @@ from nautobot.core.apps import (
     NavMenuTab,
 )
 
-
 menu_items = (
     NavMenuTab(
         name="Organization",
@@ -29,7 +28,7 @@ menu_items = (
                             NavMenuAddButton(
                                 link="tenancy:tenant_add",
                                 permissions=[
-                                    "tenancy.add_tag",
+                                    "tenancy.add_tenant",
                                 ],
                             ),
                         ),

@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 
 
 def get_permission_for_model(model, action):
@@ -58,13 +59,41 @@ def permission_is_exempt(name):
     if action == "view":
         if (
             # All models (excluding those in EXEMPT_EXCLUDE_MODELS) are exempt from view permission enforcement
-            "*" in settings.EXEMPT_VIEW_PERMISSIONS
-            and (app_label, model_name) not in settings.EXEMPT_EXCLUDE_MODELS
+            "*" in settings.EXEMPT_VIEW_PERMISSIONS and (app_label, model_name) not in settings.EXEMPT_EXCLUDE_MODELS
         ) or (
             # This specific model is exempt from view permission enforcement
-            f"{app_label}.{model_name}"
-            in settings.EXEMPT_VIEW_PERMISSIONS
+            f"{app_label}.{model_name}" in settings.EXEMPT_VIEW_PERMISSIONS
         ):
             return True
 
     return False
+
+
+def qs_filter_from_constraints(constraints, tokens=None):
+    """
+    Construct filtered QuerySet from user constraints (tokens).
+
+    Args:
+        constraints (dict): User's permissions cached items.
+        tokens (dict, optional): user tokens. Defaults to a None.
+
+    Returns:
+        QuerySet object: A QuerySet of tuples or, an empty QuerySet if constraints are null.
+    """
+    if tokens is None:
+        tokens = {}
+
+    def _replace_tokens(value, tokens):
+        if isinstance(value, list):
+            return list(map(lambda v: tokens.get(v, v), value))
+        return tokens.get(value, value)
+
+    params = Q()
+    for constraint in constraints:
+        if constraint:
+            params |= Q(**{k: _replace_tokens(v, tokens) for k, v in constraint.items()})
+        else:
+            # permit model level access, constrains are null
+            return Q()
+
+    return params

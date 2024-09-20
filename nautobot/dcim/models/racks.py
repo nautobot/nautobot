@@ -1,14 +1,13 @@
-from collections import OrderedDict
-
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Count, Sum, Q
+from django.db.models import Count, Q, Sum
 
-from nautobot.core.models.fields import NaturalOrderingField, JSONArrayField
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.models.fields import JSONArrayField, NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.models.utils import array_to_string
@@ -19,6 +18,7 @@ from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_
 from nautobot.dcim.elevations import RackElevationSVG
 from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
+
 from .device_components import PowerOutlet, PowerPort
 from .devices import Device
 from .power import PowerFeed
@@ -46,13 +46,13 @@ class RackGroup(TreeModel, OrganizationalModel):
     Racks can be grouped as subsets within a Location.
     """
 
-    name = models.CharField(max_length=100, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.CASCADE,
         related_name="rack_groups",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:
         ordering = ("name",)
@@ -91,7 +91,6 @@ class RackGroup(TreeModel, OrganizationalModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -104,14 +103,14 @@ class Rack(PrimaryModel):
     Each Rack is assigned to a Location and (optionally) a RackGroup.
     """
 
-    name = models.CharField(max_length=100, db_index=True)
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
+    _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True)
     status = StatusField(blank=False, null=False)
     role = RoleField(blank=True, null=True)
-    facility_id = models.CharField(
+    facility_id = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- intentional, see below
         max_length=50,
         blank=True,
-        null=True,
+        null=True,  # because facility_id is optional but is part of a uniqueness constraint
         verbose_name="Facility ID",
         help_text="Locally-assigned identifier",
     )
@@ -135,9 +134,9 @@ class Rack(PrimaryModel):
         blank=True,
         null=True,
     )
-    serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number", db_index=True)
+    serial = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, verbose_name="Serial number", db_index=True)
     asset_tag = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         null=True,
         unique=True,
@@ -273,7 +272,7 @@ class Rack(PrimaryModel):
             contains a height attribute for the device
         """
 
-        elevation = OrderedDict()
+        elevation = {}
         for u in self.units:
             elevation[u] = {
                 "id": u,
@@ -472,7 +471,7 @@ class RackReservation(PrimaryModel):
         null=True,
     )
     user = models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="rack_reservations")
-    description = models.CharField(max_length=200)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
 
     class Meta:
         ordering = ["created"]

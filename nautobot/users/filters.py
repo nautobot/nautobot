@@ -1,16 +1,17 @@
-import django_filters
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+import django_filters
 
-from nautobot.dcim.models import RackReservation
-from nautobot.extras.models import ObjectChange
-from nautobot.users.models import ObjectPermission, Token
 from nautobot.core.filters import (
     BaseFilterSet,
+    NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
 )
+from nautobot.dcim.models import RackReservation
+from nautobot.extras.models import ObjectChange
+from nautobot.users.models import ObjectPermission, Token
 
 __all__ = (
     "GroupFilterSet",
@@ -99,7 +100,7 @@ class TokenFilterSet(BaseFilterSet):
         fields = ["id", "key", "write_enabled", "created", "expires", "description"]
 
 
-class ObjectPermissionFilterSet(BaseFilterSet):
+class ObjectPermissionFilterSet(BaseFilterSet, NameSearchFilterSet):
     users = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=get_user_model().objects.all(),
         to_field_name="username",

@@ -13,8 +13,13 @@ A simple example to override the device detail view:
 from django.shortcuts import HttpResponse
 from django.views import generic
 
+from nautobot.apps.views import ObjectPermissionRequiredMixin
 
-class DeviceViewOverride(generic.View):
+
+class DeviceViewOverride(ObjectPermissionRequiredMixin, generic.View):
+    def get_required_permission(self):
+        return "dcim.view_device"
+
     def get(self, request, *args, **kwargs):
         return HttpResponse(("Hello world! I'm a view which "
                              "overrides the device object detail view."))

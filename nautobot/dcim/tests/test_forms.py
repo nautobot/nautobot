@@ -1,8 +1,8 @@
 from django.test import TestCase
 
-from nautobot.dcim.forms import DeviceForm, DeviceFilterForm, InterfaceCreateForm, RackForm
-from nautobot.dcim.choices import DeviceFaceChoices, InterfaceTypeChoices, RackWidthChoices
-
+from nautobot.core.testing.forms import FormTestCases
+from nautobot.dcim.choices import DeviceFaceChoices, InterfaceModeChoices, InterfaceTypeChoices, RackWidthChoices
+from nautobot.dcim.forms import DeviceFilterForm, DeviceForm, InterfaceCreateForm, InterfaceForm, RackForm
 from nautobot.dcim.models import (
     Device,
     DeviceType,
@@ -12,13 +12,18 @@ from nautobot.dcim.models import (
     Manufacturer,
     Platform,
     Rack,
+    SoftwareImageFile,
+    SoftwareVersion,
 )
-from nautobot.tenancy.models import Tenant
 from nautobot.extras.models import Role, SecretsGroup, Status
+from nautobot.ipam.models import VLAN
+from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 
 
-class DeviceTestCase(TestCase):
+class DeviceTestCase(FormTestCases.BaseFormTestCase):
+    form_class = DeviceForm
+
     def setUp(self):
         self.device_status = Status.objects.get_for_model(Device).first()
 
@@ -40,6 +45,15 @@ class DeviceTestCase(TestCase):
         cls.manufacturer = cls.device_type.manufacturer
         cls.platform = Platform.objects.filter(manufacturer=cls.device_type.manufacturer).first()
         cls.device_role = Role.objects.get_for_model(Device).first()
+        cls.software_version_contains_no_valid_image_for_device_type = SoftwareVersion.objects.create(
+            platform=cls.platform,
+            version="New version 1.0.0",
+            status=Status.objects.get_for_model(SoftwareVersion).first(),
+        )
+        cls.software_version = SoftwareVersion.objects.first()
+        cls.software_image_files = SoftwareImageFile.objects.exclude(software_version=cls.software_version).exclude(
+            default_image=True
+        )
 
         Device.objects.create(
             name="Device 1",
@@ -130,6 +144,49 @@ class DeviceTestCase(TestCase):
         )
         self.assertFalse(form.is_valid())
         self.assertIn("face", form.errors)
+
+    def test_no_software_image_file_specified_is_valid(self):
+        form = DeviceForm(
+            data={
+                "name": "New Device",
+                "role": self.device_role.pk,
+                "tenant": None,
+                "manufacturer": self.manufacturer.pk,
+                "device_type": self.device_type.pk,
+                "location": self.location.pk,
+                "rack": None,
+                "face": None,
+                "position": None,
+                "platform": self.platform.pk,
+                "status": self.device_status.pk,
+                "secrets_group": SecretsGroup.objects.first().pk,
+                "software_version": self.software_version_contains_no_valid_image_for_device_type.pk,
+                "software_image_files": [],
+            }
+        )
+        self.assertTrue(form.is_valid())
+
+    def test_invalid_software_image_file_specified(self):
+        form = DeviceForm(
+            data={
+                "name": "New Device",
+                "role": self.device_role.pk,
+                "tenant": None,
+                "manufacturer": self.manufacturer.pk,
+                "device_type": self.device_type.pk,
+                "location": self.location.pk,
+                "rack": None,
+                "face": None,
+                "position": None,
+                "platform": self.platform.pk,
+                "status": self.device_status.pk,
+                "secrets_group": SecretsGroup.objects.first().pk,
+                "software_version": self.software_version.pk,
+                "software_image_files": list(self.software_image_files.values_list("pk", flat=True)),
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("software_image_files", form.errors)
 
     def test_non_racked_device_with_position(self):
         form = DeviceForm(
@@ -260,4 +317,50 @@ class RackTestCase(TestCase):
             "width": RackWidthChoices.WIDTH_19IN,
         }
         form = RackForm(data=data, instance=racks[0])
+        self.assertTrue(form.is_valid())
+
+
+class InterfaceTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.device = Device.objects.first()
+        status = Status.objects.get_for_model(Interface).first()
+        cls.interface = Interface.objects.create(
+            device=cls.device,
+            name="test interface form 0.0",
+            type=InterfaceTypeChoices.TYPE_2GFC_SFP,
+            status=status,
+        )
+        cls.vlan = VLAN.objects.first()
+        cls.data = {
+            "device": cls.device.pk,
+            "name": "test interface form 0.0",
+            "type": InterfaceTypeChoices.TYPE_2GFC_SFP,
+            "status": status.pk,
+            "mode": InterfaceModeChoices.MODE_TAGGED,
+            "tagged_vlans": [cls.vlan.pk],
+        }
+
+    def test_interface_form_clean_vlan_location_fail(self):
+        """Assert that form validation fails when no matching locations are associated to tagged VLAN"""
+        self.vlan.locations.set(list(Location.objects.exclude(pk=self.device.location.pk))[:2])
+        form = InterfaceForm(data=self.data, instance=self.interface)
+        self.assertFalse(form.is_valid())
+
+    def test_interface_vlan_location_clean_multiple_locations_pass(self):
+        """Assert that form validation passes when multiple locations are associated to tagged VLAN with one matching"""
+        self.vlan.locations.add(self.device.location)
+        form = InterfaceForm(data=self.data, instance=self.interface)
+        self.assertTrue(form.is_valid())
+
+    def test_interface_vlan_location_clean_single_location_pass(self):
+        """Assert that form validation passes when a single location is associated to tagged VLAN"""
+        self.vlan.locations.set([self.device.location])
+        form = InterfaceForm(data=self.data, instance=self.interface)
+        self.assertTrue(form.is_valid())
+
+    def test_interface_vlan_location_clean_no_locations_pass(self):
+        """Assert that form validation passes when no locations are associated to tagged VLAN"""
+        self.vlan.locations.clear()
+        form = InterfaceForm(data=self.data, instance=self.interface)
         self.assertTrue(form.is_valid())

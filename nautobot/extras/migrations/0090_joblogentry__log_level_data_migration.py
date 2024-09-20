@@ -1,6 +1,5 @@
 from django.db import migrations
 
-
 LOG_LEVEL_MAPPING = {
     "default": "debug",
     "success": "info",

@@ -213,7 +213,7 @@ AUTH_LDAP_CACHE_TIMEOUT = 3600
 
 Multiple servers can be supported in `django-auth-ldap` by the use of additional LDAP backends, as described in the library's [documentation](https://django-auth-ldap.readthedocs.io/en/latest/multiconfig.html).
 
-In order to define and load additional backends into Nautobot a plugin can be used. This plugin will allow the backend(s) to be loaded into the Django settings for use within the `nautobot_config.py` file. At the simplest form the plugin should have a custom backend(s) defined:
+In order to define and load additional backends into Nautobot an App can be used. This App will allow the backend(s) to be loaded into the Django settings for use within the `nautobot_config.py` file. At the simplest form the App should have a custom backend(s) defined:
 
 ```python
 # my_customer_backends.py
@@ -224,14 +224,14 @@ class LDAPBackendSecondary(LDAPBackend):
     settings_prefix = "AUTH_LDAP_SECONDARY_"
 ```
 
-If the plugin is named `nautobot_ldap_plugin`, the following snippet could be used to load the additional LDAP backend:
+If the App is named `nautobot_ldap_app`, the following snippet could be used to load the additional LDAP backend:
 
 ```python
 # nautobot_config.py
 
 AUTHENTICATION_BACKENDS = [
     'django_auth_ldap.backend.LDAPBackend',
-    'nautobot_ldap_plugin.my_customer_backends.LDAPBackendSecondary',  # path to the custom LDAP Backend
+    'nautobot_ldap_app.my_customer_backends.LDAPBackendSecondary',  # path to the custom LDAP Backend
     'nautobot.core.authentication.ObjectPermissionBackend',
 ]
 ```
@@ -244,7 +244,7 @@ Once the custom backend is loaded into the settings all the configuration items 
 # Server URI which uses django_auth_ldap.backend.LDAPBackend
 AUTH_LDAP_SERVER_URI = "ldap://ad.example.com"
 
-# Server URI which uses nautobot_ldap_plugin.my_customer_backends.LDAPBackendSecondary
+# Server URI which uses nautobot_ldap_app.my_customer_backends.LDAPBackendSecondary
 AUTH_LDAP_SECONDARY_SERVER_URI = "ldap://secondary-ad.example.com"
 ```
 
@@ -255,7 +255,7 @@ AUTH_LDAP_SECONDARY_SERVER_URI = "ldap://secondary-ad.example.com"
 
 `systemctl restart nautobot` restarts the Nautobot service, and initiates any changes made to `nautobot_config.py`. If there are syntax errors present, the Nautobot process will not spawn an instance, and errors should be logged to `/var/log/messages`.
 
-For troubleshooting LDAP user/group queries, add or merge the following [logging](../../configuration/optional-settings.md#logging) configuration to `nautobot_config.py`:
+For troubleshooting LDAP user/group queries, add or merge the following [logging](../../configuration/settings.md#logging) configuration to `nautobot_config.py`:
 
 ```python
 LOGGING = {
@@ -283,4 +283,4 @@ Ensure the file and path specified in logfile exist and are writable and executa
 
 ---
 
-Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings.md#external_auth_default_permissions) next.
+Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/settings.md#external_auth_default_permissions) next.

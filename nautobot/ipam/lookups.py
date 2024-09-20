@@ -1,7 +1,6 @@
-import netaddr
-from django.db import NotSupportedError
-from django.db import connection as _connection
+from django.db import connection as _connection, NotSupportedError
 from django.db.models import Lookup, lookups
+import netaddr
 
 
 def _mysql_varbin_to_broadcast():

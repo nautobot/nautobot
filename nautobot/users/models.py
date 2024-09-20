@@ -10,10 +10,11 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMixin
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.utils.data import flatten_dict
-
+from nautobot.extras.models.change_logging import ChangeLoggedModel
 
 __all__ = (
     "AdminGroup",
@@ -53,10 +54,20 @@ class User(BaseModel, AbstractUser):
     """
 
     config_data = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
+    default_saved_views = models.ManyToManyField(
+        to="extras.SavedView",
+        related_name="users",
+        through="extras.UserSavedViewAssociation",
+        through_fields=("user", "saved_view"),
+        blank=True,
+        verbose_name="user-specific default saved views",
+        help_text="User specific default saved views",
+    )
 
     # TODO: we don't currently have a general "Users" guide.
     documentation_static_path = "docs/development/core/user-preferences.html"
     objects = UserManager()
+    is_metadata_associable_model = False
 
     class Meta:
         db_table = "auth_user"
@@ -187,10 +198,11 @@ class Token(BaseModel):
     expires = models.DateTimeField(blank=True, null=True)
     key = models.CharField(max_length=40, unique=True, validators=[MinLengthValidator(40)])
     write_enabled = models.BooleanField(default=True, help_text="Permit create/update/delete operations using this key")
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     documentation_static_path = "docs/user-guide/platform-functionality/users/token.html"
     natural_key_field_names = ["pk"]  # default would be `["key"]`, which is obviously not ideal!
+    is_metadata_associable_model = False
 
     class Meta:
         ordering = ["created"]
@@ -221,14 +233,14 @@ class Token(BaseModel):
 #
 
 
-class ObjectPermission(BaseModel):
+class ObjectPermission(BaseModel, ChangeLoggedModel):
     """
     A mapping of view, add, change, and/or delete permission for users and/or groups to an arbitrary set of objects
     identified by ORM query parameters.
     """
 
-    name = models.CharField(max_length=100, unique=True)
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     enabled = models.BooleanField(default=True)
     # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
     # pylint: disable=unsupported-binary-operation
@@ -266,6 +278,7 @@ class ObjectPermission(BaseModel):
     )
 
     documentation_static_path = "docs/user-guide/platform-functionality/users/objectpermission.html"
+    is_metadata_associable_model = False
 
     class Meta:
         ordering = ["name"]

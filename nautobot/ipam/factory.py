@@ -1,24 +1,25 @@
 import datetime
 import logging
-
-import factory
-import faker
 import math
 
+from django.contrib.contenttypes.models import ContentType
+import factory
+import faker
+
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.factory import (
+    get_random_instances,
     NautobotBoolIterator,
     OrganizationalModelFactory,
     PrimaryModelFactory,
-    UniqueFaker,
-    get_random_instances,
     random_instance,
+    UniqueFaker,
 )
 from nautobot.dcim.models import Location
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import PrefixTypeChoices
-from nautobot.ipam.models import IPAddress, Prefix, RIR, RouteTarget, VLAN, VLANGroup, VRF, Namespace
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, RIR, RouteTarget, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
-
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class RIRFactory(OrganizationalModelFactory):
     is_private = factory.LazyAttribute(lambda rir: rir.name.startswith("RFC"))
 
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
 
 def random_route_distinguisher():
@@ -51,7 +52,7 @@ def random_route_distinguisher():
     fake = faker.Faker()
     branch = fake.pyint(0, 2)
     if branch == 0:
-        # 16-bit ASNs 64496–64511 are reserved for documentation and sample code
+        # 16-bit ASNs 64496-64511 are reserved for documentation and sample code
         return f"{fake.pyint(64496, 64511)}:{fake.pyint(0, 2**32 - 1)}"
     if branch == 1:
         return f"{fake.ipv4_private()}:{fake.pyint(0, 2**16 - 1)}"
@@ -72,7 +73,7 @@ class RouteTargetFactory(PrimaryModelFactory):
     name = factory.LazyFunction(random_route_distinguisher)
 
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
     has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
@@ -83,7 +84,7 @@ class VRFFactory(PrimaryModelFactory):
         model = VRF
         exclude = (
             "has_description",
-            "has_rd",
+            "has_status",
             "has_tenant",
         )
 
@@ -92,14 +93,21 @@ class VRFFactory(PrimaryModelFactory):
 
     # RD needs to be globally unique, but the random route-distinguisher generation space is large enough that
     # we'll deal with collisions as and when they occur.
-    has_rd = NautobotBoolIterator()
-    rd = factory.Maybe("has_rd", factory.LazyFunction(random_route_distinguisher), None)
+    # TODO Need to figure out a way to guarantee uniqueness on the VRF model, as namespace <-> rd combination composite key
+    # is not guaranteed to be unique since rd is nullable.
+    # Making rd not nullable on the randomly generated data to pass test_composite_key() uniqueness test here.
+    rd = factory.LazyFunction(random_route_distinguisher)
 
     has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
+
+    has_status = NautobotBoolIterator()
+    status = factory.Maybe(
+        "has_status", random_instance(lambda: Status.objects.get_for_model(VRF), allow_null=False), None
+    )
 
     namespace = random_instance(Namespace, allow_null=False)
 
@@ -131,13 +139,10 @@ class VLANGroupFactory(OrganizationalModelFactory):
     class Params:
         unique_name = UniqueFaker("word", part_of_speech="noun")
 
-    # TODO: name is not globally unique, but (location, name) tuple must be.
-    # The likelihood of collision with random names is pretty low, but non-zero.
-    # We might want to consider *intentionally* using non-globally-unique names for testing purposes?
     name = factory.LazyAttribute(lambda o: o.unique_name.upper())
 
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
     has_location = NautobotBoolIterator()
     location = factory.Maybe(
@@ -175,9 +180,9 @@ class VLANFactory(PrimaryModelFactory):
         exclude = (
             "has_description",
             "has_vlan_group",
-            "has_location",
             "has_role",
             "has_tenant",
+            "has_location",
         )
 
     # TODO: VID and name do not need to be globally unique, but must be unique within a group (if any)
@@ -197,14 +202,12 @@ class VLANFactory(PrimaryModelFactory):
                         f"{o.vid:04d}",  # "0001" rather than "1", for more consistent names
                         faker.Faker().word(part_of_speech="adjective"),
                         o.vlan_group,  # may be None
-                        o.location,  # may be None
                     ),
                 )
             ]
-        )[
-            :255
-        ]  # truncate to max VLAN.name length just to be safe
+        )[:255]  # truncate to max VLAN.name length just to be safe
     )
+    has_location = NautobotBoolIterator()
 
     status = random_instance(lambda: Status.objects.get_for_model(VLAN), allow_null=False)
     has_role = NautobotBoolIterator()
@@ -215,30 +218,31 @@ class VLANFactory(PrimaryModelFactory):
     )
 
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
     has_vlan_group = NautobotBoolIterator()
     vlan_group = factory.Maybe("has_vlan_group", random_instance(VLANGroup, allow_null=False), None)
 
-    has_location = NautobotBoolIterator()
-    location = factory.Maybe(
-        "has_vlan_group",
-        factory.LazyAttribute(lambda vlan: vlan.vlan_group.location),
-        factory.Maybe("has_location", random_instance(Location, allow_null=False), None),
-    )
-
     has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
+
+    @factory.post_generation
+    def locations(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.locations.set(extracted)
+            else:
+                vlan_ct = ContentType.objects.get_for_model(VLAN)
+                self.locations.set(
+                    get_random_instances(
+                        lambda: Location.objects.filter(location_type__content_types__in=[vlan_ct]), minimum=0
+                    )
+                )
 
 
 class VLANGetOrCreateFactory(VLANFactory):
     class Meta:
-        django_get_or_create = ("vlan_group", "location", "tenant")
-
-    vlan_group = factory.SubFactory(
-        VLANGroupGetOrCreateFactory,
-        location=factory.SelfAttribute("..location"),
-    )
+        django_get_or_create = ("vlan_group", "vid")
 
 
 class VRFGetOrCreateFactory(VRFFactory):
@@ -254,7 +258,7 @@ class NamespaceFactory(PrimaryModelFactory):
     class Meta:
         model = Namespace
 
-    name = UniqueFaker("text", max_nb_chars=20)
+    name = UniqueFaker("text", max_nb_chars=20)  # could be up to CHARFIELD_MAX_LENGTH but that gets unwieldy fast
 
 
 class PrefixFactory(PrimaryModelFactory):
@@ -283,7 +287,7 @@ class PrefixFactory(PrimaryModelFactory):
     class Params:
         has_date_allocated = NautobotBoolIterator()
         has_description = NautobotBoolIterator()
-        has_location = NautobotBoolIterator()
+        has_locations = NautobotBoolIterator()
         has_rir = NautobotBoolIterator()
         has_role = NautobotBoolIterator()
         has_tenant = NautobotBoolIterator()
@@ -296,11 +300,7 @@ class PrefixFactory(PrimaryModelFactory):
         UniqueFaker("ipv6_network"),
         UniqueFaker("ipv4", network=True),
     )
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
-    # TODO: create a LocationGetOrCreateFactory to get or create a location
-    location = factory.Maybe(
-        "has_location", random_instance(lambda: Location.objects.get_for_model(Prefix), allow_null=False), None
-    )
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
     role = factory.Maybe(
         "has_role",
         random_instance(lambda: Role.objects.get_for_model(Prefix), allow_null=False),
@@ -313,7 +313,6 @@ class PrefixFactory(PrimaryModelFactory):
         "has_vlan",
         factory.SubFactory(
             VLANGetOrCreateFactory,
-            location=factory.SelfAttribute("..location"),
             tenant=factory.SelfAttribute("..tenant"),
         ),
         None,
@@ -327,6 +326,19 @@ class PrefixFactory(PrimaryModelFactory):
     # )
     rir = factory.Maybe("has_rir", random_instance(RIR, allow_null=False), None)
     date_allocated = factory.Maybe("has_date_allocated", factory.Faker("date_time", tzinfo=datetime.timezone.utc), None)
+
+    @factory.post_generation
+    def locations(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.locations.set(extracted)
+            else:
+                prefix_ct = ContentType.objects.get_for_model(Prefix)
+                self.locations.set(
+                    get_random_instances(
+                        lambda: Location.objects.filter(location_type__content_types__in=[prefix_ct]), minimum=0
+                    )
+                )
 
     @factory.post_generation
     def children(self, create, extracted, **kwargs):
@@ -352,7 +364,7 @@ class PrefixFactory(PrimaryModelFactory):
             return
 
         # 50% chance to create children
-        if not faker.Faker().pybool():
+        if factory.random.randgen.choice([True, False]):
             return
 
         action = "create" if create else "build"
@@ -371,9 +383,9 @@ class PrefixFactory(PrimaryModelFactory):
 
         # Default to maximum of 4 children unless overridden in kwargs
         max_count = int(kwargs.pop("max_count", 4))
-        child_count = faker.Faker().pyint(min_value=0, max_value=min(max_count, self.prefix.size))
-        if child_count == 0:
+        if max_count == 0:
             return
+        child_count = faker.Faker().pyint(min_value=1, max_value=min(max_count, self.prefix.size))
 
         # Propagate parent tenant to children if parent tenant is set
         if self.tenant is not None:
@@ -398,21 +410,17 @@ class PrefixFactory(PrimaryModelFactory):
             if child_cidr > 128 or self.ip_version == 4 and child_cidr > 32:
                 raise ValueError(f"Unable to create {child_count} child prefixes in container prefix {self.cidr_str}.")
 
-            if self.type == PrefixTypeChoices.TYPE_CONTAINER:
-                weights = [10, 1]  # prefer network prefixes
-                child_type = factory.random.randgen.choices(
-                    [PrefixTypeChoices.TYPE_NETWORK, PrefixTypeChoices.TYPE_CONTAINER], weights
-                )[0]
-            else:
-                child_type = PrefixTypeChoices.TYPE_POOL
+            weights = [1, 6, 3]  # prefer network and pool prefixes
+            child_type = factory.random.randgen.choices(
+                [PrefixTypeChoices.TYPE_CONTAINER, PrefixTypeChoices.TYPE_NETWORK, PrefixTypeChoices.TYPE_POOL], weights
+            )[0]
 
-            # Create child prefixes, preserving location, vrf and is_ipv6 from parent
+            # Create child prefixes, preserving is_ipv6 from parent
             for count, address in enumerate(self.prefix.subnet(child_cidr)):
                 if count == child_count:
                     break
                 method(
                     prefix=str(address.cidr),
-                    location=self.location,
                     is_ipv6=is_ipv6,
                     has_rir=False,
                     namespace=self.namespace,
@@ -458,7 +466,7 @@ class IPAddressFactory(PrimaryModelFactory):
     #     UniqueFaker("ipv6"),
     #     UniqueFaker("ipv4_private"),
     # )
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
     dns_name = factory.Maybe("has_dns_name", factory.Faker("hostname"), "")
     # TODO: Needs to be made more robust because prefixes and namespaces need to exist first
     # nat_inside = factory.SubFactory(

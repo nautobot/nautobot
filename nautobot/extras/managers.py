@@ -1,6 +1,5 @@
 from celery import states
 from django.utils import timezone
-from django_celery_beat.managers import ExtendedManager
 from django_celery_results.managers import TaskResultManager, transaction_retry
 
 from nautobot.core.models import BaseManager
@@ -8,6 +7,20 @@ from nautobot.core.models.querysets import RestrictedQuerySet
 
 
 class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResultManager):
+    def get_task(self, task_id):
+        """Get result for task by ``task_id``.
+
+        This overloads `TaskResultManager.get_task` provided by `django-celery-results` to manage custom
+        behaviors for integration with Nautobot.
+        """
+        try:
+            return self.get(id=task_id)
+        except self.model.DoesNotExist:
+            if self._last_id == task_id:
+                self.warn_if_repeatable_read()
+            self._last_id = task_id
+            return self.model(id=task_id)
+
     @transaction_retry(max_retries=2)
     def store_result(
         self,
@@ -122,5 +135,5 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
         return obj
 
 
-class ScheduledJobsManager(BaseManager.from_queryset(RestrictedQuerySet), ExtendedManager):
+class ScheduledJobsManager(BaseManager.from_queryset(RestrictedQuerySet)):
     pass

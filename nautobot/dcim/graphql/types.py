@@ -3,6 +3,21 @@ import graphene
 from nautobot.circuits.graphql.types import CircuitTerminationType
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import construct_resolver
+from nautobot.dcim.filters import (
+    CableFilterSet,
+    ConsolePortFilterSet,
+    ConsoleServerPortFilterSet,
+    DeviceFilterSet,
+    FrontPortFilterSet,
+    InterfaceFilterSet,
+    LocationFilterSet,
+    PlatformFilterSet,
+    PowerFeedFilterSet,
+    PowerOutletFilterSet,
+    PowerPortFilterSet,
+    RackFilterSet,
+    RearPortFilterSet,
+)
 from nautobot.dcim.graphql.mixins import CableTerminationMixin, PathEndpointMixin
 from nautobot.dcim.models import (
     Cable,
@@ -11,8 +26,8 @@ from nautobot.dcim.models import (
     ConsoleServerPort,
     Device,
     FrontPort,
-    Location,
     Interface,
+    Location,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -20,22 +35,6 @@ from nautobot.dcim.models import (
     Rack,
     RearPort,
 )
-from nautobot.dcim.filters import (
-    CableFilterSet,
-    ConsoleServerPortFilterSet,
-    ConsolePortFilterSet,
-    DeviceFilterSet,
-    FrontPortFilterSet,
-    InterfaceFilterSet,
-    PlatformFilterSet,
-    PowerFeedFilterSet,
-    PowerOutletFilterSet,
-    PowerPortFilterSet,
-    RackFilterSet,
-    RearPortFilterSet,
-    LocationFilterSet,
-)
-from nautobot.extras.graphql.types import TagType  # noqa: F401
 from nautobot.extras.models import DynamicGroup
 
 
@@ -59,7 +58,7 @@ class DeviceType(OptimizedNautobotObjectType):
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self, use_cache=True)
+        return DynamicGroup.objects.get_for_object(self)
 
 
 class PlatformType(OptimizedNautobotObjectType):
@@ -83,7 +82,7 @@ class RackType(OptimizedNautobotObjectType):
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self, use_cache=True)
+        return DynamicGroup.objects.get_for_object(self)
 
 
 class CableType(OptimizedNautobotObjectType):

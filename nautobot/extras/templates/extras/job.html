@@ -28,7 +28,7 @@
     <div class="tab-content">
         <div role="tabpanel" class="tab-pane active" id="run">
             <div class="row">
-                <div class="col-md-6 col-md-offset-3">
+                <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
                     {% if not perms.extras.run_job %}
                         <div class="alert alert-warning">
                             <i class="mdi mdi-alert"></i>
@@ -67,7 +67,9 @@
                                 <strong>Job Data</strong>
                             </div>
                             <div class="panel-body">
-                                {% render_form job_form excluded_fields="[]" %}
+                                {% block job_form %}
+                                    {% render_form job_form excluded_fields="[]" %}
+                                {% endblock %}
                             </div>
                             {% if job_model.has_sensitive_variables %}
                                 <div class="panel-footer">
@@ -83,7 +85,9 @@
                                 <strong>Job Execution</strong>
                             </div>
                             <div class="panel-body">
-                                {% render_form schedule_form %}
+                                {% block schedule_form %}
+                                    {% render_form schedule_form %}
+                                {% endblock %}
                             </div>
                             {% if job_model.approval_required %}
                                 <div class="panel-footer">

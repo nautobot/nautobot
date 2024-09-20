@@ -5,7 +5,6 @@ from django.contrib.contenttypes.models import ContentType
 
 from nautobot.extras.choices import LogLevelChoices
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -16,6 +15,9 @@ def files_from_contenttype_directories(base_path, job_result, log_grouping):
     Returns:
         (Tuple[ContentType, file_path]): A tuple of the ContentType and the file path.
     """
+    if not os.path.isdir(base_path):
+        return
+
     for app_label in os.listdir(base_path):
         app_label_path = os.path.join(base_path, app_label)
         if not os.path.isdir(app_label_path):

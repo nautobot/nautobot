@@ -7,13 +7,13 @@ class NautobotUIViewSet(
     mixins.ObjectEditViewMixin,
     mixins.ObjectDestroyViewMixin,
     mixins.ObjectBulkDestroyViewMixin,
-    mixins.ObjectBulkCreateViewMixin,
+    mixins.ObjectBulkCreateViewMixin,  # 3.0 TODO: remove, no longer needed after ImportObjects system Job.
     mixins.ObjectBulkUpdateViewMixin,
     mixins.ObjectChangeLogViewMixin,
     mixins.ObjectNotesViewMixin,
 ):
     """
     Nautobot BaseViewSet that is intended for UI use only. It provides default Nautobot functionalities such as
-    `create()`, `bulk_create()`, `update()`, `partial_update()`, `bulk_update()`, `destroy()`, `bulk_destroy()`, `retrieve()`
+    `create()`, `update()`, `partial_update()`, `bulk_update()`, `destroy()`, `bulk_destroy()`, `retrieve()`
     `notes()`, `changelog()` and `list()` actions.
     """

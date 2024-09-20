@@ -1,14 +1,14 @@
 from collections import OrderedDict
 
 from django import template
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-from nautobot.extras.models import Job, JobButton
 from nautobot.core.utils.data import render_jinja2
-
+from nautobot.extras.models import Job, JobButton
 
 register = template.Library()
 
@@ -28,6 +28,7 @@ HIDDEN_INPUTS = """
 <input type="hidden" name="object_pk" value="{object_pk}">
 <input type="hidden" name="object_model_name" value="{object_model_name}">
 <input type="hidden" name="_schedule_type" value="immediately">
+<input type="hidden" name="_task_queue" value="{task_queue}">
 <input type="hidden" name="_return_url" value="{redirect_path}">
 """
 
@@ -70,7 +71,7 @@ CONFIRM_MODAL = """
 </div>
 """
 
-SAFE_EMPTY_STR = mark_safe("")  # noqa: S308
+SAFE_EMPTY_STR = mark_safe("")  # noqa: S308  # suspicious-mark-safe-usage -- this one is safe
 
 
 def _render_job_button_for_obj(job_button, obj, context, content_type):
@@ -106,12 +107,17 @@ def _render_job_button_for_obj(job_button, obj, context, content_type):
 
     # Disable buttons if the user doesn't have permission to run the underlying Job.
     has_run_perm = Job.objects.check_perms(context["user"], instance=job_button.job, action="run")
+    try:
+        _task_queue = job_button.job.task_queues[0]
+    except IndexError:
+        _task_queue = settings.CELERY_TASK_DEFAULT_QUEUE
     hidden_inputs = format_html(
         HIDDEN_INPUTS,
         csrf_token=context["csrf_token"],
         object_pk=obj.pk,
         object_model_name=f"{content_type.app_label}.{content_type.model}",
         redirect_path=context["request"].path,
+        task_queue=_task_queue,
     )
     template_args = {
         "button_id": job_button.pk,
@@ -121,7 +127,7 @@ def _render_job_button_for_obj(job_button, obj, context, content_type):
         "object": obj,
         "job": job_button.job,
         "hidden_inputs": hidden_inputs,
-        "disabled": "" if has_run_perm else "disabled",
+        "disabled": "" if (has_run_perm and job_button.job.installed and job_button.job.enabled) else "disabled",
     }
 
     if job_button.confirmation:
@@ -143,7 +149,7 @@ def job_buttons(context, obj):
     """
     content_type = ContentType.objects.get_for_model(obj)
     # We will enforce "run" permission later in deciding which buttons to show as disabled.
-    buttons = JobButton.objects.filter(content_types=content_type)
+    buttons = JobButton.objects.filter(content_types=content_type, enabled=True)
     if not buttons:
         return SAFE_EMPTY_STR
 

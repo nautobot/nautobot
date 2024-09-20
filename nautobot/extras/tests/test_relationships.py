@@ -15,12 +15,22 @@ from nautobot.core.tables import RelationshipColumn
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.utils.lookup import get_route_for_model
-from nautobot.dcim.models import Device, Platform, Rack, Location, LocationType
+from nautobot.dcim.forms import DeviceForm
+from nautobot.dcim.models import (
+    Controller,
+    Device,
+    DeviceType,
+    DeviceTypeToSoftwareImageFile,
+    Location,
+    LocationType,
+    Platform,
+    Rack,
+)
 from nautobot.dcim.tables import LocationTable
 from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
-from nautobot.extras.models import Relationship, RelationshipAssociation, Status
+from nautobot.extras.models import Relationship, RelationshipAssociation, Role, Status
+from nautobot.ipam.models import VLAN, VLANGroup
 
 
 class RelationshipBaseTest:
@@ -126,8 +136,8 @@ class RelationshipBaseTest:
         cls.m2ms_1.validated_save()
 
         # Relationships involving a content type that doesn't actually have a backing model.
-        # This can occur in practice if, for example, a relationship is defined for a plugin-defined model,
-        # then the plugin is subsequently uninstalled or deactivated.
+        # This can occur in practice if, for example, a relationship is defined for an App-defined model,
+        # then the App is subsequently uninstalled or deactivated.
         cls.invalid_ct = ContentType.objects.create(app_label="nonexistent", model="nosuchmodel")
 
         # Don't use validated_save() on these as it will fail due to the invalid content-type
@@ -427,6 +437,274 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
             "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
             str(error.exception),
         )
+
+    def test_get_for_model_caching_and_cache_invalidation(self):
+        """Test that the cache is used and is properly invalidated when Relationships are created or deleted."""
+
+        manager = Relationship.objects
+        manager_methods = [
+            (manager.get_for_model, 2),
+            (manager.get_for_model_source, 1),
+            (manager.get_for_model_destination, 1),
+        ]
+
+        for manager_method, expected_queries in manager_methods:
+            with self.subTest(manager_method=manager_method.__name__):
+                manager_method(Location)
+
+                # Assert that the cache is used when calling method a second time
+                with self.assertNumQueries(0):
+                    manager_method(Location)
+
+                # Assert that different models are cached separately
+                with self.assertNumQueries(expected_queries):
+                    manager_method(Rack)
+                with self.assertNumQueries(0):
+                    manager_method(Rack)
+                with self.assertNumQueries(0):
+                    manager_method(Location)
+
+                # Assert that the cache is invalidated on object save
+                relationship = Relationship(
+                    label="Test Relationship 1",
+                    key="test_relationship_1",
+                    source_type=self.location_ct,
+                    destination_type=self.location_ct,
+                    source_label="Location",
+                    destination_filter={"name": ["location-b"]},
+                    type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+                )
+                relationship.save()
+                try:
+                    with self.assertNumQueries(expected_queries):
+                        manager_method(Location)
+                    with self.assertNumQueries(0):
+                        manager_method(Location)
+                finally:
+                    # Assert that the cache is invalidated on object delete
+                    relationship.delete()
+                with self.assertNumQueries(expected_queries):
+                    manager_method(Location)
+                with self.assertNumQueries(0):
+                    manager_method(Location)
+
+    def test_required_related_object_errors(self):
+        """
+        Confirm that the fix in https://github.com/nautobot/nautobot/pull/5570 is working as expected
+        """
+        device_ct = ContentType.objects.get_for_model(Device)
+        status = Status.objects.get_for_model(Device).first()
+        device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
+        # Create a Device with role Role 1
+        role_1 = Role.objects.create(name="Role 1")
+        role_1.content_types.add(ContentType.objects.get_for_model(Device))
+        device_1 = Device.objects.create(
+            device_type=device_type, role=role_1, name="Device 1", location=self.locations[0], status=status
+        )
+        # Create a Device with role Role 2
+        role_2 = Role.objects.create(name="Role 2")
+        role_2.content_types.add(ContentType.objects.get_for_model(Device))
+        device_2 = Device.objects.create(
+            device_type=device_type, role=role_2, name="Device 2", location=self.locations[0], status=status
+        )
+        # Create a Device with role Role 3
+        role_3 = Role.objects.create(name="Role 3")
+        role_3.content_types.add(ContentType.objects.get_for_model(Device))
+        device_3 = Device.objects.create(
+            device_type=device_type, role=role_3, name="Device 3", location=self.locations[0], status=status
+        )
+        # Create a one-to-many relationship with destination required, source filter: {"role": ["Role 1"]}
+        # and destination filter {"role": ["Role 2"]}
+        relationship = Relationship.objects.create(
+            label="Device to Devices",
+            key="device_to_devices",
+            source_type=device_ct,
+            source_filter={"role": ["Role 1"]},
+            destination_type=device_ct,
+            destination_filter={"role": ["Role 2"]},
+            type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+            required_on="destination",
+        )
+        # Attempt to update device_3 which will not be in the queryset filtered by the destination filter
+        # Assert that the form is valid and no ValueError is raised.
+        update_status = Status.objects.get_for_model(Device).last()
+        update_data_for_device_3 = {
+            "location": device_3.location.pk,
+            "device_type": device_3.device_type.pk,
+            "role": device_3.role.pk,
+            "name": device_3.name,
+            "status": update_status.pk,
+        }
+        form = DeviceForm(instance=device_3, data=update_data_for_device_3)
+        self.assertTrue(form.is_valid())
+        # Attempt to update device_1 which will not be in the destination filter,
+        # but is in the source filter.
+        update_data_for_device_1 = {
+            "location": device_1.location.pk,
+            "device_type": device_1.device_type.pk,
+            "role": device_1.role.pk,
+            "name": device_1.name,
+            "status": update_status.pk,
+        }
+        form2 = DeviceForm(instance=device_1, data=update_data_for_device_1)
+        self.assertTrue(form2.is_valid())
+        # Attempt to update device_2 which will be in the destination filter, so it should
+        # require the relationship.
+        update_data_for_device_2 = {
+            "location": device_2.location.pk,
+            "device_type": device_2.device_type.pk,
+            "role": device_2.role.pk,
+            "name": "Device 2",
+            "status": update_status.pk,
+        }
+        form3 = DeviceForm(instance=device_2, data=update_data_for_device_2)
+        self.assertFalse(form3.is_valid())
+        # Device 1 has a relationship to Device 2
+        update_data_for_device_1 = {
+            "location": device_1.location.pk,
+            "device_type": device_1.device_type.pk,
+            "role": device_1.role.pk,
+            "name": device_1.name,
+            "status": update_status.pk,
+            "cr_device_to_devices__destination": [device_2.pk],
+        }
+        form4 = DeviceForm(instance=device_1, data=update_data_for_device_1)
+        self.assertTrue(form4.is_valid())
+        form4.save()
+        # Device 2 has a relationship to Device 1, form should validate and save.
+        update_data_for_device_2 = {
+            "location": device_2.location.pk,
+            "device_type": device_2.device_type.pk,
+            "role": device_2.role.pk,
+            "name": "Device 2",
+            "status": update_status.pk,
+            "cr_device_to_devices__source": device_1.pk,
+        }
+        form5 = DeviceForm(instance=device_2, data=update_data_for_device_2)
+        self.assertTrue(form5.is_valid())
+        form5.save()
+        # Device 2 has a relationship to Device 3, save should fail as Device 3 doesn't match filter.
+        update_data_for_device_2 = {
+            "location": device_2.location.pk,
+            "device_type": device_2.device_type.pk,
+            "role": device_2.role.pk,
+            "name": "Device 2",
+            "status": update_status.pk,
+            "cr_device_to_devices__source": device_3.pk,
+        }
+        form6 = DeviceForm(instance=device_2, data=update_data_for_device_2)
+        with self.assertRaises(ValidationError):
+            form6.save()
+        # Device 1 has a relationship to Device 3, save should fail as Device 3 doesn't match filter.
+        update_data_for_device_1 = {
+            "location": device_1.location.pk,
+            "device_type": device_1.device_type.pk,
+            "role": device_1.role.pk,
+            "name": "Device 1",
+            "status": update_status.pk,
+            "cr_device_to_devices__destination": [
+                device_3.pk,
+            ],
+        }
+        form6 = DeviceForm(instance=device_1, data=update_data_for_device_1)
+        with self.assertRaises(ValidationError):
+            form6.save()
+
+        relationship.required_on = "source"
+        relationship.save()
+        # Attempt to update device_3 which will not be in the queryset filtered by the destination filter
+        # Assert that the form is valid and no ValueError is raised. This ensures that an object that
+        # does not take part in any relationships can still be updated, addressing issue #5569.
+        update_status = Status.objects.get_for_model(Device).last()
+        update_data_for_device_3 = {
+            "location": device_3.location.pk,
+            "device_type": device_3.device_type.pk,
+            "role": device_3.role.pk,
+            "name": device_3.name,
+            "status": update_status.pk,
+        }
+        form = DeviceForm(instance=device_3, data=update_data_for_device_3)
+        self.assertTrue(form.is_valid())
+        # Attempt to update device_1 which will not be in the destination filter,
+        # but is in the source filter. Should fail as device_to_devices is required.
+        device_1.delete()
+        device_1 = Device.objects.create(
+            device_type=device_type, role=role_1, name="Device 1", location=self.locations[0], status=status
+        )
+        update_data_for_device_1 = {
+            "location": device_1.location.pk,
+            "device_type": device_1.device_type.pk,
+            "role": device_1.role.pk,
+            "name": device_1.name,
+            "status": update_status.pk,
+        }
+        form2 = DeviceForm(instance=device_1, data=update_data_for_device_1)
+        self.assertFalse(form2.is_valid())
+        # Attempt to update device_2 which will be in the destination filter, which should not require the
+        # relationship anymore.
+        device_2.delete()
+        device_2 = Device.objects.create(
+            device_type=device_type, role=role_2, name="Device 2", location=self.locations[0], status=status
+        )
+        update_data_for_device_2 = {
+            "location": device_2.location.pk,
+            "device_type": device_2.device_type.pk,
+            "role": device_2.role.pk,
+            "name": "Device 2",
+            "status": update_status.pk,
+        }
+        form3 = DeviceForm(instance=device_2, data=update_data_for_device_2)
+        self.assertTrue(form3.is_valid())
+        # Device 1 has a relationship to Device 2
+        update_data_for_device_1 = {
+            "location": device_1.location.pk,
+            "device_type": device_1.device_type.pk,
+            "role": device_1.role.pk,
+            "name": device_1.name,
+            "status": update_status.pk,
+            "cr_device_to_devices__destination": [device_2.pk],
+        }
+        form4 = DeviceForm(instance=device_1, data=update_data_for_device_1)
+        self.assertTrue(form4.is_valid())
+        form4.save()
+        # Device 2 has a relationship to Device 1, form should validate and save.
+        update_data_for_device_2 = {
+            "location": device_2.location.pk,
+            "device_type": device_2.device_type.pk,
+            "role": device_2.role.pk,
+            "name": "Device 2",
+            "status": update_status.pk,
+            "cr_device_to_devices__source": device_1.pk,
+        }
+        form5 = DeviceForm(instance=device_2, data=update_data_for_device_2)
+        self.assertTrue(form5.is_valid())
+        form5.save()
+        # Device 2 has a relationship to Device 3, save should fail as Device 3 doesn't match filter.
+        update_data_for_device_2 = {
+            "location": device_2.location.pk,
+            "device_type": device_2.device_type.pk,
+            "role": device_2.role.pk,
+            "name": "Device 2",
+            "status": update_status.pk,
+            "cr_device_to_devices__source": device_3.pk,
+        }
+        form6 = DeviceForm(instance=device_2, data=update_data_for_device_2)
+        with self.assertRaises(ValidationError):
+            form6.save()
+        # Device 1 has a relationship to Device 3, save should fail as Device 3 doesn't match filter.
+        update_data_for_device_1 = {
+            "location": device_1.location.pk,
+            "device_type": device_1.device_type.pk,
+            "role": device_1.role.pk,
+            "name": "Device 1",
+            "status": update_status.pk,
+            "cr_device_to_devices__destination": [
+                device_3.pk,
+            ],
+        }
+        form6 = DeviceForm(instance=device_1, data=update_data_for_device_1)
+        with self.assertRaises(ValidationError):
+            form6.save()
 
 
 class RelationshipAssociationTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
@@ -1112,6 +1390,11 @@ class RequiredRelationshipTestMixin:
            =================================================================
 
         """
+        # Protected FK to SoftwareImageFile prevents deletion
+        DeviceTypeToSoftwareImageFile.objects.all().delete()
+        # Protected FK to SoftwareVersion prevents deletion
+        Controller.objects.all().delete()
+        Device.objects.all().update(software_version=None)
 
         # Create required relationships:
         device_ct = ContentType.objects.get_for_model(Device)
@@ -1296,6 +1579,7 @@ class RequiredRelationshipTestMixin:
                 self.assertEqual(from_model.objects.count(), existing_count)
 
                 # 3. Try creating an object when all required data is present
+                related_objects_data = {}
                 if interact_with == "ui":
                     related_objects_data = {related_field_name: required_object_pks}
 
@@ -1368,7 +1652,7 @@ class RequiredRelationshipTestMixin:
                     # Object is updated with the required relationship data (succeeds)
                     response = self.send_data(
                         from_model,
-                        {**{"name": f'{params["create_data"]["name"]} edited'}, **related_objects_data},
+                        {"name": f'{params["create_data"]["name"]} edited', **related_objects_data},
                         interact_with,
                         action="edit",
                         url_kwargs={"pk": newly_created_object.pk},

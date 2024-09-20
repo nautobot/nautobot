@@ -1,18 +1,23 @@
 import datetime
+from io import BytesIO
+import urllib.parse
 
 from django.contrib import messages
-from django.core.exceptions import FieldError
+from django.core.exceptions import FieldError, ValidationError
 from django.db.models import ForeignKey
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
-
-from rest_framework import serializers
+from django_tables2 import RequestConfig
+from rest_framework import exceptions, serializers
 
 from nautobot.core.api.fields import ChoiceField, ContentTypeField, TimeZoneSerializerField
+from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.models.utils import is_taggable
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_filter_field_label
-from nautobot.core.utils.lookup import get_form_for_model
+from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model, get_form_for_model
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
 
 
 def check_filter_for_display(filters, field_name, values):
@@ -97,6 +102,8 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
     """From the given serializer class, build a list of field dicts suitable for rendering in the CSV import form."""
     serializer = serializer_class(context={"request": None, "depth": 0})
     fields = []
+    # Note lots of "noqa: S308" in this function. That's `suspicious-mark-safe-usage`, but in all of the below cases
+    # we control the input string and it's known to be safe, so mark_safe() is being used correctly here.
     for field_name, field in serializer.fields.items():
         if field.read_only:
             continue
@@ -110,6 +117,7 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
                 field_info = {
                     "name": cf.add_prefix_to_cf_key(),
                     "required": cf_form_field.required,
+                    "foreign_key": False,
                     "label": cf_form_field.label,
                     "help_text": cf_form_field.help_text,
                 }
@@ -128,6 +136,7 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
         field_info = {
             "name": field_name,
             "required": field.required,
+            "foreign_key": False,
             "label": field.label,
             "help_text": field.help_text,
         }
@@ -145,12 +154,14 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
             elif isinstance(field.child_relation, ContentTypeField):
                 field_info["format"] = mark_safe('<code>"app_label.model,app_label.model"</code>')  # noqa: S308
             else:
-                field_info["format"] = mark_safe('<code>"UUID,UUID"</code>')  # noqa: S308
+                field_info["foreign_key"] = field.child_relation.queryset.model._meta.label_lower
+                field_info["format"] = mark_safe('<code>"UUID,UUID"</code> or combination of fields')  # noqa: S308
         elif isinstance(field, serializers.RelatedField):
             if isinstance(field, ContentTypeField):
                 field_info["format"] = mark_safe("<code>app_label.model</code>")  # noqa: S308
             else:
-                field_info["format"] = mark_safe("<code>UUID</code>")  # noqa: S308
+                field_info["foreign_key"] = field.queryset.model._meta.label_lower
+                field_info["format"] = mark_safe("<code>UUID</code> or combination of fields")  # noqa: S308
         elif isinstance(field, (serializers.ListField, serializers.MultipleChoiceField)):
             field_info["format"] = mark_safe('<code>"value,value"</code>')  # noqa: S308
         elif isinstance(field, (serializers.DictField, serializers.JSONField)):
@@ -167,6 +178,34 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
     return fields
 
 
+def import_csv_helper(*, request, form, serializer_class):
+    field_name = "csv_file" if request.FILES else "csv_data"
+    csvtext = form.cleaned_data[field_name]
+    try:
+        data = NautobotCSVParser().parse(
+            stream=BytesIO(csvtext.encode("utf-8")),
+            parser_context={"request": request, "serializer_class": serializer_class},
+        )
+        new_objs = []
+        validation_failed = False
+        for row, entry in enumerate(data, start=1):
+            serializer = serializer_class(data=entry, context={"request": request})
+            if serializer.is_valid():
+                new_objs.append(serializer.save())
+            else:
+                validation_failed = True
+                for field, err in serializer.errors.items():
+                    form.add_error(field_name, f"Row {row}: {field}: {err[0]}")
+    except exceptions.ParseError as exc:
+        validation_failed = True
+        form.add_error(None, str(exc))
+
+    if validation_failed:
+        raise ValidationError("")
+
+    return new_objs
+
+
 def handle_protectederror(obj_list, request, e):
     """
     Generate a user-friendly error message in response to a ProtectedError exception.
@@ -179,11 +218,28 @@ def handle_protectederror(obj_list, request, e):
         protected_count,
     )
 
+    # Format objects based on whether they have a detail view/absolute url
+    objects_with_absolute_url = []
+    objects_without_absolute_url = []
     # Append dependent objects to error message
+    for dependent in protected_objects[:50]:
+        try:
+            dependent.get_absolute_url()
+            objects_with_absolute_url.append(dependent)
+        except AttributeError:
+            objects_without_absolute_url.append(dependent)
+
     err_message += format_html_join(
         ", ",
         '<a href="{}">{}</a>',
-        ((dependent.get_absolute_url(), dependent) for dependent in protected_objects[:50]),
+        ((dependent.get_absolute_url(), dependent) for dependent in objects_with_absolute_url),
+    )
+    if objects_with_absolute_url and objects_without_absolute_url:
+        err_message += format_html(", ")
+    err_message += format_html_join(
+        ", ",
+        "<span>{}</span>",
+        ((dependent,) for dependent in objects_without_absolute_url),
     )
 
     messages.error(request, err_message)
@@ -234,7 +290,84 @@ def prepare_cloned_fields(instance):
         for tag in instance.tags.all():
             params.append(("tags", tag.pk))
 
-    # Concatenate parameters into a URL query string
-    param_string = "&".join([f"{k}={v}" for k, v in params])
+    # Encode the parameters into a URL query string
+    param_string = urllib.parse.urlencode(params)
 
     return param_string
+
+
+def view_changes_not_saved(request, view, current_saved_view):
+    """
+    Compare request.GET's query dict with the configuration stored on the current saved view
+    If there is any configuration different, return True
+    If every configuration is the same, return False
+    """
+    if current_saved_view is None:
+        return True
+    query_dict = request.GET.dict()
+
+    if "table_changes_pending" in query_dict or "all_filters_removed" in query_dict:
+        return True
+    per_page = int(query_dict.get("per_page", 0))
+    if per_page and per_page != current_saved_view.config.get("pagination_count"):
+        return True
+    sort = request.GET.getlist("sort", [])
+    if sort and sort != current_saved_view.config.get("sort_order", []):
+        return True
+    query_dict_keys = sorted(list(query_dict.keys()))
+    for param in view.non_filter_params:
+        if param in query_dict_keys:
+            query_dict_keys.remove(param)
+    filter_params = current_saved_view.config.get("filter_params", {})
+
+    if query_dict_keys:
+        if set(query_dict_keys) != set(filter_params.keys()):
+            return True
+        for key, value in filter_params.items():
+            if set(value) != set(request.GET.getlist(key)):
+                return True
+    return False
+
+
+def common_detail_view_context(request, instance):
+    """Additional template context for object detail views, shared by both ObjectView and NautobotHTMLRenderer."""
+    context = {}
+
+    created_by, last_updated_by = get_created_and_last_updated_usernames_for_model(instance)
+    context["created_by"] = created_by
+    context["last_updated_by"] = last_updated_by
+
+    if getattr(instance, "is_contact_associable_model", False):
+        paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        associations = instance.associated_contacts.restrict(request.user, "view").order_by("role__name")
+        associations_table = AssociatedContactsTable(associations, orderable=False)
+        RequestConfig(request, paginate).configure(associations_table)
+        associations_table.columns.show("pk")
+        context["associated_contacts_table"] = associations_table
+    else:
+        context["associated_contacts_table"] = None
+
+    if getattr(instance, "is_dynamic_group_associable_model", False):
+        paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        dynamic_groups = instance.dynamic_groups.restrict(request.user, "view")
+        dynamic_groups_table = DynamicGroupTable(dynamic_groups, orderable=False)
+        dynamic_groups_table.columns.hide("content_type")
+        RequestConfig(request, paginate).configure(dynamic_groups_table)
+        # dynamic_groups_table.columns.show("pk")  # we don't have any supported bulk ops here presently
+        context["associated_dynamic_groups_table"] = dynamic_groups_table
+    else:
+        context["associated_dynamic_groups_table"] = None
+
+    if getattr(instance, "is_metadata_associable_model", False):
+        paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        object_metadata = instance.associated_object_metadata.restrict(request.user, "view").order_by(
+            "metadata_type", "scoped_fields"
+        )
+        object_metadata_table = ObjectMetadataTable(object_metadata, orderable=False)
+        object_metadata_table.columns.hide("assigned_object")
+        RequestConfig(request, paginate).configure(object_metadata_table)
+        context["associated_object_metadata_table"] = object_metadata_table
+    else:
+        context["associated_object_metadata_table"] = None
+
+    return context

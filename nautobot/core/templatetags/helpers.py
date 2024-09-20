@@ -2,25 +2,29 @@ import datetime
 import json
 import logging
 import re
+from urllib.parse import parse_qs
 
 from django import template
 from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.staticfiles.finders import find
-from django.templatetags.static import StaticNode, static
+from django.core.exceptions import ObjectDoesNotExist
+from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
-from django.utils.html import format_html, strip_tags
-from django.utils.text import slugify as django_slugify
+from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
+from django.utils.text import slugify as django_slugify
 from django_jinja import library
 from markdown import markdown
 import yaml
 
 from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
-from nautobot.core.utils import color, config, data, lookup
-from nautobot.core.utils.navigation import is_route_new_ui_ready
+from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
+# S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
 HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
 HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')  # noqa: S308
 HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')  # noqa: S308
@@ -71,14 +75,25 @@ def hyperlinked_object(value, field="display"):
         >>> hyperlinked_object(location, "name")
         '<a href="/dcim/locations/leaf/">Leaf</a>'
     """
-    if value is None:
+    return _build_hyperlink(value, field)
+
+
+@library.filter()
+@register.filter()
+def hyperlinked_email(value):
+    """Render an email address as a `mailto:` hyperlink."""
+    if not value:
         return placeholder(value)
-    display = getattr(value, field) if hasattr(value, field) else str(value)
-    if hasattr(value, "get_absolute_url"):
-        if hasattr(value, "description") and value.description:
-            return format_html('<a href="{}" title="{}">{}</a>', value.get_absolute_url(), value.description, display)
-        return format_html('<a href="{}">{}</a>', value.get_absolute_url(), display)
-    return format_html("{}", display)
+    return format_html('<a href="mailto:{}">{}</a>', value, value)
+
+
+@library.filter()
+@register.filter()
+def hyperlinked_phone_number(value):
+    """Render a phone number as a `tel:` hyperlink."""
+    if not value:
+        return placeholder(value)
+    return format_html('<a href="tel:{}">{}</a>', value, value)
 
 
 @library.filter()
@@ -124,7 +139,7 @@ def add_html_id(element_str, id_str):
     match = re.match(r"^(.*?<\w+) ?(.*)$", element_str, flags=re.DOTALL)
     if not match:
         return element_str
-    return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))  # noqa: S308
+    return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))  # noqa: S308  # suspicious-mark-safe-usage
 
 
 @library.filter()
@@ -170,36 +185,47 @@ def render_markdown(value):
     Example:
         {{ text | render_markdown }}
     """
-    # Strip HTML tags
-    value = strip_tags(value)
-
-    # Sanitize Markdown links
-    schemes = "|".join(settings.ALLOWED_URL_SCHEMES)
-    pattern = rf"\[(.+)\]\((?!({schemes})).*:(.+)\)"
-    value = re.sub(pattern, "[\\1](\\3)", value, flags=re.IGNORECASE)
-
     # Render Markdown
     html = markdown(value, extensions=["fenced_code", "tables"])
 
-    return mark_safe(html)  # noqa: S308
+    # Sanitize rendered HTML
+    html = nautobot_logging.clean_html(html)
+
+    return mark_safe(html)  # noqa: S308  # suspicious-mark-safe-usage, OK here since we sanitized the string earlier
 
 
 @library.filter()
 @register.filter()
-def render_json(value):
+def render_json(value, syntax_highlight=True, pretty_print=False):
     """
     Render a dictionary as formatted JSON.
+
+    Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a
+    `<code class="language-json>` HTML tag to flag it for syntax highlighting by highlight.js.
     """
-    return json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
+    rendered_json = json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
+    if syntax_highlight:
+        html_string = '<code class="language-json">{}</code>'
+        if pretty_print:
+            html_string = "<pre>" + html_string + "</pre>"
+        return format_html(html_string, rendered_json)
+
+    return rendered_json
 
 
 @library.filter()
 @register.filter()
-def render_yaml(value):
+def render_yaml(value, syntax_highlight=True):
     """
     Render a dictionary as formatted YAML.
+
+    Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a
+    `<code class="language-yaml>` HTML tag to flag it for syntax highlighting by highlight.js.
     """
-    return yaml.dump(json.loads(json.dumps(value, ensure_ascii=False)), allow_unicode=True)
+    rendered_yaml = yaml.dump(json.loads(json.dumps(value, ensure_ascii=False)), allow_unicode=True)
+    if syntax_highlight:
+        return format_html('<code class="language-yaml">{}</code>', rendered_yaml)
+    return rendered_yaml
 
 
 @library.filter()
@@ -563,6 +589,33 @@ def slugify(value):
     return django_slugify(value)
 
 
+@library.filter()
+@register.filter()
+def render_uptime(seconds):
+    """Format a value in seconds to a human readable value.
+
+    Example:
+        >>> render_uptime(1024768)
+        "11 days 20 hours 39 minutes"
+    """
+    try:
+        seconds = int(seconds)
+    except ValueError:
+        return placeholder(seconds)
+    delta = datetime.timedelta(seconds=seconds)
+    uptime_hours = delta.seconds // 3600
+    uptime_minutes = delta.seconds // 60 % 60
+    return format_html(
+        "{} {} {} {} {} {}",
+        delta.days,
+        "days" if delta.days != 1 else "day",
+        uptime_hours,
+        "hours" if uptime_hours != 1 else "hour",
+        uptime_minutes,
+        "minutes" if uptime_minutes != 1 else "minute",
+    )
+
+
 #
 # Tags
 #
@@ -589,6 +642,23 @@ def querystring(request, **kwargs):
         return "?" + query_string
     else:
         return ""
+
+
+@register.simple_tag()
+def table_config_button(table, table_name=None, extra_classes=""):
+    if table_name is None:
+        table_name = table.__class__.__name__
+    html_template = (
+        '<button type="button" class="btn btn-default {}'
+        '" data-toggle="modal" data-target="#{}_config" title="Configure table">'
+        '<i class="mdi mdi-cog"></i> Configure</button>'
+    )
+    return format_html(html_template, extra_classes, table_name)
+
+
+@register.simple_tag()
+def table_config_button_small(table, table_name=None):
+    return table_config_button(table, table_name, "btn-xs")
 
 
 @register.inclusion_tag("utilities/templatetags/utilization_graph.html")
@@ -696,6 +766,121 @@ def filter_form_modal(
     }
 
 
+@register.inclusion_tag("utilities/templatetags/saved_view_modal.html")
+def saved_view_modal(
+    params,
+    view,
+    model,
+    request,
+):
+    from nautobot.extras.forms import SavedViewModalForm
+    from nautobot.extras.models import SavedView
+
+    param_dict = {}
+    filters_applied = parse_qs(params)
+
+    sort_order = []
+    per_page = None
+    table_changes_pending = False
+    all_filters_removed = False
+    current_saved_view = None
+    current_saved_view_pk = None
+    non_filter_params = [
+        "all_filters_removed",
+        "page",
+        "per_page",
+        "sort",
+        "saved_view",
+        "table_changes_pending",
+        "clear_view",
+    ]
+
+    table_name = lookup.get_table_for_model(model).__name__
+    for param in non_filter_params:
+        if param == "saved_view":
+            current_saved_view_pk = filters_applied.pop(param, None)
+            if current_saved_view_pk:
+                current_saved_view_pk = current_saved_view_pk[0]
+                try:
+                    # We are not using .restrict(request.user, "view") here
+                    # User should be able to see any saved view that he has the list view access to.
+                    current_saved_view = SavedView.objects.get(pk=current_saved_view_pk)
+                except ObjectDoesNotExist:
+                    messages.error(request, f"Saved view {current_saved_view_pk} not found")
+
+        elif param == "table_changes_pending":
+            table_changes_pending = filters_applied.pop(param, False)
+        elif param == "all_filters_removed":
+            all_filters_removed = filters_applied.pop(param, False)
+        elif param == "per_page":
+            per_page = filters_applied.pop(param, None)
+        elif param == "sort":
+            sort_order = filters_applied.pop(param, [])
+        elif param == "clear_view":
+            filters_applied.pop(param, False)
+
+    if filters_applied:
+        param_dict["filter_params"] = filters_applied
+    else:
+        if (current_saved_view is not None and all_filters_removed) or (current_saved_view is None):
+            # user removed all the filters in a saved view
+            param_dict["filter_params"] = {}
+        elif current_saved_view is not None:
+            # user did not make any changes to the saved view filter params
+            param_dict["filter_params"] = current_saved_view.config.get("filter_params", {})
+
+    if current_saved_view is not None and not table_changes_pending:
+        # user did not make any changes to the saved view table config
+        view_table_config = current_saved_view.config.get("table_config", {}).get(f"{table_name}", None)
+        if view_table_config is not None:
+            param_dict["table_config"] = view_table_config.get("columns", [])
+    else:
+        # display default user display
+        if request.user is not None and not isinstance(request.user, AnonymousUser):
+            param_dict["table_config"] = request.user.get_config(f"tables.{table_name}.columns")
+    # If both are not available, do not display table_config
+
+    if per_page:
+        # user made changes to saved view pagination count
+        param_dict["per_page"] = per_page
+    elif current_saved_view is not None and not per_page:
+        # no changes made, display current saved view pagination count
+        param_dict["per_page"] = current_saved_view.config.get(
+            "pagination_count", config.get_settings_or_config("PAGINATE_COUNT")
+        )
+    else:
+        # display default pagination count
+        param_dict["per_page"] = config.get_settings_or_config("PAGINATE_COUNT")
+
+    if sort_order:
+        # user made changes to saved view sort order
+        param_dict["sort_order"] = sort_order
+    elif current_saved_view is not None and not sort_order:
+        # no changes made, display current saved view sort order
+        param_dict["sort_order"] = current_saved_view.config.get("sort_order", [])
+    else:
+        # no sorting applied
+        param_dict["sort_order"] = []
+
+    param_dict = json.dumps(param_dict, indent=4, sort_keys=True, ensure_ascii=False)
+    return {
+        "form": SavedViewModalForm(),
+        "params": params,
+        "param_dict": param_dict,
+        "view": view,
+    }
+
+
+@register.inclusion_tag("utilities/templatetags/dynamic_group_assignment_modal.html")
+def dynamic_group_assignment_modal(request, content_type):
+    from nautobot.extras.forms import DynamicGroupBulkAssignForm
+
+    return {
+        "request": request,
+        "form": DynamicGroupBulkAssignForm(model=content_type.model_class()),
+    }
+
+
 @register.inclusion_tag("utilities/templatetags/modal_form_as_dialog.html")
 def modal_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type=None):
     """Generate a form in a modal view.
@@ -763,6 +948,24 @@ def versioned_static(file_path):
     return add_nautobot_version_query_param_to_url(url)
 
 
+@register.simple_tag
+def tree_hierarchy_ui_representation(tree_depth, hide_hierarchy_ui):
+    """Generates a visual representation of a tree record hierarchy using dots.
+
+    Args:
+        tree_depth (range): A range representing the depth of the tree nodes.
+        hide_hierarchy_ui (bool): Indicates whether to hide the hierarchy UI.
+
+    Returns:
+        str: A string containing dots (representing hierarchy levels) if `hide_hierarchy_ui` is False,
+             otherwise an empty string.
+    """
+    if hide_hierarchy_ui or tree_depth == 0:
+        return ""
+    ui_representation = " ".join(['<i class="mdi mdi-circle-small"></i>' for _ in tree_depth])
+    return mark_safe(ui_representation)  # noqa: S308 # suspicious-mark-safe-usage, OK here since its just the `i` tag
+
+
 @library.filter()
 @register.filter()
 def hyperlinked_object_with_color(obj):
@@ -770,7 +973,7 @@ def hyperlinked_object_with_color(obj):
     if obj:
         content = f'<span class="label" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{hyperlinked_object(obj)}</span>'
         return format_html(content)
-    return "—"
+    return HTML_NONE
 
 
 @register.filter()
@@ -781,12 +984,68 @@ def queryset_to_pks(obj):
     return ",".join(result)
 
 
-#
-# Navigation
-#
-
-
+@library.filter()
 @register.filter()
-def is_new_ui_ready(url_path):
-    """Return True if url_path is NewUI Ready else False"""
-    return is_route_new_ui_ready(url_path)
+def hyperlinked_object_target_new_tab(value, field="display"):
+    """Render and link to a Django model instance, if any, or render a placeholder if not.
+
+    Similar to the hyperlinked_object filter, but passes attributes needed to open the link in new tab.
+
+    Uses the specified object field if available, otherwise uses the string representation of the object.
+    If the object defines `get_absolute_url()` this will be used to hyperlink the displayed object;
+    additionally if there is an `object.description` this will be used as the title of the hyperlink.
+
+    Args:
+        value (Union[django.db.models.Model, None]): Instance of a Django model or None.
+        field (Optional[str]): Name of the field to use for the display value. Defaults to "display".
+
+    Returns:
+        (str): String representation of the value (hyperlinked if it defines get_absolute_url()) or a placeholder.
+
+    Examples:
+        >>> hyperlinked_object_target_new_tab(device)
+        '<a href="/dcim/devices/3faafe8c-bdd6-4317-88dc-f791e6988caa/" target="_blank" rel="noreferrer">Device 1</a>'
+        >>> hyperlinked_object_target_new_tab(device_role)
+        '<a href="/dcim/device-roles/router/" title="Devices that are routers, not switches" target="_blank" rel="noreferrer">Router</a>'
+        >>> hyperlinked_object_target_new_tab(None)
+        '<span class="text-muted">&mdash;</span>'
+        >>> hyperlinked_object_target_new_tab("Hello")
+        'Hello'
+        >>> hyperlinked_object_target_new_tab(location)
+        '<a href="/dcim/locations/leaf/" target="_blank" rel="noreferrer">Root → Intermediate → Leaf</a>'
+        >>> hyperlinked_object_target_new_tab(location, "name")
+        '<a href="/dcim/locations/leaf/" target="_blank" rel="noreferrer">Leaf</a>'
+    """
+    return _build_hyperlink(value, field, target="_blank", rel="noreferrer")
+
+
+def _build_hyperlink(value, field="", target="", rel=""):
+    """Internal function used by filters to build hyperlinks.
+
+    Args:
+        value (Union[django.db.models.Model, None]): Instance of a Django model or None.
+        field (Optional[str]): Name of the field to use for the display value. Defaults to "display".
+        target (Optional[str]): Location to open the linked document.  Defaults to "" which is _self.
+        rel (Optional[str]): Relationship between current document and linked document. Defaults to "".
+
+    Returns:
+        (str): String representation of the value (hyperlinked if it defines get_absolute_url()) or a placeholder.
+    """
+    if value is None:
+        return placeholder(value)
+
+    attributes = {}
+    display = getattr(value, field) if hasattr(value, field) else str(value)
+    if hasattr(value, "get_absolute_url"):
+        try:
+            attributes["href"] = value.get_absolute_url()
+            if hasattr(value, "description") and value.description:
+                attributes["title"] = value.description
+            if target:
+                attributes["target"] = target
+            if rel:
+                attributes["rel"] = rel
+            return format_html("<a {}>{}</a>", format_html_join(" ", '{}="{}"', attributes.items()), display)
+        except AttributeError:
+            pass
+    return format_html("{}", display)

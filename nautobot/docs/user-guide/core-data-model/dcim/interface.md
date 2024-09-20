@@ -1,6 +1,6 @@
 # Interfaces
 
-Interfaces in Nautobot represent network interfaces used to exchange data with connected devices. On modern networks, these are most commonly Ethernet, but other types are supported as well. Each interface must be assigned a type, an operational [`status`](../../platform-functionality/status.md) and may optionally be assigned a MAC address, MTU, and IEEE 802.1Q mode (tagged or access). Each interface can also be enabled or disabled, and optionally designated as management-only (for out-of-band management).
+Interfaces in Nautobot represent network interfaces used to exchange data with connected devices. On modern networks, these are most commonly Ethernet, but other types are supported as well. Each interface must be assigned a type, an operational [`status`](../../platform-functionality/status.md) and may optionally be assigned a MAC address, MTU, IEEE 802.1Q mode (tagged or access) and an operational [`role`](../../platform-functionality/role.md). Each interface can also be enabled or disabled, and optionally designated as management-only (for out-of-band management).
 
 The following operational statuses are available by default:
 
@@ -32,3 +32,9 @@ IP addresses can be assigned to interfaces. VLANs can also be assigned to each i
 
 +++ 1.6.0
     Interfaces can now be assigned to an [Interface Redundancy Group](./interfaceredundancygroup.md) to represent redundancy protocols such as HSRP or VRRP.
+
++++ 2.3.0
+    Interfaces now have an optional `role` field and can be assigned [Role](../../platform-functionality/role.md) instances to track common configurations.
+
++/- 2.3.0
+    This model has been updated to support being installed in [Modules](module.md). As a result, there are now two fields for assignment to a Device or Module. One of the `device` or `module` fields must be populated but not both. If a `module` is supplied, the `device` field must be null, and similarly the `module` field must be null if a `device` is supplied.

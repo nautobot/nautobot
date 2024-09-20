@@ -1,9 +1,8 @@
 from nautobot.core.api.routers import OrderedDefaultRouter
+
 from . import views
 
-
-router = OrderedDefaultRouter()
-router.APIRootView = views.CircuitsRootView
+router = OrderedDefaultRouter(view_name="Circuits")
 
 # Providers
 router.register("providers", views.ProviderViewSet)

@@ -1,6 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Q
+from django.db.models import Model, Q
 import django_filters
+from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import verbose_lookup_expr
 
 from nautobot.core.constants import (
@@ -14,7 +15,6 @@ from nautobot.core.filters import (
 )
 from nautobot.dcim.models import Device
 from nautobot.extras.choices import (
-    CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
     RelationshipSideChoices,
 )
@@ -28,12 +28,12 @@ from nautobot.extras.filters.customfields import (
     CustomFieldMultiValueDateFilter,
     CustomFieldMultiValueNumberFilter,
     CustomFieldNumberFilter,
+    CustomFieldSelectFilter,
 )
 from nautobot.extras.models import (
     ConfigContextSchema,
     CustomField,
     Relationship,
-    RelationshipAssociation,
     Role,
     Status,
 )
@@ -62,17 +62,19 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
         super().__init__(*args, **kwargs)
 
         custom_field_filter_classes = {
+            # Here, for the "base" filters for each custom field, for backwards compatibility, use single-value filters.
+            # For the "extended" filters, see below, we use multi-value filters.
+            # 3.0 TODO: switch the "base" filters to multi-value filters as well.
             CustomFieldTypeChoices.TYPE_DATE: CustomFieldDateFilter,
             CustomFieldTypeChoices.TYPE_BOOLEAN: CustomFieldBooleanFilter,
             CustomFieldTypeChoices.TYPE_INTEGER: CustomFieldNumberFilter,
             CustomFieldTypeChoices.TYPE_JSON: CustomFieldJSONFilter,
+            # The below are multi-value filters already:
             CustomFieldTypeChoices.TYPE_MULTISELECT: CustomFieldMultiSelectFilter,
-            CustomFieldTypeChoices.TYPE_SELECT: CustomFieldMultiSelectFilter,
+            CustomFieldTypeChoices.TYPE_SELECT: CustomFieldSelectFilter,
         }
 
-        custom_fields = CustomField.objects.filter(
-            content_types=ContentType.objects.get_for_model(self._meta.model)
-        ).exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
+        custom_fields = CustomField.objects.get_for_model(self._meta.model, exclude_filter_disabled=True)
         for cf in custom_fields:
             # Determine filter class for this CustomField type, default to CustomFieldCharFilter
             new_filter_name = cf.add_prefix_to_cf_key()
@@ -175,49 +177,32 @@ class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
         self.side = side
         super().__init__(queryset=queryset, *args, **kwargs)
 
+    def generate_query(self, value, **kwargs):
+        query = Q()
+
+        value = [v.pk if isinstance(v, Model) else v for v in value]
+
+        if self.side in (RelationshipSideChoices.SIDE_SOURCE, RelationshipSideChoices.SIDE_PEER):
+            query |= Q(
+                source_for_associations__relationship=self.relationship.id,
+                source_for_associations__destination_id__in=value,
+            )
+        if self.side in (RelationshipSideChoices.SIDE_DESTINATION, RelationshipSideChoices.SIDE_PEER):
+            query |= Q(
+                destination_for_associations__relationship=self.relationship.id,
+                destination_for_associations__source_id__in=value,
+            )
+        return query
+
     def filter(self, qs, value):
-        value = [entry.id for entry in value]
-        # Check if value is empty or a DynamicChoiceField that is empty.
-        if not value or "" in value:
-            # if value is empty we return the entire unmodified queryset
+        if not value or any(v in EMPTY_VALUES for v in value):
             return qs
-        else:
-            if self.side == "source":
-                values = RelationshipAssociation.objects.filter(
-                    destination_id__in=value,
-                    source_type=self.relationship.source_type,
-                    relationship=self.relationship,
-                ).values_list("source_id", flat=True)
-            elif self.side == "destination":
-                values = RelationshipAssociation.objects.filter(
-                    source_id__in=value,
-                    destination_type=self.relationship.destination_type,
-                    relationship=self.relationship,
-                ).values_list("destination_id", flat=True)
-            else:
-                destinations = RelationshipAssociation.objects.filter(
-                    source_id__in=value,
-                    destination_type=self.relationship.destination_type,
-                    relationship=self.relationship,
-                ).values_list("destination_id", flat=True)
 
-                sources = RelationshipAssociation.objects.filter(
-                    destination_id__in=value,
-                    source_type=self.relationship.source_type,
-                    relationship=self.relationship,
-                ).values_list("source_id", flat=True)
-
-                values = list(destinations) + list(sources)
-
-            # ModelMultipleChoiceFilters always have `distinct=True` so we must make sure that the
-            # unioned queryset is also distinct. We also need to conditionally check if the incoming
-            # `qs` is distinct in the case that a caller is manually passing in a queryset that may
-            # not be distinct. (Ref: https://github.com/nautobot/nautobot/issues/2963)
-            union_qs = self.get_method(self.qs)(Q(**{"id__in": values}))
-            if qs.query.distinct:
-                union_qs = union_qs.distinct()
-
-            return qs & union_qs
+        query = self.generate_query(value)
+        result = self.get_method(qs)(query)
+        if self.distinct:
+            result = result.distinct()
+        return result
 
 
 class RelationshipModelFilterSetMixin(django_filters.FilterSet):
@@ -235,16 +220,13 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
         """
         Append form fields for all Relationships assigned to this model.
         """
-        query = Q(source_type=self.obj_type, source_hidden=False) | Q(
-            destination_type=self.obj_type, destination_hidden=False
-        )
-        relationships = Relationship.objects.select_related("source_type", "destination_type").filter(query)
+        src_relationships, dst_relationships = Relationship.objects.get_for_model(model=model, hidden=False)
 
-        for rel in relationships.iterator():
-            if rel.source_type == self.obj_type and not rel.source_hidden:
-                self._append_relationships_side([rel], RelationshipSideChoices.SIDE_SOURCE, model)
-            if rel.destination_type == self.obj_type and not rel.destination_hidden:
-                self._append_relationships_side([rel], RelationshipSideChoices.SIDE_DESTINATION, model)
+        for rel in src_relationships:
+            self._append_relationships_side([rel], RelationshipSideChoices.SIDE_SOURCE, model)
+
+        for rel in dst_relationships:
+            self._append_relationships_side([rel], RelationshipSideChoices.SIDE_DESTINATION, model)
 
     def _append_relationships_side(self, relationships, initial_side, model):
         """
@@ -304,7 +286,17 @@ class RoleModelFilterSetMixin(django_filters.FilterSet):
     Mixin to add a `role` filter field to a FilterSet.
     """
 
-    role = RoleFilter()
+    @classmethod
+    def get_filters(cls):
+        filters = super().get_filters()
+
+        if cls._meta.model is not None:
+            filters["role"] = RoleFilter(
+                field_name="role",
+                query_params={"content_types": [cls._meta.model._meta.label_lower]},
+            )
+
+        return filters
 
 
 class StatusFilter(NaturalKeyOrPKMultipleChoiceFilter):
@@ -323,4 +315,14 @@ class StatusModelFilterSetMixin(django_filters.FilterSet):
     Mixin to add a `status` filter field to a FilterSet.
     """
 
-    status = StatusFilter()
+    @classmethod
+    def get_filters(cls):
+        filters = super().get_filters()
+
+        if cls._meta.model is not None:
+            filters["status"] = StatusFilter(
+                field_name="status",
+                query_params={"content_types": [cls._meta.model._meta.label_lower]},
+            )
+
+        return filters

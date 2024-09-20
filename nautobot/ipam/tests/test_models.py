@@ -1,11 +1,11 @@
 from unittest import skipIf
 
-import netaddr
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import connection, IntegrityError
 from django.db.models import ProtectedError
 from django.test import TestCase
+import netaddr
 
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim import choices as dcim_choices
@@ -13,6 +13,7 @@ from nautobot.dcim.models import Device, DeviceType, Interface, Location, Locati
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
+    get_default_namespace,
     IPAddress,
     IPAddressToInterface,
     Namespace,
@@ -23,7 +24,6 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
-    get_default_namespace,
 )
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
@@ -44,25 +44,30 @@ class IPAddressToInterfaceTest(TestCase):
             status=Status.objects.get_for_model(Device).first(),
         )
         int_status = Status.objects.get_for_model(Interface).first()
+        int_role = Role.objects.get_for_model(Interface).first()
         cls.test_int1 = Interface.objects.create(
             device=cls.test_device,
             name="int1",
             status=int_status,
+            role=int_role,
             type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
         )
         cls.test_int2 = Interface.objects.create(
             device=cls.test_device,
             name="int2",
             status=int_status,
+            role=int_role,
             type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
         )
         cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="cluster1", cluster_type=cluster_type)
         vmint_status = Status.objects.get_for_model(VMInterface).first()
+        vmint_role = Role.objects.get_for_model(VMInterface).first()
         cls.test_vm = VirtualMachine.objects.create(
             name="vm1",
             cluster=cluster,
             status=Status.objects.get_for_model(VirtualMachine).first(),
+            role=vmint_role,
         )
         cls.test_vmint1 = VMInterface.objects.create(
             name="vmint1",
@@ -73,6 +78,7 @@ class IPAddressToInterfaceTest(TestCase):
             name="vmint2",
             virtual_machine=cls.test_vm,
             status=vmint_status,
+            role=vmint_role,
         )
 
     def test_removing_ip_addresses_containing_host_device_primary_ip_nullifies_host_device_primary_ip(self):
@@ -295,13 +301,114 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.child1 = Prefix.objects.create(prefix="101.102.0.0/26", status=self.status, namespace=self.namespace)
         self.child2 = Prefix.objects.create(prefix="101.102.0.64/26", status=self.status, namespace=self.namespace)
 
+    def test_location_queries(self):
+        locations = Location.objects.all()[:4]
+        for location in locations:
+            location.location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
+        for i in range(10):
+            pfx = Prefix.objects.create(prefix=f"1.1.1.{4*i}/30", status=self.status, namespace=self.namespace)
+            if i > 4:
+                pfx.locations.set(locations)
+
+        with self.subTest("Assert filtering and excluding `location`"):
+            self.assertQuerysetEqualAndNotEmpty(
+                Prefix.objects.filter(location=locations[0]),
+                Prefix.objects.filter(locations__in=[locations[0]]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                Prefix.objects.exclude(location=locations[0]),
+                Prefix.objects.exclude(locations__in=[locations[0]]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                Prefix.objects.filter(location__in=[locations[0]]),
+                Prefix.objects.filter(locations__in=[locations[0]]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                Prefix.objects.exclude(location__in=[locations[0]]),
+                Prefix.objects.exclude(locations__in=[locations[0]]),
+            )
+
+        # We use `assertQuerysetEqualAndNotEmpty` for test validation. Including a nullable field could lead
+        # to flaky tests where querysets might return None, causing tests to fail. Therefore, we select
+        # fields that consistently contain values to ensure reliable filtering.
+        query_params = ["name", "location_type", "status"]
+
+        for field_name in query_params:
+            with self.subTest(f"Assert location__{field_name} query."):
+                value = getattr(locations[0], field_name)
+                self.assertQuerysetEqualAndNotEmpty(
+                    Prefix.objects.filter(**{f"location__{field_name}": value}),
+                    Prefix.objects.filter(**{f"locations__{field_name}": value}),
+                )
+                self.assertQuerysetEqualAndNotEmpty(
+                    Prefix.objects.exclude(**{f"location__{field_name}": value}),
+                    Prefix.objects.exclude(**{f"locations__{field_name}": value}),
+                )
+
     def test_prefix_validation(self):
         location_type = LocationType.objects.get(name="Room")
         location = Location.objects.filter(location_type=location_type).first()
         prefix = Prefix(prefix="192.0.2.0/24", location=location, status=self.statuses[0])
         with self.assertRaises(ValidationError) as cm:
             prefix.validated_save()
-        self.assertIn(f'Prefixes may not associate to locations of type "{location_type.name}"', str(cm.exception))
+        self.assertIn(f"Prefixes may not associate to Locations of types {[location_type.name]}", str(cm.exception))
+
+    def test_location_validation(self):
+        location_type = LocationType.objects.get(name="Room")
+        location = Location.objects.filter(location_type=location_type).first()
+        with self.assertRaises(ValidationError) as cm:
+            location.prefixes.add(self.root)
+        self.assertIn(f"{location} is a Room and may not have Prefixes associated to it.", str(cm.exception))
+
+    def test_create_field_population(self):
+        """Test the various ways of creating a Prefix all result in correctly populated fields."""
+        with self.subTest("Creation with a prefix and status"):
+            prefix = Prefix(prefix="192.0.3.0/24", status=self.status)
+            prefix.save()
+            self.assertEqual(prefix.network, "192.0.3.0")
+            self.assertEqual(prefix.broadcast, "192.0.3.255")
+            self.assertEqual(prefix.prefix_length, 24)
+            self.assertEqual(prefix.type, PrefixTypeChoices.TYPE_NETWORK)  # default value
+            # parent field is tested exhaustively below
+            self.assertEqual(prefix.ip_version, 4)
+            self.assertEqual(prefix.namespace, get_default_namespace())  # default value
+
+        with self.subTest("Creation with a network, broadcast, and prefix_length"):
+            prefix = Prefix(network="192.0.4.0", broadcast="192.0.4.255", prefix_length=24, status=self.status)
+            prefix.save()
+            self.assertEqual(prefix.network, "192.0.4.0")
+            self.assertEqual(prefix.broadcast, "192.0.4.255")
+            self.assertEqual(prefix.prefix_length, 24)
+            self.assertEqual(prefix.type, PrefixTypeChoices.TYPE_NETWORK)  # default value
+            # parent field is tested exhaustively below
+            self.assertEqual(prefix.ip_version, 4)
+            self.assertEqual(prefix.namespace, get_default_namespace())  # default value
+            self.assertEqual(prefix.prefix, netaddr.IPNetwork("192.0.4.0/24"))
+
+        with self.subTest("Creation with conflicting values - prefix takes precedence"):
+            prefix = Prefix(
+                prefix="192.0.5.0/24",
+                status=self.status,
+                network="1.1.1.1",
+                broadcast="2.2.2.2",
+                prefix_length=27,
+                ip_version=6,
+            )
+            prefix.save()
+            self.assertEqual(prefix.network, "192.0.5.0")
+            self.assertEqual(prefix.broadcast, "192.0.5.255")
+            self.assertEqual(prefix.prefix_length, 24)
+            self.assertEqual(prefix.ip_version, 4)
+
+        with self.subTest("Creation with conflicting values - network and prefix_length take precedence"):
+            prefix = Prefix(
+                status=self.status, network="192.0.6.0", prefix_length=24, broadcast="192.0.6.127", ip_version=6
+            )
+            prefix.save()
+            self.assertEqual(prefix.network, "192.0.6.0")
+            self.assertEqual(prefix.broadcast, "192.0.6.255")
+            self.assertEqual(prefix.prefix_length, 24)
+            self.assertEqual(prefix.ip_version, 4)
 
     def test_tree_methods(self):
         """Test the various tree methods work as expected."""
@@ -855,6 +962,126 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         self.status = Status.objects.get(name="Active")
         self.prefix = Prefix.objects.create(prefix="192.0.2.0/24", status=self.status, namespace=self.namespace)
 
+    def test_get_or_create(self):
+        """Assert `get_or_create` method to permit specifying a namespace as an alternative to a parent prefix."""
+        default_namespace = get_default_namespace()
+        namespace = Namespace.objects.create(name="Test Namespace")
+
+        ipaddr_status = Status.objects.get_for_model(IPAddress).first()
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+
+        parent = Prefix.objects.create(prefix="10.1.1.0/24", namespace=namespace, status=prefix_status)
+        default_namespace_parent = Prefix.objects.create(
+            prefix="10.0.0.0/24", namespace=default_namespace, status=prefix_status
+        )
+
+        ipaddress = IPAddress.objects.create(address="10.1.1.1/24", namespace=namespace, status=ipaddr_status)
+        default_namespace_ipaddress = IPAddress.objects.create(
+            address="10.0.0.1/24", namespace=default_namespace, status=ipaddr_status
+        )
+        mask_length = 24
+
+        with self.subTest("Assert retrieve"):
+            ip_obj, created = IPAddress.objects.get_or_create(
+                host=ipaddress.host,
+                mask_length=mask_length,
+                namespace=namespace,
+                status=ipaddr_status,
+            )
+            self.assertEqual(ip_obj, ipaddress)
+            self.assertFalse(created)
+
+            ip_obj, created = IPAddress.objects.get_or_create(host=ipaddress.host, status=ipaddr_status)
+            self.assertEqual(ip_obj.status, ipaddr_status)
+            self.assertFalse(created)
+
+        with self.subTest(
+            "Assert get_or_create utilizes default namespace when retrieving parent if no namespace is provided"
+        ):
+            ip_obj, created = IPAddress.objects.get_or_create(
+                host=default_namespace_ipaddress.host,
+                mask_length=default_namespace_ipaddress.mask_length,
+                status=ipaddr_status,
+            )
+            self.assertEqual(ip_obj, default_namespace_ipaddress)
+            self.assertFalse(created)
+
+        with self.subTest("Assert create"):
+            new_host = "10.0.0.2"
+            ip_obj, created = IPAddress.objects.get_or_create(
+                host=new_host,
+                mask_length=mask_length,
+                status=ipaddr_status,
+            )
+            self.assertEqual(ip_obj.host, new_host)
+            self.assertEqual(ip_obj.mask_length, mask_length)
+            self.assertEqual(ip_obj.parent, default_namespace_parent)
+            self.assertEqual(ip_obj.parent.namespace, default_namespace)
+            self.assertTrue(created)
+
+        with self.subTest("Assert create explicitly defining a non default namespace"):
+            new_host = "10.1.1.2"
+            ip_obj, created = IPAddress.objects.get_or_create(
+                host=new_host, mask_length=mask_length, status=ipaddr_status, namespace=namespace
+            )
+            self.assertEqual(ip_obj.host, new_host)
+            self.assertEqual(ip_obj.mask_length, mask_length)
+            self.assertEqual(ip_obj.parent, parent)
+            self.assertEqual(ip_obj.parent.namespace, namespace)
+            self.assertTrue(created)
+
+        with self.subTest("Assert passing invalid host/mask_length"):
+            with self.assertRaises(ValidationError) as err:
+                IPAddress.objects.get_or_create(
+                    host="0.000.0", mask_length=mask_length, status=ipaddr_status, namespace=namespace
+                )
+            self.assertIn(
+                "Enter a valid IPv4 or IPv6 address.",
+                str(err.exception),
+            )
+            with self.assertRaises(ValidationError) as err:
+                IPAddress.objects.get_or_create(
+                    host=ipaddress.host, mask_length=5712, status=ipaddr_status, namespace=namespace
+                )
+            self.assertIn(
+                f"{ipaddress.host}/5712 does not appear to be an IPv4 or IPv6 network.",
+                str(err.exception),
+            )
+
+    def test_create_field_population(self):
+        """Test that the various ways of creating an IPAddress result in correctly populated fields."""
+        if self.namespace != get_default_namespace():
+            prefix = Prefix.objects.create(prefix="192.0.2.0/24", status=self.status, namespace=get_default_namespace())
+        else:
+            prefix = self.prefix
+
+        with self.subTest("Creation with an address"):
+            ip = IPAddress(address="192.0.2.1/24", status=self.status)
+            ip.save()
+            self.assertEqual(ip.host, "192.0.2.1")
+            self.assertEqual(ip.mask_length, 24)
+            self.assertEqual(ip.type, IPAddressTypeChoices.TYPE_HOST)  # default value
+            self.assertEqual(ip.parent, prefix)
+            self.assertEqual(ip.ip_version, 4)
+
+        with self.subTest("Creation with a host and mask_length"):
+            ip = IPAddress(host="192.0.2.2", mask_length=24, status=self.status)
+            ip.save()
+            self.assertEqual(ip.host, "192.0.2.2")
+            self.assertEqual(ip.mask_length, 24)
+            self.assertEqual(ip.type, IPAddressTypeChoices.TYPE_HOST)  # default value
+            self.assertEqual(ip.parent, prefix)
+            self.assertEqual(ip.ip_version, 4)
+
+        with self.subTest("Creation with conflicting values - address takes precedence"):
+            ip = IPAddress(address="192.0.2.3/24", host="1.1.1.1", mask_length=32, ip_version=6, status=self.status)
+            ip.save()
+            self.assertEqual(ip.host, "192.0.2.3")
+            self.assertEqual(ip.mask_length, 24)
+            self.assertEqual(ip.type, IPAddressTypeChoices.TYPE_HOST)  # default value
+            self.assertEqual(ip.parent, prefix)
+            self.assertEqual(ip.ip_version, 4)
+
     #
     # Uniqueness enforcement tests
     #
@@ -862,12 +1089,13 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
     def test_duplicate_global_unique(self):
         """Test that duplicate IPs in the same Namespace raises an error."""
         IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
-        with self.assertRaises(IntegrityError):
-            IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+        duplicate_ip = IPAddress(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+        with self.assertRaises(ValidationError):
+            duplicate_ip.full_clean()
 
     def test_multiple_nat_outside_list(self):
         """
-        Test suite to test supporing nat_outside_list.
+        Test suite to test supporting nat_outside_list.
         """
         Prefix.objects.create(prefix="192.168.0.0/24", status=self.status, namespace=self.namespace)
         nat_inside = IPAddress.objects.create(address="192.168.0.1/24", status=self.status, namespace=self.namespace)
@@ -998,6 +1226,34 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         )
         ip.validated_save()
 
+    def test_change_parent_and_namespace(self):
+        namespaces = (
+            Namespace.objects.create(name="test_change_parent 1"),
+            Namespace.objects.create(name="test_change_parent 2"),
+        )
+        prefixes = (
+            Prefix.objects.create(
+                prefix="10.0.0.0/8", status=self.status, namespace=namespaces[0], type=PrefixTypeChoices.TYPE_NETWORK
+            ),
+            Prefix.objects.create(
+                prefix="10.0.0.0/16", status=self.status, namespace=namespaces[1], type=PrefixTypeChoices.TYPE_NETWORK
+            ),
+        )
+
+        ip = IPAddress(address="10.0.0.1", status=self.status, namespace=namespaces[0])
+        ip.validated_save()
+        ip.refresh_from_db()
+        self.assertEqual(ip.parent, prefixes[0])
+
+        ip.parent = prefixes[1]
+        ip.validated_save()
+        ip.refresh_from_db()
+        self.assertEqual(ip.parent, prefixes[1])
+
+        ip._namespace = namespaces[0]
+        ip.validated_save()
+        self.assertEqual(ip.parent, prefixes[0])
+
     def test_varbinary_ip_fields_with_empty_values_do_not_violate_not_null_constrains(self):
         # Assert that an error is triggered when the host is not provided.
         # Initially, VarbinaryIPField fields with None values are stored as the binary representation of b'',
@@ -1066,29 +1322,59 @@ class TestVLAN(ModelTestCases.BaseModelTestCase):
     model = VLAN
 
     def test_vlan_validation(self):
-        location_type = LocationType.objects.get(name="Root")
-        location_type.content_types.set([])
-        location_type.validated_save()
+        location_type = LocationType.objects.get(name="Floor")  # Floors may not have VLANs according to our factory
         location = Location.objects.filter(location_type=location_type).first()
         vlan = VLAN(name="Group 1", vid=1, location=location)
         vlan.status = Status.objects.get_for_model(VLAN).first()
         with self.assertRaises(ValidationError) as cm:
             vlan.validated_save()
-        self.assertIn(f'VLANs may not associate to locations of type "{location_type.name}"', str(cm.exception))
+        self.assertIn(f"VLANs may not associate to Locations of types {[location_type.name]}", str(cm.exception))
 
-        location_type.content_types.add(ContentType.objects.get_for_model(VLAN))
-        group = VLANGroup.objects.create(name="Group 1")
-        vlan.vlan_group = group
-        location_status = Status.objects.get_for_model(Location).first()
-        location_2 = Location.objects.create(name="Location 2", location_type=location_type, status=location_status)
-        group.location = location_2
-        group.save()
+    def test_location_validation(self):
+        location_type = LocationType.objects.get(name="Floor")  # Floors may not have VLANs according to our factory
+        location = Location.objects.filter(location_type=location_type).first()
+        vlan = VLAN.objects.first()
         with self.assertRaises(ValidationError) as cm:
-            vlan.validated_save()
-        self.assertIn(
-            f'The assigned group belongs to a location that does not include location "{location.name}"',
-            str(cm.exception),
-        )
+            location.vlans.add(vlan)
+        self.assertIn(f"{location} is a Floor and may not have VLANs associated to it.", str(cm.exception))
+
+    def test_location_queries(self):
+        location = VLAN.objects.filter(locations__isnull=False).first().locations.first()
+
+        with self.subTest("Assert filtering and excluding `location`"):
+            self.assertQuerysetEqualAndNotEmpty(
+                VLAN.objects.filter(location=location),
+                VLAN.objects.filter(locations__in=[location]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                VLAN.objects.exclude(location=location),
+                VLAN.objects.exclude(locations__in=[location]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                VLAN.objects.filter(location__in=[location]),
+                VLAN.objects.filter(locations__in=[location]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                VLAN.objects.exclude(location__in=[location]),
+                VLAN.objects.exclude(locations__in=[location]),
+            )
+
+        # We use `assertQuerysetEqualAndNotEmpty` for test validation. Including a nullable field could lead
+        # to flaky tests where querysets might return None, causing tests to fail. Therefore, we select
+        # fields that consistently contain values to ensure reliable filtering.
+        query_params = ["name", "location_type", "status"]
+
+        for field_name in query_params:
+            with self.subTest(f"Assert location__{field_name} query."):
+                value = getattr(location, field_name)
+                self.assertQuerysetEqualAndNotEmpty(
+                    VLAN.objects.filter(**{f"location__{field_name}": value}),
+                    VLAN.objects.filter(**{f"locations__{field_name}": value}),
+                )
+                self.assertQuerysetEqualAndNotEmpty(
+                    VLAN.objects.exclude(**{f"location__{field_name}": value}),
+                    VLAN.objects.exclude(**{f"locations__{field_name}": value}),
+                )
 
 
 class TestVRF(ModelTestCases.BaseModelTestCase):

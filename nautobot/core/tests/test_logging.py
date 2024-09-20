@@ -21,6 +21,26 @@ class LoggingUtilitiesTest(testing.TestCase):
         ("Password: is1234", "Password: (redacted)"),
         ("Password is: is1234", "Password is: (redacted)"),
         ("Password is is1234", "Password is (redacted)"),
+        ("secret is: is1234", "secret is: (redacted)"),
+        ("secret is is1234", "secret is (redacted)"),
+        ("secrets is: is1234", "secrets is: (redacted)"),
+        ("secrets is is1234", "secrets is (redacted)"),
+        ('{"username": "is1234"}', '{"username": (redacted)'),
+        ('{"password": "is1234"}', '{"password": (redacted)'),
+        ('{"secret": "is1234"}', '{"secret": (redacted)'),
+        ('{"secrets": "is1234"}', '{"secrets": (redacted)'),
+        # sanitize bytestrings too
+        ("password: is1234".encode("utf-8"), "password: (redacted)".encode("utf-8")),
+        # and lists
+        (
+            ["username: myusername", "password: is1234".encode("utf-8")],
+            ["username: (redacted)", "password: (redacted)".encode("utf-8")],
+        ),
+        # and tuples, and nested data
+        (
+            ("username: myusername", ["password: is1234"]),
+            ("username: (redacted)", ["password: (redacted)"]),
+        ),
     )
 
     def test_sanitize_default_coverage(self):
@@ -32,3 +52,10 @@ class LoggingUtilitiesTest(testing.TestCase):
         """Test that sanitizing the same string repeatedly doesn't cascade oddly."""
         for dirty, clean in self.DIRTY_CLEAN:
             self.assertEqual(logging.sanitize(logging.sanitize(dirty)), clean)
+
+    def test_sanitize_invalid_replacement(self):
+        """Test that the replacement string can't contain backreferences."""
+        with self.assertRaises(RuntimeError):
+            logging.sanitize("password: is1234", replacement=r" actually \1")
+        with self.assertRaises(RuntimeError):
+            logging.sanitize("password: is1234", replacement=r" actually \g<1>")

@@ -131,8 +131,3 @@ function setSystemThemeActive() {
     tdDarkTheme.classList.remove("active-theme");
     tdLightTheme.classList.remove("active-theme");
 }
-
-function viewNewUI() {
-    document.cookie = "newui=1; path=/";
-    document.location.reload(true);
-}

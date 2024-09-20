@@ -4,7 +4,6 @@ from django.db import migrations
 
 from nautobot.ipam.utils.migrations import increment_names_of_records_with_similar_names
 
-
 DEFAULT_VLAN_GROUP_BASENAME = "Default VLAN Group"
 
 

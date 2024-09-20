@@ -1,6 +1,7 @@
+import datetime
 import random
 import types
-from unittest import skip
+from unittest import skip, TestCase as UnitTestTestCase
 import uuid
 
 from django.apps import apps
@@ -8,18 +9,17 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-from django.test import TestCase, override_settings
+from django.test import override_settings, TestCase
 from django.test.client import RequestFactory
 from django.urls import reverse
-from graphql import GraphQLError
 import graphene.types
-from graphene_django.settings import graphene_settings
 from graphene_django.registry import get_global_registry
+from graphene_django.settings import graphene_settings
+from graphql import get_default_backend, GraphQLError
 from graphql.error.located_error import GraphQLLocatedError
-from graphql import get_default_backend
 from rest_framework import status
 
-from nautobot.circuits.models import Provider, CircuitTermination
+from nautobot.circuits.models import CircuitTermination, Provider
 from nautobot.core.graphql import execute_query, execute_saved_query
 from nautobot.core.graphql.generators import (
     generate_list_search_parameters,
@@ -27,22 +27,23 @@ from nautobot.core.graphql.generators import (
 )
 from nautobot.core.graphql.schema import (
     extend_schema_type,
-    extend_schema_type_custom_field,
-    extend_schema_type_tags,
     extend_schema_type_config_context,
-    extend_schema_type_relationships,
+    extend_schema_type_custom_field,
     extend_schema_type_null_field_choice,
+    extend_schema_type_relationships,
+    extend_schema_type_tags,
 )
-from nautobot.core.graphql.types import OptimizedNautobotObjectType
+from nautobot.core.graphql.types import DateType, OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import str_to_var_name
-from nautobot.core.testing import NautobotTestClient, create_test_user
-from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices, PortTypeChoices, ConsolePortTypeChoices
+from nautobot.core.testing import create_test_user, NautobotTestClient
+from nautobot.dcim.choices import ConsolePortTypeChoices, InterfaceModeChoices, InterfaceTypeChoices, PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, LocationFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
 from nautobot.dcim.models import (
     Cable,
     ConsolePort,
     ConsoleServerPort,
+    Controller,
     Device,
     DeviceType,
     FrontPort,
@@ -51,18 +52,20 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroupAssociation,
     Location,
     LocationType,
+    Manufacturer,
+    Module,
     PowerFeed,
-    PowerPort,
     PowerOutlet,
     PowerPanel,
+    PowerPort,
     Rack,
     RearPort,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import (
     ChangeLoggedModel,
-    CustomField,
     ConfigContext,
+    CustomField,
     GraphQLQuery,
     Relationship,
     RelationshipAssociation,
@@ -71,19 +74,19 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.registry import registry
-from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressToInterface,
     Namespace,
     Prefix,
     VLAN,
+    VLANGroup,
     VRF,
     VRFDeviceAssignment,
     VRFPrefixAssignment,
 )
-from nautobot.users.models import ObjectPermission, Token
 from nautobot.tenancy.models import Tenant
+from nautobot.users.models import ObjectPermission, Token
 from nautobot.virtualization.factory import ClusterTypeFactory
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 
@@ -91,8 +94,14 @@ from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 User = get_user_model()
 
 
-class GraphQLTestCase(TestCase):
+class GraphQLTestCaseBase(TestCase):
     def setUp(self):
+        self.SCHEMA = graphene_settings.SCHEMA  # not a no-op; this causes the schema to be built when first called
+
+
+class GraphQLTestCase(GraphQLTestCaseBase):
+    def setUp(self):
+        super().setUp()
         self.user = create_test_user("graphql_testuser")
         GraphQLQuery.objects.create(name="GQL 1", query="{ query: locations {name} }")
         GraphQLQuery.objects.create(name="GQL 2", query="query ($name: [String!]) { locations(name:$name) {name} }")
@@ -110,6 +119,22 @@ class GraphQLTestCase(TestCase):
         resp = execute_query(query, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
         self.assertEqual(len(resp["data"]["query"]), Location.objects.all().count())
+
+    @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_execute_query_with_custom_field_type_date(self):
+        """Test Custom Field with Date type returns valid Date object and not string. Fix for bug #3664"""
+        custom_field = CustomField(
+            type=CustomFieldTypeChoices.TYPE_DATE, label="custom_date_field", key="custom_date_field"
+        )
+        custom_field.validated_save()
+        custom_field.content_types.set([ContentType.objects.get_for_model(Location)])
+        custom_field_data = {"custom_date_field": "2023-01-23"}
+        self.locations[0]._custom_field_data = custom_field_data
+        self.locations[0].save()
+        query = "query ($name: [String!]) { locations(name:$name) {name, _custom_field_data, cf_custom_date_field} }"
+        resp = execute_query(query, user=self.user, variables={"name": "Location-1"}).to_dict()
+        self.assertEqual(resp["data"]["locations"]["cf_custom_date_field"], custom_field_data)
 
     @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -153,18 +178,18 @@ class GraphQLTestCase(TestCase):
         for app_label, models in registry["model_features"]["graphql"].items():
             for model_name in models:
                 model = apps.get_model(app_label=app_label, model_name=model_name)
-                self.assertIsNotNone(graphene_django_registry.get_type_for_model(model))
+                self.assertIsNotNone(graphene_django_registry.get_type_for_model(model), model)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_graphql_url_field(self):
         """Test the url field for all graphql types."""
-        schema = graphene_settings.SCHEMA.introspect()
+        schema = self.SCHEMA.introspect()
         graphql_fields = schema["__schema"]["types"][0]["fields"]
         for graphql_field in graphql_fields:
             if graphql_field["type"]["kind"] == "LIST" or graphql_field["name"] == "content_type":
                 continue
             with self.subTest(f"Testing graphql url field for {graphql_field['name']}"):
-                graphene_object_type_definition = graphene_settings.SCHEMA.get_type(graphql_field["type"]["name"])
+                graphene_object_type_definition = self.SCHEMA.get_type(graphql_field["type"]["name"])
 
                 # simple check for url field in type definition
                 self.assertIn(
@@ -190,14 +215,14 @@ class GraphQLTestCase(TestCase):
                     )
 
 
-class GraphQLUtilsTestCase(TestCase):
+class GraphQLUtilsTestCase(GraphQLTestCaseBase):
     def test_str_to_var_name(self):
         self.assertEqual(str_to_var_name("IP Addresses"), "ip_addresses")
         self.assertEqual(str_to_var_name("My New VAR"), "my_new_var")
         self.assertEqual(str_to_var_name("My-VAR"), "my_var")
 
 
-class GraphQLGenerateSchemaTypeTestCase(TestCase):
+class GraphQLGenerateSchemaTypeTestCase(GraphQLTestCaseBase):
     def test_model_w_filterset(self):
         schema = generate_schema_type(app_name="dcim", model=Device)
         self.assertEqual(schema.__bases__[0], OptimizedNautobotObjectType)
@@ -211,8 +236,9 @@ class GraphQLGenerateSchemaTypeTestCase(TestCase):
         self.assertIsNone(schema._meta.filterset_class)
 
 
-class GraphQLExtendSchemaType(TestCase):
+class GraphQLExtendSchemaType(GraphQLTestCaseBase):
     def setUp(self):
+        super().setUp()
         self.datas = (
             {"field_name": "my_text", "field_type": CustomFieldTypeChoices.TYPE_TEXT},
             {
@@ -302,8 +328,9 @@ class GraphQLExtendSchemaType(TestCase):
         self.assertIsInstance(getattr(schema, "resolve_mode"), types.FunctionType)
 
 
-class GraphQLExtendSchemaRelationship(TestCase):
+class GraphQLExtendSchemaRelationship(GraphQLTestCaseBase):
     def setUp(self):
+        super().setUp()
         location_ct = ContentType.objects.get_for_model(Location)
         rack_ct = ContentType.objects.get_for_model(Rack)
         vlan_ct = ContentType.objects.get_for_model(VLAN)
@@ -428,8 +455,9 @@ class GraphQLExtendSchemaRelationship(TestCase):
             self.assertNotIn(field_name, schema._meta.fields.keys())
 
 
-class GraphQLSearchParameters(TestCase):
+class GraphQLSearchParameters(GraphQLTestCaseBase):
     def setUp(self):
+        super().setUp()
         self.schema = generate_schema_type(app_name="dcim", model=Location)
 
     def test_search_parameters(self):
@@ -445,7 +473,7 @@ class GraphQLSearchParameters(TestCase):
                 self.assertNotIn(field, params.keys())
 
 
-class GraphQLAPIPermissionTest(TestCase):
+class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
     client_class = NautobotTestClient
 
     @classmethod
@@ -604,21 +632,9 @@ class GraphQLAPIPermissionTest(TestCase):
         self.assertEqual(names, ["Rack 1-1", "Rack 1-2", "Rack 2-1", "Rack 2-2"])
 
     def test_graphql_api_no_token(self):
-        """Validate unauthenticated users are not able to query anything by default."""
+        """Validate unauthenticated users are not able to query anything."""
         response = self.client.post(self.api_url, {"query": self.get_racks_query}, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(response.data["data"]["racks"], list)
-        names = [item["name"] for item in response.data["data"]["racks"]]
-        self.assertEqual(names, [])
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_graphql_api_no_token_exempt(self):
-        """Validate unauthenticated users are able to query based on the exempt permissions."""
-        response = self.client.post(self.api_url, {"query": self.get_racks_query}, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(response.data["data"]["racks"], list)
-        names = [item["name"] for item in response.data["data"]["racks"]]
-        self.assertEqual(names, ["Rack 1-1", "Rack 1-2", "Rack 2-1", "Rack 2-2"])
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_graphql_api_wrong_token(self):
         """Validate a wrong token return 403."""
@@ -684,37 +700,39 @@ class GraphQLAPIPermissionTest(TestCase):
         self.assertEqual(location_names, location_list)
 
 
-class GraphQLQueryTest(TestCase):
+class GraphQLQueryTest(GraphQLTestCaseBase):
     """Execute various GraphQL queries and verify their correct responses."""
 
     @classmethod
     def setUpTestData(cls):
         """Initialize the Database with some datas."""
-        super().setUpTestData()
         cls.user = User.objects.create(username="Super User", is_active=True, is_superuser=True)
 
-        # Remove random IPAddress and Device fixtures for this custom test
+        # Remove random IPAddress, Module and Device fixtures for this custom test
         IPAddress.objects.all().delete()
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
+        Module.objects.all().delete()
 
         # Initialize fake request that will be required to execute GraphQL query
         cls.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
         cls.request.id = uuid.uuid4()
         cls.request.user = cls.user
 
-        # Populate Data
-        cls.device_type1 = DeviceType.objects.first()
-        cls.device_type2 = DeviceType.objects.last()
+        # Populate Data - create new device types with no component templates
+        manufacturer = Manufacturer.objects.first()
+        cls.device_type1 = DeviceType.objects.create(manufacturer=manufacturer, model="test device_type1")
+        cls.device_type2 = DeviceType.objects.create(manufacturer=manufacturer, model="test device_type2")
         roles = Role.objects.get_for_model(Device)
         cls.device_role1 = roles[0]
         cls.device_role2 = roles[1]
-        cls.device_role3 = random.choice(roles)
+        cls.device_role3 = random.choice(roles)  # noqa: S311  # suspicious-non-cryptographic-random-usage
         cls.location_statuses = list(Status.objects.get_for_model(Location))[:2]
         cls.location_type = LocationType.objects.get(name="Campus")
         cls.location1 = Location.objects.filter(location_type=cls.location_type).first()
         cls.location2 = Location.objects.filter(location_type=cls.location_type).last()
-        cls.location1.name = "Location-1"
-        cls.location2.name = "Location-2"
+        cls.location1.name = "Campus Location-1"
+        cls.location2.name = "Campus Location-2"
         cls.location1.status = cls.location_statuses[0]
         cls.location2.status = cls.location_statuses[1]
         cls.location1.validated_save()
@@ -727,8 +745,8 @@ class GraphQLQueryTest(TestCase):
 
         vlan_statuses = Status.objects.get_for_model(VLAN)
         vlan_groups = (
-            VLANGroupFactory.create(location=cls.location1),
-            VLANGroupFactory.create(location=cls.location2),
+            VLANGroup.objects.create(name="VLANGroup 1", location=cls.location1),
+            VLANGroup.objects.create(name="VLANGroup 2", location=cls.location2),
         )
         cls.vlan1 = VLAN.objects.create(
             name="VLAN 1", vid=100, location=cls.location1, status=vlan_statuses[0], vlan_group=vlan_groups[0]
@@ -847,6 +865,7 @@ class GraphQLQueryTest(TestCase):
         ]
 
         interface_status = Status.objects.get_for_model(Interface).first()
+        interface_role = Role.objects.get_for_model(Interface).first()
         cls.interface11 = Interface.objects.create(
             name="Int1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
@@ -855,12 +874,14 @@ class GraphQLQueryTest(TestCase):
             mode=InterfaceModeChoices.MODE_ACCESS,
             untagged_vlan=cls.vlan1,
             status=interface_status,
+            role=interface_role,
         )
         cls.interface12 = Interface.objects.create(
             name="Int2",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=cls.device1,
             status=interface_status,
+            role=interface_role,
         )
         cls.namespace = Namespace.objects.first()
         cls.intr_group_status = Status.objects.get_for_model(InterfaceRedundancyGroup).first()
@@ -914,6 +935,7 @@ class GraphQLQueryTest(TestCase):
         cls.prefix1 = Prefix.objects.create(
             prefix="10.0.1.0/24", namespace=cls.namespace, status=cls.prefix_statuses[0]
         )
+        cls.prefix1.locations.add(cls.location1, cls.location2)
         cls.ipaddr1 = IPAddress.objects.create(
             address="10.0.1.1/24", namespace=cls.namespace, status=cls.ip_statuses[0]
         )
@@ -941,6 +963,7 @@ class GraphQLQueryTest(TestCase):
             untagged_vlan=cls.vlan2,
             mode=InterfaceModeChoices.MODE_ACCESS,
             status=interface_status,
+            role=interface_role,
         )
         cls.interface22 = Interface.objects.create(
             name="Int2",
@@ -952,6 +975,7 @@ class GraphQLQueryTest(TestCase):
         cls.prefix2 = Prefix.objects.create(
             prefix="10.0.2.0/24", namespace=cls.namespace, status=cls.prefix_statuses[1]
         )
+        cls.prefix2.locations.add(cls.location1, cls.location2)
         cls.ipaddr2 = IPAddress.objects.create(
             address="10.0.2.1/30", namespace=cls.namespace, status=cls.ip_statuses[1]
         )
@@ -966,7 +990,11 @@ class GraphQLQueryTest(TestCase):
         )
 
         cls.interface31 = Interface.objects.create(
-            name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=cls.device3, status=interface_status
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=cls.device3,
+            status=interface_status,
+            role=interface_role,
         )
         cls.interface31 = Interface.objects.create(
             name="Mgmt1",
@@ -975,6 +1003,7 @@ class GraphQLQueryTest(TestCase):
             mgmt_only=True,
             enabled=False,
             status=interface_status,
+            role=interface_role,
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
@@ -1077,10 +1106,9 @@ class GraphQLQueryTest(TestCase):
         cls.rm2ms_assoc_3.validated_save()
 
         cls.backend = get_default_backend()
-        cls.schema = graphene_settings.SCHEMA
 
     def execute_query(self, query, variables=None):
-        document = self.backend.document_from_string(self.schema, query)
+        document = self.backend.document_from_string(self.SCHEMA, query)
         if variables:
             return document.execute(context_value=self.request, variable_values=variables)
         else:
@@ -1492,9 +1520,9 @@ query {
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_locations_filter(self):
         filters = (
-            ('name: "Location-1"', 1),
-            ('name: ["Location-1"]', 1),
-            ('name: ["Location-1", "Location-2"]', 2),
+            ('name: "Campus Location-1"', 1),
+            ('name: ["Campus Location-1"]', 1),
+            ('name: ["Campus Location-1", "Campus Location-2"]', 2),
             ('name__ic: "Location"', Location.objects.filter(name__icontains="Location").count()),
             ('name__ic: ["Location"]', Location.objects.filter(name__icontains="Location").count()),
             ('name__nic: "Location"', Location.objects.exclude(name__icontains="Location").count()),
@@ -1525,6 +1553,50 @@ query {
                 result = self.execute_query(query)
                 self.assertIsNone(result.errors)
                 self.assertEqual(len(result.data["locations"]), nbr_expected_results)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_prefixes_nested_m2m_filter(self):
+        """
+        Test functionality added to address https://github.com/nautobot/nautobot/issues/5906.
+
+        Prefix.locations is a ManyToManyField, which was not filterable in our GraphQL schema before this fix.
+        """
+        query = 'query { prefixes (prefix_length__gte:16) { prefix locations (location_type:["Campus"]) { name } } }'
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        found_valid_location = False
+        found_invalid_location = False
+        for prefix_data in result.data["prefixes"]:
+            for location_data in prefix_data["locations"]:
+                if location_data["name"].startswith("Campus"):
+                    found_valid_location = True
+                else:
+                    print(f"Found unexpected unfiltered location {location_data['name']} under {prefix_data['prefix']}")
+                    found_invalid_location = True
+        self.assertTrue(found_valid_location)
+        self.assertFalse(found_invalid_location)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_locations_nested_reverse_m2m_filter(self):
+        """
+        Test functionality added to address https://github.com/nautobot/nautobot/issues/5906.
+
+        Location.prefixes is a (reverse) ManyToManyRel, which was not filterable in our GraphQL schema before this fix.
+        """
+        query = "query { locations { name prefixes (prefix_length:24) { prefix } } }"
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        found_valid_prefix = False
+        found_invalid_prefix = False
+        for location_data in result.data["locations"]:
+            for prefix_data in location_data["prefixes"]:
+                if prefix_data["prefix"].endswith("/24"):
+                    found_valid_prefix = True
+                else:
+                    print(f"Found unexpected unfiltered prefix {prefix_data['prefix']} under {location_data['name']}")
+                    found_invalid_prefix = True
+        self.assertTrue(found_valid_prefix)
+        self.assertFalse(found_invalid_prefix)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_devices_filter(self):
@@ -2136,7 +2208,7 @@ query {
         self.assertIsNone(result.errors)
         self.assertIsInstance(result.data, dict, result)
         self.assertIsInstance(result.data["device_types"], list, result)
-        self.assertEqual(result.data["device_types"][0]["model"], self.device_type1.model, result)
+        self.assertEqual(result.data["device_types"][0]["model"], DeviceType.objects.first().model, result)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interface_pagination(self):
@@ -2172,7 +2244,7 @@ query {
         self.assertEqual(interface_names, ["Int2", "Int1"])
 
         result_2 = self.execute_query(query_all)
-        self.assertEqual(len(result_2.data.get("interfaces", [])), 6)
+        self.assertEqual(len(result_2.data.get("interfaces", [])), Interface.objects.count())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_power_feeds_cable_peer(self):
@@ -2360,3 +2432,17 @@ query {
         self.assertNotIn("error", str(result))
         expected_interfaces_first = {"ip_addresses": [{"primary_ip4_for": [{"id": str(self.device1.id)}]}]}
         self.assertEqual(result.data["device"]["interfaces"][0], expected_interfaces_first)
+
+
+class GraphQLTypeTestCase(UnitTestTestCase):
+    def test_date_type(self):
+        date_obj = datetime.date.today()
+        date_time_obj = datetime.datetime.today()
+        str_obj = date_obj.isoformat()
+        obj_not_accepted = False
+        self.assertEqual(DateType.serialize(date_obj), str_obj)
+        self.assertEqual(DateType.serialize(date_time_obj), str_obj)
+        self.assertEqual(DateType.serialize(str_obj), str_obj)
+        with self.assertRaises(GraphQLError) as cm:
+            DateType.serialize(obj_not_accepted)
+        self.assertIn("Received not compatible date", str(cm.exception))

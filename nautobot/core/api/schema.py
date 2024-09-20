@@ -4,7 +4,7 @@ import re
 from drf_spectacular.contrib.django_filters import DjangoFilterExtension
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.openapi import AutoSchema
-from drf_spectacular.plumbing import build_array_type, build_media_type_object, get_doc, is_serializer
+from drf_spectacular.plumbing import build_array_type, build_media_type_object, get_doc, is_serializer, list_hash
 from drf_spectacular.serializers import PolymorphicProxySerializerExtension
 from rest_framework import serializers
 from rest_framework.relations import ManyRelatedField
@@ -14,7 +14,6 @@ from nautobot.core.api import (
     SerializedPKRelatedField,
     WritableNestedSerializer,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +113,7 @@ class NautobotAutoSchema(AutoSchema):
             }
 
         # Inject a custom description for the "id" parameter since ours has custom lookup behavior.
-        if "parameters" in operation:
+        if operation is not None and "parameters" in operation:
             for param in operation["parameters"]:
                 if param["name"] == "id" and "description" not in param:
                     param["description"] = "Unique object identifier, either a UUID primary key or a composite key."
@@ -153,7 +152,7 @@ class NautobotAutoSchema(AutoSchema):
             if re.search(r"<drf_format_suffix\w*:\w+>", self.path_regex):
                 tokenized_path.append("formatted")
 
-            return "_".join(tokenized_path + [action])
+            return "_".join([*tokenized_path, action])
 
         # For all other view actions, operation-id is the same as in the base class
         return super().get_operation_id()
@@ -360,6 +359,8 @@ class ChoiceFieldFix(OpenApiSerializerFieldExtension):
             return {
                 "type": value_type,
                 "enum": list(choices.keys()),
+                # Used to deduplicate enums with the same set of choices, since drf-spectacular 0.27.2
+                "x-spec-enum-id": list_hash([(k, v) for k, v in choices.items() if k not in ("", None)]),
             }
         else:
             return {

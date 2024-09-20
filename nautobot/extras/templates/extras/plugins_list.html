@@ -5,13 +5,11 @@
 {% block content %}
     <div class="pull-right noprint">
         {% if request.user.is_authenticated and table_config_form %}
-            <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table">
-                <i class="mdi mdi-cog"></i> Configure</button>
-            </button>
+            {% table_config_button table table_name="ObjectTable" %}
         {% endif %}
     </div>
 
-    <h1>{% block title %}Installed Plugins{% endblock %}</h1>
+    <h1>{% block title %}Installed Apps{% endblock %}</h1>
 
     <div class="row">
         <div class="col-md-12">

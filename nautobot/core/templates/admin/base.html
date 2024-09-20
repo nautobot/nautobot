@@ -8,55 +8,7 @@
 <html lang="en"{% if request.COOKIES|get_item:"theme" == 'dark' %} data-theme="dark"{% endif %}>
 <head>
     <title>{% block title %}Admin Home{% endblock %} - Nautobot</title>
-    <link rel="stylesheet"
-          href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/bootstrap.min.css'">
-    <link rel="stylesheet"
-          href="{% static 'materialdesignicons-6.5.95/css/materialdesignicons.min.css' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=materialdesignicons-6.5.95/css/materialdesignicons.min.css'">
-    <link rel="stylesheet"
-          href="{% static 'jquery-ui-1.13.1/jquery-ui.min.css' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.13.1/jquery-ui.min.css'">
-    <link rel="stylesheet"
-          href="{% static 'select2-4.0.13/select2.min.css' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=select2-4.0.13/select2.min.css'">
-    <link rel="stylesheet"
-          href="{% static 'select2-bootstrap-0.1.0-beta.10/select2-bootstrap.min.css' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=select2-bootstrap-0.1.0-beta.10/select2-bootstrap.min.css'">
-    <link rel="stylesheet"
-          href="{% static 'flatpickr-4.6.9/themes/light.min.css' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/themes/light.min.css'">
-    <link rel="stylesheet" id="dark-theme"
-          href="{% versioned_static 'css/dark.css' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=css/dark.css'"{% if request.COOKIES|get_item:"theme" != 'dark' %} disabled="disabled"{% endif %} />
-    <link rel="stylesheet" id="base-theme"
-          href="{% versioned_static 'css/base.css' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
-    <link rel="apple-touch-icon" sizes="180x180" href="{%  custom_branding_or_static 'icon_180' 'img/nautobot_icon_180x180.png' %}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{% custom_branding_or_static 'icon_32' 'img/nautobot_icon_32x32.png' %}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{% custom_branding_or_static 'icon_16' 'img/nautobot_icon_16x16.png' %}">
-    <link rel="icon" type="image/png" href="{% custom_branding_or_static 'icon_192' 'img/nautobot_icon_192x192.png' %}" sizes="192x192">
-    <link rel="mask-icon" href="{% custom_branding_or_static 'icon_mask' 'img/nautobot_icon_monochrome.svg' %}" color="#0097ff">
-    <link rel="shortcut icon" href="{% custom_branding_or_static 'favicon' 'img/favicon.ico' %}">
-
-    <script src="{% static 'jquery/jquery-3.6.0.min.js' %}"
-        onerror="window.location='{% url 'media_failure' %}?filename=jquery/jquery-3.6.0.min.js'"></script>
-    <script src="{% static 'jquery-ui-1.13.1/jquery-ui.min.js' %}"
-            onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.13.1/jquery-ui.min.js'"></script>
-    <script src="{% static 'bootstrap-3.4.1-dist/js/bootstrap.min.js' %}"
-            onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/js/bootstrap.min.js'"></script>
-    <script src="{% static 'select2-4.0.13/select2.min.js' %}"
-            onerror="window.location='{% url 'media_failure' %}?filename=select2-4.0.13/select2.min.js'"></script>
-    <script src="{% static 'flatpickr-4.6.9/flatpickr.min.js' %}"
-            onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/flatpickr.min.js'"></script>
-    <script src="{% static 'js/forms.js' %}"
-            onerror="window.location='{% url 'media_failure' %}?filename=js/forms.js'"></script>
-
-    <meta name="msapplication-TileColor" content="#2d89ef">
-    <meta name="theme-color" content="#ffffff">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
-
+    {% include 'inc/media.html' %}
     {% block extrahead %}{% endblock %}
     {% block extrastyle %}{% endblock %}
 
@@ -94,23 +46,27 @@
         }
     </style>
 </head>
-<body {% if is_popup %}style="padding-top: 0px;"{% endif %}>
+<body {% if is_popup %}style="padding-left: 0px;"{% endif %}>
+
 {% if not is_popup %}
     {% include 'inc/nav_menu.html' %}
 {% endif %}
-<div class="container-fluid wrapper" {% if is_popup %}style="padding-bottom: 0px;"{% endif %}>
-    {% if "BANNER_TOP"|settings_or_config %}
-        <div class="alert alert-info text-center" role="alert">
-            {{ "BANNER_TOP"|settings_or_config|safe }}
-        </div>
+
+<div class="container-fluid wrapper" id="main-content" {% if is_popup %}style="padding-bottom: 0px;"{% endif %}>
+    {% if not is_popup %}
+        {% if "BANNER_TOP"|settings_or_config %}
+            <div class="alert alert-info text-center" role="alert">
+                {{ "BANNER_TOP"|settings_or_config|render_markdown }}
+            </div>
+        {% endif %}
+        {% if settings.MAINTENANCE_MODE %}
+            <div class="alert alert-warning text-center" role="alert">
+                <h4><i class="mdi mdi-alert"></i> Maintenance Mode</h4>
+                <p>Nautobot is currently in maintenance mode. Functionality may be limited.</p>
+            </div>
+        {% endif %}
+        {% plugin_banners %}
     {% endif %}
-    {% if settings.MAINTENANCE_MODE %}
-        <div class="alert alert-warning text-center" role="alert">
-            <h4><i class="mdi mdi-alert"></i> Maintenance Mode</h4>
-            <p>Nautobot is currently in maintenance mode. Functionality may be limited.</p>
-        </div>
-    {% endif %}
-    {% plugin_banners %}
     {% for message in messages %}
         <div class="alert alert-{{ message.tags }} alert-dismissable" role="alert">
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
@@ -148,47 +104,20 @@
             {% block content %}{{ content }}{% endblock %}
         </div>
     </div>
-
-    {% block footer %}<footer id="footer"></footer>{% endblock %}
     <div class="push"></div>
     {% if "BANNER_BOTTOM"|settings_or_config %}
         <div class="alert alert-info text-center banner-bottom" role="alert">
-                {{ "BANNER_BOTTOM"|settings_or_config|safe }}
+                {{ "BANNER_BOTTOM"|settings_or_config|render_markdown }}
         </div>
     {% endif %}
 </div>
 {% if not is_popup %}
-    <footer class="footer">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-xs-4">
-                    <p class="text-muted">{{ settings.HOSTNAME }} (v{{ settings.VERSION }})</p>
-                </div>
-                <div class="col-xs-4 text-center">
-                    <p class="text-muted">{% now 'Y-m-d H:i:s T' %}</p>
-                </div>
-                <div class="col-xs-4 text-right noprint">
-                    <p class="text-muted">
-                        <a href="#theme_modal" data-toggle="modal" data-target="#theme_modal" id="btn-theme-modal"><i class="mdi mdi-theme-light-dark text-primary"></i>Theme</a> &middot;
-                        <i class="mdi mdi-book-open-page-variant text-primary"></i>
-                        {% if settings.BRANDING_URLS.docs %}
-                            <a href="{{ settings.BRANDING_URLS.docs }}">Docs</a>
-                        {% else %}
-                            <a href="{% static 'docs/index.html' %}">Docs</a>
-                        {% endif %}
-                        &middot;
-                        <i class="mdi mdi-cloud-braces text-primary"></i> <a href="{% url 'api_docs' %}">API</a> &middot;
-                        <i class="mdi mdi-graphql text-primary"></i> <a href="{% url 'graphql' %}">GraphQL</a> &middot;
-                        <i class="mdi mdi-xml text-primary"></i> <a href="{{ settings.BRANDING_URLS.code }}">Code</a> &middot;
-                        <i class="mdi mdi-lifebuoy text-primary"></i> <a href="{{ settings.BRANDING_URLS.help }}">Help</a>
-                    </p>
-                </div>
-            </div>
-        </div>
-    </footer>
+    {% include 'inc/footer.html' %}
 {% endif %}
 {% include 'modals/modal_theme.html' with name='theme'%}
-<script src="{% versioned_static 'js/theme.js' %}"></script>
-{% block javascript %}{% endblock %}
+
+{% block javascript %}
+    {% include 'inc/javascript.html' %}
+{% endblock %}
 </body>
 </html>

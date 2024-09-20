@@ -10,19 +10,6 @@
     {% endfor %}
 {% endblock %}
 
-{% block buttons %}
-        {% plugin_buttons object %}
-        {% if perms.dcim.add_location %}
-            {% clone_button object %}
-        {% endif %}
-        {% if perms.dcim.change_location %}
-            {% edit_button object key="pk" %}
-        {% endif %}
-        {% if perms.dcim.delete_location %}
-            {% delete_button object key="pk" %}
-        {% endif %}
-{% endblock buttons %}
-
 {% block content_left_page %}
     <div class="panel panel-default">
         <div class="panel-heading">
@@ -91,7 +78,7 @@
     </div>
     <div class="panel panel-default">
         <div class="panel-heading">
-            <strong>Contact Info</strong>
+            <strong>Geographical Info</strong>
         </div>
         <table class="table table-hover panel-body attr-table">
             <tr>
@@ -128,32 +115,39 @@
                     {% endif %}
                 </td>
             </tr>
-            <tr>
-                <td>Contact Name</td>
-                <td>{{ object.contact_name|placeholder }}</td>
-            </tr>
-            <tr>
-                <td>Contact Phone</td>
-                <td>
-                    {% if object.contact_phone %}
-                        <a href="tel:{{ object.contact_phone }}">{{ object.contact_phone }}</a>
-                    {% else %}
-                        <span class="text-muted">&mdash;</span>
-                    {% endif %}
-                </td>
-            </tr>
-            <tr>
-                <td>Contact E-Mail</td>
-                <td>
-                    {% if object.contact_email %}
-                        <a href="mailto:{{ object.contact_email }}">{{ object.contact_email }}</a>
-                    {% else %}
-                        <span class="text-muted">&mdash;</span>
-                    {% endif %}
-                </td>
-            </tr>
         </table>
     </div>
+    {% if show_convert_to_contact_button %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Contact Info</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Contact Name</td>
+                    <td>{{ object.contact_name|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Contact Phone</td>
+                    <td>{{ object.contact_phone|hyperlinked_phone_number }}</td>
+                </tr>
+                <tr>
+                    <td>Contact E-Mail</td>
+                    <td>{{ object.contact_email|hyperlinked_email }}</td>
+                </tr>
+            </table>
+            {% if request.user|has_perms:contact_association_permission %}
+                {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
+                    <div class="panel-footer text-right noprint">
+                        <a href="{% url 'dcim:location_migrate_data_to_contact' pk=object.pk %}?return_url={{return_url}}" class="btn btn-primary btn-xs">
+                            <span class="mdi mdi-account-edit" aria-hidden="true"></span>
+                            Convert to contact/team record
+                        </a>
+                    </div>
+                {% endwith %}
+            {% endif %}
+        </div>
+    {% endif %}
     <div class="panel panel-default">
         <div class="panel-heading">
             <strong>Comments</strong>
@@ -183,11 +177,11 @@
                 <p>Devices</p>
             </div>
             <div class="col-md-4 text-center">
-                <h2><a href="{% url 'ipam:prefix_list' %}?location={{ object.pk }}" class="btn {% if stats.prefix_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.prefix_count }}</a></h2>
+                <h2><a href="{% url 'ipam:prefix_list' %}?locations={{ object.pk }}" class="btn {% if stats.prefix_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.prefix_count }}</a></h2>
                 <p>Prefixes</p>
             </div>
             <div class="col-md-4 text-center">
-                <h2><a href="{% url 'ipam:vlan_list' %}?location={{ object.pk }}" class="btn {% if stats.vlan_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.vlan_count }}</a></h2>
+                <h2><a href="{% url 'ipam:vlan_list' %}?locations={{ object.pk }}" class="btn {% if stats.vlan_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.vlan_count }}</a></h2>
                 <p>VLANs</p>
             </div>
             <div class="col-md-4 text-center">

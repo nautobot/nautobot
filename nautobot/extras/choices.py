@@ -3,7 +3,6 @@ from celery import states
 from nautobot.core.choices import ChoiceSet
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 
-
 #
 # Banners (currently plugin-specific)
 #
@@ -22,6 +21,41 @@ class BannerClassChoices(ChoiceSet):
         (CLASS_INFO, "Info"),
         (CLASS_WARNING, "Warning"),
         (CLASS_DANGER, "Danger"),
+    )
+
+
+#
+# Contact Association
+#
+
+
+class ContactAssociationRoleChoices(ChoiceSet):
+    """Role choices for contact association instances"""
+
+    ROLE_ADMINISTRATIVE = "administrative"
+    ROLE_BILLING = "billing"
+    ROLE_SUPPORT = "support"
+    ROLE_ON_SITE = "on site"
+
+    CHOICES = (
+        (ROLE_ADMINISTRATIVE, "Administrative"),
+        (ROLE_BILLING, "Billing"),
+        (ROLE_SUPPORT, "Support"),
+        (ROLE_ON_SITE, "On Site"),
+    )
+
+
+class ContactAssociationStatusChoices(ChoiceSet):
+    """Status choices for contact association instances"""
+
+    STATUS_PRIMARY = "primary"
+    STATUS_SECONDARY = "secondary"
+    STATUS_ACTIVE = "active"
+
+    CHOICES = (
+        (STATUS_PRIMARY, "Primary"),
+        (STATUS_SECONDARY, "Secondary"),
+        (STATUS_ACTIVE, "Active"),
     )
 
 
@@ -65,11 +99,25 @@ class CustomFieldTypeChoices(ChoiceSet):
         (TYPE_MARKDOWN, "Markdown"),
     )
 
+    # Types that support validation_minimum/validation_maximum
+    MIN_MAX_TYPES = (
+        TYPE_TEXT,
+        TYPE_INTEGER,
+        TYPE_URL,
+        TYPE_SELECT,
+        TYPE_MULTISELECT,
+        TYPE_JSON,
+        TYPE_MARKDOWN,
+    )
+
+    # Types that support validation_regex
     REGEX_TYPES = (
         TYPE_TEXT,
         TYPE_URL,
         TYPE_SELECT,
         TYPE_MULTISELECT,
+        TYPE_JSON,
+        TYPE_MARKDOWN,
     )
 
 
@@ -111,6 +159,18 @@ class CustomLinkButtonClassChoices(ButtonClassChoices):
 #
 # Dynamic Groups
 #
+
+
+class DynamicGroupTypeChoices(ChoiceSet):
+    TYPE_DYNAMIC_FILTER = "dynamic-filter"
+    TYPE_DYNAMIC_SET = "dynamic-set"
+    TYPE_STATIC = "static"
+
+    CHOICES = (
+        (TYPE_DYNAMIC_FILTER, "Filter-defined"),
+        (TYPE_DYNAMIC_SET, "Group of groups"),
+        (TYPE_STATIC, "Static assignment"),
+    )
 
 
 class DynamicGroupOperatorChoices(ChoiceSet):
@@ -254,6 +314,37 @@ class LogLevelChoices(ChoiceSet):
 
 
 #
+# Metadata
+#
+
+
+class MetadataTypeDataTypeChoices(CustomFieldTypeChoices):
+    """
+    Values for the MetadataType.data_type field.
+
+    Generally equivalent to CustomFieldTypeChoices, but adds TYPE_CONTACT_OR_TEAM.
+    """
+
+    TYPE_CONTACT_TEAM = "contact-or-team"
+    # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
+    TYPE_DATETIME = "datetime"
+    TYPE_FLOAT = "float"
+
+    CHOICES = (
+        *CustomFieldTypeChoices.CHOICES,
+        (TYPE_CONTACT_TEAM, "Contact or Team"),
+        # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
+        (TYPE_DATETIME, "Date/time"),
+        (TYPE_FLOAT, "Floating point number"),
+    )
+
+    MIN_MAX_TYPES = (
+        *CustomFieldTypeChoices.MIN_MAX_TYPES,
+        TYPE_FLOAT,
+    )
+
+
+#
 # ObjectChanges
 #
 
@@ -375,9 +466,9 @@ class SecretsGroupAccessTypeChoices(ChoiceSet):
 
 class SecretsGroupSecretTypeChoices(ChoiceSet):
     TYPE_KEY = "key"
-    TYPE_PASSWORD = "password"
-    TYPE_SECRET = "secret"
-    TYPE_TOKEN = "token"
+    TYPE_PASSWORD = "password"  # noqa: S105  # hardcoded-password-string -- false positive
+    TYPE_SECRET = "secret"  # noqa: S105  # hardcoded-password-string -- false positive
+    TYPE_TOKEN = "token"  # noqa: S105  # hardcoded-password-string -- false positive
     TYPE_USERNAME = "username"
 
     CHOICES = (

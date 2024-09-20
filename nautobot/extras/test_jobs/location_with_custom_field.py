@@ -4,9 +4,8 @@ from django.db import transaction
 from nautobot.core.celery import register_jobs
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.jobs import Job, get_task_logger
+from nautobot.extras.jobs import get_task_logger, Job
 from nautobot.extras.models import CustomField, Status
-
 
 logger = get_task_logger(__name__)
 

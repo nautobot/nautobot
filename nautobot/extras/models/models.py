@@ -4,10 +4,11 @@ import json
 from db_file_storage.model_utils import delete_file, delete_file_if_needed
 from db_file_storage.storage import DatabaseFileStorage
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.core.files.storage import get_storage_class
 from django.core.exceptions import ValidationError
+from django.core.files.storage import get_storage_class
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -20,10 +21,10 @@ from jsonschema.exceptions import SchemaError, ValidationError as JSONSchemaVali
 from jsonschema.validators import Draft7Validator
 from rest_framework.utils.encoders import JSONEncoder
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
-from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName
+from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, LaxURLField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.core.models.validators import EnhancedURLValidator
 from nautobot.core.utils.data import deepmerge, render_jinja2
 from nautobot.extras.choices import (
     ButtonClassChoices,
@@ -31,14 +32,15 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
 
 # Avoid breaking backward compatibility on anything that might expect these to still be defined here:
-from .jobs import JOB_LOGS, Job, JobLogEntry, JobResult, ScheduledJob, ScheduledJobs  # noqa: F401
+from .jobs import Job, JOB_LOGS, JobLogEntry, JobResult, ScheduledJob, ScheduledJobs  # noqa: F401  # unused-import
 
+User = get_user_model()
 #
 # Config contexts
 #
@@ -68,14 +70,22 @@ def limit_dynamic_group_choices():
 
 
 @extras_features("graphql")
-class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin, NotesMixin):
+class ConfigContext(
+    ChangeLoggedModel,
+    ConfigContextSchemaValidationMixin,
+    ContactMixin,
+    # DynamicGroupsModelMixin,  # TODO: conflicts with "dynamic_groups" M2M field on this model
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
     """
     A ConfigContext represents a set of arbitrary data available to any Device or VirtualMachine matching its assigned
     qualifiers (location, tenant, etc.). For example, the data stored in a ConfigContext assigned to location A and tenant B
     will be available to a Device in location A assigned to tenant B. Data is stored in JSON format.
     """
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
 
     # A ConfigContext *may* be owned by another model, such as a GitRepository, or it may be un-owned
     owner_content_type = models.ForeignKey(
@@ -94,7 +104,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     )
 
     weight = models.PositiveSmallIntegerField(default=1000)
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     is_active = models.BooleanField(
         default=True,
     )
@@ -239,8 +249,8 @@ class ConfigContextSchema(OrganizationalModel):
     This model stores jsonschema documents where are used to optionally validate config context data payloads.
     """
 
-    name = models.CharField(max_length=200, unique=True)
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     data_schema = models.JSONField(
         help_text="A JSON Schema document which is used to validate a config context object."
     )
@@ -297,10 +307,18 @@ class ConfigContextSchema(OrganizationalModel):
 
 
 @extras_features("graphql")
-class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
+class CustomLink(
+    ChangeLoggedModel,
+    ContactMixin,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
     """
-    A custom link to an external representation of a Nautobot object. The link text and URL fields accept Jinja2 template
-    code to be rendered with an object as context.
+    A custom link to an external representation of a Nautobot object.
+
+    The link text and URL fields accept Jinja2 template code to be rendered with an object as context.
     """
 
     content_type = models.ForeignKey(
@@ -309,7 +327,7 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
         limit_choices_to=FeatureQuery("custom_links"),
         related_name="custom_links",
     )
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     text = models.CharField(
         max_length=500,
         help_text="Jinja2 template code for link text. "
@@ -324,7 +342,7 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
     )
     weight = models.PositiveSmallIntegerField(default=100)
     group_name = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         help_text="Links with the same group will appear as a dropdown menu",
     )
@@ -351,7 +369,15 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
 @extras_features(
     "graphql",
 )
-class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin):
+class ExportTemplate(
+    ChangeLoggedModel,
+    ContactMixin,
+    DynamicGroupsModelMixin,
+    RelationshipModel,
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
     # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
     owner_content_type = models.ForeignKey(
         to=ContentType,
@@ -373,19 +399,19 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin
         limit_choices_to=FeatureQuery("export_templates"),
         related_name="export_templates",
     )
-    name = models.CharField(max_length=100)
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     template_code = models.TextField(
         help_text="The list of objects being exported is passed as a context variable named <code>queryset</code>."
     )
     mime_type = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         verbose_name="MIME type",
         help_text="Defaults to <code>text/plain</code>",
     )
     file_extension = models.CharField(
-        max_length=15,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         help_text="Extension to append to the rendered filename",
     )
@@ -440,11 +466,10 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin
 class ExternalIntegration(PrimaryModel):
     """Model for tracking integrations with external applications."""
 
-    name = models.CharField(max_length=255, unique=True)
-    remote_url = models.CharField(
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    remote_url = LaxURLField(
         max_length=500,
         verbose_name="Remote URL",
-        validators=[EnhancedURLValidator()],
     )
     secrets_group = models.ForeignKey(
         null=True,
@@ -481,7 +506,7 @@ class ExternalIntegration(PrimaryModel):
         help_text="Headers for the HTTP request",
     )
     ca_file_path = models.CharField(
-        max_length=255,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         verbose_name="CA file path",
     )
@@ -547,8 +572,8 @@ class FileAttachment(BaseModel):
     """
 
     bytes = models.BinaryField()
-    filename = models.CharField(max_length=255)
-    mimetype = models.CharField(max_length=255)
+    filename = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    mimetype = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
 
     natural_key_field_names = ["pk"]
 
@@ -605,7 +630,7 @@ class FileProxy(BaseModel):
     `delete()` on each one individually.
     """
 
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     file = models.FileField(upload_to=_upload_to, storage=_job_storage)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     job_result = models.ForeignKey(to=JobResult, null=True, blank=True, on_delete=models.CASCADE, related_name="files")
@@ -645,8 +670,15 @@ class FileProxy(BaseModel):
 
 
 @extras_features("graphql")
-class GraphQLQuery(BaseModel, ChangeLoggedModel, NotesMixin):
-    name = models.CharField(max_length=100, unique=True)
+class GraphQLQuery(
+    ChangeLoggedModel,
+    ContactMixin,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     query = models.TextField()
     variables = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
 
@@ -697,7 +729,8 @@ class GraphQLQuery(BaseModel, ChangeLoggedModel, NotesMixin):
 
 
 class HealthCheckTestModel(BaseModel):
-    title = models.CharField(max_length=128)
+    title = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    is_metadata_associable_model = False
 
 
 #
@@ -716,7 +749,7 @@ class ImageAttachment(BaseModel):
     image = models.ImageField(upload_to=image_upload, height_field="image_height", width_field="image_width")
     image_height = models.PositiveSmallIntegerField()
     image_width = models.PositiveSmallIntegerField()
-    name = models.CharField(max_length=50, blank=True, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True)
     created = models.DateTimeField(auto_now_add=True)
 
     natural_key_field_names = ["pk"]
@@ -769,7 +802,7 @@ class ImageAttachment(BaseModel):
 
 
 @extras_features("graphql", "webhooks")
-class Note(BaseModel, ChangeLoggedModel):
+class Note(ChangeLoggedModel, BaseModel):
     """
     Notes allow anyone with proper permissions to add a note to an object.
     """
@@ -789,6 +822,8 @@ class Note(BaseModel, ChangeLoggedModel):
     note = models.TextField()
     objects = BaseManager.from_queryset(NotesQuerySet)()
 
+    is_metadata_associable_model = False
+
     class Meta:
         ordering = ["created"]
         unique_together = [["assigned_object_type", "assigned_object_id", "user_name", "created"]]
@@ -803,12 +838,85 @@ class Note(BaseModel, ChangeLoggedModel):
 
 
 #
+# SavedView
+#
+
+
+@extras_features(
+    "custom_validators",
+)
+class SavedView(BaseModel, ChangeLoggedModel):
+    owner = models.ForeignKey(
+        to=User, blank=False, null=False, on_delete=models.CASCADE, help_text="The user that created this view"
+    )
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=False, null=False, help_text="The name of this view")
+    view = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=False,
+        null=False,
+        help_text="The name of the list view that the saved view is derived from, e.g. dcim:device_list",
+    )
+    config = models.JSONField(
+        encoder=DjangoJSONEncoder, blank=True, default=dict, help_text="Saved Configuration on this view"
+    )
+    is_global_default = models.BooleanField(default=False)
+    is_shared = models.BooleanField(default=True)
+
+    documentation_static_path = "docs/user-guide/platform-functionality/savedview.html"
+
+    class Meta:
+        ordering = ["owner", "view", "name"]
+        unique_together = [["owner", "name", "view"]]
+        verbose_name = "saved view"
+        verbose_name_plural = "saved views"
+
+    def __str__(self):
+        return f"{self.owner.username} - {self.view} - {self.name}"
+
+    def save(self, *args, **kwargs):
+        # If this SavedView is set to a global default, all other saved views related to this view name should not be the global default.
+        if self.is_global_default:
+            SavedView.objects.filter(view=self.view, is_global_default=True).exclude(pk=self.pk).update(
+                is_global_default=False
+            )
+            # If the view is set to Global default, is_shared should be true regardless
+            self.is_shared = True
+
+        super().save(*args, **kwargs)
+
+
+@extras_features("graphql")
+class UserSavedViewAssociation(BaseModel):
+    saved_view = models.ForeignKey("extras.SavedView", on_delete=models.CASCADE, related_name="user_assignments")
+    user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="saved_view_assignments")
+    view_name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    is_metadata_associable_model = False
+
+    class Meta:
+        unique_together = [["user", "view_name"]]
+
+    def __str__(self):
+        return f"{self.user}: {self.saved_view} - {self.view_name}"
+
+    def clean(self):
+        super().clean()
+        self.view_name = self.saved_view.view
+
+
+#
 # Webhooks
 #
 
 
 @extras_features("graphql")
-class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
+class Webhook(
+    ChangeLoggedModel,
+    ContactMixin,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
     """
     A Webhook defines a request that will be sent to a remote application when an object is created, updated, and/or
     delete in Nautobot. The request will contain a representation of the object, which the remote application can act on.
@@ -822,7 +930,7 @@ class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
         limit_choices_to=FeatureQuery("webhooks"),
         help_text="The object(s) to which this Webhook applies.",
     )
-    name = models.CharField(max_length=150, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     type_create = models.BooleanField(default=False, help_text="Call this webhook when a matching object is created.")
     type_update = models.BooleanField(default=False, help_text="Call this webhook when a matching object is updated.")
     type_delete = models.BooleanField(default=False, help_text="Call this webhook when a matching object is deleted.")
@@ -839,7 +947,7 @@ class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
         verbose_name="HTTP method",
     )
     http_content_type = models.CharField(
-        max_length=100,
+        max_length=CHARFIELD_MAX_LENGTH,
         default=HTTP_CONTENT_TYPE_JSON,
         verbose_name="HTTP content type",
         help_text="The complete list of official content types is available "
@@ -858,7 +966,7 @@ class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
         "<code>timestamp</code>, <code>username</code>, <code>request_id</code>, and <code>data</code>.",
     )
     secret = models.CharField(
-        max_length=255,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         help_text="When provided, the request will include a 'X-Hook-Signature' "
         "header containing a HMAC hex digest of the payload body using "

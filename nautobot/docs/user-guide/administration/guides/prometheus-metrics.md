@@ -25,7 +25,25 @@ CACHES = {
 }
 ```
 
++++ 2.2.1
+    In case the `/metrics` endpoint is not performant or not required, you can disable specific apps with the [`METRICS_DISABLED_APPS`](../configuration/settings.md#metrics_disabled_apps) configuration setting.
+
 For more information see the [django-prometheus](https://github.com/korfuri/django-prometheus) docs.
+
+## Authentication
+
++++ 2.1.5
+
+Metrics by default do not require authentication to view. Authentication can be toggled with the `METRICS_AUTHENTICATION` configuration setting. If set to `True`, this will require the user to be logged in or to use an API token. See [Rest API Authentication](../../platform-functionality/rest-api/authentication.md) for more details on API authentication.
+
+### Sample Telegraf configuration
+
+```toml
+[[inputs.prometheus]]
+urls = ["http://localhost/metrics"]
+metric_version=2
+http_headers = {"Authorization" = "Token 0123456789abcdef0123456789abcdef01234567"}
+```
 
 ## Metric Types
 

@@ -1,6 +1,0 @@
-"""Views for {{ app_name }}."""
-
-from django.shortcuts import render
-from nautobot.core.views import generic
-
-from {{ app_name }} import models

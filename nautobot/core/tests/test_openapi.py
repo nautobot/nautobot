@@ -1,6 +1,5 @@
 from drf_spectacular.renderers import OpenApiYamlRenderer
 from drf_spectacular.settings import spectacular_settings
-
 import yaml
 
 from nautobot.core.testing import TestCase

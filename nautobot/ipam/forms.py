@@ -1,5 +1,7 @@
 from django import forms
+from django.core.exceptions import ValidationError
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     add_blank_choice,
     AddressFieldMixin,
@@ -24,8 +26,8 @@ from nautobot.dcim.form_mixins import (
 from nautobot.dcim.models import Device, Location, Rack
 from nautobot.extras.forms import (
     NautobotBulkEditForm,
-    NautobotModelForm,
     NautobotFilterForm,
+    NautobotModelForm,
     RoleModelBulkEditFormMixin,
     RoleModelFilterFormMixin,
     StatusModelBulkEditFormMixin,
@@ -35,10 +37,11 @@ from nautobot.extras.forms import (
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
-from .choices import IPAddressVersionChoices, IPAddressTypeChoices, ServiceProtocolChoices, PrefixTypeChoices
+
+from .choices import IPAddressTypeChoices, IPAddressVersionChoices, PrefixTypeChoices, ServiceProtocolChoices
 from .constants import (
-    IPADDRESS_MASK_LENGTH_MIN,
     IPADDRESS_MASK_LENGTH_MAX,
+    IPADDRESS_MASK_LENGTH_MIN,
     PREFIX_LENGTH_MAX,
     PREFIX_LENGTH_MIN,
     SERVICE_PORT_MAX,
@@ -81,7 +84,7 @@ class NamespaceBulkEditForm(
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Namespace.objects.all(), widget=forms.MultipleHiddenInput())
-    description = forms.CharField(max_length=200, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         model = Namespace
@@ -89,6 +92,12 @@ class NamespaceBulkEditForm(
             "description",
             "location",
         ]
+
+
+class NamespaceFilterForm(LocatableModelFilterFormMixin, NautobotFilterForm):
+    model = Namespace
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False)
 
 
 #
@@ -116,6 +125,7 @@ class VRFForm(NautobotModelForm, TenancyForm):
             "name",
             "rd",
             "namespace",
+            "status",
             "description",
             "import_targets",
             "export_targets",
@@ -131,14 +141,21 @@ class VRFForm(NautobotModelForm, TenancyForm):
         }
         help_texts = {
             "rd": "Route distinguisher unique to this Namespace (as defined in RFC 4364)",
+            "status": "Operational status of this VRF",
         }
 
 
-class VRFBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+class VRFBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=VRF.objects.all(), widget=forms.MultipleHiddenInput())
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    add_prefixes = DynamicModelMultipleChoiceField(
+        queryset=Prefix.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
+    remove_prefixes = DynamicModelMultipleChoiceField(
+        queryset=Prefix.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
 
     class Meta:
         nullable_fields = [
@@ -147,9 +164,9 @@ class VRFBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         ]
 
 
-class VRFFilterForm(NautobotFilterForm, TenancyFilterForm):
+class VRFFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, TenancyFilterForm):
     model = VRF
-    field_order = ["q", "import_targets", "export_targets", "tenant_group", "tenant"]
+    field_order = ["q", "import_targets", "export_targets", "status", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
     import_targets = DynamicModelMultipleChoiceField(
         queryset=RouteTarget.objects.all(), to_field_name="name", required=False
@@ -180,7 +197,7 @@ class RouteTargetForm(NautobotModelForm, TenancyForm):
 class RouteTargetBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=RouteTarget.objects.all(), widget=forms.MultipleHiddenInput())
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    description = forms.CharField(max_length=200, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         nullable_fields = [
@@ -238,13 +255,19 @@ class RIRFilterForm(NautobotFilterForm):
 #
 
 
-class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, PrefixFieldMixin):
+class PrefixForm(NautobotModelForm, TenancyForm, PrefixFieldMixin):
+    locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        label="Locations",
+        null_option="None",
+        query_params={"content_type": Prefix._meta.label_lower},
+    )
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
         label="VLAN group",
         null_option="None",
-        query_params={"location_id": "$location"},
         initial_params={"vlans": "$vlan"},
     )
     vlan = DynamicModelChoiceField(
@@ -252,8 +275,8 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         required=False,
         label="VLAN",
         query_params={
-            "location": "$location",
-            "group_id": "$vlan_group",
+            "locations": "$locations",
+            "vlan_group": "$vlan_group",
         },
     )
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
@@ -277,7 +300,7 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
             "prefix",
             "namespace",
             "vrfs",
-            "location",
+            "locations",
             "vlan",
             "status",
             "role",
@@ -309,15 +332,22 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         if self.instance is not None:
             self.initial["vrfs"] = self.instance.vrfs.values_list("id", flat=True)
 
+    def clean(self):
+        # Translate model ValidationError to forms.ValidationError
+        try:
+            return super().clean()
+        except ValidationError as e:
+            raise forms.ValidationError(e.message_dict) from e
+
     def save(self, *args, **kwargs):
         instance = super().save(*args, **kwargs)
         instance.vrfs.set(self.cleaned_data["vrfs"])
+        instance.locations.set(self.cleaned_data["locations"])
         return instance
 
 
 class PrefixBulkEditForm(
     TagsBulkEditFormMixin,
-    LocatableModelBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
     RoleModelBulkEditFormMixin,
     NautobotBulkEditForm,
@@ -336,15 +366,26 @@ class PrefixBulkEditForm(
     """
     prefix_length = forms.IntegerField(min_value=PREFIX_LENGTH_MIN, max_value=PREFIX_LENGTH_MAX, required=False)
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
+    add_locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(), required=False, query_params={"content_type": Prefix._meta.label_lower}
+    )
+    remove_locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(), required=False, query_params={"content_type": Prefix._meta.label_lower}
+    )
+    add_vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
+    remove_vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
     date_allocated = forms.DateTimeField(required=False, widget=DateTimePicker)
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         model = Prefix
         nullable_fields = [
-            "location",
             # "vrf",
             "tenant",
             "rir",
@@ -355,7 +396,6 @@ class PrefixBulkEditForm(
 
 class PrefixFilterForm(
     NautobotFilterForm,
-    LocatableModelFilterFormMixin,
     TenancyFilterForm,
     StatusModelFilterFormMixin,
     RoleModelFilterFormMixin,
@@ -370,7 +410,7 @@ class PrefixFilterForm(
         "vrfs",
         "present_in_vrf_id",
         "status",
-        "location",
+        "locations",
         "role",
         "tenant_group",
         "tenant",
@@ -406,6 +446,13 @@ class PrefixFilterForm(
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
+    locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        required=False,
+        null_option="None",
+        query_params={"content_type": VLAN._meta.label_lower},
+    )
     type = forms.MultipleChoiceField(
         required=False,
         choices=PrefixTypeChoices,
@@ -535,10 +582,14 @@ class IPAddressForm(IPAddressFormMixin, ReturnURLForm):
                 if nat_inside_parent.count() == 1:
                     nat_inside_parent = nat_inside_parent.first()
                     if nat_inside_parent.interface is not None:
-                        initial["nat_location"] = nat_inside_parent.interface.device.location.pk
-                        if nat_inside_parent.interface.device.rack:
-                            initial["nat_rack"] = nat_inside_parent.interface.device.rack.pk
-                        initial["nat_device"] = nat_inside_parent.interface.device.pk
+                        parent_device = nat_inside_parent.interface.device
+                        if parent_device is None and nat_inside_parent.interface.module is not None:
+                            parent_device = nat_inside_parent.interface.module.device
+                        if parent_device:
+                            initial["nat_location"] = parent_device.location.pk
+                            if parent_device.rack:
+                                initial["nat_rack"] = parent_device.rack.pk
+                            initial["nat_device"] = parent_device.pk
                     elif nat_inside_parent.vm_interface is not None:
                         initial["nat_cluster"] = nat_inside_parent.vm_interface.virtual_machine.cluster.pk
                         initial["nat_virtual_machine"] = nat_inside_parent.vm_interface.virtual_machine.pk
@@ -583,8 +634,8 @@ class IPAddressBulkEditForm(
         required=False,
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    dns_name = forms.CharField(max_length=255, required=False)
-    description = forms.CharField(max_length=100, required=False)
+    dns_name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         required=False,
         choices=add_blank_choice(IPAddressTypeChoices),
@@ -619,6 +670,8 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         "role",
         "tenant_group",
         "tenant",
+        "nat_inside",
+        "has_nat_inside",
     ]
     q = forms.CharField(required=False, label="Search")
     parent = forms.CharField(
@@ -655,6 +708,12 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         widget=StaticSelect2(),
     )
     tags = TagFilterField(model)
+    nat_inside = DynamicModelChoiceField(queryset=IPAddress.objects.all(), required=False, label="NAT Inside Address")
+    has_nat_inside = forms.NullBooleanField(
+        required=False,
+        label="Has NAT Inside",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
 
 
 #
@@ -681,17 +740,23 @@ class VLANGroupFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
 #
 
 
-class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
+class VLANForm(NautobotModelForm, TenancyForm):
+    locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        label="Locations",
+        null_option="None",
+        query_params={"content_type": VLAN._meta.label_lower},
+    )
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
-        query_params={"location": "$location"},
     )
 
     class Meta:
         model = VLAN
         fields = [
-            "location",
+            "locations",
             "vlan_group",
             "vid",
             "name",
@@ -703,7 +768,7 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "tags",
         ]
         help_texts = {
-            "location": "Leave blank if this VLAN spans multiple locations",
+            "locations": "Leave blank if this VLAN spans all locations",
             "vlan_group": "VLAN group (optional)",
             "vid": "Configured VLAN ID",
             "name": "Configured VLAN name",
@@ -711,10 +776,22 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "role": "The primary function of this VLAN",
         }
 
+    def clean(self):
+        # Validation error raised in signal is not properly handled in form clean
+        # Hence handling any validationError that might occur.
+        try:
+            return super().clean()
+        except ValidationError as e:
+            raise forms.ValidationError(e.message_dict) from e
+
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        instance.locations.set(self.cleaned_data["locations"])
+        return instance
+
 
 class VLANBulkEditForm(
     TagsBulkEditFormMixin,
-    LocatableModelBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
     RoleModelBulkEditFormMixin,
     NautobotBulkEditForm,
@@ -725,13 +802,18 @@ class VLANBulkEditForm(
         required=False,
         query_params={"location_id": "$location"},
     )
+    add_locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(), required=False, query_params={"content_type": VLAN._meta.label_lower}
+    )
+    remove_locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(), required=False, query_params={"content_type": VLAN._meta.label_lower}
+    )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         model = VLAN
         nullable_fields = [
-            "location",
             "vlan_group",
             "tenant",
             "description",
@@ -740,7 +822,6 @@ class VLANBulkEditForm(
 
 class VLANFilterForm(
     NautobotFilterForm,
-    LocatableModelFilterFormMixin,
     TenancyFilterForm,
     StatusModelFilterFormMixin,
     RoleModelFilterFormMixin,
@@ -748,20 +829,26 @@ class VLANFilterForm(
     model = VLAN
     field_order = [
         "q",
-        "location",
-        "group_id",
+        "locations",
+        "vlan_group",
         "status",
         "role",
         "tenant_group",
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
-    group_id = DynamicModelMultipleChoiceField(
+    locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        required=False,
+        null_option="None",
+        query_params={"content_type": VLAN._meta.label_lower},
+    )
+    vlan_group = DynamicModelMultipleChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
         label="VLAN group",
         null_option="None",
-        query_params={"location": "$location"},
     )
     tags = TagFilterField(model)
 
@@ -849,7 +936,7 @@ class ServiceBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         base_field=forms.IntegerField(min_value=SERVICE_PORT_MIN, max_value=SERVICE_PORT_MAX),
         required=False,
     )
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         nullable_fields = [

@@ -46,18 +46,20 @@
                                 {% if "__" in item.name %}
                                     {% with app_name=item.name|split:"__"|first name=item.name|split:"__"|last %}
                                         {% get_attr settings "PLUGINS_CONFIG" as app_settings %}
-                                        <div class="form-group{% if item.form_field.errors %} has-error{% endif %}">
-                                            {% if app_settings|get_item:app_name|get_item:name is not None %}
-                                                <div class="alert alert-warning" role="alert">
-                                                    <code>{{ name }} = {{ app_settings|get_item:app_name|get_item:name | quote_string }}</code>
-                                                    is defined in <code>{{ settings.SETTINGS_PATH }}</code>
-                                                    under PLUGINS_CONFIG[{{app_name}}],
-                                                    therefore it is not currently editable here.
-                                                    <br>Remove that declaration from <code>{{ settings.SETTINGS_PATH }}</code>
-                                                    if you want to manage it via this interface instead.
-                                                </div>
-                                                {{ item.form_field.as_hidden }}
-                                            {% else %}
+                                        {% if app_settings|get_item:app_name|get_item:name is not None %}
+                                            <div class="alert alert-warning" role="alert">
+                                                <code>{{ name }} = {{ app_settings|get_item:app_name|get_item:name | quote_string }}</code>
+                                                is set via an environment variable or otherwise explicitly
+                                                set in <code>{{ settings.SETTINGS_PATH }}</code>
+                                                under PLUGINS_CONFIG[{{app_name}}],
+                                                therefore it is not currently editable here.
+                                                <br>Remove that environment variable and/or the declaration in
+                                                <code>{{ settings.SETTINGS_PATH }}</code>
+                                                if you want to manage it via this interface instead.
+                                            </div>
+                                            {{ item.form_field.as_hidden }}
+                                        {% else %}
+                                            <div class="form-group{% if item.form_field.errors %} has-error{% endif %}">
                                                 <label class="col-md-3 control-label" for="{{ item.form_field.id_for_label }}">
                                                     {{ name | split:"_" | join:" " }}
                                                     <span class="help-block">
@@ -70,22 +72,24 @@
                                                         {{ item.form_field }}
                                                     <span class="help-block">{{ item.help_text | linebreaksbr }}</span>
                                                 </div>
-                                            {% endif %}
-                                        </div>
+                                            </div>
+                                        {% endif %}
                                     {% endwith %}
                                 {% else %}
                                     {% get_attr settings item.name as settings_value %}
-                                    <div class="form-group{% if item.form_field.errors %} has-error{% endif %}">
-                                        {% if settings_value is not None %}
-                                            <div class="alert alert-warning" role="alert">
-                                                <code>{{ item.name }} = {{ settings_value | quote_string }}</code>
-                                                is defined in <code>{{ settings.SETTINGS_PATH }}</code>,
-                                                therefore it is not currently editable here.
-                                                <br>Remove that declaration from <code>{{ settings.SETTINGS_PATH }}</code>
-                                                if you want to manage it via this interface instead.
-                                            </div>
-                                            {{ item.form_field.as_hidden }}
-                                        {% else %}
+                                    {% if settings_value is not None %}
+                                        <div class="alert alert-warning" role="alert">
+                                            <code>{{ item.name }} = {{ settings_value | quote_string }}</code>
+                                            is set via an environment variable or otherwise explicitly
+                                            set in <code>{{ settings.SETTINGS_PATH }}</code>,
+                                            therefore it is not currently editable here.
+                                            <br>Remove that environment variable and/or the declaration in
+                                            <code>{{ settings.SETTINGS_PATH }}</code>
+                                            if you want to manage it via this interface instead.
+                                        </div>
+                                        {{ item.form_field.as_hidden }}
+                                    {% else %}
+                                        <div class="form-group{% if item.form_field.errors %} has-error{% endif %}">
                                             <label class="col-md-3 control-label" for="{{ item.form_field.id_for_label }}">
                                                 {{ item.name | split:"_" | join:" " }}
                                                 <span class="help-block">
@@ -98,8 +102,8 @@
                                                     {{ item.form_field }}
                                                 <span class="help-block">{{ item.help_text | linebreaksbr }}</span>
                                             </div>
-                                        {% endif %}
-                                    </div>
+                                        </div>
+                                    {% endif %}
                                 {% endif %}
                                 {% endfor %}
                             </div>

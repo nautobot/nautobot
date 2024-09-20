@@ -38,7 +38,7 @@
       "description": "Require dashboard approval for major updates for packages known to have breaking changes.",
       "dependencyDashboardApproval": true,
       "matchBaseBranches": ["next"],
-      "matchPackageNames": ["django-taggit", "flake8"],
+      "matchPackageNames": ["django-taggit"],
       "matchUpdateTypes": ["major"]
     }
   ],

@@ -45,7 +45,7 @@ The [`django-storages`](https://django-storages.readthedocs.io/en/stable/) libra
 In `nautobot_config.py` define the following configuration:
 
 ```python
-STORAGE_BACKEND = "storages.backends.s3boto3.S3Boto3Storage"
+STORAGE_BACKEND = "storages.backends.s3.S3Storage"
 
 STORAGE_CONFIG = {
     "AWS_ACCESS_KEY_ID": "...",
@@ -88,9 +88,9 @@ front_image = models.ImageField(upload_to="devicetype-images", blank=True)
 rear_image = models.ImageField(upload_to="devicetype-images", blank=True)
 ```
 
-At a high level this takes care of everything you'd need for standard Nautobot deployment, but what if you're creating a plugin and you have a requirement for the data to be stored in an additional directory?
+At a high level this takes care of everything you'd need for standard Nautobot deployment, but what if you're creating an App and you have a requirement for the data to be stored in an additional directory?
 
-This is where using the generic `FileField` provided by Django comes into play. For example, lets say a new plugin is being developed and storing the software images is one of the key requirements. The model might look something like the snippet below:
+This is where using the generic `FileField` provided by Django comes into play. For example, lets say a new App is being developed and storing the software images is one of the key requirements. The model might look something like the snippet below:
 
 ```python
 class SoftwareFileAttachment(BaseModel):
@@ -107,15 +107,15 @@ class SoftwareFileAttachment(BaseModel):
 
 The `models.FileField` alongside the `upload_to` argument can be used to store user uploaded files into the already established S3 bucket. With the configuration settings provided earlier in this article and the `upload_to=uploads/` attribute the software attachments will be stored at `f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{AWS_LOCATION}/uploads/"`.
 
-The nice thing about using `django-storages` is the ease of use and the ability to easily extend storage backends. One use case for extending storage backends that has been used is to store certain plugin data attachments in its own S3 bucket with different permissions. If we take this concept to the example of `SoftwareFileAttachment` we can put the software images in their own S3 bucket by creating a custom storage backend that we can pass to our `models.FileField` model field.
+The nice thing about using `django-storages` is the ease of use and the ability to easily extend storage backends. One use case for extending storage backends that has been used is to store certain App data attachments in its own S3 bucket with different permissions. If we take this concept to the example of `SoftwareFileAttachment` we can put the software images in their own S3 bucket by creating a custom storage backend that we can pass to our `models.FileField` model field.
 
-For this example I created a simple python file called `customer_storage.py` in the root of my plugin.
+For this example I created a simple python file called `customer_storage.py` in the root of my App.
 
 ```python
 """Example of a custom extension to support flexible s3 storage."""
-from storages.backends.s3boto3 import S3Boto3Storage
+from storages.backends.s3 import S3Storage
 
-class MediaStorage(S3Boto3Storage):
+class MediaStorage(S3Storage):
     bucket_name = 'nautobot-sw-media'
     location = "software_images" # store files under directory `software_images/` in bucket `nautobot-sw-media`
 ```
@@ -123,7 +123,7 @@ class MediaStorage(S3Boto3Storage):
 In the model you just need to pass in the `storage=` argument.
 
 ```python
-from custom_config_plugin.custom_storage import MediaStorage
+from custom_config_app.custom_storage import MediaStorage
 
 class SoftwareFileAttachment(BaseModel):
     """An uploaded software bin file for OS upgrades."""
@@ -139,7 +139,7 @@ class SoftwareFileAttachment(BaseModel):
 
 When a user uploads a new software image to this model it will be stored in `<AWS S3 URL>/software_images/uploads/<file>.bin`.
 
-This is valuable because you may have certain models in a plugin or other enhancements that need to have more specific granularity in the S3 bucket they belong in, also it may be crucial to have different S3 IAM requirements for certain files over the general static files the Nautobot application needs to run appropriately.
+This is valuable because you may have certain models in an App or other enhancements that need to have more specific granularity in the S3 bucket they belong in, also it may be crucial to have different S3 IAM requirements for certain files over the general static files the Nautobot application needs to run appropriately.
 
 ## Summary
 

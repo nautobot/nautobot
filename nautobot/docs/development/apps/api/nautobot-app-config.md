@@ -81,4 +81,4 @@ The following `NautobotAppConfig` attributes can be configured to customize wher
 | `jobs` | `"jobs.jobs"` | Dotted path to a list of [Job classes](platform-features/jobs.md) |
 | `menu_items` | `"navigation.menu_items"` | Dotted path to a list of [navigation menu items](ui-extensions/navigation.md) provided by the app |
 | `secrets_providers` | `"secrets.secrets_providers"` | Dotted path to a list of [secrets providers](platform-features/secrets-providers.md) in the app |
-| `template_extensions` | `"template_content.template_extensions"` | Dotted path to a list of [template extension classes](ui-extensions/object-detail-views.md) |
+| `template_extensions` | `"template_content.template_extensions"` | Dotted path to a list of [template extension classes](ui-extensions/object-views.md) |

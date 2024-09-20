@@ -13,7 +13,6 @@ from django_filters.utils import verbose_lookup_expr
 from nautobot.core import exceptions
 from nautobot.core.utils.lookup import get_filterset_for_model
 
-
 # Check if field name contains a lookup expr
 # e.g `name__ic` has lookup expr `ic (icontains)` while `name` has no lookup expr
 CONTAINS_LOOKUP_EXPR_RE = re.compile(r"(?<=__)\w+")
@@ -88,10 +87,6 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     Return the relevant form field instance for a filterset parameter e.g DynamicModelMultipleChoiceField, forms.IntegerField e.t.c
     """
     # Avoid circular import
-    from nautobot.dcim.models import Device
-    from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, CustomFieldFilterMixin, StatusFilter
-    from nautobot.extras.models import ConfigContext, Role, Status, Tag
-    from nautobot.extras.utils import ChangeLoggedModelsQuery, RoleModelsQuery, TaggableClassesQuery
     from nautobot.core.filters import MultiValueDecimalFilter, MultiValueFloatFilter
     from nautobot.core.forms import (
         BOOLEAN_CHOICES,
@@ -100,6 +95,10 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
         StaticSelect2,
         StaticSelect2Multiple,
     )
+    from nautobot.dcim.models import Device
+    from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, CustomFieldFilterMixin
+    from nautobot.extras.models import ConfigContext
+    from nautobot.extras.utils import ChangeLoggedModelsQuery, RoleModelsQuery, TaggableClassesQuery
     from nautobot.virtualization.models import VirtualMachine
 
     if filterset is None or filterset.Meta.model != model:
@@ -115,17 +114,18 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     elif isinstance(field, NumberFilter):
         form_field = forms.IntegerField()
     elif isinstance(field, ModelMultipleChoiceFilter):
-        related_model = Status if isinstance(field, StatusFilter) else field.extra["queryset"].model
+        if getattr(field, "prefers_id", False):
+            to_field_name = "id"
+        else:
+            to_field_name = field.extra.get("to_field_name", "id")
         form_attr = {
-            "queryset": related_model.objects.all(),
-            "to_field_name": field.extra.get("to_field_name", "id"),
+            "queryset": field.extra["queryset"],
+            "to_field_name": to_field_name,
+            "query_params": field.extra.get("query_params", {}),
         }
         # ConfigContext requires content_type set to Device and VirtualMachine
         if model == ConfigContext:
             form_attr["query_params"] = {"content_types": [Device._meta.label_lower, VirtualMachine._meta.label_lower]}
-        # Status and Tag api requires content_type, to limit result to only related content_types
-        elif related_model in [Role, Status, Tag]:
-            form_attr["query_params"] = {"content_types": model._meta.label_lower}
 
         form_field = DynamicModelMultipleChoiceField(**form_attr)
     elif isinstance(
@@ -137,7 +137,9 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
         plural_name = slugify_dashes_to_underscores(model._meta.verbose_name_plural)
         # Cable-connectable models use "cable_terminations", not "cables", as the feature name
         if plural_name == "cables":
-            plural_name == "cable_terminations"
+            plural_name = "cable_terminations"
+        elif plural_name == "metadata_types":
+            plural_name = "metadata"
         try:
             form_field = MultipleContentTypeField(choices_as_strings=True, feature=plural_name)
         except KeyError:

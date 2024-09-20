@@ -1,11 +1,10 @@
 from django.test.client import RequestFactory
-
-from nautobot.extras.models import GraphQLQuery
-
 from graphene.types import Scalar
 from graphene_django.settings import graphene_settings
 from graphql import get_default_backend
 from graphql.language import ast
+
+from nautobot.extras.models import GraphQLQuery
 
 
 def execute_query(query, variables=None, request=None, user=None):

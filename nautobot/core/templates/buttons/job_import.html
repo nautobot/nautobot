@@ -1,0 +1,13 @@
+{% if import_url %}
+    {% if list_element %}
+        <li>
+            <a id="import-button" href="{{ import_url }}">
+                <span class="mdi mdi-database-import text-muted" aria-hidden="true"></span> Import from CSV
+            </a>
+        </li>
+    {% else %}
+        <a id="import-button" href="{{ import_url }}" class="btn btn-info">
+            <span class="mdi mdi-database-import" aria-hidden="true"></span> Import
+        </a>
+    {% endif %}
+{% endif %}
