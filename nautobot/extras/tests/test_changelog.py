@@ -209,8 +209,8 @@ class ChangeLogViewTest(ModelViewTestCase):
         oc_without_object_data_v2_1.validated_save()
         with self.subTest("previous ObjectChange has object_data_v2, current ObjectChange does not"):
             resp = self.client.get(oc_without_object_data_v2_1.get_absolute_url())
-            self.assertContains(resp, "initial description")
-            self.assertContains(resp, "changed description1")
+            self.assertContains(resp, '"description": "initial description"')
+            self.assertContains(resp, '"description": "changed description1"')
 
         # create second objectchange without object_data_v2
         with context_managers.web_request_context(self.user):
@@ -221,8 +221,8 @@ class ChangeLogViewTest(ModelViewTestCase):
         oc_without_object_data_v2_2.validated_save()
         with self.subTest("previous and current ObjectChange do not have object_data_v2"):
             resp = self.client.get(oc_without_object_data_v2_2.get_absolute_url())
-            self.assertContains(resp, "changed description1")
-            self.assertContains(resp, "changed description2")
+            self.assertContains(resp, '"description": "changed description1"')
+            self.assertContains(resp, '"description": "changed description2"')
 
         # create objectchange with object_data_v2
         with context_managers.web_request_context(self.user):
@@ -231,8 +231,8 @@ class ChangeLogViewTest(ModelViewTestCase):
         oc_with_object_data_v2 = get_changes_for_model(location).first()
         with self.subTest("previous ObjectChange does not have object_data_v2, current ObjectChange does"):
             resp = self.client.get(oc_with_object_data_v2.get_absolute_url())
-            self.assertContains(resp, "changed description2")
-            self.assertContains(resp, "changed description3")
+            self.assertContains(resp, '"description": "changed description2"')
+            self.assertContains(resp, '"description": "changed description3"')
 
 
 class ChangeLogAPITest(APITestCase):
