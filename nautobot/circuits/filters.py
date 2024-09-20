@@ -1,6 +1,6 @@
 import django_filters
-from django.db.models import Q
 
+from nautobot.cloud.models import CloudNetwork
 from nautobot.core.filters import (
     BaseFilterSet,
     NameSearchFilterSet,
@@ -17,6 +17,7 @@ from nautobot.dcim.filters import (
 from nautobot.dcim.models import Location
 from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
+
 from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 __all__ = (
@@ -29,9 +30,14 @@ __all__ = (
 
 
 class ProviderFilterSet(NautobotFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "account": "icontains",
+            "noc_contact": "icontains",
+            "admin_contact": "icontains",
+            "comments": "icontains",
+        },
     )
     circuits = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="cid",
@@ -52,6 +58,7 @@ class ProviderFilterSet(NautobotFilterSet):
         label="Has provider networks",
     )
     location = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         field_name="circuits__circuit_terminations__location",
         queryset=Location.objects.all(),
         to_field_name="name",
@@ -72,25 +79,14 @@ class ProviderFilterSet(NautobotFilterSet):
             "tags",
         ]
 
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
-        # pylint: disable=unsupported-binary-operation
-        return queryset.filter(
-            Q(name__icontains=value)
-            | Q(account__icontains=value)
-            | Q(noc_contact__icontains=value)
-            | Q(admin_contact__icontains=value)
-            | Q(comments__icontains=value)
-        )
-        # pylint: enable=unsupported-binary-operation
-
 
 class ProviderNetworkFilterSet(NautobotFilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+            "comments": "icontains",
+        },
     )
     circuit_terminations = django_filters.ModelMultipleChoiceFilter(
         queryset=CircuitTermination.objects.all(),
@@ -110,16 +106,6 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
     class Meta:
         model = ProviderNetwork
         fields = ["comments", "description", "id", "name", "tags"]
-
-    def search(self, queryset, name, value):
-        if not value.strip():
-            return queryset
-        # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
-        # pylint: disable=unsupported-binary-operation
-        return queryset.filter(
-            Q(name__icontains=value) | Q(description__icontains=value) | Q(comments__icontains=value)
-        ).distinct()
-        # pylint: enable=unsupported-binary-operation
 
 
 class CircuitTypeFilterSet(NautobotFilterSet, NameSearchFilterSet):
@@ -156,6 +142,7 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
         label="Circuit type (name or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         field_name="circuit_terminations__location",
         queryset=Location.objects.all(),
         to_field_name="name",
@@ -172,6 +159,13 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
     circuit_termination_z = django_filters.ModelMultipleChoiceFilter(
         queryset=CircuitTermination.objects.all(),
         label="Termination Z (ID)",
+    )
+
+    cloud_network = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="circuit_terminations__cloud_network",
+        queryset=CloudNetwork.objects.all(),
+        to_field_name="name",
+        label="Cloud Network (name or ID)",
     )
 
     class Meta:
@@ -211,6 +205,9 @@ class CircuitTerminationFilterSet(
         queryset=ProviderNetwork.objects.all(),
         to_field_name="name",
         label="Provider Network (name or ID)",
+    )
+    cloud_network = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=CloudNetwork.objects.all(), to_field_name="name", label="Cloud Network (name or ID)"
     )
 
     class Meta:

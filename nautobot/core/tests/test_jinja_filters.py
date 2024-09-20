@@ -47,17 +47,17 @@ class NautobotJinjaFilterTest(TestCase):
             "slugify",
         ]
 
-        # For each helper, try to render a jinja template with render_jinja2 and fail if TemplateAssertionError is raised
+        # For each helper, try to render jinja template with render_jinja2 and fail if TemplateAssertionError is raised
         for helper in helpers_to_validate:
             try:
                 data.render_jinja2("{{ data | " + helper + " }}", {"data": None})
             except TemplateAssertionError:
                 raise
-            except Exception:
+            except Exception:  # noqa: S110  # try-except-pass -- an antipattern in general, but OK here
                 pass
 
     def test_netutils_filters_in_jinja(self):
-        """Import the list of all Jinja filters from Netutils and validate that all of them have been properly loaded in Django Jinja"""
+        """Import all Jinja filters from Netutils and validate that all have been properly loaded in Django Jinja."""
         filters = jinja2_convenience_function()
 
         for filter_ in filters.keys():
@@ -65,7 +65,7 @@ class NautobotJinjaFilterTest(TestCase):
                 data.render_jinja2("{{ data | " + filter_ + " }}", {"data": None})
             except TemplateAssertionError:
                 raise
-            except Exception:
+            except Exception:  # noqa: S110  # try-except-pass -- an antipattern in general, but OK here
                 pass
 
     def test_sandboxed_render(self):

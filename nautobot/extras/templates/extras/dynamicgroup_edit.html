@@ -1,4 +1,4 @@
-{% extends "generic/object_edit.html" %}
+{% extends 'generic/object_create.html' %}
 {% load static %}
 {% load form_helpers %}
 
@@ -25,6 +25,8 @@
             {% render_field form.name %}
             {% render_field form.description %}
             {% render_field form.content_type %}
+            {% render_field form.group_type %}
+            {% render_field form.tenant %}
         </div>
     </div>
     <div class="panel panel-default">
@@ -120,7 +122,7 @@
                                                 {% for error in field.errors %}
                                                     {# Embed an HTML comment indicating the error for extraction by tests #}
                                                     <!-- FORM-ERROR {{ field.name }}: {{ error }} -->
-                                                    <li clas="text-danger">{{ error }}</li>
+                                                    <li class="text-danger">{{ error }}</li>
                                                 {% endfor %}
                                             </ul>
                                         {% endif %}

@@ -1,9 +1,8 @@
 from nautobot.core.api.routers import OrderedDefaultRouter
+
 from . import views
 
-
-router = OrderedDefaultRouter()
-router.APIRootView = views.ExtrasRootView
+router = OrderedDefaultRouter(view_name="Extras")
 
 # Computed Fields
 router.register("computed-fields", views.ComputedFieldViewSet)
@@ -13,6 +12,10 @@ router.register("config-contexts", views.ConfigContextViewSet)
 
 # Config context schemas
 router.register("config-context-schemas", views.ConfigContextSchemaViewSet)
+
+# Contacts
+router.register("contacts", views.ContactViewSet)
+router.register("contact-associations", views.ContactAssociationViewSet)
 
 # ContentTypes
 router.register("content-types", views.ContentTypeViewSet)
@@ -27,6 +30,13 @@ router.register("custom-links", views.CustomLinkViewSet)
 # Dynamic Groups
 router.register("dynamic-groups", views.DynamicGroupViewSet)
 router.register("dynamic-group-memberships", views.DynamicGroupMembershipViewSet)
+
+# Saved Views
+router.register("saved-views", views.SavedViewViewSet)
+router.register("user-saved-view-associations", views.UserSavedViewAssociationViewSet)
+
+# Static Groups
+router.register("static-group-associations", views.StaticGroupAssociationViewSet)
 
 # Export templates
 router.register("export-templates", views.ExportTemplateViewSet)
@@ -65,6 +75,11 @@ router.register("job-results", views.JobResultViewSet)
 # Scheduled Jobs
 router.register("scheduled-jobs", views.ScheduledJobViewSet)
 
+# Metadata
+router.register("metadata-types", views.MetadataTypeViewSet)
+router.register("metadata-choices", views.MetadataChoiceViewSet)
+router.register("object-metadata", views.ObjectMetadataViewSet)
+
 # Notes
 router.register("notes", views.NoteViewSet)
 
@@ -88,6 +103,9 @@ router.register("statuses", views.StatusViewSet)
 
 # Tags
 router.register("tags", views.TagViewSet)
+
+# Teams
+router.register("teams", views.TeamViewSet)
 
 # Webhooks
 router.register("webhooks", views.WebhooksViewSet)

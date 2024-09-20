@@ -1,17 +1,16 @@
 import hashlib
 import json
 import platform
-import requests
-import requests.exceptions
 import uuid
 
 from constance import config
 from django.apps import apps
 from django.conf import settings
 from django.core.management.base import BaseCommand
+import requests
+import requests.exceptions
 
 from nautobot.core.utils.config import get_settings_or_config
-
 
 METRICS_ENDPOINT = "https://nautobot.cloud/api/nautobot/installation-metric/"
 

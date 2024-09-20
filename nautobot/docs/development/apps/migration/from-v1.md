@@ -5,7 +5,6 @@ This document provides guidance on migrating code from version 1.x to version 2.
 ## Table of Contents
 
 - New to Nautobot v2.0.0
-    - [New UI](../../core/react-ui.md)
     - [Enhanced Filter Fields](../../../release-notes/version-2.0.md#enhanced-filter-fields-2804)
 - Changes to Nautobot in v2.0.0
     - [Database (ORM) Changes](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#database-orm-changes)
@@ -38,12 +37,12 @@ This document provides guidance on migrating code from version 1.x to version 2.
         - [Revamp CSV Import and Export](code-updates.md#revamp-csv-import-and-export)
     - Model Updates
         - [Global](model-updates/global.md)
-            - [Replace the Usage of Slugs](model-updates/global.md#replace-the-usage-of-slugs-with-composite-keys)
+            - [Replace the Usage of Slugs](model-updates/global.md#replace-the-usage-of-slugs)
         - [DCIM](model-updates/dcim.md)
             - [Replace Site and Region with Location Model](model-updates/dcim.md#replace-site-and-region-with-location-model)
         - [Extras](model-updates/extras.md)
             - [Replace Role Related Models with Generic Role Model](model-updates/extras.md#replace-role-related-models-with-generic-role-model)
-            - [Update Job and Job related models](model-updates/extras.md#update-job-and-job-related-models)
+            - [Update Job and Job related models](model-updates/extras.md#updates-to-job-and-job-related-models)
                 - [Job Model Changes](model-updates/extras.md#job-model-changes)
                 - [Job Logging Changes](model-updates/extras.md#job-logging-changes)
                 - [JobResult Model Changes](model-updates/extras.md#jobresult-model-changes)

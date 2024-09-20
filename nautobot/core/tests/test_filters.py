@@ -7,22 +7,19 @@ from django.db import models as django_models
 from django.shortcuts import reverse
 from django.test import TestCase
 from django.test.utils import isolate_apps
-
 import django_filters
 from tree_queries.models import TreeNodeForeignKey
 
 from nautobot.circuits.filters import CircuitFilterSet
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core import filters, testing
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import fields as core_fields
 from nautobot.core.utils import lookup
-from nautobot.dcim import choices as dcim_choices
-from nautobot.dcim import filters as dcim_filters
-from nautobot.dcim import models as dcim_models
-from nautobot.dcim.models import Device
+from nautobot.dcim import choices as dcim_choices, filters as dcim_filters, models as dcim_models
+from nautobot.dcim.models import Controller, Device
 from nautobot.extras import models as extras_models
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam import factory as ipam_factory
 from nautobot.ipam import models as ipam_models
 
 
@@ -145,6 +142,7 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
                 self.child_location_2ab,
                 self.child_location_same_name_2,
             ],
+            ordered=False,
         )
 
     def test_filter_null(self):
@@ -215,6 +213,7 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
                 self.child_location_2ab,
                 self.child_location_same_name_2,
             ],
+            ordered=False,
         )
 
     def test_filter_combined_name_exclude(self):
@@ -413,15 +412,15 @@ class BaseFilterSetTest(TestCase):
     Ensure that a BaseFilterSet automatically creates the expected set of filters for each filter type.
     """
 
-    class TestFilterSet(filters.BaseFilterSet):
+    class TestFilterSet(filters.BaseFilterSet):  # pylint: disable=used-before-assignment  # appears to be a pylint bug
         """Filterset for testing various fields."""
 
-        class TestModel(django_models.Model):
+        class TestModel(django_models.Model):  # noqa: DJ008  # django-model-without-dunder-str -- fine since this isn't a "real" model
             """
             Test model used by BaseFilterSetTest for filter validation. Should never appear in a schema migration.
             """
 
-            charfield = django_models.CharField(max_length=10)
+            charfield = django_models.CharField(max_length=CHARFIELD_MAX_LENGTH)
             choicefield = django_models.IntegerField(choices=(("A", 1), ("B", 2), ("C", 3)))
             charchoicefield = django_models.CharField(
                 choices=(("1", "Option 1"), ("2", "Option 2"), ("3", "Option 3")), max_length=10
@@ -833,6 +832,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         manufacturers = dcim_models.Manufacturer.objects.all()[:3]
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
 
         device_types = (
@@ -1306,14 +1306,14 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
             parent=self.parent_location_1,
             name="Test Child Location 1",
             location_type=self.lt,
-            asn=1234,
+            asn=12345,
             status=status,
         )
         self.child_location_2 = dcim_models.Location.objects.create(
             parent=self.parent_location_2,
             name="Test Child Location 2",
             location_type=self.lt,
-            asn=12345,
+            asn=123456,
             status=status,
         )
         self.child_location_3 = dcim_models.Location.objects.create(
@@ -1355,19 +1355,19 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
 
     def test_default_exact(self):
         """Test a default search for an "exact" value."""
-        params = {"q": "1234"}
+        params = {"q": "12345"}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact="1234")
+            self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact=12345)
         )
         asn = (
-            dcim_models.Location.objects.exclude(asn="1234")
+            dcim_models.Location.objects.exclude(asn="12345")
             .exclude(asn__isnull=True)
             .values_list("asn", flat=True)
             .first()
         )
         params = {"q": str(asn)}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact=str(asn))
+            self.filterset_class(params, self.queryset).qs, self.queryset.filter(asn__exact=asn)
         )
 
     def test_default_id(self):
@@ -1391,9 +1391,9 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
 
             q = filters.SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact", "preprocessor": int}})
 
-        params = {"q": "1234"}
+        params = {"q": "12345"}
         self.assertQuerysetEqualAndNotEmpty(
-            MyLocationFilterSet(params, self.queryset).qs, self.queryset.filter(asn__exact="1234")
+            MyLocationFilterSet(params, self.queryset).qs, self.queryset.filter(asn__exact="12345")
         )
         params = {"q": "123"}
         # Both querysets are empty so we dont use assertQuerysetEqualAndNotEmpty here.
@@ -1405,7 +1405,7 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
 
             q = filters.SearchFilter(filter_predicates={"asn": {"lookup_expr": "exact", "preprocessor": dict}})
 
-        params = {"q": "1234"}
+        params = {"q": "12345"}
         # Both querysets are empty so we dont use assertQuerysetEqualAndNotEmpty here.
         self.assertEqual(self.get_filterset_count(params, MyLocationFilterSet2), 0)
 
@@ -1587,7 +1587,6 @@ class FilterTypeTest(TestCase):
         """
         user = get_user_model().objects.create_user(username="testuser", is_superuser=True)
         self.client.force_login(user)
-        ipam_factory.PrefixFactory()
         prefix_list_url = reverse(lookup.get_route_for_model(ipam_models.Prefix, "list"))
         response = self.client.get(f"{prefix_list_url}?prefix_length__lte=20")
         self.assertNotContains(response, "Invalid filters were specified")

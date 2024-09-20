@@ -1,0 +1,63 @@
+{% extends 'dcim/module/base.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <strong>Module</strong>
+    </div>
+    <table class="table table-hover panel-body attr-table">
+        <tr>
+            <td>Module Type</td>
+            <td>
+                {{ object.module_type|hyperlinked_object }}
+            </td>
+        </tr>
+        <tr>
+            <td>Installed in</td>
+            <td>
+                {% if object.parent_module_bay %}
+                    {% if object.parent_module_bay.parent_device %}
+                        <a href="{% url 'dcim:device_modulebays' pk=object.parent_module_bay.parent_device.pk %}">{{ object.parent_module_bay.display }}</a>
+                    {% else %}
+                        <a href="{% url 'dcim:module_modulebays' pk=object.parent_module_bay.parent_module.pk %}">{{ object.parent_module_bay.display }}</a>
+                    {% endif %}
+                {% else %}
+                    {{ None|placeholder }}
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td>Location</td>
+            <td>
+                {% include 'dcim/inc/location_hierarchy.html' with location=object.location %}
+            </td>
+        </tr>
+        <tr>
+            <td>Status</td>
+            <td>{{ object.status|hyperlinked_object_with_color }}</td>
+        </tr>
+        <tr>
+            <td>Role</td>
+            <td>{{ object.role|hyperlinked_object_with_color }}</td>
+        </tr>
+        <tr>
+            <td>Serial</td>
+            <td>{{ object.serial|placeholder }}</td>
+        </tr>
+        <tr>
+            <td>Asset Tag</td>
+            <td>{{ object.asset_tag|placeholder }}</td>
+        </tr>
+        <tr>
+            <td>Tenant</td>
+            <td>{{ object.tenant|hyperlinked_object }}</td>
+        </tr>
+    </table>
+</div>
+{% endblock content_left_page %}
+
+{% block javascript %}
+{{ block.super }}
+
+{% endblock javascript %}

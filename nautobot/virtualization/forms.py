@@ -1,6 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     add_blank_choice,
     BootstrapMixin,
@@ -19,23 +20,24 @@ from nautobot.core.forms import (
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.constants import INTERFACE_MTU_MAX, INTERFACE_MTU_MIN
-from nautobot.dcim.forms import InterfaceCommonForm, INTERFACE_MODE_HELP_TEXT
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
-from nautobot.dcim.models import Device, Location, Platform, Rack
+from nautobot.dcim.forms import INTERFACE_MODE_HELP_TEXT, InterfaceCommonForm
+from nautobot.dcim.models import Device, Location, Platform, Rack, SoftwareImageFile, SoftwareVersion
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
-    NautobotBulkEditForm,
-    NautobotModelForm,
-    NautobotFilterForm,
     LocalContextFilterForm,
-    LocalContextModelForm,
     LocalContextModelBulkEditForm,
+    LocalContextModelForm,
+    NautobotBulkEditForm,
+    NautobotFilterForm,
+    NautobotModelForm,
     RoleModelBulkEditFormMixin,
     RoleModelFilterFormMixin,
+    RoleNotRequiredModelFormMixin,
     StatusModelBulkEditFormMixin,
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
@@ -44,8 +46,8 @@ from nautobot.extras.models import Status
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
-from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
+from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 #
 # Cluster types
@@ -61,6 +63,12 @@ class ClusterTypeForm(NautobotModelForm):
         ]
 
 
+class ClusterTypeFilterForm(NautobotFilterForm):
+    model = ClusterType
+    q = forms.CharField(required=False, label="Search")
+    clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), to_field_name="name", required=False)
+
+
 #
 # Cluster groups
 #
@@ -73,6 +81,12 @@ class ClusterGroupForm(NautobotModelForm):
             "name",
             "description",
         ]
+
+
+class ClusterGroupFilterForm(NautobotFilterForm):
+    model = ClusterGroup
+    q = forms.CharField(required=False, label="Search")
+    clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), to_field_name="name", required=False)
 
 
 #
@@ -207,6 +221,13 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
         queryset=Cluster.objects.all(), query_params={"cluster_group_id": "$cluster_group"}
     )
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
+    software_image_files = DynamicModelMultipleChoiceField(
+        queryset=SoftwareImageFile.objects.all(),
+        required=False,
+        label="Software image files",
+        help_text="Override the software image files associated with the software version for this virtual machine",
+    )
+    software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
     vrfs = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -227,6 +248,8 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
             "platform",
             "primary_ip4",
             "primary_ip6",
+            "software_image_files",
+            "software_version",
             "vcpus",
             "memory",
             "disk",
@@ -258,7 +281,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
                 # Collect interface IPs
                 interface_ip_assignments = IPAddressToInterface.objects.filter(
                     vm_interface__in=interface_ids
-                ).prefetch_related("ip_address")
+                ).select_related("ip_address")
                 if interface_ip_assignments.exists():
                     ip_list = [
                         (
@@ -315,6 +338,8 @@ class VirtualMachineBulkEditForm(
     memory = forms.IntegerField(required=False, label="Memory (MB)")
     disk = forms.IntegerField(required=False, label="Disk (GB)")
     comments = CommentField(widget=SmallTextarea, label="Comments")
+    software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
+    software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
 
     class Meta:
         nullable_fields = [
@@ -324,6 +349,8 @@ class VirtualMachineBulkEditForm(
             "memory",
             "disk",
             "comments",
+            "software_image_files",
+            "software_version",
         ]
 
 
@@ -375,6 +402,16 @@ class VirtualMachineFilterForm(
         label="Has a primary IP",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
+    software_version = DynamicModelMultipleChoiceField(
+        queryset=SoftwareVersion.objects.all(),
+        required=False,
+        label="Software version",
+    )
+    has_software_version = forms.NullBooleanField(
+        required=False,
+        label="Has software version",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
     tags = TagFilterField(model)
 
 
@@ -404,7 +441,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         required=False,
         label="Untagged VLAN",
         query_params={
-            "location_id": "null",
+            "locations": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
@@ -412,7 +449,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         required=False,
         label="Tagged VLANs",
         query_params={
-            "location_id": "null",
+            "locations": "null",
         },
     )
     ip_addresses = DynamicModelMultipleChoiceField(
@@ -426,6 +463,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         fields = [
             "virtual_machine",
             "name",
+            "role",
             "enabled",
             "parent_interface",
             "bridge",
@@ -461,11 +499,12 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         # Add current location to VLANs query params
         location = virtual_machine.location
         if location:
-            self.fields["untagged_vlan"].widget.add_query_param("location_id", location.pk)
-            self.fields["tagged_vlans"].widget.add_query_param("location_id", location.pk)
+            self.fields["untagged_vlan"].widget.add_query_param("locations", location.pk)
+            self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
 
 
-class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
+class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm, RoleNotRequiredModelFormMixin):
+    model = VMInterface
     virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())
     name_pattern = ExpandableNameField(label="Name")
     enabled = forms.BooleanField(required=False, initial=True)
@@ -492,7 +531,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         label="MTU",
     )
     mac_address = forms.CharField(required=False, label="MAC Address")
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     mode = forms.ChoiceField(
         choices=add_blank_choice(InterfaceModeChoices),
         required=False,
@@ -502,14 +541,14 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location_id": "null",
+            "locations": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location_id": "null",
+            "locations": "null",
         },
     )
     status = DynamicModelChoiceField(
@@ -534,11 +573,13 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         # Add current location to VLANs query params
         location = virtual_machine.location
         if location:
-            self.fields["untagged_vlan"].widget.add_query_param("location_id", location.pk)
-            self.fields["tagged_vlans"].widget.add_query_param("location_id", location.pk)
+            self.fields["untagged_vlan"].widget.add_query_param("locations", location.pk)
+            self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
 
 
-class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
+class VMInterfaceBulkEditForm(
+    TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, RoleModelBulkEditFormMixin, NautobotBulkEditForm
+):
     pk = forms.ModelMultipleChoiceField(queryset=VMInterface.objects.all(), widget=forms.MultipleHiddenInput())
     virtual_machine = forms.ModelChoiceField(
         queryset=VirtualMachine.objects.all(),
@@ -560,7 +601,7 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
         max_value=INTERFACE_MTU_MAX,
         label="MTU",
     )
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     mode = forms.ChoiceField(
         choices=add_blank_choice(InterfaceModeChoices),
         required=False,
@@ -570,14 +611,14 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location_id": "null",
+            "locations": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location_id": "null",
+            "locations": "null",
         },
     )
 
@@ -604,8 +645,8 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
             location = getattr(parent_obj.cluster, "location", None)
             if location is not None:
                 # Add current location to VLANs query params
-                self.fields["untagged_vlan"].widget.add_query_param("location_id", location.pk)
-                self.fields["tagged_vlans"].widget.add_query_param("location_id", location.pk)
+                self.fields["untagged_vlan"].widget.add_query_param("locations", location.pk)
+                self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
 
         self.fields["parent_interface"].choices = ()
         self.fields["parent_interface"].widget.attrs["disabled"] = True
@@ -617,7 +658,7 @@ class VMInterfaceBulkRenameForm(BulkRenameForm):
     pk = forms.ModelMultipleChoiceField(queryset=VMInterface.objects.all(), widget=forms.MultipleHiddenInput())
 
 
-class VMInterfaceFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
+class VMInterfaceFilterForm(NautobotFilterForm, RoleModelFilterFormMixin, StatusModelFilterFormMixin):
     model = VMInterface
     cluster_id = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False, label="Cluster")
     virtual_machine_id = DynamicModelMultipleChoiceField(
@@ -646,7 +687,9 @@ class VirtualMachineBulkAddComponentForm(CustomFieldModelBulkEditFormMixin, Boot
 class VMInterfaceBulkCreateForm(
     form_from_model(VMInterface, ["enabled", "mtu", "description", "mode", "tags"]),
     VirtualMachineBulkAddComponentForm,
+    RoleNotRequiredModelFormMixin,
 ):
+    model = VMInterface
     status = DynamicModelChoiceField(
         queryset=Status.objects.all(),
         query_params={"content_types": VMInterface._meta.label_lower},
@@ -655,6 +698,7 @@ class VMInterfaceBulkCreateForm(
     field_order = (
         "name_pattern",
         "status",
+        "role",
         "enabled",
         "mtu",
         "description",

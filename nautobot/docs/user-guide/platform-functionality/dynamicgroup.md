@@ -2,69 +2,107 @@
 
 +++ 1.3.0
 
-Dynamic Groups provide a way to organize objects of the same Content Type by matching filters. A Dynamic Group can be used to create unique groups of objects matching a given filter, such as Devices for a specific location or set of locations. As indicated by the name, Dynamic Groups update in real time as potential member objects are created, updated, or deleted.
+Dynamic Groups provide a general-purpose way to collect related objects of a given Content Type, such as Devices associated with a given Location(s) and Status(es), Circuits attached to a given set of Devices, and so forth. A given Dynamic Group may contain any number of objects of the appropriate type as members, and an object may belong to any number of Dynamic Groups of the appropriate content-type as a member of each. It is possible both to query the members of a given Dynamic Group, and also to query which Dynamic Groups a given object is a member of.
 
-When creating a Dynamic Group, one must select a Content Type to which it is associated, for example `dcim.device`. The filtering parameters saved to the group behave as a bi-directional search query that is used to identify members of that group, and can also be used to determine from an individual object the list of Dynamic Groups to which an individual object belongs.
+There are currently three ways to define the object members of a Dynamic group:
 
-Once created the Content Type for a Dynamic Group may not be modified as this relationship is tightly-coupled to the available filtering parameters. All other fields may be updated at any time.
+1. Filter-based assignment (for example, "All Devices with Location X and Status Y")
+2. Set-based assignment from other defined groups (for example, "All devices in Group A or Group B but not Group C")
+3. Static assignment directly to the group (for example, "Device XYZ01, Device XYZ02, and Device XYZ04")
+
++++ 1.4.0 "Set-based group assignment"
+    Support for set-based assignment to groups was added.
+
++++ 2.3.0 "Static group assignment"
+    Support for static assignment to groups was added, and the distinction between filter-based and set-based assignment was formally established.
+
+The members of each Dynamic Group are cached and tracked by [Static Group Association](staticgroupassociation.md) database records.
 
 ## Introduction
 
-### Creating Dynamic Groups
+### Creating Dynamic Groups in the UI
 
-Dynamic Groups can be created through the UI under _Organization > Dynamic Groups_ and clicking the "Add" button, or through the REST API.
+Dynamic Groups can be created through the UI under _Organization > Groups > Dynamic Groups_ and clicking the "Add" button.
 
-Each Dynamic Group must have a human-readable **Name** string, e.g. `devices-location-ams01`. You must select a **Content Type** for the group that determines the kind of objects that can be members of the group and the corresponding filtering parameters available. Finally, you may also assign an optional human-friendly **Description** (e.g. "Devices in location AMS01").
+When creating a Dynamic Group, you must provide a unique **Name** for the group, select an **Object Type** (also known as content-type) of the objects that it will contain as members, for example `dcim.device`, and also select a **Group Type**, specifying which of the supported member assignment patterns will apply to this group. (Any given Dynamic Group can only use one such pattern; mixing assignment types within a single group is not permitted at this time.) You can also optionally provide a **Description** for the group, select a [**Tenant**](../core-data-model/tenancy/tenant.md) that the group applies to, and/or apply [**Tags**](tag.md) to it.
 
-Once a new Dynamic Group is created, the group can be configured by clicking the "Edit" button to specify **Filter Fields** or **Child Groups** to use to narrow down the group's member objects. More on this below.
++++ 2.3.0 "Tenant and tags"
+    Support for assigning a tenant and/or tags to a Dynamic Group was added.
 
 !!! warning
-    The content type of a Dynamic Group cannot be modified once created, so take care in selecting this initially. This is intended to prevent the possibility of inconsistent data and enforces the importance of thinking about the data model when defining a new Dynamic Group.
+    After initial creation, the Content Type for a Dynamic Group may not be modified, as doing so would invalidate the filter, set definition, or static assignments of members for this group. Similarly, the Group Type also generally may not be modified, except in a few specific cases that are permitted for backwards compatibility with the behavior of Dynamic Groups before an explicit Group Type field was added to the model. All other fields may be updated at any time.
 
-### Working with Dynamic Groups
+Once a new Dynamic Group is created, the group membership can be configured by clicking the "Edit" button to specify **Filter Fields** or **Child Groups** as appropriate to the Group Type, or, for static membership, by navigating to the object list view and selecting the objects to add to the group. More on these options below.
 
-Once created and configured, Dynamic Groups can be accessed from the primary Dynamic Groups landing page in the web interface under the _Organization > Dynamic Groups_ menu. From there you may view the list of available groups, search or filter the list, view or edit an individual group, or bulk delete groups. Additionally if a group's filter has matching members, the number of members may be clicked to take you to the list of members for that dynamic group containing those objects.
+### Working with Dynamic Groups in the UI
+
+Once created and configured, Dynamic Groups can be accessed from the primary Dynamic Groups landing page in the web interface under the _Organization > Groups > Dynamic Groups_ menu. From there you may view the list of available groups, search or filter the list, view or edit an individual group, or bulk delete groups. Additionally if a group has any members, you can click on the members count in the Dynamic Groups list view to display the full list of members for that Dynamic Group.
 
 Dynamic Groups cannot be imported nor can they be updated in bulk, as these operations would be complex and do not make sense in most cases.
 
 From an individual object's detail page, if it is a member of any groups, a "Dynamic Groups" tab will display in the navigation tabs. Clicking that tab will display all Dynamic Groups of which this object is a member.
 
-### Filtering
+## About Membership Caching
 
-Dynamic Group filtering is powered by **FilterSet** objects underneath the hood. Basic filtering is performed using the `filter` that is defined on a given Dynamic Group. Advanced filtering is performed by aggregating filters from multiple nested Dynamic Groups to form a combined parent Dynamic Group, which will be explained later in this document.
+Since looking up the members of a filter-based or set-based Dynamic Group can potentially involve an expensive set of database queries depending on the complexity of the group definition, Nautobot internally caches the members of these group types using the same [Static Group Association](staticgroupassociation.md) database table that also records the members of statically-defined Dynamic Groups. In particular, this implementation greatly speeds up the "reverse lookup" pattern where, given an individual object, the user needs to identify all Dynamic Groups that it is a member of.
 
-An object is considered to be a member of a Dynamic Group if it is of the same Content Type and it is not excluded by way of any of the filter criteria specified for that group. By default, a freshly created group has an empty filter (`{}`), which will include all objects of the matching Content Type, just as a default list view of those objects would display prior to any filter fields being filled in the web UI.
+Creating, updating, or deleting a Dynamic Group will automatically refresh the cache with the new membership information for this group, as will viewing the "detail view" of any given Dynamic Group.
+
+If you need to refresh the membership cache for all Dynamic Groups, you can do so by running the management command `nautobot-server refresh_dynamic_group_member_caches`. This will clear and repopulate the cache for all Dynamic Groups.
+
+You can also refresh the cache for one or all Dynamic Groups by running the `Refresh Dynamic Group Caches` system [Job](jobs/index.md). You may find it useful to define a schedule for this job such that it automatically refreshes these caches periodically, such as every 15 minutes or every day, depending on your needs.
+
+!!! warning
+    Creating or updating other objects (candidate group members and/or objects that are referenced by a Dynamic Group's filters) will **not** automatically refresh these caches.
+
+## Dynamic Group Types
+
+### Filter-Based Dynamic Groups
+
+Assignment of objects to a filter-based Dynamic Group is powered by Nautobot **FilterSet** classes underneath the hood. The [django-filter](https://django-filter.readthedocs.io/en/stable/) documentation may be a useful reference for users wanting to develop an in-depth understanding of FilterSets, but is by no means required to understand Dynamic Groups.
+
+A filter-based Dynamic Group defines a `filter` field, which is stored in the database as a JSON dict. An object is considered to be a member of such a Dynamic Group if it has the correct Content Type and it is not excluded by the filter criteria defined by the group. By default, a freshly created Dynamic Group has an empty filter (`{}`), which means that all objects of the matching Content Type are members of this group, just as a default list view of these objects would display all such objects prior to any filter fields being selected in the web UI.
 
 For example, for a Dynamic Group with Content Type of `dcim.device` and an empty filter, the list of members would be equivalent to the default Device list view, which in turn is equivalent to the queryset for `Device.objects.all()` from the database ORM.
 
-+/- 1.4.0
++/- 1.4.0 "Change in empty filter behavior"
     In Nautobot v1.3.0 the default for a Dynamic Group with an empty filter was to "fail closed" and have zero members.
 
     As of v1.4.0, this behavior has been inverted to default to include all objects matching the Content Type, instead of matching no objects as was previously the case. This was necessary to implement the progressive layering of child filters similarly to how we use filters to reduce desired objects from basic list view filters. This will be described in more detail below.
 
-#### Basic Filtering
+When editing a filter-based Dynamic Group, under the **Filter Options** section, you will find a **Filter Fields** tab that allows you to select filter criteria. The filter fields available for a given Content Type are backed and validated by underlying FilterSet classes (for example `nautobot.dcim.filters.DeviceFilterSet`) and are represented in the web interface as a dynamically-generated filter form that corresponds to each eligible filter field.
 
-When editing a Dynamic Group, under the **Filter Options** section, you will find a **Filter Fields** tab that allows one to specify filter criteria. The filter fields available for a given Content Type are backed and validated by underlying filterset classes (for example `nautobot.dcim.filters.DeviceFilterSet`) and are represented in the web interface as a dynamically-generated filter form that corresponds to each eligible filter field.
-
-#### Advanced Filtering
+### Set-Based Dynamic Groups
 
 +++ 1.4.0
 
-Advanced filtering is performed using nested Dynamic Group memberships.
+Set-based Dynamic Groups do not directly define a filter for identifying member objects; instead, they define their members based on set operations (AND, OR, and NOT, or Union, Intersection, and Difference if you prefer) involving _other_ Dynamic Groups.
 
-An object is considered a member of an advanced Dynamic Group if it matches the aggregated filter criteria across all descendant groups.
+!!! tip
+    At this time, a set-based Dynamic Group may include filter-based Dynamic Groups and other set-based Dynamic Groups in its members definition, but set-based Dynamic Groups _may not_ currently include static-assignment-based Dynamic Groups. This restriction may be removed in a future Nautobot release.
 
-When editing a Dynamic Group, under the **Filter Options** section, you will find a **Child Groups** tab that allows one to make other Dynamic Groups of the same Content Type children of the parent group.
+An object is considered a member of an set-based Dynamic Group if it matches the aggregated filter criteria derived from the "child" or "descendant" groups included in this group definition. The immediate descendants of a Dynamic Group are accessible through its `.children` attribute, but if the children are also set-based Dynamic Groups, then they may have their own descendants as well, and so forth. The many-to-many mapping of "parent" to "child" Dynamic Groups is implemented via a "through table" of `DynamicGroupMembership` records.
+
+!!! info
+    The name "Dynamic Group Membership" is potentially confusing -- it does _not_ describe the member objects (devices, IP addresses, etc.) of a Dynamic Group (that's the "Static Group Association" table, described below, used for static-assignment-based groups and caching); rather, this table defines the association between each set-based Dynamic Group and the other Dynamic Groups that are its "children".
+
+When editing a set-based Dynamic Group, under the **Filter Options** section, you will find a **Child Groups** tab that allows you to select other Dynamic Groups of the same Content Type to be "children" of this "parent" group and how they will be used to select or exclude candidate objects from the "parent" group's members.
 
 ![Child Groups](../../media/models/dynamicgroup_filtering_01.png)
+
+### Static-Assignment-Based Dynamic Groups
+
++++ 2.3.0
+
+Unlike the other types of Dynamic Groups, the members of a static-assignment-based Dynamic Group are not automatically derived by Nautobot, but instead are each explicitly assigned to such a group. Each association of a given object into a given static-assignment-based Dynamic Group is recorded by a [Static Group Association](staticgroupassociation.md) database record. Individual objects can be associated to these Dynamic Groups in the object's create/edit form, but in most cases it's easier and quicker to bulk-update a set of objects from their appropriate list/table view via the "Update Group Assignment" button.
 
 ## Example Workflow
 
 Dynamic Groups are a complex topic and are perhaps best understood through a series of worked examples.
 
-### Basic Filtering with a single Dynamic Group
+### Basic Filtering with a single Filter-Based Dynamic Group
 
-Let's say you want to create a Dynamic Group that contains all production Devices at your first two Locations. You can create a Dynamic Group called "Devices at Locations A and B" for Content Type `dcim | device`, then edit it and set the **Filter Fields** to match:
+Let's say you want to create a Dynamic Group that contains all production Devices at your first two Locations. You can create a Dynamic Group named "Devices at Locations A and B", for Content Type `dcim | device`, with Group Type "Filter-based membership", then edit it and set the **Filter Fields** to match:
 
 1. a Location of either "AMS01" or "BKK01"
 2. a Status of "Active" or "Offline"
@@ -92,7 +130,7 @@ A key to understand here is that generally, within a single Dynamic Group, addit
 !!! note
     Keep in mind that the `Filter Query Logic` will also contain any descendants of the selected model instance.  As we can see above the `Filter Query Logic` uses both location "BKK01" and "AMSO1" and their descendants.
 
-### Advanced Filtering - Combining Two Dynamic Groups into a Third
+### Advanced Filtering: Defining a Set-Based Dynamic Group to Combine Two Others
 
 +++ 1.4.0
 
@@ -112,9 +150,9 @@ Now, let's say that you add a third location to your network. This location is c
 )
 ```
 
-This logic is too complex to express directly via a single Dynamic Group, but fear not! This is what combining Dynamic Groups allows you to do.
+This logic is too complex to express directly via a single Dynamic Group, but fear not! This is what combining Dynamic Groups via a set-based group allows you to do.
 
-First, you can create a new "Devices of Interest" group. Edit this group, and instead of specifying **Filter Fields**, switch to the **Child Groups** tab of the editor, select the operator "Include (OR)" and the group "Devices at Locations A and B", and update the group.
+First, create a new "Devices of Interest" group, again of Content Type "dcim | device", but this time select "Set-based membership" as the Group Type. Edit this group, and instead of specifying **Filter Fields**, you will instead use the **Child Groups** tab of the editor, select the operator "Include (OR)" and the group "Devices at Locations A and B", and update the group.
 
 ![Creating a Parent Group](../../media/models/dynamicgroup_workflow_advanced_1_01.png)
 
@@ -214,7 +252,7 @@ Most importantly, you now have a Dynamic Group that contains exactly the set of 
 
 ### Filter Generation
 
-Filters are always processed hiearchically from the top down starting from the parent group and descending recursively to the last nested child group in order by the `weight` value assigned to that group when it was associated to its parent.
+Filters are always processed hierarchically from the top down starting from the parent group and descending recursively to the last nested child group in order by the `weight` value assigned to that group when it was associated to its parent.
 
 !!! note
     For the purpose illustration, we will use "left to right" terminology since when verbally describing precedence in English, we read from left to right, so that following it will be more intuitive.
@@ -332,7 +370,13 @@ AND NOT (
 
 ## Dynamic Groups and the REST API
 
-Dynamic Groups are fully supported by the API. Two distinct endpoints are required, one each for managing Dynamic Groups and for assigning child groups using Dynamic Group Memberships.
+Dynamic Groups are fully supported by the API. There are several distinct endpoints for accessing different aspects of this feature
+
+The REST API endpints under `/api/extras/dynamic-groups/` are used to perform standard CRUD (Create/Retrieve/Update/Delete) operations on Dynamic Group definitions. There is also a special read-only endpoint `/api/extras/dynamic-groups/<group UUID>/members/` that returns a serialized list of a group's member objects; for example, for a Dynamic Group of Prefixes, this endpoint would return the list of Prefix objects contained in this group.
+
+A second set of endpoints, `/api/extras/dynamic-group-memberships/`, provides CRUD functionality for the Dynamic Group Membership through table that manages the definition of a set-based Dynamic Group.
+
+A third set of endpoints, `/api/extras/static-group-associations/`, provides CRUD functionality for the [Static Group Association](staticgroupassociation.md) through table that manages the assignment of members to a static-membership Dynamic Group.
 
 ### Specifying Filter Conditions
 
@@ -388,19 +432,19 @@ Any invalid field values for valid field names will also result in a `Validation
 +/- 1.4.0
     Prior to v1.4.0, any invalid field names that are not eligible for filtering objects will be discarded upon validation.
 
-    As of v1.4.0, [strict filtering is enabled by default](../administration/configuration/optional-settings.md#strict_filtering), which causes any invalid field names to result in a `ValidationError`.
+    As of v1.4.0, [strict filtering is enabled by default](../administration/configuration/settings.md#strict_filtering), which causes any invalid field names to result in a `ValidationError`.
 
-### Managing Dynamic Groups
+### Managing Dynamic Groups in the REST API
 
-#### Creating a Dynamic Group
+#### Creating a Dynamic Group via REST
 
 A Dynamic Group may be created by performing a `POST` to the Dynamic Groups list endpoint at `/api/extras/dynamic-groups/`.
 
 !!! note
-    The `filter` field will default to an empty filter (`{}`) if not provided.
+    The `group_type` field defaults to `dynamic-filter` (i.e., filter-based membership) if unspecified, and similarly the `filter` field will default to an empty filter (`{}`) if not provided.
 
 !!! important
-    It is not possible to perform a nested assignment of `children` when creating a new Dynamic Group. You must first create the new group and then use the endpoint for creating Dynamic Group Memberships as explained below under [Assigning Child Groups](#assigning-child-groups).
+    It is not possible to perform a nested assignment of `children` when creating a new Dynamic Group. You must first create the new group and then use the endpoint for creating Dynamic Group Memberships as explained below under [Assigning Child Groups via REST](#assigning-child-groups-via-rest).
 
 Request:
 
@@ -411,7 +455,7 @@ POST /api/extras/dynamic-groups/
     "name": "parent",
     "description": "I am a parent group with nested children.",
     "content-type": "dcim.device",
-    "filter": {},
+    "group-type": "dynamic-filter",
 }
 ```
 
@@ -425,6 +469,7 @@ Response:
     "name": "parent",
     "description": "I am the parent group with nested children.",
     "content_type": "dcim.device",
+    "group_type": "dynamic-filter",
     "filter": {},
     "children": [],
     "created": "2022-07-06T20:17:04.305663Z",
@@ -435,48 +480,37 @@ Response:
 }
 ```
 
-#### Updating or Deleting a Dynamic Group
+#### Updating or Deleting a Dynamic Group via REST
 
 !!! important
-    It is not possible to perform a nested update of `children` when updating a new Dynamic Group. You must use the endpoint for creating Dynamic Group Memberships as explained below under [Updating or Deleting Child Groups](#updating-or-deleting-child-groups).
+    It is not possible to perform a nested update of `children` when updating a Dynamic Group. You must use the endpoint for creating Dynamic Group Memberships as explained below under [Updating or Deleting Child Groups via REST](#updating-or-deleting-child-groups-via-rest).
 
 Updating or deleting a Dynamic Group is done by sending a request to the detail endpoint for that object.
 
-A Dynamic Group may be updated using `PUT` or `PATCH` (for a partial update) requests. A `PUT` request requires the entire object to be updated in place. For example if you wanted to update the `name` and the `description` together, leaving every other field with their current values as provided:
+A Dynamic Group may be updated using `PUT` or `PATCH` requests. As usual for REST, a `PUT` request requires the entire object to be described, while a `PATCH` allows for individual fields to be updated without affecting the other fields. For example if you wanted to update the `name` and the `description` together, leaving every other field with their current values as provided:
 
 ```json
-PUT /api/extras/dynamic-groups/{uuid}/
+PATCH /api/extras/dynamic-groups/{uuid}/
 
 {
     "name": "I am the best parent group",
     "description": "I am the best parent group with nested children.",
-    "filter": {}
-}
-```
-
-Performing a partial update using a `PATCH` request can allow any single field to be updated without affecting the other fields. For example, if we wanted to update only the `name` for a group:
-
-```json
-PATCH /api/extras/dynamic-group-memberships/{uuid}/
-
-{
-    "name": "I am the best parent group"
 }
 ```
 
 To delete a Dynamic Group you would send a `DELETE` request to the detail endpoint:
 
 ```json
-DELETE /api/extras/dynamic-group-memberships/{uuid}/
+DELETE /api/extras/dynamic-groups/{uuid}/
 ```
 
-### Managing Child Groups
+### Managing Child Groups via REST
 
-Dynamic Groups may be nested to a parent group by creating a new Dynamic Group Membership. The act of assigning a Dynamic Group as a child to a parent group creates a Dynamic Group Membership.
+Dynamic Groups may be added to a set-based group by creating a new Dynamic Group Membership. The act of assigning a Dynamic Group as a child to a parent group creates a Dynamic Group Membership.
 
 This can be done at the list endpoint found at `/api/extras/dynamic-group-memberships/`.
 
-#### Assigning Child Groups
+#### Assigning Child Groups via REST
 
 Dynamic Group Membership objects may be created, updated, or deleted just like any other object and are represented as `children` on the parent group.
 
@@ -534,6 +568,7 @@ GET /api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/
     "name": "parent",
     "description": "",
     "content_type": "dcim.device",
+    "group_type": "dynamic-set",
     "filter": {},
     "children": [
         {
@@ -565,24 +600,11 @@ GET /api/extras/dynamic-groups/1f825078-b6dc-4b12-9463-be5a9189b03f/
 }
 ```
 
-#### Updating or Deleting Child Groups
+#### Updating or Deleting Child Groups via REST
 
 Updating or deleting Dynamic Group Membership is done by sending a request to the detail endpoint for that membership object.
 
-A Dynamic Group Membership may be updated using `PUT` or `PATCH` (for a partial update) requests. A `PUT` request requires the entire object to be updated in place. For example if you wanted to update the `operator` and the `weight` together,leaving every other field with their current values as provided:
-
-```json
-PUT /api/extras/dynamic-group-memberships/{uuid}/
-
-{
-    "group": {"name": "first-child"},
-    "parent_group": {"name": "parent"},
-    "operator": "difference",
-    "weight": 10
-}
-```
-
-Performing a partial update using a `PATCH` request can allow any single field to be updated without affecting the other fields. For example, if we only wanted to update the `weight` for a membership:
+A Dynamic Group Membership may be updated using `PUT` or `PATCH` requests. Again, a `PUT` request requires the entire object to be described, while performing a partial update using a `PATCH` request can allow any single field to be updated without affecting the other fields. For example, if we only wanted to update the `weight` for a membership:
 
 ```json
 PATCH /api/extras/dynamic-group-memberships/{uuid}/
@@ -598,66 +620,35 @@ To delete a Dynamic Group Membership you would send a `DELETE` request to the de
 DELETE /api/extras/dynamic-group-memberships/{uuid}/
 ```
 
-## Membership and Caching
+## Dynamic Groups and the Python API (Django ORM)
 
-Since looking up the members of a Dynamic Group can be a very expensive operation, Nautobot caches the results of these lookups for a configurable amount of time. By default this cache is disabled. You can change this default value by changing the `DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT` in the administration panel. This value is in seconds.
+!!! tip
+    By default, all models inheriting from Nautobot's `OrganizationalModel` or `PrimaryModel` classes are assumed to be a viable object type for Dynamic Groups to be defined for. Individual models that do not wish to be assignable to Dynamic Groups can declare the flag `is_dynamic_group_associable_model = False` on their model definition. Conversely, models that inherit directly from Nautobot's `BaseModel` default to _not_ supporting Dynamic Groups, but can include the `nautobot.apps.models.DynamicGroupsModelMixin` class as a part of their class definition in order to enable Dynamic Group support.
 
-Creating, updating, or deleting a Dynamic Group will automatically invalidate the cache for that group. This means that the next time the group is evaluated, the cache will be refreshed with the new membership information.
+### Working with a Dynamic Group's Members
 
-This greatly speeds up the reverse association of any object to any Dynamic Group(s) to which it may be associated.
+Any Dynamic Group object in the ORM has a simple property, `.members`, for retrieving the QuerySet of (cached) members of that group. Because this data is cached in the database, even for a complex filter-based or set-based group definition, no expensive queries are required here; evaluating the QuerySet will perform a single efficient database query. You can of course perform further `.filter()` and other QuerySet operations, but (as always with QuerySets) this will incur additional database queries to re-evaluate the modified QuerySet.
 
-A Dynamic Group object in the ORM exposes two (2) properties for retrieving the members of that group:
+Additionally, a Dynamic Group has the method `.has_member(obj)` for checking whether a single given database object is a (cached) member of this group. This too is a very efficient query.
 
-- `members` - The evaluated QuerySet defined by the Dynamic Group and it's potential child groups. This will always perform database queries.
-- `members_cached` - A cached instance of `members.all()`. This will only perform database queries if the cache is expired. You can continue to perform `.filter()` and other QuerySet operations but this will incur additional database queries.
+Neither of the above attributes provide a way to directly bypass the cache used by this Dynamic Group; if it's important to your use case to guarantee up-to-the-minute accurate membership information, you can call a Dynamic Group's `.update_cached_members()` method, which will refresh its cache and return the resulting member QuerySet. Because refreshing the cache involves evaluating the Dynamic Group's defined filter(s), this is necessarily a more expensive database query(s) than either of the above access patterns, so it should only be done if required.
 
-Additionally, a Dynamic Group has the following methods for working with group membership and caching:
++/- 2.3.0 "Simpler, always-on caching"
+    In prior versions of Nautobot, `.members` did not use a cache (and so would always re-evaluate the Dynamic Group), and a separate `.members_cached` property used a configurable Redis cache to temporarily store the evaluated QuerySet. For performance reasons, the behavior of `.members` has been changed to behave as described above. `.members_cached` should be considered deprecated and will likely be removed in a future major release.
 
-- `update_cached_members` - A way of forcing an update to the cached members of a Dynamic Group. This will always perform database queries. It will also return the updated `members_cached` property.
-- `has_member` - A way of checking if an object is a member of a Dynamic Group. The arguments are:
-    - `obj` - An instance of an object to check if it is a member of the given group.
-    - `use_cache` - A boolean value to choose whether to use the cached member list (`use_cache=True`) or force the database query (`use_cache=False`, the default). This is a handy way to have Nautobot perform the ideal membership check.
-        - `DynamicGroup.members_cached.filter(pk=obj.pk).exists()` will re-perform a database query, where `DynamicGroup.has_member(obj, use_cache=False)` will perform `obj in list(DyamicGroup.members_cached)`, performing no additional database queries.
-        - In contrast `DynamicGroup.members.filter(pk=obj.pk).exists()` will always a database query but a much faster one as opposed to`obj in list(DyamicGroup.members)`.
+    Similarly, `.has_member(obj)` was previously non-cached by default, but the Redis cache could be used by invoking it as `.has_member(obj, use_cache=True)`; this too has been changed in this release, and the `use_cache` flag should be considered deprecated as well.
 
-A model instance that supports Dynamic Groups will expose the following properties:
+For static-assignment-based Dynamic groups (only!) you can update its member list by assigning directly to its `.members` or calling its `.add_members()` or `.remove_members()` methods as desired. Invoking any of these APIs for a filter-based or set-based Dynamic Group is an error and will raise an exception.
 
-- `dynamic_groups` - A QuerySet of `DynamicGroup` objects; performs the most database queries.
-    - Iterates over all Dynamic Groups that are applicable to the instance's content type, resulting in a list (what is available as `dynamic_groups_list`) of applicable Dynamic Groups.
-    - A final query (`DynamicGroup.objects.filter(pk__in=dynamic_groups_list)`) is necessary to retrieve a QuerySet of `DynamicGroup` objects.
-    - Always performs `N+1` queries where `N` is the number of Dynamic Groups that are applicable to the instance's content type
-    - Evaluation of `instance_1.dynamic_groups` adds no benefit to `instance_2.dynamic_groups`: each instance will perform `N+1` queries.
-- `dynamic_groups_cached` - A QuerySet of `DynamicGroup` objects; uses cached member list if available. Ideal for most use cases.
-    - Uses cached member lists for each Dynamic Group that is applicable to the instance's content type. Membership check returns a list (what is available as `dynamic_groups_list_cached`) of applicable Dynamic Groups.
-    - A query (`DynamicGroup.objects.filter(pk__in=dynamic_groups_list_cached)`) is necessary to retrieve a QuerySet of `DynamicGroup` objects.
-    - Ideal for most use cases, performing only `1` query if membership lists are cached.
-    - Evaluation of `instance_1.dynamic_groups_cached` benefits `instance_2.dynamic_groups_cached` as all dynamic group membership lists are cached: `instance_1.dynamic_groups_cached` may perform `N+1` queries, but `instance_2.dynamic_groups_cached` will perform `1` query.
-- `dynamic_groups_list` - List of membership to `DynamicGroup` objects; performs one less database query than `dynamic_groups`.
-    - The internal list used by `dynamic_groups` to retrieve a QuerySet of `DynamicGroup` objects, but saves the final query.
-    - Beneficial if you don't need QuerySet instance of `DynamicGroup` objects, but want to use uncached membership lists on a large amount of objects.
-    - Always performs `N` queries where `N` is the number of Dynamic Groups that are applicable to the instance's content type
-- `dynamic_groups_list_cached` - List of membership to `DynamicGroup` objects; uses cached member list if available. Performs no database queries in optimal conditions.
-    - The internal list used by `dynamic_groups_cached` to retrieve a QuerySet of `DynamicGroup` objects, but saves the final query.
-    - The most optimal way to retrieve a list of `DynamicGroup` objects for an instance: Worst case `instance_1.dynamic_groups_list_cached` will perform `N` queries, but `instance_2.dynamic_groups_list_cached` will perform `0` queries.
+### Working with an Object's Containing Dynamic Groups
 
-### Invalidating/Refreshing the Cache
+Conversely, any model instance that supports Dynamic Groups will expose the property `.dynamic_groups`, which returns the QuerySet of (cached) Dynamic Groups that contain the model instance. As above, there's no direct way to bypass caching; if it's critically important to your use case to have up-to-the-minute accuracy, your only recourse is to call `DynamicGroup.update_cached_members()` for _each and every potentially relevant DynamicGroup record_, which obviously has the potential to be a very expensive operation if many Dynamic Groups are defined.
 
-If you need to invalidate the membership cache for a Dynamic Group, you can do so by running the management command: `nautobot-server refresh_dynamic_group_member_caches`. This will invalidate the cache for all Dynamic Groups.
++/- 2.3.0 "Simpler, always-on caching"
+    In prior versions of Nautobot, `.dynamic_groups` did not use a cache (and so had the potential to be a very expensive lookup every time it was accessed), and a separate `.dynamic_groups_cached` property used a configurable Redis cache to temporarily store the evaluated QuerySet. For performance reasons, the behavior of `.dynamic_groups` has been changed to behave as described above. `.dynamic_groups_cached` should be considered deprecated and will likely be removed in a future major release.
 
-You can also create a `Job` to run periodically to refresh the cache for particular Dynamic Groups and running on a schedule:
+    Additionally, prior versions of Nautobot exposed two additional model properties, `.dynamic_groups_list` and `.dynamic_groups_cached`, which provided a (very slight) performance improvement over the previous two properties. With the introduction of the database cache implementation, these properties no longer provide any relevant performance improvement, and should be considered deprecated as well.
 
-```python
-from nautobot.extras.jobs import Job, ObjectVar
-from nautobot.extras.models import DynamicGroup
+### Refreshing the Cache
 
-class ExampleDynamicGroupMemberCacheRefresh(Job):
-    dynamic_group = ObjectVar(
-        model=DynamicGroup
-    )
-
-    class Meta:
-        name = "Update Dynamic Group Member Cache"
-
-    def run(self, data, commit):
-        DynamicGroup.objects.get(pk=data['dynamic_group']).update_cached_members()
-```
+In addition to the UI, management command, and Job based mechanisms for refreshing a group's members cache, described earlier in this document, from an App or Job, you can also directly call `group.update_cached_members()` as described above.

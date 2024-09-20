@@ -131,6 +131,18 @@ Humanize speeds given in Kbps.
 {{ speed_value | humanize_speed }}
 ```
 
+### hyperlinked_email
+
++++ 2.2.0
+
+Render an email address, if any, as a `mailto:` hyperlink, or render a placeholder if no email is given.
+
+### hyperlinked_phone_number
+
++++ 2.2.0
+
+Render a phone number string, if any, as a `tel:` hyperlink, or render a placeholder if no phone number is given.
+
 ### hyperlinked_object
 
 +++ 1.4.0
@@ -210,21 +222,112 @@ If value is None this renders `<span class="text-muted">&mdash;</span>`
 
 Render a dictionary as formatted JSON.
 
++/- 2.2.0
+    Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a `<code class="language-json>` HTML tag to flag it for syntax highlighting by highlight.js.
+
 ```django
 {{ data | render_json }}
 ```
 
 ### render_markdown
 
-Render text as Markdown.
+Render and sanitize Markdown text into HTML. A limited subset of HTML tags and attributes are permitted in the text as well; non-permitted HTML will be stripped from the output for security.
 
 ```django
 {{ text | render_markdown }}
 ```
 
+#### Permitted HTML Tags and Attributes
+
++++ 2.1.2
+
+The set of permitted HTML tags is defined in `nautobot.core.constants.HTML_ALLOWED_TAGS`, and their permitted attributes are defined in `nautobot.core.constants.HTML_ALLOWED_ATTRIBUTES`. As of Nautobot 2.1.2 the following are permitted:
+
+??? info "Full list of HTML tags and attributes"
+    | Tag            | Attributes                                                           |
+    | -------------- | -------------------------------------------------------------------- |
+    | `<a>`          | `href`, `hreflang`                                                   |
+    | `<abbr>`       |                                                                      |
+    | `<acronym>`    |                                                                      |
+    | `<b>`          |                                                                      |
+    | `<bdi>`        |                                                                      |
+    | `<bdo>`        | `dir`                                                                |
+    | `<blockquote>` | `cite`                                                               |
+    | `<br>`         |                                                                      |
+    | `<caption>`    |                                                                      |
+    | `<center>`     |                                                                      |
+    | `<cite>`       |                                                                      |
+    | `<code>`       |                                                                      |
+    | `<col>`        | `align`, `char`, `charoff`, `span`                                   |
+    | `<colgroup>`   | `align`, `char`, `charoff`, `span`                                   |
+    | `<dd>`         |                                                                      |
+    | `<del>`        | `cite`, `datetime`                                                   |
+    | `<details>`    |                                                                      |
+    | `<div>`        |                                                                      |
+    | `<dl>`         |                                                                      |
+    | `<dt>`         |                                                                      |
+    | `<em>`         |                                                                      |
+    | `<h1>`         |                                                                      |
+    | `<h2>`         |                                                                      |
+    | `<h3>`         |                                                                      |
+    | `<h4>`         |                                                                      |
+    | `<h5>`         |                                                                      |
+    | `<h6>`         |                                                                      |
+    | `<hgroup>`     |                                                                      |
+    | `<hr>`         | `align`, `size`, `width`                                             |
+    | `<i>`          |                                                                      |
+    | `<img>`        | `align`, `alt`, `height`, `src`, `width`                             |
+    | `<ins>`        | `cite`, `datetime`                                                   |
+    | `<kbd>`        |                                                                      |
+    | `<li>`         |                                                                      |
+    | `<mark>`       |                                                                      |
+    | `<ol>`         | `start`                                                              |
+    | `<p>`          |                                                                      |
+    | `<pre>`        |                                                                      |
+    | `<q>`          | `cite`                                                               |
+    | `<rp>`         |                                                                      |
+    | `<rt>`         |                                                                      |
+    | `<rtc>`        |                                                                      |
+    | `<ruby>`       |                                                                      |
+    | `<s>`          |                                                                      |
+    | `<samp>`       |                                                                      |
+    | `<small>`      |                                                                      |
+    | `<span>`       |                                                                      |
+    | `<strike>`     |                                                                      |
+    | `<strong>`     |                                                                      |
+    | `<sub>`        |                                                                      |
+    | `<summary>`    |                                                                      |
+    | `<sup>`        |                                                                      |
+    | `<table>`      | `align`, `char`, `charoff`, `summary`                                |
+    | `<tbody>`      | `align`, `char`, `charoff`                                           |
+    | `<td>`         | `align`, `char`, `charoff`, `colspan`, `headers`, `rowspan`          |
+    | `<th>`         | `align`, `char`, `charoff`, `colspan`, `headers`, `rowspan`, `scope` |
+    | `<thead>`      | `align`, `char`, `charoff`                                           |
+    | `<time>`       |                                                                      |
+    | `<tr>`         | `align`, `char`, `charoff`                                           |
+    | `<tt>`         |                                                                      |
+    | `<u>`          |                                                                      |
+    | `<ul>`         |                                                                      |
+    | `<var>`        |                                                                      |
+    | `<wbr>`        |                                                                      |
+
+### render_uptime
+
+Render an uptime value in seconds to a human readable value.
+    1024768 => "11 days 20 hours 39 minutes"
+    1 => "0 days 0 hours 0 minutes"
+    3660 => "0 days 1 hour 1 minute"
+
+```django
+{{ 1024768 | render_uptime }}
+```
+
 ### render_yaml
 
 Render a dictionary as formatted YAML.
+
++/- 2.2.0
+    Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a `<code class="language-yaml>` HTML tag to flag it for syntax highlighting by highlight.js.
 
 ```django
 {{ data | render_yaml }}
@@ -243,8 +346,8 @@ Get a value from Django settings (if specified) or Constance configuration (othe
 
     ```django
     # Django Template
-    {{ "SAMPLE_VARIABLE" | settings_or_config:"example_plugin" }}
-    {{ "lowercase_example" | settings_or_config:"example_plugin" }}
+    {{ "SAMPLE_VARIABLE" | settings_or_config:"example_app" }}
+    {{ "lowercase_example" | settings_or_config:"example_app" }}
     ```
 
 ### slugify

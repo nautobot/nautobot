@@ -1,9 +1,8 @@
 from nautobot.core.api.routers import OrderedDefaultRouter
+
 from . import views
 
-
-router = OrderedDefaultRouter()
-router.APIRootView = views.VirtualizationRootView
+router = OrderedDefaultRouter(view_name="Virtualization")
 
 # Clusters
 router.register("cluster-types", views.ClusterTypeViewSet)

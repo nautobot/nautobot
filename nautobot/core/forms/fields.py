@@ -8,15 +8,15 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
 from django.db.models import Q
-from django.forms.fields import BoundField, InvalidJSONInput
-from django.forms.fields import JSONField as _JSONField
+from django.forms.fields import BoundField, InvalidJSONInput, JSONField as _JSONField
+from django.templatetags.static import static
 from django.urls import reverse
+from django.utils.html import format_html
 import django_filters
 from netaddr import EUI
 from netaddr.core import AddrFormatError
 
-from nautobot.core import choices as core_choices
-from nautobot.core import forms
+from nautobot.core import choices as core_choices, forms
 from nautobot.core.forms import widgets
 from nautobot.core.models import validators
 from nautobot.core.utils import data as data_utils, lookup
@@ -228,6 +228,10 @@ class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
 
         if "queryset" not in kwargs:
             if feature is not None:
+                from nautobot.extras.registry import registry
+
+                if feature not in registry["model_features"]:
+                    raise KeyError
                 kwargs["queryset"] = ContentType.objects.filter(
                     extras_utils.FeatureQuery(feature).get_query()
                 ).order_by("app_label", "model")
@@ -374,12 +378,16 @@ class CommentField(django_forms.CharField):
 
     widget = django_forms.Textarea
     default_label = ""
-    # TODO: Port Markdown cheat sheet to internal documentation
-    default_helptext = (
-        '<i class="mdi mdi-information-outline"></i> '
-        '<a href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet" target="_blank">'
-        "Markdown</a> syntax is supported"
-    )
+
+    @property
+    def default_helptext(self):
+        # TODO: Port Markdown cheat sheet to internal documentation
+        return format_html(
+            '<i class="mdi mdi-information-outline"></i> '
+            '<a href="https://www.markdownguide.org/cheat-sheet/#basic-syntax" rel="noopener noreferrer">Markdown</a> '
+            'syntax is supported, as well as <a href="{}#render_markdown">a limited subset of HTML</a>.',
+            static("docs/user-guide/platform-functionality/template-filters.html"),
+        )
 
     def __init__(self, *args, **kwargs):
         required = kwargs.pop("required", False)
@@ -449,6 +457,7 @@ class DynamicModelChoiceMixin:
 
     filter = django_filters.ModelChoiceFilter  # 2.0 TODO(Glenn): can we rename this? pylint: disable=redefined-builtin
     widget = widgets.APISelect
+    iterator = widgets.MinimalModelChoiceIterator
 
     def __init__(
         self,
@@ -471,6 +480,7 @@ class DynamicModelChoiceMixin:
         # to_field_name is set by ModelChoiceField.__init__(), but we need to set it early for reference
         # by widget_attrs()
         self.to_field_name = kwargs.get("to_field_name")
+        self.data_queryset = kwargs.get("queryset")  # may be updated in get_bound_field()
 
         super().__init__(*args, **kwargs)
 
@@ -535,12 +545,12 @@ class DynamicModelChoiceMixin:
             field_name = getattr(self, "to_field_name") or "pk"
             filter_ = self.filter(field_name=field_name)
             try:
-                self.queryset = filter_.filter(self.queryset, data)
-            except (TypeError, ValidationError):
+                self.data_queryset = filter_.filter(self.queryset, data)
+            except (TypeError, ValueError, ValidationError):
                 # Catch any error caused by invalid initial data passed from the user
-                self.queryset = self.queryset.none()
+                self.data_queryset = self.queryset.none()
         else:
-            self.queryset = self.queryset.none()
+            self.data_queryset = self.queryset.none()
 
         # Set the data URL on the APISelect widget (if not already set)
         widget = bound_field.field.widget

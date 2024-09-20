@@ -1,14 +1,15 @@
 import logging
 import operator
 
-import netaddr
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError, MultipleObjectsReturned
+from django.core.exceptions import MultipleObjectsReturned, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q
 from django.utils.functional import cached_property
+import netaddr
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -19,20 +20,26 @@ from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
 from nautobot.ipam import choices, constants
 from nautobot.virtualization.models import VMInterface
-from .fields import VarbinaryIPField
-from .querysets import IPAddressQuerySet, PrefixQuerySet, RIRQuerySet
-from .validators import DNSValidator
 
+from .fields import VarbinaryIPField
+from .querysets import IPAddressQuerySet, PrefixQuerySet, RIRQuerySet, VLANQuerySet
+from .validators import DNSValidator
 
 __all__ = (
     "IPAddress",
+    "IPAddressToInterface",
+    "Namespace",
     "Prefix",
+    "PrefixLocationAssignment",
     "RIR",
     "RouteTarget",
     "Service",
     "VLAN",
     "VLANGroup",
+    "VLANLocationAssignment",
     "VRF",
+    "VRFDeviceAssignment",
+    "VRFPrefixAssignment",
 )
 
 
@@ -42,7 +49,6 @@ logger = logging.getLogger(__name__)
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -51,8 +57,8 @@ logger = logging.getLogger(__name__)
 class Namespace(PrimaryModel):
     """Container for unique IPAM objects."""
 
-    name = models.CharField(max_length=255, unique=True, db_index=True)
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True, db_index=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -91,6 +97,7 @@ def get_default_namespace_pk():
     "custom_validators",
     "export_templates",
     "graphql",
+    "statuses",
     "webhooks",
 )
 class VRF(PrimaryModel):
@@ -100,14 +107,15 @@ class VRF(PrimaryModel):
     are said to exist in the "global" table.)
     """
 
-    name = models.CharField(max_length=100, db_index=True)
-    rd = models.CharField(
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
+    rd = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- see below
         max_length=constants.VRF_RD_MAX_LENGTH,
         blank=True,
-        null=True,
+        null=True,  # because rd is optional but part of a uniqueness constraint
         verbose_name="Route distinguisher",
         help_text="Unique route distinguisher (as defined in RFC 4364)",
     )
+    status = StatusField(blank=True, null=True)
     namespace = models.ForeignKey(
         "ipam.Namespace",
         on_delete=models.PROTECT,
@@ -138,7 +146,7 @@ class VRF(PrimaryModel):
         blank=True,
         null=True,
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     import_targets = models.ManyToManyField(to="ipam.RouteTarget", related_name="importing_vrfs", blank=True)
     export_targets = models.ManyToManyField(to="ipam.RouteTarget", related_name="exporting_vrfs", blank=True)
 
@@ -266,14 +274,15 @@ class VRFDeviceAssignment(BaseModel):
     virtual_machine = models.ForeignKey(
         "virtualization.VirtualMachine", null=True, blank=True, on_delete=models.CASCADE, related_name="vrf_assignments"
     )
-    rd = models.CharField(
+    rd = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- see below
         max_length=constants.VRF_RD_MAX_LENGTH,
         blank=True,
-        null=True,
+        null=True,  # because rd is optional but (will be) part of a uniqueness constraint
         verbose_name="Route distinguisher",
         help_text="Unique route distinguisher (as defined in RFC 4364)",
     )
-    name = models.CharField(blank=True, max_length=100)
+    name = models.CharField(blank=True, max_length=CHARFIELD_MAX_LENGTH)
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = [
@@ -311,6 +320,7 @@ class VRFDeviceAssignment(BaseModel):
 class VRFPrefixAssignment(BaseModel):
     vrf = models.ForeignKey("ipam.VRF", on_delete=models.CASCADE, related_name="+")
     prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="vrf_assignments")
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = ["vrf", "prefix"]
@@ -342,7 +352,7 @@ class RouteTarget(PrimaryModel):
         unique=True,
         help_text="Route target value (formatted in accordance with RFC 4360)",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -368,13 +378,13 @@ class RIR(OrganizationalModel):
     space. This can be an organization like ARIN or RIPE, or a governing standard such as RFC 1918.
     """
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     is_private = models.BooleanField(
         default=False,
         verbose_name="Private",
         help_text="IP space managed by this RIR is considered private",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     objects = BaseManager.from_queryset(RIRQuerySet)()
 
@@ -390,7 +400,6 @@ class RIR(OrganizationalModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -431,17 +440,15 @@ class Prefix(PrimaryModel):
     # ip_version is set internally just like network, broadcast, and prefix_length.
     ip_version = models.IntegerField(
         choices=choices.IPAddressVersionChoices,
-        null=True,
         editable=False,
         db_index=True,
         verbose_name="IP Version",
     )
-    location = models.ForeignKey(
+    locations = models.ManyToManyField(
         to="dcim.Location",
-        on_delete=models.PROTECT,
         related_name="prefixes",
+        through="ipam.PrefixLocationAssignment",
         blank=True,
-        null=True,
     )
     namespace = models.ForeignKey(
         to="ipam.Namespace",
@@ -478,14 +485,14 @@ class Prefix(PrimaryModel):
         null=True,
         help_text="Date this prefix was allocated to an RIR, reserved in IPAM, etc.",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     objects = BaseManager.from_queryset(PrefixQuerySet)()
 
     clone_fields = [
         "date_allocated",
         "description",
-        "location",
+        "locations",
         "namespace",
         "rir",
         "role",
@@ -494,11 +501,6 @@ class Prefix(PrimaryModel):
         "type",
         "vlan",
     ]
-    """
-    dynamic_group_filter_fields = {
-        "vrf": "vrf_id",  # Duplicate filter fields that will be collapsed in 2.0
-    }
-    """
 
     class Meta:
         ordering = (
@@ -526,11 +528,16 @@ class Prefix(PrimaryModel):
 
     def __init__(self, *args, **kwargs):
         prefix = kwargs.pop("prefix", None)
+        self._location = kwargs.pop("location", None)
         super().__init__(*args, **kwargs)
         self._deconstruct_prefix(prefix)
 
     def __str__(self):
         return str(self.prefix)
+
+    @property
+    def display(self):
+        return f"{self.prefix}: {self.namespace}"
 
     def _deconstruct_prefix(self, prefix):
         if prefix:
@@ -549,16 +556,6 @@ class Prefix(PrimaryModel):
             self.broadcast = str(broadcast)
             self.prefix_length = prefix.prefixlen
             self.ip_version = prefix.version
-
-    def clean(self):
-        super().clean()
-
-        # Validate location
-        if self.location is not None:
-            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
-                raise ValidationError(
-                    {"location": f'Prefixes may not associate to locations of type "{self.location.location_type}".'}
-                )
 
     def delete(self, *args, **kwargs):
         """
@@ -617,6 +614,8 @@ class Prefix(PrimaryModel):
     def save(self, *args, **kwargs):
         if isinstance(self.prefix, netaddr.IPNetwork):
             # Clear host bits from prefix
+            # This also has the subtle side effect of calling self._deconstruct_prefix(),
+            # which will (re)set the broadcast and ip_version values of this instance to their correct values.
             self.prefix = self.prefix.cidr
 
         # Determine if a parent exists and set it to the closest ancestor by `prefix_length`.
@@ -655,7 +654,10 @@ class Prefix(PrimaryModel):
         #     )
         #     raise ValidationError({"__all__": err_msg})
 
-        super().save(*args, **kwargs)
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            if self._location is not None:
+                self.location = self._location
 
         # Determine the subnets and reparent them to this prefix.
         self.reparent_subnets()
@@ -677,6 +679,22 @@ class Prefix(PrimaryModel):
     @prefix.setter
     def prefix(self, prefix):
         self._deconstruct_prefix(prefix)
+
+    @property
+    def location(self):
+        if self.locations.count() > 1:
+            raise self.locations.model.MultipleObjectsReturned(
+                "Multiple Location objects returned. Please refer to locations."
+            )
+        return self.locations.first()
+
+    @location.setter
+    def location(self, value):
+        if self.locations.count() > 1:
+            raise self.locations.model.MultipleObjectsReturned(
+                "Multiple Location objects returned. Please refer to locations."
+            )
+        self.locations.set([value])
 
     def reparent_subnets(self):
         """
@@ -950,10 +968,23 @@ class Prefix(PrimaryModel):
         return UtilizationData(numerator=numerator_set.size, denominator=denominator)
 
 
+@extras_features("graphql")
+class PrefixLocationAssignment(BaseModel):
+    prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="location_assignments")
+    location = models.ForeignKey("dcim.Location", on_delete=models.CASCADE, related_name="prefix_assignments")
+    is_metadata_associable_model = False
+
+    class Meta:
+        unique_together = ["prefix", "location"]
+        ordering = ["prefix", "location"]
+
+    def __str__(self):
+        return f"{self.prefix}: {self.location}"
+
+
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "statuses",
@@ -987,7 +1018,7 @@ class IPAddress(PrimaryModel):
     parent = models.ForeignKey(
         "ipam.Prefix",
         blank=True,
-        null=True,
+        null=True,  # TODO remove this, it shouldn't be permitted for the database!
         related_name="ip_addresses",  # `IPAddress` to use `related_name="ip_addresses"`
         on_delete=models.PROTECT,
         help_text="The parent Prefix of this IPAddress.",
@@ -995,9 +1026,9 @@ class IPAddress(PrimaryModel):
     # ip_version is set internally just like network, and mask_length.
     ip_version = models.IntegerField(
         choices=choices.IPAddressVersionChoices,
-        null=True,
         editable=False,
         db_index=True,
+        verbose_name="IP Version",
     )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
@@ -1016,14 +1047,14 @@ class IPAddress(PrimaryModel):
         help_text='The IP Addresses for which this address is the "outside" IP',
     )
     dns_name = models.CharField(
-        max_length=255,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         validators=[DNSValidator],
         verbose_name="DNS Name",
         help_text="Hostname or FQDN (not case-sensitive)",
         db_index=True,
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     clone_fields = [
         "tenant",
@@ -1041,21 +1072,14 @@ class IPAddress(PrimaryModel):
         verbose_name_plural = "IP addresses"
         unique_together = ["parent", "host"]
 
-    def __init__(self, *args, **kwargs):
-        address = kwargs.pop("address", None)
-        namespace = kwargs.pop("namespace", None)
+    def __init__(self, *args, address=None, namespace=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # If namespace wasn't provided, but parent was, we'll use the parent's namespace.
-        if namespace is None and self.parent is not None:
-            namespace = self.parent.namespace
+        if namespace is not None and not self.present_in_database:
+            self._provided_namespace = namespace
 
-        if namespace is None:
-            namespace = get_default_namespace()
-
-        self._namespace = namespace
-
-        self._deconstruct_address(address)
+        if address is not None and not self.present_in_database:
+            self._deconstruct_address(address)
 
     def __str__(self):
         return str(self.address)
@@ -1091,7 +1115,7 @@ class IPAddress(PrimaryModel):
             raise ValidationError({"namespace": "No suitable parent Prefix exists in this Namespace"}) from e
 
     def clean(self):
-        super().clean()
+        self.address = self.address  # not a no-op - forces re-calling of self._deconstruct_address()
 
         # Validate that host is not being modified
         if self.present_in_database:
@@ -1103,14 +1127,10 @@ class IPAddress(PrimaryModel):
         if self.type == choices.IPAddressTypeChoices.TYPE_SLAAC and self.ip_version != 6:
             raise ValidationError({"type": "Only IPv6 addresses can be assigned SLAAC type"})
 
-        # If neither `parent` or `namespace` was provided; raise this exception
-        if self._namespace is None:
-            raise ValidationError({"parent": "Either a parent or a namespace must be provided."})
-
         closest_parent = self._get_closest_parent()
         # Validate `parent` can be used as the parent for this ipaddress
-        if self.parent and closest_parent:
-            if self.parent != closest_parent:
+        if closest_parent is not None:
+            if self.parent is not None and self.parent != closest_parent:
                 raise ValidationError(
                     {
                         "parent": (
@@ -1120,8 +1140,8 @@ class IPAddress(PrimaryModel):
                     }
                 )
             self.parent = closest_parent
+            self._namespace = None
 
-    def save(self, *args, **kwargs):
         # 3.0 TODO: uncomment the below to enforce this constraint
         # if self.parent.type != choices.PrefixTypeChoices.TYPE_NETWORK:
         #     err_msg = f"IP addresses cannot be created in {self.parent.type} prefixes. You must create a network prefix first."
@@ -1131,10 +1151,11 @@ class IPAddress(PrimaryModel):
         if not self.dns_name.islower:
             self.dns_name = self.dns_name.lower()
 
-        # Host and mask_length are required to get closest parent
-        closest_parent = self._get_closest_parent()
-        if closest_parent is not None:
-            self.parent = closest_parent
+        super().clean()
+
+    def save(self, *args, **kwargs):
+        self.clean()  # MUST do data fixup as above
+
         super().save(*args, **kwargs)
 
     @property
@@ -1181,6 +1202,22 @@ class IPAddress(PrimaryModel):
 
         return query
 
+    @property
+    def _namespace(self):
+        # if a namespace was explicitly set, use it
+        if getattr(self, "_provided_namespace", None):
+            return self._provided_namespace
+        if self.parent is not None:
+            return self.parent.namespace
+        return get_default_namespace()
+
+    @_namespace.setter
+    def _namespace(self, namespace):
+        # unset parent when namespace is changed
+        if namespace:
+            self.parent = None
+        self._provided_namespace = namespace
+
     # 2.0 TODO: Remove exception, getter, setter below when we can safely deprecate previous properties
     class NATOutsideMultipleObjectsReturned(MultipleObjectsReturned):
         """
@@ -1214,6 +1251,7 @@ class IPAddressToInterface(BaseModel):
     is_primary = models.BooleanField(default=False, help_text="Is primary address on interface")
     is_secondary = models.BooleanField(default=False, help_text="Is secondary address on interface")
     is_standby = models.BooleanField(default=False, help_text="Is standby address on interface")
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = [
@@ -1251,7 +1289,7 @@ class VLANGroup(OrganizationalModel):
     A VLAN group is an arbitrary collection of VLANs within which VLAN IDs and names must be unique.
     """
 
-    name = models.CharField(max_length=100, db_index=True, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True, unique=True)
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -1259,13 +1297,10 @@ class VLANGroup(OrganizationalModel):
         blank=True,
         null=True,
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:
-        ordering = (
-            "location",
-            "name",
-        )  # (location, name) may be non-unique
+        ordering = ("name",)
         verbose_name = "VLAN group"
         verbose_name_plural = "VLAN groups"
 
@@ -1312,12 +1347,11 @@ class VLAN(PrimaryModel):
     or more Prefixes assigned to it.
     """
 
-    location = models.ForeignKey(
+    locations = models.ManyToManyField(
         to="dcim.Location",
-        on_delete=models.PROTECT,
         related_name="vlans",
+        through="ipam.VLANLocationAssignment",
         blank=True,
-        null=True,
     )
     vlan_group = models.ForeignKey(
         to="ipam.VLANGroup",
@@ -1329,7 +1363,7 @@ class VLAN(PrimaryModel):
     vid = models.PositiveSmallIntegerField(
         verbose_name="ID", validators=[MinValueValidator(1), MaxValueValidator(4094)]
     )
-    name = models.CharField(max_length=255, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     status = StatusField(blank=False, null=False)
     role = RoleField(blank=True, null=True)
     tenant = models.ForeignKey(
@@ -1339,10 +1373,10 @@ class VLAN(PrimaryModel):
         blank=True,
         null=True,
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     clone_fields = [
-        "location",
+        "locations",
         "vlan_group",
         "tenant",
         "status",
@@ -1351,10 +1385,10 @@ class VLAN(PrimaryModel):
     ]
 
     natural_key_field_names = ["pk"]
+    objects = BaseManager.from_queryset(VLANQuerySet)()
 
     class Meta:
         ordering = (
-            "location",
             "vlan_group",
             "vid",
         )  # (location, group, vid) may be non-unique
@@ -1370,28 +1404,33 @@ class VLAN(PrimaryModel):
     def __str__(self):
         return self.display or super().__str__()
 
-    def clean(self):
-        super().clean()
+    def __init__(self, *args, **kwargs):
+        # TODO: Remove self._location, location @property once legacy `location` field is no longer supported
+        self._location = kwargs.pop("location", None)
+        super().__init__(*args, **kwargs)
 
-        # Validate location
-        if self.location is not None:
-            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
-                raise ValidationError(
-                    {"location": f'VLANs may not associate to locations of type "{self.location.location_type}".'}
-                )
+    def save(self, *args, **kwargs):
+        # Using atomic here cause legacy `location` is inserted into `locations`() which might result in an error.
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            if self._location:
+                self.location = self._location
 
-        # Validate VLAN group
-        if (
-            self.vlan_group is not None
-            and self.location is not None
-            and self.vlan_group.location is not None
-            and self.vlan_group.location not in self.location.ancestors(include_self=True)
-        ):
-            raise ValidationError(
-                {
-                    "vlan_group": f'The assigned group belongs to a location that does not include location "{self.location}".'
-                }
+    @property
+    def location(self):
+        if self.locations.count() > 1:
+            raise self.locations.model.MultipleObjectsReturned(
+                "Multiple Location objects returned. Please refer to locations."
             )
+        return self.locations.first()
+
+    @location.setter
+    def location(self, value):
+        if self.locations.count() > 1:
+            raise self.locations.model.MultipleObjectsReturned(
+                "Multiple Location objects returned. Please refer to locations."
+            )
+        self.locations.set([value])
 
     @property
     def display(self):
@@ -1404,6 +1443,20 @@ class VLAN(PrimaryModel):
     def get_vminterfaces(self):
         # Return all VM interfaces assigned to this VLAN
         return VMInterface.objects.filter(Q(untagged_vlan_id=self.pk) | Q(tagged_vlans=self.pk)).distinct()
+
+
+@extras_features("graphql")
+class VLANLocationAssignment(BaseModel):
+    vlan = models.ForeignKey("ipam.VLAN", on_delete=models.CASCADE, related_name="location_assignments")
+    location = models.ForeignKey("dcim.Location", on_delete=models.CASCADE, related_name="vlan_assignments")
+    is_metadata_associable_model = False
+
+    class Meta:
+        unique_together = ["vlan", "location"]
+        ordering = ["vlan", "location"]
+
+    def __str__(self):
+        return f"{self.vlan}: {self.location}"
 
 
 @extras_features(
@@ -1434,7 +1487,7 @@ class Service(PrimaryModel):
         null=True,
         blank=True,
     )
-    name = models.CharField(max_length=100, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     protocol = models.CharField(max_length=50, choices=choices.ServiceProtocolChoices)
     ports = JSONArrayField(
         base_field=models.PositiveIntegerField(
@@ -1451,7 +1504,7 @@ class Service(PrimaryModel):
         blank=True,
         verbose_name="IP addresses",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:
         ordering = (

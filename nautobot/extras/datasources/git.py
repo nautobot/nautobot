@@ -1,25 +1,24 @@
 """Git data source functionality."""
 
 from collections import defaultdict, namedtuple
+from contextlib import suppress
 import logging
 import mimetypes
 import os
-import re
-import sys
-from contextlib import suppress
 from pathlib import Path
+import re
 from urllib.parse import quote
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
+from git import InvalidGitRepositoryError, Repo
 import yaml
-from git import Repo, InvalidGitRepositoryError
 
-from nautobot.core.celery import app as celery_app
 from nautobot.core.utils.git import GitRepo
-from nautobot.dcim.models import Device, DeviceType, Location, Platform
+from nautobot.core.utils.module_loading import import_modules_privately
+from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     LogLevelChoices,
     SecretsGroupAccessTypeChoices,
@@ -36,12 +35,12 @@ from nautobot.extras.models import (
     Role,
     Tag,
 )
-from nautobot.extras.registry import DatasourceContent, register_datasource_contents
+from nautobot.extras.registry import DatasourceContent, register_datasource_contents, registry
 from nautobot.extras.utils import refresh_job_model_from_job_class
-from nautobot.tenancy.models import TenantGroup, Tenant
-from nautobot.virtualization.models import ClusterGroup, Cluster, VirtualMachine
-from .utils import files_from_contenttype_directories
+from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 
+from .utils import files_from_contenttype_directories
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +136,7 @@ def get_repo_from_url_to_path_and_from_branch(repository_record):
 
 def ensure_git_repository(repository_record, logger=None, head=None):  # pylint: disable=redefined-outer-name
     """Ensure that the given Git repo is present, up-to-date, and has the correct branch selected.
-    Note that this function may be called independently of the `GitRepositoryiSync` job,
+    Note that this function may be called independently of the `GitRepositorySync` job,
     such as to ensure that different Nautobot instances and/or worker instances all have a local copy of the same HEAD.
     Args:
       repository_record (GitRepository): Repository to ensure the state of.
@@ -153,10 +152,9 @@ def ensure_git_repository(repository_record, logger=None, head=None):  # pylint:
     if head is not None:
         # If the repo exists and has HEAD already checked out, the repo is present and has the correct branch selected.
         with suppress(InvalidGitRepositoryError):
-            if (
-                Path(repository_record.filesystem_path).exists()
-                and Repo(repository_record.filesystem_path).rev_parse("HEAD") == head
-            ):
+            if Path(repository_record.filesystem_path).exists() and str(
+                Repo(repository_record.filesystem_path).rev_parse("HEAD")
+            ) == str(head):
                 return False
 
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
@@ -187,7 +185,7 @@ def ensure_git_repository(repository_record, logger=None, head=None):  # pylint:
 def git_repository_dry_run(repository_record, logger):  # pylint: disable=redefined-outer-name
     """Log the difference between local branch and remote branch files.
     Args:
-        repository_record (GitRepository): The GitRepostiory instance to diff.
+        repository_record (GitRepository): The GitRepository instance to diff.
         logger (logging.Logger): Logger to log results to.
     """
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
@@ -226,125 +224,127 @@ def refresh_git_config_contexts(repository_record, job_result, delete=False):
 def update_git_config_contexts(repository_record, job_result):
     """Refresh any config contexts provided by this Git repository."""
     config_context_path = os.path.join(repository_record.filesystem_path, "config_contexts")
-    if not os.path.isdir(config_context_path):
-        return
-
     managed_config_contexts = set()
     managed_local_config_contexts = defaultdict(set)
 
-    # First, handle the "flat file" case - data files in the root config_context_path,
-    # whose metadata is expressed purely within the contents of the file:
-    for file_name in os.listdir(config_context_path):
-        if not os.path.isfile(os.path.join(config_context_path, file_name)):
-            continue
-        msg = f"Loading config context from `{file_name}`"
-        logger.info(msg)
-        job_result.log(msg, grouping="config contexts")
-        try:
-            with open(os.path.join(config_context_path, file_name), "r") as fd:
-                # The data file can be either JSON or YAML; since YAML is a superset of JSON, we can load it regardless
-                context_data = yaml.safe_load(fd)
-
-            # A file can contain one config context dict or a list thereof
-            if isinstance(context_data, dict):
-                context_name = import_config_context(context_data, repository_record, job_result)
-                managed_config_contexts.add(context_name)
-            elif isinstance(context_data, list):
-                for context_data_entry in context_data:
-                    context_name = import_config_context(context_data_entry, repository_record, job_result)
-                    managed_config_contexts.add(context_name)
-            else:
-                raise RuntimeError("data must be a dict or list of dicts")
-
-        except Exception as exc:
-            msg = f"Error in loading config context data from `{file_name}`: {exc}"
-            logger.error(msg)
-            job_result.log(msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="config contexts")
-
-    # Next, handle the "filter/name" directory structure case - files in <filter_type>/<name>.(json|yaml)
-    for filter_type in (
-        "locations",
-        "device_types",
-        "roles",
-        "platforms",
-        "cluster_groups",
-        "clusters",
-        "tenant_groups",
-        "tenants",
-        "tags",
-        "dynamic_groups",
-    ):
-        if os.path.isdir(os.path.join(repository_record.filesystem_path, filter_type)):
-            msg = (
-                f'Found "{filter_type}" directory in the repository root. If this is meant to contain config contexts, '
-                "it should be moved into a `config_contexts/` subdirectory."
-            )
-            logger.warning(msg)
-            job_result.log(msg, level_choice=LogLevelChoices.LOG_WARNING, grouping="config contexts")
-
-        dir_path = os.path.join(config_context_path, filter_type)
-        if not os.path.isdir(dir_path):
-            continue
-
-        for file_name in os.listdir(dir_path):
-            name = os.path.splitext(file_name)[0]
-            msg = f'Loading config context, filter `{filter_type} = [name: "{name}"]`, from `{filter_type}/{file_name}`'
+    if os.path.isdir(config_context_path):
+        # First, handle the "flat file" case - data files in the root config_context_path,
+        # whose metadata is expressed purely within the contents of the file:
+        for file_name in os.listdir(config_context_path):
+            if not os.path.isfile(os.path.join(config_context_path, file_name)):
+                continue
+            msg = f"Loading config context from `{file_name}`"
             logger.info(msg)
             job_result.log(msg, grouping="config contexts")
             try:
-                with open(os.path.join(dir_path, file_name), "r") as fd:
-                    # Data file can be either JSON or YAML; since YAML is a superset of JSON, we can load it regardless
+                with open(os.path.join(config_context_path, file_name), "r") as fd:
+                    # The data file can be either JSON or YAML; since YAML is a superset of JSON, we load it regardless
                     context_data = yaml.safe_load(fd)
 
-                # Unlike the above case, these files always contain just a single config context record
-
-                # Add the implied filter to the context metadata
-                if filter_type == "device_types":
-                    context_data.setdefault("_metadata", {}).setdefault(filter_type, []).append({"model": name})
+                # A file can contain one config context dict or a list thereof
+                if isinstance(context_data, dict):
+                    context_name = import_config_context(context_data, repository_record, job_result)
+                    managed_config_contexts.add(context_name)
+                elif isinstance(context_data, list):
+                    for context_data_entry in context_data:
+                        context_name = import_config_context(context_data_entry, repository_record, job_result)
+                        managed_config_contexts.add(context_name)
                 else:
-                    context_data.setdefault("_metadata", {}).setdefault(filter_type, []).append({"name": name})
+                    raise RuntimeError("data must be a dict or list of dicts")
 
-                context_name = import_config_context(context_data, repository_record, job_result)
-                managed_config_contexts.add(context_name)
             except Exception as exc:
                 msg = f"Error in loading config context data from `{file_name}`: {exc}"
                 logger.error(msg)
                 job_result.log(msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="config contexts")
 
-    # Finally, handle device- and virtual-machine-specific "local" context in (devices|virtual_machines)/<name>.(json|yaml)
-    for local_type in ("devices", "virtual_machines"):
-        if os.path.isdir(os.path.join(repository_record.filesystem_path, local_type)):
-            msg = (
-                f'Found "{local_type}" directory in the repository root. If this is meant to contain config contexts, '
-                "it should be moved into a `config_contexts/` subdirectory."
-            )
-            logger.warning(msg)
-            job_result.log(msg, level_choice=LogLevelChoices.LOG_WARNING, grouping="config contexts")
-
-        dir_path = os.path.join(config_context_path, local_type)
-        if not os.path.isdir(dir_path):
-            continue
-
-        for file_name in os.listdir(dir_path):
-            device_name = os.path.splitext(file_name)[0]
-            msg = f"Loading local config context for `{device_name}` from `{local_type}/{file_name}`"
-            logger.info(msg)
-            job_result.log(msg, grouping="local config contexts")
-            try:
-                with open(os.path.join(dir_path, file_name), "r") as fd:
-                    context_data = yaml.safe_load(fd)
-
-                import_local_config_context(
-                    local_type,
-                    device_name,
-                    context_data,
-                    repository_record,
+        # Next, handle the "filter/name" directory structure case - files in <filter_type>/<name>.(json|yaml)
+        for filter_type in (
+            "locations",
+            "device_types",
+            "roles",
+            "platforms",
+            "cluster_groups",
+            "clusters",
+            "tenant_groups",
+            "tenants",
+            "tags",
+            "dynamic_groups",
+            "device_redundancy_groups",
+        ):
+            if os.path.isdir(os.path.join(repository_record.filesystem_path, filter_type)):
+                msg = (
+                    f'Found "{filter_type}" directory in the repository root. If this is meant to contain config contexts, '
+                    "it should be moved into a `config_contexts/` subdirectory."
                 )
-                managed_local_config_contexts[local_type].add(device_name)
-            except Exception as exc:
-                msg = f"Error in loading local config context from `{local_type}/{file_name}`: {exc}"
-                logger.error(msg)
-                job_result.log(msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="local config contexts")
+                logger.warning(msg)
+                job_result.log(msg, level_choice=LogLevelChoices.LOG_WARNING, grouping="config contexts")
+
+            dir_path = os.path.join(config_context_path, filter_type)
+            if not os.path.isdir(dir_path):
+                continue
+
+            for file_name in os.listdir(dir_path):
+                name = os.path.splitext(file_name)[0]
+                msg = (
+                    f'Loading config context, filter `{filter_type} = [name: "{name}"]`, '
+                    f"from `{filter_type}/{file_name}`"
+                )
+                logger.info(msg)
+                job_result.log(msg, grouping="config contexts")
+                try:
+                    with open(os.path.join(dir_path, file_name), "r") as fd:
+                        # Data file can be either JSON or YAML; since YAML is a superset of JSON, we load it regardless
+                        context_data = yaml.safe_load(fd)
+
+                    # Unlike the above case, these files always contain just a single config context record
+
+                    # Add the implied filter to the context metadata
+                    if filter_type == "device_types":
+                        context_data.setdefault("_metadata", {}).setdefault(filter_type, []).append({"model": name})
+                    else:
+                        context_data.setdefault("_metadata", {}).setdefault(filter_type, []).append({"name": name})
+
+                    context_name = import_config_context(context_data, repository_record, job_result)
+                    managed_config_contexts.add(context_name)
+                except Exception as exc:
+                    msg = f"Error in loading config context data from `{file_name}`: {exc}"
+                    logger.error(msg)
+                    job_result.log(msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="config contexts")
+
+        # Finally, handle device- and VM-specific "local" context in (devices|virtual_machines)/<name>.(json|yaml)
+        for local_type in ("devices", "virtual_machines"):
+            if os.path.isdir(os.path.join(repository_record.filesystem_path, local_type)):
+                msg = (
+                    f'Found "{local_type}" directory in the repository root. If this is meant to contain '
+                    "config contexts, it should be moved into a `config_contexts/` subdirectory."
+                )
+                logger.warning(msg)
+                job_result.log(msg, level_choice=LogLevelChoices.LOG_WARNING, grouping="config contexts")
+
+            dir_path = os.path.join(config_context_path, local_type)
+            if not os.path.isdir(dir_path):
+                continue
+
+            for file_name in os.listdir(dir_path):
+                device_name = os.path.splitext(file_name)[0]
+                msg = f"Loading local config context for `{device_name}` from `{local_type}/{file_name}`"
+                logger.info(msg)
+                job_result.log(msg, grouping="local config contexts")
+                try:
+                    with open(os.path.join(dir_path, file_name), "r") as fd:
+                        context_data = yaml.safe_load(fd)
+
+                    import_local_config_context(
+                        local_type,
+                        device_name,
+                        context_data,
+                        repository_record,
+                    )
+                    managed_local_config_contexts[local_type].add(device_name)
+                except Exception as exc:
+                    msg = f"Error in loading local config context from `{local_type}/{file_name}`: {exc}"
+                    logger.error(msg)
+                    job_result.log(msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="local config contexts")
 
     # Delete any prior contexts that are owned by this repository but were not created/updated above
     delete_git_config_contexts(
@@ -403,6 +403,7 @@ def import_config_context(context_data, repository_record, job_result):
         ("tenants", Tenant),
         ("tags", Tag),
         ("dynamic_groups", DynamicGroup),
+        ("device_redundancy_groups", DeviceRedundancyGroup),
     ]:
         relations[key] = []
         for object_data in context_metadata.get(key, ()):
@@ -516,6 +517,8 @@ def import_local_config_context(local_type, device_name, context_data, repositor
             record = Device.objects.get(name=device_name)
         elif local_type == "virtual_machines":
             record = VirtualMachine.objects.get(name=device_name)
+        else:
+            raise ValueError(f"Unknown local_type value: {local_type}")
     except MultipleObjectsReturned:
         # Possible for Device as name is not guaranteed globally unique
         # TODO: come up with a design that accounts for non-unique names, as well as un-named Devices.
@@ -599,39 +602,38 @@ def refresh_git_config_context_schemas(repository_record, job_result, delete=Fal
 def update_git_config_context_schemas(repository_record, job_result):
     """Refresh any config context schemas provided by this Git repository."""
     config_context_schema_path = os.path.join(repository_record.filesystem_path, "config_context_schemas")
-    if not os.path.isdir(config_context_schema_path):
-        return
 
     managed_config_context_schemas = set()
 
-    for file_name in os.listdir(config_context_schema_path):
-        if not os.path.isfile(os.path.join(config_context_schema_path, file_name)):
-            continue
-        msg = (f"Loading config context schema from `{file_name}`",)
-        logger.info(msg)
-        job_result.log(msg, grouping="config context schemas")
-        try:
-            with open(os.path.join(config_context_schema_path, file_name), "r") as fd:
-                # The data file can be either JSON or YAML; since YAML is a superset of JSON, we can load it regardless
-                context_schema_data = yaml.safe_load(fd)
+    if os.path.isdir(config_context_schema_path):
+        for file_name in os.listdir(config_context_schema_path):
+            if not os.path.isfile(os.path.join(config_context_schema_path, file_name)):
+                continue
+            msg = (f"Loading config context schema from `{file_name}`",)
+            logger.info(msg)
+            job_result.log(msg, grouping="config context schemas")
+            try:
+                with open(os.path.join(config_context_schema_path, file_name), "r") as fd:
+                    # The data file can be either JSON or YAML; since YAML is a superset of JSON, we load it regardless
+                    context_schema_data = yaml.safe_load(fd)
 
-            # A file can contain one config context dict or a list thereof
-            if isinstance(context_schema_data, dict):
-                context_name = import_config_context_schema(context_schema_data, repository_record, job_result)
-                managed_config_context_schemas.add(context_name)
-            elif isinstance(context_schema_data, list):
-                for context_schema in context_schema_data:
-                    if isinstance(context_schema, dict):
-                        context_name = import_config_context_schema(context_schema, repository_record, job_result)
-                        managed_config_context_schemas.add(context_name)
-                    else:
-                        raise RuntimeError("each item in list data must be a dict")
-            else:
-                raise RuntimeError("data must be a dict or a list of dicts")
-        except Exception as exc:
-            msg = f"Error in loading config context schema data from `{file_name}`: {exc}"
-            logger.error(msg)
-            job_result.log(msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="config context schemas")
+                # A file can contain one config context dict or a list thereof
+                if isinstance(context_schema_data, dict):
+                    context_name = import_config_context_schema(context_schema_data, repository_record, job_result)
+                    managed_config_context_schemas.add(context_name)
+                elif isinstance(context_schema_data, list):
+                    for context_schema in context_schema_data:
+                        if isinstance(context_schema, dict):
+                            context_name = import_config_context_schema(context_schema, repository_record, job_result)
+                            managed_config_context_schemas.add(context_name)
+                        else:
+                            raise RuntimeError("each item in list data must be a dict")
+                else:
+                    raise RuntimeError("data must be a dict or a list of dicts")
+            except Exception as exc:
+                msg = f"Error in loading config context schema data from `{file_name}`: {exc}"
+                logger.error(msg)
+                job_result.log(msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="config context schemas")
 
     # Delete any prior contexts that are owned by this repository but were not created/updated above
     delete_git_config_context_schemas(
@@ -715,55 +717,41 @@ def delete_git_config_context_schemas(repository_record, job_result, preserve=()
 #
 
 
-def refresh_code_from_repository(repository_slug, consumer=None, skip_reimport=False):
+def refresh_job_code_from_repository(repository_slug, skip_reimport=False, ignore_import_errors=True):
     """
-    After cloning/updating a GitRepository on disk, call this function to reload and reregister the repo's Python code.
+    After cloning/updating/deleting a GitRepository on disk, call this function to reload and reregister its Python.
 
     Args:
-        repository_slug (str): Repository directory in GIT_ROOT that was refreshed.
-        consumer (celery.worker.Consumer): Celery Consumer to update as well
+        repository_slug (str): Repository directory in GIT_ROOT that was updated or deleted.
         skip_reimport (bool): If True, unload existing code from this repository but do not re-import it.
+        ignore_import_errors (bool): If True, any exceptions raised in the import will be caught and logged.
+            If False, exceptions will be re-raised after logging.
     """
-    if settings.GIT_ROOT not in sys.path:
-        sys.path.append(settings.GIT_ROOT)
-
-    app = consumer.app if consumer is not None else celery_app
-    # TODO: This is ugly, but when app.use_fast_trace_task is set (true by default), Celery calls
-    # celery.app.trace.fast_trace_task(...) which assumes that all tasks are cached and have a valid `__trace__()`
-    # function defined. In theory consumer.update_strategies() (below) should ensure this, but it doesn't
-    # go far enough (possibly a discrepancy between the main worker process and the prefork executors?)
-    # as we can and do still encounter errors where `task.__trace__` is unexpectedly None.
-    # For now, simply disabling use_fast_trace_task forces the task trace function to be rebuilt each time,
-    # which avoids the issue at the cost of very slight overhead.
-    app.use_fast_trace_task = False
-
     # Unload any previous version of this module and its submodules if present
-    for module_name in list(sys.modules):
-        if module_name == repository_slug or module_name.startswith(f"{repository_slug}."):
-            logger.debug("Unloading module %s", module_name)
-            if module_name in app.loader.task_modules:
-                app.loader.task_modules.remove(module_name)
-            del sys.modules[module_name]
+    for job_class_path in list(registry["jobs"]):
+        if job_class_path.startswith(f"{repository_slug}."):
+            del registry["jobs"][job_class_path]
 
-    # Unregister any previous Celery tasks from this module
-    for task_name in list(app.tasks):
-        if task_name.startswith(f"{repository_slug}."):
-            logger.debug("Unregistering Celery task %s", task_name)
-            app.tasks.unregister(task_name)
-            if consumer is not None:
-                del consumer.strategies[task_name]
+    if skip_reimport:
+        return
 
-    if not skip_reimport:
-        try:
-            repository = GitRepository.objects.get(slug=repository_slug)
-            if "extras.job" in repository.provided_contents:
-                # Re-import Celery tasks from this module
-                logger.debug("Importing Jobs from %s.jobs in GIT_ROOT", repository_slug)
-                app.loader.import_task_module(f"{repository_slug}.jobs")
-                if consumer is not None:
-                    consumer.update_strategies()
-        except GitRepository.DoesNotExist as exc:
-            logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
+    try:
+        repository = GitRepository.objects.get(slug=repository_slug)
+        if "extras.job" in repository.provided_contents:
+            if not (
+                os.path.isdir(os.path.join(repository.filesystem_path, "jobs"))
+                or os.path.isfile(os.path.join(repository.filesystem_path, "jobs.py"))
+            ):
+                logger.error("No `jobs` submodule found in Git repository %s", repository)
+                if not ignore_import_errors:
+                    raise FileNotFoundError(f"No `jobs` submodule found in Git repository {repository}")
+            else:
+                import_modules_privately(
+                    settings.GIT_ROOT, module_path=[repository_slug, "jobs"], ignore_import_errors=ignore_import_errors
+                )
+    except GitRepository.DoesNotExist as exc:
+        logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
+        if not ignore_import_errors:
             raise
 
 
@@ -773,13 +761,13 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
     if "extras.job" in repository_record.provided_contents and not delete:
         found_jobs = False
         try:
-            refresh_code_from_repository(repository_record.slug)
+            refresh_job_code_from_repository(repository_record.slug, ignore_import_errors=False)
 
-            for task_name, task in celery_app.tasks.items():
-                if not task_name.startswith(f"{repository_record.slug}."):
+            for job_class_path, job_class in registry["jobs"].items():
+                if not job_class_path.startswith(f"{repository_record.slug}.jobs."):
                     continue
                 found_jobs = True
-                job_model, created = refresh_job_model_from_job_class(Job, task.__class__)
+                job_model, created = refresh_job_model_from_job_class(Job, job_class)
 
                 if job_model is None:
                     msg = "Failed to create Job record; check Nautobot logs for details"
@@ -788,15 +776,18 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
                     continue
 
                 if created:
-                    message = "Created Job record"
+                    message = f"Created Job record for {job_class_path}"
                 else:
-                    message = "Refreshed Job record"
+                    message = f"Refreshed Job record for {job_class_path}"
                 logger.info(message)
                 job_result.log(message=message, obj=job_model, grouping="jobs", level_choice=LogLevelChoices.LOG_INFO)
                 installed_jobs.append(job_model)
 
             if not found_jobs:
-                msg = "No jobs were registered on loading the `jobs` submodule. Did you miss a `register_jobs()` call?"
+                msg = (
+                    f"No jobs were registered on loading the `{repository_record.slug}.jobs` submodule. "
+                    "Did you miss a `register_jobs()` call? Or was there a syntax error or similar in your code?"
+                )
                 logger.warning(msg)
                 job_result.log(msg, grouping="jobs", level_choice=LogLevelChoices.LOG_WARNING)
         except Exception as exc:
@@ -804,8 +795,8 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
             logger.error(msg)
             job_result.log(msg, grouping="jobs", level_choice=LogLevelChoices.LOG_ERROR)
     else:
-        # Unload code from this repository, do not reimport it
-        refresh_code_from_repository(repository_record.slug, skip_reimport=True)
+        # Flush this repository's job classes
+        refresh_job_code_from_repository(repository_record.slug, skip_reimport=True)
 
     for job_model in Job.objects.filter(module_name__startswith=f"{repository_record.slug}."):
         if job_model.installed and job_model not in installed_jobs:
@@ -846,12 +837,10 @@ def update_git_export_templates(repository_record, job_result):
             job_result.log(msg, level_choice=LogLevelChoices.LOG_WARNING, grouping="export templates")
 
     export_template_path = os.path.join(repository_record.filesystem_path, "export_templates")
-    if not os.path.isdir(export_template_path):
-        return
+    managed_export_templates = {}
 
     git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
 
-    managed_export_templates = {}
     for model_content_type, file_path in files_from_contenttype_directories(
         export_template_path, job_result, "export templates"
     ):

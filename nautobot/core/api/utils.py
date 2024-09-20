@@ -10,10 +10,9 @@ from django.urls import reverse
 from rest_framework import serializers, status
 from rest_framework.utils import formatting
 from rest_framework.utils.field_mapping import get_nested_relation_kwargs
-from rest_framework.utils.model_meta import RelationInfo, _get_to_field
+from rest_framework.utils.model_meta import _get_to_field, RelationInfo
 
 from nautobot.core.api import exceptions
-
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +147,7 @@ def nested_serializers_for_models(models, prefix=""):
             class NautobotNestedSerializer(serializer_class):
                 class Meta(serializer_class.Meta):
                     fields = ["id", "object_type", "url"]
+                    exclude = None
 
                 def get_field_names(self, declared_fields, info):
                     """Don't auto-add any other fields to the field_names!"""
@@ -168,13 +168,18 @@ def is_api_request(request):
     return request.path_info.startswith(api_path)
 
 
-def get_view_name(view, suffix=None):
+def get_view_name(view):
     """
     Derive the view name from its associated model, if it has one. Fall back to DRF's built-in `get_view_name`.
     """
-    if hasattr(view, "queryset"):
+    if hasattr(view, "name") and view.name:
+        return view.name
+    elif hasattr(view, "queryset"):
         # Determine the model name from the queryset.
-        name = view.queryset.model._meta.verbose_name
+        if hasattr(view, "detail") and view.detail:
+            name = view.queryset.model._meta.verbose_name
+        else:
+            name = view.queryset.model._meta.verbose_name_plural
         name = " ".join([w[0].upper() + w[1:] for w in name.split()])  # Capitalize each word
 
     else:
@@ -184,8 +189,10 @@ def get_view_name(view, suffix=None):
         name = formatting.remove_trailing_string(name, "ViewSet")
         name = formatting.camelcase_to_spaces(name)
 
-    if suffix:
-        name += " " + suffix
+        # Suffix may be set by some Views, such as a ViewSet.
+        suffix = getattr(view, "suffix", None)
+        if suffix:
+            name += " " + suffix
 
     return name
 
@@ -216,11 +223,10 @@ def format_output(field, field_value):
         "required": False,  # Form field placeholder
     }
     # TODO: fix these local imports if at all possible
-    from nautobot.core.api import WritableNestedSerializer
-    from rest_framework.fields import CharField
-    from rest_framework.fields import IntegerField
+    from rest_framework.fields import CharField, IntegerField
     from rest_framework.serializers import ListSerializer
-    from nautobot.core.api import ChoiceField
+
+    from nautobot.core.api import ChoiceField, WritableNestedSerializer
 
     kwargs = {}
     if isinstance(field_value, (WritableNestedSerializer, ListSerializer)):

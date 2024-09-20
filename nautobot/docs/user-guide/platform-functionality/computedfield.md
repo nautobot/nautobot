@@ -53,13 +53,13 @@ Computed field templates can utilize the context of the object the field is bein
 
 ## Computed Field Template Filters
 
-Computed field templates can also utilize built-in Jinja2 filters or custom ones that have been registered via plugins. These filters can be used by providing the name of the filter function. As an example:
+Computed field templates can also utilize built-in Jinja2 filters or custom ones that have been registered via an App. These filters can be used by providing the name of the filter function. As an example:
 
 ```jinja2
 {{ obj.location.name | leet_speak }}
 ```
 
-See the documentation on [built-in filters](./template-filters.md) or [registering custom Jinja2 filters](../../development/apps/api/platform-features/jinja2-filters.md) in plugins.
+See the documentation on [built-in filters](./template-filters.md) or [registering custom Jinja2 filters](../../development/apps/api/platform-features/jinja2-filters.md) in Apps.
 
 ## Computed Fields and the REST API
 

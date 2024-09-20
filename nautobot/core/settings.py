@@ -1,14 +1,17 @@
 import os
+import os.path
 import platform
 import re
 import sys
+import tempfile
 
 from django.contrib.messages import constants as messages
 import django.forms
 from django.utils.safestring import mark_safe
 
 from nautobot import __version__
-from nautobot.core.settings_funcs import is_truthy, parse_redis_connection, ConstanceConfigItem  # noqa: F401
+from nautobot.core.constants import CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR
+from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
 
 #
 # Environment setup
@@ -29,7 +32,7 @@ AUTH_USER_MODEL = "users.User"
 
 # Set the default AutoField for 3rd party apps
 # N.B. Ideally this would be a `UUIDField`, but due to Django restrictions
-#      we can’t do that yet
+#      we can't do that yet
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
@@ -40,7 +43,16 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 #
 # Nautobot optional settings/defaults
 #
-ALLOWED_URL_SCHEMES = (
+
+# Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
+NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
+
+# Allow users to enable request profiling via django-silk for admins to inspect.
+if "NAUTOBOT_ALLOW_REQUEST_PROFILING" in os.environ and os.environ["NAUTOBOT_ALLOW_REQUEST_PROFILING"] != "":
+    ALLOW_REQUEST_PROFILING = is_truthy(os.environ["NAUTOBOT_ALLOW_REQUEST_PROFILING"])
+
+# URL schemes that are allowed within links in Nautobot
+ALLOWED_URL_SCHEMES = [
     "file",
     "ftp",
     "ftps",
@@ -55,17 +67,34 @@ ALLOWED_URL_SCHEMES = (
     "tftp",
     "vnc",
     "xmpp",
-)
+]
 
-# Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
-NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
+# Banners to display to users. Markdown and limited HTML are allowed.
+if "NAUTOBOT_BANNER_BOTTOM" in os.environ and os.environ["NAUTOBOT_BANNER_BOTTOM"] != "":
+    BANNER_BOTTOM = os.environ["NAUTOBOT_BANNER_BOTTOM"]
+if "NAUTOBOT_BANNER_LOGIN" in os.environ and os.environ["NAUTOBOT_BANNER_LOGIN"] != "":
+    BANNER_LOGIN = os.environ["NAUTOBOT_BANNER_LOGIN"]
+if "NAUTOBOT_BANNER_TOP" in os.environ and os.environ["NAUTOBOT_BANNER_TOP"] != "":
+    BANNER_TOP = os.environ["NAUTOBOT_BANNER_TOP"]
 
-# The directory where the Nautobot UI packaging is stored.
-NAUTOBOT_UI_DIR = os.path.join(NAUTOBOT_ROOT, "ui")
+# Number of days to retain changelog entries. Set to 0 to retain changes indefinitely. Defaults to 90 if not set here.
+if "NAUTOBOT_CHANGELOG_RETENTION" in os.environ and os.environ["NAUTOBOT_CHANGELOG_RETENTION"] != "":
+    CHANGELOG_RETENTION = int(os.environ["NAUTOBOT_CHANGELOG_RETENTION"])
 
 # Disable linking of Config Context objects via Dynamic Groups by default. This could cause performance impacts
 # when a large number of dynamic groups are present
 CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED", "False"))
+
+# UUID uniquely but anonymously identifying this Nautobot deployment.
+if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID"] != "":
+    DEPLOYMENT_ID = os.environ["NAUTOBOT_DEPLOYMENT_ID"]
+
+# Device names are not guaranteed globally-unique by Nautobot but in practice they often are.
+# Set this to True to use the device name alone as the natural key for Device objects.
+# Set this to False to use the sequence (name, tenant, location) as the natural key instead.
+#
+if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"] != "":
+    DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
 
 # Exclude potentially sensitive models from wildcard view exemption. These may still be exempted
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
@@ -87,18 +116,39 @@ HTTP_PROXIES = None
 # Send anonymized installation metrics when post_upgrade or send_installation_metrics management commands are run
 INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "True"))
 
+# Maximum file size (in bytes) that as running Job can create in a call to `Job.create_file()`. Default is 10 << 20
+if "NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE" in os.environ and os.environ["NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"] != "":
+    JOB_CREATE_FILE_MAX_SIZE = int(os.environ["NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"])
+
 # The storage backend to use for Job input files and Job output files
 JOB_FILE_IO_STORAGE = os.getenv("NAUTOBOT_JOB_FILE_IO_STORAGE", "db_file_storage.storage.DatabaseFileStorage")
 
 # The file path to a directory where locally installed Jobs can be discovered
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 
+# `Location` names are not guaranteed globally-unique by Nautobot but in practice they often are.
+# Set this to `True` to use the location `name` alone as the natural key for `Location` objects.
+# Set this to `False` to use the sequence `(name, parent__name, parent__parent__name, ...)` as the natural key instead.
+if "NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY"] != "":
+    LOCATION_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY"])
+
+
 # Log Nautobot deprecation warnings. Note that this setting is ignored (deprecation logs always enabled) if DEBUG = True
 LOG_DEPRECATION_WARNINGS = is_truthy(os.getenv("NAUTOBOT_LOG_DEPRECATION_WARNINGS", "False"))
 
+# Setting this to True will display a "maintenance mode" banner at the top of every page.
 MAINTENANCE_MODE = is_truthy(os.getenv("NAUTOBOT_MAINTENANCE_MODE", "False"))
+
+# Maximum number of objects that the UI and API will retrieve in a single request. Default is 1000
+if "NAUTOBOT_MAX_PAGE_SIZE" in os.environ and os.environ["NAUTOBOT_MAX_PAGE_SIZE"] != "":
+    MAX_PAGE_SIZE = int(os.environ["NAUTOBOT_MAX_PAGE_SIZE"])
+
 # Metrics
 METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_METRICS_ENABLED", "False"))
+METRICS_AUTHENTICATED = is_truthy(os.getenv("NAUTOBOT_METRICS_AUTHENTICATED", "False"))
+METRICS_DISABLED_APPS = []
+if "NAUTOBOT_METRICS_DISABLED_APPS" in os.environ and os.environ["NAUTOBOT_METRICS_DISABLED_APPS"] != "":
+    METRICS_DISABLED_APPS = os.getenv("NAUTOBOT_METRICS_DISABLED_APPS", "").split(_CONFIG_SETTING_SEPARATOR)
 
 # Napalm
 NAPALM_ARGS = {}
@@ -106,9 +156,48 @@ NAPALM_PASSWORD = os.getenv("NAUTOBOT_NAPALM_PASSWORD", "")
 NAPALM_TIMEOUT = int(os.getenv("NAUTOBOT_NAPALM_TIMEOUT", "30"))
 NAPALM_USERNAME = os.getenv("NAUTOBOT_NAPALM_USERNAME", "")
 
+# Default number of objects to display per page of the UI and REST API. Default is 50
+if "NAUTOBOT_PAGINATE_COUNT" in os.environ and os.environ["NAUTOBOT_PAGINATE_COUNT"] != "":
+    PAGINATE_COUNT = int(os.environ["NAUTOBOT_PAGINATE_COUNT"])
+
+# The options displayed in the web interface dropdown to limit the number of objects per page.
+# Default is [25, 50, 100, 250, 500, 1000]
+if "NAUTOBOT_PER_PAGE_DEFAULTS" in os.environ and os.environ["NAUTOBOT_PER_PAGE_DEFAULTS"] != "":
+    PER_PAGE_DEFAULTS = [int(val) for val in os.environ["NAUTOBOT_PER_PAGE_DEFAULTS"].split(_CONFIG_SETTING_SEPARATOR)]
+
 # Plugins
 PLUGINS = []
 PLUGINS_CONFIG = {}
+
+# Prefer IPv6 addresses or IPv4 addresses in selecting a device's primary IP address? Default False
+if "NAUTOBOT_PREFER_IPV4" in os.environ and os.environ["NAUTOBOT_PREFER_IPV4"] != "":
+    PREFER_IPV4 = is_truthy(os.environ["NAUTOBOT_PREFER_IPV4"])
+
+# Default height and width in pixels of a single rack unit in rendered rack elevations. Defaults are 22 and 220
+if (
+    "NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_HEIGHT" in os.environ
+    and os.environ["NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_HEIGHT"] != ""
+):
+    RACK_ELEVATION_DEFAULT_UNIT_HEIGHT = int(os.environ["NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_HEIGHT"])
+if (
+    "NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH" in os.environ
+    and os.environ["NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH"] != ""
+):
+    RACK_ELEVATION_DEFAULT_UNIT_WIDTH = int(os.environ["NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH"])
+
+# Enable two-digit format for the rack unit numbering in rack elevations.
+if (
+    "NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT" in os.environ
+    and os.environ["NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"] != ""
+):
+    RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT = is_truthy(os.environ["NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"])
+
+# How frequently to check for a new Nautobot release on GitHub, and the URL to check for this information.
+# Defaults to disabled (no URL) and check every 24 hours when enabled
+if "NAUTOBOT_RELEASE_CHECK_TIMEOUT" in os.environ and os.environ["NAUTOBOT_RELEASE_CHECK_TIMEOUT"] != "":
+    RELEASE_CHECK_TIMEOUT = int(os.environ["NAUTOBOT_RELEASE_CHECK_TIMEOUT"])
+if "NAUTOBOT_RELEASE_CHECK_URL" in os.environ and os.environ["NAUTOBOT_RELEASE_CHECK_URL"] != "":
+    RELEASE_CHECK_URL = os.environ["NAUTOBOT_RELEASE_CHECK_URL"]
 
 # Global 3rd-party authentication settings
 EXTERNAL_AUTH_DEFAULT_GROUPS = []
@@ -127,12 +216,20 @@ SOCIAL_AUTH_BACKEND_PREFIX = "social_core.backends"
 SANITIZER_PATTERNS = [
     # General removal of username-like and password-like tokens
     (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
-    (re.compile(r"(username|password|passwd|pwd)((?:\s+is.?|:)?\s+)\S+", re.IGNORECASE), r"\1\2{replacement}"),
+    (
+        re.compile(r"(username|password|passwd|pwd|secret|secrets)([\"']?(?:\s+is.?|:)?\s+)\S+[\"']?", re.IGNORECASE),
+        r"\1\2{replacement}",
+    ),
 ]
 
 # Storage
 STORAGE_BACKEND = None
 STORAGE_CONFIG = {}
+
+# Custom message to display on 4xx and 5xx error pages. Markdown and HTML are supported.
+# Default message directs the user to #nautobot on NTC's Slack community.
+if "NAUTOBOT_SUPPORT_MESSAGE" in os.environ and os.environ["NAUTOBOT_SUPPORT_MESSAGE"] != "":
+    SUPPORT_MESSAGE = os.environ["NAUTOBOT_SUPPORT_MESSAGE"]
 
 # Test runner that is aware of our use of "integration" tags and only runs
 # integration tests if explicitly passed in with `nautobot-server test --tag integration`.
@@ -181,7 +278,8 @@ REST_FRAMEWORK_VERSION = VERSION.rsplit(".", 1)[0]  # Use major.minor as API ver
 VERSION_MAJOR, VERSION_MINOR = [int(v) for v in REST_FRAMEWORK_VERSION.split(".")]
 # We support all major.minor API versions from 2.0 to the present latest version.
 # Similar logic exists in tasks.py, please keep them in sync!
-assert VERSION_MAJOR == 2, f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {VERSION_MAJOR}"
+if VERSION_MAJOR != 2:
+    raise RuntimeError(f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {VERSION_MAJOR}")
 REST_FRAMEWORK_ALLOWED_VERSIONS = [f"{VERSION_MAJOR}.{minor}" for minor in range(0, VERSION_MINOR + 1)]
 
 REST_FRAMEWORK = {
@@ -192,7 +290,7 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_FILTER_BACKENDS": (
         "nautobot.core.api.filter_backends.NautobotFilterBackend",
-        "rest_framework.filters.OrderingFilter",
+        "nautobot.core.api.filter_backends.NautobotOrderingFilter",
     ),
     "DEFAULT_METADATA_CLASS": "nautobot.core.api.metadata.NautobotMetadata",
     "DEFAULT_PAGINATION_CLASS": "nautobot.core.api.pagination.OptionalLimitOffsetPagination",
@@ -238,6 +336,7 @@ SPECTACULAR_SETTINGS = {
     # trim it from all of the individual paths correspondingly.
     # See also https://github.com/nautobot/nautobot-ansible/pull/135 for an example of why this is desirable.
     "SERVERS": [{"url": "/api"}],
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.IsAuthenticated"],
     "SCHEMA_PATH_PREFIX": "/api",
     "SCHEMA_PATH_PREFIX_TRIM": True,
     # use sidecar - locally packaged UI files, not CDN
@@ -292,9 +391,6 @@ SPECTACULAR_SETTINGS = {
 # Databases
 #
 
-# Only PostgresSQL is supported, so database driver is hard-coded. This can
-# still be overloaded in custom settings.
-# https://docs.djangoproject.com/en/stable/ref/settings/#databases
 DATABASES = {
     "default": {
         "NAME": os.getenv("NAUTOBOT_DB_NAME", "nautobot"),
@@ -315,16 +411,19 @@ if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
     DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
 
 # The secret key is used to encrypt session keys and salt passwords.
-SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY")
+SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
 
 # Default overrides
-ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
+if "NAUTOBOT_ALLOWED_HOSTS" in os.environ and os.environ["NAUTOBOT_ALLOWED_HOSTS"] != "":
+    ALLOWED_HOSTS = os.environ["NAUTOBOT_ALLOWED_HOSTS"].split(" ")
+else:
+    ALLOWED_HOSTS = []
 CSRF_TRUSTED_ORIGINS = []
 CSRF_FAILURE_VIEW = "nautobot.core.views.csrf_failure"
 DATE_FORMAT = os.getenv("NAUTOBOT_DATE_FORMAT", "N j, Y")
 DATETIME_FORMAT = os.getenv("NAUTOBOT_DATETIME_FORMAT", "N j, Y g:i a")
 DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "False"))
-INTERNAL_IPS = ("127.0.0.1", "::1")
+INTERNAL_IPS = ["127.0.0.1", "::1"]
 FORCE_SCRIPT_NAME = None
 
 TESTING = "test" in sys.argv
@@ -380,7 +479,6 @@ SESSION_COOKIE_AGE = int(os.getenv("NAUTOBOT_SESSION_COOKIE_AGE", "1209600"))  #
 SESSION_FILE_PATH = os.getenv("NAUTOBOT_SESSION_FILE_PATH", None)
 SHORT_DATE_FORMAT = os.getenv("NAUTOBOT_SHORT_DATE_FORMAT", "Y-m-d")
 SHORT_DATETIME_FORMAT = os.getenv("NAUTOBOT_SHORT_DATETIME_FORMAT", "Y-m-d H:i")
-SHORT_TIME_FORMAT = os.getenv("NAUTOBOT_SHORT_TIME_FORMAT", "H:i:s")
 TIME_FORMAT = os.getenv("NAUTOBOT_TIME_FORMAT", "g:i a")
 TIME_ZONE = os.getenv("NAUTOBOT_TIME_ZONE", "UTC")
 
@@ -412,6 +510,7 @@ INSTALLED_APPS = [
     "rest_framework",  # Must be after `nautobot.core` for template overrides
     "db_file_storage",
     "nautobot.circuits",
+    "nautobot.cloud",
     "nautobot.dcim",
     "nautobot.ipam",
     "nautobot.extras",
@@ -423,9 +522,13 @@ INSTALLED_APPS = [
     "graphene_django",
     "health_check",
     "health_check.storage",
+    # We have custom implementations of these in nautobot.extras.health_checks:
+    # "health_check.db",
+    # "health_check.contrib.migrations",
+    # "health_check.contrib.redis",
     "django_extensions",
-    "constance.backends.database",
     "django_ajax_tables",
+    "silk",
 ]
 
 # Middleware
@@ -433,6 +536,7 @@ MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "silk.middleware.SilkyMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -510,10 +614,7 @@ X_FRAME_OPTIONS = "DENY"
 # Static files (CSS, JavaScript, Images)
 STATIC_ROOT = os.path.join(NAUTOBOT_ROOT, "static")
 STATIC_URL = "static/"
-STATICFILES_DIRS = (
-    os.path.join(BASE_DIR, "project-static"),
-    os.path.join(NAUTOBOT_UI_DIR, "build", "static"),
-)
+STATICFILES_DIRS = (os.path.join(BASE_DIR, "project-static"),)
 
 # Media
 MEDIA_URL = "media/"
@@ -540,6 +641,8 @@ LOGIN_REDIRECT_URL = "home"
 CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 CONSTANCE_DATABASE_PREFIX = "constance:nautobot:"
 CONSTANCE_DATABASE_CACHE_BACKEND = "default"
+# Constance defaults to a 24-hour timeout when autofilling its cache, which is undesirable in many cases.
+CONSTANCE_DATABASE_CACHE_AUTOFILL_TIMEOUT = int(os.getenv("NAUTOBOT_CACHES_TIMEOUT", "300"))
 CONSTANCE_IGNORE_ADMIN_VERSION_CHECK = True  # avoid potential errors in a multi-node deployment
 
 CONSTANCE_ADDITIONAL_FIELDS = {
@@ -571,17 +674,22 @@ CONSTANCE_ADDITIONAL_FIELDS = {
 }
 
 CONSTANCE_CONFIG = {
+    "ALLOW_REQUEST_PROFILING": ConstanceConfigItem(
+        default=False,
+        help_text="Allow users to enable request profiling on their login session.",
+        field_type=bool,
+    ),
     "BANNER_BOTTOM": ConstanceConfigItem(
         default="",
-        help_text="Custom HTML to display in a banner at the bottom of all pages.",
+        help_text="Custom Markdown or limited HTML to display in a banner at the bottom of all pages.",
     ),
     "BANNER_LOGIN": ConstanceConfigItem(
         default="",
-        help_text="Custom HTML to display in a banner at the top of the login page.",
+        help_text="Custom Markdown or limited HTML to display in a banner at the top of the login page.",
     ),
     "BANNER_TOP": ConstanceConfigItem(
         default="",
-        help_text="Custom HTML to display in a banner at the top of all pages.",
+        help_text="Custom Markdown or limited HTML to display in a banner at the top of all pages.",
     ),
     "CHANGELOG_RETENTION": ConstanceConfigItem(
         default=90,
@@ -601,22 +709,9 @@ CONSTANCE_CONFIG = {
         "Used for sending anonymous installation metrics, when settings.INSTALLATION_METRICS_ENABLED is set to True.",
         field_type=str,
     ),
-    "DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT": ConstanceConfigItem(
-        default=0,
-        help_text="Dynamic Group member cache timeout in seconds. This is the amount of time that a Dynamic Group's member list "
-        "will be cached in Django cache backend. Since retrieving the member list of a Dynamic Group can be a very "
-        "expensive operation, especially in reverse, this cache is used to speed up the process of retrieving the "
-        "member list. This cache is invalidated when a Dynamic Group is saved. Set to 0 to disable caching.",
-        field_type=int,
-    ),
-    "FEEDBACK_BUTTON_ENABLED": ConstanceConfigItem(
-        default=True,
-        help_text="Whether to show the Feedback button in the new UI sidebar.",
-        field_type=bool,
-    ),
     "JOB_CREATE_FILE_MAX_SIZE": ConstanceConfigItem(
         default=10 << 20,
-        help_text=mark_safe(  # noqa: S308
+        help_text=mark_safe(  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
             "Maximum size (in bytes) of any single file generated by a <code>Job.create_file()</code> call."
         ),
         field_type=int,
@@ -649,14 +744,14 @@ CONSTANCE_CONFIG = {
     ),
     "NETWORK_DRIVERS": ConstanceConfigItem(
         default={},
-        help_text=mark_safe(  # noqa: S308
+        help_text=mark_safe(  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
             "Extend or override default Platform.network_driver translations provided by "
             '<a href="https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/">netutils</a>. '
             "Enter a dictionary in JSON format, for example:\n"
-            "<pre>{\n"
+            '<pre><code class="language-json">{\n'
             '    "netmiko": {"my_network_driver": "cisco_ios"},\n'
             '    "pyats": {"my_network_driver": "iosxe"} \n'
-            "}</pre>",
+            "}</code></pre>",
         ),
         # Use custom field type defined above
         field_type="optional_json_field",
@@ -671,6 +766,11 @@ CONSTANCE_CONFIG = {
     ),
     "RACK_ELEVATION_DEFAULT_UNIT_WIDTH": ConstanceConfigItem(
         default=230, help_text="Default width (in pixels) of a rack unit in a rack elevation diagram", field_type=int
+    ),
+    "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT": ConstanceConfigItem(
+        default=False,
+        help_text="Enables two-digit format for the rack unit numbering in a rack elevation diagram",
+        field_type=bool,
     ),
     "RELEASE_CHECK_TIMEOUT": ConstanceConfigItem(
         default=24 * 3600,
@@ -689,7 +789,8 @@ CONSTANCE_CONFIG = {
     ),
     "SUPPORT_MESSAGE": ConstanceConfigItem(
         default="",
-        help_text="Help message to include on 4xx and 5xx error pages. Markdown is supported.\n"
+        help_text="Help message to include on 4xx and 5xx error pages. "
+        "Markdown is supported, as are some HTML tags and attributes.\n"
         "If unspecified, instructions to join Network to Code's Slack community will be provided.",
     ),
 }
@@ -701,10 +802,15 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Natural Keys": ["DEVICE_NAME_AS_NATURAL_KEY", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
-    "Performance": ["DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT", "JOB_CREATE_FILE_MAX_SIZE"],
-    "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
+    "Performance": ["JOB_CREATE_FILE_MAX_SIZE"],
+    "Rack Elevation Rendering": [
+        "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT",
+        "RACK_ELEVATION_DEFAULT_UNIT_WIDTH",
+        "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT",
+    ],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["FEEDBACK_BUTTON_ENABLED", "SUPPORT_MESSAGE"],
+    "User Interface": ["SUPPORT_MESSAGE"],
+    "Debugging": ["ALLOW_REQUEST_PROFILING"],
 }
 
 #
@@ -749,7 +855,7 @@ CACHES = {
             "django_prometheus.cache.backends.redis.RedisCache" if METRICS_ENABLED else "django_redis.cache.RedisCache",
         ),
         "LOCATION": parse_redis_connection(redis_database=1),
-        "TIMEOUT": 300,
+        "TIMEOUT": int(os.getenv("NAUTOBOT_CACHES_TIMEOUT", "300")),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "PASSWORD": "",
@@ -764,10 +870,16 @@ CONTENT_TYPE_CACHE_TIMEOUT = int(os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT"
 # Celery (used for background processing)
 #
 
+# Celery Beat heartbeat file path - will be touched by Beat each time it wakes up as a proof-of-health.
+CELERY_BEAT_HEARTBEAT_FILE = os.getenv(
+    "NAUTOBOT_CELERY_BEAT_HEARTBEAT_FILE",
+    os.path.join(tempfile.gettempdir(), "nautobot_celery_beat_heartbeat"),
+)
+
 # Celery broker URL used to tell workers where queues are located
 CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
 
-# Celery results backend URL to tell workers where to publish task results
+# Celery results backend URL to tell workers where to publish task results - DO NOT CHANGE THIS
 CELERY_RESULT_BACKEND = "nautobot.core.celery.backends.NautobotDatabaseBackend"
 
 # Enables extended task result attributes (name, args, kwargs, worker, retries, queue, delivery_info) to be written to backend.
@@ -779,16 +891,27 @@ CELERY_RESULT_EXPIRES = None
 # Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
 CELERY_TASK_TRACK_STARTED = True
 
-# If enabled, a `task-sent` event will be sent for every task so tasks can be tracked before they’re consumed by a worker.
+# If enabled, a `task-sent` event will be sent for every task so tasks can be tracked before they're consumed by a worker.
 CELERY_TASK_SEND_SENT_EVENT = True
+
+# How many tasks a worker is allowed to reserve for its own consumption and execution.
+# If set to zero (not recommended) a single worker can reserve all tasks even if other workers are free.
+# For short running tasks (such as webhooks) you may want to set this to a larger number to increase throughput.
+# Conversely, for long running tasks (such as SSoT or Golden-Config Jobs at scale) you may want to set this to 1
+# so that a worker executing a long-running task will not prefetch other tasks, which would block their execution
+# until the long-running task completes.
+# https://docs.celeryq.dev/en/stable/userguide/optimizing.html#prefetch-limits
+CELERY_WORKER_PREFETCH_MULTIPLIER = int(os.getenv("NAUTOBOT_CELERY_WORKER_PREFETCH_MULTIPLIER", "4"))
 
 # If enabled stdout and stderr of running jobs will be redirected to the task logger.
 CELERY_WORKER_REDIRECT_STDOUTS = is_truthy(os.getenv("NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS", "True"))
 
-# The log level of log messages generated by redirected job stdout and stderr. Can be one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`.
+# The log level of log messages generated by redirected job stdout and stderr.
+# Can be one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`.
 CELERY_WORKER_REDIRECT_STDOUTS_LEVEL = os.getenv("NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS_LEVEL", "WARNING")
 
-# Send task-related events so that tasks can be monitored using tools like flower. Sets the default value for the workers -E argument.
+# Send task-related events so that tasks can be monitored using tools like flower.
+# Sets the default value for the workers -E argument.
 CELERY_WORKER_SEND_TASK_EVENTS = True
 
 # Default celery queue name that will be used by workers and tasks if no queue is specified
@@ -809,7 +932,7 @@ CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", str(10
 CELERY_WORKER_PROMETHEUS_PORTS = []
 if os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS"):
     CELERY_WORKER_PROMETHEUS_PORTS = [
-        int(value) for value in os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS").split(",")
+        int(value) for value in os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS").split(_CONFIG_SETTING_SEPARATOR)
     ]
 
 # These settings define the custom nautobot serialization encoding as an accepted data encoding format
@@ -847,6 +970,8 @@ BRANDING_FILEPATHS = {
         "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None
     ),  # bullet image used for various view headers
     "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None),  # bullet image used for nav menu headers
+    "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # Custom global CSS
+    "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # Custom global JavaScript
 }
 
 # Title to use in place of "Nautobot"
@@ -921,5 +1046,34 @@ DRF_REACT_TEMPLATE_TYPE_MAP = {
     "UUIDField": {"type": "string", "format": "uuid"},
 }
 
-# Turn on or off new ui feature
-ENABLE_ALPHA_UI = is_truthy(os.getenv("NAUTOBOT_ENABLE_ALPHA_UI", "False"))
+
+#
+# django-silk is used for optional request profiling for debugging purposes
+#
+
+SILKY_PYTHON_PROFILER = True
+SILKY_PYTHON_PROFILER_BINARY = True
+SILKY_PYTHON_PROFILER_EXTENDED_FILE_NAME = True
+SILKY_ANALYZE_QUERIES = False  # See the docs for the implications of turning this on https://github.com/jazzband/django-silk?tab=readme-ov-file#enable-query-analysis
+SILKY_AUTHENTICATION = True  # User must login
+SILKY_AUTHORISATION = True  # User must have permissions
+
+
+# This makes it so that only superusers can access the silk UI
+def silk_user_permissions(user):
+    return user.is_superuser
+
+
+SILKY_PERMISSIONS = silk_user_permissions
+
+
+# This ensures profiling only happens when enabled on the sessions. Users are able
+# to turn this on or off in their user profile. It also ignores health-check requests.
+def silk_request_logging_intercept_logic(request):
+    if request.path != "/health/":
+        if request.session.get("silk_record_requests", False):
+            return True
+    return False
+
+
+SILKY_INTERCEPT_FUNC = silk_request_logging_intercept_logic

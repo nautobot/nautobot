@@ -1,6 +1,6 @@
 # Application Registry
 
-The registry is an in-memory data structure which houses various application-wide parameters, such as the list of enabled plugins. It is not exposed to the user and is not intended to be modified by any code outside of Nautobot core.
+The registry is an in-memory data structure which houses various application-wide parameters, such as the list of enabled Apps. It is not exposed to the user and is not intended to be modified by any code outside of Nautobot core.
 
 The registry behaves essentially like a Python dictionary, with the notable exception that once a store (key) has been declared, it cannot be deleted or overwritten. The value of a store can, however, be modified; e.g. by appending a value to a list. Store values generally do not change once the application has been initialized.
 
@@ -46,7 +46,7 @@ Definition of data types that can be provided by data source models (such as [Gi
 }
 ```
 
-Plugins may extend this dictionary with additional data sources and/or data types by calling `extras.registry.register_datasource_contents()` as desired.
+Apps may extend this dictionary with additional data sources and/or data types by calling `extras.registry.register_datasource_contents()` as desired.
 
 ### `homepage_layout`
 
@@ -87,6 +87,32 @@ A dictionary holding information about the layout of Nautobot's homepage. Each a
 }
 ```
 
+### `jobs`
+
++++ 2.2.3
+
+A dictionary of registered [Job classes](../jobs/index.md), indexed by their [class path](../../user-guide/platform-functionality/jobs/index.md#jobs-and-class_path). For example:
+
+```python
+{
+    "nautobot.core.jobs.ExportObjectList": <class "nautobot.core.jobs.ExportObjectList">,
+    "nautobot.core.jobs.GitRepositorySync": <class "nautobot.core.jobs.GitRepositorySync">,
+    "nautobot.core.jobs.GitRepositoryDryRun": <class "nautobot.core.jobs.GitRepositoryDryRun">,
+    "nautobot.core.jobs.ImportObjects": <class "nautobot.core.jobs.ImportObjects">,
+    "example_app.jobs.ExampleDryRunJob": <class "example_app.jobs.ExampleDryRunJob">,
+    "example_app.jobs.ExampleJob": <class "example_app.jobs.ExampleJob">,
+    "example_app.jobs.ExampleHiddenJob": <class "example_app.jobs.ExampleHiddenJob">,
+    "example_app.jobs.ExampleLoggingJob": <class "example_app.jobs.ExampleLoggingJob">,
+    "example_app.jobs.ExampleFileInputOutputJob": <class "example_app.jobs.ExampleFileInputOutputJob">,
+    "example_app.jobs.ExampleJobHookReceiver": <class "example_app.jobs.ExampleJobHookReceiver">,
+    "example_app.jobs.ExampleSimpleJobButtonReceiver": <class "example_app.jobs.ExampleSimpleJobButtonReceiver">,
+    "example_app.jobs.ExampleComplexJobButtonReceiver": <class "example_app.jobs.ExampleComplexJobButtonReceiver">
+}
+```
+
+!!! caution
+    This registry entry should be treated as a cache and as an implementation detail; in general you should prefer the use of the `nautobot.apps.get_jobs()` and/or `nautobot.apps.get_job()` APIs in order to retrieve specific Job classes.
+
 ### `model_features`
 
 A dictionary of particular features (e.g. custom fields) mapped to the Nautobot models which support them, arranged by app. For example:
@@ -111,7 +137,7 @@ For more information visit [model-features](model-features.md).
 
 +++ 1.1.0
 
-Navigation menu items provided by Nautobot applications. Each app may register its navbar configuration inside of the `nav_menu` dictionary using `navigation.py`. Tabs are stored in the top level moving down to groups, items and buttons. Tabs, groups and items can be modified by using the key values inside other application and plugins. The `nav_menu` dict should never be modified directly.
+Navigation menu items provided by Nautobot applications. Each app may register its navbar configuration inside of the `nav_menu` dictionary using `navigation.py`. Tabs are stored in the top level moving down to groups, items and buttons. Tabs, groups and items can be modified by using the key values inside other core applications and Apps. The `nav_menu` dict should never be modified directly.
 
 Example:
 
@@ -178,7 +204,7 @@ Example:
 
 ### `plugin_custom_validators`
 
-Plugin [custom validator classes](../apps/api/platform-features/custom-validators.md) that provide additional data model validation logic. Implemented as a dictionary mapping data model names to a list of `CustomValidator` subclasses, for example:
+App [custom validator classes](../apps/api/platform-features/custom-validators.md) that provide additional data model validation logic. Implemented as a dictionary mapping data model names to a list of `CustomValidator` subclasses, for example:
 
 ```python
 {
@@ -189,7 +215,7 @@ Plugin [custom validator classes](../apps/api/platform-features/custom-validator
 
 ### `plugin_graphql_types`
 
-List of GraphQL Type objects that will be added to the GraphQL schema. GraphQL objects that are defined in a plugin will be automatically registered into this registry. An example:
+List of GraphQL Type objects that will be added to the GraphQL schema. GraphQL objects that are defined in an App will be automatically registered into this registry. An example:
 
 ```python
 [
@@ -198,11 +224,11 @@ List of GraphQL Type objects that will be added to the GraphQL schema. GraphQL o
 ```
 
 --- 2.0.0
-    The `plugin_jobs` registry has been replaced by [`nautobot.core.celery.register_jobs`](../../user-guide/platform-functionality/jobs/index.md#writing-jobs) which should be called at import time by any plugin that provides jobs.
+    The `plugin_jobs` registry has been replaced by [`nautobot.core.celery.register_jobs`](../jobs/index.md#writing-jobs) which should be called at import time by any App that provides jobs.
 
 ### `plugin_template_extensions`
 
-Plugin content that gets embedded into core Nautobot templates. The store comprises Nautobot models registered as dictionary keys, each pointing to a list of applicable template extension classes that exist. An example:
+App content that gets embedded into core Nautobot templates. The store comprises Nautobot models registered as dictionary keys, each pointing to a list of applicable template extension classes that exist. An example:
 
 ```python
 {

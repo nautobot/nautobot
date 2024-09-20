@@ -19,7 +19,7 @@ The following sections will guide you through how to create each object type.
 
 Devices can be organized by functional roles, which are fully customizable by the user.
 
-More information on Device Roles can be found in the [Device Roles](../../core-data-model/dcim/device.md#device-roles) section of the Nautobot documentation.
+More information on Device Roles can be found in the [Device Roles](../../platform-functionality/role.md) section of the Nautobot documentation.
 
 To create a new Device, you will need an existing Device Role or need to create a new Device Role instance.
 
@@ -40,7 +40,7 @@ To create a new Device Role:
 
 A Manufacturer represents the "make" of a device; e.g. Cisco or Dell. Each device type must be assigned to a manufacturer.
 
-More information on Manufacturers is in the [Manufacturers](../../core-data-model/dcim/devicetype.md#manufacturers) section of the Nautobot documentation.
+More information on Manufacturers is in the [Manufacturers](../../core-data-model/dcim/manufacturer.md) section of the Nautobot documentation.
 
 To create a new Device Type, you will need an existing Manufacturer or need to create a new Manufacturer instance.
 
@@ -59,7 +59,7 @@ To create a new Manufacturer:
 A device type represents a particular make and model of hardware that exists in the real world.
 Device types define the physical attributes of a device (rack height and depth) and its individual components (console, power, network interfaces, and so on).
 
-More information on Device Types is in the [Device Types](../../core-data-model/dcim/devicetype.md#device-types_1) section of the Nautobot documentation.
+More information on Device Types is in the [Device Types](../../core-data-model/dcim/devicetype.md) section of the Nautobot documentation.
 
 To create a new Device, you will need an existing Device Type or need to create a new Device Type instance.
 

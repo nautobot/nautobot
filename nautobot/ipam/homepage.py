@@ -1,7 +1,6 @@
 from nautobot.core.apps import HomePageItem, HomePagePanel
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
 
-
 layout = (
     HomePagePanel(
         name="IPAM",

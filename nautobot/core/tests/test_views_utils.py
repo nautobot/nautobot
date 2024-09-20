@@ -1,9 +1,10 @@
+import urllib.parse
+
 from django.db import ProgrammingError
 from django.test import TestCase
 
 from nautobot.core.models.querysets import count_related
-from nautobot.core.views.utils import check_filter_for_display
-
+from nautobot.core.views.utils import check_filter_for_display, prepare_cloned_fields
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, InventoryItem, Location, Manufacturer
 from nautobot.extras.models import Role, Status
@@ -77,7 +78,7 @@ class CheckFilterForDisplayTest(TestCase):
                 expected_output,
             )
 
-        # TODO(glenn): We need some filters that *aren't* getting updated to the new pattern - maybe in example_plugin?
+        # TODO(glenn): We need some filters that *aren't* getting updated to the new pattern - maybe in example_app?
         # with self.subTest("Test get value display (also legacy filter ModelMultipleChoiceFilter)"):
         #     example_obj = DeviceType.objects.first()
         #     expected_output = {
@@ -105,7 +106,7 @@ class CheckFilterForDisplayTest(TestCase):
 
 class CheckCountRelatedSubquery(TestCase):
     def test_count_related(self):
-        """Assert that InventoryItems with the same Manufacuturers do not cause issues in count_related subquery."""
+        """Assert that InventoryItems with the same Manufacturers do not cause issues in count_related subquery."""
         location = Location.objects.filter(parent__isnull=False).first()
         self.manufacturers = Manufacturer.objects.all()[:3]
         devicetype = DeviceType.objects.first()
@@ -136,6 +137,34 @@ class CheckCountRelatedSubquery(TestCase):
             device=device1, manufacturer=self.manufacturers[2], name="Inv 4"
         )
         try:
-            list(Manufacturer.objects.annotate(inventory_item_count=count_related(InventoryItem, "manufacturer")))
+            qs = Manufacturer.objects.annotate(inventory_item_count=count_related(InventoryItem, "manufacturer"))
+            list(qs)
+            self.assertEqual(qs.get(pk=self.manufacturers[0].pk).inventory_item_count, 2)
+            self.assertEqual(qs.get(pk=self.manufacturers[1].pk).inventory_item_count, 1)
+            self.assertEqual(qs.get(pk=self.manufacturers[2].pk).inventory_item_count, 2)
         except ProgrammingError:
             self.fail("count_related subquery failed with ProgrammingError")
+
+        qs = Device.objects.annotate(
+            manufacturer_count=count_related(Manufacturer, "inventory_items__device", distinct=True)
+        )
+        self.assertEqual(qs.get(pk=device1.pk).manufacturer_count, 3)
+
+
+class CheckPrepareClonedFields(TestCase):
+    name = "Building-02"
+    descriptions = ["Complicated Name & Stuff", "Simple Name"]
+
+    def testQueryParameterGeneration(self):
+        """Assert that a clone field with a special character, &, is properly escaped"""
+        instance = Location.objects.get(name=self.name)
+        self.assertIsInstance(instance, Location)
+        for description in self.descriptions:
+            with self.subTest(f"Testing parameter generation for a model with the name '{description}'"):
+                instance.description = description
+                query_params = urllib.parse.parse_qs(prepare_cloned_fields(instance))
+                self.assertTrue(isinstance(query_params, dict))
+                self.assertTrue("description" in query_params.keys())
+                self.assertTrue(isinstance(query_params["description"], list))
+                self.assertTrue(len(query_params["description"]) == 1)
+                self.assertTrue(query_params["description"][0] == description)

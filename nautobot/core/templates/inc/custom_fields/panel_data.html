@@ -44,7 +44,7 @@
                                             Show/Hide
                                         </button>
                                     </p>
-                                    <pre class="collapse" id="cf_{{ field.key }}"><code>{{ value|render_json }}</code></pre>
+                                    <pre class="collapse" id="cf_{{ field.key }}">{{ value|render_json }}</pre>
                                 {% elif value or value == 0 %}
                                     {{ value }}
                                 {% elif field.required %}

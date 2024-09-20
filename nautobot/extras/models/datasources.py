@@ -1,21 +1,24 @@
 """Models for representing external data sources."""
+
 from importlib.util import find_spec
 import os
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.core.validators import URLValidator
 from django.db import models
 
-from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.models.fields import AutoSlugField, LaxURLField, slugify_dashes_to_underscores
 from nautobot.core.models.generics import PrimaryModel
-from nautobot.extras.utils import extras_features, check_if_key_is_graphql_safe
+from nautobot.core.models.validators import EnhancedURLValidator
+from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features
 
 
 @extras_features(
     "config_context_owners",
     "export_template_owners",
+    "graphql",
     "job_results",
     "webhooks",
 )
@@ -23,7 +26,7 @@ class GitRepository(PrimaryModel):
     """Representation of a Git repository used as an external data source."""
 
     name = models.CharField(
-        max_length=100,
+        max_length=CHARFIELD_MAX_LENGTH,
         unique=True,
     )
     slug = AutoSlugField(
@@ -32,15 +35,16 @@ class GitRepository(PrimaryModel):
         slugify_function=slugify_dashes_to_underscores,
     )
 
-    remote_url = models.URLField(
-        max_length=255,
+    remote_url = LaxURLField(
+        max_length=CHARFIELD_MAX_LENGTH,
         # For the moment we don't support ssh:// and git:// URLs
         help_text="Only HTTP and HTTPS URLs are presently supported",
-        validators=[URLValidator(schemes=["http", "https"])],
+        validators=[EnhancedURLValidator(schemes=["http", "https"])],
     )
     branch = models.CharField(
-        max_length=64,
+        max_length=CHARFIELD_MAX_LENGTH,
         default="main",
+        help_text="Branch, tag, or commit",
     )
 
     current_head = models.CharField(
@@ -95,8 +99,6 @@ class GitRepository(PrimaryModel):
         if not self.present_in_database:
             check_if_key_is_graphql_safe(self.__class__.__name__, self.slug, "slug")
             # Check on create whether the proposed slug conflicts with a module name already in the Python environment.
-            # Because we add GIT_ROOT to the end of sys.path, trying to import this repository will instead
-            # import the earlier-found Python module in its place, which would be undesirable.
             if find_spec(self.slug) is not None:
                 raise ValidationError(
                     f'Please choose a different slug, as "{self.slug}" is an installed Python package or module.'
@@ -152,8 +154,8 @@ class GitRepository(PrimaryModel):
             JobResult
         """
         from nautobot.extras.datasources import (
-            enqueue_pull_git_repository_and_refresh_data,
             enqueue_git_repository_diff_origin_and_local,
+            enqueue_pull_git_repository_and_refresh_data,
         )
 
         if dry_run:

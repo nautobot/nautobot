@@ -56,7 +56,7 @@ Nautobot's `BaseModel` base class and related classes now implement automatic su
 
 Developers can refer to the [documentation on natural keys](../development/core/natural-keys.md) for details on how to support and use this feature.
 
-Two new configuration settings, [`DEVICE_NAME_AS_NATURAL_KEY`](../user-guide/administration/configuration/optional-settings.md#device_name_as_natural_key) and [`LOCATION_NAME_AS_NATURAL_KEY`](../user-guide/administration/configuration/optional-settings.md#location_name_as_natural_key), have been added to allow an administrator to customize the natural-key behavior of these two widely-used models.
+Two new configuration settings, [`DEVICE_NAME_AS_NATURAL_KEY`](../user-guide/administration/configuration/settings.md#device_name_as_natural_key) and [`LOCATION_NAME_AS_NATURAL_KEY`](../user-guide/administration/configuration/settings.md#location_name_as_natural_key), have been added to allow an administrator to customize the natural-key behavior of these two widely-used models.
 
 #### REST API Query Depth Parameter ([#3042](https://github.com/nautobot/nautobot/issues/3042))
 
@@ -156,7 +156,7 @@ The `region` and `site` fields are being removed in the `filter` data of `Dynami
 
 Check out the API and UI endpoints changes incurred by the changes stated above in the ["Upgrading from Nautobot v1.X"](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md) guide.
 
-Check out the [Region and Site Related Data Model Migration Guide](../user-guide/administration/upgrading/from-v1/region-and-site-data-migration-guide.md#region-and-site-related-data-model-migration-guide-for-existing-nautobot-app-installations) to learn how to migrate your Nautobot Apps and data models from `Site` and `Region` to `Location`.
+Check out the [Region and Site Related Data Model Migration Guide](../development/apps/migration/model-updates/dcim.md) to learn how to migrate your Nautobot Apps and data models from `Site` and `Region` to `Location`.
 
 #### Corrected Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
@@ -335,10 +335,14 @@ The configuration settings `CACHEOPS`, `CACHEOPS_DEFAULTS`, `CACHEOPS_DEGRADE_ON
 
 When we launched Nautobot we introduced the `nautobot-server` command as the primary entrypoint to managing your application, replacing the legacy `manage.py` script that is common with Django-based applications. The original `manage.py` was left there initially in v1.0.0 as a fallback, however it is no longer needed, so we have removed it in Nautobot 2.0.
 
+#### Redundant Settings Variables
+
+The `ENFORCE_GLOBAL_UNIQUE` setting has been removed as now IPAM uniqueness is enforced by Namespaces. The `DISABLE_PREFIX_LIST_HIERARCHY` setting has been removed as prefix hierarchy is now implemented as a concrete `parent`/`children` relationship to improve performance.
+
 #### Redundant Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
 !!! warning
-    This change may introduce breaking changes to your existing `DynamicGroup` filters, `ObjectPermission` filters, `Relationship` filters, and any other saved references to these fields. You should review any existing instances of these models before and after upgrading your production environment for any potentially subtle change. Please refer to the [Upgrading from Nautobot v1.X](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#removed-redundant-filter-fields) guide for more details.
+    This change may introduce breaking changes to your existing `DynamicGroup` filters, `ObjectPermission` filters, `Relationship` filters, and any other saved references to these fields. You should review any existing instances of these models before and after upgrading your production environment for any potentially subtle change. Please refer to the [Upgrading from Nautobot v1.X](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#removed-filter-fields) guide for more details.
 
 As a part of breaking changes made in v2.X, shadowed filter/filterset fields are being removed throughout Nautobot.
 
@@ -356,7 +360,7 @@ Now in v2.x, that format is no longer supported. Instead, you would use:
 
 `/circuits/circuits/?provider=<uuid>`
 
-Check out the specific changes documented in the table at [UI and REST API Filter Changes](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#removed-redundant-filter-fields)
+Check out the specific changes documented in the table at [UI and REST API Filter Changes](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#removed-filter-fields)
 
 #### RQ support ([#2523](https://github.com/nautobot/nautobot/issue/2523))
 

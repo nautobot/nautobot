@@ -1,12 +1,13 @@
 import uuid
 
+from django.conf import settings
+from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.urls import NoReverseMatch, reverse
 from django.utils.encoding import is_protected_type
-from django.conf import settings
-from django.contrib.contenttypes.models import ContentType
-from django.core.cache import cache
 from django.utils.functional import classproperty
 
 from nautobot.core.models.managers import BaseManager
@@ -18,6 +19,7 @@ __all__ = (
     "BaseManager",
     "BaseModel",
     "CompositeKeyQuerySetMixin",
+    "ContentTypeRelatedQuerySet",
     "RestrictedQuerySet",
     "construct_composite_key",
     "construct_natural_slug",
@@ -46,13 +48,21 @@ class BaseModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True, editable=False)
 
     objects = BaseManager.from_queryset(RestrictedQuerySet)()
+    is_contact_associable_model = False  # ContactMixin overrides this to default True
+    is_dynamic_group_associable_model = False  # DynamicGroupMixin overrides this to default True
+    is_metadata_associable_model = True
+    is_saved_view_model = False  # SavedViewMixin overrides this to default True
+    is_cloud_resource_type_model = False  # CloudResourceTypeMixin overrides this to default True
 
-    @property
-    def present_in_database(self):
-        """
-        True if the record exists in the database, False if it does not.
-        """
-        return not self._state.adding
+    associated_object_metadata = GenericRelation(
+        "extras.ObjectMetadata",
+        content_type_field="assigned_object_type",
+        object_id_field="assigned_object_id",
+        related_query_name="associated_object_metadata_%(app_label)s_%(class)s",  # e.g. 'associated_object_metadata_dcim_device'
+    )
+
+    class Meta:
+        abstract = True
 
     def get_absolute_url(self, api=False):
         """
@@ -77,6 +87,13 @@ class BaseModel(models.Model):
 
         raise AttributeError(f"Cannot find a URL for {self} ({self._meta.app_label}.{self._meta.model_name})")
 
+    @property
+    def present_in_database(self):
+        """
+        True if the record exists in the database, False if it does not.
+        """
+        return not self._state.adding
+
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def _content_type(cls):  # pylint: disable=no-self-argument
         """
@@ -91,7 +108,7 @@ class BaseModel(models.Model):
 
         Necessary for use with _content_type_cached and management commands.
         """
-        return f"{cls._meta.label_lower}._content_type"
+        return f"nautobot.{cls._meta.label_lower}._content_type"
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def _content_type_cached(cls):  # pylint: disable=no-self-argument
@@ -100,9 +117,6 @@ class BaseModel(models.Model):
         """
 
         return cache.get_or_set(cls._content_type_cache_key, cls._content_type, settings.CONTENT_TYPE_CACHE_TIMEOUT)
-
-    class Meta:
-        abstract = True
 
     def validated_save(self, *args, **kwargs):
         """
@@ -285,3 +299,24 @@ class BaseModel(models.Model):
                 f"expected no more than {len(natural_key_field_lookups)} but got {len(args)}."
             )
         return dict(zip(natural_key_field_lookups, args))
+
+
+class ContentTypeRelatedQuerySet(RestrictedQuerySet):
+    def get_for_model(self, model):
+        """
+        Return all `self.model` instances assigned to the given model.
+        """
+        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
+        return self.filter(content_types=content_type)
+
+    # TODO(timizuo): Merge into get_for_model; Cant do this now cause it would require alot
+    #  of refactoring
+    def get_for_models(self, models_):
+        """
+        Return all `self.model` instances assigned to the given `_models`.
+        """
+        q = models.Q()
+        for model in models_:
+            q |= models.Q(app_label=model._meta.app_label, model=model._meta.model_name)
+        content_types = ContentType.objects.filter(q)
+        return self.filter(content_types__in=content_types)

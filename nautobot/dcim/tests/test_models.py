@@ -3,6 +3,7 @@ from decimal import Decimal
 from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.test import TestCase
 from django.test.utils import override_settings
 
@@ -11,11 +12,15 @@ from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.choices import (
     CableStatusChoices,
     CableTypeChoices,
+    ConsolePortTypeChoices,
     DeviceFaceChoices,
     InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerOutletFeedLegChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
+    SubdeviceRoleChoices,
 )
 from nautobot.dcim.models import (
     Cable,
@@ -23,29 +28,39 @@ from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceTemplate,
+    InventoryItem,
     Location,
     LocationType,
     Manufacturer,
+    Module,
+    ModuleBay,
+    ModuleBayTemplate,
+    ModuleType,
     Platform,
-    PowerPort,
-    PowerPortTemplate,
     PowerOutlet,
     PowerOutletTemplate,
     PowerPanel,
+    PowerPort,
+    PowerPortTemplate,
     Rack,
     RackGroup,
     RearPort,
     RearPortTemplate,
+    SoftwareImageFile,
+    SoftwareVersion,
 )
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -54,6 +69,501 @@ from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import User
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
+
+
+class ModularDeviceComponentTestCaseMixin:
+    """Generic test for modular device components. Also used for testing modular component templates."""
+
+    # fields required to create instances of the model, with the exception of name, device_field and module_field
+    modular_component_create_data = {}
+    model = None
+    device_field = "device"  # field name for the parent device
+    module_field = "module"  # field name for the parent module
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device = Device.objects.first()
+        cls.module = Module.objects.first()
+
+    def test_parent_validation_device_and_module(self):
+        """Assert that a modular component must have a parent device or parent module but not both."""
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 1",
+            **{self.device_field: self.device, self.module_field: self.module},
+            **self.modular_component_create_data,
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+    def test_parent_validation_no_device_or_module(self):
+        """Assert that a modular component must have a parent device or parent module but not both."""
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 1",
+            **self.modular_component_create_data,
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+    def test_parent_validation_succeeds(self):
+        """Assert that a modular component must have a parent device or parent module but not both."""
+        with self.subTest(f"{self.model._meta.model_name} with a parent device"):
+            instance = self.model(
+                name=f"test {self.model._meta.model_name} 1",
+                **{self.device_field: self.device},
+                **self.modular_component_create_data,
+            )
+
+            instance.full_clean()
+            instance.save()
+
+        with self.subTest(f"{self.model._meta.model_name} with a parent module"):
+            instance = self.model(
+                name=f"test {self.model._meta.model_name} 1",
+                **{self.module_field: self.module},
+                **self.modular_component_create_data,
+            )
+
+            instance.full_clean()
+            instance.save()
+
+    def test_uniqueness_device(self):
+        """Assert that the combination of device and name is unique."""
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 1",
+            **{self.device_field: self.device},
+            **self.modular_component_create_data,
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        # same device, different name works
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 2",
+            **{self.device_field: self.device},
+            **self.modular_component_create_data,
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 1",
+            **{self.device_field: self.device},
+            **self.modular_component_create_data,
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            instance.save()
+
+    def test_uniqueness_module(self):
+        """Assert that the combination of module and name is unique."""
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 1",
+            **{self.module_field: self.module},
+            **self.modular_component_create_data,
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        # same module, different name works
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 2",
+            **{self.module_field: self.module},
+            **self.modular_component_create_data,
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 1",
+            **{self.module_field: self.module},
+            **self.modular_component_create_data,
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            instance.save()
+
+
+class ConsolePortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = ConsolePort
+    modular_component_create_data = {"type": ConsolePortTypeChoices.TYPE_RJ45}
+
+
+class ConsoleServerPortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = ConsoleServerPort
+    modular_component_create_data = {"type": ConsolePortTypeChoices.TYPE_RJ45}
+
+
+class PowerPortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = PowerPort
+    modular_component_create_data = {"type": PowerPortTypeChoices.TYPE_NEMA_1030P}
+
+
+class PowerOutletTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = PowerOutlet
+    modular_component_create_data = {"type": PowerOutletTypeChoices.TYPE_IEC_C13}
+
+
+class RearPortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = RearPort
+    modular_component_create_data = {"type": PortTypeChoices.TYPE_8P8C}
+
+
+class FrontPortTestCase(ModelTestCases.BaseModelTestCase):
+    model = FrontPort
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.module = Module.objects.filter(rear_ports__isnull=False).first()
+        cls.module_rear_port = cls.module.rear_ports.first()
+        module_used_positions = set(cls.module_rear_port.front_ports.values_list("rear_port_position", flat=True))
+        cls.module_available_positions = set(range(1, cls.module_rear_port.positions + 1)).difference(
+            module_used_positions
+        )
+
+        cls.device = Device.objects.filter(rear_ports__isnull=False).first()
+        cls.device_rear_port = cls.device.rear_ports.first()
+        device_used_positions = set(cls.device_rear_port.front_ports.values_list("rear_port_position", flat=True))
+        cls.device_available_positions = set(range(1, cls.device_rear_port.positions + 1)).difference(
+            device_used_positions
+        )
+
+    def test_parent_validation_device_and_module(self):
+        """Assert that a modular component must have a parent device or parent module but not both."""
+        instance = self.model(
+            device=self.device,
+            module=self.module,
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port=self.module_rear_port,
+            rear_port_position=self.module_available_positions.copy().pop(),
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+    def test_parent_validation_no_device_or_module(self):
+        """Assert that a modular component must have a parent device or parent module but not both."""
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port=self.module_rear_port,
+            rear_port_position=self.module_available_positions.copy().pop(),
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+    def test_parent_validation_succeeds(self):
+        """Assert that a modular component must have a parent device or parent module but not both."""
+        with self.subTest(f"{self.model._meta.model_name} with a parent device"):
+            instance = self.model(
+                device=self.device,
+                name=f"test {self.model._meta.model_name} 1",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=self.device_rear_port,
+                rear_port_position=self.device_available_positions.copy().pop(),
+            )
+
+            instance.full_clean()
+            instance.save()
+
+        with self.subTest(f"{self.model._meta.model_name} with a parent module"):
+            instance = self.model(
+                module=self.module,
+                name=f"test {self.model._meta.model_name} 1",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=self.module_rear_port,
+                rear_port_position=self.module_available_positions.copy().pop(),
+            )
+
+            instance.full_clean()
+            instance.save()
+
+    def test_uniqueness_device(self):
+        """Assert that the combination of device and name is unique."""
+        device_available_positions = self.device_available_positions.copy()
+        instance = self.model(
+            device=self.device,
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port=self.device_rear_port,
+            rear_port_position=device_available_positions.pop(),
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        # same device, different name works
+        instance = self.model(
+            device=self.device,
+            name=f"test {self.model._meta.model_name} 2",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port=self.device_rear_port,
+            rear_port_position=device_available_positions.pop(),
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        instance = self.model(
+            device=self.device,
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port=self.device_rear_port,
+            rear_port_position=device_available_positions.pop(),
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            instance.save()
+
+    def test_uniqueness_module(self):
+        """Assert that the combination of module and name is unique."""
+        module_available_positions = self.module_available_positions.copy()
+        instance = self.model(
+            module=self.module,
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port=self.module_rear_port,
+            rear_port_position=module_available_positions.pop(),
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        # same module, different name works
+        instance = self.model(
+            module=self.module,
+            name=f"test {self.model._meta.model_name} 2",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port=self.module_rear_port,
+            rear_port_position=module_available_positions.pop(),
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        instance = self.model(
+            module=self.module,
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port=self.module_rear_port,
+            rear_port_position=module_available_positions.pop(),
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            instance.save()
+
+
+class ModularDeviceComponentTemplateTestCaseMixin(ModularDeviceComponentTestCaseMixin):
+    """Generic test for modular device component templates."""
+
+    device_field = "device_type"  # field name for the parent device_type
+    module_field = "module_type"  # field name for the parent module_type
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device = DeviceType.objects.first()
+        cls.module = ModuleType.objects.first()
+
+
+class ConsolePortTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = ConsolePortTemplate
+    modular_component_create_data = {"type": ConsolePortTypeChoices.TYPE_RJ45}
+
+
+class ConsoleServerPortTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = ConsoleServerPortTemplate
+    modular_component_create_data = {"type": ConsolePortTypeChoices.TYPE_RJ45}
+
+
+class PowerPortTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = PowerPortTemplate
+    modular_component_create_data = {"type": PowerPortTypeChoices.TYPE_NEMA_1030P}
+
+
+class PowerOutletTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = PowerOutletTemplate
+    modular_component_create_data = {"type": PowerOutletTypeChoices.TYPE_IEC_C13}
+
+
+class RearPortTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = RearPortTemplate
+    modular_component_create_data = {"type": PortTypeChoices.TYPE_8P8C}
+
+
+class FrontPortTemplateTestCase(ModelTestCases.BaseModelTestCase):
+    model = FrontPortTemplate
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.module_type = ModuleType.objects.filter(rear_port_templates__isnull=False).first()
+        cls.module_rear_port = cls.module_type.rear_port_templates.first()
+        module_used_positions = set(
+            cls.module_rear_port.front_port_templates.values_list("rear_port_position", flat=True)
+        )
+        cls.module_available_positions = set(range(1, cls.module_rear_port.positions + 1)).difference(
+            module_used_positions
+        )
+
+        cls.device_type = DeviceType.objects.filter(rear_port_templates__isnull=False).first()
+        cls.device_rear_port = cls.device_type.rear_port_templates.first()
+        device_used_positions = set(
+            cls.device_rear_port.front_port_templates.values_list("rear_port_position", flat=True)
+        )
+        cls.device_available_positions = set(range(1, cls.device_rear_port.positions + 1)).difference(
+            device_used_positions
+        )
+
+    def test_parent_validation_device_and_module(self):
+        """Assert that a modular component must have a parent device or parent module but not both."""
+        instance = self.model(
+            device_type=self.device_type,
+            module_type=self.module_type,
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=self.module_rear_port,
+            rear_port_position=self.module_available_positions.copy().pop(),
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+    def test_parent_validation_no_device_or_module(self):
+        """Assert that a modular component must have a parent device or parent module but not both."""
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=self.module_rear_port,
+            rear_port_position=self.module_available_positions.copy().pop(),
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+    def test_parent_validation_succeeds(self):
+        """Assert that a modular component must have a parent device or parent module but not both."""
+        with self.subTest(f"{self.model._meta.model_name} with a parent device"):
+            instance = self.model(
+                device_type=self.device_type,
+                name=f"test {self.model._meta.model_name} 1",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port_template=self.device_rear_port,
+                rear_port_position=self.device_available_positions.copy().pop(),
+            )
+
+            instance.full_clean()
+            instance.save()
+
+        with self.subTest(f"{self.model._meta.model_name} with a parent module"):
+            instance = self.model(
+                module_type=self.module_type,
+                name=f"test {self.model._meta.model_name} 1",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port_template=self.module_rear_port,
+                rear_port_position=self.module_available_positions.copy().pop(),
+            )
+
+            instance.full_clean()
+            instance.save()
+
+    def test_uniqueness_device(self):
+        """Assert that the combination of device and name is unique."""
+        device_available_positions = self.device_available_positions.copy()
+        instance = self.model(
+            device_type=self.device_type,
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=self.device_rear_port,
+            rear_port_position=device_available_positions.pop(),
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        # same device, different name works
+        instance = self.model(
+            device_type=self.device_type,
+            name=f"test {self.model._meta.model_name} 2",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=self.device_rear_port,
+            rear_port_position=device_available_positions.pop(),
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        instance = self.model(
+            device_type=self.device_type,
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=self.device_rear_port,
+            rear_port_position=device_available_positions.pop(),
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            instance.save()
+
+    def test_uniqueness_module(self):
+        """Assert that the combination of module and name is unique."""
+        module_available_positions = self.module_available_positions.copy()
+        instance = self.model(
+            module_type=self.module_type,
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=self.module_rear_port,
+            rear_port_position=module_available_positions.pop(),
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        # same module, different name works
+        instance = self.model(
+            module_type=self.module_type,
+            name=f"test {self.model._meta.model_name} 2",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=self.module_rear_port,
+            rear_port_position=module_available_positions.pop(),
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        instance = self.model(
+            module_type=self.module_type,
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=self.module_rear_port,
+            rear_port_position=module_available_positions.pop(),
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            instance.save()
 
 
 class CableLengthTestCase(TestCase):
@@ -161,7 +671,10 @@ class InterfaceTemplateCustomFieldTestCase(TestCase):
         self.assertEqual(Interface.objects.get(pk=interfaces[1].pk).cf["field_3"], "value_3")
 
 
-class InterfaceTemplateTestCase(TestCase):
+class InterfaceTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, TestCase):
+    modular_component_create_data = {"type": InterfaceTypeChoices.TYPE_1GE_FIXED}
+    model = InterfaceTemplate
+
     def test_interface_template_sets_interface_status(self):
         """
         When a device is created with a device type associated with the template,
@@ -269,31 +782,31 @@ class InterfaceRedundancyGroupTestCase(ModelTestCases.BaseModelTestCase):
         cls.interfaces = (
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 1",
+                name="Test Interface 1",
                 type="1000base-t",
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 2",
+                name="Test Interface 2",
                 type="1000base-t",
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 3",
+                name="Test Interface 3",
                 type=InterfaceTypeChoices.TYPE_BRIDGE,
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 4",
+                name="Test Interface 4",
                 type=InterfaceTypeChoices.TYPE_1GE_GBIC,
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 5",
+                name="Test Interface 5",
                 type=InterfaceTypeChoices.TYPE_LAG,
                 status=non_default_status,
             ),
@@ -682,10 +1195,8 @@ class LocationTestCase(ModelTestCases.BaseModelTestCase):
             "parent__parent__parent__parent__parent__name",
             "parent__parent__parent__parent__parent__parent__name",
             "parent__parent__parent__parent__parent__parent__parent__name",
-        ][: Location.objects.max_tree_depth() + 1]
-        self.assertEqual(
-            len(expected), Location.objects.max_tree_depth() + 1, "Not enough expected entries, fix the test!"
-        )
+        ][: Location.objects.max_depth + 1]
+        self.assertEqual(len(expected), Location.objects.max_depth + 1, "Not enough expected entries, fix the test!")
         self.assertEqual(expected, Location.natural_key_field_lookups)
         # Grab an arbitrary leaf node
         location = Location.objects.filter(parent__isnull=False, children__isnull=True).first()
@@ -881,9 +1392,17 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         self.device_type = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="Test Device Type 1",
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT,
+        )
+        self.child_devicetype = DeviceType.objects.create(
+            model="Child Device Type 1",
+            manufacturer=manufacturer,
+            subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+            u_height=0,
         )
         self.device_role = Role.objects.get_for_model(Device).first()
         self.device_status = Status.objects.get_for_model(Device).first()
+        self.intf_role = Role.objects.get_for_model(Interface).first()
         self.location_type_1 = LocationType.objects.get(name="Building")
         self.location_type_2 = LocationType.objects.get(name="Floor")
         self.location_type_3 = LocationType.objects.get(name="Campus")
@@ -946,6 +1465,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         ).save()
 
         DeviceBayTemplate(device_type=self.device_type, name="Device Bay 1").save()
+        ModuleBayTemplate.objects.create(device_type=self.device_type, position="1111")
 
         self.device = Device(
             location=self.location_3,
@@ -1023,6 +1543,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         )
 
         DeviceBay.objects.get(device=self.device, name="Device Bay 1")
+        ModuleBay.objects.get(parent_device=self.device, position="1111")
 
     def test_multiple_unnamed_devices(self):
         device1 = Device(
@@ -1075,17 +1596,18 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         device2.save()
 
     def test_device_location_content_type_not_allowed(self):
+        self.location_type_2.content_types.clear()
         device = Device(
             name="Device 3",
             device_type=self.device_type,
             role=self.device_role,
             status=self.device_status,
-            location=self.location_1,
+            location=self.location_2,
         )
         with self.assertRaises(ValidationError) as cm:
             device.validated_save()
         self.assertIn(
-            f'Devices may not associate to locations of type "{self.location_type_1.name}"', str(cm.exception)
+            f'Devices may not associate to locations of type "{self.location_type_2.name}"', str(cm.exception)
         )
 
     def test_device_redundancy_group_validation(self):
@@ -1134,10 +1656,11 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
             location=self.location_3,
         )
         device.validated_save()
-        interface = Interface.objects.create(name="Int1", device=device, status=self.device_status)
+        interface = Interface.objects.create(name="Int1", device=device, status=self.device_status, role=self.intf_role)
         ips = list(IPAddress.objects.filter(ip_version=4)[:5]) + list(IPAddress.objects.filter(ip_version=6)[:5])
         interface.add_ip_addresses(ips)
         device.primary_ip4 = interface.ip_addresses.all().filter(ip_version=6).first()
+        self.assertIsNotNone(device.primary_ip4)
         with self.assertRaises(ValidationError) as cm:
             device.validated_save()
         self.assertIn(
@@ -1146,6 +1669,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         )
         device.primary_ip4 = None
         device.primary_ip6 = interface.ip_addresses.all().filter(ip_version=4).first()
+        self.assertIsNotNone(device.primary_ip6)
         with self.assertRaises(ValidationError) as cm:
             device.validated_save()
         self.assertIn(
@@ -1155,6 +1679,274 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         device.primary_ip4 = interface.ip_addresses.all().filter(ip_version=4).first()
         device.primary_ip6 = interface.ip_addresses.all().filter(ip_version=6).first()
         device.validated_save()
+
+    def test_primary_ip_validation_logic_modules(self):
+        device = Device(
+            name="Test IP Device",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+        )
+        device.validated_save()
+        manufacturer = Manufacturer.objects.first()
+        module_type = ModuleType.objects.create(manufacturer=manufacturer, model="module model tests")
+
+        status = Status.objects.get_for_model(Module).first()
+        module_bay = ModuleBay.objects.create(
+            parent_device=device,
+            name="1111",
+            position="1111",
+        )
+
+        module = Module.objects.create(
+            module_type=module_type,
+            parent_module_bay=module_bay,
+            status=status,
+        )
+
+        interface = Interface.objects.create(name="Int1", module=module, status=self.device_status, role=self.intf_role)
+        ips = list(IPAddress.objects.filter(ip_version=4)[:5]) + list(IPAddress.objects.filter(ip_version=6)[:5])
+        interface.add_ip_addresses(ips)
+        device.primary_ip4 = interface.ip_addresses.all().filter(ip_version=4).first()
+        self.assertIsNotNone(device.primary_ip4)
+        device.primary_ip6 = interface.ip_addresses.all().filter(ip_version=6).first()
+        self.assertIsNotNone(device.primary_ip6)
+        device.validated_save()
+
+    def test_software_version_device_type_validation(self):
+        """
+        Assert that device's software version contains a software image file that matches the device's device type or a default image.
+        """
+
+        software_version = SoftwareVersion.objects.filter(software_image_files__isnull=False).first()
+        software_version.software_image_files.all().update(default_image=False)
+        self.device_type.software_image_files.set([])
+        self.device.software_version = software_version
+        invalid_software_image_file = SoftwareImageFile.objects.filter(default_image=False).first()
+        invalid_software_image_file.device_types.set([])
+        self.device.software_image_files.set([invalid_software_image_file])
+
+        # There is an invalid non-default software_image_file specified for the software version
+        # It is not a default image and it does not match any device type
+        with self.assertRaises(ValidationError):
+            self.device.validated_save()
+
+        # user should be able to specify any software version without specifying software_image_files
+        self.device.software_image_files.set([])
+        self.device.validated_save()
+
+        # Default image matches
+        software_image_file = software_version.software_image_files.first()
+        software_image_file.default_image = True
+        software_image_file.save()
+        self.device.validated_save()
+
+        # Device type matches
+        software_image_file.default_image = False
+        software_image_file.save()
+        self.device_type.software_image_files.add(software_image_file)
+        self.device.validated_save()
+
+    def test_all_x_properties(self):
+        self.assertEqual(self.device.all_modules.count(), 0)
+        self.assertEqual(self.device.all_module_bays.count(), 1)
+        self.assertEqual(self.device.all_console_server_ports.count(), 1)
+        self.assertEqual(self.device.all_console_ports.count(), 1)
+        self.assertEqual(self.device.all_front_ports.count(), 1)
+        self.assertEqual(self.device.all_interfaces.count(), 1)
+        self.assertEqual(self.device.all_rear_ports.count(), 1)
+        self.assertEqual(self.device.all_power_ports.count(), 1)
+        self.assertEqual(self.device.all_power_outlets.count(), 1)
+
+        parent_module_bay = self.device.all_module_bays.first()
+
+        manufacturer = Manufacturer.objects.first()
+        module_type = ModuleType.objects.create(manufacturer=manufacturer, model="module model tests")
+        status = Status.objects.get_for_model(Module).first()
+
+        # Create ModuleType components
+        ConsolePortTemplate.objects.create(module_type=module_type, name="Console Port 1")
+        ConsoleServerPortTemplate.objects.create(module_type=module_type, name="Console Server Port 1")
+
+        ppt = PowerPortTemplate.objects.create(
+            module_type=module_type,
+            name="Power Port 1",
+            maximum_draw=1000,
+            allocated_draw=500,
+        )
+
+        PowerOutletTemplate.objects.create(
+            module_type=module_type,
+            name="Power Outlet 1",
+            power_port_template=ppt,
+            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
+        )
+
+        InterfaceTemplate.objects.create(
+            module_type=module_type,
+            name="Interface {module.parent.parent}/{module.parent}/{module}",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mgmt_only=True,
+        )
+
+        rpt = RearPortTemplate.objects.create(
+            module_type=module_type,
+            name="Rear Port 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            positions=8,
+        )
+
+        FrontPortTemplate.objects.create(
+            module_type=module_type,
+            name="Front Port 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=rpt,
+            rear_port_position=2,
+        )
+
+        ModuleBayTemplate.objects.create(
+            module_type=module_type,
+            position="1111",
+        )
+
+        module = Module.objects.create(
+            module_type=module_type,
+            status=status,
+            parent_module_bay=parent_module_bay,
+        )
+
+        self.assertEqual(self.device.all_modules.count(), 1)
+        self.assertEqual(self.device.all_module_bays.count(), 2)
+        self.assertEqual(self.device.all_console_server_ports.count(), 2)
+        self.assertEqual(self.device.all_console_ports.count(), 2)
+        self.assertEqual(self.device.all_front_ports.count(), 2)
+        self.assertEqual(self.device.all_interfaces.count(), 2)
+        self.assertEqual(self.device.all_rear_ports.count(), 2)
+        self.assertEqual(self.device.all_power_ports.count(), 2)
+        self.assertEqual(self.device.all_power_outlets.count(), 2)
+
+        child_module_bay = module.module_bays.first()
+        Module.objects.create(
+            module_type=module_type,
+            status=status,
+            parent_module_bay=child_module_bay,
+        )
+
+        self.assertEqual(self.device.all_modules.count(), 2)
+        self.assertEqual(self.device.all_module_bays.count(), 3)
+        self.assertEqual(self.device.all_console_server_ports.count(), 3)
+        self.assertEqual(self.device.all_console_ports.count(), 3)
+        self.assertEqual(self.device.all_front_ports.count(), 3)
+        self.assertEqual(self.device.all_interfaces.count(), 3)
+        self.assertEqual(self.device.all_rear_ports.count(), 3)
+        self.assertEqual(self.device.all_power_ports.count(), 3)
+        self.assertEqual(self.device.all_power_outlets.count(), 3)
+
+    def test_child_devices_are_not_saved_when_unnecessary(self):
+        parent_device = Device.objects.create(
+            name="Parent Device 1",
+            location=self.location_3,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+        )
+        parent_device.validated_save()
+
+        child_device = Device.objects.create(
+            name="Child Device 1",
+            location=parent_device.location,
+            device_type=self.child_devicetype,
+            role=parent_device.role,
+            status=self.device_status,
+        )
+        child_device.validated_save()
+        child_mtime_before_parent_saved = str(child_device.last_updated)
+
+        devicebay = DeviceBay.objects.get(device=parent_device, name="Device Bay 1")
+        devicebay.installed_device = child_device
+        devicebay.validated_save()
+
+        #
+        # Tests
+        #
+
+        #
+        # On a NOOP save, the child device shouldn't be updated
+        parent_device.save()
+
+        child_mtime_after_parent_noop_save = str(Device.objects.get(name="Child Device 1").last_updated)
+
+        self.assertEqual(child_mtime_before_parent_saved, child_mtime_after_parent_noop_save)
+
+        #
+        # On a serial number update, the child device shouldn't be updated
+        parent_device.serial = "12345"
+        parent_device.save()
+
+        child_mtime_after_parent_serial_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
+
+        self.assertEqual(child_mtime_before_parent_saved, child_mtime_after_parent_serial_update_save)
+
+        #
+        # If the parent rack updates, the child mtime should update.
+        rack = Rack.objects.create(name="Rack 1", location=parent_device.location, status=self.device_status)
+        parent_device.rack = rack
+        parent_device.save()
+
+        child_mtime_after_parent_rack_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
+
+        self.assertNotEqual(child_mtime_after_parent_noop_save, child_mtime_after_parent_rack_update_save)
+
+        #
+        # If the parent site updates, the child mtime should update
+        location = Location.objects.create(
+            name="New Site 1", status=self.device_status, location_type=self.location_type_3
+        )
+        parent_device.location = location
+        parent_device.save()
+
+        child_mtime_after_parent_site_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
+
+        self.assertNotEqual(child_mtime_after_parent_rack_update_save, child_mtime_after_parent_site_update_save)
+
+
+class DeviceBayTestCase(ModelTestCases.BaseModelTestCase):
+    model = DeviceBay
+
+    def setUp(self):
+        self.devices = Device.objects.filter(device_type__subdevice_role=SubdeviceRoleChoices.ROLE_PARENT)
+        devicetype = DeviceType.objects.create(
+            manufacturer=self.devices[0].device_type.manufacturer,
+            model="TestDeviceType1",
+            u_height=0,
+            subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+        )
+        child_device = Device.objects.create(
+            device_type=devicetype,
+            role=self.devices[0].role,
+            name="TestDevice1",
+            status=self.devices[0].status,
+            location=self.devices[0].location,
+        )
+        DeviceBay.objects.create(device=self.devices[0], name="Device Bay 1", installed_device=child_device)
+
+    def test_assigning_installed_device(self):
+        server = Device.objects.exclude(device_type__subdevice_role=SubdeviceRoleChoices.ROLE_CHILD).last()
+        bay = DeviceBay(device=self.devices[1], name="Device Bay Err", installed_device=server)
+        with self.assertRaises(ValidationError) as err:
+            bay.validated_save()
+        self.assertIn(
+            f'Cannot install device "{server}"; device-type "{server.device_type}" subdevice_role is not "child".',
+            str(err.exception),
+        )
+
+
+class DeviceTypeToSoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
+    model = DeviceTypeToSoftwareImageFile
+
+    def test_get_docs_url(self):
+        """No docs for this through table model."""
 
 
 class CableTestCase(ModelTestCases.BaseModelTestCase):
@@ -1522,9 +2314,16 @@ class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we
         )
 
 
-class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we have an InterfaceFactory
+class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = Interface
+
     @classmethod
     def setUpTestData(cls):
+        super().setUpTestData()
+        cls.modular_component_create_data = {
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "status": Status.objects.get_for_model(Interface).first(),
+        }
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
@@ -1570,6 +2369,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=self.device,
             status=Status.objects.get_for_model(Interface).first(),
+            role=Role.objects.get_for_model(Interface).first(),
         )
         with self.assertRaises(ValidationError) as err:
             interface.tagged_vlans.add(self.vlan)
@@ -1584,6 +2384,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 device=self.device,
                 status=Status.objects.get_for_model(Interface).first(),
+                role=Role.objects.get_for_model(Interface).first(),
             )
             interface.tagged_vlans.add(self.other_location_vlan)
         self.assertEqual(
@@ -1599,6 +2400,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=self.device,
             status=Status.objects.get_for_model(Interface).first(),
+            role=Role.objects.get_for_model(Interface).first(),
         )
         ips = list(IPAddress.objects.filter(parent__namespace=self.namespace))
 
@@ -1624,6 +2426,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=self.device,
             status=Status.objects.get_for_model(Interface).first(),
+            role=Role.objects.get_for_model(Interface).first(),
         )
         ips = list(IPAddress.objects.filter(parent__namespace=self.namespace))
 
@@ -1658,3 +2461,711 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
         interface.remove_ip_addresses(self.device.primary_ip6)
         self.device.refresh_from_db()
         self.assertEqual(self.device.primary_ip6, None)
+
+
+class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
+    model = SoftwareImageFile
+
+    def test_queryset_get_for_object(self):
+        """
+        Test that the queryset get_for_object method returns the expected results for Device, DeviceType, InventoryItem and VirtualMachine
+        """
+        qs = SoftwareImageFile.objects.all()
+        location = Location.objects.first()
+        manufacturer = Manufacturer.objects.first()
+        platform = Platform.objects.first()
+        role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        software_version_status = Status.objects.get_for_model(SoftwareVersion).first()
+        software_image_file_status = Status.objects.get_for_model(SoftwareImageFile).first()
+        virtual_machine_status = Status.objects.get_for_model(VirtualMachine).first()
+
+        software_versions = (
+            SoftwareVersion.objects.create(
+                platform=platform, version="Test version 1.0.0", status=software_version_status
+            ),
+            SoftwareVersion.objects.create(
+                platform=platform, version="Test version 2.0.0", status=software_version_status
+            ),
+        )
+        software_image_files = (
+            SoftwareImageFile.objects.create(
+                software_version=software_versions[0],
+                image_file_name="software_image_file_qs_test_1.bin",
+                status=software_image_file_status,
+            ),
+            SoftwareImageFile.objects.create(
+                software_version=software_versions[0],
+                image_file_name="software_image_file_qs_test_2.bin",
+                status=software_image_file_status,
+                default_image=True,
+            ),
+            SoftwareImageFile.objects.create(
+                software_version=software_versions[1],
+                image_file_name="software_image_file_qs_test_3.bin",
+                status=software_image_file_status,
+            ),
+            SoftwareImageFile.objects.create(
+                software_version=software_versions[1],
+                image_file_name="software_image_file_qs_test_4.bin",
+                status=software_image_file_status,
+            ),
+        )
+
+        device_types = (
+            DeviceType.objects.create(
+                manufacturer=manufacturer,
+                model="Test SoftwareImageFileQs Device Type 1",
+            ),
+            DeviceType.objects.create(
+                manufacturer=manufacturer,
+                model="Test SoftwareImageFileQs Device Type 2",
+            ),
+        )
+        device_types[0].software_image_files.set(software_image_files[0:2])
+        device_types[1].software_image_files.set(software_image_files[2:4])
+
+        # This should only return the device types with a direct m2m relationship to the software image files
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(device_types[0]), software_image_files[0:2])
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(device_types[1]), software_image_files[2:4])
+
+        devices = (
+            Device.objects.create(
+                device_type=device_types[0],
+                role=role,
+                name="Test SoftwareImageFileQs Device1",
+                location=location,
+                status=device_status,
+                software_version=software_versions[0],
+            ),
+            Device.objects.create(
+                device_type=device_types[1],
+                role=role,
+                name="Test SoftwareImageFileQs Device2",
+                location=location,
+                status=device_status,
+                software_version=software_versions[0],
+            ),
+        )
+
+        # Only return the software image files associated with the device's software version and device type
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(devices[0]), software_image_files[0:2])
+
+        # When the device's software image files are overridden with the direct m2m relationship, return those
+        devices[1].software_image_files.set(software_image_files[1:3])
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(devices[1]), software_image_files[1:3])
+
+        # If no device types are associated with the software image files, return the default software image file
+        device_types[0].software_image_files.clear()
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(devices[0]), [software_image_files[1]])
+
+        inventory_items = (
+            InventoryItem.objects.create(
+                device=devices[0],
+                name="Test SoftwareImageFileQs Inventory Item 1",
+                software_version=software_versions[0],
+            ),
+            InventoryItem.objects.create(
+                device=devices[1],
+                name="Test SoftwareImageFileQs Inventory Item 2",
+                software_version=software_versions[1],
+            ),
+        )
+
+        # Only return the software image files associated with the inventory item's software version
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(inventory_items[0]), software_image_files[0:2])
+
+        # When the inventory item's software image files are overridden with the direct m2m relationship, return those
+        inventory_items[1].software_image_files.set(software_image_files[1:3])
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(inventory_items[1]), software_image_files[1:3])
+
+        cluster_type = ClusterType.objects.create(name="Test SoftwareImageFileQs Cluster Type 1")
+        cluster = Cluster.objects.create(name="Test SoftwareImageFileQs Cluster 1", cluster_type=cluster_type)
+        virtual_machines = (
+            VirtualMachine.objects.create(
+                cluster=cluster,
+                name="Test SoftwareImageFileQs Virtual Machine 1",
+                status=virtual_machine_status,
+                software_version=software_versions[0],
+            ),
+            VirtualMachine.objects.create(
+                cluster=cluster,
+                name="Test SoftwareImageFileQs Virtual Machine 2",
+                status=virtual_machine_status,
+                software_version=software_versions[1],
+            ),
+        )
+
+        # Only return the software image files associated with the virtual machine's software version
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(virtual_machines[0]), software_image_files[0:2])
+
+        # When the virtual machine's software image files are overridden with the direct m2m relationship, return those
+        virtual_machines[1].software_image_files.set(software_image_files[1:3])
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(virtual_machines[1]), software_image_files[1:3])
+
+        with self.assertRaises(TypeError):
+            qs.get_for_object(Circuit)
+
+
+class SoftwareVersionTestCase(ModelTestCases.BaseModelTestCase):
+    model = SoftwareVersion
+
+    def test_queryset_get_for_object(self):
+        """
+        Test that the queryset get_for_object method returns the expected results for Device, DeviceType, InventoryItem and VirtualMachine
+        """
+        qs = SoftwareVersion.objects.all()
+
+        # Only return the device types with a direct m2m relationship to the version's software image files
+        device_type = DeviceType.objects.filter(software_image_files__isnull=False).first()
+        self.assertIsNotNone(device_type)
+        self.assertQuerysetEqualAndNotEmpty(
+            qs.get_for_object(device_type), qs.filter(software_image_files__device_types=device_type)
+        )
+
+        # Only return the software version set on the device's software_version foreign key
+        device = Device.objects.filter(software_version__isnull=False).first()
+        self.assertIsNotNone(device)
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(device), [device.software_version])
+
+        # Only return the software version set on the inventory item's software_version foreign key
+        software_version = SoftwareVersion.objects.first()
+        inventory_item = InventoryItem.objects.create(
+            device=device,
+            name="Test SoftwareVersionQs Inventory Item 1",
+            software_version=software_version,
+        )
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(inventory_item), [inventory_item.software_version])
+
+        # Only return the software version set on the virtual machine's software_version foreign key
+        cluster_type = ClusterType.objects.create(name="Test SoftwareImageFileQs Cluster Type 1")
+        cluster = Cluster.objects.create(name="Test SoftwareImageFileQs Cluster 1", cluster_type=cluster_type)
+        virtual_machine = VirtualMachine.objects.create(
+            cluster=cluster,
+            name="Test SoftwareImageFileQs Virtual Machine",
+            status=Status.objects.get_for_model(VirtualMachine).first(),
+            software_version=software_version,
+        )
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(virtual_machine), [virtual_machine.software_version])
+
+        with self.assertRaises(TypeError):
+            qs.get_for_object(Circuit)
+
+
+class ControllerTestCase(ModelTestCases.BaseModelTestCase):
+    model = Controller
+
+    def test_device_or_device_redundancy_group_validation(self):
+        """Ensure a controller cannot be linked to both a device and a device redundancy group."""
+        controller = Controller(
+            name="Controller testing Device and Device Redundancy Group exclusivity",
+            status=Status.objects.get_for_model(Controller).first(),
+            role=Role.objects.get_for_model(Controller).first(),
+            location=Location.objects.first(),
+            controller_device=Device.objects.first(),
+            controller_device_redundancy_group=DeviceRedundancyGroup.objects.first(),
+        )
+        with self.assertRaises(ValidationError) as error:
+            controller.validated_save()
+        self.assertEqual(
+            error.exception.message_dict["controller_device"][0],
+            "Cannot assign both a device and a device redundancy group to a controller.",
+        )
+
+    def test_location_content_type_validation(self):
+        """Ensure a controller cannot be linked to a location of the wrong type."""
+        location_type = LocationType.objects.create(name="Location type without content type")
+        location = Location.objects.create(
+            name="Location testing Location content type",
+            location_type=location_type,
+            status=Status.objects.get_for_model(Location).first(),
+        )
+        controller = Controller.objects.first()
+        controller.location = location
+        with self.assertRaises(ValidationError) as error:
+            controller.validated_save()
+        self.assertEqual(
+            error.exception.message_dict["location"][0],
+            f'Devices may not associate to locations of type "{location_type}".',
+        )
+
+
+class ControllerManagedDeviceGroupTestCase(ModelTestCases.BaseModelTestCase):
+    model = ControllerManagedDeviceGroup
+
+    def test_controller_matches_parent(self):
+        """Ensure a controller device group cannot be linked to a controller that does not match its parent."""
+        controllers = iter(Controller.objects.all())
+        parent_group = ControllerManagedDeviceGroup(
+            name="Parent Group testing Controller match",
+            controller=next(controllers),
+        )
+        parent_group.validated_save()
+
+        child_group = ControllerManagedDeviceGroup(
+            name="Child Group testing Controller match",
+            controller=next(controllers),
+            parent=parent_group,
+        )
+        self.assertNotEqual(parent_group.controller, child_group.controller, "Controllers should be different")
+
+        with self.assertRaises(ValidationError) as error:
+            child_group.validated_save()
+        self.assertEqual(
+            error.exception.message_dict["controller"][0],
+            "Controller device group must have the same controller as the parent group.",
+        )
+
+    def test_parent_controller_change(self):
+        """Ensure the controller of a parent group is updated in all descendant groups."""
+        controller1, controller2 = Controller.objects.all()[:2]
+        self.assertNotEqual(controller1, controller2, "Controllers should be different")
+
+        parent_group = ControllerManagedDeviceGroup.objects.create(
+            name="Parent Group testing Controller match",
+            controller=controller1,
+        )
+        child_group1 = ControllerManagedDeviceGroup.objects.create(
+            name="Child Group 1 testing Controller match",
+            controller=controller1,
+            parent=parent_group,
+        )
+        child_group2 = ControllerManagedDeviceGroup.objects.create(
+            name="Child Group 2 testing Controller match",
+            controller=controller1,
+            parent=child_group1,
+        )
+
+        parent_group = ControllerManagedDeviceGroup.objects.get(pk=parent_group.pk)
+        parent_group.controller = controller2
+        parent_group.save()
+
+        self.assertEqual(
+            ControllerManagedDeviceGroup.objects.get(pk=parent_group.pk).controller,
+            controller2,
+            "Parent group controller should have been updated",
+        )
+        self.assertEqual(
+            ControllerManagedDeviceGroup.objects.get(pk=child_group1.pk).controller,
+            controller2,
+            "Child group 1 controller should have been updated",
+        )
+        self.assertEqual(
+            ControllerManagedDeviceGroup.objects.get(pk=child_group2.pk).controller,
+            controller2,
+            "Child group 2 controller should have been updated",
+        )
+
+
+class ModuleBayTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = ModuleBay
+    device_field = "parent_device"  # field name for the parent device
+    module_field = "parent_module"  # field name for the parent module
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device = Device.objects.first()
+        cls.device.module_bays.all().delete()
+        cls.module = Module.objects.first()
+        cls.module.module_bays.all().delete()
+
+    def test_parent_property(self):
+        """Assert that the parent property walks up the inheritance tree of Device -> ModuleBay -> Module -> ModuleBay."""
+        module_type = ModuleType.objects.first()
+        status = Status.objects.get_for_model(Module).first()
+
+        parent_module_bay = ModuleBay.objects.create(
+            parent_device=self.device,
+            name="1111",
+            position="1111",
+        )
+        module = Module.objects.create(
+            module_type=module_type,
+            parent_module_bay=parent_module_bay,
+            status=status,
+        )
+        child_module_bay = ModuleBay.objects.create(
+            parent_module=module,
+            name="1111",
+            position="1111",
+        )
+        child_module = Module.objects.create(
+            module_type=module_type,
+            parent_module_bay=child_module_bay,
+            status=status,
+        )
+        grandchild_module_bay = ModuleBay.objects.create(
+            parent_module=child_module,
+            name="1111",
+            position="1111",
+        )
+
+        self.assertEqual(parent_module_bay.parent, self.device)
+        self.assertEqual(child_module_bay.parent, self.device)
+        self.assertEqual(grandchild_module_bay.parent, self.device)
+
+        # Remove the module from the module bay and put it in storage
+        module.parent_module_bay = None
+        module.location = Location.objects.get_for_model(Module).first()
+        module.save()
+
+        self.assertEqual(parent_module_bay.parent, self.device)
+        self.assertIsNone(child_module_bay.parent)
+        self.assertIsNone(grandchild_module_bay.parent)
+
+
+class ModuleBayTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = ModuleBayTemplate
+
+    @classmethod
+    def setUpTestData(cls):
+        manufacturer = Manufacturer.objects.first()
+        cls.device_type = cls.device = DeviceType.objects.create(
+            manufacturer=manufacturer, model="Test ModuleBayTemplate DT1"
+        )
+        cls.module_type = cls.module = ModuleType.objects.create(
+            manufacturer=manufacturer, model="Test ModuleBayTemplate MT1"
+        )
+
+        # Create some instances for the generic natural key tests to use
+        ModuleBayTemplate.objects.create(
+            device_type=cls.device_type,
+            name="2222",
+            position="2222",
+        )
+        ModuleBayTemplate.objects.create(
+            device_type=cls.device_type,
+            name="3333",
+            position="3333",
+        )
+        ModuleBayTemplate.objects.create(
+            module_type=cls.module_type,
+            name="3333",
+            position="3333",
+        )
+        ModuleBayTemplate.objects.create(
+            module_type=cls.module_type,
+            name="4444",
+            position="4444",
+        )
+
+    def test_parent_property(self):
+        module_bay_template = ModuleBayTemplate.objects.create(
+            device_type=self.device_type,
+            name="1111",
+            position="1111",
+        )
+        self.assertEqual(module_bay_template.parent, self.device_type)
+
+        module_bay_template = ModuleBayTemplate.objects.create(
+            module_type=self.module_type,
+            name="1111",
+            position="1111",
+        )
+        self.assertEqual(module_bay_template.parent, self.module_type)
+
+
+class ModuleTestCase(ModelTestCases.BaseModelTestCase):
+    model = Module
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device = Device.objects.filter(module_bays__isnull=True).first()
+        manufacturer = Manufacturer.objects.first()
+        cls.module_type = ModuleType.objects.create(manufacturer=manufacturer, model="module model tests")
+        cls.location = Location.objects.get_for_model(Module).first()
+        cls.status = Status.objects.get_for_model(Module).first()
+
+        # Create ModuleType components
+        ConsolePortTemplate.objects.create(module_type=cls.module_type, name="Console Port 1")
+        ConsoleServerPortTemplate.objects.create(module_type=cls.module_type, name="Console Server Port 1")
+
+        ppt = PowerPortTemplate.objects.create(
+            module_type=cls.module_type,
+            name="Power Port 1",
+            maximum_draw=1000,
+            allocated_draw=500,
+        )
+
+        PowerOutletTemplate.objects.create(
+            module_type=cls.module_type,
+            name="Power Outlet 1",
+            power_port_template=ppt,
+            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
+        )
+
+        InterfaceTemplate.objects.create(
+            module_type=cls.module_type,
+            name="Interface {module.parent.parent}/{module.parent}/{module}",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mgmt_only=True,
+        )
+
+        rpt = RearPortTemplate.objects.create(
+            module_type=cls.module_type,
+            name="Rear Port 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            positions=8,
+        )
+
+        FrontPortTemplate.objects.create(
+            module_type=cls.module_type,
+            name="Front Port 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=rpt,
+            rear_port_position=2,
+        )
+
+        ModuleBayTemplate.objects.create(
+            module_type=cls.module_type,
+            position="1111",
+        )
+
+        cls.module = Module.objects.create(
+            module_type=cls.module_type,
+            location=cls.location,
+            status=cls.status,
+        )
+        cls.module_bay = cls.module.module_bays.first()
+
+    def test_parent_validation_module_bay_and_location(self):
+        """Assert that a module must have a parent module bay or location but not both."""
+        module = Module(
+            module_type=self.module_type,
+            parent_module_bay=self.module_bay,
+            location=self.location,
+            status=self.status,
+        )
+
+        with self.assertRaises(ValidationError):
+            module.full_clean()
+
+    def test_parent_validation_no_module_bay_or_location(self):
+        """Assert that a module must have a parent module bay or location but not both."""
+        module = Module(
+            module_type=self.module_type,
+            status=self.status,
+        )
+
+        with self.assertRaises(ValidationError):
+            module.full_clean()
+
+    def test_parent_validation_succeeds(self):
+        """Assert that a module must have a parent module bay or location but not both."""
+        with self.subTest("Module with a parent module bay"):
+            module = Module(
+                module_type=self.module_type,
+                parent_module_bay=self.module_bay,
+                status=self.status,
+            )
+
+            module.full_clean()
+            module.save()
+
+        with self.subTest("Module with a parent location"):
+            module = Module(
+                module_type=self.module_type,
+                location=self.location,
+                status=self.status,
+            )
+
+            module.full_clean()
+            module.save()
+
+    def test_device_property(self):
+        """Assert that the device property walks up the inheritance tree of Device -> ModuleBay -> Module -> ModuleBay."""
+        parent_module_bay = ModuleBay.objects.create(
+            parent_device=self.device,
+            position="1111",
+        )
+        parent_module = Module.objects.create(
+            module_type=self.module_type,
+            parent_module_bay=parent_module_bay,
+            status=self.status,
+        )
+        child_module_bay = parent_module.module_bays.first()
+        child_module = Module.objects.create(
+            module_type=self.module_type,
+            parent_module_bay=child_module_bay,
+            status=self.status,
+        )
+        grandchild_module_bay = child_module.module_bays.first()
+        grandchild_module = Module.objects.create(
+            module_type=self.module_type,
+            parent_module_bay=grandchild_module_bay,
+            status=self.status,
+        )
+
+        self.assertEqual(parent_module.device, self.device)
+        self.assertEqual(child_module.device, self.device)
+        self.assertEqual(grandchild_module.device, self.device)
+
+        # Remove the module from the module bay and put it in storage
+        parent_module.parent_module_bay = None
+        parent_module.location = self.location
+        parent_module.save()
+
+        self.assertIsNone(parent_module.device)
+        self.assertIsNone(child_module.device)
+        self.assertIsNone(grandchild_module.device)
+
+    def test_null_serial_asset_tag(self):
+        """Assert that the serial and asset_tag fields are converted to None if a blank string is supplied."""
+        module = Module.objects.create(
+            module_type=self.module_type,
+            status=self.status,
+            parent_module_bay=self.module_bay,
+            serial="",
+            asset_tag="",
+        )
+
+        module.refresh_from_db()
+
+        self.assertIsNone(module.serial)
+        self.assertIsNone(module.asset_tag)
+
+        module.delete()
+        module = Module.objects.create(
+            module_type=self.module_type,
+            status=self.status,
+            parent_module_bay=self.module_bay,
+        )
+
+        module.refresh_from_db()
+
+        self.assertIsNone(module.serial)
+        self.assertIsNone(module.asset_tag)
+
+    def test_module_components_created(self):
+        module = Module(
+            location=self.location,
+            module_type=self.module_type,
+            status=self.status,
+        )
+        module.validated_save()
+        self.assertEqual(module.console_ports.count(), self.module_type.console_port_templates.count())
+        self.assertEqual(module.console_server_ports.count(), self.module_type.console_server_port_templates.count())
+        self.assertEqual(module.power_ports.count(), self.module_type.power_port_templates.count())
+        self.assertEqual(module.power_outlets.count(), self.module_type.power_outlet_templates.count())
+        self.assertEqual(module.interfaces.count(), self.module_type.interface_templates.count())
+        self.assertEqual(module.front_ports.count(), self.module_type.front_port_templates.count())
+        self.assertEqual(module.rear_ports.count(), self.module_type.rear_port_templates.count())
+        self.assertEqual(module.module_bays.count(), self.module_type.module_bay_templates.count())
+
+        ConsolePort.objects.get(module=module, name="Console Port 1")
+
+        ConsoleServerPort.objects.get(module=module, name="Console Server Port 1")
+
+        pp = PowerPort.objects.get(module=module, name="Power Port 1", maximum_draw=1000, allocated_draw=500)
+
+        PowerOutlet.objects.get(
+            module=module,
+            name="Power Outlet 1",
+            power_port=pp,
+            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
+        )
+
+        Interface.objects.get(
+            module=module,
+            name="Interface {module.parent.parent}/{module.parent}/{module}",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mgmt_only=True,
+        )
+
+        rp = RearPort.objects.get(module=module, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C, positions=8)
+
+        FrontPort.objects.get(
+            module=module,
+            name="Front Port 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port=rp,
+            rear_port_position=2,
+        )
+
+        ModuleBay.objects.get(parent_module=module, position="1111")
+
+    def test_module_infinite_recursion_self_parent(self):
+        """Assert that a module cannot be its own parent."""
+        module = Module.objects.create(
+            location=self.location,
+            module_type=self.module_type,
+            status=self.status,
+        )
+        module_bay = module.module_bays.first()
+        module.parent_module_bay = module_bay
+
+        with self.assertRaises(ValidationError) as context:
+            module.save()
+        self.assertEqual(context.exception.message, "Creating this instance would cause an infinite loop.")
+
+    def test_module_infinite_recursion_ancestor(self):
+        """Assert that a module cannot be its own ancestor."""
+        parent_module = Module.objects.create(
+            module_type=self.module_type,
+            location=self.location,
+            status=self.status,
+        )
+        parent_module_bay = parent_module.module_bays.first()
+        child_module = Module.objects.create(
+            module_type=self.module_type,
+            parent_module_bay=parent_module_bay,
+            status=self.status,
+        )
+        child_module_bay = child_module.module_bays.first()
+        parent_module.parent_module_bay = child_module_bay
+        parent_module.location = None
+
+        with self.assertRaises(ValidationError) as context:
+            parent_module.save()
+
+        self.assertEqual(context.exception.message, "Creating this instance would cause an infinite loop.")
+
+    def test_render_component_names(self):
+        """Test that creating a Module with components properly renders the {module} and {module.parent} variables."""
+        grandparent_module = Module.objects.create(
+            module_type=self.module_type,
+            location=self.location,
+            status=self.status,
+        )
+        grandparent_module_bay = grandparent_module.module_bays.first()
+        grandparent_module_bay.position = "3"
+        grandparent_module_bay.save()
+        parent_module = Module.objects.create(
+            parent_module_bay=grandparent_module.module_bays.first(),
+            module_type=self.module_type,
+            status=self.status,
+        )
+        parent_module.clean()
+        parent_module_bay = parent_module.module_bays.first()
+        parent_module_bay.position = "2"
+        parent_module_bay.save()
+        child_module = Module.objects.create(
+            parent_module_bay=parent_module.module_bays.first(),
+            module_type=self.module_type,
+            status=self.status,
+        )
+        child_module.clean()
+
+        self.assertEqual(
+            grandparent_module.interfaces.first().name, "Interface {module.parent.parent}/{module.parent}/{module}"
+        )
+        self.assertEqual(parent_module.interfaces.first().name, "Interface {module.parent.parent}/{module.parent}/3")
+        self.assertEqual(child_module.interfaces.first().name, "Interface {module.parent.parent}/3/2")
+
+        # Moving the grandparent module out of inventory populates the template variables on all descendant interfaces
+        grandparent_module.parent_module_bay = self.module_bay
+        grandparent_module.location = None
+        grandparent_module.validated_save()
+        module_bay_position = self.module_bay.position
+        self.assertEqual(
+            grandparent_module.interfaces.first().name,
+            "Interface {module.parent.parent}/{module.parent}/" + module_bay_position,
+        )
+        self.assertEqual(
+            parent_module.interfaces.first().name, "Interface {module.parent.parent}/" + module_bay_position + "/3"
+        )
+        self.assertEqual(child_module.interfaces.first().name, "Interface " + module_bay_position + "/3/2")
+
+
+class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
+    model = ModuleType

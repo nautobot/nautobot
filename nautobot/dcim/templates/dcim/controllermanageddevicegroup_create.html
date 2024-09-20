@@ -1,0 +1,88 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+{% load helpers %}
+{% load static %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Controller</strong></div>
+        <div class="panel-body">
+            {% render_field form.controller.as_hidden %}
+            {% render_field form.controller %}
+            {% render_field form.name %}
+            {% render_field form.devices %}
+            {% render_field form.parent %}
+            {% render_field form.weight %}
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock form %}
+
+{% block javascript %}
+<script type="text/javascript">
+    const controllerUrl = '{% url 'dcim-api:controller-list' %}';
+    const controllerGroupUrl = '{% url 'dcim-api:controllermanageddevicegroup-list' %}';
+
+    const parentInput = $('select#id_parent');
+    const controllerInput = $('select#id_controller');
+    const hiddenControllerInput = $('input#id_controller');
+
+    const request = (url, calback) => {
+        $.ajax({
+            url,
+            method: "GET",
+            success: calback,
+            error: (error) => {
+                const message = `Error in request. URL: ${url}`;
+                console.error(message, error);
+                alert(message);
+            },
+        });
+    };
+
+    const setController = (uid) => {
+        console.log('Set controller:', uid);
+        if (controllerInput.find(`option[value=${uid}]`).length) {
+            controllerInput.val(uid);
+            hiddenControllerInput.val(uid);
+        } else {
+            request(`${controllerUrl}${uid}/`, (data) => {
+                console.log('Controller data:', data);
+                controllerInput.append(new Option(data.name, uid));
+                setController(uid);
+            });
+        }
+    };
+
+    const updateControllerFromParent = (parentUid) => {
+        request(
+            `${controllerGroupUrl}${parentUid}/`,
+            (data) => data.controller && setController(data.controller.id),
+        );
+    };
+
+    const onParentInput = (event) => {
+        const parentUid = parentInput.val();
+        if (parentUid) {
+            controllerInput.prop("disabled", true);
+            if (event) {
+                updateControllerFromParent(parentUid);
+            }
+        } else {
+            controllerInput.prop("disabled", false);
+        }
+    };
+
+    const onControllerInput = () => {
+        hiddenControllerInput.val(controllerInput.val());
+    };
+
+    parentInput.on('select2:select', onParentInput);
+    parentInput.on('select2:unselect', onParentInput);
+
+    controllerInput.on('select2:select', onControllerInput);
+    controllerInput.on('select2:unselect', onControllerInput);
+
+    onParentInput();
+</script>
+{% endblock %}

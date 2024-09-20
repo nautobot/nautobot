@@ -5,16 +5,16 @@ HTTP_CONTENT_TYPE_JSON = "application/json"
 EXTRAS_FEATURES = [
     "cable_terminations",
     "config_context_owners",
-    "custom_fields",
+    "custom_fields",  # Deprecated - see nautobot.extras.utils.populate_model_features_registry
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_template_owners",
     "export_templates",
     "graphql",
-    "job_results",
+    "job_results",  # No longer used
     "locations",
-    "relationships",
+    "relationships",  # Deprecated - see nautobot.extras.utils.populate_model_features_registry
     "statuses",
     "webhooks",
 ]
@@ -36,7 +36,6 @@ JOB_OVERRIDABLE_FIELDS = (
 
 # Job field length limits
 JOB_MAX_NAME_LENGTH = 100  # TODO(Glenn): this should really be a more general-purpose constant, like NAME_MAX_LENGTH
-JOB_MAX_GROUPING_LENGTH = 255
 
 
 # JobLogEntry Truncation Length

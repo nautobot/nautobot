@@ -1,8 +1,7 @@
 import time
-import uuid
-
 from unittest import skip
 from unittest.mock import patch
+import uuid
 
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -12,7 +11,8 @@ from django.test.utils import isolate_apps
 from nautobot.core.models import BaseModel
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug, deconstruct_composite_key
 from nautobot.core.testing import TestCase
-from nautobot.dcim.models import DeviceType, Location, Manufacturer
+from nautobot.dcim.models import DeviceType, Location, LocationType, Manufacturer
+from nautobot.extras.models import Status
 
 
 @isolate_apps("nautobot.core.tests")
@@ -113,7 +113,7 @@ class NaturalKeyTestCase(BaseModelTest):
         """
 
         # Ensure the cache is empty from previous tests
-        cache.delete(f"{self.FakeBaseModel._meta.label_lower}._content_type")
+        cache.delete(self.FakeBaseModel._content_type_cache_key)
 
         with patch.object(self.FakeBaseModel, "_content_type", return_value=True) as mock__content_type:
             self.FakeBaseModel._content_type_cached
@@ -127,7 +127,7 @@ class NaturalKeyTestCase(BaseModelTest):
             self.assertEqual(mock__content_type.call_count, 2)
 
         # Clean-up after ourselves
-        cache.delete(f"{self.FakeBaseModel._meta.label_lower}._content_type")
+        cache.delete(self.FakeBaseModel._content_type_cache_key)
 
     @override_settings(CONTENT_TYPE_CACHE_TIMEOUT=0)
     def test__content_type_caching_disabled(self):
@@ -136,7 +136,7 @@ class NaturalKeyTestCase(BaseModelTest):
         """
 
         # Ensure the cache is empty from previous tests
-        cache.delete(f"{self.FakeBaseModel._meta.label_lower}._content_type")
+        cache.delete(self.FakeBaseModel._content_type_cache_key)
 
         with patch.object(self.FakeBaseModel, "_content_type", return_value=True) as mock__content_type:
             self.FakeBaseModel._content_type_cached
@@ -168,3 +168,25 @@ class TreeModelTestCase(TestCase):
         for key, value in values_subset_dict.items():
             with self.subTest(description="values(key, key, key...)", key=key):
                 self.assertEqual(value, getattr(instance, key))
+
+    def test_tree_max_depth(self):
+        """Test that tree_max_depth() and the max_depth cached property are calculated correctly."""
+        max_tree_depth = max(loc.tree_depth for loc in Location.objects.all().with_tree_fields())
+        self.assertEqual(max_tree_depth, Location.objects.all().max_tree_depth())
+        self.assertEqual(max_tree_depth, Location.objects.max_depth)
+
+        # Add a new tree so that the max depth increases
+        location_type = LocationType.objects.get(name="Campus")  # root type and infinitely nestable
+        status = Status.objects.get_for_model(Location).first()
+        loc = None
+        for i in range(max_tree_depth + 2):
+            loc = Location.objects.create(
+                name=f"Nested Campus {i}", parent=loc, location_type=location_type, status=status
+            )
+        self.assertEqual(max_tree_depth + 1, Location.objects.all().max_tree_depth())
+        self.assertEqual(max_tree_depth + 1, Location.objects.max_depth)
+
+        # Delete the most-nested location so that the max depth decreases
+        loc.delete()
+        self.assertEqual(max_tree_depth, Location.objects.all().max_tree_depth())
+        self.assertEqual(max_tree_depth, Location.objects.max_depth)

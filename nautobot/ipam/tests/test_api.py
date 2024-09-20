@@ -1,9 +1,11 @@
 from concurrent.futures.thread import ThreadPoolExecutor
 import json
-from unittest import skip
 from random import shuffle
+from unittest import skip
 
+from django.contrib.contenttypes.models import ContentType
 from django.db import connection
+from django.db.models import Count
 from django.urls import reverse
 from rest_framework import status
 
@@ -11,19 +13,23 @@ from nautobot.core.testing import APITestCase, APIViewTestCases, disable_warning
 from nautobot.core.testing.api import APITransactionTestCase
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
-from nautobot.extras.models import Role, Status
+from nautobot.extras.models import CustomField, Role, Status
 from nautobot.ipam import choices
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressToInterface,
+    Namespace,
     Prefix,
+    PrefixLocationAssignment,
     RIR,
     RouteTarget,
     Service,
     VLAN,
     VLANGroup,
+    VLANLocationAssignment,
     VRF,
-    Namespace,
+    VRFDeviceAssignment,
+    VRFPrefixAssignment,
 )
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
@@ -44,17 +50,17 @@ class NamespaceTest(APIViewTestCases.APIViewTestCase):
         location = Location.objects.first()
         cls.create_data = [
             {
-                "name": "Purple Monkey Namesapce 1",
+                "name": "Purple Monkey Namespace 1",
                 "description": "A perfectly cromulent namespace.",
                 "location": location.pk,
             },
             {
-                "name": "Purple Monkey Namesapce 2",
+                "name": "Purple Monkey Namespace 2",
                 "description": "A secondarily cromulent namespace.",
                 "location": location.pk,
             },
             {
-                "name": "Purple Monkey Namesapce 3",
+                "name": "Purple Monkey Namespace 3",
                 "description": "A third cromulent namespace.",
                 "location": location.pk,
             },
@@ -78,11 +84,14 @@ class VRFTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         namespace = Namespace.objects.first()
+        vrf_statuses = Status.objects.get_for_model(VRF)
+
         cls.create_data = [
             {
                 "namespace": namespace.pk,
                 "name": "VRF 4",
                 "rd": "65000:4",
+                "status": vrf_statuses.first().pk,
             },
             {
                 "namespace": namespace.pk,
@@ -92,11 +101,179 @@ class VRFTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "VRF 6",
                 "rd": "65000:6",
+                "status": vrf_statuses.last().pk,
             },
         ]
         cls.bulk_update_data = {
             "description": "New description",
+            "status": vrf_statuses.last().pk,
         }
+
+
+class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
+    model = VRFDeviceAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.vrfs = VRF.objects.all()
+        cls.devices = Device.objects.all()
+        locations = Location.objects.filter(location_type__name="Campus")
+        cluster_type = ClusterType.objects.create(name="Test Cluster Type")
+        clusters = (
+            Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, location=locations[0]),
+            Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type, location=locations[1]),
+            Cluster.objects.create(name="Cluster 3", cluster_type=cluster_type, location=locations[2]),
+        )
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        vm_role = Role.objects.get_for_model(VirtualMachine).first()
+
+        cls.test_vm = VirtualMachine.objects.create(
+            cluster=clusters[0],
+            name="VM 1",
+            role=vm_role,
+            status=vm_status,
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            device=cls.devices[0],
+            rd="65000:1",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            device=cls.devices[1],
+            rd="65000:2",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            virtual_machine=cls.test_vm,
+            rd="65000:3",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[1],
+            virtual_machine=cls.test_vm,
+            rd="65000:4",
+        )
+
+        cls.create_data = [
+            {
+                "vrf": cls.vrfs[2].pk,
+                "device": cls.devices[4].pk,
+                "virtual_machine": None,
+                "rd": "65000:4",
+            },
+            {
+                "vrf": cls.vrfs[3].pk,
+                "device": None,
+                "virtual_machine": cls.test_vm.pk,
+                "rd": "65000:5",
+            },
+            {
+                "vrf": cls.vrfs[4].pk,
+                "device": cls.devices[6].pk,
+                "virtual_machine": None,
+                "rd": "65000:6",
+            },
+        ]
+        cls.bulk_update_data = {
+            "rd": "65000:7",
+        }
+
+    def test_creating_invalid_vrf_device_assignments(self):
+        # Add object-level permission
+        duplicate_device_create_data = {
+            "vrf": self.vrfs[0].pk,
+            "device": self.devices[1].pk,
+            "virtual_machine": None,
+            "rd": "65000:6",
+        }
+        duplicate_vm_create_data = {
+            "vrf": self.vrfs[1].pk,
+            "device": None,
+            "virtual_machine": self.test_vm.pk,
+            "rd": "65000:6",
+        }
+        invalid_create_data = {
+            "vrf": self.vrfs[2].pk,
+            "device": self.devices[6].pk,
+            "virtual_machine": self.test_vm.pk,
+            "rd": "65000:6",
+        }
+        self.add_permissions("ipam.add_vrfdeviceassignment")
+        response = self.client.post(self._get_list_url(), duplicate_device_create_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("The fields device, vrf must make a unique set.", str(response.content))
+        response = self.client.post(self._get_list_url(), duplicate_vm_create_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("The fields virtual_machine, vrf must make a unique set.", str(response.content))
+        response = self.client.post(self._get_list_url(), invalid_create_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("A VRF cannot be associated with both a device and a virtual machine.", str(response.content))
+
+
+class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
+    model = VRFPrefixAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.vrfs = (
+            VRF.objects.annotate(prefixes_count=Count("namespace__prefixes")).filter(prefixes_count__gte=2).distinct()
+        )
+        cls.prefixes = Prefix.objects.all()
+
+        VRFPrefixAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            prefix=cls.prefixes.filter(namespace=cls.vrfs[0].namespace)[0],
+        )
+        VRFPrefixAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            prefix=cls.prefixes.filter(namespace=cls.vrfs[0].namespace)[1],
+        )
+        VRFPrefixAssignment.objects.create(
+            vrf=cls.vrfs[1],
+            prefix=cls.prefixes.filter(namespace=cls.vrfs[1].namespace)[0],
+        )
+        VRFPrefixAssignment.objects.create(
+            vrf=cls.vrfs[1],
+            prefix=cls.prefixes.filter(namespace=cls.vrfs[1].namespace)[1],
+        )
+        cls.create_data = [
+            {
+                "vrf": cls.vrfs[2].pk,
+                "prefix": cls.prefixes.filter(namespace=cls.vrfs[2].namespace).exclude(vrfs=cls.vrfs[2])[0].pk,
+            },
+            {
+                "vrf": cls.vrfs[3].pk,
+                "prefix": cls.prefixes.filter(namespace=cls.vrfs[3].namespace).exclude(vrfs=cls.vrfs[3])[0].pk,
+            },
+            {
+                "vrf": cls.vrfs[4].pk,
+                "prefix": cls.prefixes.filter(namespace=cls.vrfs[4].namespace).exclude(vrfs=cls.vrfs[4])[0].pk,
+            },
+        ]
+
+    def test_creating_invalid_vrf_prefix_assignments(self):
+        duplicate_create_data = {
+            "vrf": self.vrfs[0].pk,
+            "prefix": self.prefixes.filter(namespace=self.vrfs[0].namespace)[0].pk,
+        }
+        wrong_namespace_create_data = {
+            "vrf": self.vrfs[0].pk,
+            "prefix": self.prefixes.exclude(namespace=self.vrfs[0].namespace)[0].pk,
+        }
+        missing_field_create_data = {
+            "vrf": self.vrfs[0].pk,
+            "prefix": None,
+        }
+        self.add_permissions("ipam.add_vrfprefixassignment")
+        response = self.client.post(self._get_list_url(), duplicate_create_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("The fields vrf, prefix must make a unique set.", str(response.content))
+        response = self.client.post(self._get_list_url(), wrong_namespace_create_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Prefix must be in same namespace as VRF", str(response.content))
+        response = self.client.post(self._get_list_url(), missing_field_create_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("This field may not be null.", str(response.content))
 
 
 class RouteTargetTest(APIViewTestCases.APIViewTestCase):
@@ -159,6 +336,9 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         cls.namespace = Namespace.objects.first()
         cls.statuses = Status.objects.get_for_model(Prefix)
         cls.status = cls.statuses[0]
+        cls.locations = Location.objects.get_for_model(Prefix)
+        cls.custom_field = CustomField.objects.create(key="prefixcf", label="Prefix Custom Field", type="text")
+        cls.custom_field.content_types.add(ContentType.objects.get_for_model(Prefix))
         cls.create_data = [
             {
                 "prefix": "192.168.4.0/24",
@@ -173,6 +353,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
                 "rir": rir.pk,
                 "type": choices.PrefixTypeChoices.TYPE_NETWORK,
                 "namespace": cls.namespace.pk,
+                "custom_fields": {"prefixcf": "hello world"},
             },
             {
                 "prefix": "192.168.6.0/24",
@@ -184,6 +365,62 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             "status": cls.statuses[0].pk,
         }
         cls.choices_fields = ["type"]
+
+    def test_legacy_api_behavior(self):
+        """
+        Tests for the 2.0/2.1 REST API of Prefixes.
+        """
+        self.add_permissions("ipam.view_prefix", "ipam.add_prefix", "ipam.change_prefix")
+
+        with self.subTest("valid GET"):
+            prefix = Prefix.objects.annotate(location_count=Count("locations")).filter(location_count=1).first()
+            self.assertIsNotNone(prefix)
+            url = reverse("ipam-api:prefix-detail", kwargs={"pk": prefix.pk})
+            response = self.client.get(f"{url}?api_version=2.1", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(response.data["location"]["id"], prefix.location.pk)
+
+        with self.subTest("invalid GET"):
+            prefix = Prefix.objects.annotate(location_count=Count("locations")).filter(location_count__gt=1).first()
+            self.assertIsNotNone(prefix)
+            url = reverse("ipam-api:prefix-detail", kwargs={"pk": prefix.pk})
+            response = self.client.get(f"{url}?api_version=2.1", **self.header)
+            self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
+            self.assertEqual(
+                str(response.data["detail"]),
+                "This object has multiple Locations and so cannot be represented in the 2.0 or 2.1 REST API. "
+                "Please correct the data or use a later API version.",
+            )
+
+        with self.subTest("valid POST"):
+            url = reverse("ipam-api:prefix-list")
+            data = {**self.create_data[0]}
+            data["location"] = self.locations[0].pk
+            response = self.client.post(f"{url}?api_version=2.1", data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_201_CREATED)
+            self.assertTrue(Prefix.objects.filter(pk=response.data["id"]).exists())
+
+        with self.subTest("valid PATCH"):
+            prefix = Prefix.objects.annotate(locations_count=Count("locations")).filter(locations_count=1).first()
+            self.assertIsNotNone(prefix)
+            url = reverse("ipam-api:prefix-detail", kwargs={"pk": prefix.pk})
+            data = {"location": self.locations[0].pk}
+            response = self.client.patch(f"{url}?api_version=2.1", data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(response.data["location"]["id"], data["location"])
+
+        with self.subTest("invalid PATCH"):
+            prefix = Prefix.objects.annotate(locations_count=Count("locations")).filter(locations_count__gt=1).first()
+            url = reverse("ipam-api:prefix-detail", kwargs={"pk": prefix.pk})
+            data = {**self.create_data[0]}
+            data["location"] = self.locations[0].pk
+            response = self.client.patch(f"{url}?api_version=2.1", data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
+            self.assertEqual(
+                str(response.data["detail"]),
+                "This object has multiple Locations and so cannot be represented in the 2.0 or 2.1 REST API. "
+                "Please correct the data or use a later API version.",
+            )
 
     def test_list_available_prefixes(self):
         """
@@ -206,6 +443,17 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         for i, p in enumerate(response.data):
             self.assertEqual(p["prefix"], str(available_prefixes[i]))
 
+    def test_prefix_display_value(self):
+        """
+        Test that the `display` field is correctly populated.
+        """
+        url = reverse("ipam-api:prefix-list")
+        self.add_permissions("ipam.view_prefix")
+
+        response = self.client.get(f"{url}?depth=1", **self.header)
+        for p in response.data["results"]:
+            self.assertEqual(p["display"], f'{p["prefix"]}: {p["namespace"]["name"]}')
+
     def test_create_single_available_prefix(self):
         """
         Test retrieval of the first available prefix within a parent prefix.
@@ -226,23 +474,31 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         for i in range(4):
             data = {
                 "prefix_length": child_prefix_length,
-                "namespace": self.namespace.pk,
                 "status": self.status.pk,
                 "description": f"Test Prefix {i + 1}",
+                "custom_fields": {"prefixcf": f"value {i+1}"},
             }
             response = self.client.post(url, data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
             self.assertEqual(response.data["prefix"], str(prefixes_to_be_created[i]))
             self.assertEqual(str(response.data["namespace"]["url"]), self.absolute_api_url(prefix.namespace))
             self.assertEqual(response.data["description"], data["description"])
+            self.assertIn("custom_fields", response.data)
+            self.assertIn("prefixcf", response.data["custom_fields"])
+            self.assertEqual(response.data["custom_fields"]["prefixcf"], data["custom_fields"]["prefixcf"])
 
-        # Try to create one more prefix
-        response = self.client.post(url, {"prefix_length": child_prefix_length}, format="json", **self.header)
+        # Try to create one more prefix, and expect a HTTP 204 response.
+        # This feels wrong to me (shouldn't it be a 4xx or 5xx?) but it's how the API has historically behaved.
+        response = self.client.post(
+            url, {"prefix_length": child_prefix_length, "status": self.status.pk}, format="json", **self.header
+        )
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
         self.assertIn("detail", response.data)
 
-        # Try to create invalid prefix type
-        response = self.client.post(url, {"prefix_length": str(child_prefix_length)}, format="json", **self.header)
+        # Invalid data does trigger a HTTP 400 response.
+        response = self.client.post(
+            url, {"prefix_length": "hello", "status": self.status.pk}, format="json", **self.header
+        )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertIn("prefix_length", response.data[0])
 
@@ -267,35 +523,32 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             {
                 "prefix_length": child_prefix_length,
                 "description": "Test Prefix 1",
-                "namespace": self.namespace.pk,
                 "status": self.status.pk,
+                "custom_fields": {"prefixcf": "value 1"},
             },
             {
                 "prefix_length": child_prefix_length,
                 "description": "Test Prefix 2",
-                "namespace": self.namespace.pk,
                 "status": self.status.pk,
             },
             {
                 "prefix_length": child_prefix_length,
                 "description": "Test Prefix 3",
-                "namespace": self.namespace.pk,
                 "status": self.status.pk,
             },
             {
                 "prefix_length": child_prefix_length,
                 "description": "Test Prefix 4",
-                "namespace": self.namespace.pk,
                 "status": self.status.pk,
             },
             {
                 "prefix_length": child_prefix_length,
                 "description": "Test Prefix 5",
-                "namespace": self.namespace.pk,
                 "status": self.status.pk,
             },
         ]
         response = self.client.post(url, data, format="json", **self.header)
+        # This feels wrong to me (shouldn't it be a 4xx or 5xx?) but it's how the API has historically behaved.
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
         self.assertIn("detail", response.data)
 
@@ -308,6 +561,9 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(url, data[:4], format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(len(response.data), 4)
+        self.assertIn("custom_fields", response.data[0])
+        self.assertIn("prefixcf", response.data[0]["custom_fields"])
+        self.assertEqual("value 1", response.data[0]["custom_fields"]["prefixcf"])
 
     def test_list_available_ips(self):
         """
@@ -342,6 +598,8 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             type=choices.PrefixTypeChoices.TYPE_NETWORK,
             status=self.status,
         )
+        cf = CustomField.objects.create(key="ipcf", label="IP Custom Field", type="text")
+        cf.content_types.add(ContentType.objects.get_for_model(IPAddress))
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "extras.view_status")
 
@@ -349,16 +607,20 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         for i in range(1, 7):
             data = {
                 "description": f"Test IP {i}",
-                "namespace": self.namespace.pk,
                 "status": self.status.pk,
+                "custom_fields": {"ipcf": f"value {i}"},
             }
             response = self.client.post(url, data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
             self.assertEqual(str(response.data["parent"]["url"]), self.absolute_api_url(prefix))
             self.assertEqual(response.data["description"], data["description"])
+            self.assertIn("custom_fields", response.data)
+            self.assertIn("ipcf", response.data["custom_fields"])
+            self.assertEqual(f"value {i}", response.data["custom_fields"]["ipcf"])
 
         # Try to create one more IP
-        response = self.client.post(url, {}, format="json", **self.header)
+        response = self.client.post(url, {"status": self.status.pk}, format="json", **self.header)
+        # This feels wrong to me (shouldn't it be a 4xx or 5xx?) but it's how the API has historically behaved.
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
         self.assertIn("detail", response.data)
 
@@ -372,26 +634,65 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             namespace=self.namespace,
             status=self.status,
         )
+        cf = CustomField.objects.create(key="ipcf", label="IP Custom Field", type="text")
+        cf.content_types.add(ContentType.objects.get_for_model(IPAddress))
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "extras.view_status")
 
         # Try to create seven IPs (only six are available)
         data = [
-            {"description": f"Test IP {i}", "namespace": self.namespace.pk, "status": self.status.pk}
+            {"description": f"Test IP {i}", "status": self.status.pk, "custom_fields": {"ipcf": str(i)}}
             for i in range(1, 8)
         ]  # 7 IPs
         response = self.client.post(url, data, format="json", **self.header)
+        # This feels wrong to me (shouldn't it be a 4xx or 5xx?) but it's how the API has historically behaved.
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
         self.assertIn("detail", response.data)
 
         # Create all six available IPs in a single request
-        data = [
-            {"description": f"Test IP {i}", "namespace": self.namespace.pk, "status": self.status.pk}
-            for i in range(1, 7)
-        ]  # 6 IPs
+        data = data[:6]
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(len(response.data), 6)
+        self.assertIn("custom_fields", response.data[0])
+        self.assertIn("ipcf", response.data[0]["custom_fields"])
+        self.assertEqual("1", response.data[0]["custom_fields"]["ipcf"])
+
+
+class PrefixLocationAssignmentTest(APIViewTestCases.APIViewTestCase):
+    model = PrefixLocationAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.prefixes = Prefix.objects.all()
+        cls.locations = Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(Prefix))
+
+        # Guarantees that at-least 3 locations do not have this prefix
+        for location in cls.locations[:3]:
+            location.prefixes.remove(cls.prefixes[0])
+        for location in cls.locations[3:6]:
+            location.prefixes.remove(cls.prefixes[1])
+        locations_without_prefix_0 = cls.locations.exclude(prefixes__in=[cls.prefixes[0]])
+        locations_without_prefix_1 = cls.locations.exclude(prefixes__in=[cls.prefixes[1]])
+
+        cls.create_data = [
+            {
+                "prefix": cls.prefixes[0].pk,
+                "location": locations_without_prefix_0[0].pk,
+            },
+            {
+                "prefix": cls.prefixes[0].pk,
+                "location": locations_without_prefix_0[1].pk,
+            },
+            {
+                "prefix": cls.prefixes[1].pk,
+                "location": locations_without_prefix_1[0].pk,
+            },
+            {
+                "prefix": cls.prefixes[1].pk,
+                "location": locations_without_prefix_1[1].pk,
+            },
+        ]
 
 
 class ParallelPrefixTest(APITransactionTestCase):
@@ -625,11 +926,12 @@ class IPAddressToInterfaceTest(APIViewTestCases.APIViewTestCase):
             status=devicestatus,
         )
         int_status = Status.objects.get_for_model(Interface).first()
+        int_role = Role.objects.get_for_model(Interface).first()
         int_type = InterfaceTypeChoices.TYPE_1GE_FIXED
         interfaces = [
-            Interface.objects.create(device=device, name="eth0", status=int_status, type=int_type),
+            Interface.objects.create(device=device, name="eth0", status=int_status, role=int_role, type=int_type),
             Interface.objects.create(device=device, name="eth1", status=int_status, type=int_type),
-            Interface.objects.create(device=device, name="eth2", status=int_status, type=int_type),
+            Interface.objects.create(device=device, name="eth2", status=int_status, role=int_role, type=int_type),
             Interface.objects.create(device=device, name="eth3", status=int_status, type=int_type),
         ]
 
@@ -638,8 +940,11 @@ class IPAddressToInterfaceTest(APIViewTestCases.APIViewTestCase):
         vm_status = Status.objects.get_for_model(VirtualMachine).first()
         virtual_machine = (VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, status=vm_status),)
         vm_int_status = Status.objects.get_for_model(VMInterface).first()
+        vm_int_role = Role.objects.get_for_model(VMInterface).first()
         vm_interfaces = [
-            VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status),
+            VMInterface.objects.create(
+                virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status, role=vm_int_role
+            ),
             VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth1", status=vm_int_status),
         ]
 
@@ -686,15 +991,28 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
 
+    def get_deletable_object(self):
+        return VLANGroup.objects.create(name="DELETE ME")
+
+    def get_deletable_object_pks(self):
+        vlangroups = [
+            VLANGroup.objects.create(name="DELETE ME"),
+            VLANGroup.objects.create(name="ME TOO"),
+            VLANGroup.objects.create(name="AND ME"),
+        ]
+        return [vg.pk for vg in vlangroups]
+
 
 class VLANTest(APIViewTestCases.APIViewTestCase):
     model = VLAN
     choices_fields = []
+    validation_excluded_fields = ["location"]
 
     @classmethod
     def setUpTestData(cls):
         statuses = Status.objects.get_for_model(VLAN)
         vlan_groups = VLANGroup.objects.filter(location__isnull=False)[:2]
+        cls.locations = Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(VLAN))
 
         cls.create_data = [
             {
@@ -702,21 +1020,19 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "name": "VLAN 4 with a name much longer than 64 characters to verify that we increased the limit",
                 "vlan_group": vlan_groups[0].pk,
                 "status": statuses[0].pk,
-                "location": vlan_groups[0].location.pk,
             },
             {
                 "vid": 5,
                 "name": "VLAN 5",
                 "vlan_group": vlan_groups[0].pk,
                 "status": statuses[0].pk,
-                "location": vlan_groups[0].location.pk,
             },
             {
                 "vid": 6,
                 "name": "VLAN 6",
                 "vlan_group": vlan_groups[0].pk,
                 "status": statuses[0].pk,
-                "location": vlan_groups[0].location.pk,
+                "location": cls.locations[3].pk,
             },
         ]
         cls.bulk_update_data = {
@@ -740,6 +1056,93 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
         content = json.loads(response.content.decode("utf-8"))
         self.assertIn("detail", content)
         self.assertTrue(content["detail"].startswith("Unable to delete object."))
+
+    def test_vlan_2_1_api_version_response(self):
+        """Assert location can be used in VLAN API create/retrieve."""
+
+        self.add_permissions("ipam.view_vlan")
+        self.add_permissions("ipam.add_vlan")
+        self.add_permissions("ipam.change_vlan")
+        with self.subTest("Assert GET"):
+            vlan = VLAN.objects.annotate(locations_count=Count("locations")).filter(locations_count=1).first()
+            url = reverse("ipam-api:vlan-detail", kwargs={"pk": vlan.pk})
+            response = self.client.get(f"{url}?api_version=2.1", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(response.data["location"]["id"], vlan.location.pk)
+
+        with self.subTest("Assert GET with multiple location"):
+            vlan = VLAN.objects.annotate(locations_count=Count("locations")).filter(locations_count__gt=1).first()
+            url = reverse("ipam-api:vlan-detail", kwargs={"pk": vlan.pk})
+            response = self.client.get(f"{url}?api_version=2.1", **self.header)
+            self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
+            self.assertEqual(
+                str(response.data["detail"]),
+                "This object has multiple Locations and so cannot be represented in the 2.0 or 2.1 REST API. "
+                "Please correct the data or use a later API version.",
+            )
+
+        with self.subTest("Assert CREATE"):
+            url = reverse("ipam-api:vlan-list")
+            data = {**self.create_data[0]}
+            data["location"] = self.locations[0].pk
+            response = self.client.post(f"{url}?api_version=2.1", data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_201_CREATED)
+            self.assertTrue(VLAN.objects.filter(pk=response.data["id"]).exists())
+
+        with self.subTest("Assert UPDATE on multiple locations ERROR"):
+            vlan = VLAN.objects.annotate(locations_count=Count("locations")).filter(locations_count__gt=1).first()
+            url = reverse("ipam-api:vlan-detail", kwargs={"pk": vlan.pk})
+            data = {**self.create_data[0]}
+            data["vid"] = 19
+            data["location"] = self.locations[0].pk
+            data.pop("vlan_group")
+            response = self.client.patch(f"{url}?api_version=2.1", data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
+            self.assertEqual(
+                str(response.data["detail"]),
+                "This object has multiple Locations and so cannot be represented in the 2.0 or 2.1 REST API. "
+                "Please correct the data or use a later API version.",
+            )
+
+        with self.subTest("Assert UPDATE on single location"):
+            vlan = VLAN.objects.annotate(locations_count=Count("locations")).filter(locations_count=1).first()
+            url = reverse("ipam-api:vlan-detail", kwargs={"pk": vlan.pk})
+            data = {"location": self.locations[0].pk}
+            response = self.client.patch(f"{url}?api_version=2.1", data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(response.data["location"]["id"], data["location"])
+
+
+class VLANLocationAssignmentTest(APIViewTestCases.APIViewTestCase):
+    model = VLANLocationAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.vlans = VLAN.objects.filter(locations__isnull=False)
+        cls.locations = Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(VLAN))
+        # make sure there are 4 locations without vlans 1 and 2 for the create_data below
+        for i in range(4):
+            cls.locations[i].vlans.set([])
+        locations_without_vlans = cls.locations.exclude(vlans__in=[cls.vlans[0], cls.vlans[1]])
+
+        cls.create_data = [
+            {
+                "vlan": cls.vlans[0].pk,
+                "location": locations_without_vlans[1].pk,
+            },
+            {
+                "vlan": cls.vlans[0].pk,
+                "location": locations_without_vlans[2].pk,
+            },
+            {
+                "vlan": cls.vlans[1].pk,
+                "location": locations_without_vlans[3].pk,
+            },
+            {
+                "vlan": cls.vlans[1].pk,
+                "location": locations_without_vlans[4].pk,
+            },
+        ]
 
 
 class ServiceTest(APIViewTestCases.APIViewTestCase):

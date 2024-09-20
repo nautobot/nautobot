@@ -5,10 +5,11 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-from .choices import CircuitTerminationSideChoices
-from .models import CircuitTermination
 from nautobot.dcim.models import CablePath
 from nautobot.dcim.signals import create_cablepath
+
+from .choices import CircuitTerminationSideChoices
+from .models import CircuitTermination
 
 
 def rebuild_paths_circuits(obj):

@@ -1,7 +1,6 @@
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.core.apps import HomePageItem, HomePagePanel
 
-
 layout = (
     HomePagePanel(
         name="Circuits",

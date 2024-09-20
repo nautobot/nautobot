@@ -8,7 +8,6 @@ from nautobot.core.apps import (
     NavMenuTab,
 )
 
-
 menu_items = (
     NavMenuTab(
         name="Circuits",
@@ -35,9 +34,17 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
+                        link="circuits:circuittermination_list",
+                        name="Circuit Terminations",
+                        weight=200,
+                        permissions=[
+                            "circuits.view_circuittermination",
+                        ],
+                    ),
+                    NavMenuItem(
                         link="circuits:circuittype_list",
                         name="Circuit Types",
-                        weight=200,
+                        weight=300,
                         permissions=[
                             "circuits.view_circuittype",
                         ],

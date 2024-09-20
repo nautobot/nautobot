@@ -1,10 +1,10 @@
-from django.test import override_settings
 from django.contrib.contenttypes.models import ContentType
+from django.test import override_settings
 from netaddr import EUI
 
-from nautobot.core.testing import ViewTestCases, post_data
+from nautobot.core.testing import post_data, ViewTestCases
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.models import Device, Location, LocationType, Platform
+from nautobot.dcim.models import Device, Location, LocationType, Platform, SoftwareVersion
 from nautobot.extras.models import ConfigContextSchema, CustomField, Role, Status, Tag
 from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import VLAN
@@ -30,14 +30,6 @@ class ClusterGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "description": "A new cluster group",
         }
 
-        cls.csv_data = (
-            "name,description",
-            "Cluster Group 4,Fourth cluster group",
-            "Cluster Group 5,Fifth cluster group",
-            "Cluster Group 6,Sixth cluster group",
-            "Cluster Group 7,Seventh cluster group",
-        )
-
 
 class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = ClusterType
@@ -55,14 +47,6 @@ class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "name": "Cluster Type X",
             "description": "A new cluster type",
         }
-
-        cls.csv_data = (
-            "name,description",
-            'Cluster Type ""4"",Fourth cluster type',
-            'Cluster Type ""5"",Fifth cluster type',
-            'Cluster Type ""6"",Sixth cluster type',
-            'Cluster Type ""7"",Seventh cluster type',
-        )
 
 
 class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -110,13 +94,6 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tags": [t.pk for t in Tag.objects.get_for_model(Cluster)],
         }
 
-        cls.csv_data = (
-            "name,cluster_type",
-            f"Cluster 4,{clustertypes[0].name}",
-            f"Cluster 5,{clustertypes[0].name}",
-            f"Cluster 6,{clustertypes[0].name}",
-        )
-
         cls.bulk_edit_data = {
             "cluster_group": clustergroups[1].pk,
             "cluster_type": clustertypes[1].pk,
@@ -148,6 +125,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Cluster.objects.create(name="Cluster 2", cluster_type=clustertype, location=locations[0]),
         )
 
+        software_versions = SoftwareVersion.objects.filter(software_image_files__isnull=False)[:3]
         statuses = Status.objects.get_for_model(VirtualMachine)
         status_staged = statuses[0]
 
@@ -157,6 +135,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             role=vmroles[0],
             platform=platforms[0],
             status=statuses[0],
+            software_version=software_versions[0],
         )
         VirtualMachine.objects.create(
             name="Virtual Machine 2",
@@ -164,6 +143,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             role=vmroles[0],
             platform=platforms[0],
             status=statuses[0],
+            software_version=software_versions[1],
         )
         VirtualMachine.objects.create(
             name="Virtual Machine 3",
@@ -171,6 +151,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             role=vmroles[0],
             platform=platforms[0],
             status=statuses[0],
+            software_version=software_versions[2],
         )
 
         cls.form_data = {
@@ -188,14 +169,8 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "comments": "Some comments",
             "tags": [t.pk for t in Tag.objects.get_for_model(VirtualMachine)],
             "local_config_context_data": None,
+            "software_version": software_versions[0].pk,
         }
-
-        cls.csv_data = (
-            "name,cluster,status",
-            f"Virtual Machine 4,Cluster 1,{statuses[0].name}",
-            f"Virtual Machine 5,Cluster 1,{statuses[0].name}",
-            f"Virtual Machine 6,Cluster 1,{statuses[0].name}",
-        )
 
         cls.bulk_edit_data = {
             "cluster": clusters[1].pk,
@@ -207,6 +182,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "memory": 65535,
             "disk": 8000,
             "comments": "New comments",
+            "software_version": software_versions[0].pk,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -289,11 +265,15 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         statuses = Status.objects.get_for_model(VMInterface)
         status = statuses.first()
-
+        role = Role.objects.get_for_model(VMInterface).first()
         interfaces = (
-            VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 1", status=status),
+            VMInterface.objects.create(
+                virtual_machine=virtualmachines[0], name="Interface 1", status=status, role=role
+            ),
             VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 2", status=status),
-            VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 3", status=status),
+            VMInterface.objects.create(
+                virtual_machine=virtualmachines[0], name="Interface 3", status=status, role=role
+            ),
             VMInterface.objects.create(virtual_machine=virtualmachines[1], name="BRIDGE", status=status),
         )
         # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
@@ -356,22 +336,27 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "custom_field_1": "Custom field data",
             "tags": [],
+            "role": role.pk,
         }
-
-        cls.csv_data = (
-            "virtual_machine,name,status",
-            f"{virtualmachines[1].composite_key},Interface 4,{statuses[0].name}",
-            f"{virtualmachines[1].composite_key},Interface 5,{statuses[0].name}",
-            f"{virtualmachines[1].composite_key},Interface 6,{statuses[0].name}",
-        )
 
         cls.bulk_edit_data = {
             "enabled": False,
             "mtu": 2000,
             "status": status.pk,
+            "role": role.pk,
             "description": "New description",
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "custom_field_1": "New Custom Field Data",
+        }
+
+    def _edit_object_test_setup(self):
+        test_instance = self._get_queryset().first()
+        self.update_data = {
+            "name": test_instance.name,
+            "virtual_machine": test_instance.virtual_machine.pk,
+            "status": test_instance.status.pk,
+            "label": "new test label",
+            "description": "new test description",
         }

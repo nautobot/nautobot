@@ -9,13 +9,10 @@ from netaddr import IPNetwork
 
 from nautobot.core import filters, forms, testing
 from nautobot.core.utils import requests
-from nautobot.dcim import filters as dcim_filters, forms as dcim_forms
-from nautobot.dcim import models as dcim_models
+from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models
 from nautobot.dcim.tests import test_views
-from nautobot.extras import filters as extras_filters
-from nautobot.extras import models as extras_models
-from nautobot.ipam import forms as ipam_forms
-from nautobot.ipam import models as ipam_models
+from nautobot.extras import filters as extras_filters, models as extras_models
+from nautobot.ipam import forms as ipam_forms, models as ipam_models
 
 
 class SearchFormTestCase(TestCase):
@@ -517,11 +514,11 @@ class AddressFieldMixinTest(TestCase):
         ipaddr_status = extras_models.Status.objects.get_for_model(ipam_models.IPAddress).first()
         prefix_status = extras_models.Status.objects.get_for_model(ipam_models.Prefix).first()
         self.namespace = ipam_models.Namespace.objects.first()
-        self.prefix = ipam_models.Prefix.objects.create(
-            prefix="10.0.0.0/24", namespace=self.namespace, status=prefix_status
+        self.prefix, _ = ipam_models.Prefix.objects.get_or_create(
+            prefix="10.0.0.0/24", namespace=self.namespace, defaults={"status": prefix_status}
         )
-        self.ip = ipam_models.IPAddress.objects.create(
-            address="10.0.0.1/32", namespace=self.namespace, status=ipaddr_status
+        self.ip, _ = ipam_models.IPAddress.objects.get_or_create(
+            address="10.0.0.1/32", parent=self.prefix, defaults={"status": ipaddr_status}
         )
         self.initial = {"address": self.ip.address}
 
@@ -640,11 +637,14 @@ class DynamicFilterFormTest(TestCase):
                 form._get_lookup_field_choices(),
                 [
                     ("color", "Color"),
+                    ("contacts", "Contacts (name or ID)"),
                     ("content_types", "Content type(s)"),
                     ("created", "Created"),
+                    ("dynamic_groups", "Dynamic groups (name or ID)"),
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
+                    ("teams", "Teams (name or ID)"),
                 ],
             )
             self.assertEqual(
@@ -658,10 +658,12 @@ class DynamicFilterFormTest(TestCase):
                     ("contact_email", "Contact E-mail"),
                     ("contact_name", "Contact name"),
                     ("contact_phone", "Contact phone"),
+                    ("contacts", "Contacts (name or ID)"),
                     ("created", "Created"),
                     ("description", "Description"),
                     ("devices", "Devices (name or ID)"),
-                    ("cf_example_plugin_auto_custom_field", "Example Plugin Automatically Added Custom Field"),
+                    ("dynamic_groups", "Dynamic groups (name or ID)"),
+                    ("cf_example_app_auto_custom_field", "Example App Automatically Added Custom Field"),
                     ("facility", "Facility"),
                     ("has_vlan_groups", "Has VLAN groups"),
                     ("has_vlans", "Has VLANs"),
@@ -690,6 +692,7 @@ class DynamicFilterFormTest(TestCase):
                     ("status", "Status (name or ID)"),
                     ("vlans", "Tagged VLANs (VID or ID)"),
                     ("tags", "Tags"),
+                    ("teams", "Teams (name or ID)"),
                     ("tenant_id", 'Tenant (ID) (deprecated, use "tenant" filter instead)'),
                     ("tenant", "Tenant (name or ID)"),
                     ("tenant_group", "Tenant Group (name or ID)"),
@@ -726,11 +729,14 @@ class DynamicFilterFormTest(TestCase):
                 [
                     (None, "---------"),
                     ("color", "Color"),
+                    ("contacts", "Contacts (name or ID)"),
                     ("content_types", "Content type(s)"),
                     ("created", "Created"),
+                    ("dynamic_groups", "Dynamic groups (name or ID)"),
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
+                    ("teams", "Teams (name or ID)"),
                 ],
             )
             self.assertEqual(

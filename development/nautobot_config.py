@@ -1,7 +1,12 @@
 """Nautobot development configuration file."""
+
 import os
 
-from nautobot.core.settings import *  # noqa: F403
+from nautobot.core.settings import *  # noqa: F403  # undefined-local-with-import-star
+
+# The above results in various F405 undefined-local-with-import-star-usage,
+# "may be undefined, or defined from star imports",
+# which we suppress on a case-by-case basis below
 from nautobot.core.settings_funcs import is_truthy
 
 SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "012345678901234567890123456789012345678901234567890123456789")
@@ -33,12 +38,25 @@ LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 LOGGING["loggers"]["nautobot"]["handlers"] = ["verbose_console" if DEBUG else "normal_console"]  # noqa: F405
 LOGGING["loggers"]["nautobot"]["level"] = LOG_LEVEL  # noqa: F405
 
+# Enable the following to setup structlog logging for Nautobot.
+# Configures defined loggers to use structlog and overwrites all formatters and handlers.
+#
+# from nautobot.core.settings_funcs import setup_structlog_logging
+# setup_structlog_logging(
+#     LOGGING,
+#     INSTALLED_APPS,
+#     MIDDLEWARE,
+#     log_level="DEBUG" if DEBUG else "INFO",
+#     debug_db=False,  # Set to True to log all database queries
+#     plain_format=bool(DEBUG),  # Set to True to use human-readable structlog format over JSON
+# )
+
 #
 # Plugins
 #
 
 PLUGINS = [
-    "example_plugin",
+    "example_app",
 ]
 
 CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]
@@ -59,14 +77,16 @@ if is_truthy(os.getenv("ENABLE_OIDC", "False")):
         "nautobot.core.authentication.ObjectPermissionBackend",
     )
     SOCIAL_AUTH_KEYCLOAK_KEY = "nautobot"
-    SOCIAL_AUTH_KEYCLOAK_SECRET = "7b1c3527-8702-4742-af69-2b74ee5742e8"
+    SOCIAL_AUTH_KEYCLOAK_SECRET = "7b1c3527-8702-4742-af69-2b74ee5742e8"  # noqa: S105  # hardcoded-password-string
     SOCIAL_AUTH_KEYCLOAK_PUBLIC_KEY = requests.get("http://keycloak:8087/realms/nautobot/", timeout=15).json()[
         "public_key"
     ]
     SOCIAL_AUTH_KEYCLOAK_AUTHORIZATION_URL = "http://localhost:8087/realms/nautobot/protocol/openid-connect/auth"
-    SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL = "http://keycloak:8087/realms/nautobot/protocol/openid-connect/token"
+    SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL = "http://keycloak:8087/realms/nautobot/protocol/openid-connect/token"  # noqa: S105  # hardcoded-password-string
     SOCIAL_AUTH_KEYCLOAK_VERIFY_SSL = False
 
 METRICS_ENABLED = True
+METRICS_AUTHENTICATED = False
+METRICS_DISABLED_APPS = []
 
 CELERY_WORKER_PROMETHEUS_PORTS = [8080]

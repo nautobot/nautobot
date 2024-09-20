@@ -1,12 +1,14 @@
 from collections.abc import Mapping
+from datetime import datetime, timedelta
 import logging
+from pathlib import Path
 
 from celery import current_app
-from django_celery_beat.schedulers import ModelEntry, DatabaseScheduler
+from django.conf import settings
+from django_celery_beat.schedulers import DatabaseScheduler, ModelEntry
 from kombu.utils.json import loads
 
 from nautobot.extras.models import ScheduledJob, ScheduledJobs
-
 
 logger = logging.getLogger(__name__)
 
@@ -19,17 +21,24 @@ class NautobotScheduleEntry(ModelEntry):
 
     def __init__(self, model, app=None):
         """Initialize the model entry."""
+        # copy-paste from django_celery_beat.schedulers
         self.app = app or current_app._get_current_object()
+
+        # Nautobot-specific logic
         self.name = f"{model.name}_{model.pk}"
-        self.task = model.task
+        self.task = "nautobot.extras.jobs.run_job"
         try:
             # Nautobot scheduled jobs pass args/kwargs as constructed objects,
             # but Celery built-in jobs such as celery.backend_cleanup pass them as JSON to be parsed
-            self.args = model.args if isinstance(model.args, (tuple, list)) else loads(model.args or "[]")
+            self.args = [model.task] + (
+                model.args if isinstance(model.args, (tuple, list)) else loads(model.args or "[]")
+            )
             self.kwargs = model.kwargs if isinstance(model.kwargs, dict) else loads(model.kwargs or "{}")
         except (TypeError, ValueError) as exc:
             logger.exception("Removing schedule %s for argument deserialization error: %s", self.name, exc)
             self._disable(model)
+
+        # copy-paste from django_celery_beat.schedulers
         try:
             self.schedule = model.schedule
         except model.DoesNotExist:
@@ -39,6 +48,7 @@ class NautobotScheduleEntry(ModelEntry):
             )
             self._disable(model)
 
+        # Nautobot-specific logic
         self.options = {"nautobot_job_scheduled_job_id": model.id, "headers": {}}
 
         if model.user:
@@ -62,13 +72,24 @@ class NautobotScheduleEntry(ModelEntry):
         if isinstance(model.celery_kwargs, Mapping):
             self.options.update(model.celery_kwargs)
 
+        # copy-paste from django_celery_beat.schedulers
         self.total_run_count = model.total_run_count
         self.model = model
 
         if not model.last_run_at:
             model.last_run_at = self._default_now()
+            # if last_run_at is not set and
+            # model.start_time last_run_at should be in way past.
+            # This will trigger the job to run at start_time
+            # and avoid the heap block.
+            if model.start_time:
+                model.last_run_at = model.last_run_at - timedelta(days=365 * 30)
 
         self.last_run_at = model.last_run_at
+
+    def _default_now(self):
+        """Instead of using self.app.timezone, use the timezone specific to this schedule entry."""
+        return datetime.now(self.model.time_zone)
 
 
 class NautobotDatabaseScheduler(DatabaseScheduler):
@@ -95,3 +116,14 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
             entry.total_run_count = entry.model.total_run_count
             entry.model.save()
         return resp
+
+    def tick(self, *args, **kwargs):
+        """
+        Run a tick - one iteration of the scheduler.
+
+        This is an extension of `celery.beat.Scheduler.tick()` to touch the `CELERY_BEAT_HEARTBEAT_FILE` file.
+        """
+        interval = super().tick(*args, **kwargs)
+        if settings.CELERY_BEAT_HEARTBEAT_FILE:
+            Path(settings.CELERY_BEAT_HEARTBEAT_FILE).touch(exist_ok=True)
+        return interval

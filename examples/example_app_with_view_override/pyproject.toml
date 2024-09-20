@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "example_app_with_view_override"
+version = "1.0.0"
+description = "Nautobot App for testing override_views feature."
+authors = ["Network to Code <opensource@networktocode.com>"]
+license = "Apache-2.0"
+packages = [
+    {include = "example_app_with_view_override"}
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py38"
+
+[tool.ruff.lint]
+select = [
+    "DJ",  # flake8-django
+    "E",  # pycodestyle
+    "F",  # pyflakes
+    "I",  # isort
+    "PIE",  # flake8-pie
+    "RUF",  # ruff itself
+    "S",  # flake8-bandit
+    "W",  # pycodestyle
+]
+ignore = [
+    "E501",  # pycodestyle: line-too-long
+    "PIE808",  # unnecessary-range-start
+    "RUF012",  # mutable-class-default - see https://github.com/astral-sh/ruff/issues/5243
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-sort-within-sections = true
+order-by-type = false
+section-order = ["future", "standard-library", "third-party", "nautobot", "first-party", "local-folder"]
+
+[tool.ruff.lint.isort.sections]
+"nautobot" = ["nautobot"]

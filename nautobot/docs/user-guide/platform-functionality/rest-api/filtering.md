@@ -9,7 +9,7 @@ Multiple parameters can be joined to further narrow results. For example, `GET /
 Generally, passing multiple values for a single parameter will result in a logical OR operation. For example, `GET /api/dcim/locations/?parent=north-america&parent=south-america&location_type=country` will return "country" type locations in North America _or_ South America. However, a logical AND operation will be used in instances where a field may have multiple values, such as tags. For example, `GET /api/dcim/locations/?tag=foo&tag=bar` will return only locations which have both the "foo" _and_ "bar" tags applied.
 
 +/- 1.4.0
-    If [STRICT_FILTERING](../../administration/configuration/optional-settings.md#strict_filtering) is True (its default value), unrecognized filter parameters now result in a 400 Bad Request response instead of being silently ignored.
+    If [`STRICT_FILTERING`](../../administration/configuration/settings.md#strict_filtering) is True (its default value), unrecognized filter parameters now result in a 400 Bad Request response instead of being silently ignored.
 
 ### Filtering by Choice Field
 
@@ -132,11 +132,7 @@ Certain other fields, namely foreign key relationships support the lookup expres
 
 ### Network and Host Fields
 
-There are [Custom Lookups](https://docs.djangoproject.com/en/3.2/howto/custom-lookups/) built for the `VarbinaryIPField` field types. While
-the `VarbinaryIPField` is applied to fields for network, host, and broadcast, the below filters only apply to network and host. The design
-makes an assumption that there is in fact a broadcast (of type `VarbinaryIPField`) and prefix_length (of type `Integer`) within the same
-model. This assumption is used to understand the relevant scope of the network in question and is important to note when extending the
-Nautobot core or plugin data model.
+There are [Custom Lookups](https://docs.djangoproject.com/en/3.2/howto/custom-lookups/) built for the `VarbinaryIPField` field types. While the `VarbinaryIPField` is applied to fields for `network`, `host`, and `broadcast`, the below filters only apply to `network` and `host`. The design makes an assumption that there is in fact a `broadcast` (of type `VarbinaryIPField`) and `prefix_length` (of type `Integer`) within the same model. This assumption is used to understand the relevant scope of the network in question and is important to note when extending the Nautobot core or App data model.
 
 - `**` `exact` - An exact match of an IP or network address, e.g. `host__exact="10.0.0.1"`
 - `**` `iexact` - An exact match of an IP or network address, e.g. `host__iexact="10.0.0.1"`

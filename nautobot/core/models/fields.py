@@ -2,16 +2,18 @@ import json
 import re
 
 from django.core import exceptions
-from django.core.validators import RegexValidator, MaxLengthValidator
+from django.core.validators import MaxLengthValidator, RegexValidator
 from django.db import models
 from django.utils.text import slugify
 from django_extensions.db.fields import AutoSlugField as _AutoSlugField
 from netaddr import AddrFormatError, EUI, mac_unix_expanded
 from taggit.managers import TaggableManager
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import fields, widgets
 from nautobot.core.models import ordering
 from nautobot.core.models.managers import TagsManager
+from nautobot.core.models.validators import EnhancedURLValidator
 
 
 class mac_unix_expanded_uppercase(mac_unix_expanded):
@@ -133,7 +135,7 @@ class AutoSlugField(_AutoSlugField):
     """
 
     def __init__(self, *args, **kwargs):
-        kwargs.setdefault("max_length", 100)
+        kwargs.setdefault("max_length", CHARFIELD_MAX_LENGTH)
         kwargs.setdefault("editable", True)
         kwargs.setdefault("overwrite_on_add", False)
         kwargs.setdefault("unique", True)
@@ -377,6 +379,20 @@ class JSONArrayField(models.JSONField):
                 "base_field": self.base_field.formfield(),
                 **kwargs,
             }
+        )
+
+
+class LaxURLField(models.URLField):
+    """Like models.URLField, but using validators.EnhancedURLValidator and forms.LaxURLField."""
+
+    default_validators = [EnhancedURLValidator()]
+
+    def formfield(self, **kwargs):
+        return super().formfield(
+            **{
+                "form_class": fields.LaxURLField,
+                **kwargs,
+            },
         )
 
 

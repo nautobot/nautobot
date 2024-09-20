@@ -1,17 +1,20 @@
+from collections import OrderedDict
+from datetime import date, datetime
+import json
 import logging
 import re
-from collections import OrderedDict
-from datetime import datetime, date
 
 from django import forms
-from django.db import models, transaction
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
+from django.db import models, transaction
 from django.forms.widgets import TextInput
 from django.utils.html import format_html
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     add_blank_choice,
     CommentField,
@@ -35,9 +38,9 @@ from nautobot.core.templatetags.helpers import render_markdown
 from nautobot.core.utils.data import render_jinja2
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
-from nautobot.extras.utils import check_if_key_is_graphql_safe, FeatureQuery, extras_features
+from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
 
 logger = logging.getLogger(__name__)
 
@@ -49,12 +52,27 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
         """
         Return all ComputedFields assigned to the given model.
         """
-        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
-        return self.get_queryset().filter(content_type=content_type)
+        concrete_model = model._meta.concrete_model
+        cache_key = f"{self.get_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}"
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            content_type = ContentType.objects.get_for_model(concrete_model)
+            queryset = self.get_queryset().filter(content_type=content_type)
+            cache.set(cache_key, queryset)
+        return queryset
+
+    get_for_model.cache_key_prefix = "nautobot.extras.computedfield.get_for_model"
 
 
 @extras_features("graphql")
-class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
+class ComputedField(
+    ContactMixin,
+    ChangeLoggedModel,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
     """
     Read-only rendered fields driven by a Jinja2 template that are applied to objects within a ContentType.
     """
@@ -70,8 +88,13 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
         help_text="Internal field name. Please use underscores rather than dashes in this key.",
         slugify_function=slugify_dashes_to_underscores,
     )
-    label = models.CharField(max_length=100, help_text="Name of the field as displayed to users")
-    description = models.CharField(max_length=200, blank=True)
+    grouping = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=True,
+        help_text="Human-readable grouping that this computed field belongs to.",
+    )
+    label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, help_text="Name of the field as displayed to users")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     template = models.TextField(max_length=500, help_text="Jinja2 template code for field value")
     fallback_value = models.CharField(
         max_length=500,
@@ -277,6 +300,55 @@ class CustomFieldModel(models.Model):
             return computed_field.render(context={"obj": self})
         return computed_field.template
 
+    def get_computed_fields_grouping_basic(self):
+        """
+        This method exists to help call get_computed_field_groupings() in templates where a function argument (advanced_ui) cannot be specified.
+        Return a dictonary of computed fields grouped by the same grouping in the form
+        {
+            <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
+            ...
+            <grouping_5>: [(cf8, <value for cf8>), (cf9, <value for cf9>), ...],
+            ...
+        }
+        which have advanced_ui set to False
+        """
+        return self.get_computed_fields_grouping(advanced_ui=False)
+
+    def get_computed_fields_grouping_advanced(self):
+        """
+        This method exists to help call get_computed_field_groupings() in templates where a function argument (advanced_ui) cannot be specified.
+        Return a dictonary of computed fields grouped by the same grouping in the form
+        {
+            <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
+            ...
+            <grouping_5>: [(cf8, <value for cf8>), (cf9, <value for cf9>), ...],
+            ...
+        }
+        which have advanced_ui set to True
+        """
+        return self.get_computed_fields_grouping(advanced_ui=True)
+
+    def get_computed_fields_grouping(self, advanced_ui=None):
+        """
+        Return a dictonary of computed fields grouped by the same grouping in the form
+        {
+            <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
+            ...
+            <grouping_5>: [(cf8, <value for cf8>), (cf9, <value for cf9>), ...],
+            ...
+        }
+        """
+        record = {}
+        computed_fields = ComputedField.objects.get_for_model(self)
+        if advanced_ui is not None:
+            computed_fields = computed_fields.filter(advanced_ui=advanced_ui)
+
+        for field in computed_fields:
+            data = (field, field.render(context={"obj": self}))
+            record.setdefault(field.grouping, []).append(data)
+        record = dict(sorted(record.items()))
+        return record
+
     def get_computed_fields(self, label_as_key=False, advanced_ui=None):
         """
         Return a dictionary of all computed fields and their rendered values for this model.
@@ -296,16 +368,39 @@ class CustomFieldModel(models.Model):
 class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    def get_for_model(self, model):
+    def get_for_model(self, model, exclude_filter_disabled=False):
         """
         Return all CustomFields assigned to the given model.
+
+        Args:
+            model: The django model to which custom fields are registered
+            exclude_filter_disabled: Exclude any custom fields which have filter logic disabled
         """
-        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
-        return self.get_queryset().filter(content_types=content_type)
+        concrete_model = model._meta.concrete_model
+        cache_key = (
+            f"{self.get_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}.{exclude_filter_disabled}"
+        )
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            content_type = ContentType.objects.get_for_model(concrete_model)
+            queryset = self.get_queryset().filter(content_types=content_type)
+            if exclude_filter_disabled:
+                queryset = queryset.exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
+            cache.set(cache_key, queryset)
+        return queryset
+
+    get_for_model.cache_key_prefix = "nautobot.extras.customfield.get_for_model"
 
 
 @extras_features("webhooks")
-class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
+class CustomField(
+    ContactMixin,
+    ChangeLoggedModel,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="custom_fields",
@@ -314,7 +409,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         help_text="The object(s) to which this field applies.",
     )
     grouping = models.CharField(
-        max_length=255,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         help_text="Human-readable grouping that this custom field belongs to.",
     )
@@ -325,19 +420,21 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         help_text="The type of value(s) allowed for this field.",
     )
     label = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         help_text="Name of the field as displayed to users.",
         blank=False,
     )
     key = AutoSlugField(
         blank=True,
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         separator="_",
         populate_from="label",
         help_text="Internal field name. Please use underscores rather than dashes in this key.",
         slugify_function=slugify_dashes_to_underscores,
     )
-    description = models.CharField(max_length=200, blank=True, help_text="A helpful description for this field.")
+    description = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="A helpful description for this field."
+    )
     required = models.BooleanField(
         default=False,
         help_text="If true, this field is required when creating new objects or editing an existing object.",
@@ -365,13 +462,13 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         blank=True,
         null=True,
         verbose_name="Minimum value",
-        help_text="Minimum allowed value (for numeric fields).",
+        help_text="Minimum allowed value (for numeric fields) or length (for text fields).",
     )
     validation_maximum = models.BigIntegerField(
         blank=True,
         null=True,
         verbose_name="Maximum value",
-        help_text="Maximum allowed value (for numeric fields).",
+        help_text="Maximum allowed value (for numeric fields) or length (for text fields).",
     )
     validation_regex = models.CharField(
         blank=True,
@@ -439,16 +536,16 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             except ValidationError as err:
                 raise ValidationError({"default": f'Invalid default value "{self.default}": {err.message}'})
 
-        # Minimum/maximum values can be set only for numeric fields
-        if self.validation_minimum is not None and self.type != CustomFieldTypeChoices.TYPE_INTEGER:
-            raise ValidationError({"validation_minimum": "A minimum value may be set only for numeric fields"})
-        if self.validation_maximum is not None and self.type != CustomFieldTypeChoices.TYPE_INTEGER:
-            raise ValidationError({"validation_maximum": "A maximum value may be set only for numeric fields"})
+        # Minimum/maximum values can be set only for fields that support them
+        if self.validation_minimum is not None and self.type not in CustomFieldTypeChoices.MIN_MAX_TYPES:
+            raise ValidationError({"validation_minimum": "A minimum value may not be set for fields of this type"})
+        if self.validation_maximum is not None and self.type not in CustomFieldTypeChoices.MIN_MAX_TYPES:
+            raise ValidationError({"validation_maximum": "A maximum value may not be set for fields of this type"})
 
         # Regex validation can be set only for text, url, select and multi-select fields
         if self.validation_regex and self.type not in CustomFieldTypeChoices.REGEX_TYPES:
             raise ValidationError(
-                {"validation_regex": "Regular expression validation is supported only for text, URL and select fields"}
+                {"validation_regex": "Regular expression validation is not supported for fields of this type"}
             )
 
         # Choices can be set only on selection fields
@@ -515,13 +612,35 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                 widget=DatePicker(),
             )
 
-        # Text and URL
-        elif self.type in (CustomFieldTypeChoices.TYPE_URL, CustomFieldTypeChoices.TYPE_TEXT):
+        # Text-like fields
+        elif self.type in (
+            CustomFieldTypeChoices.TYPE_URL,
+            CustomFieldTypeChoices.TYPE_TEXT,
+            CustomFieldTypeChoices.TYPE_MARKDOWN,
+        ):
             if self.type == CustomFieldTypeChoices.TYPE_URL:
-                field = LaxURLField(required=required, initial=initial)
+                field = LaxURLField(
+                    required=required,
+                    initial=initial,
+                    min_length=self.validation_minimum,
+                    max_length=self.validation_maximum,
+                )
             elif self.type == CustomFieldTypeChoices.TYPE_TEXT:
-                field = forms.CharField(max_length=255, required=required, initial=initial)
-
+                field = forms.CharField(
+                    required=required,
+                    initial=initial,
+                    min_length=self.validation_minimum,
+                    max_length=self.validation_maximum,
+                )
+            elif self.type == CustomFieldTypeChoices.TYPE_MARKDOWN:
+                field = CommentField(
+                    required=required,
+                    initial=initial,
+                    widget=SmallTextarea,
+                    label=None,
+                    min_length=self.validation_minimum,
+                    max_length=self.validation_maximum,
+                )
             if self.validation_regex:
                 field.validators = [
                     RegexValidator(
@@ -530,12 +649,10 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                     )
                 ]
 
-        # Markdown
-        elif self.type == CustomFieldTypeChoices.TYPE_MARKDOWN:
-            field = CommentField(widget=SmallTextarea, label=None)
-
         # JSON
         elif self.type == CustomFieldTypeChoices.TYPE_JSON:
+            # Unlike the above cases, we don't apply min_length/max_length to the field,
+            # nor do we add a RegexValidator to the field, as these all apply after parsing and validating the JSON
             if simple_json_filter:
                 field = JSONField(encoder=DjangoJSONEncoder, required=required, initial=None, widget=TextInput)
             else:
@@ -596,15 +713,33 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         """
         if value not in [None, "", []]:
             # Validate text field
-            if self.type in (CustomFieldTypeChoices.TYPE_TEXT, CustomFieldTypeChoices.TYPE_URL):
+            if self.type in (
+                CustomFieldTypeChoices.TYPE_TEXT,
+                CustomFieldTypeChoices.TYPE_URL,
+                CustomFieldTypeChoices.TYPE_MARKDOWN,
+            ):
                 if not isinstance(value, str):
                     raise ValidationError("Value must be a string")
-
+                if self.validation_minimum is not None and len(value) < self.validation_minimum:
+                    raise ValidationError(f"Value must be at least {self.validation_minimum} characters in length")
+                if self.validation_maximum is not None and len(value) > self.validation_maximum:
+                    raise ValidationError(f"Value must not exceed {self.validation_maximum} characters in length")
                 if self.validation_regex and not re.search(self.validation_regex, value):
                     raise ValidationError(f"Value must match regex '{self.validation_regex}'")
 
+            # Validate JSON
+            elif self.type == CustomFieldTypeChoices.TYPE_JSON:
+                if self.validation_regex or self.validation_minimum is not None or self.validation_maximum is not None:
+                    json_value = json.dumps(value)
+                    if self.validation_minimum is not None and len(json_value) < self.validation_minimum:
+                        raise ValidationError(f"Value must be at least {self.validation_minimum} characters in length")
+                    if self.validation_maximum is not None and len(json_value) > self.validation_maximum:
+                        raise ValidationError(f"Value must not exceed {self.validation_maximum} characters in length")
+                    if self.validation_regex and not re.search(self.validation_regex, json_value):
+                        raise ValidationError(f"Value must match regex '{self.validation_regex}'")
+
             # Validate integer
-            if self.type == CustomFieldTypeChoices.TYPE_INTEGER:
+            elif self.type == CustomFieldTypeChoices.TYPE_INTEGER:
                 try:
                     value = int(value)
                 except ValueError:
@@ -615,14 +750,14 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                     raise ValidationError(f"Value must not exceed {self.validation_maximum}")
 
             # Validate boolean
-            if self.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
+            elif self.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
                 try:
                     value = is_truthy(value)
                 except ValueError as exc:
                     raise ValidationError("Value must be true or false.") from exc
 
             # Validate date
-            if self.type == CustomFieldTypeChoices.TYPE_DATE:
+            elif self.type == CustomFieldTypeChoices.TYPE_DATE:
                 if not isinstance(value, date):
                     try:
                         datetime.strptime(value, "%Y-%m-%d")
@@ -630,13 +765,13 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                         raise ValidationError("Date values must be in the format YYYY-MM-DD.")
 
             # Validate selected choice
-            if self.type == CustomFieldTypeChoices.TYPE_SELECT:
+            elif self.type == CustomFieldTypeChoices.TYPE_SELECT:
                 if value not in self.custom_field_choices.values_list("value", flat=True):
                     raise ValidationError(
                         f"Invalid choice ({value}). Available choices are: {', '.join(self.custom_field_choices.values_list('value', flat=True))}"
                     )
 
-            if self.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
+            elif self.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
                 if isinstance(value, str):
                     value = value.split(",")
                 if not set(value).issubset(self.custom_field_choices.values_list("value", flat=True)):
@@ -657,7 +792,16 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
         super().delete(*args, **kwargs)
 
-        delete_custom_field_data.delay(self.key, content_types)
+        # Circular Import
+        from nautobot.extras.signals import change_context_state
+
+        change_context = change_context_state.get()
+        if change_context is None:
+            context = None
+        else:
+            context = change_context.as_dict(instance=self)
+            context["context_detail"] = "delete custom field data"
+        delete_custom_field_data.delay(self.key, content_types, context)
 
     def add_prefix_to_cf_key(self):
         return "cf_" + str(self.key)
@@ -680,10 +824,11 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
             type__in=[CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT]
         ),
     )
-    value = models.CharField(max_length=100)
+    value = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")
 
     documentation_static_path = "docs/user-guide/platform-functionality/customfield.html"
+    is_metadata_associable_model = False
 
     class Meta:
         ordering = ["custom_field", "weight", "value"]
@@ -695,6 +840,11 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
     def clean(self):
         if self.custom_field.type not in (CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT):
             raise ValidationError("Custom field choices can only be assigned to selection fields.")
+
+        if self.custom_field.validation_minimum is not None and len(self.value) < self.custom_field.validation_minimum:
+            raise ValidationError(f"Value must be at least {self.custom_field.validation_minimum} characters long.")
+        if self.custom_field.validation_maximum is not None and len(self.value) > self.custom_field.validation_maximum:
+            raise ValidationError(f"Value must not exceed {self.custom_field.validation_maximum} characters long.")
 
         if not re.search(self.custom_field.validation_regex, self.value):
             raise ValidationError(f"Value must match regex {self.custom_field.validation_regex} got {self.value}.")
@@ -711,8 +861,22 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
         super().save(*args, **kwargs)
 
         if self.value != database_object.value:
+            # Circular Import
+            from nautobot.extras.signals import change_context_state
+
+            change_context = change_context_state.get()
+            if change_context is None:
+                context = None
+            else:
+                context = change_context.as_dict(instance=self)
+                context["context_detail"] = "update custom field choice data"
             transaction.on_commit(
-                lambda: update_custom_field_choice_data.delay(self.custom_field.pk, database_object.value, self.value)
+                lambda: update_custom_field_choice_data.delay(
+                    self.custom_field.pk,
+                    database_object.value,
+                    self.value,
+                    context,
+                )
             )
 
     def delete(self, *args, **kwargs):

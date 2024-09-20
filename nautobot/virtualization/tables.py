@@ -10,6 +10,7 @@ from nautobot.core.tables import (
 from nautobot.dcim.tables.devices import BaseInterfaceTable
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
+
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 __all__ = (
@@ -22,14 +23,11 @@ __all__ = (
     "VMInterfaceTable",
 )
 
-# TODO: re-introduce assign ip address button?
 VMINTERFACE_BUTTONS = """
-{% if perms.ipam.add_ipaddress %}
-    <!--
-    <a href="{% url 'ipam:ipaddress_add' %}?vminterface={{ record.pk }}&return_url={{ virtualmachine.get_absolute_url }}" class="btn btn-xs btn-success" title="Add IP address">
+{% if perms.ipam.add_ipaddress and perms.virtualization.change_vminterface %}
+    <a href="{% url 'ipam:ipaddress_add' %}?vminterface={{ record.pk }}&return_url={{ request.path }}" class="btn btn-xs btn-success" title="Add IP address">
         <i class="mdi mdi-plus-thick" aria-hidden="true"></i>
     </a>
-    -->
 {% endif %}
 """
 
@@ -42,7 +40,9 @@ VMINTERFACE_BUTTONS = """
 class ClusterTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    cluster_count = tables.Column(verbose_name="Clusters")
+    cluster_count = LinkedCountColumn(
+        viewname="virtualization:cluster_list", url_params={"cluster_type": "pk"}, verbose_name="Clusters"
+    )
     actions = ButtonsColumn(ClusterType)
 
     class Meta(BaseTable.Meta):
@@ -59,7 +59,9 @@ class ClusterTypeTable(BaseTable):
 class ClusterGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    cluster_count = tables.Column(verbose_name="Clusters")
+    cluster_count = LinkedCountColumn(
+        viewname="virtualization:cluster_list", url_params={"cluster_group": "pk"}, verbose_name="Clusters"
+    )
     actions = ButtonsColumn(ClusterGroup)
 
     class Meta(BaseTable.Meta):
@@ -81,12 +83,12 @@ class ClusterTable(BaseTable):
     cluster_group = tables.Column(linkify=True)
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
-        url_params={"cluster_id": "pk"},
+        url_params={"cluster": "pk"},
         verbose_name="Devices",
     )
     vm_count = LinkedCountColumn(
         viewname="virtualization:virtualmachine_list",
-        url_params={"cluster_id": "pk"},
+        url_params={"cluster": "pk"},
         verbose_name="VMs",
     )
     tags = TagColumn(url_name="virtualization:cluster_list")
@@ -196,6 +198,7 @@ class VMInterfaceTable(StatusTableMixin, BaseInterfaceTable):
             "virtual_machine",
             "name",
             "status",
+            "role",
             "enabled",
             "mac_address",
             "mtu",
@@ -206,7 +209,7 @@ class VMInterfaceTable(StatusTableMixin, BaseInterfaceTable):
             "untagged_vlan",
             "tagged_vlans",
         )
-        default_columns = ("pk", "virtual_machine", "name", "status", "enabled", "description")
+        default_columns = ("pk", "virtual_machine", "name", "status", "role", "enabled", "description")
 
 
 class VirtualMachineVMInterfaceTable(VMInterfaceTable):
@@ -224,6 +227,7 @@ class VirtualMachineVMInterfaceTable(VMInterfaceTable):
             "pk",
             "name",
             "status",
+            "role",
             "enabled",
             "parent_interface",
             "bridge",
@@ -241,6 +245,7 @@ class VirtualMachineVMInterfaceTable(VMInterfaceTable):
             "pk",
             "name",
             "status",
+            "role",
             "enabled",
             "parent_interface",
             "mac_address",

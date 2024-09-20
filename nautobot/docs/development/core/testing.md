@@ -29,6 +29,7 @@ The `invoke unittest` and `invoke integration-test` commands are intentionally d
 - New unit tests **must always** inherit from `nautobot.core.testing.TestCase` or one of its subclasses. Do not use `django.test.TestCase`.
     - API view test cases should generally inherit from one or more of the classes in `nautobot.core.testing.api.APIViewTestCases`.
     - Filterset test cases should generally inherit from `nautobot.core.testing.filters.FilterTestCases.FilterTestCase`.
+    - Form test cases should generally inherit from `nautobot.core.testing.forms.FormTestCases.BaseFormTestCase`.
     - Model test cases should generally inherit from `nautobot.core.testing.models.ModelTestCases.BaseModelTestCase`.
     - View test cases should generally inherit from one or more of the classes in `nautobot.core.testing.views.ViewTestCases`.
 - New integration tests **must always** inherit from `nautobot.core.testing.integration.SeleniumTestCase`. Do not use any other base class for integration tests.
@@ -40,7 +41,7 @@ The `invoke unittest` and `invoke integration-test` commands are intentionally d
 
 +++ 2.0.0
 
-Nautobot provides a set of generic tests for testing the behavior of FilterSets. These tests are located in [`nautobot.core.testing.filters.FilterTestCase`](../../code-reference/nautobot/apps/testing.md#nautobot.core.testing.filters.FilterTestCases.FilterTestCase) and can be used to test some common filters in Nautobot.
+Nautobot provides a set of generic tests for testing the behavior of FilterSets. These tests are located in [`nautobot.core.testing.filters.FilterTestCase`](../../code-reference/nautobot/apps/testing.md#nautobot.apps.testing.FilterTestCases.FilterTestCase) and can be used to test some common filters in Nautobot.
 
 ### Generic Boolean Filter Tests
 
@@ -98,15 +99,24 @@ Factories for each Nautobot app's models are defined in the corresponding `nauto
 Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/testing/advanced/#defining-a-test-runner) class (`nautobot.core.tests.runner.NautobotTestRunner`) makes use of the various factories to pre-populate the test database with data before running any tests. This reduces the need for individual tests to define their own baseline data sets.
 
 !!! info
-    Because plugins also commonly use Nautobot's test runner, the base Nautobot `settings.py` currently defaults [`TEST_USE_FACTORIES`](../../user-guide/administration/configuration/optional-settings.md#test_use_factories) to `False` so as to not negatively impact plugin tests that may not be designed to account for the presence of pre-populated test data in the database. This configuration is overridden to `True` in `nautobot/core/tests/nautobot_config.py` for Nautobot's own tests.
+    Because Apps also commonly use Nautobot's test runner, the base Nautobot `settings.py` currently defaults [`TEST_USE_FACTORIES`](../../user-guide/administration/configuration/settings.md#test_use_factories) to `False` so as to not negatively impact App tests that may not be designed to account for the presence of pre-populated test data in the database. This configuration is overridden to `True` in `nautobot/core/tests/nautobot_config.py` for Nautobot's own tests.
 
 ### Factory Caching
 
 +++ 1.5.11
 
-To reduce the time taken between multiple test runs, a new argument has been added to the `nautobot-server test`, `invoke unittest` and `invoke integration-test` commands: `--cache-test-fixtures`. When running one of these commands with `--cache-test-fixtures` for the first time, after the factory data has been generated it will be saved to a `factory_dump.json` file in the `development` directory. On subsequent runs of unit or integration tests, the factory data will be loaded from the file instead of being generated again. This can significantly reduce the time taken to run tests. It's a good idea to let this file be regenerated after pulling new code from the repository, as the factory data may have changed.
+To reduce the time taken between multiple test runs, a new argument has been added to the `nautobot-server test`, `invoke unittest` and `invoke integration-test` commands: `--cache-test-fixtures`. When running one of these commands with `--cache-test-fixtures` for the first time, after the factory data has been generated it will be saved to a `factory_dump.json` file in the `development` directory. On subsequent runs of unit or integration tests, the factory data will be loaded from the file instead of being generated again. This can significantly reduce the time taken to run tests.
 
 Factory caching is disabled by default. When using the `invoke` commands to run tests, caching can be enabled by default for your development environment by setting the `cache_test_fixtures` key to `True` in the `invoke.yml` file.
+
++/- 2.2.7 "Hashing of migrations in the factory dump"
+    The test runner now calculates a hash of applied database migrations and uses that as a key when creating/locating the factory data file. This serves as a way to avoid inadvertently using cached test data from the wrong branch or wrong set of migrations, and reduces the frequency with which you might need to manually delete the fixture file. For example, the set of migrations present in `develop` might result in a `factory_dump.966e2e1ed4ae5f924d54.json`, while those in `next` might result in `factory_dump.72b71317c5f5c047493e.json` - both files can coexist, and when you switch between branches during development, the correct one will automatically be selected.
+
+!!! tip
+    Although changes to the set of migrations defined will automatically invalidate an existing factory dump, there are two other cases where you will currently need to manually remove the file in order to force regeneration of the factory data:
+
+    1. When the contents of an existing migration file are modified (the hashing implementation currently can't detect this change).
+    2. When the definition of a factory is changed or a new factory is added.
 
 ## Performance Tests
 
@@ -120,7 +130,7 @@ Once you install the package, you can do `invoke performance-test` or `invoke un
 `NautobotPerformanceTestRunner` which inherits from `DiscoverSlowestTestsRunner` will only be available when `django-slowtests` is installed. The runner measures the time to run unit tests against baselines stored in a designated .yml file (defaults to `nautobot/core/tests/performance_baselines.yml`) in addition to running the unit tests themselves.
 
 !!! warning
-    This functionality requires the installation of the [`django-slowtests`](https://pypi.org/project/django-slowtests/) Python package, which is present in Nautobot's own development environment, but is *not* an inherent dependency of the Nautobot package when installed otherwise, such as into a plugin's development environment.
+    This functionality requires the installation of the [`django-slowtests`](https://pypi.org/project/django-slowtests/) Python package, which is present in Nautobot's own development environment, but is *not* an inherent dependency of the Nautobot package when installed otherwise, such as into an App's development environment.
 
 !!! info
     `invoke performance-test` is enabled when `django-slowtests` is installed and when called, it will run and evaluate the performance of specific unit tests that are tagged with `performance` i.e. `@tag("performance")`. `invoke unittest --performance-report` and `invoke integration-test --performance-report` will also be enabled and when called, they will generate a performance report for all the tests ran in the terminal.
@@ -158,7 +168,7 @@ Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_
 ```
 
 !!! info
-    To output the performance evaluation to a file for later use, i.e. as performance baselines for future test runs, do `invoke performance-test --performance-snapshot`. This command will collect the `names` of the test and their `execution_time` and store them in a .yml file default to `report.yml`. Subsequently, the data in that file will have to be manually added to the baseline file set at [`TEST_PERFORMANCE_BASELINE_FILE`](../../user-guide/administration/configuration/optional-settings.md#test_performance_baseline_file) to be used as baselines in performance tests.
+    To output the performance evaluation to a file for later use, i.e. as performance baselines for future test runs, do `invoke performance-test --performance-snapshot`. This command will collect the `names` of the test and their `execution_time` and store them in a .yml file default to `report.yml`. Subsequently, the data in that file will have to be manually added to the baseline file set at [`TEST_PERFORMANCE_BASELINE_FILE`](../../user-guide/administration/configuration/settings.md#test_performance_baseline_file) to be used as baselines in performance tests.
 
 Example output of `invoke performance-test --performance-snapshot`:
 
@@ -187,7 +197,7 @@ Example output of `invoke performance-test --performance-snapshot`:
 
 `TEST_PERFORMANCE_BASELINE_FILE` specifies the file in which performance baselines are stored, defaults to `nautobot/core/tests/performance_baselines.yml`. Currently, only baselines for those unit tests tagged with `performance` are stored.
 
-You can add baselines for your own test to `nautobot/core/tests/performance_baselines.yml` or have your own baseline yaml file for performance testing by specifying a different file path for  `TEST_PERFORMANCE_BASELINE_FILE` in plugin's development/test `nautobot_config.py`, and store the output of `invoke performance-test --performance-snapshot` in that file.
+You can add baselines for your own test to `nautobot/core/tests/performance_baselines.yml` or have your own baseline yaml file for performance testing by specifying a different file path for  `TEST_PERFORMANCE_BASELINE_FILE` in an App's development/test `nautobot_config.py`, and store the output of `invoke performance-test --performance-snapshot` in that file.
 `--performance-snapshot` flag will store the results of your performance test to a new `report.yml` and all you need to do is copy/paste the results to the file set by `TEST_PERFORMANCE_BASELINE_FILE`. Now you have baselines for your own tests!
 
 Example output of `invoke performance-test --performance-snapshot`:
@@ -230,7 +240,7 @@ Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_
     `django-slowtests` is only a *development* dependency of Nautobot. You cannot run performance tests in a production deployment of Nautobot unless you directly `pip install django-slowtests` into such a deployment.
 
 !!! info
-    Because plugins also commonly use Nautobot's default test runner `NautobotTestRunner`, in order to use `NautobotPerformanceTestRunner` you need to add `django-slowtests` as a part of your plugin dev dependencies.
+    Because Apps also commonly use Nautobot's default test runner `NautobotTestRunner`, in order to use `NautobotPerformanceTestRunner` you need to add `django-slowtests` as a part of your App dev dependencies.
 
 ## Test Code Style
 

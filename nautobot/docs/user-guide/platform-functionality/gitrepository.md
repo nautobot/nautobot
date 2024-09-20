@@ -5,7 +5,7 @@ Some text-based content is more conveniently stored in a separate Git repository
 * Job source files and associated data files,
 * Configuration context data
 * Export templates
-* Additional data types as registered by any installed plugins
+* Additional data types as registered by any installed Apps
 
 !!! important
     Nautobot's Git integration depends on the availability of the `git` program. If `git` is not installed, Nautobot will be unable to pull data from Git repositories.
@@ -32,7 +32,7 @@ The implementation of private repository access can vary from Git provider to Gi
 !!! note
     When defining a [secrets group](./secret.md#secrets-groups) for a Git repository, the group must contain assigned secret(s) with an *access type* of `HTTP(S)` and *secret type(s)* of `Token` (and `Username`, if required by the provider).
 
-Whenever a Git repository record is created, updated, or deleted, Nautobot automatically enqueues a background task that will asynchronously execute to clone, fetch, or delete a local copy of the Git repository on the filesystem (located under [`GIT_ROOT`](../administration/configuration/optional-settings.md#git_root)) and then create, update, and/or delete any database records managed by this repository. The progress and eventual outcome of this background task are recorded as a `JobResult` record that may be viewed from the Git repository user interface.
+Whenever a Git repository record is created, updated, or deleted, Nautobot automatically enqueues a background task that will asynchronously execute to clone, fetch, or delete a local copy of the Git repository on the filesystem (located under [`GIT_ROOT`](../administration/configuration/settings.md#git_root)) and then create, update, and/or delete any database records managed by this repository. The progress and eventual outcome of this background task are recorded as a `JobResult` record that may be viewed from the Git repository user interface.
 
 !!! important
     The repository branch must exist and have a commit against it. At this time, Nautobot will not initialize an empty repository.

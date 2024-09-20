@@ -8,6 +8,7 @@ from nautobot.core.models.fields import (
     ForeignKeyLimitedByContentTypes,
     ForeignKeyWithAutoRelatedName,
     JSONArrayField,
+    LaxURLField,
     mac_unix_expanded_uppercase,
     MACAddressCharField,
     NaturalOrderingField,
@@ -15,9 +16,9 @@ from nautobot.core.models.fields import (
     slugify_dots_to_dashes,
     TagsField,
 )
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.managers import BaseManager, TagsManager
 from nautobot.core.models.name_color_content_types import ContentTypeRelatedQuerySet, NameColorContentTypesModel
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize, naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar, EmptyGroupByJSONBAgg, JSONBAgg
 from nautobot.core.models.querysets import CompositeKeyQuerySetMixin, count_related, RestrictedQuerySet
@@ -43,13 +44,18 @@ from nautobot.extras.models import (
     StatusField,
     StatusModel,
 )
-from nautobot.extras.models.mixins import DynamicGroupMixin, NotesMixin
+from nautobot.extras.models.mixins import (
+    ContactMixin,
+    DynamicGroupMixin,
+    DynamicGroupsModelMixin,
+    NotesMixin,
+    SavedViewMixin,
+)
 from nautobot.extras.models.models import ConfigContextSchemaValidationMixin
 from nautobot.extras.plugins import CustomValidator
 from nautobot.extras.utils import extras_features
 from nautobot.ipam.fields import VarbinaryIPField
 from nautobot.ipam.models import get_default_namespace, get_default_namespace_pk
-
 
 __all__ = (
     "array_to_string",
@@ -65,12 +71,14 @@ __all__ = (
     "ConfigContextSchemaValidationMixin",
     "construct_composite_key",
     "construct_natural_slug",
+    "ContactMixin",
     "ContentTypeRelatedQuerySet",
     "count_related",
     "CustomFieldModel",
     "CustomValidator",
     "deconstruct_composite_key",
     "DynamicGroupMixin",
+    "DynamicGroupsModelMixin",
     "EmptyGroupByJSONBAgg",
     "EnhancedURLValidator",
     "ExclusionValidator",
@@ -84,6 +92,7 @@ __all__ = (
     "is_taggable",
     "JSONArrayField",
     "JSONBAgg",
+    "LaxURLField",
     "mac_unix_expanded_uppercase",
     "MACAddressCharField",
     "NameColorContentTypesModel",
@@ -96,6 +105,7 @@ __all__ = (
     "PrimaryModel",
     "RelationshipModel",
     "RestrictedQuerySet",
+    "SavedViewMixin",
     "serialize_object_v2",
     "serialize_object",
     "slugify_dashes_to_underscores",

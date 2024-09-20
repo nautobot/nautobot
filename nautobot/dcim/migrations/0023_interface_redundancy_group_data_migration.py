@@ -1,4 +1,5 @@
 from django.db import migrations
+
 from nautobot.extras.management import clear_status_choices, populate_status_choices
 
 

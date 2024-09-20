@@ -3,6 +3,7 @@ from django.db import models
 
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
+
 from .lookups import PathContains
 
 

@@ -28,13 +28,13 @@ For technical reasons of backwards-compatibility, the database (ORM) and GraphQL
 
 A plugin may now define extra tabs which will be appended to the object view's list of tabs.
 
-You can refer to the [plugin development guide](../development/apps/api/ui-extensions/object-detail-views.md) on how to add tabs to existing object detail views.
+You can refer to the [plugin development guide](../development/apps/api/ui-extensions/object-views.md) on how to add tabs to existing object detail views.
 
 #### Custom Template (CSS, HTML, JavaScript) on Job Forms ([#1865](https://github.com/nautobot/nautobot/issues/1865))
 
 Jobs can now specify a `template_name` property and provide a custom template with additional JavaScript and CSS to help with user input on the Job submission form.
 
-You can refer to the [Job class metadata attribute documentation](../user-guide/platform-functionality/jobs/index.md#template_name) on how to build and define this template.
+You can refer to the [Job class metadata attribute documentation](../development/jobs/index.md#template_name) on how to build and define this template.
 
 #### Dynamic Groups Support Additional Models ([#2200](https://github.com/nautobot/nautobot/pull/2200))
 
@@ -59,7 +59,7 @@ Please see the documentation on [best practices for mapping model fields to filt
 
 Jobs can now be configured to run automatically when a change event occurs on a Nautobot object. Job hooks associate jobs to content types and actions to run jobs when a create, update or delete action occurs on the selected content type. A new job base class `JobHookReceiver` was introduced that jobs must subclass to be associated with a job hook.
 
-Please see the documentation on [Job Hooks](../user-guide/platform-functionality/jobs/models.md#jobhook) for more information.
+Please see the documentation on [Job Hooks](../user-guide/platform-functionality/jobs/jobhook.md) for more information.
 
 #### Job Re-Runs ([#1875](https://github.com/nautobot/nautobot/issues/1875))
 
@@ -152,10 +152,10 @@ A number of mixin classes have been renamed for improved self-consistency and cl
 
 Filtering of object lists in the UI and in the REST API will now report an error if an unknown or unrecognized filter parameter is specified. _This is a behavior change from previous Nautobot releases, in which unknown filter parameters would be silently discarded and ignored._
 
-A new configuration setting, [`STRICT_FILTERING`](../user-guide/administration/configuration/optional-settings.md#strict_filtering) has been added. It defaults to `True`, enabling strict validation of filter parameters, but can be set to `False` to disable this validation.
+A new configuration setting, [`STRICT_FILTERING`](../user-guide/administration/configuration/settings.md#strict_filtering) has been added. It defaults to `True`, enabling strict validation of filter parameters, but can be set to `False` to disable this validation.
 
 !!! warning
-    Setting [`STRICT_FILTERING`](../user-guide/administration/configuration/optional-settings.md#strict_filtering) to `False` can result in unexpected filtering results in the case of user error, for example a request to `/api/dcim/devices/?has_primry_ip=false` (note the typo `primry`) will result in a list of all devices, rather than the intended list of only devices that lack a primary IP address. In the case of Jobs or external automation making use of such a filter, this could have wide-ranging consequences.
+    Setting [`STRICT_FILTERING`](../user-guide/administration/configuration/settings.md#strict_filtering) to `False` can result in unexpected filtering results in the case of user error, for example a request to `/api/dcim/devices/?has_primry_ip=false` (note the typo `primry`) will result in a list of all devices, rather than the intended list of only devices that lack a primary IP address. In the case of Jobs or external automation making use of such a filter, this could have wide-ranging consequences.
 
 #### Moved Registry Template Context ([#1945](https://github.com/nautobot/nautobot/issues/1945))
 

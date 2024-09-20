@@ -82,10 +82,15 @@
                     {% endif %}
                 </td>
             </tr>
-            {% else %}
+            {% elif termination.provider_network %}
             <tr>
                 <td>Provider Network</td>
                 <td>{{ termination.provider_network|hyperlinked_object }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td>Cloud Network</td>
+                <td>{{ termination.cloud_network|hyperlinked_object }}</td>
             </tr>
             {% endif %}
             <tr>

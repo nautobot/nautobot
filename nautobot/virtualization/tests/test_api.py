@@ -3,8 +3,8 @@ from rest_framework import status
 
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.models import Location, LocationType
-from nautobot.extras.models import ConfigContextSchema, Status
+from nautobot.dcim.models import Location, LocationType, SoftwareVersion
+from nautobot.extras.models import ConfigContextSchema, Role, Status
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.virtualization.models import (
     Cluster,
@@ -142,6 +142,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
             ),
         )
 
+        cls.software_versions = SoftwareVersion.objects.filter(software_image_files__isnull=False)[:3]
         cls.statuses = Status.objects.get_for_model(VirtualMachine)
 
         VirtualMachine.objects.create(
@@ -149,18 +150,21 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
             cluster=clusters[0],
             local_config_context_data={"A": 1},
             status=cls.statuses[0],
+            software_version=cls.software_versions[0],
         )
         VirtualMachine.objects.create(
             name="Virtual Machine 2",
             cluster=clusters[0],
             local_config_context_data={"B": 2},
             status=cls.statuses[0],
+            software_version=cls.software_versions[1],
         )
         VirtualMachine.objects.create(
             name="Virtual Machine 3",
             cluster=clusters[0],
             local_config_context_data={"C": 3},
             status=cls.statuses[0],
+            software_version=cls.software_versions[2],
         )
 
         cls.create_data = [
@@ -168,20 +172,24 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
                 "name": "Virtual Machine 4",
                 "cluster": clusters[1].pk,
                 "status": cls.statuses[0].pk,
+                "software_version": cls.software_versions[0].pk,
             },
             {
                 "name": "Virtual Machine 5",
                 "cluster": clusters[1].pk,
                 "status": cls.statuses[0].pk,
+                "software_version": cls.software_versions[1].pk,
             },
             {
                 "name": "Virtual Machine 6",
                 "cluster": clusters[1].pk,
                 "status": cls.statuses[0].pk,
+                "software_version": cls.software_versions[2].pk,
             },
         ]
         cls.bulk_update_data = {
             "status": cls.statuses[1].pk,
+            "software_version": cls.software_versions[0].pk,
         }
 
     def test_config_context_excluded_by_default_in_list_view(self):
@@ -281,11 +289,15 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
         vm_status = Status.objects.get_for_model(VirtualMachine).first()
         virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1", status=vm_status)
         cls.interface_status = Status.objects.get_for_model(VMInterface).first()
-
+        cls.interface_role = Role.objects.get_for_model(VMInterface).first()
         interfaces = (
-            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 1", status=cls.interface_status),
+            VMInterface.objects.create(
+                virtual_machine=virtualmachine, name="Interface 1", status=cls.interface_status, role=cls.interface_role
+            ),
             VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 2", status=cls.interface_status),
-            VMInterface.objects.create(virtual_machine=virtualmachine, name="Interface 3", status=cls.interface_status),
+            VMInterface.objects.create(
+                virtual_machine=virtualmachine, name="Interface 3", status=cls.interface_status, role=cls.interface_role
+            ),
         )
 
         vlan_status = Status.objects.get_for_model(VLAN).first()
@@ -372,6 +384,7 @@ class VMInterfaceTest(APIViewTestCases.APIViewTestCase):
                 name="VMInterface 1",
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 status=self.interface_status,
+                role=self.interface_role,
             )
             interface.tagged_vlans.add(vlan)
             payload = {"mode": None, "tagged_vlans": [vlan.pk]}

@@ -10,6 +10,9 @@ Cables can connect power ports only to power outlets or power feeds. (Pass-throu
 +++ 1.4.5
     The fields `created` and `last_updated` were added to all device component models. If you upgraded from Nautobot 1.4.4 or earlier, the values for these fields will default to `None` (null).
 
++/- 2.3.0
+    This model has been updated to support being installed in [Modules](module.md). As a result, there are now two fields for assignment to a Device or Module. One of the `device` or `module` fields must be populated but not both. If a `module` is supplied, the `device` field must be null, and similarly the `module` field must be null if a `device` is supplied.
+
 ## Example Power Topology
 
 ![Power distribution model](../../../media/power_distribution.png)

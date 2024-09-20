@@ -193,6 +193,8 @@ If you run into issues, you may also deliberately tell `pip3` to install into yo
 pip3 install --user invoke
 ```
 
+If you encounter an [`externally-managed-environment`](https://peps.python.org/pep-0668/) error, you may need to install invoke through your OS's package manager. For example, `apt-get install python3-invoke` for Debian.
+
 Please see the [official documentation on Pip user installs](https://pip.pypa.io/en/stable/user_guide/#user-installs) for more information.
 
 #### List Invoke Tasks
@@ -208,7 +210,6 @@ Example output:
 ```no-highlight
 Available tasks:
 
-  black                  Check Python code style with Black.
   build                  Build Nautobot docker image.
   build-and-check-docs   Build docs for use within Nautobot.
   build-dependencies
@@ -222,8 +223,6 @@ Available tasks:
   destroy                Destroy all containers and volumes.
   docker-push            Tags and pushes docker images to the appropriate repos, intended for release use only.
   dumpdata               Dump data from database to db_output file.
-  eslint                 Check for ESLint rule compliance and other style issues.
-  flake8                 Check for PEP8 compliance and other style issues.
   hadolint               Check Dockerfile for hadolint compliance and other style issues.
   integration-test       Run Nautobot integration tests.
   loaddata               Load data from file.
@@ -234,36 +233,40 @@ Available tasks:
   nbshell                Launch an interactive Nautobot shell.
   performance-test       Run Nautobot performance tests.
   post-upgrade           Performs Nautobot common post-upgrade operations using a single entrypoint.
-  prettier               Check Node.JS code style with Prettier.
   pylint                 Perform static analysis of Nautobot code.
   restart                Gracefully restart containers.
+  ruff                   Run ruff to perform code formatting and/or linting.
   serve-docs             Runs local instance of mkdocs serve (ctrl-c to stop).
   start                  Start Nautobot and its dependencies in detached mode.
   stop                   Stop Nautobot and its dependencies.
   tests                  Run all linters and unit tests.
   unittest               Run Nautobot unit tests.
   unittest-coverage      Report on code test coverage as measured by 'invoke unittest'.
-  unittest-ui            Run Nautobot UI unit tests.
+  version                Show the version of Nautobot Python and NPM packages or bump them when a valid bump rule is provided.
   vscode                 Launch Visual Studio Code with the appropriate Environment variables to run in a container.
+  yamllint               Run yamllint to validate formatting applies to YAML standards.
 ```
 
 #### Using Docker with Invoke
+
++/- 2.1.2
+    The Docker dev environment creates a superuser account by default with the username and password "admin". To disable this behavior, you must set the environment variable `NAUTOBOT_CREATE_SUPERUSER=false` using an [override file](./docker-compose-advanced-use-cases.md#docker-compose-overrides).
 
 A development environment can be easily started up from the root of the project using the following commands:
 
 * `invoke build` - Builds Nautobot docker images
 * `invoke migrate` - Performs database migration operation in Django
-* `invoke createsuperuser` - Creates a superuser account for the Nautobot application
 * `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and Celery Beat in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers
 
 Additional useful commands for the development environment:
 
-* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, NGINX, Node.js, Celery, and Celery Beat (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
+* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, NGINX, Celery, and Celery Beat (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
 * `invoke cli [-s servicename]` - Launch a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
 * `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
+* `invoke createsuperuser` - Creates a superuser account for the Nautobot application
 
 !!! note
-    The `mkdocs` and `storybook` containers (see later) are not started automatically by `invoke start` or `invoke debug`. If desired, these may be started manually with `invoke start -s mkdocs` or `invoke start -s storybook` as appropriate.
+    The `mkdocs` container is not started automatically by `invoke start` or `invoke debug`. If desired, this container may be started manually with `invoke start -s mkdocs`.
 
 !!! tip
     The Nautobot server uses a Django webservice and worker uses watchdog to provide automatic reload of your web and worker servers in **most** cases when using `invoke start` or `invoke debug`.
@@ -280,8 +283,8 @@ This workflow uses Python and Poetry to work with your development environment l
 There are a few things you'll need:
 
 * A Linux system or environment
-* A MySQL or PostgreSQL server, which can be installed locally [per the documentation](../../user-guide/administration/installation/index.md#installing-nautobot-dependencies)
-* A Redis server, which can also be [installed locally](../../user-guide/administration/installation/index.md#installing-nautobot-dependencies)
+* A MySQL or PostgreSQL server, which can be installed locally [per the documentation](../../user-guide/administration/installation/install_system.md)
+* A Redis server, which can also be [installed locally](../../user-guide/administration/installation/install_system.md)
 * A supported version of Python
 * A recent version of [Poetry](https://python-poetry.org/docs/#installation)
 
@@ -322,22 +325,6 @@ brew install hadolint
 ```no-highlight
 brew install markdownlint-cli
 ```
-
-#### Install Node.JS and npm
-
-[npm](https://www.npmjs.com/) is the tool used to install and compile the Nautobot front-end UI. On macOS with [Homebrew](https://brew.sh) you can install npm by running:
-
-```no-highlight
-brew install node@18
-```
-
-You should then move to the `nautobot/ui/` subdirectory and run `npm ci` to install all of the JS dependencies for local development of the Nautobot UI:
-
-```no-highlight
-npm ci
-```
-
-Be sure to switch back to the base directory of the repository after you do this.
 
 #### Creating a Python Virtual Environment
 
@@ -472,17 +459,20 @@ cp development/nautobot_config.py ~/.nautobot/nautobot_config.py
 
 A newly created configuration includes sane defaults. If you need to customize them, edit your `nautobot_config.py` and update the following settings as required:
 
-* [`ALLOWED_HOSTS`](../../user-guide/administration/configuration/required-settings.md#allowed_hosts): This can be set to `["*"]` for development purposes and must be set if `DEBUG=False`
-* [`DATABASES`](../../user-guide/administration/configuration/required-settings.md#databases): Database connection parameters, if different from the defaults
+* [`ALLOWED_HOSTS`](../../user-guide/administration/configuration/settings.md#allowed_hosts): This can be set to `["*"]` for development purposes and must be set if `DEBUG=False`
+* [`DATABASES`](../../user-guide/administration/configuration/settings.md#databases): Database connection parameters, if different from the defaults
 * **Redis settings**: Redis configuration requires multiple settings. The defaults should be fine for development.
-* [`DEBUG`](../../user-guide/administration/configuration/optional-settings.md#debug): Set to `True` to enable verbose exception logging and, if installed, the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
-* [`EXTRA_INSTALLED_APPS`](../../user-guide/administration/configuration/optional-settings.md#extra-applications): Optionally provide a list of extra Django apps/plugins you may desire to use for development
+* [`DEBUG`](../../user-guide/administration/configuration/settings.md#debug): Set to `True` to enable verbose exception logging and, if installed, the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
+* [`EXTRA_INSTALLED_APPS`](../../user-guide/administration/configuration/settings.md#extra-applications): Optionally provide a list of extra Django apps you may desire to use for development
 
 ## Working in your Development Environment
 
 Below are common commands for working your development environment.
 
 ### Creating a Superuser
+
++/- 2.1.2
+    The Docker dev environment creates a superuser account by default with the username and password "admin". To disable this behavior, you must set the environment variable `NAUTOBOT_CREATE_SUPERUSER=false` using an [override file](./docker-compose-advanced-use-cases.md#docker-compose-overrides).
 
 You'll need to create a administrative superuser account to be able to log into the Nautobot Web UI for the first time. Specifying an email address for the user is not required, but be sure to use a very strong password.
 
@@ -526,36 +516,7 @@ Quit the server with CONTROL-C.
 
 Please see the [official Django documentation on `runserver`](https://docs.djangoproject.com/en/stable/ref/django-admin/#runserver) for more information.
 
-!!! note
-    When first started in Docker Compose, the Nautobot development server container will automatically install dependencies for building the React UI for Nautobot, then build this UI. This may take several minutes before the server becomes ready to accept web connections.
-
-You can connect to the development server at `localhost:8080`, but normally you'll want to connect to the Node.js server instead (see below).
-
-### Starting the Node.js Server
-
-In development, you should run a Node.js server instance as well. This will handle automatically rebuilding the UI when you make changes in the `nautobot/ui` directory.
-
-| Docker Compose Workflow | Virtual Environment Workflow    |
-| ----------------------- | ------------------------------- |
-| `invoke start`          | `cd nautobot/ui; npm run start` |
-
-!!! note
-    In the Docker Compose workflow, the Node.js server will delay starting until the Nautobot development server has finished the initial UI build, which may take several minutes. This is normal.
-
-You can connect to the Node.js server at `localhost:3000`.
-
-### Starting the Storybook Server
-
-When working on the UI, you may find it useful to run a [Storybook](https://storybook.js.org/) instance that provides interactive documentation of the `nautobot-ui` library used by Nautobot's user interface.
-
-| Docker Compose Workflow     | Virtual Environment Workflow    |
-| --------------------------- | ------------------------------- |
-| `invoke start -s storybook` | `TODO`                          |
-
-!!! note
-    This container is not started by default when using `invoke start`. You must individually start it using `invoke start -s storybook`.
-
-You can connect to Storybook at `localhost:6006`.
+You can connect to the development server at `localhost:8080`.
 
 ### Starting the Worker Server
 
@@ -671,20 +632,60 @@ Unit tests are run using the `invoke unittest` command (if using the Docker deve
 !!! info
     By default `invoke unittest` will start and run the unit tests inside the Docker development container; this ensures that PostgreSQL and Redis servers are available during the test. However, if you have your environment configured such that `nautobot-server` can run locally, outside of the Docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead.
 
-In cases where you haven't made any changes to the database (which is most of the time), you can append the `--keepdb` argument to this command to reuse the test database between runs. This cuts down on the time it takes to run the test suite since the database doesn't have to be rebuilt each time.
+##### Useful Unit Test Parameters
 
-| Docker Compose Workflow    | Virtual Environment Workflow                                                             |
-| -------------------------- | ---------------------------------------------------------------------------------------- |
-| `invoke unittest --keepdb` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test --keepdb nautobot` |
+The `invoke unittest` command supports a number of optional parameters to influence its behavior. Careful use of these parameters can greatly reduce the time it takes to run and re-run tests during development.
 
-!!! note
-    Using the `--keepdb` argument will raise errors if you've modified any model fields since the previous test run.
+* `--failfast` - Fail as soon as any test failure or error condition is encountered, instead of running to completion.
+* `--label <module.path>` - Only run the specific subset of tests. Can be broad (`--label nautobot.core.tests`) or specific (`--label nautobot.core.tests.test_graphql.GraphQLQueryTestCase`).
+* `--no-buffer` - Allow stdout/stderr output from the test to be seen in your terminal, instead of being hidden. **If you're debugging code with `breakpoint()`, you should use this option, as otherwise you'll never see the breakpoint happen.**
+* `--no-cache-test-fixtures` - Prevent caching [test factory data](./testing.md#factory-caching) to disk, or if a cache is already present, prevent loading from that cache when initializing the test environment.
+* `--no-keepdb` - Prevent saving and reusing the initialized test database between test runs. **The `--no-keepdb` option is mandatory if you're actively making changes to model definitions or migrations.**
+* `--parallel` - Split the tests across multiple parallel subprocesses. Can greatly reduce the runtime of the entire test suite when used. Auto-detects the number of workers if not specified with `--parallel-workers`. This parameter is automatically included if no `--label` is specified.
+* `--parallel-workers` - Specify the number of workers to use when running tests in parallel. Implies `--parallel`.
+* `--pattern` - Only run tests which match the given substring. Can be used multiple times.
+* `--skip-docs-build` - Skip building/rebuilding the static Nautobot documentation before running the test. Saves some time on reruns when you haven't changed the documentation source files.
+* `--verbose` - Run tests more verbosely, including describing each test case as it is run.
 
-!!! warning
-    In some cases when tests fail and exit uncleanly it may leave the test database in an inconsistent state. If you encounter errors about missing objects, remove `--keepdb` and run the tests again.
+##### Unit Test Invocation Examples
 
-+/- 1.5.11
-    The `--cache-test-fixtures` argument was added to the `invoke unittest` and `nautobot-server test` commands to allow for caching of test factory data between test runs. See the [factories documentation](./testing.md#factory-caching) for more information.
+In general, when you first run the Nautobot tests in your local copy of the repository, we'd recommend:
+
+```no-highlight
+invoke unittest
+```
+
+When there are too many cores on the testing machine, you can limit the number of parallel workers:
+
+```no-highlight
+invoke unittest --parallel-workers 4
+```
+
+On subsequent reruns, you can add the other performance-related options:
+
+```no-highlight
+invoke unittest --skip-docs-build
+invoke unittest --skip-docs-build --label nautobot.core.tests
+```
+
+When switching between significantly different branches of the code base (e.g. `main` vs `develop` vs `next`), you'll need to for once include the `--no-keepdb` option so that the test database can be destroyed and recreated appropriately:
+
+```no-highlight
+invoke unittest --no-keepdb
+```
+
+To not use the cached test fixture, you will need to include the `--no-cache-test-fixtures` flag
+
+```no-highlight
+invoke unittest --no-cache-test-fixtures
+```
+
+To limit the test to a specific pattern or label, you can use the `--label` and `--pattern` options:
+
+```no-highlight
+invoke unittest --verbose --skip-docs-build --label nautobot.core.tests.dcim.test_views.DeviceTestCase
+invoke unittest --verbose --skip-docs-build --pattern Controller
+```
 
 #### Integration Tests
 
@@ -710,7 +711,7 @@ Integration tests are run using the `invoke integration-test` command. All integ
 | `invoke integration-test` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test --tag integration nautobot` |
 
 !!! info
-    The same arguments supported by `invoke unittest` are supported by `invoke integration-test`. The key difference being the dependency upon the Selenium container, and inclusion of the `integration` tag.
+    The same arguments supported by `invoke unittest` are supported by `invoke integration-test`, with the exception of `--parallel` at this time. The key difference being the dependency upon the Selenium container, and inclusion of the `integration` tag.
 
 !!! tip
     You may also use `invoke integration-test` in the Virtual Environment workflow given that the `selenium` container is running, and that the `INVOKE_NAUTOBOT_LOCAL=True` environment variable has been set.
@@ -727,23 +728,22 @@ The following environment variables can be provided when running tests to custom
 
 ### Verifying the REST API Schema
 
-If you make changes to the REST API, you should verify that the REST API OpenAPI schema renders correctly without errors. To verify that there are no errors, you can run the `invoke check-schema` command (if using the Docker development environment) or the `nautobot-server spectacular` command. In the latter case you should run the command for each supported REST API version that Nautobot provides (e.g. "1.2", "1.3")
+If you make changes to the REST API, you should verify that the REST API OpenAPI schema renders correctly without errors. To verify that there are no errors, you can run the `invoke check-schema` command (if using the Docker development environment) or the `nautobot-server spectacular` command. In the latter case you should run the command for each supported REST API version that Nautobot provides (e.g. "2.0", "2.1")
 
 | Docker Compose Workflow | Virtual Environment Workflow                                                               |
 | ----------------------- | ------------------------------------------------------------------------------------------ |
-| `invoke check-schema`   | `nautobot-server spectacular --api-version 1.2 --validate --fail-on-warn --file /dev/null` |
+| `invoke check-schema`   | `nautobot-server spectacular --api-version 2.0 --validate --fail-on-warn --file /dev/null` |
 
 ### Verifying Code Style and Static Analysis
 
-To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Flake8](https://flake8.pycqa.org/),  [Black](https://black.readthedocs.io/), [ESLint](https://eslint.org), and [Prettier](https://prettier.io). Additionally, [static analysis](https://en.wikipedia.org/wiki/Static_program_analysis) of Nautobot code is performed by [Pylint](https://pylint.pycqa.org/en/latest/). You should run all of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
+To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Ruff](https://docs.astral.sh/ruff). Additionally, [static analysis](https://en.wikipedia.org/wiki/Static_program_analysis) of Nautobot code is performed by Ruff and [Pylint](https://pylint.pycqa.org/en/latest/). You should run all of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
 
-| Docker Compose Workflow | Virtual Environment Workflow                                                                            |
-| ----------------------- | ------------------------------------------------------------------------------------------------------- |
-| `invoke flake8`         | `flake8`                                                                                                |
-| `invoke black`          | `black`                                                                                                 |
-| `invoke eslint`         | `npx eslint .`                                                                                          |
-| `invoke prettier`       | `npx prettier -c .`                                                                                     |
-| `invoke pylint`         | `nautobot-server pylint nautobot tasks.py && nautobot-server pylint --recursive development/ examples/` |
+<!-- markdownlint-disable no-inline-html -->
+| Docker Compose Workflow | Virtual Environment Workflow                                                                                                     |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `invoke ruff`           | `ruff format --check nautobot/ development/ examples/ tasks.py`<br>and<br>`ruff check nautobot/ development/ examples/ tasks.py` |
+| `invoke pylint`         | `nautobot-server pylint nautobot tasks.py`<br>and<br>`nautobot-server pylint --recursive development/ examples/`                 |
+<!-- markdownlint-enable no-inline-html -->
 
 ### Handling Migrations
 
@@ -768,7 +768,7 @@ If your branch modifies a Django model (and as a result requires a database sche
 * If you have yet to run `invoke makemigrations`, you can pass in a name for the migration with the `-n` option, example `invoke makemigrations -n provider_increase_account_length`.
 * If you have already run `invoke makemigrations`, rename the generated migration files, for example `0004_provider_increase_account_length` instead of `0004_auto_20211220_2104`.
 
-You’ll also want to run `black` against the generated migration file as the autogenerated code doesn’t follow our style guide by default.
+You’ll also want to run `invoke ruff --autoformat` (or `ruff format`) against the generated migration file as the autogenerated code doesn’t follow our style guide by default.
 
 When modifying model field attributes, modify the test data in the tests too to reflect these changes and also any forms which refer to the model.
 

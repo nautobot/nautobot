@@ -3,7 +3,6 @@ import inspect
 from django.template import Context, Engine
 from django.template.exceptions import TemplateSyntaxError
 from django.test import TestCase
-
 from netutils.utils import jinja2_convenience_function
 
 
@@ -21,15 +20,15 @@ class NautobotTemplateTagsNetutilsTest(TestCase):
                 i = 1
                 for param_name, param in signature.parameters.items():
                     template_string += f" {param_name}="
-                    if param.annotation == str:
+                    if param.annotation is str:
                         template_string += f'"{i}"'
-                    elif param.annotation == bool:
+                    elif param.annotation is bool:
                         template_string += "True"
                     elif param.annotation in (int, float):
                         template_string += str(i)
                     elif param.annotation in (list, tuple):
                         template_string += "[]"
-                    elif param.annotation == dict:
+                    elif param.annotation is dict:
                         template_string += "{}"
                     else:
                         template_string += "None"
@@ -47,6 +46,6 @@ class NautobotTemplateTagsNetutilsTest(TestCase):
                 except ConnectionError:
                     # Yes, some netutils functions such as tcp_ping actually make network calls when invoked. Eeek.
                     pass
-                except Exception:
+                except Exception:  # noqa: S110  # try-except-pass -- an antipattern in general, but OK here
                     # Catch-all - at least it wasn't a TemplateSyntaxError, so good enough for now.
                     pass

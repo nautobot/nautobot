@@ -1,5 +1,5 @@
-import django_filters
 from django.db.models import Q
+import django_filters
 
 from nautobot.core.filters import (
     BaseFilterSet,
@@ -13,7 +13,7 @@ from nautobot.core.filters import (
 )
 from nautobot.core.utils.data import is_uuid
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
-from nautobot.dcim.models import Device, Location, Platform
+from nautobot.dcim.models import Device, Location, Platform, SoftwareImageFile, SoftwareVersion
 from nautobot.extras.filters import (
     CustomFieldModelFilterSetMixin,
     LocalContextModelFilterSetMixin,
@@ -153,9 +153,15 @@ class VirtualMachineFilterSet(
     )
     cluster_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Cluster.objects.all(),
-        label="Cluster (ID)",
+        label="Cluster (ID) - Deprecated (use cluster filter)",
+    )
+    cluster = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Cluster.objects.all(),
+        to_field_name="name",
+        label="Cluster (name or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         field_name="cluster__location",
         to_field_name="name",
@@ -200,10 +206,41 @@ class VirtualMachineFilterSet(
         field_name="interfaces",
         label="Has interfaces",
     )
+    has_software_image_files = RelatedMembershipBooleanFilter(
+        field_name="software_image_files",
+        label="Has software image files",
+    )
+    software_image_files = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareImageFile.objects.all(),
+        to_field_name="image_file_name",
+        label="Software image files (image file name or ID)",
+    )
+    has_software_version = RelatedMembershipBooleanFilter(
+        field_name="software_version",
+        label="Has software version",
+    )
+    software_version = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareVersion.objects.all(),
+        to_field_name="version",
+        label="Software version (version or ID)",
+    )
 
     class Meta:
         model = VirtualMachine
-        fields = ["id", "name", "cluster", "vcpus", "memory", "disk", "comments", "tags"]
+        fields = [
+            "id",
+            "name",
+            "cluster",
+            "vcpus",
+            "memory",
+            "disk",
+            "comments",
+            "has_software_image_files",
+            "software_image_files",
+            "has_software_version",
+            "software_version",
+            "tags",
+        ]
 
     def generate_query__has_primary_ip(self, value):
         query = Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)
@@ -231,7 +268,9 @@ class VirtualMachineFilterSet(
         return queryset.filter(primary_ip6__in=ip_queryset)
 
 
-class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomFieldModelFilterSetMixin):
+class VMInterfaceFilterSet(
+    BaseFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin, CustomFieldModelFilterSetMixin
+):
     q = SearchFilter(filter_predicates={"name": "icontains"})
 
     cluster_id = django_filters.ModelMultipleChoiceFilter(
@@ -287,6 +326,7 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         label="MAC address",
     )
     tagged_vlans = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="vid",
         queryset=VLAN.objects.all(),
         label="Tagged VLANs (VID or ID)",
@@ -296,6 +336,7 @@ class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomField
         label="Has Tagged VLANs",
     )
     untagged_vlan = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         to_field_name="vid",
         queryset=VLAN.objects.all(),
         label="Untagged VLAN (VID or ID)",

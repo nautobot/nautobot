@@ -1,11 +1,11 @@
-import uuid
 from unittest import skip, skipIf
+import uuid
 
 from django.db import connection
 
+from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.core.models.fields import TagsField
 from nautobot.core.testing.migrations import NautobotDataMigrationTest
-from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, RelationshipTypeChoices
 
 

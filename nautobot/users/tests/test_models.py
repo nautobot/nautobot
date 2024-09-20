@@ -3,7 +3,6 @@ from django.contrib.auth import get_user_model
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.users.models import ObjectPermission, Token
 
-
 # Use the proper swappable User model
 User = get_user_model()
 

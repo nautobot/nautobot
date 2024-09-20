@@ -12,7 +12,7 @@ The requirements to extend a filter set or a filter form (or both) are:
 
 Nautobot dynamically creates many additional filters based upon the defined filter type. Specifically, there are additional lookup expressions (referred to in code as `lookup_expr`) that are created for each filter, when there is neither a `lookup_expr` nor `method` parameter already set. These dynamically-added lookup expressions are added using a shorthand notation (e.g. `icontains` is `ic`). Nautobot will also add the negation of each, for example, so `icontains` will be added along with _not_ `icontains` using the `ic` and `nic` expressions respectively.
 
-The dynamically-added lookup expressions can be found in the source code at [nautobot/core/constants.py](https://github.com/nautobot/nautobot/blob/main/nautobot/core/constants.py) and the mapping logic can be found in [nautobot/core/filters.py](https://github.com/nautobot/nautobot/blob/main/nautobot/core/filters.py). Please see the documentation on [filtering](../../../../user-guide/platform-functionality/rest-api/filtering.md##lookup-expressions) for more information.
+The dynamically-added lookup expressions can be found in the source code at [nautobot/core/constants.py](https://github.com/nautobot/nautobot/blob/main/nautobot/core/constants.py) and the mapping logic can be found in [nautobot/core/filters.py](https://github.com/nautobot/nautobot/blob/main/nautobot/core/filters.py). Please see the documentation on [filtering](../../../../user-guide/platform-functionality/rest-api/filtering.md#lookup-expressions) for more information.
 
 !!! tip
     For developers of apps that define their own model filters, note that the above are added dynamically, as long as the class inherits from `nautobot.apps.filters.BaseFilterSet`.
@@ -26,9 +26,9 @@ However, that does not cover every possible use case, to list a few examples:
 There are several conditions that must be met in order to extend a filter:
 
 * The original FilterSet must follow the pattern: `f"{model.__name__}FilterSet"` e.g. `TenantFilterSet`
-* The `FilterExtension.filterset_fields` attribute must be a valid dict, with each key being the filter name (which must start with the plugin's `name` + `_`, e.g. `"example_plugin_description"`, not merely `"description"`) and each value being a valid [django-filter](https://django-filter.readthedocs.io/en/main/) filter
+* The `FilterExtension.filterset_fields` attribute must be a valid dict, with each key being the filter name (which must start with the App's `name` + `_`, e.g. `"example_app_description"`, not merely `"description"`) and each value being a valid [django-filter](https://django-filter.readthedocs.io/en/main/) filter
 
-Nautobot will dynamically generate the additional relevant lookup expressions of an app's defined custom FilterSet field, so no need to additionally register `example_plugin_description__ic`, etc.
+Nautobot will dynamically generate the additional relevant lookup expressions of an app's defined custom FilterSet field, so no need to additionally register `example_app_description__ic`, etc.
 
 Similar to `FilterSet` fields, Nautobot provides a default filter form for each model, however that does not cover every possible use case. To list a few examples of why one may want to extend a filter form:
 
@@ -43,7 +43,7 @@ There are several conditions that must be met in order to extend a filter:
 !!! note
     An app is not required to define both `filterset_fields` and `filterform_fields`.
 
-You can view an example of `filter_extensions.py` by viewing [the one provided](https://github.com/nautobot/nautobot/blob/main/examples/example_plugin/example_plugin/filter_extensions.py) with the Example Plugin.
+You can view an example of `filter_extensions.py` by viewing [the one provided](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/filter_extensions.py) with the Example App.
 
 !!! tip
     The `method` parameter, if used, must be a callable (method/function). Note that because filters with a `method` do their filtering in Python code rather than at the database level, performance of `method` filters is generally much poorer than pure-database filters. The `method` parameter is not supported when using [Dynamic Groups](../../../../user-guide/platform-functionality/dynamicgroup.md).

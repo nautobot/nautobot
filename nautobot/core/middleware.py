@@ -12,9 +12,9 @@ from nautobot.core.authentication import (
     assign_permissions_to_user,
 )
 from nautobot.core.settings_funcs import (
-    sso_auth_enabled,
-    remote_auth_enabled,
     ldap_auth_enabled,
+    remote_auth_enabled,
+    sso_auth_enabled,
 )
 from nautobot.core.views import server_error
 from nautobot.extras.choices import ObjectChangeEventContextChoices

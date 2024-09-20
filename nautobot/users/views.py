@@ -7,20 +7,20 @@ from django.contrib.auth import (
     logout as auth_logout,
     update_session_auth_hash,
 )
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils.encoding import iri_to_uri
 from django.utils.decorators import method_decorator
+from django.utils.encoding import iri_to_uri
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
 from nautobot.core.forms import ConfirmationForm
-from .forms import LoginForm, PasswordChangeForm, TokenForm
-from .models import Token
+from nautobot.core.views.generic import GenericView
 
+from .forms import AdvancedProfileSettingsForm, LoginForm, PasswordChangeForm, TokenForm
+from .models import Token
 
 #
 # Login/logout
@@ -118,7 +118,7 @@ def is_django_auth_user(request):
     return request.session.get(BACKEND_SESSION_KEY, None) == "nautobot.core.authentication.ObjectPermissionBackend"
 
 
-class ProfileView(LoginRequiredMixin, View):
+class ProfileView(GenericView):
     template_name = "users/profile.html"
 
     def get(self, request):
@@ -132,7 +132,7 @@ class ProfileView(LoginRequiredMixin, View):
         )
 
 
-class UserConfigView(LoginRequiredMixin, View):
+class UserConfigView(GenericView):
     template_name = "users/preferences.html"
 
     def get(self, request):
@@ -160,7 +160,7 @@ class UserConfigView(LoginRequiredMixin, View):
         return redirect("user:preferences")
 
 
-class ChangePasswordView(LoginRequiredMixin, View):
+class ChangePasswordView(GenericView):
     template_name = "users/change_password.html"
 
     RESTRICTED_NOTICE = "Remotely authenticated user credentials cannot be changed within Nautobot."
@@ -218,7 +218,7 @@ class ChangePasswordView(LoginRequiredMixin, View):
 #
 
 
-class TokenListView(LoginRequiredMixin, View):
+class TokenListView(GenericView):
     def get(self, request):
         tokens = Token.objects.filter(user=request.user)
 
@@ -233,7 +233,7 @@ class TokenListView(LoginRequiredMixin, View):
         )
 
 
-class TokenEditView(LoginRequiredMixin, View):
+class TokenEditView(GenericView):
     def get(self, request, pk=None):
         if pk is not None:
             if not request.user.has_perm("users.change_token"):
@@ -248,7 +248,7 @@ class TokenEditView(LoginRequiredMixin, View):
 
         return render(
             request,
-            "generic/object_edit.html",
+            "generic/object_create.html",
             {
                 "obj": token,
                 "obj_type": token._meta.verbose_name,
@@ -281,7 +281,7 @@ class TokenEditView(LoginRequiredMixin, View):
 
         return render(
             request,
-            "generic/object_edit.html",
+            "generic/object_create.html",
             {
                 "obj": token,
                 "obj_type": token._meta.verbose_name,
@@ -292,7 +292,7 @@ class TokenEditView(LoginRequiredMixin, View):
         )
 
 
-class TokenDeleteView(LoginRequiredMixin, View):
+class TokenDeleteView(GenericView):
     def get(self, request, pk):
         token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
         initial_data = {
@@ -327,5 +327,55 @@ class TokenDeleteView(LoginRequiredMixin, View):
                 "obj_type": token._meta.verbose_name,
                 "form": form,
                 "return_url": reverse("user:token_list"),
+            },
+        )
+
+
+#
+# Advanced Profile Settings
+#
+
+
+class AdvancedProfileSettingsEditView(GenericView):
+    template_name = "users/advanced_settings_edit.html"
+
+    def get(self, request):
+        silk_record_requests = request.session.get("silk_record_requests", False)
+        form = AdvancedProfileSettingsForm(initial={"request_profiling": silk_record_requests})
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "active_tab": "advanced_settings",
+                "return_url": reverse("user:advanced_settings_edit"),
+                "is_django_auth_user": is_django_auth_user(request),
+            },
+        )
+
+    def post(self, request):
+        form = AdvancedProfileSettingsForm(request.POST)
+
+        if form.is_valid():
+            silk_record_requests = form.cleaned_data["request_profiling"]
+
+            # Set the value for `silk_record_requests` in the session
+            request.session["silk_record_requests"] = silk_record_requests
+
+            if silk_record_requests:
+                msg = "Enabled request profiling for the duration of the login session."
+            else:
+                msg = "Disabled request profiling."
+            messages.success(request, msg)
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "active_tab": "advanced_settings",
+                "return_url": reverse("user:advanced_settings_edit"),
+                "is_django_auth_user": is_django_auth_user(request),
             },
         )
