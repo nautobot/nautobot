@@ -707,8 +707,8 @@ def check_schema(context, api_version=None):
 )
 def unittest(
     context,
-    cache_test_fixtures=False,
-    keepdb=False,
+    cache_test_fixtures=True,
+    keepdb=True,
     label="nautobot",
     pattern=None,
     failfast=False,
@@ -746,11 +746,11 @@ def unittest(
         command += " --keepdb"
     if failfast:
         command += " --failfast"
-    if buffer and not parallel:  # Django 3.x doesn't support '--parallel --buffer'; can remove this after Django 4.x
+    if buffer:
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
-    if parallel:
+    if parallel or label == "nautobot":
         command += " --parallel"
         if parallel_workers:
             command += f"={parallel_workers}"
@@ -805,8 +805,8 @@ def unittest_coverage(context):
 )
 def integration_test(
     context,
-    cache_test_fixtures=False,
-    keepdb=False,
+    cache_test_fixtures=True,
+    keepdb=True,
     label="nautobot",
     failfast=False,
     buffer=True,

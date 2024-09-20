@@ -727,13 +727,17 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                     )
 
         # Validate untagged VLAN
-        # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to assign a VLAN belongs to
-        # the parent Locations or the child locations of `device.location`?
+        location = self.parent.location
+        if location:
+            location_ids = [ancestor.id for ancestor in location.ancestors()]
+            location_ids.append(location.id)
+        else:
+            location_ids = []
         if (
             self.untagged_vlan
             and self.untagged_vlan.locations.exists()
             and self.parent
-            and not self.untagged_vlan.locations.filter(id=self.parent.location_id).exists()
+            and not self.untagged_vlan.locations.filter(pk__in=location_ids).exists()
         ):
             raise ValidationError(
                 {

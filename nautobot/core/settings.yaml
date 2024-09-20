@@ -47,7 +47,7 @@ properties:
     description: >-
       A list of valid fully-qualified domain names (FQDNs) and/or IP addresses that can be used to reach the
       Nautobot service. (If provided as an environment variable, it should be a space-separated string, for example
-      `NAUTOBOT_ALLOWED_HOSTS="localhost 127.0.0.1 example.com"`)
+      `NAUTOBOT_ALLOWED_HOSTS="localhost 127.0.0.1 nautobot.example.com"`)
     details: |-
       Usually this is the same as the hostname for the Nautobot server, but can also be different; for example,
       when using a reverse proxy serving the Nautobot website under a different FQDN than the hostname of the
@@ -70,7 +70,7 @@ properties:
 
       !!! tip
           If there is more than one hostname in this list, you may also need to set
-          [CSRF_TRUSTED_ORIGINS](optional-settings.md#csrf_trusted_origins) as well.
+          [CSRF_TRUSTED_ORIGINS](settings.md#csrf_trusted_origins) as well.
 
       If you are not yet sure what the domain name and/or IP address of the Nautobot installation will be,
       and are comfortable accepting the risks in doing so, you can set this to a wildcard (asterisk) to
@@ -83,7 +83,6 @@ properties:
       !!! warning
           It is not recommended to leave this value as `['*']` for production deployments.
     environment_variable: "NAUTOBOT_ALLOWED_HOSTS"
-    is_required_setting: true
     items:
       type: "string"
     see_also:
@@ -297,19 +296,21 @@ properties:
         TIMEOUT: 300
     description: "The `CACHES` setting is required to simplify the configuration for `django-redis`."
     details: |-
-      The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to enable Redis
-      as a concurrent write lock for preventing race conditions when allocating IP address objects.
+      The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to enable Redis as a
+      concurrent write lock for preventing race conditions when allocating IP address objects.
+      Nautobot also uses the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/)
+      (which also relies on the `CACHES` setting) to perform caching. This includes caching of the values of
+      [administratively configurable settings](#administratively-configurable-settings) as stored in the database.
 
-      !!! important
-          Nautobot also utilizes the built-in
-          [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/)
-          (which also relies on the `CACHES` setting) to perform caching.
+      !!! tip
+          Rather than directly setting `CACHES["default"]["LOCATION"]`, we recommend managing this setting via
+          the various `NAUTOBOT_REDIS_*` environment variables, as those variables apply to both `CACHES` and
+          [`CELERY_BROKER_URL`](#celery_broker_url) alike, which is typically preferable.
 
-      +/- 2.0.0
-          The default value of `CACHES["default"]["LOCATION"]` has changed from `redis://localhost:6379/0`
-          to `redis://localhost:6379/1`, as Django's native caching is now taking the role previously occupied by
-          `django-cacheops`.
-    is_required_setting: true
+      +++ 2.3.4 "`NAUTOBOT_CACHES_TIMEOUT` environment variable"
+          Added support for the environment variable `NAUTOBOT_CACHES_TIMEOUT` for configuring the
+          `CACHES["default"]["TIMEOUT"]` setting. This environment variable also controls the cache timeout
+          for administratively configurable settings.
     properties:
       default:
         properties:
@@ -322,6 +323,13 @@ properties:
             type: "string"
           LOCATION:
             default: "redis://localhost:6379/1"
+            environment_variables:
+            - "NAUTOBOT_REDIS_SCHEME"
+            - "NAUTOBOT_REDIS_SSL"
+            - "NAUTOBOT_REDIS_USERNAME"
+            - "NAUTOBOT_REDIS_PASSWORD"
+            - "NAUTOBOT_REDIS_HOST"
+            - "NAUTOBOT_REDIS_PORT"
             format: "uri"
             type: "string"
           OPTIONS:
@@ -336,10 +344,11 @@ properties:
             type: "object"
           TIMEOUT:
             default: 300
+            environment_variable: "NAUTOBOT_CACHES_TIMEOUT"
             type: "integer"
         type: "object"
     see_also:
-      "Guide to Nautobot Caching, including TLS and HA configuration": "../../administration/guides/caching.md"
+      "Guide to Nautobot Redis configuration, including TLS and HA configuration": "redis.md"
     type: "object"
   CELERY_BEAT_HEARTBEAT_FILE:
     default: "/tmp/nautobot_celery_beat_heartbeat"
@@ -351,8 +360,7 @@ properties:
     default: {}
     description: "A dict of additional options passed to the Celery broker transport."
     details: >-
-      This is only required when
-      [configuring Celery to utilize Redis Sentinel](../../administration/guides/caching.md#celery-sentinel-configuration).
+      This is only required when [configuring Celery to utilize Redis Sentinel](redis.md#celery-sentinel-configuration).
     properties:
       master_name:
         type: "string"
@@ -366,7 +374,18 @@ properties:
   CELERY_BROKER_URL:
     default: "redis://localhost:6379/0"
     description: "Celery broker URL used to tell workers where queues are located."
-    environment_variable: "NAUTOBOT_CELERY_BROKER_URL"
+    details: >-
+      If the `NAUTOBOT_CELERY_BROKER_URL` environment variable is not set, the default for this setting will be
+      influenced by the various `NAUTOBOT_REDIS_*` environment variables instead, which is often preferable as those
+      variables also influence the [`CACHES`](#caches) configuration as well.
+    environment_variables:
+    - "NAUTOBOT_CELERY_BROKER_URL"
+    - "NAUTOBOT_REDIS_SCHEME"
+    - "NAUTOBOT_REDIS_SSL"
+    - "NAUTOBOT_REDIS_USERNAME"
+    - "NAUTOBOT_REDIS_PASSWORD"
+    - "NAUTOBOT_REDIS_HOST"
+    - "NAUTOBOT_REDIS_PORT"
     format: "uri"
     type: "string"
   CELERY_BROKER_USE_SSL:
@@ -628,7 +647,6 @@ properties:
 
           As of Nautobot 1.1.5 and later, if you have generated a new `nautobot_config.py` using
           `nautobot-server init`, this line is already present in your config and no action is required.
-    is_required_setting: true
     properties:
       default:
         additionalProperties: true
@@ -828,7 +846,7 @@ properties:
   FORCE_SCRIPT_NAME:
     default: null
     description: >-
-      If not None, this will be used as the value of the SCRIPT_NAME environment variable in any HTTP request.
+      If not None, this will be used as the value of the `SCRIPT_NAME` environment variable in any HTTP request.
     details: |-
       This setting can be used to override the server-provided value of `SCRIPT_NAME`, which is most commonly used
       for hosting Nautobot in a subdirectory (e.g. _example.com/nautobot/_).
@@ -1205,7 +1223,7 @@ properties:
       !!! note
           The Docker container normally attempts to run migrations on startup; however, if the database is
           in a read-only state the Docker container will fail to start. Setting the environment variable
-          [`NAUTOBOT_DOCKER_SKIP_INIT`](../installation-extras/docker.md#nautobot_docker_skip_init) to `true`
+          [`NAUTOBOT_DOCKER_SKIP_INIT`](../guides/docker.md#nautobot_docker_skip_init) to `true`
           will prevent the migrations from occurring.
 
       !!! note
@@ -1609,7 +1627,6 @@ properties:
           In the case of a highly available installation with multiple web servers, `SECRET_KEY` must be identical
           among all servers in order to maintain a persistent user session state.
     environment_variable: "NAUTOBOT_SECRET_KEY"
-    is_required_setting: true
     type: "string"
   SESSION_CACHE_ALIAS:
     default: "default"
