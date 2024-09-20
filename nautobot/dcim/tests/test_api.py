@@ -3446,9 +3446,6 @@ class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
             vdc.refresh_from_db()
             self.assertEqual(vdc.primary_ip6, ip_v6)
 
-    def test_get_docs_url(self):
-        """No docs for VirtualDeviceContext yet."""
-
 
 class InterfaceVDCAssignmentTestCase(APIViewTestCases.APIViewTestCase):
     model = InterfaceVDCAssignment
@@ -3491,6 +3488,3 @@ class InterfaceVDCAssignmentTestCase(APIViewTestCases.APIViewTestCase):
                 "interface": interfaces[2].pk,
             },
         ]
-
-    def test_get_docs_url(self):
-        """No docs for InterfaceVDCAssignment yet."""

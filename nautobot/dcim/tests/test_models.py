@@ -3273,3 +3273,6 @@ class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
             f"Interfaces with names {[interface.name]} must all belong to the "
             f"same device as the Virtual Device Context's device.",
         )
+
+    def test_get_docs_url(self):
+        """No docs for VirtualDeviceContext yet."""
