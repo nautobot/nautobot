@@ -727,7 +727,9 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                     )
 
         # Validate untagged VLAN
-        location = self.parent.location
+        location = None
+        if self.parent:
+            location = self.parent.location
         if location:
             location_ids = [ancestor.id for ancestor in location.ancestors()]
             location_ids.append(location.id)
