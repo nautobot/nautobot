@@ -2875,7 +2875,11 @@ class InterfaceView(generic.ObjectView):
 
         redundancy_table = self._get_interface_redundancy_groups_table(request, instance)
         virtual_device_contexts_table = tables.VirtualDeviceContextTable(
-            instance.virtual_device_contexts.all(), orderable=False, exclude=("device",)
+            instance.virtual_device_contexts.restrict(request.user, "view").select_related(
+                "device", "tenant", "primary_ip4", "primary_ip6"
+            ),
+            orderable=False,
+            exclude=("device",),
         )
 
         return {
@@ -4252,8 +4256,10 @@ class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
     table_class = tables.VirtualDeviceContextTable
 
     def get_extra_context(self, request, instance):
-        if instance:
-            interfaces_table = tables.InterfaceTable(instance.interfaces.all(), orderable=False, exclude=("device",))
+        if self.action == "retrieve":
+            interfaces_table = tables.InterfaceTable(
+                instance.interfaces.restrict(request.user, "view"), orderable=False, exclude=("device",)
+            )
 
             return {
                 "interfaces_table": interfaces_table,

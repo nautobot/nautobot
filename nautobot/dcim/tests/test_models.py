@@ -3196,54 +3196,80 @@ class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
     model = ModuleType
 
 
-# TODO: Uncomment test case when VDC primary_ip validation is active
-# class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
-#     model = VirtualDeviceContext
+class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
+    model = VirtualDeviceContext
 
-#     def test_assigning_primary_ip(self):
-#         device = Device.objects.first()
-#         intf_status = Status.objects.get_for_model(Interface).first()
-#         vdc_status = Status.objects.get_for_model(VirtualDeviceContext).first()
-#         intf_role = Role.objects.get_for_model(Interface).first()
-#         interface = Interface.objects.create(
-#             name="Int1", device=device, status=intf_status, role=intf_role, type=InterfaceTypeChoices.TYPE_100GE_CFP
-#         )
-#         vdc = VirtualDeviceContext(
-#             device=device,
-#             status=vdc_status,
-#             identifier=100,
-#             name="Test VDC 1",
-#         )
-#         vdc.validated_save()
+    def test_assigning_primary_ip(self):
+        device = Device.objects.first()
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext).first()
+        vdc = VirtualDeviceContext(
+            device=device,
+            status=vdc_status,
+            identifier=100,
+            name="Test VDC 1",
+        )
+        vdc.validated_save()
 
-#         ip_v4 = IPAddress.objects.filter(ip_version=4).first()
-#         ip_v6 = IPAddress.objects.filter(ip_version=6).first()
+        ip_v4 = IPAddress.objects.filter(ip_version=4).first()
+        ip_v6 = IPAddress.objects.filter(ip_version=6).first()
 
-#         vdc.primary_ip4 = ip_v6
-#         with self.assertRaises(ValidationError) as err:
-#             vdc.validated_save()
-#         self.assertIn(
-#             f"{ip_v6} is not an IPv4 address",
-#             str(err.exception),
-#         )
+        vdc.primary_ip4 = ip_v6
+        with self.assertRaises(ValidationError) as err:
+            vdc.validated_save()
+        self.assertIn(
+            f"{ip_v6} is not an IPv4 address",
+            str(err.exception),
+        )
 
-#         vdc.primary_ip4 = None
-#         vdc.primary_ip6 = ip_v4
-#         with self.assertRaises(ValidationError) as err:
-#             vdc.validated_save()
-#         self.assertIn(
-#             f"{ip_v4} is not an IPv6 address",
-#             str(err.exception),
-#         )
+        vdc.primary_ip4 = None
+        vdc.primary_ip6 = ip_v4
+        with self.assertRaises(ValidationError) as err:
+            vdc.validated_save()
+        self.assertIn(
+            f"{ip_v4} is not an IPv6 address",
+            str(err.exception),
+        )
 
-#         vdc.primary_ip6 = ip_v6
-#         with self.assertRaises(ValidationError) as err:
-#             vdc.validated_save()
-#         self.assertIn(
-#             f"The specified IP address ({ip_v6}) is not assigned to this Virtual Device Context.",
-#             str(err.exception),
-#         )
-#        interface.virtual_device_contexts.add(vdc)
-#        interface.add_ip_addresses([ip_v4, ip_v6])
-#        vdc.primary_ip4 = ip_v4
-#        vdc.validated_save()
+        # TODO: Uncomment test case when VDC primary_ip interface validation is active
+        # interface = Interface.objects.create(
+        #     name="Int1", device=device, status=intf_status, role=intf_role, type=InterfaceTypeChoices.TYPE_100GE_CFP
+        # )
+        # intf_status = Status.objects.get_for_model(Interface).first()
+        # intf_role = Role.objects.get_for_model(Interface).first()
+        # vdc.primary_ip6 = ip_v6
+        # with self.assertRaises(ValidationError) as err:
+        #     vdc.validated_save()
+        # self.assertIn(
+        #     f"The specified IP address ({ip_v6}) is not assigned to this Virtual Device Context.",
+        #     str(err.exception),
+        # )
+        # interface.virtual_device_contexts.add(vdc)
+        # interface.add_ip_addresses([ip_v4, ip_v6])
+        vdc.primary_ip4 = ip_v4
+        vdc.primary_ip6 = ip_v6
+        vdc.validated_save()
+
+    def test_interfaces_validation_logic(self):
+        """Assert Virtual Device COntext raises error when adding interfaces that do not belong to same device as the VDC's device."""
+        device = Device.objects.first()
+        interface = Interface.objects.create(
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=device,
+            status=Status.objects.get_for_model(Interface).first(),
+            role=Role.objects.get_for_model(Interface).first(),
+        )
+        vdc = VirtualDeviceContext.objects.create(
+            name="Sample VDC",
+            device=Device.objects.exclude(pk=self.device.pk).first(),
+            identifier=100,
+            status=Status.objects.get_for_model(VirtualDeviceContext).first(),
+        )
+
+        with self.assertRaises(ValidationError) as err:
+            vdc.interfaces.add(interface)
+        self.assertEqual(
+            err.exception.message_dict["interfaces"][0],
+            f"Interfaces with names {[interface.name]} must all belong to the "
+            f"same device as the Virtual Device Context's device.",
+        )

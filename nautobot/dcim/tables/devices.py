@@ -1423,7 +1423,7 @@ class VirtualDeviceContextTable(StatusTableMixin, BaseTable):
     primary_ip = tables.Column(linkify=True, order_by=("primary_ip6", "primary_ip4"), verbose_name="IP Address")
     primary_ip4 = tables.Column(linkify=True, verbose_name="IPv4 Address")
     primary_ip6 = tables.Column(linkify=True, verbose_name="IPv6 Address")
-    interfaces_count = LinkedCountColumn(
+    interface_count = LinkedCountColumn(
         viewname="dcim:interface_list",
         url_params={"virtual_device_contexts": "pk"},
         verbose_name="Interfaces",
@@ -1442,7 +1442,7 @@ class VirtualDeviceContextTable(StatusTableMixin, BaseTable):
             "primary_ip",
             "primary_ip4",
             "primary_ip6",
-            "interfaces_count",
+            "interface_count",
             "tags",
         )
         default_columns = (
@@ -1453,5 +1453,5 @@ class VirtualDeviceContextTable(StatusTableMixin, BaseTable):
             "status",
             "tenant",
             "primary_ip",
-            "interfaces_count",
+            "interface_count",
         )

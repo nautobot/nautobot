@@ -2937,6 +2937,14 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
             "device": "$device",
         },
     )
+    virtual_device_contexts = DynamicModelMultipleChoiceField(
+        queryset=VirtualDeviceContext.objects.all(),
+        label="Virtual Device Contexts",
+        required=False,
+        query_params={
+            "device": "$device",
+        },
+    )
 
     class Meta:
         model = Interface
@@ -2953,6 +2961,7 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
             "lag",
             "mac_address",
             "ip_addresses",
+            "virtual_device_contexts",
             "mtu",
             "vrf",
             "mgmt_only",
@@ -2973,6 +2982,19 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
         help_texts = {
             "mode": INTERFACE_MODE_HELP_TEXT,
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.present_in_database:
+            # Since `virtual_device_contexts` is not a concrete model field on INterface;
+            # This is the best way to pre-populate its choices
+            self.fields["virtual_device_contexts"].initial = self.instance.virtual_device_contexts.all()
+
+    def save(self, commit=True):
+        instance = super().save(commit)
+        if commit:
+            instance.virtual_device_contexts.set(self.cleaned_data["virtual_device_contexts"])
+        return instance
 
 
 class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleNotRequiredModelFormMixin):
@@ -3057,6 +3079,14 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
         required=False,
         query_params={"available_on_device": "$device"},
     )
+    virtual_device_contexts = DynamicModelChoiceField(
+        queryset=VirtualDeviceContext.objects.all(),
+        label="Virtual Device Contexts",
+        required=False,
+        query_params={
+            "device": "$device",
+        },
+    )
     field_order = (
         "device",
         "module",
@@ -3075,6 +3105,7 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
         "description",
         "mgmt_only",
         "ip_addresses",
+        "virtual_device_contexts",
         "mode",
         "untagged_vlan",
         "tagged_vlans",
@@ -5205,8 +5236,9 @@ class VirtualDeviceContextForm(NautobotModelForm):
 
     def save(self, commit=True):
         instance = super().save(commit)
-        interfaces = self.cleaned_data["interfaces"]
-        instance.interfaces.set(interfaces)
+        if commit:
+            interfaces = self.cleaned_data["interfaces"]
+            instance.interfaces.set(interfaces)
         return instance
 
 
@@ -5242,8 +5274,11 @@ class VirtualDeviceContextFilterForm(
         "device",
         "status",
         "tenant",
+        "has_tenant",
         "has_primary_ip",
+        "tags",
     ]
+
     q = forms.CharField(required=False, label="Search")
     device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),

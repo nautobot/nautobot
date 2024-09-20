@@ -1,3 +1,0 @@
-# Virtual Device Context
-
-# TODO
