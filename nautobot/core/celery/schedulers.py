@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from pathlib import Path
 
@@ -83,7 +83,7 @@ class NautobotScheduleEntry(ModelEntry):
             # This will trigger the job to run at start_time
             # and avoid the heap block.
             if model.start_time:
-                model.last_run_at = model.last_run_at - datetime.timedelta(days=365 * 30)
+                model.last_run_at = model.last_run_at - timedelta(days=365 * 30)
 
         self.last_run_at = model.last_run_at
 

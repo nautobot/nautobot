@@ -459,11 +459,11 @@ cp development/nautobot_config.py ~/.nautobot/nautobot_config.py
 
 A newly created configuration includes sane defaults. If you need to customize them, edit your `nautobot_config.py` and update the following settings as required:
 
-* [`ALLOWED_HOSTS`](../../user-guide/administration/configuration/required-settings.md#allowed_hosts): This can be set to `["*"]` for development purposes and must be set if `DEBUG=False`
-* [`DATABASES`](../../user-guide/administration/configuration/required-settings.md#databases): Database connection parameters, if different from the defaults
+* [`ALLOWED_HOSTS`](../../user-guide/administration/configuration/settings.md#allowed_hosts): This can be set to `["*"]` for development purposes and must be set if `DEBUG=False`
+* [`DATABASES`](../../user-guide/administration/configuration/settings.md#databases): Database connection parameters, if different from the defaults
 * **Redis settings**: Redis configuration requires multiple settings. The defaults should be fine for development.
-* [`DEBUG`](../../user-guide/administration/configuration/optional-settings.md#debug): Set to `True` to enable verbose exception logging and, if installed, the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
-* [`EXTRA_INSTALLED_APPS`](../../user-guide/administration/configuration/optional-settings.md#extra-applications): Optionally provide a list of extra Django apps you may desire to use for development
+* [`DEBUG`](../../user-guide/administration/configuration/settings.md#debug): Set to `True` to enable verbose exception logging and, if installed, the [Django debug toolbar](https://django-debug-toolbar.readthedocs.io/en/latest/)
+* [`EXTRA_INSTALLED_APPS`](../../user-guide/administration/configuration/settings.md#extra-applications): Optionally provide a list of extra Django apps you may desire to use for development
 
 ## Working in your Development Environment
 
@@ -636,12 +636,12 @@ Unit tests are run using the `invoke unittest` command (if using the Docker deve
 
 The `invoke unittest` command supports a number of optional parameters to influence its behavior. Careful use of these parameters can greatly reduce the time it takes to run and re-run tests during development.
 
-* `--cache-test-fixtures` - Cache [test factory data](./testing.md#factory-caching) to disk, or if a cache is already present, load from that cache when initializing the test environment. Can significantly improve the initial startup time of the test suite after your first test run.
 * `--failfast` - Fail as soon as any test failure or error condition is encountered, instead of running to completion.
-* `--keepdb` - Save and reuse the initialized test database between test runs. Can significantly improve the initial startup time of the test suite after your first test run. **Do not use if you're actively making changes to model definitions or migrations.**
 * `--label <module.path>` - Only run the specific subset of tests. Can be broad (`--label nautobot.core.tests`) or specific (`--label nautobot.core.tests.test_graphql.GraphQLQueryTestCase`).
 * `--no-buffer` - Allow stdout/stderr output from the test to be seen in your terminal, instead of being hidden. **If you're debugging code with `breakpoint()`, you should use this option, as otherwise you'll never see the breakpoint happen.**
-* `--parallel` - Split the tests across multiple parallel subprocesses. Can greatly reduce the runtime of the entire test suite when used. Auto-detects the number of workers if not specified with `--parallel-workers`.
+* `--no-cache-test-fixtures` - Prevent caching [test factory data](./testing.md#factory-caching) to disk, or if a cache is already present, prevent loading from that cache when initializing the test environment.
+* `--no-keepdb` - Prevent saving and reusing the initialized test database between test runs. **The `--no-keepdb` option is mandatory if you're actively making changes to model definitions or migrations.**
+* `--parallel` - Split the tests across multiple parallel subprocesses. Can greatly reduce the runtime of the entire test suite when used. Auto-detects the number of workers if not specified with `--parallel-workers`. This parameter is automatically included if no `--label` is specified.
 * `--parallel-workers` - Specify the number of workers to use when running tests in parallel. Implies `--parallel`.
 * `--pattern` - Only run tests which match the given substring. Can be used multiple times.
 * `--skip-docs-build` - Skip building/rebuilding the static Nautobot documentation before running the test. Saves some time on reruns when you haven't changed the documentation source files.
@@ -652,33 +652,39 @@ The `invoke unittest` command supports a number of optional parameters to influe
 In general, when you first run the Nautobot tests in your local copy of the repository, we'd recommend:
 
 ```no-highlight
-invoke unittest --cache-test-fixtures --keepdb --parallel
+invoke unittest
 ```
 
 When there are too many cores on the testing machine, you can limit the number of parallel workers:
 
 ```no-highlight
-invoke unittest --cache-test-fixtures --keepdb --parallel-workers 4
+invoke unittest --parallel-workers 4
 ```
 
 On subsequent reruns, you can add the other performance-related options:
 
 ```no-highlight
-invoke unittest --cache-test-fixtures --keepdb --parallel --skip-docs-build
-invoke unittest --cache-test-fixtures --keepdb --parallel --skip-docs-build --label nautobot.core.tests
+invoke unittest --skip-docs-build
+invoke unittest --skip-docs-build --label nautobot.core.tests
 ```
 
-When switching between significantly different branches of the code base (e.g. `main` vs `develop` vs `next`), you'll need to for once omit the `--keepdb` option so that the test database can be destroyed and recreated appropriately:
+When switching between significantly different branches of the code base (e.g. `main` vs `develop` vs `next`), you'll need to for once include the `--no-keepdb` option so that the test database can be destroyed and recreated appropriately:
 
 ```no-highlight
-invoke unittest --cache-test-fixtures --parallel
+invoke unittest --no-keepdb
+```
+
+To not use the cached test fixture, you will need to include the `--no-cache-test-fixtures` flag
+
+```no-highlight
+invoke unittest --no-cache-test-fixtures
 ```
 
 To limit the test to a specific pattern or label, you can use the `--label` and `--pattern` options:
 
 ```no-highlight
-invoke unittest --cache-test-fixtures --keepdb --verbose --skip-docs-build --label nautobot.core.tests.dcim.test_views.DeviceTestCase
-invoke unittest --cache-test-fixtures --keepdb --verbose --skip-docs-build --pattern Controller
+invoke unittest --verbose --skip-docs-build --label nautobot.core.tests.dcim.test_views.DeviceTestCase
+invoke unittest --verbose --skip-docs-build --pattern Controller
 ```
 
 #### Integration Tests

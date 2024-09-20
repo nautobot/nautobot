@@ -1840,6 +1840,9 @@ class ApprovalQueueTestCase(
             return reverse("extras:scheduledjob_approval_request_view", kwargs={"pk": instance.pk})
         raise ValueError("This override is only valid for list and view test cases")
 
+    def get_list_url(self):
+        return reverse("extras:scheduledjob_approval_queue_list")
+
     def setUp(self):
         super().setUp()
         self.job_model = Job.objects.get_for_class_path("dry_run.TestDryRun")

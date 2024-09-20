@@ -256,6 +256,4 @@ If you are able to connect but receive a 502 (bad gateway) error, check the foll
 
 - The uWSGI worker processes are running (`systemctl status nautobot` should show a status of `active (running)`)
 - NGINX is configured to connect to the port on which uWSGI is listening (default is `8001`).
-- SELinux may be preventing the reverse proxy connection. You may need to allow HTTP network connections with the
-  command `setsebool -P httpd_can_network_connect 1`. For further information, view the [SELinux
-  troubleshooting](../installation-extras/selinux-troubleshooting.md) guide.
+- SELinux may be preventing the reverse proxy connection. You may need to allow HTTP network connections with the command `setsebool -P httpd_can_network_connect 1`. For further information, view the [SELinux troubleshooting](../guides/selinux-troubleshooting.md) guide.
