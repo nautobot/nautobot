@@ -1,8 +1,9 @@
 import re
-from unittest import mock
+from unittest import mock, skipIf
 import urllib.parse
 
 from django.apps import apps
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, RequestFactory
@@ -574,11 +575,6 @@ class SilkUIAccessTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
 
-from unittest import skipIf
-
-from django.conf import settings
-
-
 class ExampleViewWithCustomPermissionsTest(TestCase):
     @skipIf(
         "example_app" not in settings.PLUGINS,
@@ -604,7 +600,7 @@ class ExampleViewWithCustomPermissionsTest(TestCase):
         response = self.client.get(url, follow=True)
         self.assertHttpStatus(response, 403)
         response_body = response.content.decode(response.charset)
-        self.assertIn('You do not have permission to access this page.', response_body)
+        self.assertIn("You do not have permission to access this page.", response_body)
 
         # View should be successfully accessed
         self.user.is_staff = True
@@ -612,4 +608,4 @@ class ExampleViewWithCustomPermissionsTest(TestCase):
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
         response_body = response.content.decode(response.charset)
-        self.assertIn('You are viewing a table of example models', response_body)
+        self.assertIn("You are viewing a table of example models", response_body)

@@ -38,7 +38,9 @@ urlpatterns = [
     # This URL definition is here in order to test the permission_classes functionality which is defined
     # in NautobotUIViewSetMixin
     path(
-        "view-with-custom-permissions/", views.ViewWithCustomPermissions.as_view({"get": "list"}), name="view_with_custom_permissions"
+        "view-with-custom-permissions/",
+        views.ViewWithCustomPermissions.as_view({"get": "list"}),
+        name="view_with_custom_permissions",
     ),
 ]
 urlpatterns += router.urls
