@@ -1,5 +1,6 @@
 """Classes and utilities for defining an object detail view through a NautobotUIViewSet."""
 
+import contextlib
 from dataclasses import dataclass
 
 from django.core.exceptions import FieldDoesNotExist
@@ -9,7 +10,6 @@ from django.template.defaultfilters import truncatechars
 from django.template.loader import get_template, render_to_string
 from django.templatetags.l10n import localize
 from django.urls import reverse
-from django.urls.exceptions import NoReverseMatch
 from django.utils.html import format_html, format_html_join
 
 from nautobot.core.templatetags.helpers import (
@@ -21,9 +21,9 @@ from nautobot.core.templatetags.helpers import (
     render_boolean,
     render_json,
     render_markdown,
+    validated_viewname,
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
-from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.tenancy.models import Tenant
 
@@ -405,13 +405,9 @@ class KeyValueTablePanel(Panel):
                 # in an appropriate hyperlink:
                 list_url = None
                 list_url_filter = self.queryset_list_url_filter(key, value, context)
-                if list_url_filter:
-                    list_url_name = get_route_for_model(model, "list")
-                    # TODO test for https://github.com/nautobot/nautobot/issues/2077 regression here
-                    try:
-                        list_url = f"{reverse(list_url_name)}?{list_url_filter}"
-                    except NoReverseMatch:
-                        pass
+                list_url_name = validated_viewname(model, "list")
+                if list_url_filter and list_url_name:
+                    list_url = f"{reverse(list_url_name)}?{list_url_filter}"
 
                 display = format_html_join(
                     ", ", "{}", ([self.render_value(key, record, context)] for record in value[:3])
@@ -798,6 +794,49 @@ class _ObjectDetailMainTab(Tab):
         return bettertitle(context["object"]._meta.verbose_name)
 
 
+class _ObjectDataProvenancePanel(ObjectFieldsPanel):
+    """Built-in class for a Panel displaying data provenance information on the Advanced tab."""
+
+    def __init__(
+        self,
+        *,
+        weight=150,
+        label="Data Provenance",
+        section=SectionChoices.LEFT_HALF,
+        fields=("created", "last_updated", "created_by", "last_updated_by", "api_url"),
+        ignore_nonexistent_fields=True,
+        **kwargs,
+    ):
+        super().__init__(
+            weight=weight,
+            label=label,
+            section=section,
+            fields=fields,
+            ignore_nonexistent_fields=ignore_nonexistent_fields,
+            **kwargs,
+        )
+
+    def get_data(self, context):
+        data = super().get_data(context)
+        # 3.0 TODO: instead of passing these around as context variables, just call
+        # `get_created_and_last_updated_usernames_for_model(context[self.context_object_key])` right here?
+        data["created_by"] = context["created_by"]
+        data["last_updated_by"] = context["last_updated_by"]
+        with contextlib.suppress(AttributeError):
+            data["api_url"] = context[self.context_object_key].get_absolute_url(api=True)
+        return data
+
+    def render_key(self, key, value, context):
+        if key == "api_url":
+            return "View in API Browser"
+        return super().render_key(key, value, context)
+
+    def render_value(self, key, value, context):
+        if key == "api_url":
+            return format_html('<a href="{}" target="_blank"><span class="mdi mdi-open-in-new"></span></a>', value)
+        return super().render_value(key, value, context)
+
+
 class _ObjectDetailAdvancedTab(Tab):
     """Built-in class for a Tab displaying "advanced" information such as PKs and data provenance."""
 
@@ -819,14 +858,7 @@ class _ObjectDetailAdvancedTab(Tab):
                     fields=["id", "natural_slug", "slug"],
                     ignore_nonexistent_fields=True,
                 ),
-                ObjectFieldsPanel(
-                    label="Data Provenance",
-                    section=SectionChoices.LEFT_HALF,
-                    weight=150,
-                    fields=["created", "last_updated"],
-                    ignore_nonexistent_fields=True,
-                    # TODO add created_by/last_updated_by derived fields and link to REST API
-                ),
+                _ObjectDataProvenancePanel(),
                 _ObjectCustomFieldsPanel(advanced_ui=True),
                 _ObjectComputedFieldsPanel(advanced_ui=True),
                 _ObjectRelationshipsPanel(advanced_ui=True),
@@ -852,7 +884,7 @@ class _ObjectDetailContactsTab(Tab):
                 ObjectsTablePanel(
                     weight=100,
                     table_key="associated_contacts_table",
-                    # TODO we should provide a standard reusable component template for bulk-actions in the footer
+                    # TODO: we should provide a standard reusable component template for bulk-actions in the footer
                     footer_content_template_path="components/panel/footer_contacts_table.html",
                 ),
             )
