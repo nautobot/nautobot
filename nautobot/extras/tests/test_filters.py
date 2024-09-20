@@ -6,11 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, RequestFactory
 from django.utils.timezone import now
-
-try:
-    from zoneinfo import ZoneInfo
-except ImportError:  # Python 3.8
-    from backports.zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo
 
 from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.filters import DeviceFilterSet

@@ -11,11 +11,7 @@ from django.test import override_settings
 from django.urls import reverse
 from django.utils.timezone import make_aware, now
 from rest_framework import status
-
-try:
-    from zoneinfo import ZoneInfo
-except ImportError:  # Python 3.8
-    from backports.zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores

@@ -352,10 +352,10 @@ poetry shell
 Example output:
 
 ```no-highlight
-Spawning shell within /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8
+Spawning shell within /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.12
 
-. /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8/bin/activate
-(nautobot-Ams_xyDt-py3.8) $
+. /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.12/bin/activate
+(nautobot-Ams_xyDt-py3.12) $
 ```
 
 Notice that the console prompt changes to indicate the active environment. This updates the necessary system environment variables to ensure that any Python scripts are run within the virtual environment.
@@ -369,7 +369,7 @@ which python
 Example output:
 
 ```no-highlight
-(nautobot-Ams_xyDt-py3.8) $ /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8/bin/python
+(nautobot-Ams_xyDt-py3.12) $ /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.12/bin/python
 ```
 
 To exit the virtual shell, use `exit`:
@@ -554,11 +554,10 @@ Example output:
 ...
 # Shell Plus Django Imports
 ...
-# Django version 3.2.16
-# Nautobot version 2.0.0a0
+# Django version 4.2.15
+# Nautobot version 2.3.3b1
 # Example Nautobot App version 1.0.0
-Python 3.8.16 (default, Mar 23 2023, 04:48:11)
-[GCC 10.2.1 20210110] on linux
+Python 3.12.6 (main, Sep 12 2024, 21:12:08) [GCC 12.2.0] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 (InteractiveConsole)
 >>>

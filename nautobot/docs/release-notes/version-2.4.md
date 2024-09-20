@@ -16,6 +16,12 @@ This document describes all new features and changes in Nautobot 2.4.
 
 ### Changed
 
+### Removed
+
+#### Python 3.8 Support Removed
+
+As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python 3.9.
+
 ### Dependencies
 
 <!-- towncrier release notes start -->

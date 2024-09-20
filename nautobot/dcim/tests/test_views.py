@@ -9,11 +9,7 @@ from django.test import override_settings
 from django.urls import reverse
 from netaddr import EUI
 import yaml
-
-try:
-    import zoneinfo
-except ImportError:  # python 3.8
-    from backports import zoneinfo
+import zoneinfo
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
