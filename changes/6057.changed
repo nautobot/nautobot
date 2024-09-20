@@ -1,1 +1,1 @@
-Enhanced job delete functions to prevent users with the appropriate permissions or super users from deleting system jobs from the UI and the API.
+Enhanced job delete functions to prevent users from deleting system jobs from the UI and the API.
