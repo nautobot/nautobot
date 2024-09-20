@@ -368,7 +368,7 @@ class KeyValueTablePanel(Panel):
         """
         For rendering queryset values - if provided, will be passed as a filter parameter to the corresponding list URL.
         """
-        return None
+        return ""
 
     def render_value(self, key, value, context):
         """Intelligently render the provided value in human-readable form."""
@@ -403,6 +403,7 @@ class KeyValueTablePanel(Panel):
 
                 # If we can find the list URL and the appropriate filter parameter for this listing, wrap the above
                 # in an appropriate hyperlink:
+                list_url = None
                 list_url_filter = self.queryset_list_url_filter(key, value, context)
                 if list_url_filter:
                     list_url_name = get_route_for_model(model, "list")
@@ -410,7 +411,7 @@ class KeyValueTablePanel(Panel):
                     try:
                         list_url = f"{reverse(list_url_name)}?{list_url_filter}"
                     except NoReverseMatch:
-                        list_url = None
+                        pass
 
                 display = format_html_join(
                     ", ", "{}", ([self.render_value(key, record, context)] for record in value[:3])
