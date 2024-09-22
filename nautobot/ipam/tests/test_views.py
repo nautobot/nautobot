@@ -994,6 +994,7 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "location": location.pk,
             "description": "A new VLAN group",
             "range": "1-4094",
+            "tags": [t.pk for t in Tag.objects.get_for_model(VLANGroup)],
         }
 
     def get_deletable_object(self):
