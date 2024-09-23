@@ -87,6 +87,7 @@ router.register("controller-managed-device-groups", views.ControllerManagedDevic
 
 # Virtual Device Contexts
 router.register("vdcs", views.VirtualDeviceContextViewSet)
+router.register("interface-vdc-assignments", views.InterfaceVDCAssignmentViewSet)
 
 
 app_name = "dcim-api"
