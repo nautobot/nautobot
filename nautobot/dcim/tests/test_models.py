@@ -3261,7 +3261,7 @@ class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
         )
         vdc = VirtualDeviceContext.objects.create(
             name="Sample VDC",
-            device=Device.objects.exclude(pk=self.device.pk).first(),
+            device=Device.objects.exclude(pk=device.pk).first(),
             identifier=100,
             status=Status.objects.get_for_model(VirtualDeviceContext).first(),
         )

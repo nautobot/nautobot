@@ -1806,6 +1806,17 @@ class DeviceView(generic.ObjectView):
         modulebay_count = instance.module_bays.count()
         module_count = instance.module_bays.filter(installed_module__isnull=False).count()
 
+        vdcs = instance.virtual_device_contexts.restrict(request.user).select_related(
+            "tenant", "primary_ip4", "primary_ip6"
+        )
+        vdcs_table = tables.VirtualDeviceContextTable(vdcs, orderable=False, exclude=("device",))
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(vdcs_table)
+
         return {
             "services": services,
             "software_version_images": software_version_images,
@@ -1814,6 +1825,7 @@ class DeviceView(generic.ObjectView):
             "active_tab": "device",
             "modulebay_count": modulebay_count,
             "module_count": f"{module_count}/{modulebay_count}",
+            "vdcs_table": vdcs_table,
         }
 
 
