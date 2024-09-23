@@ -1,0 +1,1 @@
+Added `is_occupied` boolean filter to the Rack elevation API endpoint to allow filtering by occupied or unoccupied units.

@@ -675,6 +675,20 @@ class RackTest(APIViewTestCases.APIViewTestCase):
             status=statuses[0],
         )
 
+        populated_rack = Rack.objects.create(
+            location=locations[0],
+            rack_group=rack_groups[0],
+            role=rack_roles[0],
+            name="Rack 4",
+            status=statuses[0],
+        )
+        # Place a device in Rack 4
+        device = Device.objects.filter(location=populated_rack.location, rack=None).first()
+        device.rack = populated_rack
+        device.face = "front"
+        device.position = 10
+        device.save()
+
         cls.create_data = [
             {
                 "name": "Test Rack 4",
@@ -741,6 +755,44 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         params = {"face": "front", "exclude": "a85a31aa-094f-4de9-8ba6-16cb088a1b74"}
         response = self.client.get(url, params, **self.header)
         self.assertHttpStatus(response, 200)
+
+    def test_filter_rack_elevation_is_occupied(self):
+        """
+        Test filtering the list of rack elevations by occupied status.
+        """
+        rack = Rack.objects.get(name="Rack 4")
+        self.add_permissions("dcim.view_rack")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+        # Get all units first
+        params = {"face": "front"}
+        response = self.client.get(url, params, **self.header)
+        all_units = response.data["results"]
+        # Assert the count is equal to the number of units in the rack
+        self.assertEqual(len(all_units), rack.u_height)
+
+        # Next get only unoccupied units
+        params = {"face": "front", "is_occupied": False}
+        response = self.client.get(url, params, **self.header)
+        unoccupied_units = response.data["results"]
+        # Assert the count is more than 0
+        self.assertGreater(len(unoccupied_units), 0)
+        # Assert the unoccupied count is less than the total number of units
+        self.assertLess(len(unoccupied_units), len(all_units))
+
+        # Next get only occupied units
+        params = {"face": "front", "is_occupied": True}
+        response = self.client.get(url, params, **self.header)
+        occupied_units = response.data["results"]
+        # Assert the count is more than 0
+        self.assertGreater(len(occupied_units), 0)
+        # Assert the occupied count is less than the total number of units
+        self.assertLess(len(occupied_units), len(all_units))
+
+        # Assert that the sum of unoccupied and occupied units is equal to the total number of units
+        self.assertEqual(len(unoccupied_units) + len(occupied_units), len(all_units))
+        # Assert that the lists are mutually exclusive
+        self.assertEqual(len([unit for unit in unoccupied_units if unit in occupied_units]), 0)
+        self.assertEqual(len([unit for unit in occupied_units if unit in unoccupied_units]), 0)
 
     def test_get_rack_elevation_svg(self):
         """
