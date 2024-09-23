@@ -1,0 +1,1 @@
+Fixed the selection options for `position` on the device add/edit form to disable RUs that are currently occupied.
