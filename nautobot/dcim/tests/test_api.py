@@ -679,7 +679,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
             location=locations[0],
             rack_group=rack_groups[0],
             role=rack_roles[0],
-            name="Rack 4",
+            name="Populated Rack",
             status=statuses[0],
         )
         # Place a device in Rack 4
@@ -760,7 +760,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         """
         Test filtering the list of rack elevations by occupied status.
         """
-        rack = Rack.objects.get(name="Rack 4")
+        rack = Rack.objects.get(name="Populated Rack")
         self.add_permissions("dcim.view_rack")
         url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
         # Get all units first
