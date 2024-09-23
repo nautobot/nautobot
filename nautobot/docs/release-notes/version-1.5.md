@@ -26,7 +26,7 @@ Custom fields can now be assigned to a free-text "grouping" to improve usability
 A new optional job property `task_queues` has been introduced to allow Nautobot to leverage custom celery queues for jobs. This will allow you to send jobs to specific workers based on which queue is selected. This property can be set on the job class and overridden in the job model, similar to other overridable job fields. If `task_queues` is not defined on the job class or job model, the job will only be able to use the default queue. A new field has been added to the job run form to allow you to select a queue when you run the job and  an optional field `task_queue` has been added to the REST API [job run endpoint](../user-guide/platform-functionality/jobs/index.md#via-the-rest-api) for the same purpose.
 
 !!! important
-    The default celery queue name has been changed from `celery` to `default`. If you have any workers or tasks hard coded to use `celery` you will need to update those workers/tasks or change the [`CELERY_TASK_DEFAULT_QUEUE`](../user-guide/administration/configuration/optional-settings.md#celery_task_default_queue) setting in your `nautobot_config.py`.
+    The default celery queue name has been changed from `celery` to `default`. If you have any workers or tasks hard coded to use `celery` you will need to update those workers/tasks or change the [`CELERY_TASK_DEFAULT_QUEUE`](../user-guide/administration/configuration/settings.md#celery_task_default_queue) setting in your `nautobot_config.py`.
 
 #### Device Redundancy Groups ([#1892](https://github.com/nautobot/nautobot/issues/1892))
 
@@ -110,7 +110,7 @@ As a result, the value of this setting now defaults to `False`, disabling databa
 
 +/- 1.5.2
 
-Deprecation warnings raised by Nautobot itself (such as warnings about upcoming breaking changes in a future release) are no longer logged as `WARNING` log messages by default, but can be enabled by setting the `NAUTOBOT_LOG_DEPRECATION_WARNINGS` environment variable to `True` in your configuration. More information is available under [Optional Settings](../user-guide/administration/configuration/optional-settings.md#nautobot_log_deprecation_warnings).
+Deprecation warnings raised by Nautobot itself (such as warnings about upcoming breaking changes in a future release) are no longer logged as `WARNING` log messages by default, but can be enabled by setting the `NAUTOBOT_LOG_DEPRECATION_WARNINGS` environment variable to `True` in your configuration. More information is available under [Optional Settings](../user-guide/administration/configuration/settings.md#nautobot_log_deprecation_warnings).
 
 !!! caution
     In Nautobot 2.0, deprecation warnings will again be logged by default; a future release of Nautobot 1.5.x will also re-enable default logging of deprecation warnings.

@@ -232,7 +232,7 @@ The Celery Beat scheduler enables the periodic execution of and scheduling of ba
     You should only have a single instance of the scheduler running. Having more than one scheduler will cause multiple task executions.
 
 !!! warning
-    It's important that the [`TIME_ZONE`](../configuration/optional-settings.md#time_zone) setting on your Nautobot servers and Celery Beat server match to prevent scheduled jobs from running at the wrong time. See the [time zones](../configuration/time-zones.md) documentation for more information.
+    It's important that the [`TIME_ZONE`](../configuration/settings.md#time_zone) setting on your Nautobot servers and Celery Beat server match to prevent scheduled jobs from running at the wrong time. See the [time zones](../configuration/time-zones.md) documentation for more information.
 
 To establish the `systemd` unit file for the Celery Beat scheduler, copy and paste the following into the scheduler service file.
 
@@ -358,7 +358,7 @@ Once you've verified that the WSGI service and worker are up and running, move o
 
 When using MySQL as a database backend, if you encounter a server error along the lines of `Incorrect string value: '\\xF0\\x9F\\x92\\x80' for column`, it is because you are running afoul of the legacy implementation of Unicode (aka `utf8`) encoding in MySQL. This often occurs when using modern Unicode glyphs like the famous poop emoji.
 
-Please see the [configuration guide on MySQL Unicode settings](../configuration/required-settings.md#databases) for instructions on how to address this.
+Please see the [configuration guide on MySQL Unicode settings](../configuration/settings.md#databases) for instructions on how to address this.
 
 Please see [Computed fields with fallback value that is unicode results in OperationalError (#645)](https://github.com/nautobot/nautobot/issues/645) for more details.
 

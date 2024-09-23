@@ -104,7 +104,7 @@ By default, once authenticated, if the user has never logged in before a new use
 This new user will not be a member of any group or have any permissions assigned. If you would like to create users with
 a default set of permissions there are some additional variables to configure the permissions.
 
-Please see the documentation on [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings.md#external_auth_default_permissions) for more information.
+Please see the documentation on [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/settings.md#external_auth_default_permissions) for more information.
 
 ---
 
@@ -451,7 +451,7 @@ This should be the URL that is mapped to the "Log in" button on the top right of
 
 ---
 
-Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings.md#external_auth_default_permissions) next.
+Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/settings.md#external_auth_default_permissions) next.
 
 ---
 

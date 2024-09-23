@@ -494,6 +494,17 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         self.assertIsInstance(fields["cluster"], MultiMatchModelMultipleChoiceField)
         self.assertIsInstance(fields["cluster"].widget, APISelectMultiple)
 
+    def test_map_filter_fields_with_custom_filter_method(self):
+        """
+        Test that extension_filters with custom methods can be concatenated into `generate_query_{filter_method}`
+        and _map_filter_fields method doesn't brake on string concatenation.
+        This is a regression test for issue #6184.
+        """
+        tenant_content_type = ContentType.objects.get_for_model(Tenant)
+        # using Tenant as example app has a custom filter with a custom method.
+        group = DynamicGroup(name="tenant", content_type=tenant_content_type)
+        self.assertIsInstance(group._map_filter_fields, dict)
+
     def test_map_filter_fields_skip_missing(self):
         """
         Test that missing fields are skipped in `DynamicGroup._map_filter_fields`

@@ -138,10 +138,10 @@ plugins:
   - "redirects":
       redirect_maps:
         # 1.6 -> 2.x
-        "additional-features/caching.md": "user-guide/administration/guides/caching.md"
+        "additional-features/caching.md": "user-guide/administration/configuration/redis.md"
         "additional-features/change-logging.md": "user-guide/platform-functionality/change-logging.md"
         "additional-features/config-contexts.md": "user-guide/core-data-model/extras/configcontext.md"
-        "additional-features/healthcheck.md": "user-guide/administration/guides/healthcheck.md"
+        "additional-features/healthcheck.md": "user-guide/administration/guides/health-checks.md"
         "additional-features/jobs.md": "development/jobs/index.md"
         "additional-features/prometheus-metrics.md": "user-guide/administration/guides/prometheus-metrics.md"
         "administration/celery-queues.md": "user-guide/administration/guides/celery-queues.md"
@@ -154,8 +154,8 @@ plugins:
         "configuration/authentication/remote.md": "user-guide/administration/configuration/authentication/remote.md"
         "configuration/authentication/sso.md": "user-guide/administration/configuration/authentication/sso.md"
         "configuration/index.md": "user-guide/administration/configuration/index.md"
-        "configuration/optional-settings.md": "user-guide/administration/configuration/optional-settings.md"
-        "configuration/required-settings.md": "user-guide/administration/configuration/required-settings.md"
+        "configuration/optional-settings.md": "user-guide/administration/configuration/settings.md"
+        "configuration/required-settings.md": "user-guide/administration/configuration/settings.md"
         "core-functionality/circuits.md": "user-guide/core-data-model/circuits/circuit.md"
         "core-functionality/device-types.md": "user-guide/core-data-model/dcim/devicetype.md"
         "core-functionality/devices.md": "user-guide/core-data-model/dcim/device.md"
@@ -187,7 +187,7 @@ plugins:
         "development/templates.md": "development/core/templates.md"
         "development/testing.md": "development/core/testing.md"
         "development/user-preferences.md": "development/core/user-preferences.md"
-        "docker/index.md": "user-guide/administration/installation-extras/docker.md"
+        "docker/index.md": "user-guide/administration/guides/docker.md"
         "installation/centos.md": "user-guide/administration/installation/install_system.md"
         "installation/external-authentication.md": "user-guide/administration/installation/external-authentication.md"
         "installation/http-server.md": "user-guide/administration/installation/http-server.md"
@@ -196,7 +196,7 @@ plugins:
         "installation/migrating-from-postgresql.md": "user-guide/administration/migration/migrating-from-postgresql.md"
         "installation/nautobot.md": "user-guide/administration/installation/nautobot.md"
         "installation/region-and-site-data-migration-guide.md": "user-guide/administration/upgrading/from-v1/region-and-site-data-migration-guide.md"
-        "installation/selinux-troubleshooting.md": "user-guide/administration/installation-extras/selinux-troubleshooting.md"
+        "installation/selinux-troubleshooting.md": "user-guide/administration/guides/selinux-troubleshooting.md"
         "installation/services.md": "user-guide/administration/installation/services.md"
         "installation/ubuntu.md": "user-guide/administration/installation/install_system.md"
         "installation/upgrading-from-nautobot-v1.md": "user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md"
@@ -314,9 +314,16 @@ plugins:
         "models/extras/objectmetadata.md": "user-guide/platform-functionality/objectmetadata.md"
         "models/extras/savedview.md": "user-guide/platform-functionality/savedview.md"
         "models/extras/staticgroupassociation.md": "user-guide/platform-functionality/staticgroupassociation.md"
-        "user-guide/administration/installation/docker.md": "user-guide/administration/installation-extras/docker.md"
-        "user-guide/administration/installation/health-checks.md": "user-guide/administration/installation-extras/health-checks.md"
-        "user-guide/administration/installation/selinux-troubleshooting.md": "user-guide/administration/installation-extras/selinux-troubleshooting.md"
+        "user-guide/administration/configuration/optional-settings.md": "user-guide/administration/configuration/settings.md"
+        "user-guide/administration/configuration/required-settings.md": "user-guide/administration/configuration/settings.md"
+        "user-guide/administration/guides/caching.md": "user-guide/administration/configuration/redis.md"
+        "user-guide/administration/guides/healthcheck.md": "user-guide/administration/guides/health-checks.md"
+        "user-guide/administration/installation/docker.md": "user-guide/administration/guides/docker.md"
+        "user-guide/administration/installation/health-checks.md": "user-guide/administration/guides/health-checks.md"
+        "user-guide/administration/installation/selinux-troubleshooting.md": "user-guide/administration/guides/selinux-troubleshooting.md"
+        "user-guide/administration/installation-extras/docker.md": "user-guide/administration/guides/docker.md"
+        "user-guide/administration/installation-extras/health-checks.md": "user-guide/administration/guides/health-checks.md"
+        "user-guide/administration/installation-extras/selinux-troubleshooting.md": "user-guide/administration/guides/selinux-troubleshooting.md"
 
 nav:
   - Overview:
@@ -334,10 +341,6 @@ nav:
               - Configuring an HTTP Server: "user-guide/administration/installation/http-server.md"
               - Installing and Using Apps: "user-guide/administration/installation/app-install.md"
               - External Authentication (Optional): "user-guide/administration/installation/external-authentication.md"
-          - Installation Extras:
-              - Nautobot Docker Images: "user-guide/administration/installation-extras/docker.md"
-              - Health Checks: "user-guide/administration/installation-extras/health-checks.md"
-              - SELinux Troubleshooting: "user-guide/administration/installation-extras/selinux-troubleshooting.md"
           - Upgrading:
               - Database Backup: "user-guide/administration/upgrading/database-backup.md"
               - Upgrading Nautobot: "user-guide/administration/upgrading/upgrading.md"
@@ -355,8 +358,8 @@ nav:
               - Migrating from PostgreSQL to MySQL: "user-guide/administration/migration/migrating-from-postgresql.md"
           - Configuration:
               - "user-guide/administration/configuration/index.md"
-              - Required Settings: "user-guide/administration/configuration/required-settings.md"
-              - Optional Settings: "user-guide/administration/configuration/optional-settings.md"
+              - Settings: "user-guide/administration/configuration/settings.md"
+              - Redis: "user-guide/administration/configuration/redis.md"
               - Time Zones: "user-guide/administration/configuration/time-zones.md"
               - External Authentication:
                   - LDAP: "user-guide/administration/configuration/authentication/ldap.md"
@@ -366,8 +369,9 @@ nav:
               - Nautobot Server: "user-guide/administration/tools/nautobot-server.md"
               - Nautobot Shell: "user-guide/administration/tools/nautobot-shell.md"
           - Guides:
-              - Caching: "user-guide/administration/guides/caching.md"
-              - Health Check: "user-guide/administration/guides/healthcheck.md"
+              - Nautobot Docker Images: "user-guide/administration/guides/docker.md"
+              - SELinux Troubleshooting: "user-guide/administration/guides/selinux-troubleshooting.md"
+              - Health Checks: "user-guide/administration/guides/health-checks.md"
               - Permissions: "user-guide/administration/guides/permissions.md"
               - Prometheus Metrics: "user-guide/administration/guides/prometheus-metrics.md"
               - Replicating Nautobot: "user-guide/administration/guides/replicating-nautobot.md"
