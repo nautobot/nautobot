@@ -1,3 +1,4 @@
+import contextlib
 import django_tables2 as tables
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -88,26 +89,31 @@ class BaseTable(tables.Table):
                     self.columns.hide(column.name)
 
         # Apply custom column ordering for user
+        columns = []
+        pk = self.base_columns.pop("pk", None)
+        actions = self.base_columns.pop("actions", None)
+
         if user is not None and not isinstance(user, AnonymousUser):
             columns = user.get_config(f"tables.{self.__class__.__name__}.columns")
-            if columns:
-                pk = self.base_columns.pop("pk", None)
-                actions = self.base_columns.pop("actions", None)
+        if columns:
+            for name, column in self.base_columns.items():
+                if name in columns:
+                    self.columns.show(name)
+                else:
+                    self.columns.hide(name)
+            self.sequence = [c for c in columns if c in self.base_columns]
 
-                for name, column in self.base_columns.items():
-                    if name in columns:
-                        self.columns.show(name)
-                    else:
-                        self.columns.hide(name)
-                self.sequence = [c for c in columns if c in self.base_columns]
-
-                # Always include PK and actions column, if defined on the table
-                if pk:
-                    self.base_columns["pk"] = pk
-                    self.sequence.insert(0, "pk")
-                if actions:
-                    self.base_columns["actions"] = actions
-                    self.sequence.append("actions")
+        # Always include PK and actions column, if defined on the table
+        if pk:
+            with contextlib.suppress(ValueError):
+                self.sequence.remove("pk")
+            self.base_columns["pk"] = pk
+            self.sequence.insert(0, "pk")
+        if actions:
+            with contextlib.suppress(ValueError):
+                self.sequence.remove("actions")
+            self.base_columns["actions"] = actions
+            self.sequence.append("actions")
 
         # Dynamically update the table's QuerySet to ensure related fields are pre-fetched
         if isinstance(self.data, TableQuerysetData):
