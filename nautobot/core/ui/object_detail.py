@@ -224,7 +224,7 @@ class Panel(Component):
         header_extra_content_template_path=None,
         footer_content_template_path=None,
         template_path="components/panel/panel.html",
-        body_template_path="components/panel/body_generic.html",
+        body_wrapper_template_path="components/panel/body_generic.html",
         **kwargs,
     ):
         """
@@ -240,8 +240,8 @@ class Panel(Component):
                 if any, not including its label if any.
             footer_content_template_path (str): Template path to render content into the panel footer, if any.
             template_path (str): Template path to render the Panel as a whole. Generally you won't override this.
-            body_template_path (str): Template path to render the panel body, including its contents.
-                Generally you won't override this.
+            body_wrapper_template_path (str): Template path to render the panel body, including both its "wrapper"
+                (a `div` or `table`) as well as its contents. Generally you won't override this as a user.
         """
         self.label = label
         self.section = section
@@ -250,7 +250,7 @@ class Panel(Component):
         self.header_extra_content_template_path = header_extra_content_template_path
         self.footer_content_template_path = footer_content_template_path
         self.template_path = template_path
-        self.body_template_path = body_template_path
+        self.body_wrapper_template_path = body_wrapper_template_path
         super().__init__(**kwargs)
 
     def render(self, context):
@@ -279,8 +279,8 @@ class Panel(Component):
         return ""
 
     def render_body(self, context):
-        """Render `self.body_template_path` as panel body, with the rendered `body_content` as its content."""
-        return get_template(self.body_template_path).render(
+        """Render `self.body_wrapper_template_path` as panel body, with the rendered `body_content` as its content."""
+        return get_template(self.body_wrapper_template_path).render(
             {
                 **context,
                 "body_id": self.body_id,
@@ -308,7 +308,7 @@ class ObjectsTablePanel(Panel):
         self,
         *,
         table_key,
-        body_template_path="components/panel/body_table.html",
+        body_wrapper_template_path="components/panel/body_table.html",
         body_content_template_path="components/panel/content_table.html",
         **kwargs,
     ):
@@ -319,7 +319,9 @@ class ObjectsTablePanel(Panel):
         """
         self.table_key = table_key
         super().__init__(
-            body_template_path=body_template_path, body_content_template_path=body_content_template_path, **kwargs
+            body_wrapper_template_path=body_wrapper_template_path,
+            body_content_template_path=body_content_template_path,
+            **kwargs,
         )
 
     def get_extra_context(self, context):
@@ -335,7 +337,7 @@ class KeyValueTablePanel(Panel):
         data,
         hide_if_unset=(),
         value_transforms=None,
-        body_template_path="components/panel/body_key_value_table.html",
+        body_wrapper_template_path="components/panel/body_key_value_table.html",
         **kwargs,
     ):
         """
@@ -351,7 +353,7 @@ class KeyValueTablePanel(Panel):
         self.data = data
         self.hide_if_unset = hide_if_unset
         self.value_transforms = value_transforms or {}
-        super().__init__(body_template_path=body_template_path, **kwargs)
+        super().__init__(body_wrapper_template_path=body_wrapper_template_path, **kwargs)
 
     def should_render(self, context):
         return bool(self.get_data(context))
