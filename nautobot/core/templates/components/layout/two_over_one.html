@@ -1,0 +1,19 @@
+{% load ui_framework %}
+{% load plugins %}
+
+<div class="row">
+    <div class="col-md-6">
+        {% render_components left_half_panels %}
+        {% if include_plugin_content %}{% plugin_left_page object %}{% endif %}
+    </div>
+    <div class="col-md-6">
+        {% render_components right_half_panels %}
+        {% if include_plugin_content %}{% plugin_right_page object %}{% endif %}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-12">
+        {% render_components full_width_panels %}
+        {% if include_plugin_content %}{% plugin_full_width_page object %}{% endif %}
+    </div>
+</div>

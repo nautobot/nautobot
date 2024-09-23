@@ -1,16 +1,13 @@
 {% load helpers %}
 {% if computed_fields %}
-<style>
-    .accordion-toggle {
-        font-size: 14px;
-    }
-</style>
     <div class="panel panel-default">
         <div class="panel-heading">
             <strong>Computed Fields</strong>
-            <button type="button" class="btn-xs btn-primary pull-right" id="accordion-toggle-all">Collapse All</button>
+            <button type="button"
+                    class="btn-xs btn-primary pull-right accordion-toggle-all"
+                    data-target="#computed_fields_accordion_{{ advanced_ui }}">Collapse All</button>
         </div>
-        <table id="accordion" class="table table-hover panel-body attr-table">
+        <table id="computed_fields_accordion_{{ advanced_ui }}" class="table table-hover panel-body attr-table">
             {% for grouping, fields in computed_fields.items %}
             {% with forloop.counter0 as count %}
                 {% if grouping != "" %}
