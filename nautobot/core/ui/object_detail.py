@@ -32,7 +32,14 @@ class ObjectDetailContent:
     """
     Base class for UI framework definition of the contents of an Object Detail (Object Retrieve) page.
 
-    This currently defines the tabs and their contents, but currently does NOT define the page title, breadcrumbs, etc.
+    The general form here for use with a `NautobotUIViewSet` is:
+
+    ```py
+    class MyModelUIViewSet(NautobotUIViewSet):
+        object_detail_content = ObjectDetailContent(panels=...)
+    ```
+
+    This currently defines the tabs and their panel contents, but does NOT describe the page title, breadcrumbs, etc.
     """
 
     def __init__(self, *, panels=(), layout=LayoutChoices.DEFAULT, extra_tabs=None):
@@ -42,7 +49,7 @@ class ObjectDetailContent:
         Args:
             panels (list): List of `Panel` instances to include in this layout by default. Standard `extras` Panels
                 (custom fields, relationships, etc.) do not need to be specified as they will be automatically included.
-            layout (str): One of the LayoutChoices values from nautobot.core.ui.choices.
+            layout (str): One of the `LayoutChoices` values, indicating the layout of the "main" tab for this view.
             extra_tabs (list): Optional list of `Tab` instances. Standard `extras` Tabs (advanced, contacts,
                 dynamic-groups, metadata, etc.) do not need to be specified as they will be automatically included.
         """
@@ -63,6 +70,7 @@ class ObjectDetailContent:
 
     @property
     def tabs(self):
+        """The tabs defined for this detail view, ordered by their `weight`."""
         return sorted(self._tabs, key=lambda tab: tab.weight)
 
     @tabs.setter
@@ -70,7 +78,7 @@ class ObjectDetailContent:
         self._tabs = value
 
     def render_tabs(self, context):
-        """Render the tabs (as opposed to their contents) for each of `self.tabs`."""
+        """Render the tab labels (as opposed to their contents) for each of `self.tabs`."""
         return format_html_join("\n", "{}", ([tab.render_tab(context)] for tab in self.tabs))
 
     def render_content(self, context):
@@ -82,8 +90,8 @@ class Component:
     """
     Common base class for renderable components (tabs, panels, etc.).
 
-    Note that not all Components have a `render()` method, as many are multi-part (for example a Tab has no `render()`,
-    but has `render_tab()` and `render_content()` APIs instead.
+    Note that not all Components have a `render()` method, as many are multi-part (for example, a Tab has no `render()`,
+    but has `render_tab()` and `render_content()` APIs instead).
     """
 
     def __init__(self, *, weight):
@@ -99,17 +107,35 @@ class Component:
         """
         Check whether this component should be rendered at all.
 
-        This API is designed to provide "short-circuit" logic for skipping what otherwise might be expensive checks.
-        In general most Components may also return an empty string when actually rendered,
-        which is typically also a means to specify that they do not need to be rendered, but may be more expensive.
+        This API is designed to provide "short-circuit" logic for skipping what otherwise might be expensive rendering.
+        In general most Components may also return an empty string when actually rendered, which is typically also a
+        means to specify that they do not need to be rendered, but may be more expensive to derive.
+
+        Returns:
+            (bool): `True` (default) if this component should be rendered.
         """
         return True
 
     def get_extra_context(self, context):
-        """Augment the provided render context with additional data based on the configuration of this component."""
+        """
+        Provide additional data to include in the rendering context, based on the configuration of this component.
+
+        Returns:
+            (dict): Additional context data.
+        """
         return {}
 
     def local_context(self, context, **kwargs):
+        """
+        Augment the given rendering context with additional data as provided.
+
+        Args:
+            context (Context, dict): The existing rendering context.
+            **kwargs (dict): Additional dictionary data to add to the context.
+
+        Returns:
+            (dict): The augmented rendering context.
+        """
         if isinstance(context, Context):
             context = context.flatten()
         return {**context, **kwargs}
@@ -135,8 +161,7 @@ class Tab(Component):
             tab_id (str): HTML ID for the tab content element, used to link the tab label and its content together.
             tab_label (str): User-facing label to display for this tab.
             panels (tuple): Set of `Panel` components to potentially display within this tab.
-            layout (str): One of `nautobot.core.ui.choices.LayoutChoices` values, describing the layout of the panels
-                contained within this tab.
+            layout (str): One of the `LayoutChoices` values, describing the layout of panels within this tab.
             tab_template_path (str): Template path to use for rendering the tab label to HTML.
             content_template_path (str): Template path to use for rendering the tab contents to HTML.
         """
@@ -162,7 +187,15 @@ class Tab(Component):
     WEIGHT_CHANGELOG_TAB = 700  # reserved, not yet using this framework
 
     def panels_for_section(self, section):
-        """Get the subset of this tab's panels that apply to the given layout section, ordered by weight."""
+        """
+        Get the subset of this tab's panels that apply to the given layout section, ordered by their `weight`.
+
+        Args:
+            section (str): One of `SectionChoices`.
+
+        Returns:
+            (list[Panel]): Sorted list of Panel instances.
+        """
         return sorted((panel for panel in self.panels if panel.section == section), key=lambda panel: panel.weight)
 
     def render_tab(self, context):
@@ -232,9 +265,8 @@ class Panel(Component):
 
         Args:
             label (str): Label to display for this panel. Optional; if an empty string, the panel will have no label.
-            section (str): One of `nautobot.core.ui.choices.SectionChoices`, indicating which section of the layout
-                this Panel belongs to.
-            body_id (str): HTML element id to attach to the rendered body.
+            section (str): One of the `SectionChoices` values, indicating the layout section this Panel belongs to.
+            body_id (str): HTML element `id` to attach to the rendered body wrapper of the panel.
             body_content_template_path (str): Template path to render the content contained *within* the panel body.
             header_extra_content_template_path (str): Template path to render extra content into the panel header,
                 if any, not including its label if any.
@@ -254,7 +286,15 @@ class Panel(Component):
         super().__init__(**kwargs)
 
     def render(self, context):
-        """Render `self.template_path` as a panel, with the rendered `header`, `body`, and `footer` as context data."""
+        """
+        Render the panel as a whole.
+
+        Default implementation calls `render_label()`, `render_header_extra_content()`, `render_body()`,
+        and `render_footer_extra_content()`, then wraps them all into the templated defined by `self.template_path`.
+
+        Typically you'll override one or more of the aforementioned methods in a subclass, rather than replacing this
+        entire method as a whole.
+        """
         if not self.should_render(context):
             return ""
         context = self.local_context(context, **self.get_extra_context(context))
@@ -273,13 +313,24 @@ class Panel(Component):
         return self.label
 
     def render_header_extra_content(self, context):
-        """Render any additional (non-label) content to include in this panel's header."""
+        """
+        Render any additional (non-label) content to include in this panel's header.
+
+        Default implementation renders the template from `self.header_extra_content_template_path` if any.
+        """
         if self.header_extra_content_template_path:
             return get_template(self.header_extra_content_template_path).render(context)
         return ""
 
     def render_body(self, context):
-        """Render `self.body_wrapper_template_path` as panel body, with the rendered `body_content` as its content."""
+        """
+        Render the panel body *including its HTML wrapper element(s)*.
+
+        Default implementation calls `render_body_content()` and wraps that in the template defined at
+        `self.body_wrapper_template_path`.
+
+        Normally you won't want to override this method in a subclass, instead overriding `render_body_content()`.
+        """
         return get_template(self.body_wrapper_template_path).render(
             {
                 **context,
@@ -289,20 +340,28 @@ class Panel(Component):
         )
 
     def render_body_content(self, context):
-        """Render `self.body_content_template_path` as the content within the panel body."""
+        """
+        Render the content to include in this panel's body.
+
+        Default implementation renders the template from `self.body_content_template_path` if any.
+        """
         if self.body_content_template_path:
             return get_template(self.body_content_template_path).render(context)
         return ""
 
     def render_footer_content(self, context):
-        """Render any non-default content to include in this panel's footer."""
+        """
+        Render any non-default content to include in this panel's footer.
+
+        Default implementation renders the template from `self.footer_content_template_path` if any.
+        """
         if self.footer_content_template_path:
             return get_template(self.footer_content_template_path).render(context)
         return ""
 
 
 class ObjectsTablePanel(Panel):
-    """A panel that renders a table of objects (typically related objects, rather than the main context object)."""
+    """A panel that renders a table of objects (typically related objects, rather than the "main" object of a view)."""
 
     def __init__(
         self,
@@ -325,11 +384,12 @@ class ObjectsTablePanel(Panel):
         )
 
     def get_extra_context(self, context):
+        """Take the context value under `self.table_key` and add it to the context under key `"content_table"`."""
         return {"content_table": context[self.table_key]}
 
 
 class KeyValueTablePanel(Panel):
-    """A panel that displays a two-column table of keys and values."""
+    """A panel that displays a two-column table of keys and values, as seen in most object detail views."""
 
     def __init__(
         self,
@@ -344,11 +404,16 @@ class KeyValueTablePanel(Panel):
         Instantiate a KeyValueTablePanel.
 
         Args:
-            data (dict): The dictionary of data to display in this panel
+            data (dict): The dictionary of key/value data to display in this panel.
+                May be `None` if it will be derived dynamically by `get_data()` instead.
             hide_if_unset (list): Keys that should be omitted from the display entirely if they have a falsey value,
                 instead of displaying the usual em-dash placeholder text.
-            value_transforms (dict): Dictionary of (key, [list of transform functions]), used to apply custom rendering
-                of specific values without needing to implement a new subclass for this purpose.
+            value_transforms (dict): Dictionary of `{key: [list of transform functions]}`, used to specify custom
+                rendering of specific key values without needing to implement a new subclass for this purpose.
+                Many of the `templatetags.helpers` functions are suitable for this purpose; examples:
+
+                - `[render_markdown, placeholder]` - render the given text as Markdown, or render a placeholder if blank
+                - `[humanize_speed, placeholder]` - convert the given kbps value to Mbps or Gbps for display
         """
         self.data = data
         self.hide_if_unset = hide_if_unset
@@ -359,21 +424,72 @@ class KeyValueTablePanel(Panel):
         return bool(self.get_data(context))
 
     def get_data(self, context):
-        """Get the data for this panel, either from `self.data` or from the provided context."""
-        return self.data
+        """
+        Get the data for this panel, by default from `self.data` or the key `"data"` in the provided context.
+
+        Subclasses may need to override this method if the derivation of the data is more involved.
+
+        Returns:
+            (dict): Key/value dictionary to be rendered in this panel.
+        """
+        return self.data or context["data"]
 
     def render_key(self, key, value, context):
-        """Render the provided key in human-readable form."""
+        """
+        Render the provided key in human-readable form.
+
+        The default implementation simply replaces underscores with spaces and title-cases it with `bettertitle()`.
+        """
         return bettertitle(key.replace("_", " "))
 
     def queryset_list_url_filter(self, key, value, context):
         """
-        For rendering queryset values - if provided, will be passed as a filter parameter to the corresponding list URL.
+        Get a filter parameter to use when hyperlinking queryset data to an object list URL to provide filtering.
+
+        Returns:
+            (str): A URL parameter string of the form `"filter=value"`, or `""` if none is known.
+
+        The default implementation returns `""`, which means "no appropriate filter parameter is known,
+        do not hyperlink the queryset text." Subclasses may wish to override this to provide appropriate intelligence.
+
+        Examples:
+            - For a queryset of VRFs in a Location detail view for instance `aaf814ef-2ef6-463e-9440-54f6514afe0e`,
+              this might return the string `"locations=aaf814ef-2ef6-463e-9440-54f6514afe0e"`, resulting in the
+              hyperlinked URL `/ipam/vrfs/?locations=aaf814ef-2ef6-463e-9440-54f6514afe0e`
+            - For a queryset of Devices associated to Circuit Termination `4182ce87-0f90-450e-a682-9af5992b4bb7`
+              by a Relationship with key `termination_to_devices`, this might return the string
+              `"cr_termination_to_devices__source=4182ce87-0f90-450e-a682-9af5992b4bb7"`, resulting in the hyperlinked
+              URL `/dcim/devices/?cr_termination_to_device__source=4182ce87-0f90-450e-a682-9af5992b4bb7`
         """
         return ""
 
-    def render_value(self, key, value, context):
-        """Intelligently render the provided value in human-readable form."""
+    def render_value(self, key, value, context) -> str:
+        """
+        Render the provided value in human-readable form.
+
+        Returns:
+            (str): String or HTML representation of the given value. May return `""` to indicate that this value
+                should be skipped entirely, i.e. not displayed in the table at all.
+                May return `placeholder(value)` to display a consistent placeholder representation of any unset value.
+
+        Behavior is influenced by:
+
+        - `self.value_transforms` - if it has an entry for the given `key`, then the given functions provided there
+          will be used to render the `value`, in place of any default processing and rendering for this data type.
+        - `self.hide_if_unset` - any key in this list, if having a corresponding value of `None`, will be omitted from
+          the display (returning `""` instead of a placeholder).
+
+        There is a lot of "intelligence" built in to this method to handle various data types, including:
+
+        - Instances of `Status`, `Role` and similar models will be represented as an appropriately-colored hyperlinked
+          badge (using `hyperlinked_object_with_color()`)
+        - Instances of `Tenant` will be hyperlinked and will also display their hyperlinked `TenantGroup` if any
+        - Instances of other models will be hyperlinked (using `hyperlinked_object()`)
+        - Model QuerySets will render the first several objects in the QuerySet (as above), and if more objects are
+          present, and `self.queryset_list_url_filter()` returns an appropriate filter string, will render the link to
+          the filtered list view of that model.
+        - Etc.
+        """
         display = value
 
         if key in self.value_transforms:
@@ -437,7 +553,7 @@ class KeyValueTablePanel(Panel):
         return display
 
     def render_body_content(self, context):
-        """Override base class to render key-value pairs directly to HTML instead of using a template."""
+        """Render key-value pairs as table rows, using `render_key()` and `render_value()` methods as applicable."""
         data = self.get_data(context)
 
         if not data:
@@ -455,7 +571,7 @@ class KeyValueTablePanel(Panel):
 
 
 class ObjectFieldsPanel(KeyValueTablePanel):
-    """A panel that renders a table of object instance attributes."""
+    """A panel that renders a table of object instance attributes and their values."""
 
     def __init__(
         self,
@@ -471,13 +587,15 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         Instantiate an ObjectFieldsPanel.
 
         Args:
-            fields (str, list): The ordered list of fields to display, or "__all__" to display fields automatically.
-                Note that ManyToMany fields and reverse relations are **not** included in "__all__" at this time, nor
+            fields (str, list): The ordered list of fields to display, or `"__all__"` to display fields automatically.
+                Note that ManyToMany fields and reverse relations are **not** included in `"__all__"` at this time, nor
                 are any hidden fields, nor the specially handled `id`, `created`, `last_updated` fields on most models.
             exclude_fields (list): Only relevant if `fields == "__all__"`, in which case it excludes the given fields.
-            context_object_key (str): The context key containing the object to derive fields from.
+            context_object_key (str): The key in the render context that will contain the object to derive fields from.
             ignore_nonexistent_fields (bool): If True, `fields` is permitted to include field names that don't actually
                 exist on the provided object; otherwise an exception will be raised at render time.
+            label (str): If omitted, the provided object's `verbose_name` will be rendered as the label
+                (see `render_label()`).
         """
         self.fields = fields
         self.exclude_fields = exclude_fields
@@ -492,7 +610,12 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         return super().render_label(context)
 
     def get_data(self, context):
-        """Load data from the provided context object."""
+        """
+        Load data from the object provided in the render context based on the given set of `fields`.
+
+        Returns:
+            (dict): Key-value pairs corresponding to the object's fields, or `{}` if no object is present.
+        """
         fields = self.fields
         instance = context.get(self.context_object_key, None)
 
@@ -530,7 +653,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         return data
 
     def render_key(self, key, value, context):
-        """Render the field `verbose_name` corresponding to the given key, if applicable."""
+        """Render the `verbose_name` of the model field whose name corresponds to the given key, if applicable."""
         instance = context.get(self.context_object_key, None)
 
         if instance is not None:
@@ -544,7 +667,13 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
 
 class GroupedKeyValueTablePanel(KeyValueTablePanel):
-    """A KeyValueTablePanel that displays collapsible groupings of data."""
+    """
+    A KeyValueTablePanel that displays its data within collapsible accordion groupings, such as object custom fields.
+
+    Expects data in the form `{grouping1: {key1: value1, key2: value2, ...}, grouping2: {...}, ...}`.
+
+    The special grouping `""` may be used to indicate top-level key/value pairs that don't belong to a group.
+    """
 
     def __init__(self, *, body_id, **kwargs):
         super().__init__(body_id=body_id, **kwargs)
@@ -558,7 +687,7 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
         )
 
     def render_body_content(self, context):
-        """Override base class to render groupings and key-value pairs."""
+        """Render groups of key-value pairs to HTML."""
         data = self.get_data(context)
 
         if not data:
@@ -601,7 +730,7 @@ class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
         section=SectionChoices.LEFT_HALF,
         **kwargs,
     ):
-        """Instantiate this panel.
+        """Instantiate an `ObjectCustomFieldsPanel`.
 
         Args:
             advanced_ui (bool): Whether this is on the "main" tab (False) or the "advanced" tab (True)
