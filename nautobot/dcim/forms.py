@@ -1902,6 +1902,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             attrs={
                 "disabled-indicator": "device",
                 "data-query-param-face": '["$face"]',
+                "data-query-param-is_occupied": '["false"]',
             },
         ),
     )
