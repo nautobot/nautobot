@@ -218,8 +218,7 @@ class InterfaceCommonForm(forms.Form):
         elif mode == InterfaceModeChoices.MODE_TAGGED:
             location = self.cleaned_data[parent_field].location
             if location:
-                location_ids =[ancestor.id for ancestor in location.ancestors()]
-                location_ids.append(location.id)
+                location_ids = location.ancestors(include_self=True).values_list("id", flat=True)
             else:
                 location_ids = []
             invalid_vlans = [
@@ -232,8 +231,9 @@ class InterfaceCommonForm(forms.Form):
             if invalid_vlans:
                 raise forms.ValidationError(
                     {
-                        "tagged_vlans": f"The tagged VLANs ({', '.join(invalid_vlans)}) must belong to the same location as "
-                        f"the interface's parent device/VM, or they must be global"
+                        "tagged_vlans": f"The tagged VLANs ({', '.join(invalid_vlans)}) must have the same location as the "
+                        "interface's parent device, or is in one of the parents of the interface's parent device's location, "
+                        "or it must be global."
                     }
                 )
 

@@ -799,8 +799,7 @@ class InterfaceSerializer(
         device = self.instance.device if self.instance else data.get("device")
         location = device.location
         if location:
-            location_ids =[ancestor.id for ancestor in location.ancestors()]
-            location_ids.append(location.id)
+            location_ids = location.ancestors(include_self=True).values_list("id", flat=True)
         else:
             location_ids = []
         for vlan in data.get("tagged_vlans", []):

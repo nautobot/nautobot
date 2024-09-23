@@ -142,8 +142,7 @@ def validate_interface_tagged_vlans(instance, model, pk_set):
     # a location that is not the parent's location, or parent's location's ancestors, or None
     location = getattr(instance.parent, "location", None)
     if location:
-        location_ids =[ancestor.id for ancestor in location.ancestors()]
-        location_ids.append(location.id)
+        location_ids = location.ancestors(include_self=True).values_list("id", flat=True)
     else:
         location_ids = []
     tagged_vlans = (
