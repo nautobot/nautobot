@@ -152,7 +152,7 @@ ENV PATH="${PATH}:/root/.local/bin"
 # https://github.com/nautobot/nautobot/issues/193
 RUN poetry config virtualenvs.create false && \
     poetry config installer.parallel ${POETRY_PARALLEL:-false} && \
-    poetry config installer.no-binary lxml,pyuwsgi
+    poetry config installer.no-binary lxml,pyuwsgi,xmlsec
 
 COPY pyproject.toml poetry.lock README.md /source/
 
