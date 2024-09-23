@@ -3491,3 +3491,4 @@ class InterfaceVDCAssignmentTestCase(APIViewTestCases.APIViewTestCase):
 
     def test_docs(self):
         """Skip: InterfaceVDCAssignment has no docs yet"""
+        # TODO(timizuo): Add docs for Interface VDC Assignment

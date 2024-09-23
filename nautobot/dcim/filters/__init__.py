@@ -2149,6 +2149,7 @@ class VirtualDeviceContextFilterSet(NautobotFilterSet, TenancyModelFilterSetMixi
         label="Device (name or ID)",
     )
     interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Interface.objects.all(),
         to_field_name="name",
         label="Interface (name or ID)",
