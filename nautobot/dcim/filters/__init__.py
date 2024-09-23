@@ -2213,6 +2213,12 @@ class InterfaceVDCAssignmentFilterSet(NautobotFilterSet):
             },
         }
     )
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="interface__device",
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Device (name or ID)",
+    )
     virtual_device_context = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualDeviceContext.objects.all(),
         to_field_name="name",
@@ -2228,6 +2234,7 @@ class InterfaceVDCAssignmentFilterSet(NautobotFilterSet):
     class Meta:
         model = InterfaceVDCAssignment
         fields = [
+            "device",
             "interface",
             "virtual_device_context",
         ]
