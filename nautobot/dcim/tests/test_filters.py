@@ -4132,6 +4132,8 @@ class InterfaceVDCAssignmentTestCase(FilterTestCases.FilterTestCase):
         ("virtual_device_context", "virtual_device_context__name"),
         ("interface", "interface__id"),
         ("interface", "interface__name"),
+        ("device", "device__id"),
+        ("device", "device__name"),
     ]
 
     @classmethod
