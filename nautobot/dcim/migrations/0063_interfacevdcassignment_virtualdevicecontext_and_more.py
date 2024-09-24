@@ -118,7 +118,7 @@ class Migration(migrations.Migration):
                 (
                     "role",
                     nautobot.extras.models.roles.RoleField(
-                        blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to="extras.role"
+                        blank=True, null=True, related_name="virtual_device_contexts", on_delete=django.db.models.deletion.PROTECT, to="extras.role"
                     ),
                 ),
                 (

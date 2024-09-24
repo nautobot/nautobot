@@ -11,7 +11,6 @@ services:
       - "NAUTOBOT_DB_ENGINE=django_prometheus.db.backends.mysql"
   db:
     image: mysql:8
-    command: --sort_buffer_size=1M
     env_file:
       - dev.env
     volumes:
