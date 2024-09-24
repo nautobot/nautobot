@@ -42,6 +42,7 @@ from nautobot.dcim.models import (
     Interface,
     InterfaceRedundancyGroup,
     InterfaceTemplate,
+    InterfaceVDCAssignment,
     InventoryItem,
     Location,
     LocationType,
@@ -3444,3 +3445,50 @@ class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
             self.assertHttpStatus(response, status.HTTP_200_OK)
             vdc.refresh_from_db()
             self.assertEqual(vdc.primary_ip6, ip_v6)
+
+
+class InterfaceVDCAssignmentTestCase(APIViewTestCases.APIViewTestCase):
+    model = InterfaceVDCAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        device = Device.objects.first()
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext)[0]
+        interface_status = Status.objects.get_for_model(Interface)[0]
+        interfaces = [
+            Interface.objects.create(
+                device=device,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                name=f"Interface 00{idx}",
+                status=interface_status,
+            )
+            for idx in range(3)
+        ]
+        vdcs = [
+            VirtualDeviceContext.objects.create(
+                device=device,
+                status=vdc_status,
+                identifier=200 + idx,
+                name=f"Test VDC {idx}",
+            )
+            for idx in range(3)
+        ]
+
+        cls.create_data = [
+            {
+                "virtual_device_context": vdcs[0].pk,
+                "interface": interfaces[0].pk,
+            },
+            {
+                "virtual_device_context": vdcs[1].pk,
+                "interface": interfaces[1].pk,
+            },
+            {
+                "virtual_device_context": vdcs[2].pk,
+                "interface": interfaces[2].pk,
+            },
+        ]
+
+    def test_docs(self):
+        """Skip: InterfaceVDCAssignment has no docs yet"""
+        # TODO(timizuo): Add docs for Interface VDC Assignment

@@ -146,6 +146,7 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
     "interfaceredundancygroup",
     "interfaceredundancygroupassociation",
     "interfacetemplate",
+    "interfacevdcassignment",
     "inventoryitem",
     "ipaddresstointerface",
     "job",

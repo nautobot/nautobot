@@ -26,7 +26,7 @@ def clear_virtual_device_context_status(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0063_virtualdevicecontext_interface_vdcs"),
+        ("dcim", "0063_interfacevdcassignment_virtualdevicecontext_and_more"),
     ]
 
     operations = [
