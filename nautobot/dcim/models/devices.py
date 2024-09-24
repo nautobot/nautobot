@@ -1942,6 +1942,7 @@ class VirtualDeviceContext(PrimaryModel):
         super().clean()
         self.validate_primary_ips()
 
+
 @extras_features(
     "custom_links",
     "custom_validators",
