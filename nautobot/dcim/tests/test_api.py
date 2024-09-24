@@ -3377,6 +3377,7 @@ class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         devices = Device.objects.all()
         vdc_status = Status.objects.get_for_model(VirtualDeviceContext)[0]
+        vdc_role = Role.objects.get_for_model(VirtualDeviceContext)[0]
         tenants = Tenant.objects.all()
 
         cls.create_data = [
@@ -3385,6 +3386,7 @@ class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
                 "device": devices[0].pk,
                 "identifier": 100,
                 "status": vdc_status.pk,
+                "role": vdc_role.pk,
             },
             {
                 "name": "Virtual Device Context 2",
@@ -3399,10 +3401,12 @@ class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
                 "device": devices[2].pk,
                 "status": vdc_status.pk,
                 "tenant": tenants[2].pk,
+                "role": vdc_role.pk,
             },
         ]
         cls.update_data = {
             "tenant": tenants[3].pk,
+            "role": vdc_role.pk,
         }
         cls.bulk_update_data = {
             "tenant": tenants[4].pk,

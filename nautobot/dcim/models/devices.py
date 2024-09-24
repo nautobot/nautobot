@@ -1864,6 +1864,7 @@ class VirtualDeviceContext(PrimaryModel):
         null=True,
     )
     status = StatusField(blank=False, null=False)
+    role = RoleField(blank=True, null=True)
     primary_ip4 = models.OneToOneField(
         to="ipam.IPAddress",
         on_delete=models.SET_NULL,

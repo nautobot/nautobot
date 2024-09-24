@@ -2114,7 +2114,9 @@ class ModuleBayFilterSet(NautobotFilterSet):
         fields = "__all__"
 
 
-class VirtualDeviceContextFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin, StatusModelFilterSetMixin):
+class VirtualDeviceContextFilterSet(
+    NautobotFilterSet, TenancyModelFilterSetMixin, RoleModelFilterSetMixin, StatusModelFilterSetMixin
+):
     q = SearchFilter(
         filter_predicates={
             "device__name": {
@@ -2171,6 +2173,7 @@ class VirtualDeviceContextFilterSet(NautobotFilterSet, TenancyModelFilterSetMixi
             "has_primary_ip",
             "primary_ip4",
             "primary_ip6",
+            "role",
             "status",
             "tags",
             "description",

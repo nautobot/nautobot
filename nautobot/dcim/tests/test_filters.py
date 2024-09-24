@@ -4039,6 +4039,7 @@ class VirtualDeviceContextTestCase(FilterTestCases.FilterTestCase, FilterTestCas
         ("interfaces", "interfaces__id"),
         ("interfaces", "interfaces__name"),
         ("name",),
+        ("role", "role__name"),
         ("status", "status__name"),
     ]
 
