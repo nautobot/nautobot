@@ -72,6 +72,20 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.28 (2024-09-24)
+
+### Fixed
+
+- [#6152](https://github.com/nautobot/nautobot/issues/6152) - Fixed table column ordering.
+- [#6237](https://github.com/nautobot/nautobot/issues/6237) - Corrected presentation of rendered Markdown content in Notes table.
+- [#6262](https://github.com/nautobot/nautobot/issues/6262) - Fixed invalid installation of `xmlsec` library in the Nautobot Docker images.
+
+### Housekeeping
+
+- [#5637](https://github.com/nautobot/nautobot/issues/5637) - Removed "version" from development `docker-compose.yml` files as newer versions of Docker complain about it being obsolete.
+- [#5637](https://github.com/nautobot/nautobot/issues/5637) - Fixed behavior of `invoke stop` so that it also stops the optional `mkdocs` container if present.
+- [#6262](https://github.com/nautobot/nautobot/issues/6262) - Brought `.gitignore` up to date with latest to aid in branch switching.
+
 ## v1.6.27 (2024-09-03)
 
 ### Security
