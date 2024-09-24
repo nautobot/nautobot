@@ -3148,7 +3148,7 @@ class DeviceBayPopulateView(generic.ObjectEditView):
                 f"Added {device_bay.installed_device} to {device_bay}.",
             )
 
-            return redirect("dcim:device", pk=device_bay.device.pk)
+            return redirect("dcim:device_devicebays", pk=device_bay.device.pk)
 
         return render(
             request,
@@ -3191,7 +3191,7 @@ class DeviceBayDepopulateView(generic.ObjectEditView):
                 f"Removed {removed_device} from {device_bay}.",
             )
 
-            return redirect("dcim:device", pk=device_bay.device.pk)
+            return redirect("dcim:device_devicebays", pk=device_bay.device.pk)
 
         return render(
             request,
