@@ -11,9 +11,11 @@ gunicorn.py
 invoke.yml
 nautobot.log
 nautobot.pid
+nautobot.sql
 .DS_Store
 .idea
 .coverage
+.coverage.*
 .vscode
 docker-compose.override.yml
 *.env
@@ -27,7 +29,6 @@ uwsgi.ini
 jobs/*
 htmlcov/*
 /nautobot/project-static/docs/
-/examples/example_plugin/example_plugin/static/example_plugin/docs/
-development/factory_dump.json
+/examples/example_*/**/static/example_*/docs/
+development/factory_dump*.json
 node_modules
-nautobot/ui

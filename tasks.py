@@ -406,7 +406,7 @@ def stop(context, service=None):
     """Stop Nautobot and its dependencies."""
     print("Stopping Nautobot...")
     if not service:
-        docker_compose(context, "down")
+        docker_compose(context, "--profile '*' down")
     else:
         docker_compose(context, "stop", service=service)
 

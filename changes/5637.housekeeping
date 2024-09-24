@@ -1,0 +1,2 @@
+Removed "version" from development `docker-compose.yml` files as newer versions of Docker complain about it being obsolete.
+Fixed behavior of `invoke stop` so that it also stops the optional `mkdocs` container if present.
