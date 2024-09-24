@@ -1921,7 +1921,6 @@ class VirtualDeviceContext(PrimaryModel):
                     raise ValidationError(
                         {f"{field}": f"{ip} is not part of an interface that belongs to this VDC's device."}
                     )
-
                 # Note: The validation for primary IPs `validate_primary_ips` is commented out due to the order in which Django processes form validation with
                 # Many-to-Many (M2M) fields. During form saving, Django creates the instance first before assigning the M2M fields (in this case, interfaces).
                 # As a result, the primary_ips fields could fail validation at this point because the interfaces are not yet linked to the instance,
@@ -1942,7 +1941,6 @@ class VirtualDeviceContext(PrimaryModel):
     def clean(self):
         super().clean()
         self.validate_primary_ips()
-
 
 @extras_features(
     "custom_links",
