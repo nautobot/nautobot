@@ -69,7 +69,7 @@ class CloudNetworkFactory(PrimaryModelFactory):
     )
     cloud_account = random_instance(models.CloudAccount, allow_null=False)
     has_parent = NautobotBoolIterator()
-    extra_config = factory.Faker("pydict", value_types=[str, bool, int])
+    extra_config = factory.Faker("pydict", nb_elements=1, value_types=[str, bool, int])
 
     @factory.lazy_attribute
     def parent(self):

@@ -147,7 +147,7 @@ class CloudNetworkTest(APIViewTestCases.APIViewTestCase):
             "description": "A new description",
             "cloud_resource_type": cloud_resource_types[1].pk,
             "cloud_account": cloud_accounts[1].pk,
-            "extra_config": {"A": 1, "B": 2, "C": 3},
+            "extra_config": {"A": 1},
         }
 
 
