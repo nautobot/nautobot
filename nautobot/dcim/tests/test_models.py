@@ -3230,6 +3230,20 @@ class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
             str(err.exception),
         )
 
+        namespace = Namespace.objects.create(name="test_name_space")
+        Prefix.objects.create(
+            prefix="10.1.1.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        vdc.primary_ip4 = IPAddress.objects.create(
+            address="10.1.1.1/24", namespace=namespace, status=Status.objects.get_for_model(IPAddress).first()
+        )
+        with self.assertRaises(ValidationError) as err:
+            vdc.validated_save()
+        self.assertIn(
+            f"{vdc.primary_ip4} is not part of an interface that belongs to this VDC's device.",
+            str(err.exception),
+        )
+
         # TODO: Uncomment test case when VDC primary_ip interface validation is active
         # interface = Interface.objects.create(
         #     name="Int1", device=device, status=intf_status, role=intf_role, type=InterfaceTypeChoices.TYPE_100GE_CFP
@@ -3245,9 +3259,6 @@ class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
         # )
         # interface.virtual_device_contexts.add(vdc)
         # interface.add_ip_addresses([ip_v4, ip_v6])
-        vdc.primary_ip4 = ip_v4
-        vdc.primary_ip6 = ip_v6
-        vdc.validated_save()
 
     def test_interfaces_validation_logic(self):
         """Assert Virtual Device COntext raises error when adding interfaces that do not belong to same device as the VDC's device."""
