@@ -521,8 +521,9 @@ class PrefixIPAddressesView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Find all IPAddresses belonging to this Prefix
+        descendants = instance.descendants(include_self=True)
         ipaddresses = (
-            instance.ip_addresses.all()
+            IPAddress.objects.filter(parent__in=descendants)
             .restrict(request.user, "view")
             .select_related("role", "status", "tenant")
             .prefetch_related("primary_ip4_for", "primary_ip6_for")

@@ -898,6 +898,7 @@ class Prefix(PrimaryModel):
         Returns:
             IPAddress QuerySet
         """
+        # Question: This is a possible fix for this PR; should this be uncommented?
         # 3.0 TODO: uncomment this to enable this logic
         # if self.type == choices.PrefixTypeChoices.TYPE_POOL:
         #     return IPAddress.objects.filter(

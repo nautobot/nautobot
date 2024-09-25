@@ -328,6 +328,40 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                 strip_tags(content),
             )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_prefix_ipaddresses_table_list_includes_child_ips(self):
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        instance = Prefix.objects.create(
+            prefix="5.5.10.0/23",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=self.statuses[1],
+        )
+        Prefix.objects.create(
+            prefix="5.5.10.2/30",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_POOL,
+            status=self.statuses[1],
+        )
+        IPAddress.objects.create(
+            address="5.5.10.1/32",
+            status=ip_status,
+            namespace=self.namespace,
+        )
+        IPAddress.objects.create(
+            address="5.5.10.4/30",
+            status=ip_status,
+            namespace=self.namespace,
+        )
+        response = self.client.get(reverse("ipam:prefix_ipaddresses", args=(instance.pk,)))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
+        # TODO(timizuo): Also test for IP Addresses count is correct after count is fixed in `prefix_ipaddresses.html`;
+        # currently it shows 1 instead of 2
+        self.assertIn("5.5.10.1/32", strip_tags(content))
+        self.assertIn("5.5.10.4/30", strip_tags(content))
+
 
 class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = IPAddress
