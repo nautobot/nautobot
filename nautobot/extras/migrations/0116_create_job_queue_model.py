@@ -94,6 +94,18 @@ class Migration(migrations.Migration):
                 related_name="jobs", through="extras.JobQueueAssignment", to="extras.jobqueue"
             ),
         ),
+        migrations.AddField(
+            model_name="job",
+            name="default_job_queue_override",
+            field=models.BooleanField(default=False),
+        ),
+        migrations.AddField(
+            model_name="job",
+            name="default_job_queue",
+            field=models.ForeignKey(
+                blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to="extras.jobqueue"
+            ),
+        ),
         migrations.RenameField(
             model_name="job",
             old_name="task_queues_override",

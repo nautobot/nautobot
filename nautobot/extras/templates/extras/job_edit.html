@@ -93,6 +93,7 @@
             {% include "extras/inc/overridable_field.html" with field=form.time_limit override_field=form.time_limit_override %}
             {% include "extras/inc/overridable_field.html" with field=form.has_sensitive_variables override_field=form.has_sensitive_variables_override %}
             {% include "extras/inc/overridable_field.html" with field=form.job_queues override_field=form.job_queues_override %}
+            {% include "extras/inc/overridable_field.html" with field=form.default_job_queue override_field=form.default_job_queue_override %}
         </div>
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}

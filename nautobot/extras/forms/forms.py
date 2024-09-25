@@ -957,6 +957,10 @@ class JobEditForm(NautobotModelForm):
         label="Job Queues",
         queryset=JobQueue.objects.all(),
     )
+    default_job_queue = DynamicModelChoiceField(
+        label="Default Job Queue",
+        queryset=JobQueue.objects.all(),
+    )
 
     class Meta:
         model = Job
@@ -982,8 +986,33 @@ class JobEditForm(NautobotModelForm):
             "has_sensitive_variables",
             "job_queues_override",
             "job_queues",
+            "default_job_queue_override",
+            "default_job_queue",
             "tags",
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        job_model = self.instance
+        job_queue_queryset = JobQueue.objects.filter(jobs=job_model)
+        job_queue_params = {"jobs": [job_model.pk]}
+        if job_model.default_job_queue:
+            default_job_queue = job_model.default_job_queue.pk
+        else:
+            # Populate the field with settings.CELERY_TASK_DEFAULT_QUEUE JobQueue if it exists
+            try:
+                default_job_queue = JobQueue.objects.get(name=settings.CELERY_TASK_DEFAULT_QUEUE)
+                default_job_queue = default_job_queue.pk
+            except JobQueue.DoesNotExist:
+                pass
+        self.fields["default_job_queue"] = DynamicModelChoiceField(
+            queryset=job_queue_queryset,
+            query_params=job_queue_params,
+            required=False,
+            help_text="The default job queue to route this job to",
+            label="Default Job queue",
+        )
+        self.fields["default_job_queue"].initial = default_job_queue
 
     def clean(self):
         """
@@ -1001,6 +1030,9 @@ class JobEditForm(NautobotModelForm):
                 cleaned_data["job_queues"] = JobQueue.objects.filter(
                     name__in=getattr(job_class, "task_queues", []) or [settings.CELERY_TASK_DEFAULT_QUEUE]
                 )
+            if not cleaned_data.get("default_job_queue_override", False):
+                meta_task_queues = getattr(job_class, "task_queues", []) or [settings.CELERY_TASK_DEFAULT_QUEUE]
+                cleaned_data["default_job_queue"] = JobQueue.objects.get(name=meta_task_queues[0])
         return cleaned_data
 
     def save(self, *args, **kwargs):

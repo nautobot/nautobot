@@ -498,6 +498,20 @@ class BaseJob:
             help_text="The job queue to route this job to",
             label="Job queue",
         )
+        # Populate the job queue field on the JobRun Form
+        default_job_queue = None
+        # Populate the field with default_job_queue if it exists
+        if job_model.default_job_queue:
+            default_job_queue = job_model.default_job_queue.pk
+        else:
+            # Populate the field with settings.CELERY_TASK_DEFAULT_QUEUE JobQueue if it exists
+            try:
+                default_job_queue = JobQueue.objects.get(name=settings.CELERY_TASK_DEFAULT_QUEUE)
+                default_job_queue = default_job_queue.pk
+            except JobQueue.DoesNotExist:
+                pass
+        form.fields["_job_queue"].initial = default_job_queue
+
         if cls.supports_dryrun and (not initial or "dryrun" not in initial):
             # Set initial "dryrun" checkbox state based on the Meta parameter
             form.fields["dryrun"].initial = dryrun_default

@@ -212,6 +212,10 @@ class Job(PrimaryModel):
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
+    default_job_queue_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
     job_queues = models.ManyToManyField(
         to="extras.JobQueue",
         related_name="jobs",
@@ -219,7 +223,13 @@ class Job(PrimaryModel):
         help_text="The job queues that this job can be run on",
         through="extras.JobQueueAssignment",
     )
-
+    default_job_queue = models.ForeignKey(
+        to="extras.JobQueue",
+        on_delete=models.SET_NULL,
+        verbose_name="Default Job Queue",
+        null=True,
+        blank=True,
+    )
     objects = BaseManager.from_queryset(JobQuerySet)()
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
