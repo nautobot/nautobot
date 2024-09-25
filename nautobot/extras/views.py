@@ -2523,12 +2523,12 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 module_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(module_table)
                 context["module_table"] = module_table
-            if ContentType.objects.get_for_model(VirtualDeviceContext) in context["content_types"]:
-                vdcs = instance.virtual_device_contexts.restrict(request.user, "view")
-                vdc_table = VirtualDeviceContextTable(vdcs)
-                vdc_table.columns.hide("role")
-                RequestConfig(request, paginate).configure(vdc_table)
-                context["vdc_table"] = vdc_table
+            # if ContentType.objects.get_for_model(VirtualDeviceContext) in context["content_types"]:
+            #     vdcs = instance.virtual_device_contexts.restrict(request.user, "view")
+            #     vdc_table = VirtualDeviceContextTable(vdcs)
+            #     vdc_table.columns.hide("role")
+            #     RequestConfig(request, paginate).configure(vdc_table)
+            #     context["vdc_table"] = vdc_table
         return context
 
 
