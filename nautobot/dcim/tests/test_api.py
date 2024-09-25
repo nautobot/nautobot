@@ -643,7 +643,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        locations = Location.objects.all()[:2]
+        locations = Location.objects.filter(location_type__name="Aisle", devices__isnull=False)[:2]
 
         rack_groups = (
             RackGroup.objects.create(location=locations[0], name="Rack Group 1"),
