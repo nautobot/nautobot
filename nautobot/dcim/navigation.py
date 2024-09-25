@@ -188,6 +188,22 @@ menu_items = (
                             ),
                         ),
                     ),
+                    NavMenuItem(
+                        link="dcim:virtualdevicecontext_list",
+                        name="Virtual Device Contexts",
+                        weight=700,
+                        permissions=[
+                            "dcim.view_virtualdevicecontext",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:virtualdevicecontext_add",
+                                permissions=[
+                                    "dcim.add_virtualdevicecontext",
+                                ],
+                            ),
+                        ),
+                    ),
                 ),
             ),
             NavMenuGroup(

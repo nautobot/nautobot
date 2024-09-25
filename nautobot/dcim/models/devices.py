@@ -1898,12 +1898,6 @@ class VirtualDeviceContext(PrimaryModel):
     def __str__(self):
         return self.name
 
-    # TODO: Remove when UI View for this model is added
-    def get_absolute_url(self, api=False):
-        if api:
-            return super().get_absolute_url(api=api)
-        return None  # TODO
-
     @property
     def primary_ip(self):
         if get_settings_or_config("PREFER_IPV4") and self.primary_ip4:
@@ -1915,34 +1909,38 @@ class VirtualDeviceContext(PrimaryModel):
         else:
             return None
 
-    def clean(self):
-        from nautobot.ipam.models import IPAddressToInterface  # circular import workaround
-
-        super().clean()
-
-        all_interfaces = self.interfaces.all()
+    def validate_primary_ips(self):
         for field in ["primary_ip4", "primary_ip6"]:
             ip = getattr(self, field)
             if ip is not None:
-                if field == "primary_ip4":
-                    if ip.ip_version != 4:
-                        raise ValidationError({f"{field}": f"{ip} is not an IPv4 address."})
-                else:
-                    if ip.ip_version != 6:
-                        raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
-                if IPAddressToInterface.objects.filter(ip_address=ip, interface__in=all_interfaces).exists():
-                    pass
-                elif (
-                    ip.nat_inside is not None
-                    and IPAddressToInterface.objects.filter(
-                        ip_address=ip.nat_inside, interface__in=all_interfaces
-                    ).exists()
-                ):
-                    pass
-                else:
+                if field == "primary_ip4" and ip.ip_version != 4:
+                    raise ValidationError({f"{field}": f"{ip} is not an IPv4 address."})
+                if field == "primary_ip6" and ip.ip_version != 6:
+                    raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
+                if not ip.interfaces.filter(device=self.device).exists():
                     raise ValidationError(
-                        {f"{field}": f"The specified IP address ({ip}) is not assigned to this Virtual Device Context."}
+                        {f"{field}": f"{ip} is not part of an interface that belongs to this VDC's device."}
                     )
+                # Note: The validation for primary IPs `validate_primary_ips` is commented out due to the order in which Django processes form validation with
+                # Many-to-Many (M2M) fields. During form saving, Django creates the instance first before assigning the M2M fields (in this case, interfaces).
+                # As a result, the primary_ips fields could fail validation at this point because the interfaces are not yet linked to the instance,
+                # leading to validation errors.
+                # interfaces = self.interfaces.all()
+                # if IPAddressToInterface.objects.filter(ip_address=ip, interface__in=interfaces).exists():
+                #     pass
+                # elif (
+                #     ip.nat_inside is None
+                #     or not IPAddressToInterface.objects.filter(
+                #         ip_address=ip.nat_inside, interface__in=interfaces
+                #     ).exists()
+                # ):
+                #     raise ValidationError(
+                #         {f"{field}": f"The specified IP address ({ip}) is not assigned to this Virtual Device Context."}
+                #     )
+
+    def clean(self):
+        super().clean()
+        self.validate_primary_ips()
 
 
 @extras_features(
