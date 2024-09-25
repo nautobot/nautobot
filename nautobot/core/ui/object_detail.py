@@ -741,7 +741,7 @@ class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
         section=SectionChoices.LEFT_HALF,
         **kwargs,
     ):
-        """Instantiate an `ObjectCustomFieldsPanel`.
+        """Instantiate an `_ObjectCustomFieldsPanel`.
 
         Args:
             advanced_ui (bool): Whether this is on the "main" tab (False) or the "advanced" tab (True)
@@ -910,6 +910,37 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
         return f"cr_{relationship.key}__{side}={obj.pk}"
 
 
+class _ObjectTagsPanel(Panel):
+    """Panel displaying an object's tags as a space-separated list of color-coded tag names."""
+
+    def __init__(
+        self,
+        *,
+        weight=Panel.WEIGHT_TAGS_PANEL,
+        label="Tags",
+        section=SectionChoices.LEFT_HALF,
+        body_content_template_path="components/panel/body_content_tags.html",
+        **kwargs,
+    ):
+        """Instantiate an `_ObjectTagsPanel`."""
+        super().__init__(
+            weight=weight,
+            label=label,
+            section=section,
+            body_content_template_path=body_content_template_path,
+            **kwargs,
+        )
+
+    def should_render(self, context):
+        return hasattr(context["object"], "tags")
+
+    def get_extra_context(self, context):
+        return {
+            "tags": context["object"].tags.all(),
+            "list_url_name": validated_viewname(context["object"], "list"),
+        }
+
+
 class _ObjectDetailMainTab(Tab):
     """Base class for a main display tab containing an overview of object fields and similar data."""
 
@@ -927,7 +958,7 @@ class _ObjectDetailMainTab(Tab):
         panels.append(_ObjectCustomFieldsPanel())
         panels.append(_ObjectComputedFieldsPanel())
         panels.append(_ObjectRelationshipsPanel())
-        # TODO: tags
+        panels.append(_ObjectTagsPanel())
 
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
 
