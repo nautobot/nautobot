@@ -65,6 +65,7 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
+    InterfaceVDCAssignment,
     InventoryItem,
     Location,
     LocationType,
@@ -2147,6 +2148,16 @@ class VirtualDeviceContextFilterSet(NautobotFilterSet, TenancyModelFilterSetMixi
         to_field_name="name",
         label="Device (name or ID)",
     )
+    interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        queryset=Interface.objects.all(),
+        to_field_name="name",
+        label="Interface (name or ID)",
+    )
+    has_interfaces = RelatedMembershipBooleanFilter(
+        field_name="interfaces",
+        label="Has Interfaces",
+    )
 
     class Meta:
         model = VirtualDeviceContext
@@ -2155,9 +2166,11 @@ class VirtualDeviceContextFilterSet(NautobotFilterSet, TenancyModelFilterSetMixi
             "name",
             "device",
             "tenant",
+            "interfaces",
+            "has_interfaces",
+            "has_primary_ip",
             "primary_ip4",
             "primary_ip6",
-            "has_primary_ip",
             "status",
             "tags",
             "description",
@@ -2186,3 +2199,43 @@ class VirtualDeviceContextFilterSet(NautobotFilterSet, TenancyModelFilterSetMixi
     def filter_primary_ip6(self, queryset, name, value):
         ip_queryset = self.get_ip_queryset(value)
         return queryset.filter(primary_ip6__in=ip_queryset)
+
+
+class InterfaceVDCAssignmentFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "interface__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "virtual_device_context__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+        }
+    )
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="interface__device",
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Device (name or ID)",
+    )
+    virtual_device_context = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VirtualDeviceContext.objects.all(),
+        to_field_name="name",
+        label="Virtual Device Context (name or ID)",
+    )
+    interface = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        queryset=Interface.objects.all(),
+        to_field_name="name",
+        label="Interface (name or ID)",
+    )
+
+    class Meta:
+        model = InterfaceVDCAssignment
+        fields = [
+            "device",
+            "interface",
+            "virtual_device_context",
+        ]
