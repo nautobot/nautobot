@@ -95,6 +95,7 @@ __all__ = (
     "SoftwareImageFileTable",
     "SoftwareVersionTable",
     "VirtualChassisTable",
+    "VirtualDeviceContextTable",
 )
 
 
@@ -636,6 +637,11 @@ class BaseInterfaceTable(BaseTable):
 class InterfaceTable(StatusTableMixin, ModularDeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
     mgmt_only = BooleanColumn()
     tags = TagColumn(url_name="dcim:interface_list")
+    virtual_device_context_count = LinkedCountColumn(
+        viewname="dcim:virtualdevicecontext_list",
+        url_params={"interfaces": "pk"},
+        verbose_name="Virtual Device Contexts",
+    )
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = Interface
@@ -661,6 +667,7 @@ class InterfaceTable(StatusTableMixin, ModularDeviceComponentTable, BaseInterfac
             "tags",
             "ip_addresses",
             "untagged_vlan",
+            "virtual_device_context_count",
             "tagged_vlans",
         )
         default_columns = (
@@ -717,6 +724,7 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "ip_addresses",
             "untagged_vlan",
             "tagged_vlans",
+            "virtual_device_context_count",
             "actions",
         )
         default_columns = [
@@ -735,6 +743,7 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "mode",
             "description",
             "ip_addresses",
+            "virtual_device_context_count",
             "cable",
             "connection",
             "actions",

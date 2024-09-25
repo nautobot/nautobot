@@ -45,6 +45,7 @@ router.register("modules", views.ModuleUIViewSet)
 router.register("module-bays", views.ModuleBayUIViewSet)
 router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
 router.register("module-types", views.ModuleTypeUIViewSet)
+router.register("virtual-device-contexts", views.VirtualDeviceContextUIViewSet)
 
 urlpatterns = [
     # Location types

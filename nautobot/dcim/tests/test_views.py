@@ -54,6 +54,7 @@ from nautobot.dcim.filters import (
     PowerConnectionFilterSet,
     SoftwareImageFileFilterSet,
     SoftwareVersionFilterSet,
+    VirtualDeviceContextFilterSet,
 )
 from nautobot.dcim.models import (
     Cable,
@@ -100,6 +101,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 from nautobot.dcim.views import (
     ConsoleConnectionsListView,
@@ -3110,6 +3112,15 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
                 vlan_group=vlan_group,
             ),
         )
+        vdcs = [
+            VirtualDeviceContext.objects.create(
+                name=f"Interface VirtualDeviceContext {i}",
+                device=device,
+                status=Status.objects.get_for_model(VirtualDeviceContext).first(),
+                identifier=100 + i,
+            )
+            for i in range(2)
+        ]
 
         cls.form_data = {
             "device": device.pk,
@@ -3126,6 +3137,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
+            "virtual_device_contexts": [v.pk for v in vdcs],
             "tags": [t.pk for t in Tag.objects.get_for_model(Interface)],
         }
 
@@ -4757,3 +4769,63 @@ class ControllerManagedDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCa
         cls.bulk_edit_data = {
             "weight": 300,
         }
+
+
+class VirtualDeviceContextTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = VirtualDeviceContext
+    filterset = VirtualDeviceContextFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        devices = Device.objects.filter(interfaces__isnull=False)
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext)[0]
+        tenants = Tenant.objects.all()
+
+        cls.form_data = {
+            "name": "Virtual Device Context 1",
+            "device": devices[0].pk,
+            "identifier": 100,
+            "status": vdc_status.pk,
+            "tenant": tenants[0].pk,
+            "interfaces": [interface.pk for interface in devices[0].all_interfaces[:3]],
+            "description": "Sample Description",
+        }
+
+        cls.bulk_edit_data = {
+            "tenant": tenants[1].pk,
+        }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_vdc_primary_ips(self):
+        """Test assigning a primary IP to a virtual device context."""
+        self.add_permissions("dcim.change_virtualdevicecontext")
+        vdc = VirtualDeviceContext.objects.first()
+        device = vdc.device
+        intf_status = Status.objects.get_for_model(Interface).first()
+        intf_role = Role.objects.get_for_model(Interface).first()
+        interface = Interface.objects.create(
+            name="Int1",
+            device=device,
+            status=intf_status,
+            role=intf_role,
+            type=InterfaceTypeChoices.TYPE_100GE_CFP,
+        )
+        ip_v4 = IPAddress.objects.filter(ip_version=4).first()
+        ip_v6 = IPAddress.objects.filter(ip_version=6).first()
+        interface.virtual_device_contexts.add(vdc)
+        interface.add_ip_addresses([ip_v4, ip_v6])
+
+        form_data = self.form_data.copy()
+        form_data["device"] = vdc.device
+        form_data["interfaces"] = [interface.pk]
+        form_data["primary_ip4"] = ip_v4.pk
+        form_data["primary_ip6"] = ip_v6.pk
+        # Assert that update succeeds.
+        request = {
+            "path": self._get_url("edit", vdc),
+            "data": post_data(form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        vdc.refresh_from_db()
+        self.assertEqual(vdc.primary_ip6, ip_v6)
+        self.assertEqual(vdc.primary_ip4, ip_v4)
