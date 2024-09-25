@@ -31,7 +31,7 @@ class AccessPointGroupFactory(PrimaryModelFactory):
     name = UniqueFaker("company")
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
-    controller = random_instance(Controller, allow_null=True)
+    controller = random_instance(Controller.objects.filter(controller_device_isnull=True), allow_null=True)
     has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 

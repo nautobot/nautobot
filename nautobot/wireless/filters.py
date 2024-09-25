@@ -4,11 +4,11 @@ from nautobot.core.filters import BaseFilterSet, NaturalKeyOrPKMultipleChoiceFil
 from nautobot.dcim.models import Controller, Device
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import SecretsGroup
-from nautobot.tenancy.models import Tenant
+from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.wireless import choices, models
 
 
-class AccessPointGroupFilterSet(NautobotFilterSet):
+class AccessPointGroupFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -21,12 +21,6 @@ class AccessPointGroupFilterSet(NautobotFilterSet):
         queryset=Controller.objects.all(),
         to_field_name="name",
         label="Controller (name or ID)",
-    )
-    tenant = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="tenant",
-        queryset=Tenant.objects.all(),
-        to_field_name="name",
-        label="Tenant (name or ID)",
     )
 
     class Meta:
@@ -81,7 +75,7 @@ class RadioProfileFilterSet(NautobotFilterSet):
         fields = "__all__"
 
 
-class WirelessNetworkFilterSet(NautobotFilterSet):
+class WirelessNetworkFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -105,12 +99,6 @@ class WirelessNetworkFilterSet(NautobotFilterSet):
         label="Secrets group (name or ID)",
     )
     hidden = django_filters.BooleanFilter()
-    tenant = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="tenant",
-        queryset=Tenant.objects.all(),
-        to_field_name="name",
-        label="Tenant (name or ID)",
-    )
 
     class Meta:
         model = models.WirelessNetwork
