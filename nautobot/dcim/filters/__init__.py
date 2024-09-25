@@ -1137,6 +1137,10 @@ class InterfaceFilterSet(
         to_field_name="name",
         label="Virtual Device Context (name or ID)",
     )
+    has_virtual_device_contexts = RelatedMembershipBooleanFilter(
+        field_name="virtual_device_contexts",
+        label="Has Virtual Device Context",
+    )
 
     class Meta:
         model = Interface

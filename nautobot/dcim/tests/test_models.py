@@ -3199,18 +3199,9 @@ class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
 class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
     model = VirtualDeviceContext
 
-    # TODO: Remove when VirtualDeviceContext UI View / Docs is created
-    def test_get_docs_url(self):
-        """No docs for this through table model."""
-
     def test_assigning_primary_ip(self):
         device = Device.objects.first()
-        intf_status = Status.objects.get_for_model(Interface).first()
         vdc_status = Status.objects.get_for_model(VirtualDeviceContext).first()
-        intf_role = Role.objects.get_for_model(Interface).first()
-        interface = Interface.objects.create(
-            name="Int1", device=device, status=intf_status, role=intf_role, type=InterfaceTypeChoices.TYPE_100GE_CFP
-        )
         vdc = VirtualDeviceContext(
             device=device,
             status=vdc_status,
@@ -3239,14 +3230,60 @@ class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
             str(err.exception),
         )
 
-        vdc.primary_ip6 = ip_v6
+        namespace = Namespace.objects.create(name="test_name_space")
+        Prefix.objects.create(
+            prefix="10.1.1.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        vdc.primary_ip4 = IPAddress.objects.create(
+            address="10.1.1.1/24", namespace=namespace, status=Status.objects.get_for_model(IPAddress).first()
+        )
         with self.assertRaises(ValidationError) as err:
             vdc.validated_save()
         self.assertIn(
-            f"The specified IP address ({ip_v6}) is not assigned to this Virtual Device Context.",
+            f"{vdc.primary_ip4} is not part of an interface that belongs to this VDC's device.",
             str(err.exception),
         )
-        interface.virtual_device_contexts.add(vdc)
-        interface.add_ip_addresses([ip_v4, ip_v6])
-        vdc.primary_ip4 = ip_v4
-        vdc.validated_save()
+
+        # TODO: Uncomment test case when VDC primary_ip interface validation is active
+        # interface = Interface.objects.create(
+        #     name="Int1", device=device, status=intf_status, role=intf_role, type=InterfaceTypeChoices.TYPE_100GE_CFP
+        # )
+        # intf_status = Status.objects.get_for_model(Interface).first()
+        # intf_role = Role.objects.get_for_model(Interface).first()
+        # vdc.primary_ip6 = ip_v6
+        # with self.assertRaises(ValidationError) as err:
+        #     vdc.validated_save()
+        # self.assertIn(
+        #     f"The specified IP address ({ip_v6}) is not assigned to this Virtual Device Context.",
+        #     str(err.exception),
+        # )
+        # interface.virtual_device_contexts.add(vdc)
+        # interface.add_ip_addresses([ip_v4, ip_v6])
+
+    def test_interfaces_validation_logic(self):
+        """Assert Virtual Device COntext raises error when adding interfaces that do not belong to same device as the VDC's device."""
+        device = Device.objects.first()
+        interface = Interface.objects.create(
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=device,
+            status=Status.objects.get_for_model(Interface).first(),
+            role=Role.objects.get_for_model(Interface).first(),
+        )
+        vdc = VirtualDeviceContext.objects.create(
+            name="Sample VDC",
+            device=Device.objects.exclude(pk=device.pk).first(),
+            identifier=100,
+            status=Status.objects.get_for_model(VirtualDeviceContext).first(),
+        )
+
+        with self.assertRaises(ValidationError) as err:
+            vdc.interfaces.add(interface)
+        self.assertEqual(
+            err.exception.message_dict["interfaces"][0],
+            f"Interfaces with names {[interface.name]} must all belong to the "
+            f"same device as the Virtual Device Context's device.",
+        )
+
+    def test_get_docs_url(self):
+        """No docs for VirtualDeviceContext yet."""

@@ -2140,6 +2140,8 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         ("tagged_vlans", "tagged_vlans__vid"),
         ("untagged_vlan", "untagged_vlan__id"),
         ("untagged_vlan", "untagged_vlan__vid"),
+        ("virtual_device_contexts", "virtual_device_contexts__id"),
+        ("virtual_device_contexts", "virtual_device_contexts__name"),
     ]
 
     @classmethod
@@ -2363,6 +2365,18 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
             type=InterfaceTypeChoices.TYPE_1GE_SFP,
             status=interface_statuses[3],
         )
+
+        # Virtual Device Context
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext).first()
+        vdcs = [
+            VirtualDeviceContext.objects.create(
+                device=devices[2], status=vdc_status, identifier=200 + idx, name=f"Test VDC {idx}"
+            )
+            for idx in range(3)
+        ]
+        vdcs[0].interfaces.set(lag_interfaces)
+        vdcs[1].interfaces.set(lag_interfaces)
+        vdcs[2].interfaces.set(lag_interfaces)
 
     def test_enabled(self):
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter

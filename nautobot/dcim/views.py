@@ -109,6 +109,7 @@ from .models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 
 logger = logging.getLogger(__name__)
@@ -1805,6 +1806,17 @@ class DeviceView(generic.ObjectView):
         modulebay_count = instance.module_bays.count()
         module_count = instance.module_bays.filter(installed_module__isnull=False).count()
 
+        vdcs = instance.virtual_device_contexts.restrict(request.user).select_related(
+            "tenant", "primary_ip4", "primary_ip6"
+        )
+        vdcs_table = tables.VirtualDeviceContextTable(vdcs, orderable=False, exclude=("device",))
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(vdcs_table)
+
         return {
             "services": services,
             "software_version_images": software_version_images,
@@ -1813,6 +1825,7 @@ class DeviceView(generic.ObjectView):
             "active_tab": "device",
             "modulebay_count": modulebay_count,
             "module_count": f"{module_count}/{modulebay_count}",
+            "vdcs_table": vdcs_table,
         }
 
 
@@ -2873,6 +2886,13 @@ class InterfaceView(generic.ObjectView):
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
 
         redundancy_table = self._get_interface_redundancy_groups_table(request, instance)
+        virtual_device_contexts_table = tables.VirtualDeviceContextTable(
+            instance.virtual_device_contexts.restrict(request.user, "view").select_related(
+                "device", "tenant", "primary_ip4", "primary_ip6"
+            ),
+            orderable=False,
+            exclude=("device",),
+        )
 
         return {
             "ipaddress_table": ipaddress_table,
@@ -2881,6 +2901,7 @@ class InterfaceView(generic.ObjectView):
             "module_breadcrumb_url": "dcim:module_interfaces",
             "child_interfaces_table": child_interfaces_tables,
             "redundancy_table": redundancy_table,
+            "virtual_device_contexts_table": virtual_device_contexts_table,
             **super().get_extra_context(request, instance),
         }
 
@@ -4230,3 +4251,36 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
             context["devices_table"] = devices_table
 
         return context
+
+
+#
+# Virtual Device Context
+#
+
+
+class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.VirtualDeviceContextFilterSet
+    filterset_form_class = forms.VirtualDeviceContextFilterForm
+    form_class = forms.VirtualDeviceContextForm
+    bulk_update_form_class = forms.VirtualDeviceContextBulkEditForm
+    queryset = VirtualDeviceContext.objects.all()
+    serializer_class = serializers.VirtualDeviceContextSerializer
+    table_class = tables.VirtualDeviceContextTable
+
+    def get_extra_context(self, request, instance):
+        if self.action == "retrieve":
+            interfaces_table = tables.InterfaceTable(
+                instance.interfaces.restrict(request.user, "view"), orderable=False, exclude=("device",)
+            )
+
+            return {
+                "interfaces_table": interfaces_table,
+                **super().get_extra_context(request, instance),
+            }
+        return super().get_extra_context(request, instance)
+
+    def extra_post_save_action(self, obj, form):
+        if form.cleaned_data.get("add_interfaces", None):
+            obj.prefixes.add(*form.cleaned_data["add_interfaces"])
+        if form.cleaned_data.get("remove_interfaces", None):
+            obj.prefixes.remove(*form.cleaned_data["remove_interfaces"])
