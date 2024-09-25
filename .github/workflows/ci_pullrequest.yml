@@ -204,7 +204,7 @@ jobs:
       NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.mysql"
     services:
       mysql:
-        image: "mysql:8"
+        image: "mysql:latest"
         env:
           MYSQL_ROOT_PASSWORD: "decinablesprewad"
           MYSQL_PASSWORD: "decinablesprewad"
