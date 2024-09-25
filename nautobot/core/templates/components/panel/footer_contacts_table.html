@@ -1,0 +1,20 @@
+{% with request.path|add:"?tab=contacts"|urlencode as return_url %}
+    {% if perms.extras.change_contactassociation %}
+        <button type="submit" name="_edit" formaction="{% url 'extras:contactassociation_bulk_edit' %}?return_url={{return_url}}" class="btn btn-warning btn-xs">
+            <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
+        </button>
+    {% endif %}
+    {% if perms.extras.delete_contactassociation %}
+        <button type="submit" formaction="{% url 'extras:contactassociation_bulk_delete' %}?return_url={{return_url}}" class="btn btn-danger btn-xs">
+            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
+        </button>
+    {% endif %}
+    {% if perms.extras.add_contactassociation %}
+        <div class="pull-right">
+            <a href="{% url 'extras:object_contact_team_assign' %}?return_url={{return_url}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" class="btn btn-primary btn-xs">
+                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contact
+            </a>
+        </div>
+    {% endif %}
+    <div class="clearfix"></div>
+{% endwith %}
