@@ -4816,6 +4816,8 @@ class VirtualDeviceContextTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         interface.add_ip_addresses([ip_v4, ip_v6])
 
         form_data = self.form_data.copy()
+        form_data["device"] = vdc.device
+        form_data["interfaces"] = [interface.pk]
         form_data["primary_ip4"] = ip_v4.pk
         form_data["primary_ip6"] = ip_v6.pk
         # Assert that update succeeds.

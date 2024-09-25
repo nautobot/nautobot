@@ -1917,7 +1917,7 @@ class VirtualDeviceContext(PrimaryModel):
                     raise ValidationError({f"{field}": f"{ip} is not an IPv4 address."})
                 if field == "primary_ip6" and ip.ip_version != 6:
                     raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
-                if ip.interfaces.filter(device=self.device).count() == 0:
+                if not ip.interfaces.filter(device=self.device).exists():
                     raise ValidationError(
                         {f"{field}": f"{ip} is not part of an interface that belongs to this VDC's device."}
                     )
