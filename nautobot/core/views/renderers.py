@@ -290,6 +290,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "verbose_name_plural": queryset.model._meta.verbose_name_plural,
         }
         if view.action == "retrieve":
+            context["object_detail_content"] = view.object_detail_content
             context.update(common_detail_view_context(request, instance))
         elif view.action == "list":
             # Construct valid actions for list view.
