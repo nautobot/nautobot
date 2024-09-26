@@ -139,7 +139,7 @@ class Mixins:
             super().setUpTestData()
             cls.device_type = DeviceType.objects.first()
             cls.manufacturer = cls.device_type.manufacturer
-            cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+            cls.location = Location.objects.filter(location_type__name="Campus").first()
             cls.device_role = Role.objects.get_for_model(Device).first()
             cls.device_status = Status.objects.get_for_model(Device).first()
             cls.device = Device.objects.create(
@@ -539,6 +539,8 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModel
     def setUpTestData(cls):
         cls.status = Status.objects.get_for_model(Location).first()
         location_type = LocationType.objects.create(name="Location Type 1")
+        location_type.content_types.add(ContentType.objects.get_for_model(RackGroup))
+
         cls.locations = (
             Location.objects.create(name="Location 1", location_type=location_type, status=cls.status),
             Location.objects.create(name="Location 2", location_type=location_type, status=cls.status),
@@ -547,8 +549,6 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModel
             RackGroup.objects.create(location=cls.locations[0], name="Parent Rack Group 1"),
             RackGroup.objects.create(location=cls.locations[1], name="Parent Rack Group 2"),
         )
-
-        location_type.content_types.add(ContentType.objects.get_for_model(RackGroup))
 
         RackGroup.objects.create(
             location=cls.locations[0],
