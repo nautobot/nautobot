@@ -129,10 +129,9 @@ class RadioProfile(PrimaryModel):
         base_field=models.IntegerField(choices=RadioProfileChannelWidthChoices),
         default=list,
         blank=True,
+        null=True,
     )
-    allowed_channel_list = JSONArrayField(
-        base_field=models.IntegerField(blank=True, null=True), default=list, blank=True, null=True
-    )
+    allowed_channel_list = JSONArrayField(base_field=models.IntegerField(), default=list, blank=True, null=True)
     supported_data_rates = models.ManyToManyField(
         to="wireless.SupportedDataRate",
         related_name="radio_profiles",
