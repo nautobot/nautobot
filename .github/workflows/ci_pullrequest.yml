@@ -203,8 +203,9 @@ jobs:
       NAUTOBOT_DB_PORT: "3306"
       NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.mysql"
     services:
-      mysql:
-        image: "mysql:latest"
+      db:
+        image: "mysql:8"
+        command: "--sort_buffer_size=1M"
         env:
           MYSQL_ROOT_PASSWORD: "decinablesprewad"
           MYSQL_PASSWORD: "decinablesprewad"
@@ -227,7 +228,7 @@ jobs:
           poetry-version: "1.8.2"
           python-version: "3.12"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --no-keepdb --no-cache-test-fixtures --parallel"
+        run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel"
     needs:
       - "check-migrations"
       - "check-schema"
