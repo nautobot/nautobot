@@ -786,7 +786,9 @@ class JobResult(BaseModel, CustomFieldModel):
         )
 
         if task_queue is None:
-            task_queue = job_model.default_job_queue.name if job_model.default_job_queue else settings.CELERY_TASK_DEFAULT_QUEUE
+            task_queue = (
+                job_model.default_job_queue.name if job_model.default_job_queue else settings.CELERY_TASK_DEFAULT_QUEUE
+            )
 
         job_celery_kwargs = {
             "nautobot_job_job_model_id": job_model.id,

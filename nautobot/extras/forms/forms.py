@@ -1034,9 +1034,7 @@ class JobEditForm(NautobotModelForm):
             else:
                 names = cleaned_data["job_queues"].values_list("name", flat=True)
             names += [default_job_queue]
-            cleaned_data["job_queues"] = JobQueue.objects.filter(
-                name__in=names
-            )
+            cleaned_data["job_queues"] = JobQueue.objects.filter(name__in=names)
 
         return cleaned_data
 
