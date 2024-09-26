@@ -309,10 +309,10 @@ class ExampleJobWithSoftTimeLimit(Job):
 
 Default: `[]`
 
-A list of Job Queue names that the job can be routed to. An empty list will default to only allowing the user to select the [default Celery queue](../../user-guide/administration/configuration/settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The alphabetically first queue in this list will be used if a queue is not specified in a job run API call.
+A list of Job Queue names that the job can be routed to. An empty list will default to only allowing the user to select the [default Celery queue](../../user-guide/administration/configuration/settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The queue specified in the job's `default_job_queue` will be used if a queue is not specified in a job run API call.
 
 +/- 2.4.0 "Changed default queue selection"
-    As a result of the addition of Job Queues, the default queue when running a Job without explicitly selecting a queue is now the alphabetically first queue of those listed, rather than the first queue specified in this list.
+    As a result of the addition of Job Queues, the default queue when running a Job without explicitly selecting a queue is now the job queue specified in the `default_job_queue` field on the Job model. When that value is empty, the job will be run on the job queue with the name provided by `settings.CELERY_TASK_DEFAULT_QUEUE`.
 
 !!! note
     A worker must be listening on the requested queue or the job will not run. See the documentation on [task queues](../../user-guide/administration/guides/celery-queues.md) for more information.
