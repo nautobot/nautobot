@@ -3,7 +3,7 @@ from nautobot.dcim.models import Controller, Device
 from nautobot.extras.models import SecretsGroup
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.models import Tenant
-from nautobot.wireless import models
+from nautobot.wireless import choices, models
 
 
 class AccessPointGroupTest(APIViewTestCases.APIViewTestCase):
@@ -49,9 +49,15 @@ class SupportedDataRateTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        models.SupportedDataRate.objects.create(rate=1000, standard="802.11b", mcs_index=1)
-        models.SupportedDataRate.objects.create(rate=6000, standard="802.11g", mcs_index=2)
-        models.SupportedDataRate.objects.create(rate=54000, standard="802.11n", mcs_index=3)
+        models.SupportedDataRate.objects.create(
+            rate=1000, standard=choices.SupportedDataRateStandardChoices.B, mcs_index=1
+        )
+        models.SupportedDataRate.objects.create(
+            rate=6000, standard=choices.SupportedDataRateStandardChoices.G, mcs_index=2
+        )
+        models.SupportedDataRate.objects.create(
+            rate=54000, standard=choices.SupportedDataRateStandardChoices.N, mcs_index=3
+        )
         cls.create_data = [
             {
                 "rate": 200000,
@@ -87,7 +93,7 @@ class RadioProfileTest(APIViewTestCases.APIViewTestCase):
             tx_power_min=5,
             tx_power_max=15,
             rx_power_min=-70,
-            regulatory_domain="US",
+            regulatory_domain=choices.RadioProfileRegulatoryDomainChoices.US,
             allowed_channel_list=[1, 6, 11],
         )
         models.RadioProfile.objects.create(
@@ -96,7 +102,7 @@ class RadioProfileTest(APIViewTestCases.APIViewTestCase):
             tx_power_min=10,
             tx_power_max=20,
             rx_power_min=-75,
-            regulatory_domain="GB",
+            regulatory_domain=choices.RadioProfileRegulatoryDomainChoices.GB,
             allowed_channel_list=[36, 40, 44],
         )
         models.RadioProfile.objects.create(
@@ -105,7 +111,7 @@ class RadioProfileTest(APIViewTestCases.APIViewTestCase):
             tx_power_min=15,
             tx_power_max=25,
             rx_power_min=-80,
-            regulatory_domain="JP",
+            regulatory_domain=choices.RadioProfileRegulatoryDomainChoices.JP,
             allowed_channel_list=[],
         )
         cls.create_data = [
@@ -156,15 +162,23 @@ class WirelessNetworkTest(APIViewTestCases.APIViewTestCase):
         models.WirelessNetwork.objects.create(
             name="Wireless Network 1",
             tenant=tenants[0],
-            authentication="WPA3 Enterprise",
+            authentication=choices.WirelessNetworkAuthenticationChoices.WPA2_PERSONAL,
             ssid="ssid1",
-            mode="Local (Flex)",
+            mode=choices.WirelessNetworkModeChoices.LOCAL,
         )
         models.WirelessNetwork.objects.create(
-            name="Wireless Network 2", tenant=tenants[1], authentication="WPA3 Personal", ssid="ssid2", mode="Mesh"
+            name="Wireless Network 2",
+            tenant=tenants[1],
+            authentication=choices.WirelessNetworkAuthenticationChoices.WPA2_ENTERPRISE,
+            ssid="ssid2",
+            mode=choices.WirelessNetworkModeChoices.MESH,
         )
         models.WirelessNetwork.objects.create(
-            name="Wireless Network 3", tenant=tenants[2], authentication="Open", ssid="ssid3", mode="Bridge"
+            name="Wireless Network 3",
+            tenant=tenants[2],
+            authentication=choices.WirelessNetworkAuthenticationChoices.OPEN,
+            ssid="ssid3",
+            mode=choices.WirelessNetworkModeChoices.BRIDGE,
         )
         cls.create_data = [
             {

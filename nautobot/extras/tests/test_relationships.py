@@ -31,6 +31,7 @@ from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation, Role, Status
 from nautobot.ipam.models import VLAN, VLANGroup
+from nautobot.wireless.models import AccessPointGroup
 
 
 class RelationshipBaseTest:
@@ -1393,8 +1394,10 @@ class RequiredRelationshipTestMixin:
         # Protected FK to SoftwareImageFile prevents deletion
         DeviceTypeToSoftwareImageFile.objects.all().delete()
         # Protected FK to SoftwareVersion prevents deletion
-        Controller.objects.all().delete()
         Device.objects.all().update(software_version=None)
+
+        AccessPointGroup.objects.all().delete()
+        Controller.objects.all().delete()
 
         # Create required relationships:
         device_ct = ContentType.objects.get_for_model(Device)

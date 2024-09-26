@@ -16,6 +16,7 @@ class AccessPointGroupSerializer(TaggedModelSerializerMixin, NautobotModelSerial
         validators = []
 
     def validate(self, data):
+        """Validate the uniqueness of the controller and name together. This is required because the controller can be omitted."""
         if data.get("controller", None):
             validator = UniqueTogetherValidator(
                 queryset=models.AccessPointGroup.objects.all(),
