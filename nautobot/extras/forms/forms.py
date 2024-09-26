@@ -1032,7 +1032,7 @@ class JobEditForm(NautobotModelForm):
             if not cleaned_data.get("job_queues_override", False):
                 names = getattr(job_class, "task_queues", []) or [settings.CELERY_TASK_DEFAULT_QUEUE]
             else:
-                names = cleaned_data["job_queues"].values_list("name", flat=True)
+                names = list(cleaned_data["job_queues"].values_list("name", flat=True))
             names += [default_job_queue]
             cleaned_data["job_queues"] = JobQueue.objects.filter(name__in=names)
 
