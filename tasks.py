@@ -697,8 +697,8 @@ def check_schema(context, api_version=None):
         "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
-        "parallel": "Run tests in parallel; auto-detects the number of workers if not specified with `--parallel-workers`. (default: False)",
-        "parallel-workers": "Specify the number of workers to use when running tests in parallel. Implies `--parallel`. (default: None)",
+        "parallel": "Run tests in parallel; auto-detects the number of workers if not specified with `--parallel-workers`.",
+        "parallel_workers": "Specify the number of workers to use when running tests in parallel.",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
         "performance_report": "Generate Performance Testing report in the terminal. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
         "performance_snapshot": "Generate a new performance testing report to report.yml. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
@@ -717,7 +717,7 @@ def unittest(
     tag=None,
     verbose=False,
     append=False,
-    parallel=False,
+    parallel=True,
     parallel_workers=None,
     skip_docs_build=False,
     performance_report=False,
@@ -733,8 +733,7 @@ def unittest(
 
     if parallel_workers:
         parallel_workers = int(parallel_workers)
-        if parallel_workers > 1:
-            parallel = True
+
     append_arg = " --append" if append and not parallel else ""
     parallel_arg = " --parallel-mode" if parallel else ""
     command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
@@ -750,7 +749,7 @@ def unittest(
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
-    if parallel or label == "nautobot":
+    if parallel:
         command += " --parallel"
         if parallel_workers:
             command += f"={parallel_workers}"
@@ -837,6 +836,7 @@ def integration_test(
         skip_docs_build=skip_docs_build,
         performance_report=performance_report,
         performance_snapshot=performance_snapshot,
+        parallel=False,
     )
 
 
