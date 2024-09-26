@@ -108,7 +108,7 @@ def invalidate_relationship_models_cache(sender, **kwargs):
 
 
 @receiver(post_save)
-@receiver(m2m_changed)
+# @receiver(m2m_changed)
 def _handle_changed_object(sender, instance, raw=False, **kwargs):
     """
     Fires when an object is created or updated.
