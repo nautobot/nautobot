@@ -318,7 +318,7 @@ plugins:
         "models/wireless/radioprofile.md": "user-guide/core-data-model/wireless/radioprofile.md"
         "models/wireless/wirelessnetwork.md": "user-guide/core-data-model/wireless/wirelessnetwork.md"
         # TODO - If these docs don't have much data, redirect to the parent page.
-        "models/wireless/accesspointgroupdeviceassignement.md": "user-guide/core-data-model/wireless/accesspointgroupdeviceassignment.md"
+        "models/wireless/accesspointgroupdeviceassignment.md": "user-guide/core-data-model/wireless/accesspointgroupdeviceassignment.md"
         "models/wireless/accesspointgroupradioprofileassignment.md": "user-guide/core-data-model/wireless/accesspointgroupradioprofileassignment.md"
         "models/wireless/accesspointgroupwirelessnetworkassignement.md": "user-guide/core-data-model/wireless/accesspointgroupwirelessnetworkassignment.md"
         "user-guide/administration/installation/docker.md": "user-guide/administration/installation-extras/docker.md"
