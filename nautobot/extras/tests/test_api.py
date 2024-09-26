@@ -93,6 +93,7 @@ from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
+from nautobot.wireless.models import AccessPointGroup
 
 User = get_user_model()
 
@@ -3238,6 +3239,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         IPAddress.objects.all().delete()
         Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
+        AccessPointGroup.objects.all().delete()
         VLAN.objects.all().delete()
 
         # Parameterized tests (for creating and updating single objects):
