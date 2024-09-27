@@ -994,22 +994,13 @@ class JobEditForm(NautobotModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         job_model = self.instance
-        if job_model.default_job_queue:
-            default_job_queue = job_model.default_job_queue.pk
-        else:
-            # Populate the field with settings.CELERY_TASK_DEFAULT_QUEUE JobQueue if it exists
-            try:
-                default_job_queue = JobQueue.objects.get(name=settings.CELERY_TASK_DEFAULT_QUEUE)
-                default_job_queue = default_job_queue.pk
-            except JobQueue.DoesNotExist:
-                pass
         self.fields["default_job_queue"] = DynamicModelChoiceField(
             queryset=JobQueue.objects.all(),
             required=False,
             help_text="The default job queue to route this job to",
             label="Default Job queue",
         )
-        self.fields["default_job_queue"].initial = default_job_queue
+        self.fields["default_job_queue"].initial = job_model.default_job_queue.pk
 
     def clean(self):
         """

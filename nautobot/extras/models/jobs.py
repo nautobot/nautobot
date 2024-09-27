@@ -225,10 +225,10 @@ class Job(PrimaryModel):
     )
     default_job_queue = models.ForeignKey(
         to="extras.JobQueue",
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         verbose_name="Default Job Queue",
-        null=True,
-        blank=True,
+        null=False,
+        blank=False,
     )
     objects = BaseManager.from_queryset(JobQuerySet)()
 
@@ -369,11 +369,6 @@ class Job(PrimaryModel):
     def save(self, *args, **kwargs):
         """When a Job is uninstalled, auto-disable all associated JobButtons, JobHooks, and ScheduledJobs."""
         super().save(*args, **kwargs)
-        # Add specified default_job_queue to job.job_queues if it is not included.
-        if self.default_job_queue:
-            if not self.job_queues.filter(pk=self.default_job_queue.pk).exists():
-                self.job_queues.add(self.default_job_queue)
-
         if not self.installed:
             if self.is_job_button_receiver:
                 for jb in JobButton.objects.filter(job=self, enabled=True):

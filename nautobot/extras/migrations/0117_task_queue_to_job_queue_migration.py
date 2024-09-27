@@ -21,16 +21,15 @@ def migrate_task_queues_to_job_queues(apps, schema):
         )
         job.default_job_queue = default_job_queue
         job.save()
-        # remove duplicates?
-        task_queues = list(set(task_queues))
-
         # Go through each task_queue
         # make or get the corresponding job_queue object and assign it to the job
+        job_queues = [job.default_job_queue]
         for task_queue in task_queues:
             job_queue, _ = JobQueue.objects.get_or_create(
                 name=task_queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
             )
-            job.job_queues.add(job_queue)
+            job_queues.append(job_queue)
+        job.job_queues.set(job_queues)
 
     for sj in ScheduledJob.objects.all():
         queue = sj.queue

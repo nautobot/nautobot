@@ -29,7 +29,7 @@ from nautobot.core.exceptions import CeleryWorkerNotRunningException
 from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
 from nautobot.extras import filters
-from nautobot.extras.choices import JobExecutionType, JobQueueTypeChoices
+from nautobot.extras.choices import JobExecutionType
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
@@ -599,19 +599,10 @@ class JobViewSetBase(
                 request.method, detail="This job's source code could not be located and cannot be run"
             )
 
-        valid_queues = [settings.CELERY_TASK_DEFAULT_QUEUE]
-        job_queues = job_model.job_queues.all().values_list("name", flat=True)
-        if job_queues:
-            valid_queues += list(job_queues)
-        # Get a default queue from either the job model's specified task queue or
-        # the system default to fall back on if request doesn't provide one
-        if job_model.default_job_queue:
-            default_valid_queue = job_model.default_job_queue.name
-        else:
-            default_valid_queue, _ = JobQueue.objects.get_or_create(
-                name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
-            )
-            default_valid_queue = default_valid_queue.name
+        job_queues = list(job_model.job_queues.all().values_list("name", flat=True))
+        valid_queues = job_queues if job_queues else [settings.CELERY_TASK_DEFAULT_QUEUE]
+        # default queue should be specified on the default_job_queue.
+        default_valid_queue = job_model.default_job_queue.name
 
         # We need to call request.data for both cases as this is what pulls and caches the request data
         data = request.data

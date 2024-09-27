@@ -31,6 +31,7 @@ from nautobot.extras.models import (
     DynamicGroup,
     DynamicGroupMembership,
     GitRepository,
+    Job,
     JobResult,
     MetadataType,
     ObjectChange,
@@ -453,6 +454,13 @@ def job_result_delete_associated_files(instance, **kwargs):
     else:
         for file_proxy in instance.files.all():
             file_proxy.file.delete()
+
+
+@receiver(post_save, sender=Job)
+def add_default_job_queue_to_job_queues(instance, **kwargs):
+    # Add specified default_job_queue to job.job_queues if it is not included.
+    if not instance.job_queues.filter(pk=instance.default_job_queue.pk).exists():
+        instance.job_queues.add(instance.default_job_queue)
 
 
 def refresh_job_models(sender, *, apps, **kwargs):

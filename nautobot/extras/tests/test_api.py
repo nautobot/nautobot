@@ -1758,7 +1758,7 @@ class JobTest(
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_with_no_queue_specified(self, mock_get_worker_count):
-        """Test job run response contains nested job result."""
+        """Test job run with no queue specified."""
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
         device_role = Role.objects.get_for_model(Device).first()
@@ -1770,6 +1770,7 @@ class JobTest(
         }
         class_path = "api_test_job.APITestJob"
         job_model = Job.objects.get_for_class_path(class_path)
+        job_model.default_job_queue_override = True
         job_model.default_job_queue = JobQueue.objects.last()
         job_model.save()
 
@@ -1782,8 +1783,9 @@ class JobTest(
             format="json",
             **self.header,
         )
-        # TODO Hmmm how do I determine which queue did the job use to run?
         self.assertHttpStatus(response, self.run_success_response_status)
+        latest_job_result = JobResult.objects.latest()
+        self.assertIn(job_model.default_job_queue.name, latest_job_result.celery_kwargs)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
