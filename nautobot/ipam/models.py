@@ -891,7 +891,7 @@ class Prefix(PrimaryModel):
 
     def get_all_ips(self):
         """
-        Return IP addresses with this prefix as parent including child prefixes IP addresses.
+        Return all IP addresses contained within this prefix, including child prefixes' IP addresses.
 
         Returns:
             IPAddress QuerySet
