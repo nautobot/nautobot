@@ -101,16 +101,22 @@ Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/tes
 !!! info
     Because Apps also commonly use Nautobot's test runner, the base Nautobot `settings.py` currently defaults [`TEST_USE_FACTORIES`](../../user-guide/administration/configuration/settings.md#test_use_factories) to `False` so as to not negatively impact App tests that may not be designed to account for the presence of pre-populated test data in the database. This configuration is overridden to `True` in `nautobot/core/tests/nautobot_config.py` for Nautobot's own tests.
 
+!!! warning
+    Factories should generally **not** be called within test code, i.e. in a `setUp()` or `setUpTestData()` method. This is because factory output is *stateful*, that is to say the output of any given factory call will depend on the history of *all previous factory calls* since the process was started. This means that a call to a factory within a test case will depend on which other test cases have also called factories, and what order they were called in, as well as whether the initial test database population was done via factories or whether they were bypassed by reuse of cached test data (see below).
+
+    In short, we should only have one place in our tests where factories are called, and that's the `generate_test_data` management command. Individual tests should use standard `create()` or `save()` model methods, never factories.
+
 ### Factory Caching
 
 +++ 1.5.11
 
-To reduce the time taken between multiple test runs, a new argument has been added to the `nautobot-server test`, `invoke unittest` and `invoke integration-test` commands: `--cache-test-fixtures`. When running one of these commands with `--cache-test-fixtures` for the first time, after the factory data has been generated it will be saved to a `factory_dump.json` file in the `development` directory. On subsequent runs of unit or integration tests, the factory data will be loaded from the file instead of being generated again. This can significantly reduce the time taken to run tests.
-
-Factory caching is disabled by default. When using the `invoke` commands to run tests, caching can be enabled by default for your development environment by setting the `cache_test_fixtures` key to `True` in the `invoke.yml` file.
+To reduce the time taken between multiple test runs, a new argument has been added to the `nautobot-server test` command: `--cache-test-fixtures`. When running tests with `--cache-test-fixtures` for the first time, after the factory data has been generated it will be saved to a `factory_dump.json` file in the `development` directory. On subsequent runs of unit or integration tests, if `--cache-test-fixtures` is again specified (hint: it is included by default when running `invoke unittest` or `invoke integration-test`), the factory data will be loaded from the file instead of being generated again. This can significantly reduce the time taken to run tests.
 
 +/- 2.2.7 "Hashing of migrations in the factory dump"
     The test runner now calculates a hash of applied database migrations and uses that as a key when creating/locating the factory data file. This serves as a way to avoid inadvertently using cached test data from the wrong branch or wrong set of migrations, and reduces the frequency with which you might need to manually delete the fixture file. For example, the set of migrations present in `develop` might result in a `factory_dump.966e2e1ed4ae5f924d54.json`, while those in `next` might result in `factory_dump.72b71317c5f5c047493e.json` - both files can coexist, and when you switch between branches during development, the correct one will automatically be selected.
+
++/- 2.3.4 "Factory caching is enabled by default in invoke tasks"
+    Factory caching is now enabled by default with the `invoke unittest` and `invoke integration-test` commands. To bypass it, either use the `--no-cache-test-fixtures` argument to `invoke unittest` or `invoke integration-test`, or manually remove the `development/factory_dump.*.json` cache file(s).
 
 !!! tip
     Although changes to the set of migrations defined will automatically invalidate an existing factory dump, there are two other cases where you will currently need to manually remove the file in order to force regeneration of the factory data:

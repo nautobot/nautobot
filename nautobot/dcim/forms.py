@@ -1900,7 +1900,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         widget=APISelect(
             api_url="/api/dcim/racks/{{rack}}/elevation/",
             attrs={
-                "disabled-indicator": "device",
+                "disabled-indicator": "occupied",
                 "data-query-param-face": '["$face"]',
             },
         ),

@@ -139,7 +139,7 @@ class Mixins:
             super().setUpTestData()
             cls.device_type = DeviceType.objects.first()
             cls.manufacturer = cls.device_type.manufacturer
-            cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+            cls.location = Location.objects.filter(location_type__name="Campus").first()
             cls.device_role = Role.objects.get_for_model(Device).first()
             cls.device_status = Status.objects.get_for_model(Device).first()
             cls.device = Device.objects.create(
@@ -539,6 +539,8 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModel
     def setUpTestData(cls):
         cls.status = Status.objects.get_for_model(Location).first()
         location_type = LocationType.objects.create(name="Location Type 1")
+        location_type.content_types.add(ContentType.objects.get_for_model(RackGroup))
+
         cls.locations = (
             Location.objects.create(name="Location 1", location_type=location_type, status=cls.status),
             Location.objects.create(name="Location 2", location_type=location_type, status=cls.status),
@@ -547,8 +549,6 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModel
             RackGroup.objects.create(location=cls.locations[0], name="Parent Rack Group 1"),
             RackGroup.objects.create(location=cls.locations[1], name="Parent Rack Group 2"),
         )
-
-        location_type.content_types.add(ContentType.objects.get_for_model(RackGroup))
 
         RackGroup.objects.create(
             location=cls.locations[0],
@@ -643,7 +643,9 @@ class RackTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        locations = Location.objects.all()[:2]
+        locations = Location.objects.filter(devices__isnull=False)[:2]
+        for location in locations:
+            location.location_type.content_types.add(ContentType.objects.get_for_model(RackGroup))
 
         rack_groups = (
             RackGroup.objects.create(location=locations[0], name="Rack Group 1"),
@@ -674,6 +676,20 @@ class RackTest(APIViewTestCases.APIViewTestCase):
             name="Rack 3",
             status=statuses[0],
         )
+
+        populated_rack = Rack.objects.create(
+            location=locations[0],
+            rack_group=rack_groups[0],
+            role=rack_roles[0],
+            name="Populated Rack",
+            status=statuses[0],
+        )
+        # Place a device in Rack 4
+        device = Device.objects.filter(location=populated_rack.location, rack=None).first()
+        device.rack = populated_rack
+        device.face = "front"
+        device.position = 10
+        device.save()
 
         cls.create_data = [
             {
@@ -741,6 +757,44 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         params = {"face": "front", "exclude": "a85a31aa-094f-4de9-8ba6-16cb088a1b74"}
         response = self.client.get(url, params, **self.header)
         self.assertHttpStatus(response, 200)
+
+    def test_filter_rack_elevation_is_occupied(self):
+        """
+        Test filtering the list of rack elevations by occupied status.
+        """
+        rack = Rack.objects.get(name="Populated Rack")
+        self.add_permissions("dcim.view_rack")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+        # Get all units first
+        params = {"face": "front"}
+        response = self.client.get(url, params, **self.header)
+        all_units = response.data["results"]
+        # Assert the count is equal to the number of units in the rack
+        self.assertEqual(len(all_units), rack.u_height)
+
+        # Next get only unoccupied units
+        params = {"face": "front", "is_occupied": False}
+        response = self.client.get(url, params, **self.header)
+        unoccupied_units = response.data["results"]
+        # Assert the count is more than 0
+        self.assertGreater(len(unoccupied_units), 0)
+        # Assert the unoccupied count is less than the total number of units
+        self.assertLess(len(unoccupied_units), len(all_units))
+
+        # Next get only occupied units
+        params = {"face": "front", "is_occupied": True}
+        response = self.client.get(url, params, **self.header)
+        occupied_units = response.data["results"]
+        # Assert the count is more than 0
+        self.assertGreater(len(occupied_units), 0)
+        # Assert the occupied count is less than the total number of units
+        self.assertLess(len(occupied_units), len(all_units))
+
+        # Assert that the sum of unoccupied and occupied units is equal to the total number of units
+        self.assertEqual(len(unoccupied_units) + len(occupied_units), len(all_units))
+        # Assert that the lists are mutually exclusive
+        self.assertEqual(len([unit for unit in unoccupied_units if unit in occupied_units]), 0)
+        self.assertEqual(len([unit for unit in occupied_units if unit in unoccupied_units]), 0)
 
     def test_get_rack_elevation_svg(self):
         """

@@ -389,6 +389,7 @@ class RackElevationDetailFilterSerializer(serializers.Serializer):
     expand_devices = serializers.BooleanField(required=False, default=True)
     include_images = serializers.BooleanField(required=False, default=True)
     display_fullname = serializers.BooleanField(required=False, default=True)
+    is_occupied = serializers.BooleanField(required=False, allow_null=True, default=None)
 
     def validate(self, attrs):
         attrs.setdefault("unit_width", get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH"))
