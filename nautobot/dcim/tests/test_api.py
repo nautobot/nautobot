@@ -3473,6 +3473,19 @@ class InterfaceVDCAssignmentTestCase(APIViewTestCases.APIViewTestCase):
             )
             for idx in range(3)
         ]
+        # Create some deletable objects
+        InterfaceVDCAssignment.objects.create(
+            virtual_device_context=vdcs[0],
+            interface=interfaces[1],
+        )
+        InterfaceVDCAssignment.objects.create(
+            virtual_device_context=vdcs[0],
+            interface=interfaces[2],
+        )
+        InterfaceVDCAssignment.objects.create(
+            virtual_device_context=vdcs[1],
+            interface=interfaces[2],
+        )
 
         cls.create_data = [
             {
