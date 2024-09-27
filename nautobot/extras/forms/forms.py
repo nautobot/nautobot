@@ -1099,6 +1099,12 @@ class JobBulkEditForm(NautobotBulkEditForm):
         required=False,
         help_text="Job Queue instances that this job can run on",
     )
+    default_job_queue = DynamicModelChoiceField(
+        label="Default Job Queue",
+        queryset=JobQueue.objects.all(),
+        required=False,
+        help_text="Default Job Queue the job runs on if no Job Queue is specified",
+    )
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
     # Text field overrides
     clear_grouping_override = forms.BooleanField(
@@ -1120,6 +1126,10 @@ class JobBulkEditForm(NautobotBulkEditForm):
     clear_job_queues_override = forms.BooleanField(
         required=False,
         help_text="If checked, the selected job queues will be reverted to the default values defined in each Job's source code",
+    )
+    clear_default_job_queue_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, the default job queue will be reverted to the first value of task_queues defined in each Job's source code",
     )
     # Boolean overrides
     clear_approval_required_override = forms.BooleanField(
