@@ -1785,7 +1785,22 @@ class JobTest(
         )
         self.assertHttpStatus(response, self.run_success_response_status)
         latest_job_result = JobResult.objects.latest()
-        self.assertIn(job_model.default_job_queue.name, latest_job_result.celery_kwargs)
+        self.assertEqual(job_model.default_job_queue.name, latest_job_result.celery_kwargs["queue"])
+        job_model.default_job_queue = JobQueue.objects.first()
+        job_model.save()
+
+        url = self.get_run_url()
+        response = self.client.post(
+            url,
+            {
+                "data": job_data,
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, self.run_success_response_status)
+        latest_job_result = JobResult.objects.latest()
+        self.assertEqual(job_model.default_job_queue.name, latest_job_result.celery_kwargs["queue"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")

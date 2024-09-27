@@ -2771,7 +2771,7 @@ class JobTestCase(
             response = self.client.post(run_url, data)
             result = JobResult.objects.latest()
             self.assertIsNotNone(result, msg=run_url)
-            self.assertIn(self.test_pass.default_job_queue.name, result.celery_kwargs)
+            self.assertEqual(self.test_pass.default_job_queue.name, result.celery_kwargs["queue"])
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)

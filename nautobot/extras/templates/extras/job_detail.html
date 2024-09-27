@@ -287,16 +287,12 @@
             <tr>
                 <td>Default Job Queue</td>
                 <td>
-                    {% if object.default_job_queue %}
-                        {{ object.default_job_queue|hyperlinked_object }}
-                    {% else %}
-                        {{ None|placeholder }}
-                    {% endif %}
+                    {{ object.default_job_queue|hyperlinked_object }}
                 </td>
                 <td>
                     {% if object.default_job_queue_override %}
                         <span class="text-muted">
-                            overridden; default is:&nbsp;
+                            overridden; default is:
                             {% if object.installed %}
                                 {% if object.job_class.task_queues|length > 1 %}
                                     {{ object.job_class.task_queues.0 }}

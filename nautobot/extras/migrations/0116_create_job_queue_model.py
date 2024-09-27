@@ -103,7 +103,7 @@ class Migration(migrations.Migration):
             model_name="job",
             name="default_job_queue",
             field=models.ForeignKey(
-                blank=False, null=False, on_delete=django.db.models.deletion.PROTECT, to="extras.jobqueue"
+                blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to="extras.jobqueue"
             ),
         ),
         migrations.RenameField(

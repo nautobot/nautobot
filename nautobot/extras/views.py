@@ -2,6 +2,7 @@ import logging
 from urllib.parse import parse_qs
 
 from celery import chain
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
@@ -1530,7 +1531,9 @@ class JobBulkEditView(generic.BulkEditView):
             meta_task_queues = obj.job_class.task_queues
             job_queues = []
             obj.default_job_queue_override = False
-            obj.default_job_queue = JobQueue.objects.get(name=meta_task_queues[0]) if meta_task_queues else None
+            obj.default_job_queue, _ = JobQueue.objects.get_or_create(
+                name=meta_task_queues[0] if meta_task_queues else settings.CELERY_TASK_DEFAULT_QUEUE
+            )
         else:
             obj.default_job_queue_override = True
             obj.default_job_queue = cleaned_data["default_job_queue"]

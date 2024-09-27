@@ -960,6 +960,8 @@ class JobEditForm(NautobotModelForm):
     default_job_queue = DynamicModelChoiceField(
         label="Default Job Queue",
         queryset=JobQueue.objects.all(),
+        help_text="The default job queue to route this job to",
+        required=False,
     )
 
     class Meta:
@@ -990,17 +992,6 @@ class JobEditForm(NautobotModelForm):
             "default_job_queue",
             "tags",
         ]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        job_model = self.instance
-        self.fields["default_job_queue"] = DynamicModelChoiceField(
-            queryset=JobQueue.objects.all(),
-            required=False,
-            help_text="The default job queue to route this job to",
-            label="Default Job queue",
-        )
-        self.fields["default_job_queue"].initial = job_model.default_job_queue.pk
 
     def clean(self):
         """
