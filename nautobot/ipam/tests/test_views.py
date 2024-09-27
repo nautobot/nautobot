@@ -353,14 +353,18 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             status=ip_status,
             namespace=self.namespace,
         )
-        response = self.client.get(reverse("ipam:prefix_ipaddresses", args=(instance.pk,)))
+        url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
+        response = self.client.get(url)
         self.assertHttpStatus(response, 200)
-        content = extract_page_body(response.content.decode(response.charset))
+        content = response.content.decode(response.charset)
         # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
-        # TODO(timizuo): Also test for IP Addresses count is correct after count is fixed in `prefix_ipaddresses.html`;
-        # currently it shows 1 instead of 2
         self.assertIn("5.5.10.1/32", strip_tags(content))
         self.assertIn("5.5.10.4/30", strip_tags(content))
+        print(response.content.decode(response.charset))
+        ip_address_tab = (
+            f'<li role="presentation" class="active"><a href="{url}">IP Addresses <span class="badge">2</span></a></li>'
+        )
+        self.assertInHTML(ip_address_tab, content)
 
 
 class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):

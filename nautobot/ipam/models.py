@@ -889,23 +889,16 @@ class Prefix(PrimaryModel):
         )
         return available_ips
 
-    def get_child_ips(self):
+    def get_all_ips(self):
         """
-        Return IP addresses with this prefix as parent.
-
-        In a future release, if this prefix is a pool, it will return IP addresses within the pool's address space.
+        Return IP addresses with this prefix as parent including child prefixes IP addresses.
 
         Returns:
             IPAddress QuerySet
         """
-        # Question: This is a possible fix for this PR; should this be uncommented?
-        # 3.0 TODO: uncomment this to enable this logic
-        # if self.type == choices.PrefixTypeChoices.TYPE_POOL:
-        #     return IPAddress.objects.filter(
-        #         parent__namespace=self.namespace, host__gte=self.network, host__lte=self.broadcast
-        #     )
-        # else:
-        return self.ip_addresses.all()
+        return IPAddress.objects.filter(
+            parent__namespace=self.namespace, host__gte=self.network, host__lte=self.broadcast
+        )
 
     def get_first_available_prefix(self):
         """
