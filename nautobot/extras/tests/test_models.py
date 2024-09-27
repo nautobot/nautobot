@@ -1241,8 +1241,8 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
         job = JobModel.objects.first()
         job.default_job_queue = default_job_queue
-        job.save()
         job.job_queues.set(job_queues)
+        job.save()
 
         self.assertTrue(job.job_queues.filter(pk=default_job_queue.pk).exists())
 
