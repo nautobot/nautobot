@@ -328,6 +328,44 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                 strip_tags(content),
             )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_prefix_ipaddresses_table_list_includes_child_ips(self):
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        instance = Prefix.objects.create(
+            prefix="5.5.10.0/23",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=self.statuses[1],
+        )
+        Prefix.objects.create(
+            prefix="5.5.10.0/30",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_POOL,
+            status=self.statuses[1],
+        )
+        IPAddress.objects.create(
+            address="5.5.10.1/23",
+            status=ip_status,
+            namespace=self.namespace,
+        )
+        IPAddress.objects.create(
+            address="5.5.10.4/23",
+            status=ip_status,
+            namespace=self.namespace,
+        )
+        url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
+        self.assertIn("5.5.10.1/23", strip_tags(content))
+        self.assertIn("5.5.10.4/23", strip_tags(content))
+        print(response.content.decode(response.charset))
+        ip_address_tab = (
+            f'<li role="presentation" class="active"><a href="{url}">IP Addresses <span class="badge">2</span></a></li>'
+        )
+        self.assertInHTML(ip_address_tab, content)
+
 
 class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = IPAddress
