@@ -1,1 +1,2 @@
 Added range field on `VLANGroup` model.
+Added tags on `VLANGroup` model.

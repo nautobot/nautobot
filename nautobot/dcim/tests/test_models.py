@@ -3273,7 +3273,7 @@ class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
         vdc = VirtualDeviceContext.objects.create(
             name="Sample VDC",
             device=Device.objects.exclude(pk=device.pk).first(),
-            identifier=100,
+            identifier=99,  # factory creates identifiers starting from 100
             status=Status.objects.get_for_model(VirtualDeviceContext).first(),
         )
 

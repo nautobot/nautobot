@@ -388,7 +388,11 @@ class IPAddressToInterfaceViewSet(NautobotModelViewSet):
 
 
 class VLANGroupViewSet(NautobotModelViewSet):
-    queryset = VLANGroup.objects.select_related("location").annotate(vlan_count=count_related(VLAN, "vlan_group"))
+    queryset = (
+        VLANGroup.objects.select_related("location")
+        .prefetch_related("tags")
+        .annotate(vlan_count=count_related(VLAN, "vlan_group"))
+    )
     serializer_class = serializers.VLANGroupSerializer
     filterset_class = filters.VLANGroupFilterSet
 
