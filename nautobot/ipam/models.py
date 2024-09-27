@@ -1281,11 +1281,14 @@ class IPAddressToInterface(BaseModel):
 
 
 @extras_features(
+    "custom_links",
     "custom_validators",
+    "export_templates",
     "graphql",
     "locations",
+    "webhooks",
 )
-class VLANGroup(OrganizationalModel):
+class VLANGroup(PrimaryModel):
     """
     A VLAN group is an arbitrary collection of VLANs within which VLAN IDs and names must be unique.
     """

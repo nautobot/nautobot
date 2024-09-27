@@ -1132,7 +1132,10 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
                                 field_name,
                             )
                     if not job_model.job_queues_override:
-                        self.assertEqual(sorted(job_model.task_queues), sorted(job_model.job_class.task_queues))
+                        self.assertEqual(
+                            sorted(job_model.task_queues),
+                            sorted(job_model.job_class.task_queues) or [settings.CELERY_TASK_DEFAULT_QUEUE],
+                        )
                 except AssertionError:
                     print(list(JobModel.objects.all()))
                     print(registry["jobs"])
