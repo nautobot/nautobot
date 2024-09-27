@@ -338,18 +338,18 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             status=self.statuses[1],
         )
         Prefix.objects.create(
-            prefix="5.5.10.2/30",
+            prefix="5.5.10.0/30",
             namespace=self.namespace,
             type=PrefixTypeChoices.TYPE_POOL,
             status=self.statuses[1],
         )
         IPAddress.objects.create(
-            address="5.5.10.1/32",
+            address="5.5.10.1/23",
             status=ip_status,
             namespace=self.namespace,
         )
         IPAddress.objects.create(
-            address="5.5.10.4/30",
+            address="5.5.10.4/23",
             status=ip_status,
             namespace=self.namespace,
         )
@@ -358,8 +358,8 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         self.assertHttpStatus(response, 200)
         content = response.content.decode(response.charset)
         # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
-        self.assertIn("5.5.10.1/32", strip_tags(content))
-        self.assertIn("5.5.10.4/30", strip_tags(content))
+        self.assertIn("5.5.10.1/23", strip_tags(content))
+        self.assertIn("5.5.10.4/23", strip_tags(content))
         print(response.content.decode(response.charset))
         ip_address_tab = (
             f'<li role="presentation" class="active"><a href="{url}">IP Addresses <span class="badge">2</span></a></li>'
