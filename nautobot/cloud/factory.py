@@ -11,7 +11,6 @@ from nautobot.core.factory import (
 )
 from nautobot.dcim.models import Manufacturer
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam.models import Prefix
 
 
 class CloudAccountFactory(PrimaryModelFactory):
@@ -80,13 +79,13 @@ class CloudNetworkFactory(PrimaryModelFactory):
             return factory.random.randgen.choice(candidate_parents)
         return None
 
-    @factory.post_generation
-    def prefixes(self, create, extracted, **kwargs):
-        if create:
-            if extracted:
-                self.prefixes.set(extracted)
-            else:
-                self.prefixes.set(get_random_instances(Prefix))
+    # @factory.post_generation
+    # def prefixes(self, create, extracted, **kwargs):
+    #     if create:
+    #         if extracted:
+    #             self.prefixes.set(extracted)
+    #         else:
+    #             self.prefixes.set(get_random_instances(Prefix))
 
 
 class CloudServiceFactory(PrimaryModelFactory):
