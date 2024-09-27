@@ -1,0 +1,50 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Radio Profile</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Name</td>
+                <td>
+                    {{ object.name }}
+                </td>
+            </tr>
+            <tr>
+                <td>Description</td>
+                <td>{{ object.description|placeholder }}</td>
+            </tr>
+            <tr>
+                <td>Frequency</td>
+                <td>{{ object.frequency }}</td>
+            </tr>
+            <tr>
+                <td>Channel Width</td>
+                <td>{{ object.channel_width }}</td>
+            </tr>
+            <tr>
+                <td>Allowed Channel List</td>
+                <td>{{ object.allowed_channel_list }}</td>
+            </tr>
+            <tr>
+                <td>Transmit Power Minimum</td>
+                <td>{{ object.tx_power_min }}</td>
+            </tr>
+            <tr>
+                <td>Transmit Power Maximum</td>
+                <td>{{ object.tx_power_max }}</td>
+            </tr>
+            <tr>
+                <td>Recieve Power Minimum</td>
+                <td>{{ object.rx_power_min }}</td>
+            </tr>
+            <tr>
+                <td>Regulatory Domain</td>
+                <td>{{ object.regulatory_domain }}</td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_left_page %}
