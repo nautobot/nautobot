@@ -118,7 +118,7 @@ class RIRSerializer(NautobotModelSerializer):
 #
 
 
-class VLANGroupSerializer(NautobotModelSerializer):
+class VLANGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     vlan_count = serializers.IntegerField(read_only=True)
 
     class Meta:
