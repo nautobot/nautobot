@@ -73,7 +73,8 @@ class RadioProfileTable(BaseTable):
 
 class SupportedDataRateTable(BaseTable):
     pk = ToggleColumn()
-    rate = tables.Column()
+    rate = tables.Column(linkify=True)
+    standard = tables.Column()
     tags = TagColumn(url_name="wireless:supporteddatarate_list")
     actions = ButtonsColumn(SupportedDataRate)
 
@@ -82,12 +83,14 @@ class SupportedDataRateTable(BaseTable):
         fields = (
             "pk",
             "rate",
+            "standard",
             "tags",
             "actions",
         )
         default_columns = (
             "pk",
             "rate",
+            "standard",
             "actions",
         )
 

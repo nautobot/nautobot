@@ -383,7 +383,7 @@ class JSONArrayField(models.JSONField):
         # If the base field has choices, pass them to the form field and use a MultipleChoiceField.
         if self.base_field.choices:
             defaults["choices"] = self.base_field.choices
-            defaults["form_class"] = forms.MultipleChoiceField
+            defaults["form_class"] = fields.JSONArrayChoiceFormField
         defaults.update(**kwargs)
         return super().formfield(**defaults)
 

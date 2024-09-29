@@ -1,10 +1,13 @@
+import json
+
 from django import forms
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
-    MultiValueCharField,
+    NumericArrayField,
+    JSONArrayFormField,
     TagFilterField,
 )
 from nautobot.core.forms.fields import MultipleContentTypeField
@@ -14,6 +17,7 @@ from nautobot.extras.models import SecretsGroup
 from nautobot.ipam.models import Namespace, Prefix
 from nautobot.tenancy.forms import TenancyFilterForm
 from nautobot.tenancy.models import Tenant
+from nautobot.wireless.choices import RadioProfileChannelWidthChoices
 from nautobot.wireless.models import AccessPointGroup, RadioProfile, SupportedDataRate, WirelessNetwork
 
 
@@ -64,13 +68,19 @@ class AccessPointGroupBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
 
 
 class RadioProfileForm(NautobotModelForm):
+    allowed_channel_list = NumericArrayField(
+        base_field=forms.IntegerField(),
+        help_text="List of allowed channels for this radio profile.",
+        required=False,
+    )
     class Meta:
         model = RadioProfile
-        fields = [
-            "name",
-            "description",
-            "tags",
-        ]
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        print(f"{",".join(str(v) for v in self.instance.channel_width)}")
+        self.fields["channel_width"].initial = ",".join(str(v) for v in self.instance.channel_width)
 
 
 class RadioProfileFilterForm(NautobotFilterForm):
@@ -86,10 +96,7 @@ class RadioProfileBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
 class SupportedDataRateForm(NautobotModelForm):
     class Meta:
         model = SupportedDataRate
-        fields = [
-            "rate",
-            "tags",
-        ]
+        fields = "__all__"
 
 
 class SupportedDataRateFilterForm(NautobotFilterForm):
@@ -105,11 +112,7 @@ class SupportedDataRateBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm)
 class WirelessNetworkForm(NautobotModelForm):
     class Meta:
         model = WirelessNetwork
-        fields = [
-            "name",
-            "description",
-            "tags",
-        ]
+        fields = "__all__"
 
 
 class WirelessNetworkFilterForm(NautobotFilterForm):

@@ -8,10 +8,12 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
 from django.db.models import Q
-from django.forms.fields import BoundField, InvalidJSONInput, JSONField as _JSONField
+from django.forms.fields import BoundField, CallableChoiceIterator, InvalidJSONInput, JSONField as _JSONField
+from django.forms.widgets import MultipleHiddenInput
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.html import format_html
+from django.utils.translation import gettext_lazy as _
 import django_filters
 from netaddr import EUI
 from netaddr.core import AddrFormatError
@@ -712,6 +714,82 @@ class JSONArrayFormField(django_forms.JSONField):
         if initial in self.empty_values and value in self.empty_values:
             return False
         return super().has_changed(initial, data)
+
+
+class JSONArrayChoiceFormField(JSONArrayFormField):
+    """
+    A FormField counterpart to JSONArrayField that supports choice validation.
+    """
+    hidden_widget = MultipleHiddenInput
+    widget = widgets.StaticSelect2Multiple()
+    default_error_messages = {
+        "invalid_choice": _(
+            "Select a valid choice. %(value)s is not one of the available choices."
+        ),
+        "invalid_list": _("Enter a list of values."),
+    }
+
+    def __init__(self, base_field, choices, *, delimiter=",", **kwargs):
+        self.choices = choices
+        super().__init__(base_field, delimiter=delimiter, **kwargs)
+
+    # TODO: change this when we upgrade to Django 5, it uses a getter/setter for choices
+    def _get_choices(self):
+        return self._choices
+
+    def _set_choices(self, value):
+        if callable(value):
+            value = CallableChoiceIterator(value)
+        else:
+            value = list(value)
+        self._choices = self.widget.choices = value
+
+    choices = property(_get_choices, _set_choices)
+
+    def clean(self, value):
+        """
+        Validate `value` and return its "cleaned" value as an appropriate
+        Python object. Raise ValidationError for any errors.
+        """
+        value = super().clean(value)
+        return [self.base_field.clean(val) for val in value]
+
+    def bound_data(self, data, initial):
+        if data is None:
+            return None
+        if isinstance(data, list):
+            data = json.dumps(data)
+        return super().bound_data(data, initial)
+
+    def validate(self, value):
+        """
+        Validate `value` and raise ValidationError if necessary.
+        """
+        super().validate(value)
+        errors = []
+        for item in value:
+            try:
+                self.base_field.validate(item)
+            except ValidationError as error:
+                errors.append(error)
+            if not self.valid_value(item):
+                errors.append(ValidationError(f"{item} is not a valid choice"))
+        if errors:
+            raise ValidationError(errors)
+
+    def valid_value(self, value):
+        """Check to see if the provided value is a valid choice."""
+        text_value = str(value)
+        for k, v in self.choices:
+            if isinstance(v, (list, tuple)):
+                # This is an optgroup, so look inside the group for options
+                for k2, v2 in v:
+                    if value == k2 or text_value == str(k2):
+                        return True
+            else:
+                if value == k or text_value == str(k):
+                    return True
+        return False
 
 
 class NumericArrayField(SimpleArrayField):
