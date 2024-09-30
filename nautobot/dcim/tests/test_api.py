@@ -3377,7 +3377,8 @@ class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         devices = Device.objects.all()
         vdc_status = Status.objects.get_for_model(VirtualDeviceContext)[0]
-        vdc_role = Role.objects.get_for_model(VirtualDeviceContext)[0]
+        vdc_role = Role.objects.first()
+        vdc_role.content_types.add(ContentType.objects.get_for_model(VirtualDeviceContext))
         tenants = Tenant.objects.all()
 
         cls.create_data = [
