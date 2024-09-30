@@ -688,7 +688,8 @@ def check_schema(context, api_version=None):
 @task(
     help={
         "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
-        "keepdb": "Save and re-use test database between test runs for faster re-testing.",
+        "keepdb": "Save test database after test run for faster re-testing in combination with `--reusedb`.",
+        "reusedb": "Reuse previously saved test database for faster re-testing in combination with `--keepdb`.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "pattern": "Only run tests which match the given substring. Can be used multiple times.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
@@ -709,6 +710,7 @@ def unittest(
     context,
     cache_test_fixtures=True,
     keepdb=True,
+    reusedb=True,
     label="nautobot",
     pattern=None,
     failfast=False,
@@ -743,6 +745,8 @@ def unittest(
         command += " --cache-test-fixtures"
     if keepdb:
         command += " --keepdb"
+    if not reusedb:
+        command += " --no-reusedb"
     if failfast:
         command += " --failfast"
     if buffer:
