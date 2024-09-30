@@ -1,1 +1,0 @@
-Enhanced job delete functions to prevent users from deleting system jobs from the UI and the API.
