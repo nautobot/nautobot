@@ -1,1 +1,1 @@
-Service Form can now dynamically lookup IPAddresses.
+Fixed lookup of IP Addresses in the Service form.
