@@ -117,6 +117,42 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
+## v2.3.5 (2024-09-30)
+
+### Added
+
+- [#6257](https://github.com/nautobot/nautobot/issues/6257) - Added `is_occupied` boolean filter to the Rack elevation API endpoint to allow filtering by occupied or unoccupied units.
+
+### Changed
+
+- [#6057](https://github.com/nautobot/nautobot/issues/6057) - Enhanced job delete functions to prevent users from deleting system jobs from the UI and the API.
+- [#6170](https://github.com/nautobot/nautobot/issues/6170) - Fix Prefix IPAddresses not accounting for Child Prefix IPAddresses in the UI.
+
+### Fixed
+
+- [#5924](https://github.com/nautobot/nautobot/issues/5924) - Fixed the redirect URL for the Device Bay Populate/Depopulate view to take the user back to the Device Bays tab on the Device page.
+- [#6217](https://github.com/nautobot/nautobot/issues/6217) - Fixed SavedView functionality not working in Rack Elevation List View.
+- [#6233](https://github.com/nautobot/nautobot/issues/6233) - Corrected presentation of rendered Markdown content in Notes table.
+- [#6248](https://github.com/nautobot/nautobot/issues/6248) - Fixed Device Type link and count from Device Family Detail View.
+- [#6257](https://github.com/nautobot/nautobot/issues/6257) - Fixed the selection options for `position` on the device add/edit form to disable RUs that are currently occupied.
+
+### Dependencies
+
+- [#6247](https://github.com/nautobot/nautobot/issues/6247) - Updated documentation dependency `mkdocs-material` to `~9.5.35`.
+- [#6287](https://github.com/nautobot/nautobot/issues/6287) - Replaced incorrect `django-structlog[all]` dependency with `django-structlog[celery]`.
+
+### Documentation
+
+- [#6264](https://github.com/nautobot/nautobot/issues/6264) - Added to the core developer documentation a warning against the use of data factories within test case code.
+
+### Housekeeping
+
+- [#5802](https://github.com/nautobot/nautobot/issues/5802) - Override `get_required_permission()` in SavedViewUIViewSet to achieve the intended behavior.
+- [#6264](https://github.com/nautobot/nautobot/issues/6264) - Changed `invoke unittest` to default to `--parallel` even when a `--label` value is specified.
+- [#6264](https://github.com/nautobot/nautobot/issues/6264) - Added support for `invoke unittest --no-parallel`.
+- [#6285](https://github.com/nautobot/nautobot/issues/6285) - Added support for `invoke unittest --no-reusedb` and `nautobot-server test --no-reusedb` to streamline testing when switching frequently between branches.
+- [#6292](https://github.com/nautobot/nautobot/issues/6292) - Corrected logic of several VLAN test cases.
+
 ## v2.3.4 (2024-09-18)
 
 ### Added

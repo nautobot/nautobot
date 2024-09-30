@@ -1,2 +1,0 @@
-Changed `invoke unittest` to default to `--parallel` even when a `--label` value is specified.
-Added support for `invoke unittest --no-parallel`.
