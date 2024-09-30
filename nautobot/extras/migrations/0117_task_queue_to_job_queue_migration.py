@@ -15,9 +15,12 @@ def migrate_task_queues_to_job_queues(apps, schema):
     JobQueue.objects.get_or_create(name="default", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY})
     for job in Job.objects.all():
         task_queues = job.task_queues
-        default_job_queue, _ = JobQueue.objects.get_or_create(
-            name=task_queues[0], defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
-        )
+        if len(task_queues) > 0:
+            default_job_queue, _ = JobQueue.objects.get_or_create(
+                name=task_queues[0], defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+            )
+        else:
+            default_job_queue = JobQueue.objects.get(name="default")
         job.default_job_queue = default_job_queue
         job.save()
         # Go through each task_queue

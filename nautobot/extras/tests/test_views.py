@@ -3,7 +3,6 @@ from unittest import mock
 import urllib.parse
 import uuid
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -2304,6 +2303,9 @@ class JobTestCase(
 
         # But we do need to make sure the ones we're testing are flagged appropriately
         cls.test_pass = Job.objects.get(job_class_name="TestPass")
+        cls.test_pass.default_job_queue = JobQueue.objects.get(
+            name="default", queue_type=JobQueueTypeChoices.TYPE_CELERY
+        )
         cls.test_pass.enabled = True
         cls.test_pass.save()
 
@@ -2928,7 +2930,7 @@ class JobButtonRenderingTestCase(TestCase):
 
     def test_task_queue_hidden_input_is_present(self):
         """
-        Ensure that the job button respects the job class' task_queues and the job class task_queues[0]/default is passed as a hidden form input.
+        Ensure that the job button respects the job class' task_queues and the job class default job queue is passed as a hidden form input.
         """
         self.job.job_queues_override = True
         task_queues = ["overriden_queue", "default", "priority"]
@@ -2949,7 +2951,7 @@ class JobButtonRenderingTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn(
-            f'<input type="hidden" name="_job_queue" value="{settings.CELERY_TASK_DEFAULT_QUEUE}">', content, content
+            f'<input type="hidden" name="_job_queue" value="{self.job.default_job_queue.name}">', content, content
         )
 
     def test_view_object_with_unsafe_text(self):
