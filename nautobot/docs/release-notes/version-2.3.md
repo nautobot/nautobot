@@ -122,6 +122,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 ### Added
 
 - [#6257](https://github.com/nautobot/nautobot/issues/6257) - Added `is_occupied` boolean filter to the Rack elevation API endpoint to allow filtering by occupied or unoccupied units.
+- [#6289](https://github.com/nautobot/nautobot/issues/6289) - Added the add button to IPAM Services.
 
 ### Changed
 
@@ -136,6 +137,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6233](https://github.com/nautobot/nautobot/issues/6233) - Corrected presentation of rendered Markdown content in Notes table.
 - [#6248](https://github.com/nautobot/nautobot/issues/6248) - Fixed Device Type link and count from Device Family Detail View.
 - [#6257](https://github.com/nautobot/nautobot/issues/6257) - Fixed the selection options for `position` on the device add/edit form to disable RUs that are currently occupied.
+- [#6289](https://github.com/nautobot/nautobot/issues/6289) - Fixed lookup of IP Addresses in the Service form.
 
 ### Dependencies
 
