@@ -1043,7 +1043,6 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))
-        location_1 = cls.locations.first()
 
         vlangroups = (
             VLANGroup.objects.create(name="VLAN Group 1", location=cls.locations.first()),
@@ -1052,51 +1051,14 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         roles = Role.objects.get_for_model(VLAN)[:2]
 
-        statuses = Status.objects.get_for_model(VLAN)
-        status_1 = statuses[0]
-        status_2 = statuses[1]
-
-        vlans = (
-            VLAN.objects.create(
-                vlan_group=vlangroups[0],
-                vid=101,
-                name="VLAN101",
-                role=roles[0],
-                status=status_1,
-                _custom_field_data={"custom_field": "Value"},
-            ),
-            VLAN.objects.create(
-                vlan_group=vlangroups[0],
-                vid=102,
-                name="VLAN102",
-                role=roles[0],
-                status=status_1,
-                _custom_field_data={"custom_field": "Value"},
-            ),
-            VLAN.objects.create(
-                vlan_group=vlangroups[0],
-                vid=103,
-                name="VLAN103",
-                role=roles[0],
-                status=status_1,
-                _custom_field_data={"custom_field": "Value"},
-            ),
-        )
-        vlans[0].locations.add(location_1)
-        vlans[1].locations.add(location_1)
-        vlans[2].locations.add(location_1)
-
-        custom_field = CustomField.objects.create(
-            type=CustomFieldTypeChoices.TYPE_TEXT, label="Custom Field", default=""
-        )
-        custom_field.content_types.set([ContentType.objects.get_for_model(VLAN)])
+        status = Status.objects.get_for_model(VLAN).first()
 
         cls.form_data = {
             "vlan_group": vlangroups[1].pk,
             "vid": 999,
             "name": "VLAN999 with an unwieldy long name since we increased the limit to more than 64 characters",
             "tenant": None,
-            "status": status_2.pk,
+            "status": status.pk,
             "role": roles[1].pk,
             "locations": list(cls.locations.values_list("pk", flat=True)[:2]),
             "description": "A new VLAN",
@@ -1106,7 +1068,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             "vlan_group": vlangroups[0].pk,
             "tenant": Tenant.objects.first().pk,
-            "status": status_2.pk,
+            "status": status.pk,
             "role": roles[0].pk,
             "description": "New description",
         }
