@@ -126,11 +126,12 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 ### Changed
 
 - [#6057](https://github.com/nautobot/nautobot/issues/6057) - Enhanced job delete functions to prevent users from deleting system jobs from the UI and the API.
-- [#6170](https://github.com/nautobot/nautobot/issues/6170) - Fix Prefix IPAddresses not accounting for Child Prefix IPAddresses in the UI.
 
 ### Fixed
 
+- [#5802](https://github.com/nautobot/nautobot/issues/5802) - Override `get_required_permission()` in SavedViewUIViewSet to achieve the intended behavior.
 - [#5924](https://github.com/nautobot/nautobot/issues/5924) - Fixed the redirect URL for the Device Bay Populate/Depopulate view to take the user back to the Device Bays tab on the Device page.
+- [#6170](https://github.com/nautobot/nautobot/issues/6170) - Fix Prefix IPAddresses not accounting for Child Prefix IPAddresses in the UI.
 - [#6217](https://github.com/nautobot/nautobot/issues/6217) - Fixed SavedView functionality not working in Rack Elevation List View.
 - [#6233](https://github.com/nautobot/nautobot/issues/6233) - Corrected presentation of rendered Markdown content in Notes table.
 - [#6248](https://github.com/nautobot/nautobot/issues/6248) - Fixed Device Type link and count from Device Family Detail View.
