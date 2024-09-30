@@ -754,7 +754,7 @@ def unittest(
     if verbose:
         command += " --verbosity 2"
     if parallel or label == "nautobot":
-        command += " --parallel"
+        # command += " --parallel"
         if parallel_workers:
             command += f"={parallel_workers}"
     if performance_report or (tag and "performance" in tag):
