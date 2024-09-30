@@ -1,1 +1,1 @@
-Django-structlog should be using extras celery instead of all.
+Replaced incorrect `django-structlog[all]` dependency with `django-structlog[celery]`.
