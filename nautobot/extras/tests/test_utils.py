@@ -1,5 +1,7 @@
 from unittest import mock
 
+from django.core.cache import cache
+
 from nautobot.core.testing import TestCase
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import get_celery_queues, get_worker_count, populate_model_features_registry
@@ -17,6 +19,7 @@ class UtilsTestCase(TestCase):
             self.assertDictEqual(get_celery_queues(), {"queue1": 1})
 
         with self.subTest("2 workers 2 shared queues"):
+            cache.clear()
             mock_active_queues.return_value = {
                 "celery@worker1": [{"name": "queue1"}, {"name": "queue2"}],
                 "celery@worker2": [{"name": "queue1"}, {"name": "queue2"}],
@@ -24,6 +27,7 @@ class UtilsTestCase(TestCase):
             self.assertDictEqual(get_celery_queues(), {"queue1": 2, "queue2": 2})
 
         with self.subTest("2 workers 2 individual queues"):
+            cache.clear()
             mock_active_queues.return_value = {
                 "celery@worker1": [{"name": "queue1"}],
                 "celery@worker2": [{"name": "queue2"}],
@@ -31,6 +35,7 @@ class UtilsTestCase(TestCase):
             self.assertDictEqual(get_celery_queues(), {"queue1": 1, "queue2": 1})
 
         with self.subTest("2 workers 3 queues"):
+            cache.clear()
             mock_active_queues.return_value = {
                 "celery@worker1": [{"name": "queue1"}, {"name": "queue3"}],
                 "celery@worker2": [{"name": "queue2"}],

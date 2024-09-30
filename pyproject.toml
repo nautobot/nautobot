@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.3.6b1"
+version = "2.4.0a1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -15,7 +15,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -34,7 +33,7 @@ exclude = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.13"
+python = ">=3.9,<3.13"
 # Background task processing
 celery = "~5.3.6"
 # Fundamental web framework for Nautobot
@@ -247,7 +246,7 @@ omit = [
 
 [tool.pylint.master]
 load-plugins = "pylint_django"
-py-version = "3.8"
+py-version = "3.9"
 ignore-paths = [
     ".*third_party.*",
     "nautobot/extras/tests/git_data/02-invalid-files/",
@@ -342,7 +341,7 @@ signature-mutators=["unittest.mock.patch"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py38"
+target-version = "py39"
 extend-exclude = [
     # Intentionally malformed files
     "nautobot/extras/tests/git_data/02-invalid-files/jobs",
@@ -374,7 +373,7 @@ order-by-type = false
 [tool.towncrier]
 package = "nautobot"
 directory = "changes"
-filename = "nautobot/docs/release-notes/version-2.3.md"
+filename = "nautobot/docs/release-notes/version-2.4.md"
 template = "development/towncrier_template.j2"
 start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"

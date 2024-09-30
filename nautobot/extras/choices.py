@@ -229,6 +229,16 @@ class JobExecutionType(ChoiceSet):
     }
 
 
+class JobQueueTypeChoices(ChoiceSet):
+    TYPE_CELERY = "celery"
+    TYPE_KUBERNETES = "kubernetes"
+
+    CHOICES = (
+        (TYPE_CELERY, "Celery"),
+        (TYPE_KUBERNETES, "Kubernetes"),
+    )
+
+
 #
 # Job results
 #

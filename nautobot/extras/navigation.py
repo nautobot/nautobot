@@ -217,6 +217,22 @@ menu_items = (
                             ),
                         ),
                     ),
+                    NavMenuItem(
+                        link="extras:jobqueue_list",
+                        name="Job Queues",
+                        weight=700,
+                        permissions=[
+                            "extras.view_jobqueue",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:jobqueue_add",
+                                permissions=[
+                                    "extras.add_jobqueue",
+                                ],
+                            ),
+                        ),
+                    ),
                 ),
             ),
         ),

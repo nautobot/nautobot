@@ -1,0 +1,5 @@
+<li role="presentation"{% if request.GET.tab == tab_id %} class="active"{% endif %}>
+    <a href="{{ object.get_absolute_url }}#{{ tab_id }}" onclick="switch_tab(this.href)" aria-controls="{{ tab_id }}" role="tab" data-toggle="tab">
+        {{ label }}
+    </a>
+</li>
