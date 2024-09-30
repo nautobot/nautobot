@@ -3148,7 +3148,7 @@ class DeviceBayPopulateView(generic.ObjectEditView):
                 f"Added {device_bay.installed_device} to {device_bay}.",
             )
 
-            return redirect("dcim:device", pk=device_bay.device.pk)
+            return redirect("dcim:device_devicebays", pk=device_bay.device.pk)
 
         return render(
             request,
@@ -3191,7 +3191,7 @@ class DeviceBayDepopulateView(generic.ObjectEditView):
                 f"Removed {removed_device} from {device_bay}.",
             )
 
-            return redirect("dcim:device", pk=device_bay.device.pk)
+            return redirect("dcim:device_devicebays", pk=device_bay.device.pk)
 
         return render(
             request,
@@ -4139,9 +4139,12 @@ class DeviceFamilyUIViewSet(NautobotUIViewSet):
             context["device_type_table"] = device_type_table
 
             total_devices = 0
+            device_type_count = 0
             for device_type in device_types:
                 total_devices += device_type.device_count
+                device_type_count += 1
             context["total_devices"] = total_devices
+            context["device_type_count"] = device_type_count
 
         return context
 

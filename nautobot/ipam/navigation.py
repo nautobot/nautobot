@@ -191,7 +191,14 @@ menu_items = (
                         permissions=[
                             "ipam.view_service",
                         ],
-                        buttons=(),
+                        buttons=(
+                            NavMenuAddButton(
+                                link="ipam:service_add",
+                                permissions=[
+                                    "ipam.add_service",
+                                ],
+                            ),
+                        ),
                     ),
                 ),
             ),

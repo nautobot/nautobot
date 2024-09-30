@@ -639,11 +639,12 @@ The `invoke unittest` command supports a number of optional parameters to influe
 * `--failfast` - Fail as soon as any test failure or error condition is encountered, instead of running to completion.
 * `--label <module.path>` - Only run the specific subset of tests. Can be broad (`--label nautobot.core.tests`) or specific (`--label nautobot.core.tests.test_graphql.GraphQLQueryTestCase`).
 * `--no-buffer` - Allow stdout/stderr output from the test to be seen in your terminal, instead of being hidden. **If you're debugging code with `breakpoint()`, you should use this option, as otherwise you'll never see the breakpoint happen.**
-* `--no-cache-test-fixtures` - Prevent caching [test factory data](./testing.md#factory-caching) to disk, or if a cache is already present, prevent loading from that cache when initializing the test environment.
-* `--no-keepdb` - Prevent saving and reusing the initialized test database between test runs. **The `--no-keepdb` option is mandatory if you're actively making changes to model definitions or migrations.**
-* `--parallel` - Split the tests across multiple parallel subprocesses. Can greatly reduce the runtime of the entire test suite when used. Auto-detects the number of workers if not specified with `--parallel-workers`. This parameter is automatically included if no `--label` is specified.
-* `--parallel-workers` - Specify the number of workers to use when running tests in parallel. Implies `--parallel`.
+* `--no-cache-test-fixtures` - Prevent caching [test factory data](./testing.md#factory-caching) to disk, or if a cache is already present, prevent loading from that cache when initializing the test environment. **The `--no-cache-test-fixtures` option is mandatory if you're actively making changes to factories or model migrations.**
+* `--no-keepdb` - Prevent saving the initialized test database after a test run for later reuse in a test re-run.
+* `--no-parallel` - By default, Nautobot splits test execution across multiple parallel subprocesses to reduce the runtime of the test suite. When troubleshooting obscure test exceptions, it may be desirable to disable that behavior temporarily using this parameter.
+* `--parallel-workers` - Explicitly specify the number of workers to use when running tests in parallel.
 * `--pattern` - Only run tests which match the given substring. Can be used multiple times.
+* `--no-reusedb` - Prevent reusing the initialized test database from a previous test run; instead, create a new database. **The `--no-reusedb` option is mandatory if you're actively making changes to model migrations, or when switching between branches that differ in their included migrations.**
 * `--skip-docs-build` - Skip building/rebuilding the static Nautobot documentation before running the test. Saves some time on reruns when you haven't changed the documentation source files.
 * `--verbose` - Run tests more verbosely, including describing each test case as it is run.
 
