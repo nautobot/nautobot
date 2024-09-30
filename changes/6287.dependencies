@@ -1,0 +1,1 @@
+Replaced incorrect `django-structlog[all]` dependency with `django-structlog[celery]`.
