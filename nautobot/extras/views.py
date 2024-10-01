@@ -52,8 +52,15 @@ from nautobot.core.views.mixins import (
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.models import Controller, Device, Interface, Module, Rack
-from nautobot.dcim.tables import ControllerTable, DeviceTable, InterfaceTable, ModuleTable, RackTable
+from nautobot.dcim.models import Controller, Device, Interface, Module, Rack, VirtualDeviceContext
+from nautobot.dcim.tables import (
+    ControllerTable,
+    DeviceTable,
+    InterfaceTable,
+    ModuleTable,
+    RackTable,
+    VirtualDeviceContextTable,
+)
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.signals import change_context_state
@@ -2519,6 +2526,12 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 module_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(module_table)
                 context["module_table"] = module_table
+            if ContentType.objects.get_for_model(VirtualDeviceContext) in context["content_types"]:
+                vdcs = instance.virtual_device_contexts.restrict(request.user, "view")
+                vdc_table = VirtualDeviceContextTable(vdcs)
+                vdc_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(vdc_table)
+                context["vdc_table"] = vdc_table
         return context
 
 

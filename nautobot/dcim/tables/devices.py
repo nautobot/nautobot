@@ -1426,6 +1426,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
 class VirtualDeviceContextTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
+    role = tables.Column(linkify=True)
     tenant = TenantColumn()
     device = tables.Column(linkify=True)
     primary_ip = tables.Column(linkify=True, order_by=("primary_ip6", "primary_ip4"), verbose_name="IP Address")
@@ -1446,6 +1447,7 @@ class VirtualDeviceContextTable(StatusTableMixin, BaseTable):
             "identifier",
             "device",
             "status",
+            "role",
             "tenant",
             "primary_ip",
             "primary_ip4",
@@ -1459,6 +1461,7 @@ class VirtualDeviceContextTable(StatusTableMixin, BaseTable):
             "identifier",
             "device",
             "status",
+            "role",
             "tenant",
             "primary_ip",
             "interface_count",

@@ -892,7 +892,7 @@ class ModuleTypeViewSet(NautobotModelViewSet):
 
 
 class VirtualDeviceContextViewSet(NautobotModelViewSet):
-    queryset = VirtualDeviceContext.objects.select_related("device", "tenant", "primary_ip4", "primary_ip6")
+    queryset = VirtualDeviceContext.objects.select_related("device", "tenant", "primary_ip4", "primary_ip6", "role")
     serializer_class = serializers.VirtualDeviceContextSerializer
     filterset_class = filters.VirtualDeviceContextFilterSet
 
