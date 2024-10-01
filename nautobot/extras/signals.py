@@ -32,7 +32,6 @@ from nautobot.extras.models import (
     DynamicGroupMembership,
     GitRepository,
     Job as JobModel,
-    JobQueueAssignment,
     JobResult,
     MetadataType,
     ObjectChange,
