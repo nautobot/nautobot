@@ -218,13 +218,14 @@ class Job(PrimaryModel):
     )
     job_queues = models.ManyToManyField(
         to="extras.JobQueue",
+        related_name="jobs",
         verbose_name="Job Queues",
         help_text="The job queues that this job can be run on",
         through="extras.JobQueueAssignment",
     )
     default_job_queue = models.ForeignKey(
         to="extras.JobQueue",
-        related_name="jobs",
+        related_name="default_for_jobs",
         on_delete=models.PROTECT,
         verbose_name="Default Job Queue",
         null=False,

@@ -90,7 +90,9 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="job",
             name="job_queues",
-            field=models.ManyToManyField(through="extras.JobQueueAssignment", to="extras.jobqueue"),
+            field=models.ManyToManyField(
+                through="extras.JobQueueAssignment", to="extras.jobqueue", related_name="jobs"
+            ),
         ),
         migrations.AddField(
             model_name="job",
@@ -105,7 +107,7 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 to="extras.jobqueue",
-                related_name="jobs",
+                related_name="default_for_jobs",
             ),
         ),
         migrations.RenameField(

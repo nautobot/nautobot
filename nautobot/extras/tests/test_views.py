@@ -2303,9 +2303,8 @@ class JobTestCase(
 
         # But we do need to make sure the ones we're testing are flagged appropriately
         cls.test_pass = Job.objects.get(job_class_name="TestPass")
-        cls.test_pass.default_job_queue = JobQueue.objects.get(
-            name="default", queue_type=JobQueueTypeChoices.TYPE_CELERY
-        )
+        default_job_queue = JobQueue.objects.get(name="default", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+        cls.test_pass.default_job_queue = default_job_queue
         cls.test_pass.enabled = True
         cls.test_pass.save()
 
@@ -2318,9 +2317,7 @@ class JobTestCase(
 
         cls.test_required_args = Job.objects.get(job_class_name="TestRequired")
         cls.test_required_args.enabled = True
-        cls.test_pass.default_job_queue = JobQueue.objects.get(
-            name="default", queue_type=JobQueueTypeChoices.TYPE_CELERY
-        )
+        cls.test_pass.default_job_queue = default_job_queue
         cls.test_required_args.save()
 
         cls.extra_run_urls = (
@@ -2339,9 +2336,7 @@ class JobTestCase(
             enabled=True,
             installed=False,
         )
-        cls.test_not_installed.default_job_queue = JobQueue.objects.get(
-            name="default", queue_type=JobQueueTypeChoices.TYPE_CELERY
-        )
+        cls.test_not_installed.default_job_queue = default_job_queue
         cls.test_not_installed.validated_save()
 
         cls.data_run_immediately = {
@@ -2370,6 +2365,7 @@ class JobTestCase(
             "has_sensitive_variables_override": True,
             "job_queues": [queue.pk for queue in job_queues],
             "job_queues_override": True,
+            "default_job_queue": default_job_queue.pk,
         }
         # This form is emulating the non-conventional JobBulkEditForm
         cls.bulk_edit_data = {
