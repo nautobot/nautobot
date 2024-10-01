@@ -875,6 +875,12 @@ class ServiceForm(NautobotModelForm):
         base_field=forms.IntegerField(min_value=SERVICE_PORT_MIN, max_value=SERVICE_PORT_MAX),
         help_text="Comma-separated list of one or more port numbers. A range may be specified using a hyphen.",
     )
+    ip_addresses = DynamicModelMultipleChoiceField(
+        queryset=IPAddress.objects.all(),
+        required=False,
+        label="IP addresses",
+        query_params={"device_id": "$device", "virtual_machine_id": "$virtual_machine"},
+    )
 
     class Meta:
         model = Service
@@ -894,7 +900,6 @@ class ServiceForm(NautobotModelForm):
         }
         widgets = {
             "protocol": StaticSelect2(),
-            "ip_addresses": StaticSelect2Multiple(),
         }
 
     def __init__(self, *args, **kwargs):

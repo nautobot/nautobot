@@ -213,7 +213,7 @@ def handle_protectederror(obj_list, request, e):
     protected_objects = list(e.protected_objects)
     protected_count = len(protected_objects) if len(protected_objects) <= 50 else "More than 50"
     err_message = format_html(
-        "Unable to delete <strong>{}</strong>. {} dependent objects were found: ",
+        str(e.args[0]) if e.args else "Unable to delete <strong>{}</strong>. {} dependent objects were found: ",
         ", ".join(str(obj) for obj in obj_list),
         protected_count,
     )
