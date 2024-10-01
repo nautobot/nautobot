@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import F, Model, OuterRef, Q, Subquery
+from django.db.models import F, Model, OuterRef, ProtectedError, Q, Subquery
 from django.db.models.functions import JSONObject
 
 from nautobot.core.models.query_functions import EmptyGroupByJSONBAgg
@@ -223,6 +223,15 @@ class JobQuerySet(RestrictedQuerySet):
     """
     Extend the standard queryset with a get_for_class_path method.
     """
+
+    def delete(self):
+        for job in self:
+            if job.module_name.startswith("nautobot."):
+                raise ProtectedError(
+                    f"Unable to delete Job {job}. System Job cannot be deleted",
+                    [],
+                )
+        return super().delete()
 
     def get_for_class_path(self, class_path):
         try:

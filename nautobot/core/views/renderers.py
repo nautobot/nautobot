@@ -5,6 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.template import engines, loader
+from django.urls import resolve
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
@@ -296,7 +297,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             # Construct valid actions for list view.
             valid_actions = self.validate_action_buttons(view, request)
             # Query SavedViews for dropdown button
-            list_url = validated_viewname(model, "list")
+            resolved_path = resolve(request.path)
+            list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
             saved_views = None
             if model.is_saved_view_model:
                 # We are not using .restrict(request.user, "view") here

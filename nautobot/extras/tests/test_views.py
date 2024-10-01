@@ -18,7 +18,7 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import extract_form_failures, extract_page_body, ModelViewTestCase, TestCase, ViewTestCases
-from nautobot.core.testing.utils import disable_warnings, post_data
+from nautobot.core.testing.utils import disable_warnings, get_deletable_objects, post_data
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
     ConsolePort,
@@ -1842,6 +1842,9 @@ class ApprovalQueueTestCase(
             return reverse("extras:scheduledjob_approval_request_view", kwargs={"pk": instance.pk})
         raise ValueError("This override is only valid for list and view test cases")
 
+    def get_list_url(self):
+        return reverse("extras:scheduledjob_approval_queue_list")
+
     def setUp(self):
         super().setUp()
         self.job_model = Job.objects.get_for_class_path("dry_run.TestDryRun")
@@ -2385,6 +2388,78 @@ class JobTestCase(
             "job_queues": [queue.pk for queue in job_queues],
             "clear_job_queues_override": False,
         }
+
+    def get_deletable_object(self):
+        """
+        Get an instance that can be deleted.
+        Exclude system jobs
+        """
+        # filter out the system jobs:
+        queryset = self._get_queryset().exclude(module_name__startswith="nautobot.")
+        return get_deletable_objects(self.model, queryset).first()
+
+    def get_deletable_object_pks(self):
+        """
+        Get a list of PKs corresponding to jobs that can be safely bulk-deleted.
+        Excluding system jobs
+        """
+        queryset = self._get_queryset().exclude(module_name__startswith="nautobot.")
+        return get_deletable_objects(self.model, queryset).values_list("pk", flat=True)[:3]
+
+    def test_delete_system_jobs_fail(self):
+        instance = self._get_queryset().filter(module_name__startswith="nautobot.").first()
+        job_name = instance.name
+        request = {
+            "path": self._get_url("delete", instance),
+            "data": post_data({"confirm": True}),
+        }
+
+        # Try delete with delete job permission
+        self.add_permissions("extras.delete_job")
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 403)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(f"Unable to delete Job {instance}. System Job cannot be deleted", response_body)
+        # assert Job still exists
+        self.assertTrue(self._get_queryset().filter(name=job_name).exists())
+
+        # Try delete as a superuser
+        self.user.is_superuser = True
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 403)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(f"Unable to delete Job {instance}. System Job cannot be deleted", response_body)
+        # assert Job still exists
+        self.assertTrue(self._get_queryset().filter(name=job_name).exists())
+
+    def test_bulk_delete_system_jobs_fail(self):
+        system_job_queryset = self.model.objects.filter(module_name__startswith="nautobot.")
+        pk_list = system_job_queryset.values_list("pk", flat=True)[:3]
+        initial_count = self._get_queryset().count()
+        data = {
+            "pk": pk_list,
+            "confirm": True,
+            "_confirm": True,  # Form button
+        }
+        # Try bulk delete with delete job permission
+        self.add_permissions("extras.delete_job")
+        response = self.client.post(self._get_url("bulk_delete"), data, follow=True)
+        self.assertHttpStatus(response, 403)
+        self.assertEqual(self._get_queryset().count(), initial_count)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            f"Unable to delete Job {system_job_queryset.first()}. System Job cannot be deleted", response_body
+        )
+
+        # Try bulk delete as a superuser
+        self.user.is_superuser = True
+        response = self.client.post(self._get_url("bulk_delete"), data, follow=True)
+        self.assertHttpStatus(response, 403)
+        self.assertEqual(self._get_queryset().count(), initial_count)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            f"Unable to delete Job {system_job_queryset.first()}. System Job cannot be deleted", response_body
+        )
 
     def validate_job_data_after_bulk_edit(self, pk_list, old_data):
         # Name is bulk-editable
