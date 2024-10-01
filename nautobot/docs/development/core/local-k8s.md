@@ -21,6 +21,13 @@ curl -fsSL \
 chmod +x /usr/local/bin/kind
 ```
 
+## Create Kubernetes Cluster
+
+In this chapter, we will create a new Kind Kubernetes cluster for local development, along with a client configuration file.
+
+!!! Note
+    To access the cluster from the Nautobot containers, remember to regenerate the `kubeconfig` file as described in the second step of this chapter.
+
 To create a new Kind cluster:
 
 ```bash
@@ -48,7 +55,7 @@ kubectl cluster-info --context kind-nautobot
 Have a question, bug, or feature request? Let us know! https://kind.sigs.k8s.io/#community 🙂
 ```
 
-To export the `kubeconfig` file with an internal cluster IP address for access from connected Nautobot containers, run the following command:
+To regenerate the `kubeconfig` file with an internal cluster IP address for access from connected Nautobot containers, run the following command:
 
 ```bash
 kind get kubeconfig \
