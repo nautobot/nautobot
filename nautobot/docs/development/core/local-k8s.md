@@ -26,7 +26,8 @@ To create a new Kind cluster:
 ```bash
 kind create cluster \
     --name=nautobot \
-    --config=development/kind-config.yaml
+    --config=development/kind-config.yaml \
+    --kubeconfig=./development/kind-kube-config
 ```
 
 Expected output shows the cluster is created:
@@ -53,7 +54,7 @@ To export the `kubeconfig` file with an internal cluster IP address for access f
 kind get kubeconfig \
     --internal \
     --name=nautobot \
-    > development/kind-kube-config
+    > ./development/kind-kube-config
 ```
 
 ## Connecting Nautobot Containers
