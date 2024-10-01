@@ -1,5 +1,6 @@
 from django.shortcuts import HttpResponse, render
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 
 from nautobot.apps import views
 from nautobot.circuits.models import Circuit
@@ -116,3 +117,11 @@ class AnotherExampleModelUIViewSet(
 class ViewToBeOverridden(views.GenericView):
     def get(self, request, *args, **kwargs):
         return HttpResponse("I am a view in the example App which will be overridden by another App.")
+
+
+class ViewWithCustomPermissions(views.ObjectListViewMixin):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    filterset_class = filters.ExampleModelFilterSet
+    queryset = ExampleModel.objects.all()
+    serializer_class = serializers.ExampleModelSerializer
+    table_class = tables.ExampleModelTable

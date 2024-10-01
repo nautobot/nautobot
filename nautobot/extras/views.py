@@ -4,7 +4,6 @@ from urllib.parse import parse_qs
 from celery import chain
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
@@ -24,6 +23,7 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 
 from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
@@ -53,8 +53,15 @@ from nautobot.core.views.mixins import (
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.models import Controller, Device, Interface, Module, Rack
-from nautobot.dcim.tables import ControllerTable, DeviceTable, InterfaceTable, ModuleTable, RackTable
+from nautobot.dcim.models import Controller, Device, Interface, Module, Rack, VirtualDeviceContext
+from nautobot.dcim.tables import (
+    ControllerTable,
+    DeviceTable,
+    InterfaceTable,
+    ModuleTable,
+    RackTable,
+    VirtualDeviceContextTable,
+)
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.signals import change_context_state
@@ -1719,6 +1726,9 @@ class SavedViewUIViewSet(
     serializer_class = serializers.SavedViewSerializer
     table_class = tables.SavedViewTable
     action_buttons = ("export",)
+    permission_classes = [
+        IsAuthenticated,
+    ]
 
     def alter_queryset(self, request):
         """
@@ -1745,15 +1755,15 @@ class SavedViewUIViewSet(
 
     def check_permissions(self, request):
         """
-        Override this method to not check any permissions.
+        Override this method to not check any nautobot-specific object permissions and to only check if the user is authenticated.
         Since users with <app_label>.view_<model_name> permissions should be able to view saved views related to this model.
         And those permissions will be enforced in the related view.
         """
-
-    def dispatch(self, request, *args, **kwargs):
-        if isinstance(request.user, AnonymousUser):
-            return self.handle_no_permission()
-        return super().dispatch(request, *args, **kwargs)
+        for permission in self.get_permissions():
+            if not permission.has_permission(request, self):
+                self.permission_denied(
+                    request, message=getattr(permission, "message", None), code=getattr(permission, "code", None)
+                )
 
     def extra_message_context(self, obj):
         """
@@ -2531,6 +2541,12 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 module_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(module_table)
                 context["module_table"] = module_table
+            if ContentType.objects.get_for_model(VirtualDeviceContext) in context["content_types"]:
+                vdcs = instance.virtual_device_contexts.restrict(request.user, "view")
+                vdc_table = VirtualDeviceContextTable(vdcs)
+                vdc_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(vdc_table)
+                context["vdc_table"] = vdc_table
         return context
 
 

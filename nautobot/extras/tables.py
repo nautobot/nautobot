@@ -1065,6 +1065,9 @@ class ObjectMetadataTable(BaseTable):
 class NoteTable(BaseTable):
     actions = ButtonsColumn(Note)
     created = tables.LinkColumn()
+    note = tables.Column(
+        attrs={"td": {"class": "rendered-markdown"}},
+    )
 
     class Meta(BaseTable.Meta):
         model = Note

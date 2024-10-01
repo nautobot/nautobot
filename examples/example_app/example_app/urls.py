@@ -35,5 +35,12 @@ urlpatterns = [
     # This URL definition is here in order to test the override_views functionality which is defined
     # in examples.example_app_with_view_override.example_app_with_view_override.views
     path("override-target/", views.ViewToBeOverridden.as_view(), name="view_to_be_overridden"),
+    # This URL definition is here in order to test the permission_classes functionality which is defined
+    # in NautobotUIViewSetMixin
+    path(
+        "view-with-custom-permissions/",
+        views.ViewWithCustomPermissions.as_view({"get": "list"}),
+        name="view_with_custom_permissions",
+    ),
 ]
 urlpatterns += router.urls

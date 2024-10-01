@@ -116,6 +116,15 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
+                    "role",
+                    nautobot.extras.models.roles.RoleField(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="extras.role",
+                    ),
+                ),
+                (
                     "tags",
                     nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag"),
                 ),

@@ -952,11 +952,20 @@ class ModuleBayTemplateFactory(ModularDeviceComponentTemplateFactory):
 class VirtualDeviceContextFactory(PrimaryModelFactory):
     class Meta:
         model = VirtualDeviceContext
-        exclude = ("has_tenant", "has_description")
+        exclude = ("has_role", "has_tenant", "has_description")
 
     status = random_instance(
         lambda: Status.objects.get_for_model(VirtualDeviceContext),
         allow_null=False,
+    )
+    has_role = NautobotBoolIterator()
+    role = factory.Maybe(
+        "has_role",
+        random_instance(
+            lambda: Role.objects.get_for_model(VirtualDeviceContext),
+            allow_null=False,
+        ),
+        None,
     )
     identifier = factory.Sequence(lambda n: n + 100)
     name = factory.Sequence(lambda n: f"VirtualDeviceContext {n}")

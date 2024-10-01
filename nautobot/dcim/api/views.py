@@ -233,6 +233,8 @@ class RackViewSet(NautobotModelViewSet):
                 exclude=data["exclude"],
                 expand_devices=data["expand_devices"],
             )
+            if data["is_occupied"] is not None:
+                elevation = [u for u in elevation if u["occupied"] == data["is_occupied"]]
 
             # Enable filtering rack units by ID
             q = data["q"]
@@ -890,7 +892,7 @@ class ModuleTypeViewSet(NautobotModelViewSet):
 
 
 class VirtualDeviceContextViewSet(NautobotModelViewSet):
-    queryset = VirtualDeviceContext.objects.select_related("device", "tenant", "primary_ip4", "primary_ip6")
+    queryset = VirtualDeviceContext.objects.select_related("device", "tenant", "primary_ip4", "primary_ip6", "role")
     serializer_class = serializers.VirtualDeviceContextSerializer
     filterset_class = filters.VirtualDeviceContextFilterSet
 

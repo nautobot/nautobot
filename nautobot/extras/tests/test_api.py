@@ -1388,6 +1388,42 @@ class JobTest(
         job_model = Job.objects.get_for_class_path(class_path)
         return reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
 
+    def get_deletable_object(self):
+        """
+        Get an instance that can be deleted.
+        Exclude system jobs
+        """
+        # filter out the system jobs:
+        queryset = self._get_queryset().exclude(module_name__startswith="nautobot.")
+        instance = get_deletable_objects(self.model, queryset).first()
+        if instance is None:
+            self.fail("Couldn't find a single deletable object!")
+        return instance
+
+    def get_deletable_object_pks(self):
+        """
+        Get a list of PKs corresponding to jobs that can be safely bulk-deleted.
+        Exclude system jobs
+        """
+        queryset = self._get_queryset().exclude(module_name__startswith="nautobot.")
+        instances = get_deletable_objects(self.model, queryset).values_list("pk", flat=True)[:3]
+        if len(instances) < 3:
+            self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
+        return instances
+
+    def test_delete_system_jobs_fail(self):
+        self.add_permissions("extras.delete_job")
+        instance = self._get_queryset().filter(module_name__startswith="nautobot.").first()
+        job_name = instance.name
+        url = self._get_detail_url(instance)
+        self.client.delete(url, **self.header)
+        # assert Job still exists
+        self.assertTrue(self._get_queryset().filter(name=job_name).exists())
+        self.user.is_superuser = True
+        self.client.delete(url, **self.header)
+        # assert Job still exists
+        self.assertTrue(self._get_queryset().filter(name=job_name).exists())
+
     def test_get_job_variables(self):
         """Test the job/<pk>/variables API endpoint."""
         self.add_permissions("extras.view_job")
