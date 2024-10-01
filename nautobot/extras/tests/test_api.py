@@ -1572,8 +1572,8 @@ class JobTest(
             name="No such job",
             installed=False,
             enabled=True,
+            default_job_queue=JobQueue.objects.get(name="default", queue_type=JobQueueTypeChoices.TYPE_CELERY),
         )
-        job_model.default_job_queue = JobQueue.objects.get(name="default", queue_type=JobQueueTypeChoices.TYPE_CELERY)
         job_model.validated_save()
 
         url = self.get_run_url("uninstalled_module.NoSuchJob")
@@ -1754,7 +1754,7 @@ class JobTest(
         response = self.client.post(url, {"data": job_data}, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        job_result = JobResult.objects.latest()
+        job_result = JobResult.objects.filter(name=self.job_model.name).latest()
 
         self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
@@ -1822,8 +1822,6 @@ class JobTest(
             **self.header,
         )
         self.assertHttpStatus(response, self.run_success_response_status)
-        # latest_job_result = JobResult.objects.latest()
-        # self.assertEqual(job_model.default_job_queue.name, latest_job_result.celery_kwargs["queue"])
         job_model.default_job_queue = JobQueue.objects.first()
         job_model.save()
 
@@ -1837,8 +1835,6 @@ class JobTest(
             **self.header,
         )
         self.assertHttpStatus(response, self.run_success_response_status)
-        # latest_job_result = JobResult.objects.latest()
-        # self.assertEqual(job_model.default_job_queue.name, latest_job_result.celery_kwargs["queue"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")

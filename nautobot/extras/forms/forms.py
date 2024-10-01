@@ -1008,7 +1008,9 @@ class JobEditForm(NautobotModelForm):
             # Get default Job Queue first
             if not cleaned_data.get("default_job_queue_override", False):
                 meta_task_queues = getattr(job_class, "task_queues", []) or [settings.CELERY_TASK_DEFAULT_QUEUE]
-                cleaned_data["default_job_queue"] = JobQueue.objects.get(name=meta_task_queues[0])
+                cleaned_data["default_job_queue"] = JobQueue.objects.get_or_create(
+                    name=meta_task_queues[0], defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+                )
             default_job_queue = cleaned_data["default_job_queue"]
             # Include the default Job Queue in the Job Queues selection
             if not cleaned_data.get("job_queues_override", False):
