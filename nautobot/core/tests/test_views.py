@@ -1,8 +1,9 @@
 import re
-from unittest import mock
+from unittest import mock, skipIf
 import urllib.parse
 
 from django.apps import apps
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, RequestFactory
@@ -572,3 +573,41 @@ class SilkUIAccessTestCase(TestCase):
 
         # Check for success status code (e.g., 200)
         self.assertEqual(response.status_code, 200)
+
+
+class ExampleViewWithCustomPermissionsTest(TestCase):
+    @skipIf(
+        "example_app" not in settings.PLUGINS,
+        "example_app not in settings.PLUGINS",
+    )
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_permission_classes_attribute_is_enforced(self):
+        """
+        If example app is installed, check if the ViewWithCustomPermissions
+        is enforcing the permissions specified in its `permission_classes` attribute.
+        """
+        # Test IsAuthenticated permission
+        self.add_permissions("example_app.view_examplemodel")
+        self.client.logout()
+        url = reverse("plugins:example_app:view_with_custom_permissions")
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        response_body = response.content.decode(response.charset)
+        # check if the user is redirected to the login page
+        self.assertIn(f'<input type="hidden" name="next" value="{url}" />', response_body)
+
+        # Test IsAdmin permission
+        self.client.force_login(self.user)
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 403)
+        response_body = response.content.decode(response.charset)
+        # check if the users have to have the permission to access the page
+        self.assertIn("You do not have permission to access this page.", response_body)
+
+        # View should be successfully accessed
+        self.user.is_staff = True
+        self.user.save()
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = response.content.decode(response.charset)
+        self.assertIn("You are viewing a table of example models", response_body)

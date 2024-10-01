@@ -17,7 +17,7 @@ from django.db.models import ManyToManyField, ProtectedError, Q
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.urls import resolve, reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -207,17 +207,16 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         filter_form = None
         hide_hierarchy_ui = False
         clear_view = request.GET.get("clear_view", False)
+        resolved_path = resolve(request.path)
+        list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
 
         # If the user clicks on the clear view button, we do not check for global or user defaults
         if not clear_view and not request.GET.get("saved_view"):
             # Check if there is a default for this view for this specific user
-            app_label, model_name = model._meta.label.split(".")
-            view_name = f"{app_label}:{model_name.lower()}_list"
-
             if not isinstance(user, AnonymousUser):
                 try:
                     user_default_saved_view_pk = UserSavedViewAssociation.objects.get(
-                        user=user, view_name=view_name
+                        user=user, view_name=list_url
                     ).saved_view.pk
                     # Saved view should either belong to the user or be public
                     SavedView.objects.get(
@@ -231,7 +230,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
             # Check if there is a global default for this view
             try:
-                global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
+                global_saved_view = SavedView.objects.get(view=list_url, is_global_default=True)
                 return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
             except ObjectDoesNotExist:
                 pass
@@ -304,7 +303,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         table_config_form = None
         current_saved_view = None
         current_saved_view_pk = self.request.GET.get("saved_view", None)
-        list_url = validated_viewname(model, "list")
         # We are not using .restrict(request.user, "view") here
         # User should be able to see any saved view that he has the list view access to.
         if user.has_perms(["extras.view_savedview"]):
@@ -317,15 +315,17 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 SavedView.objects.filter(view=list_url, owner=user).order_by("name").only("pk", "name")
             )
             saved_views = shared_saved_views | user_owned_saved_views
+
+        if current_saved_view_pk:
+            try:
+                # We are not using .restrict(request.user, "view") here
+                # User should be able to see any saved view that he has the list view access to.
+                current_saved_view = SavedView.objects.get(view=list_url, pk=current_saved_view_pk)
+            except ObjectDoesNotExist:
+                messages.error(request, f"Saved view {current_saved_view_pk} not found")
+
+        # Construct the objects table
         if self.table:
-            # Construct the objects table
-            if current_saved_view_pk:
-                try:
-                    # We are not using .restrict(request.user, "view") here
-                    # User should be able to see any saved view that he has the list view access to.
-                    current_saved_view = SavedView.objects.get(view=list_url, pk=current_saved_view_pk)
-                except ObjectDoesNotExist:
-                    messages.error(request, f"Saved view {current_saved_view_pk} not found")
             if self.request.GET.getlist("sort") or (
                 current_saved_view is not None and current_saved_view.config.get("sort_order")
             ):
