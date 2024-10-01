@@ -233,6 +233,8 @@ class RackViewSet(NautobotModelViewSet):
                 exclude=data["exclude"],
                 expand_devices=data["expand_devices"],
             )
+            if data["is_occupied"] is not None:
+                elevation = [u for u in elevation if u["occupied"] == data["is_occupied"]]
 
             # Enable filtering rack units by ID
             q = data["q"]
