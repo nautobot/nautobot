@@ -16,4 +16,9 @@ class Migration(migrations.Migration):
             name="range",
             field=nautobot.core.models.fields.PositiveRangeNumberTextField(default="1-4094"),
         ),
+        migrations.AddField(
+            model_name="vlangroup",
+            name="tags",
+            field=nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag"),
+        ),
     ]

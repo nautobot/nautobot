@@ -4080,14 +4080,14 @@ class TagTest(APIViewTestCases.APIViewTestCase):
     def test_create_tags_with_invalid_content_types(self):
         self.add_permissions("extras.add_tag")
 
-        # VLANGroup is an OrganizationalModel, not a PrimaryModel, and therefore does not support tags
-        data = {**self.create_data[0], "content_types": [VLANGroup._meta.label_lower]}
+        # Manufacturer is an OrganizationalModel, not a PrimaryModel, and therefore does not support tags
+        data = {**self.create_data[0], "content_types": [Manufacturer._meta.label_lower]}
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
 
         tag = Tag.objects.filter(name=data["name"])
         self.assertHttpStatus(response, 400)
         self.assertFalse(tag.exists())
-        self.assertIn(f"Invalid content type: {VLANGroup._meta.label_lower}", response.data["content_types"])
+        self.assertIn(f"Invalid content type: {Manufacturer._meta.label_lower}", response.data["content_types"])
 
     def test_create_tags_without_content_types(self):
         self.add_permissions("extras.add_tag")
