@@ -2692,7 +2692,6 @@ class JobTestCase(
             "queue": job_queue.name,
         }
         self.test_required_args.job_queues.set([job_queue])
-        print(self.test_required_args.job_queues)
         previous_result = JobResult.objects.create(
             job_model=self.test_required_args,
             user=self.user,
@@ -2703,7 +2702,6 @@ class JobTestCase(
         run_url = reverse("extras:job_run", kwargs={"pk": self.test_required_args.pk})
         response = self.client.get(f"{run_url}?kwargs_from_job_result={previous_result.pk!s}")
         content = extract_page_body(response.content.decode(response.charset))
-        print(content)
         self.assertInHTML(f'<option value="{job_queue.pk}" selected>{job_queue}</option>', content)
         self.assertInHTML(
             '<input type="text" name="var" value="456" class="form-control" required placeholder="None" id="id_var">',

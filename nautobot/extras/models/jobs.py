@@ -170,6 +170,21 @@ class Job(PrimaryModel):
         editable=False,
         help_text="If supported, allows the job to bypass approval when running with dryrun argument set to true",
     )
+    job_queues = models.ManyToManyField(
+        to="extras.JobQueue",
+        related_name="jobs",
+        verbose_name="Job Queues",
+        help_text="The job queues that this job can be run on",
+        through="extras.JobQueueAssignment",
+    )
+    default_job_queue = models.ForeignKey(
+        to="extras.JobQueue",
+        related_name="default_for_jobs",
+        on_delete=models.PROTECT,
+        verbose_name="Default Job Queue",
+        null=False,
+        blank=False,
+    )
 
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
     grouping_override = models.BooleanField(
@@ -215,21 +230,6 @@ class Job(PrimaryModel):
     default_job_queue_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
-    )
-    job_queues = models.ManyToManyField(
-        to="extras.JobQueue",
-        related_name="jobs",
-        verbose_name="Job Queues",
-        help_text="The job queues that this job can be run on",
-        through="extras.JobQueueAssignment",
-    )
-    default_job_queue = models.ForeignKey(
-        to="extras.JobQueue",
-        related_name="default_for_jobs",
-        on_delete=models.PROTECT,
-        verbose_name="Default Job Queue",
-        null=False,
-        blank=False,
     )
     objects = BaseManager.from_queryset(JobQuerySet)()
 
@@ -795,9 +795,7 @@ class JobResult(BaseModel, CustomFieldModel):
         )
 
         if task_queue is None:
-            task_queue = (
-                job_model.default_job_queue.name if job_model.default_job_queue else settings.CELERY_TASK_DEFAULT_QUEUE
-            )
+            task_queue = job_model.default_job_queue.name
 
         job_celery_kwargs = {
             "nautobot_job_job_model_id": job_model.id,
@@ -816,8 +814,6 @@ class JobResult(BaseModel, CustomFieldModel):
         if celery_kwargs is not None:
             job_celery_kwargs.update(celery_kwargs)
 
-        print("hey")
-        print(synchronous)
         if synchronous:
             # synchronous tasks are run before the JobResult is saved, so any fields required by
             # the job must be added before calling `apply()`
@@ -854,7 +850,6 @@ class JobResult(BaseModel, CustomFieldModel):
             job_result.save()
         else:
             # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
-            print("hmmm")
             transaction.on_commit(
                 lambda: run_job.apply_async(
                     args=[job_model.class_path, *job_args],
