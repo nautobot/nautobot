@@ -123,6 +123,7 @@ class ProviderUIViewSet(NautobotUIViewSet):
                 weight=100,
                 table_key="circuits_table",
                 include_default_header_and_footer=True,
+                # TODO(timizuo): Remove when PR is ready
                 max_display_count=2,
             ),
         ),
