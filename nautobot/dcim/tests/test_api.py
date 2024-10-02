@@ -646,6 +646,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         locations = Location.objects.filter(devices__isnull=False)[:2]
         for location in locations:
             location.location_type.content_types.add(ContentType.objects.get_for_model(RackGroup))
+            location.location_type.content_types.add(ContentType.objects.get_for_model(Rack))
 
         rack_groups = (
             RackGroup.objects.create(location=locations[0], name="Rack Group 1"),
@@ -685,7 +686,9 @@ class RackTest(APIViewTestCases.APIViewTestCase):
             status=statuses[0],
         )
         # Place a device in Rack 4
-        device = Device.objects.filter(location=populated_rack.location, rack=None).first()
+        device = Device.objects.filter(
+            location=populated_rack.location, rack__isnull=True, device_type__u_height__gt=0
+        ).first()
         device.rack = populated_rack
         device.face = "front"
         device.position = 10

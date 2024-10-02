@@ -118,7 +118,7 @@ class RIRSerializer(NautobotModelSerializer):
 #
 
 
-class VLANGroupSerializer(NautobotModelSerializer):
+class VLANGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     vlan_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -479,6 +479,35 @@ class IPAllocationSerializer(NautobotModelSerializer, TaggedModelSerializerMixin
     def validate(self, data):
         data["mask_length"] = self.context["prefix"].prefix_length
         return super().validate(data)
+
+
+class VLANAllocationSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    """
+    Input serializer for POST to /api/ipam/vlan-groups/<id>/available-vlans/, i.e. allocating VLAN from VLANGroup.
+    """
+
+    vid = serializers.IntegerField(required=False, min_value=constants.VLAN_VID_MIN, max_value=constants.VLAN_VID_MAX)
+
+    def validate(self, data):
+        """Skip `ValidatedModel` validation.
+        This allows to skip `vid` attribute of `VLAN` model, while validate name and status.
+        """
+        return data
+
+    class Meta(VLANSerializer.Meta):
+        model = VLAN
+        fields = (
+            # permit "vid" and "vlan_group" for `VLAN` consistency.
+            # validate them under `VLANGroupViewSet`
+            "vid",
+            "vlan_group",
+            "name",
+            "status",
+            "role",
+            "tenant",
+            "description",
+            "custom_fields",
+        )
 
 
 #

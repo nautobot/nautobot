@@ -71,6 +71,12 @@ Added [a set of functionality](../user-guide/platform-functionality/objectmetada
 
 Nautobot now supports Python 3.12, and Python 3.12 is now the default Python version included in the `nautobot` Docker images.
 
+#### VLANGroup Model Enhancement ([#6309](https://github.com/nautobot/nautobot/issues/6309))
+
++++ 2.3.6
+
+Added a `range` field on the `VLANGroup` model with a default value of `1-4094`. `VLANGroup` model now also supports `custom_links`, `export_templates`, `tags`, and `webhooks`.
+
 #### Saved Views ([#1758](https://github.com/nautobot/nautobot/issues/1758))
 
 Added the ability for users to save multiple configurations of list views (table columns, filtering, pagination and sorting) for ease of later use and reuse. Refer to the [Saved View](../user-guide/platform-functionality/savedview.md) documentation for more details and on how to use saved views.

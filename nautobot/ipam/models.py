@@ -10,8 +10,9 @@ from django.utils.functional import cached_property
 import netaddr
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.forms.utils import parse_numeric_range
 from nautobot.core.models import BaseManager, BaseModel
-from nautobot.core.models.fields import JSONArrayField
+from nautobot.core.models.fields import JSONArrayField, PositiveRangeNumberTextField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.data import UtilizationData
@@ -1274,11 +1275,14 @@ class IPAddressToInterface(BaseModel):
 
 
 @extras_features(
+    "custom_links",
     "custom_validators",
+    "export_templates",
     "graphql",
     "locations",
+    "webhooks",
 )
-class VLANGroup(OrganizationalModel):
+class VLANGroup(PrimaryModel):
     """
     A VLAN group is an arbitrary collection of VLANs within which VLAN IDs and names must be unique.
     """
@@ -1293,10 +1297,35 @@ class VLANGroup(OrganizationalModel):
     )
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
+    range = PositiveRangeNumberTextField(
+        blank=False,
+        default="1-4094",
+        help_text="Permitted VID range(s) as comma-separated list, default '1-4094' if left blank.",
+        min_boundary=constants.VLAN_VID_MIN,
+        max_boundary=constants.VLAN_VID_MAX,
+    )
+
     class Meta:
         ordering = ("name",)
         verbose_name = "VLAN group"
         verbose_name_plural = "VLAN groups"
+
+    @property
+    def expanded_range(self):
+        """
+        Expand VLAN's range into a list of integers (VLAN IDs).
+        """
+        return parse_numeric_range(self.range)
+
+    @property
+    def available_vids(self):
+        """
+        Return all available VLAN IDs within this VLANGroup as a list.
+        """
+        used_ids = self.vlans.all().values_list("vid", flat=True)
+        available = sorted([vid for vid in self.expanded_range if vid not in used_ids])
+
+        return available
 
     def clean(self):
         super().clean()
@@ -1308,18 +1337,25 @@ class VLANGroup(OrganizationalModel):
                     {"location": f'VLAN groups may not associate to locations of type "{self.location.location_type}".'}
                 )
 
+        # Validate ranges for related VLANs.
+        _expanded_range = self.expanded_range
+        out_of_range_vids = [_vlan.vid for _vlan in self.vlans.all() if _vlan.vid not in _expanded_range]
+        if out_of_range_vids:
+            raise ValidationError(
+                {
+                    "range": f"VLAN group range may not be re-sized due to existing VLANs (IDs: {','.join(map(str, out_of_range_vids))})."
+                }
+            )
+
     def __str__(self):
         return self.name
 
     def get_next_available_vid(self):
         """
-        Return the first available VLAN ID (1-4094) in the group.
+        Return the first available VLAN ID in the group's range.
         """
-        vlan_ids = VLAN.objects.filter(vlan_group=self).values_list("vid", flat=True)
-        for i in range(1, 4095):
-            if i not in vlan_ids:
-                return i
-        return None
+        _available_vids = self.available_vids
+        return _available_vids[0] if _available_vids else None
 
 
 @extras_features(
@@ -1437,6 +1473,13 @@ class VLAN(PrimaryModel):
     def get_vminterfaces(self):
         # Return all VM interfaces assigned to this VLAN
         return VMInterface.objects.filter(Q(untagged_vlan_id=self.pk) | Q(tagged_vlans=self.pk)).distinct()
+
+    def clean(self):
+        super().clean()
+
+        # Validate Vlan Group Range
+        if self.vlan_group and self.vid not in self.vlan_group.expanded_range:
+            raise ValidationError({"vid": f"VLAN ID is not contained in VLAN Group range ({self.vlan_group.range})"})
 
 
 @extras_features("graphql")
