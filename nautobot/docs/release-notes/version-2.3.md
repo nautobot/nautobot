@@ -37,6 +37,7 @@ Job Authors and App Developers should take these actions to ensure compatibility
     Django 4 includes a small number of breaking changes compared to Django 3. In our experience, most Apps have required few (or zero) updates to be Django 4 compatible, but your mileage may vary.
 
 - Python 3.12 is now supported by Nautobot and is now the default recommended version of Python. Apps will likely need to update their packaging in order to explicitly declare support for Python 3.12.
+- App Developers should review the feature set of their data models and consider whether their models should opt into or out of inclusion in Dynamic Groups, Contacts/Teams, Object Metadata, and Saved Views via the inclusion or omission of appropriate model mixins and flag variables. Refer to the [developer documentation](../development/apps/api/models/index.md#adding-database-models) for details.
 
 ## Release Overview
 

@@ -1,0 +1,2 @@
+Fixed an error during startup when an App included a REST API serializer inheriting from an unexpected base class.
+Fixed a warning during startup about the `extras.FileAttachment` model.
