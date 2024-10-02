@@ -1,0 +1,1 @@
+Increase the minimum number of content-types to three and capped the maximum to five for MetadataType instances created by MetadataTypeFactory.
