@@ -460,18 +460,18 @@ def job_result_delete_associated_files(instance, **kwargs):
 @receiver(m2m_changed, sender=JobModel.job_queues.through)
 def add_default_job_queue_to_job_queues(instance, action, model, pk_set, **kwargs):
     if action == "pre_remove":
-        if model is JobModel:  # job_model.job_queues.remove()
+        if isinstance(instance, JobModel):  # job_model.job_queues.remove()
             # Don't allow removing the default job queue
             pk_set.discard(instance.default_job_queue.pk)
-        elif model is JobQueue:  # job_queue.jobs.remove()
+        elif isinstance(instance, JobQueue):  # job_queue.jobs.remove()
             # Don't allow removing jobs that this queue is default for
             for job_model in instance.default_for_jobs.all():
                 pk_set.discard(job_model.pk)
     elif action == "post_clear":
-        if model is JobModel:  # job_model.job_queues.clear()
+        if isinstance(instance, JobModel):  # job_model.job_queues.clear()
             # Re-add the default job queue
             instance.job_queues.add(instance.default_job_queue)
-        elif model is JobQueue:  # job_queue.jobs.clear()
+        elif isinstance(instance, JobQueue):  # job_queue.jobs.clear()
             # Re-add the jobs this queue is default for
             for job_model in instance.default_for_jobs.all():
                 job_model.job_queues.add(instance.pk)

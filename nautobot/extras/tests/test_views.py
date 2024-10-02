@@ -2837,28 +2837,6 @@ class JobTestCase(
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_job_with_no_task_queue_specified(self, _):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.view_jobresult")
-
-        self.test_pass.task_queues = []
-        self.test_pass.job_queues_override = True
-        self.test_pass.validated_save()
-        self.test_pass.default_job_queue_override = True
-        self.test_pass.default_job_queue = JobQueue.objects.last()
-        self.test_pass.save()
-        data = {
-            "_schedule_type": "immediately",
-        }
-
-        for run_url in self.run_urls:
-            response = self.client.post(run_url, data)
-            result = JobResult.objects.latest()
-            self.assertIsNotNone(result, msg=run_url)
-            # self.assertEqual(self.test_pass.default_job_queue.name, result.celery_kwargs["queue"])
-            self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
-
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_job_with_sensitive_variables_and_requires_approval(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")

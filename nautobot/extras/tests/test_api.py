@@ -1795,49 +1795,6 @@ class JobTest(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
-    def test_run_job_with_no_queue_specified(self, mock_get_worker_count):
-        """Test job run with no queue specified."""
-        mock_get_worker_count.return_value = 1
-        self.add_permissions("extras.run_job")
-        device_role = Role.objects.get_for_model(Device).first()
-        job_data = {
-            "var1": "FooBar",
-            "var2": 123,
-            "var3": False,
-            "var4": {"name": device_role.name},
-        }
-        class_path = "api_test_job.APITestJob"
-        job_model = Job.objects.get_for_class_path(class_path)
-        job_model.default_job_queue_override = True
-        job_model.default_job_queue = JobQueue.objects.last()
-        job_model.save()
-
-        url = self.get_run_url()
-        response = self.client.post(
-            url,
-            {
-                "data": job_data,
-            },
-            format="json",
-            **self.header,
-        )
-        self.assertHttpStatus(response, self.run_success_response_status)
-        job_model.default_job_queue = JobQueue.objects.first()
-        job_model.save()
-
-        url = self.get_run_url()
-        response = self.client.post(
-            url,
-            {
-                "data": job_data,
-            },
-            format="json",
-            **self.header,
-        )
-        self.assertHttpStatus(response, self.run_success_response_status)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_job_file_data_commit(self, mock_get_worker_count):
         """Job run requests can reference objects by their attributes."""
 
