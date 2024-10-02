@@ -2,7 +2,7 @@
 
 This guide will help you set up a local Kubernetes cluster using [Kind](https://kind.sigs.k8s.io/) and connect running Nautobot containers to the Kind network.
 
-## Kind Installation
+## Installing Kind
 
 In this chapter we will install Kind on your local machine and create a new Kind Kubernetes cluster.
 
@@ -21,7 +21,7 @@ curl -fsSL \
 chmod +x /usr/local/bin/kind
 ```
 
-## Create Kubernetes Cluster
+## Creating a Kind Kubernetes Cluster
 
 In this chapter, we will create a new Kind Kubernetes cluster for local development, along with a client configuration file.
 
@@ -149,7 +149,7 @@ CoreDNS is running at https://nautobot-control-plane:6443/api/v1/namespaces/kube
 To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
 ```
 
-## Create a Testing Job
+## Running a Test Job
 
 You can verify the connection by creating the testing Kubernetes job:
 
@@ -200,7 +200,7 @@ To delete the job:
 kubectl delete job demo-job
 ```
 
-## Cleanup
+## Cleaning Up
 
 To clean up the Kind cluster and the `kubeconfig` file:
 
