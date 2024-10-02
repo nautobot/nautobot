@@ -110,7 +110,6 @@ class ProviderUIViewSet(NautobotUIViewSet):
                 weight=100,
                 fields="__all__",
                 exclude_fields=["name", "comments"],
-                # value_transforms={"commit_rate": [humanize_speed, placeholder]},
             ),
             ObjectFieldsPanel(
                 label="Comments",
