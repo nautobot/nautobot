@@ -93,7 +93,9 @@ class WebRequestContextTestCase(TestCase):
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_DELETE)
         self.assertEqual(oc_list[1].action, ObjectChangeActionChoices.ACTION_CREATE)
         mock_enqueue_job_hooks.assert_has_calls([mock.call(oc_list[0]), mock.call(oc_list[1])])
-        mock_enqueue_webhooks.assert_has_calls([mock.call(oc_list[0]), mock.call(oc_list[1])])
+        mock_enqueue_webhooks.assert_has_calls(
+            [mock.call(oc_list[0], oc_list[0].get_snapshots()), mock.call(oc_list[1], oc_list[1].get_snapshots())]
+        )
 
     def test_update_then_delete(self):
         """Test that an update followed by a delete is logged as a single delete"""
