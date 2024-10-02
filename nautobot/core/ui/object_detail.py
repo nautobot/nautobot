@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
+from django.db.models.fields import URLField
 from django.template import Context
 from django.template.defaultfilters import truncatechars
 from django.template.loader import get_template, render_to_string
@@ -16,6 +17,7 @@ from django_tables2 import RequestConfig
 from nautobot.core.templatetags.helpers import (
     badge,
     bettertitle,
+    hyperlinked_field,
     hyperlinked_object,
     hyperlinked_object_with_color,
     placeholder,
@@ -385,11 +387,13 @@ class ObjectsTablePanel(Panel):
         max_display_count=None,
         include_fields=[],
         exclude_fields=[],
-        include_default_header_and_footer=False,
-        filter_by_field=None,
-        object_instance_add_field=None,
+        add_button_route="default",
+        add_permissions=None,
+        related_field_name=None,
         body_wrapper_template_path="components/panel/body_wrapper_table.html",
         body_content_template_path="components/panel/body_content_table.html",
+        header_extra_content_template_path="components/panel/header_table.html",
+        footer_content_template_path="components/panel/footer_table.html",
         **kwargs,
     ):
         """Instantiate an ObjectsTable panel.
@@ -402,37 +406,59 @@ class ObjectsTablePanel(Panel):
                 If provided, only these fields will be displayed in the table.
             exclude_fields (list, optional): A list of field names to exclude from the table display.
                 Cannot be used together with `include_fields`.
-            filter_by_field (str, optional): The name of the field to filter related objects by, typically
-                used in query string parameters to filter objects in the table.
-            object_instance_add_field (str, optional): The name of the field used to associate a new instance
-                with the current object when adding through a new obj.
-            include_default_header_and_footer (bool, optional): If True, includes default header and footer
-                templates for the table panel.
+            add_button_route (str, optional): The route used to generate the "add" button URL. Defaults to "default",
+                which uses the default table's model `add` route.
+            add_permissions (list, optional): A list of permissions required for the "add" button to be displayed. If not provided,
+                permissions are determined by default based on the model.
+            related_field_name (str, optional): The name of the field used to filter related objects (typically for query string parameters).
         """
         self.table_key = table_key
-
-        if include_default_header_and_footer:
-            kwargs["header_extra_content_template_path"] = "components/panel/header_table.html"
-            kwargs["footer_content_template_path"] = "components/panel/footer_table.html"
 
         super().__init__(
             body_wrapper_template_path=body_wrapper_template_path,
             body_content_template_path=body_content_template_path,
+            header_extra_content_template_path=header_extra_content_template_path,
+            footer_content_template_path=footer_content_template_path,
             **kwargs,
         )
         self.max_display_count = max_display_count
+        self.add_button_route = add_button_route
+        if exclude_fields and include_fields:
+            raise ValueError("You can only specify either `exclude_fields` or `include_fields`")
         self.exclude_fields = exclude_fields
         self.include_fields = include_fields
-        self.filter_by_field = filter_by_field
-        self.object_instance_add_field = object_instance_add_field
+        self.related_field_name = related_field_name
+        self.add_permissions = add_permissions
+
+    def _get_table_add_url(self, context):
+        obj = context["obj"]
+        body_content_table_add_url = None
+        request = context["request"]
+        related_field_name = self.related_field_name or obj._meta.model_name
+        return_url = context["return_url"]
+
+        if self.add_button_route == "default":
+            body_content_table = context[self.table_key]
+
+            body_content_table_model = body_content_table.Meta.model
+            permission_name = get_permission_for_model(body_content_table_model, "add")
+            if request.user.has_perms([permission_name]):
+                with contextlib.suppress(NoReverseMatch):
+                    add_route = reverse(get_route_for_model(body_content_table_model, "add"))
+                    body_content_table_add_url = f"{add_route}?{related_field_name}={obj.pk}&return_url={return_url}"
+
+        elif self.add_button_route not in [None, "default"]:
+            if request.user.has_perms(self.add_permissions or []):
+                add_route = reverse(self.add_button_route)
+                body_content_table_add_url = f"{add_route}?{related_field_name}={obj.pk}&return_url={return_url}"
+
+        return body_content_table_add_url
 
     def get_extra_context(self, context):
         """Take the context value under `self.table_key` and add it to the context under key `"body_content_table"`."""
         body_content_table = context[self.table_key]
         request = context["request"]
 
-        if self.exclude_fields and self.include_fields:
-            raise ValueError("You can only specify either `exclude_fields` or `include_fields`")
         if self.exclude_fields:
             body_content_table.exclude = self.exclude_fields
         elif self.include_fields:
@@ -445,24 +471,15 @@ class ObjectsTablePanel(Panel):
 
         obj = context["obj"]
         body_content_table_model = body_content_table.Meta.model
-        obj_filter_field_name = self.filter_by_field or context["verbose_name"]
-        add_instance_field_name = self.object_instance_add_field or context["verbose_name"]
+        related_field_name = self.related_field_name or obj._meta.model_name
 
         try:
-            body_content_table_list_url = (
-                reverse(get_route_for_model(body_content_table_model, "list")) + f"?{obj_filter_field_name}={obj.pk}"
-            )
+            list_route = reverse(get_route_for_model(body_content_table_model, "list"))
+            body_content_table_list_url = f"{list_route}?{related_field_name}={obj.pk}"
         except NoReverseMatch:
             body_content_table_list_url = None
 
-        body_content_table_add_url = None
-        permission_name = get_permission_for_model(body_content_table_model, "add")
-        if request.user.has_perms([permission_name]):
-            with contextlib.suppress(NoReverseMatch):
-                body_content_table_add_url = (
-                    reverse(get_route_for_model(body_content_table_model, "add"))
-                    + f"?{add_instance_field_name}={obj.pk}"
-                )
+        body_content_table_add_url = self._get_table_add_url(context)
 
         return {
             "body_content_table": body_content_table,
@@ -577,7 +594,10 @@ class KeyValueTablePanel(Panel):
         - Etc.
         """
         display = value
-
+        try:
+            field_instance = context["obj"]._meta.get_field(key)
+        except FieldDoesNotExist:
+            field_instance = None
         if key in self.value_transforms:
             for transform in self.value_transforms[key]:
                 display = transform(display)
@@ -630,7 +650,8 @@ class KeyValueTablePanel(Panel):
                             count - 3,
                             model._meta.verbose_name if count - 3 == 1 else model._meta.verbose_name_plural,
                         )
-
+        elif isinstance(field_instance, URLField):
+            display = hyperlinked_field(value, value)
         else:
             display = placeholder(localize(value))
 
@@ -1134,6 +1155,7 @@ class _ObjectDetailContactsTab(Tab):
                     table_key="associated_contacts_table",
                     # TODO: we should provide a standard reusable component template for bulk-actions in the footer
                     footer_content_template_path="components/panel/footer_contacts_table.html",
+                    header_extra_content_template_path=None,
                 ),
             )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)

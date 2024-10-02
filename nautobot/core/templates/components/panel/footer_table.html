@@ -6,12 +6,12 @@
             <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add {{ body_content_table_verbose_name }}
         </a>
         {% endif %}
-    {% endblock %}
 
-    {% if body_content_table_list_url and more_queryset_count > 0 %}
-    <a href="{{ body_content_table_list_url }}" class="btn btn-default btn-xs">
-        <span class="mdi mdi-database-search-outline" aria-hidden="true"></span> View {{ more_queryset_count }} more object(s)
-    </a>
-    {% endif %}
+        {% if body_content_table_list_url and more_queryset_count > 0 %}
+        <a href="{{ body_content_table_list_url }}" class="btn btn-default btn-xs">
+            <span class="mdi mdi-database-search-outline" aria-hidden="true"></span> View {{ more_queryset_count }} more object(s)
+        </a>
+        {% endif %}
+    {% endblock %}
 </div>
 <div class="clearfix"></div>
