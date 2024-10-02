@@ -73,7 +73,9 @@ Nautobot now supports Python 3.12, and Python 3.12 is now the default Python ver
 
 #### VLANGroup Model Enhancement ([#6309](https://github.com/nautobot/nautobot/issues/6309))
 
-Added a required `range` field on the `VLANGroup` model with a default value of `1-4094`. `VLANGroup` model now also supports `custom_links`, `export_templates`, `tags`, and `webhooks`.
++++ 2.3.6
+
+Added a `range` field on the `VLANGroup` model with a default value of `1-4094`. `VLANGroup` model now also supports `custom_links`, `export_templates`, `tags`, and `webhooks`.
 
 #### Saved Views ([#1758](https://github.com/nautobot/nautobot/issues/1758))
 
