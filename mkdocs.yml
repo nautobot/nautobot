@@ -636,6 +636,7 @@ nav:
           - Controllers: "development/core/controllers.md"
           - Generic Views: "development/core/generic-views.md"
           - Home Page Panels: "development/core/homepage.md"
+          - Local Kubernetes Cluster: "development/core/local-k8s.md"
           - Model Development Checklist: "development/core/model-checklist.md"
           - Model Features: "development/core/model-features.md"
           - Natural Keys: "development/core/natural-keys.md"
