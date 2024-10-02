@@ -166,6 +166,8 @@ example-app-with-view-override = {path = "examples/example_app_with_view_overrid
 factory-boy = "~3.3.1"
 # Factory Boy dependency. Don't upgrade to v26.x until breaking change is fixed https://github.com/joke2k/faker/issues/2070
 faker = ">=0.7.0,<26.0.0"
+# Library to access Kubernetes API used to develop K8s integration
+kubernetes = "^31.0.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
