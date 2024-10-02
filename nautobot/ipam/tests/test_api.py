@@ -991,6 +991,15 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
 
+    @classmethod
+    def setUpTestData(cls):
+        cls.vlan_group = VLANGroup.objects.create(name="Test", range="5-10,15-20")
+        cls.default_status = Status.objects.first()
+        VLAN.objects.create(name="vlan_5", vid=5, status=cls.default_status, vlan_group=cls.vlan_group)
+        VLAN.objects.create(name="vlan_10", vid=10, status=cls.default_status, vlan_group=cls.vlan_group)
+        VLAN.objects.create(name="vlan_17", vid=17, status=cls.default_status, vlan_group=cls.vlan_group)
+        cls.unused_vids = [6, 7, 8, 9, 15, 16, 18, 19, 20]
+
     def get_deletable_object(self):
         return VLANGroup.objects.create(name="DELETE ME")
 
@@ -1001,6 +1010,171 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
             VLANGroup.objects.create(name="AND ME"),
         ]
         return [vg.pk for vg in vlangroups]
+
+    def test_list_available_vlans(self):
+        """
+        Test retrieval of all available VLAN IDs within a VLANGroup.
+        """
+        url = reverse("ipam-api:vlangroup-available-vlans", kwargs={"pk": self.vlan_group.pk})
+        self.add_permissions("ipam.view_vlangroup")
+
+        # Retrieve all available VLAN IDs
+        response = self.client.get(url, **self.header)
+
+        self.assertEqual(response.data["results"], self.unused_vids)
+        self.assertEqual(response.data["count"], len(self.unused_vids))
+
+    def test_create_single_available_vlan(self):
+        """
+        Test creation of the first available VLAN within a VLANGroup.
+        """
+        cf = CustomField.objects.create(key="sor", label="Source of Record Field", type="text")
+        cf.content_types.add(ContentType.objects.get_for_model(VLAN))
+        url = reverse("ipam-api:vlangroup-available-vlans", kwargs={"pk": self.vlan_group.pk})
+        self.add_permissions(
+            "ipam.view_vlangroup",
+            "ipam.add_vlan",
+        )
+
+        # Create all nine available VLANs with individual requests
+        for unused_vid in self.unused_vids:
+            data = {
+                "name": f"VLAN_{unused_vid}",
+                "description": f"Test VLAN {unused_vid}",
+                "status": self.default_status.pk,
+                "custom_fields": {"sor": "Nautobot"},
+            }
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_201_CREATED)
+            self.assertEqual(response.data["results"]["name"], data["name"])
+            self.assertEqual(response.data["results"]["vid"], unused_vid)
+            self.assertEqual(response.data["results"]["description"], data["description"])
+            self.assertEqual(response.data["results"]["vlan_group"]["id"], self.vlan_group.pk)
+            self.assertIn("custom_fields", response.data["results"])
+            self.assertIn("sor", response.data["results"]["custom_fields"])
+            self.assertEqual("Nautobot", response.data["results"]["custom_fields"]["sor"])
+
+        # Try to create one more VLAN
+        response = self.client.post(
+            url, {"name": "UTILIZED_VLAN_GROUP", "status": self.default_status.pk}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertIn("detail", response.data)
+        self.assertIn(
+            f"An insufficient number of VLANs are available within the VLANGroup {self.vlan_group}",
+            response.data["detail"],
+        )
+
+    def test_create_multiple_available_vlans(self):
+        """
+        Test the creation of available VLANS within a VLANGroup.
+        """
+        cf = CustomField.objects.create(key="sor", label="Source of Record Field", type="text")
+        cf.content_types.add(ContentType.objects.get_for_model(VLAN))
+        url = reverse("ipam-api:vlangroup-available-vlans", kwargs={"pk": self.vlan_group.pk})
+        self.add_permissions(
+            "ipam.view_vlangroup",
+            "ipam.add_vlan",
+        )
+
+        # Try to create ten VLANs (only nine are available)
+        data = [  # First nine VLANs
+            {
+                "name": f"VLAN_{unused_vid}",
+                "description": f"Test VLAN {unused_vid}",
+                "status": self.default_status.pk,
+                "custom_fields": {"sor": "Nautobot"},
+            }
+            for unused_vid in self.unused_vids
+        ]
+        additional_vlan = [
+            {
+                "name": "VLAN_10",  # Out of range VLAN
+                "description": "Test VLAN 10",
+                "status": self.default_status.pk,
+                "custom_fields": {"sor": "Nautobot"},
+            }
+        ]
+        response = self.client.post(url, data + additional_vlan, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertIn("detail", response.data)
+
+        # Create all nine available VLANs in a single request
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(len(response.data["results"]), 9)
+
+        for i, vlan_data in enumerate(data):
+            self.assertEqual(response.data["results"][i]["name"], vlan_data["name"])
+            self.assertEqual(response.data["results"][i]["vid"], int(vlan_data["name"].replace("VLAN_", "")))
+            self.assertEqual(response.data["results"][i]["description"], vlan_data["description"])
+            self.assertEqual(response.data["results"][i]["vlan_group"]["id"], self.vlan_group.pk)
+            self.assertIn("custom_fields", response.data["results"][i])
+            self.assertIn("sor", response.data["results"][i]["custom_fields"])
+            self.assertEqual("Nautobot", response.data["results"][i]["custom_fields"]["sor"])
+
+    def test_create_multiple_explicit_vlans(self):
+        """
+        Test the creation of available VLANS within a VLANGroup requesting explicit VLAN IDs.
+        """
+        url = reverse("ipam-api:vlangroup-available-vlans", kwargs={"pk": self.vlan_group.pk})
+        self.add_permissions(
+            "ipam.view_vlangroup",
+            "ipam.add_vlan",
+        )
+
+        # Try to create VLANs with specified VLAN IDs. Also, explicitly (and redundantly) specify a VLAN Group.
+        data = [
+            {"name": "VLAN_6", "status": self.default_status.pk, "vid": 6},
+            {"name": "VLAN_7", "status": self.default_status.pk, "vid": 7},
+            {"name": "VLAN_8", "status": self.default_status.pk},
+            {"name": "VLAN_9", "status": self.default_status.pk, "vid": 9, "vlan_group": self.vlan_group.pk},
+            {"name": "VLAN_15", "status": self.default_status.pk},
+            {"name": "VLAN_16", "status": self.default_status.pk, "vid": 16, "vlan_group": self.vlan_group.pk},
+        ]
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(len(response.data["results"]), 6)
+
+        for i, vlan_data in enumerate(data):
+            self.assertEqual(response.data["results"][i]["name"], vlan_data["name"])
+            self.assertEqual(response.data["results"][i]["vid"], int(vlan_data["name"].replace("VLAN_", "")))
+            self.assertEqual(response.data["results"][i]["vlan_group"]["id"], self.vlan_group.pk)
+
+    def test_create_invalid_vlans(self):
+        """
+        Test the creation of VLANs using invalid requests.
+        """
+        url = reverse("ipam-api:vlangroup-available-vlans", kwargs={"pk": self.vlan_group.pk})
+        self.add_permissions(
+            "ipam.view_vlangroup",
+            "ipam.add_vlan",
+        )
+
+        # Try to create VLANs using same vid
+        data = [
+            {"name": "VLAN_6", "status": self.default_status.pk, "vid": 6},
+            {"name": "VLAN_7", "status": self.default_status.pk, "vid": 6},
+            {"name": "VLAN_8", "status": self.default_status.pk},
+        ]
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertIn("detail", response.data)
+        self.assertEqual("VLAN 6 is not available within the VLANGroup.", response.data["detail"])
+
+        # Try to create VLANs specifying other VLAN Group
+        some_other_vlan_group = VLANGroup.objects.create(name="VLAN Group 100-200", range="100-200")
+        data = [{"name": "VLAN_7", "status": self.default_status.pk, "vlan_group": some_other_vlan_group.pk}]
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertIn("detail", response.data)
+        self.assertEqual(
+            f"Invalid VLAN Group requested: {some_other_vlan_group}. Only VLAN Group {self.vlan_group} is permitted.",
+            response.data["detail"],
+        )
 
 
 class VLANTest(APIViewTestCases.APIViewTestCase):

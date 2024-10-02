@@ -719,8 +719,11 @@ class NumericArrayField(SimpleArrayField):
 
     def to_python(self, value):
         try:
-            value = ",".join([str(n) for n in forms.parse_numeric_range(value)])
-        except ValueError as error:
+            if not value:
+                value = ""
+            else:
+                value = ",".join([str(n) for n in forms.parse_numeric_range(value)])
+        except (TypeError, ValueError) as error:
             raise ValidationError(error)
         return super().to_python(value)
 
