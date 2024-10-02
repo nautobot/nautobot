@@ -9,8 +9,9 @@ from django.template import Context
 from django.template.defaultfilters import truncatechars
 from django.template.loader import get_template, render_to_string
 from django.templatetags.l10n import localize
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
+from django_tables2 import RequestConfig
 
 from nautobot.core.templatetags.helpers import (
     badge,
@@ -24,6 +25,9 @@ from nautobot.core.templatetags.helpers import (
     validated_viewname,
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
+from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.tenancy.models import Tenant
 
@@ -378,6 +382,12 @@ class ObjectsTablePanel(Panel):
         self,
         *,
         table_key,
+        max_display_count=None,
+        include_fields=[],
+        exclude_fields=[],
+        include_default_header_and_footer=False,
+        filter_by_field=None,
+        object_instance_add_field=None,
         body_wrapper_template_path="components/panel/body_wrapper_table.html",
         body_content_template_path="components/panel/body_content_table.html",
         **kwargs,
@@ -386,17 +396,82 @@ class ObjectsTablePanel(Panel):
 
         Args:
             table_key (str): The render context key string that contains the BaseTable instance of interest.
+            max_display_count (int, optional):  Maximum number of items to display in the table.
+                If None, defaults to the user's preference or a global setting.
+            include_fields (list, optional): A list of field names to include in the table display.
+                If provided, only these fields will be displayed in the table.
+            exclude_fields (list, optional): A list of field names to exclude from the table display.
+                Cannot be used together with `include_fields`.
+            filter_by_field (str, optional): The name of the field to filter related objects by, typically
+                used in query string parameters to filter objects in the table.
+            object_instance_add_field (str, optional): The name of the field used to associate a new instance
+                with the current object when adding through a new obj.
+            include_default_header_and_footer (bool, optional): If True, includes default header and footer
+                templates for the table panel.
         """
         self.table_key = table_key
+
+        if include_default_header_and_footer:
+            kwargs["header_extra_content_template_path"] = "components/panel/header_table.html"
+            kwargs["footer_content_template_path"] = "components/panel/footer_table.html"
+
         super().__init__(
             body_wrapper_template_path=body_wrapper_template_path,
             body_content_template_path=body_content_template_path,
             **kwargs,
         )
+        self.max_display_count = max_display_count
+        self.exclude_fields = exclude_fields
+        self.include_fields = include_fields
+        self.filter_by_field = filter_by_field
+        self.object_instance_add_field = object_instance_add_field
 
     def get_extra_context(self, context):
         """Take the context value under `self.table_key` and add it to the context under key `"body_content_table"`."""
-        return {"body_content_table": context[self.table_key]}
+        body_content_table = context[self.table_key]
+        request = context["request"]
+
+        if self.exclude_fields and self.include_fields:
+            raise ValueError("You can only specify either `exclude_fields` or `include_fields`")
+        if self.exclude_fields:
+            body_content_table.exclude = self.exclude_fields
+        elif self.include_fields:
+            body_content_table.Meta.default_columns = self.include_fields
+
+        per_page = self.max_display_count if self.max_display_count is not None else get_paginate_count(request)
+        paginate = {"paginator_class": EnhancedPaginator, "per_page": per_page}
+        RequestConfig(request, paginate).configure(body_content_table)
+        more_queryset_count = body_content_table.data.data.count() - per_page
+
+        obj = context["obj"]
+        body_content_table_model = body_content_table.Meta.model
+        obj_filter_field_name = self.filter_by_field or context["verbose_name"]
+        add_instance_field_name = self.object_instance_add_field or context["verbose_name"]
+
+        try:
+            body_content_table_list_url = (
+                reverse(get_route_for_model(body_content_table_model, "list")) + f"?{obj_filter_field_name}={obj.pk}"
+            )
+        except NoReverseMatch:
+            body_content_table_list_url = None
+
+        body_content_table_add_url = None
+        permission_name = get_permission_for_model(body_content_table_model, "add")
+        if request.user.has_perms([permission_name]):
+            with contextlib.suppress(NoReverseMatch):
+                body_content_table_add_url = (
+                    reverse(get_route_for_model(body_content_table_model, "add"))
+                    + f"?{add_instance_field_name}={obj.pk}"
+                )
+
+        return {
+            "body_content_table": body_content_table,
+            "body_content_table_add_url": body_content_table_add_url,
+            "body_content_table_list_url": body_content_table_list_url,
+            "body_content_table_verbose_name": body_content_table_model._meta.verbose_name,
+            "body_content_table_verbose_name_plural": body_content_table_model._meta.verbose_name_plural,
+            "more_queryset_count": max(more_queryset_count, 0),
+        }
 
 
 class KeyValueTablePanel(Panel):
