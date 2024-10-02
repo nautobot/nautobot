@@ -32,7 +32,7 @@ from nautobot.extras.models import (
     DynamicGroupMembership,
     GitRepository,
     Job as JobModel,
-    JobQueue,
+    JobQueue as JobQueueModel,
     JobResult,
     MetadataType,
     ObjectChange,
@@ -463,7 +463,7 @@ def add_default_job_queue_to_job_queues(instance, action, model, pk_set, **kwarg
         if isinstance(instance, JobModel):  # job_model.job_queues.remove()
             # Don't allow removing the default job queue
             pk_set.discard(instance.default_job_queue.pk)
-        elif isinstance(instance, JobQueue):  # job_queue.jobs.remove()
+        elif isinstance(instance, JobQueueModel):  # job_queue.jobs.remove()
             # Don't allow removing jobs that this queue is default for
             for job_model in instance.default_for_jobs.all():
                 pk_set.discard(job_model.pk)
@@ -471,7 +471,7 @@ def add_default_job_queue_to_job_queues(instance, action, model, pk_set, **kwarg
         if isinstance(instance, JobModel):  # job_model.job_queues.clear()
             # Re-add the default job queue
             instance.job_queues.add(instance.default_job_queue)
-        elif isinstance(instance, JobQueue):  # job_queue.jobs.clear()
+        elif isinstance(instance, JobQueueModel):  # job_queue.jobs.clear()
             # Re-add the jobs this queue is default for
             for job_model in instance.default_for_jobs.all():
                 job_model.job_queues.add(instance.pk)
