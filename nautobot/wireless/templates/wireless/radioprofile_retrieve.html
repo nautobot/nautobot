@@ -23,11 +23,32 @@
             </tr>
             <tr>
                 <td>Channel Width</td>
-                <td>{{ object.channel_width }}</td>
+                <td>
+                    {% if object.channel_width %}
+                        {% for width in object.channel_width %}
+                            <span class="label label-default">{{ width }}MHz</span>
+                        {% endfor %}
+                    {% else %}
+                        {{ None|placeholder }}
+                    {% endif %}
+                </td>
             </tr>
             <tr>
+                <td>Channel Width</td>
+                <td>
+                    {{ object.get_channel_width_display }}
+                </td>
+            <tr>
                 <td>Allowed Channel List</td>
-                <td>{{ object.allowed_channel_list }}</td>
+                <td>
+                    {% if object.allowed_channel_list %}
+                        {% for channel in object.allowed_channel_list %}
+                            <span class="label label-default">{{ channel }}</span>
+                        {% endfor %}
+                    {% else %}
+                        {{ None|placeholder }}
+                    {% endif %}
+                </td>
             </tr>
             <tr>
                 <td>Transmit Power Minimum</td>
@@ -48,3 +69,12 @@
         </table>
     </div>
 {% endblock content_left_page %}
+
+{% block content_full_width_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Supported Data Rates</strong>
+        </div>
+        {% include 'inc/table.html' with table=supported_data_rates_table %}
+    </div>
+{% endblock content_full_width_page %}

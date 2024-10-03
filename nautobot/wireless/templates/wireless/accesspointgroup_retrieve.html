@@ -1,4 +1,4 @@
-{% extends 'generic/object_retrieve.html' %}
+{% extends 'wireless/accesspointgroup/base.html' %}
 {% load helpers %}
 
 {% block content_left_page %}
@@ -27,3 +27,23 @@
         </table>
     </div>
 {% endblock content_left_page %}
+
+{% block content_full_width_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Wireless Networks</strong>
+        </div>
+        {% include 'inc/table.html' with table=wireless_networks_table %}
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Radio Profiles</strong>
+        </div>
+        {% include 'inc/table.html' with table=radio_profiles_table %}
+    </div>
+{% endblock content_full_width_page %}
+
+{% block javascript %}
+{{ block.super }}
+
+{% endblock javascript %}

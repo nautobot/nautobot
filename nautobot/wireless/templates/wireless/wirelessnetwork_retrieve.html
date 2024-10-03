@@ -48,3 +48,12 @@
         </table>
     </div>
 {% endblock content_left_page %}
+
+{% block content_full_width_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Access Point Groups</strong>
+        </div>
+        {% include 'inc/table.html' with table=access_point_groups_table %}
+    </div>
+{% endblock content_full_width_page %}
