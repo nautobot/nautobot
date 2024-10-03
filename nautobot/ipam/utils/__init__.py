@@ -1,9 +1,9 @@
 from django.core.exceptions import ValidationError
 import netaddr
 
+from nautobot.core.forms.utils import compress_range
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import RelationshipAssociation
-from nautobot.ipam.constants import VLAN_VID_MAX, VLAN_VID_MIN
 from nautobot.ipam.models import Prefix, VLAN
 from nautobot.ipam.querysets import IPAddressQuerySet
 from nautobot.virtualization.models import VMInterface
@@ -85,24 +85,17 @@ def add_available_vlans(vlan_group, vlans):
     """
     Create fake records for all gaps between used VLANs
     """
-    if not vlans:
-        return [{"vid": VLAN_VID_MIN, "available": VLAN_VID_MAX - VLAN_VID_MIN + 1}]
+    fake_vlans = [
+        {
+            "vid": t[0],
+            "available": t[1] - t[0] + 1,
+            "range": f"{t[0]}" if t[0] == t[1] else f"{t[0]}-{t[1]}",
+        }
+        for t in compress_range(vlan_group.available_vids)
+    ]
 
-    prev_vid = VLAN_VID_MAX
-    new_vlans = []
-    for vlan in vlans:
-        if vlan.vid - prev_vid > 1:
-            new_vlans.append({"vid": prev_vid + 1, "available": vlan.vid - prev_vid - 1})
-        prev_vid = vlan.vid
-
-    if vlans[0].vid > VLAN_VID_MIN:
-        new_vlans.append({"vid": VLAN_VID_MIN, "available": vlans[0].vid - VLAN_VID_MIN})
-    if prev_vid < VLAN_VID_MAX:
-        new_vlans.append({"vid": prev_vid + 1, "available": VLAN_VID_MAX - prev_vid})
-
-    vlans = list(vlans) + new_vlans
+    vlans = list(vlans) + fake_vlans
     vlans.sort(key=lambda v: v.vid if isinstance(v, VLAN) else v["vid"])
-
     return vlans
 
 

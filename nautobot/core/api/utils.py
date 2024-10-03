@@ -116,7 +116,7 @@ def get_serializer_for_model(model, prefix=""):
         return dynamic_import(serializer_name)
     except AttributeError as exc:
         raise exceptions.SerializerNotFound(
-            f"Could not determine serializer for {app_label}.{model_name} with prefix '{prefix}'"
+            f"Serializer for {app_label}.{model_name} not found, expected it at {serializer_name}"
         ) from exc
 
 
@@ -129,16 +129,26 @@ def nested_serializers_for_models(models, prefix=""):
 
     Used exclusively in OpenAPI schema generation.
     """
+    from nautobot.core.api.serializers import BaseModelSerializer  # avoid circular import
+
     serializer_classes = []
     for model in models:
         try:
             serializer_classes.append(get_serializer_for_model(model, prefix=prefix))
         except exceptions.SerializerNotFound as exc:
-            logger.error("%s", exc)
+            logger.warning("%s", exc)
             continue
 
     nested_serializer_classes = []
     for serializer_class in serializer_classes:
+        if not issubclass(serializer_class, BaseModelSerializer):
+            logger.warning(
+                "Serializer class %s.%s does not inherit from nautobot.apps.api.BaseModelSerializer. "
+                "This should probably be corrected.",
+                serializer_class.__module__,
+                serializer_class.__name__,
+            )
+            continue
         nested_serializer_name = f"Nested{serializer_class.__name__}"
         if nested_serializer_name in NESTED_SERIALIZER_CACHE:
             nested_serializer_classes.append(NESTED_SERIALIZER_CACHE[nested_serializer_name])
