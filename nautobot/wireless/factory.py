@@ -52,12 +52,12 @@ class RadioProfileFactory(PrimaryModelFactory):
 
     name = UniqueFaker("word")
     frequency = factory.Faker("random_element", elements=RadioProfileFrequencyChoices.values())
-    channel_width = factory.Faker("random_elements", elements=RadioProfileChannelWidthChoices.values())
+    channel_width = factory.Faker("random_elements", elements=RadioProfileChannelWidthChoices.values(), unique=True)
     regulatory_domain = factory.Faker("random_element", elements=RadioProfileRegulatoryDomainChoices.values())
     tx_power_min = factory.Faker("pyint", min_value=1, max_value=5)
     tx_power_max = factory.Faker("pyint", min_value=6, max_value=30)
     rx_power_min = factory.Faker("pyint", min_value=1, max_value=10)
-    allowed_channel_list = factory.Faker("random_elements", elements=[1, 6, 11, 36, 161, 165])
+    allowed_channel_list = factory.Faker("random_elements", elements=[1, 6, 11, 36, 161, 165], unique=True)
 
     @factory.post_generation
     def supported_data_rates(self, create, extracted, **kwargs):
