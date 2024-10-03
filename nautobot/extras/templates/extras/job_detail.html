@@ -284,6 +284,28 @@
                     {% endif %}
                 </td>
             </tr>
+            <tr>
+                <td>Default Job Queue</td>
+                <td>
+                    {{ object.default_job_queue|hyperlinked_object }}
+                </td>
+                <td>
+                    {% if object.default_job_queue_override %}
+                        <span class="text-muted">
+                            overridden; default is:
+                            {% if object.installed %}
+                                {% if object.job_class.task_queues|length > 1 %}
+                                    {{ object.job_class.task_queues.0 }}
+                                {% else %}
+                                    {{ None|placeholder }}
+                                {% endif %}
+                            {% else %}
+                                unknown (not currently installed)
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
         </table>
     </div>
 {% endblock content_right_page %}

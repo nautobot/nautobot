@@ -309,10 +309,10 @@ class ExampleJobWithSoftTimeLimit(Job):
 
 Default: `[]`
 
-A list of Job Queue names that the job can be routed to. An empty list will default to only allowing the user to select the [default Celery queue](../../user-guide/administration/configuration/settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The alphabetically first queue in this list will be used if a queue is not specified in a job run API call.
+A list of Job Queue names that the job can be routed to. An empty list will default to only allowing the user to select the [default Celery queue](../../user-guide/administration/configuration/settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The queue specified in the job's `default_job_queue` will be used if a queue is not specified in a job run API call.
 
 +/- 2.4.0 "Changed default queue selection"
-    As a result of the addition of Job Queues, the default queue when running a Job without explicitly selecting a queue is now the alphabetically first queue of those listed, rather than the first queue specified in this list.
+    As a result of the addition of Job Queues, the default queue when running a Job without explicitly selecting a queue is now the job queue specified in the `default_job_queue` field on the Job model. `default_job_queue` fields for any existing Job instances are automatically populated with the name of the first entry in `task_queues` list of the Job class. When `task_queues` list on the Job class is empty, the corresponding Job instance's `default_job_queue` will be the job queue with the name provided by `settings.CELERY_TASK_DEFAULT_QUEUE`. You can also override the initial `default_job_queue` by setting `default_job_queue_override` to True and assign the field with a different Job Queue instance.
 
 !!! note
     A worker must be listening on the requested queue or the job will not run. See the documentation on [task queues](../../user-guide/administration/guides/celery-queues.md) for more information.

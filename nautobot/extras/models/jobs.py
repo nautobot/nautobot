@@ -170,6 +170,21 @@ class Job(PrimaryModel):
         editable=False,
         help_text="If supported, allows the job to bypass approval when running with dryrun argument set to true",
     )
+    job_queues = models.ManyToManyField(
+        to="extras.JobQueue",
+        related_name="jobs",
+        verbose_name="Job Queues",
+        help_text="The job queues that this job can be run on",
+        through="extras.JobQueueAssignment",
+    )
+    default_job_queue = models.ForeignKey(
+        to="extras.JobQueue",
+        related_name="default_for_jobs",
+        on_delete=models.PROTECT,
+        verbose_name="Default Job Queue",
+        null=False,
+        blank=False,
+    )
 
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
     grouping_override = models.BooleanField(
@@ -212,14 +227,10 @@ class Job(PrimaryModel):
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
-    job_queues = models.ManyToManyField(
-        to="extras.JobQueue",
-        related_name="jobs",
-        verbose_name="Job Queues",
-        help_text="The job queues that this job can be run on",
-        through="extras.JobQueueAssignment",
+    default_job_queue_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
-
     objects = BaseManager.from_queryset(JobQuerySet)()
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
@@ -784,7 +795,7 @@ class JobResult(BaseModel, CustomFieldModel):
         )
 
         if task_queue is None:
-            task_queue = settings.CELERY_TASK_DEFAULT_QUEUE
+            task_queue = job_model.default_job_queue.name
 
         job_celery_kwargs = {
             "nautobot_job_job_model_id": job_model.id,

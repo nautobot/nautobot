@@ -701,6 +701,7 @@ class JobTable(BaseTable):
     supports_dryrun = BooleanColumn()
     soft_time_limit = tables.Column()
     time_limit = tables.Column()
+    default_job_queue = tables.Column(linkify=True)
     job_queues_count = LinkedCountColumn(
         viewname="extras:jobqueue_list", url_params={"jobs": "pk"}, verbose_name="Job Queues"
     )
@@ -750,6 +751,7 @@ class JobTable(BaseTable):
             "supports_dryrun",
             "soft_time_limit",
             "time_limit",
+            "default_job_queue",
             "job_queues_count",
             "last_run",
             "last_status",

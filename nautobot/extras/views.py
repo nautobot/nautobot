@@ -2,6 +2,7 @@ import logging
 from urllib.parse import parse_qs
 
 from celery import chain
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -1529,6 +1530,20 @@ class JobBulkEditView(generic.BulkEditView):
         else:
             obj.job_queues_override = True
             obj.job_queues.set(cleaned_data["job_queues"])
+
+        # Handle default job queue
+        clear_override_field = "clear_default_job_queue_override"
+        reset_override = cleaned_data.get(clear_override_field, False)
+        if reset_override:
+            meta_task_queues = obj.job_class.task_queues
+            job_queues = []
+            obj.default_job_queue_override = False
+            obj.default_job_queue, _ = JobQueue.objects.get_or_create(
+                name=meta_task_queues[0] if meta_task_queues else settings.CELERY_TASK_DEFAULT_QUEUE
+            )
+        else:
+            obj.default_job_queue_override = True
+            obj.default_job_queue = cleaned_data["default_job_queue"]
 
         obj.validated_save()
 

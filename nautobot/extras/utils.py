@@ -514,6 +514,10 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
 
     try:
         with transaction.atomic():
+            default_job_queue, _ = job_queue_class.objects.get_or_create(
+                name=job_class.task_queues[0] if job_class.task_queues else settings.CELERY_TASK_DEFAULT_QUEUE,
+                defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY},
+            )
             job_model, created = job_model_class.objects.get_or_create(
                 module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
                 job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
@@ -526,6 +530,7 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
                     "supports_dryrun": job_class.supports_dryrun,
                     "installed": True,
                     "enabled": False,
+                    "default_job_queue": default_job_queue,
                 },
             )
 
