@@ -94,6 +94,16 @@ class AccessPointGroupForm(NautobotModelForm):
         help_text="The controller managing this access point group.",
         required=False,
     )
+    devices = DynamicModelMultipleChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        label="Devices",
+    )
+    radio_profiles = DynamicModelMultipleChoiceField(
+        queryset=RadioProfile.objects.all(),
+        required=False,
+        label="Radio Profiles",
+    )
     class Meta:
         model = AccessPointGroup
         fields = [
@@ -101,8 +111,8 @@ class AccessPointGroupForm(NautobotModelForm):
             "description",
             "controller",
             "tenant",
-            # "devices",
-            # "radio_profiles",
+            "devices",
+            "radio_profiles",
             # "wireless_networks",
             "tags",
         ]
@@ -133,21 +143,25 @@ class AccessPointGroupBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     )
 
 
-
 class RadioProfileForm(NautobotModelForm):
     allowed_channel_list = NumericArrayField(
         base_field=forms.IntegerField(),
         help_text="List of allowed channels for this radio profile.",
         required=False,
     )
+    access_point_groups = DynamicModelMultipleChoiceField(
+        queryset=AccessPointGroup.objects.all(),
+        required=False,
+        label="Access Point Groups",
+    )
+    supported_data_rates = DynamicModelMultipleChoiceField(
+        queryset=SupportedDataRate.objects.all(),
+        required=False,
+        label="Supported Data Rates",
+    )
     class Meta:
         model = RadioProfile
         fields = "__all__"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        print(f"{",".join(str(v) for v in self.instance.channel_width)}")
-        self.fields["channel_width"].initial = ",".join(str(v) for v in self.instance.channel_width)
 
 
 class RadioProfileFilterForm(NautobotFilterForm):
@@ -180,6 +194,11 @@ class WirelessNetworkForm(NautobotModelForm):
     class Meta:
         model = WirelessNetwork
         fields = "__all__"
+        field_order = [
+            "ssid",
+            "name",
+            "description",
+        ]
 
 
 class WirelessNetworkFilterForm(NautobotFilterForm):
