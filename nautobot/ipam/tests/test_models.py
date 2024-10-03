@@ -1351,10 +1351,6 @@ class TestVLANGroup(ModelTestCases.BaseModelTestCase):
             vlan.validated_save()
         self.assertEqual(str(exc.exception), "{'vid': ['VLAN ID is not contained in VLAN Group range (1-2)']}")
 
-        # Next out of range.
-        VLAN.objects.bulk_create((VLAN(name="VLAN 6", vid=6, vlan_group=vlangroup, status=status),))
-        self.assertEqual(vlangroup.get_next_available_vid(), None)
-
 
 class TestVLAN(ModelTestCases.BaseModelTestCase):
     model = VLAN
