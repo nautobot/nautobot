@@ -727,7 +727,9 @@ class VLANGroupForm(LocatableModelFormMixin, NautobotModelForm):
         fields = [
             "location",
             "name",
+            "range",
             "description",
+            "tags",
         ]
 
 
