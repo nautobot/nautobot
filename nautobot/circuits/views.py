@@ -121,8 +121,6 @@ class ProviderUIViewSet(NautobotUIViewSet):
             ObjectsTablePanel(
                 weight=100,
                 table_key="circuits_table",
-                # TODO(timizuo): Remove when PR is ready
-                max_display_count=2,
             ),
         ),
     )
