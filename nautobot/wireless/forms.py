@@ -1,16 +1,91 @@
 from django import forms
 
 from nautobot.core.forms import (
+    BootstrapMixin,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     NumericArrayField,
     TagFilterField,
 )
-from nautobot.dcim.models import Controller
+from nautobot.dcim.models import Controller, Device, Location
 from nautobot.extras.forms import NautobotBulkEditForm, NautobotFilterForm, NautobotModelForm, TagsBulkEditFormMixin
+from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.tenancy.forms import TenancyFilterForm
 from nautobot.tenancy.models import Tenant
-from nautobot.wireless.models import AccessPointGroup, RadioProfile, SupportedDataRate, WirelessNetwork
+from nautobot.wireless.models import (
+    AccessPointGroup,
+    AccessPointGroupWirelessNetworkAssignment,
+    RadioProfile,
+    SupportedDataRate,
+    WirelessNetwork,
+)
+
+
+class AccessPointGroupWirelessNetworkVLANForm(BootstrapMixin, forms.ModelForm):
+    locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        label="Locations",
+        null_option="None",
+    )
+    vlan_group = DynamicModelChoiceField(
+        queryset=VLANGroup.objects.all(),
+        required=False,
+        label="VLAN group",
+        null_option="None",
+        initial_params={"vlans": "$vlan"},
+    )
+    vlan = DynamicModelChoiceField(
+        queryset=VLAN.objects.all(),
+        required=False,
+        label="VLAN",
+        query_params={
+            "locations": "$locations",
+            "vlan_group": "$vlan_group",
+        },
+    )
+    access_point_group = DynamicModelChoiceField(
+        queryset=AccessPointGroup.objects.all(),
+        required=False,
+    )
+    wireless_network = DynamicModelChoiceField(
+        queryset=WirelessNetwork.objects.all(),
+        required=False,
+    )
+
+    class Meta:
+        model = AccessPointGroupWirelessNetworkAssignment
+        fields = [
+            "wireless_network",
+            "access_point_group",
+            "locations",
+            "vlan_group",
+            "vlan",
+        ]
+        field_order = [
+            "wireless_network",
+            "access_point_group",
+            "locations",
+            "vlan_group",
+            "vlan",
+        ]
+
+AccessPointGroupWirelessNetworkFormSet = forms.inlineformset_factory(
+    parent_model=AccessPointGroup,
+    model=AccessPointGroupWirelessNetworkAssignment,
+    form=AccessPointGroupWirelessNetworkVLANForm,
+    exclude=["access_point_group"],
+    extra=5,
+)
+
+
+WirelessNetworkAccessPointGroupFormSet = forms.inlineformset_factory(
+    parent_model=WirelessNetwork,
+    model=AccessPointGroupWirelessNetworkAssignment,
+    form=AccessPointGroupWirelessNetworkVLANForm,
+    exclude=["wireless_network"],
+    extra=5,
+)
 
 
 class AccessPointGroupForm(NautobotModelForm):
