@@ -1,6 +1,5 @@
 """Test cases for the event notification APIs."""
 
-
 from collections import defaultdict
 
 from nautobot.core.events import deregister_event_broker, EventBroker, publish_event, register_event_broker
