@@ -23,8 +23,22 @@ def register_event_broker(event_broker):
     Args:
         event_broker (EventBroker): The initialized/configured EventBroker instance to register.
     """
-    _EVENT_BROKERS.append(event_broker)
-    logger.debug("Registered %s as an event broker", event_broker)
+    if event_broker not in _EVENT_BROKERS:
+        _EVENT_BROKERS.append(event_broker)
+        logger.debug("Registered %s as an event broker", event_broker)
+    else:
+        logger.warning("Tried to register event broker %s but it was already registered", event_broker)
+
+
+def deregister_event_broker(event_broker):
+    """
+    Deregister a previously registered `EventBroker` instance so that it no longer receives published events.
+    """
+    try:
+        _EVENT_BROKERS.remove(event_broker)
+        logger.debug("Deregistered event broker %s", event_broker)
+    except ValueError:
+        logger.warning("Tried to deregister event broker %s but it wasn't previously registered", event_broker)
 
 
 def publish_event(*, topic, payload):
@@ -45,9 +59,10 @@ def publish_event(*, topic, payload):
 
 
 __all__ = (
+    "deregister_event_broker",
     "EventBroker",
-    "RedisEventBroker",
-    "SyslogEventBroker",
     "publish_event",
+    "RedisEventBroker",
     "register_event_broker",
+    "SyslogEventBroker",
 )
