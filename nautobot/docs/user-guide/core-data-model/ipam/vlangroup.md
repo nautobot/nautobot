@@ -6,7 +6,7 @@ Groups can also be used to enforce uniqueness: Each VLAN within a group must hav
 
 ## VLAN Group Ranges
 
-+++ 2.4.0
++++ 2.3.6
 
 VLAN Groups contain a mandatory `range` field with a default value of `1-4094` (permitting all VLANs). This field may be used to constrain the valid member VLANs of the group. VLANs can only be associated with a given VLAN Group if their VLAN identifiers ("VIDs") fall within the specified `range`.
 Range value accepts commas and dashes, with examples as follows:
@@ -21,7 +21,7 @@ Values between dashes will also be expanded into a list of VLANs.
 
 ## Creating new VLANs in a VLANGroup programatically
 
-+++ 2.4.0
++++ 2.3.6
 
 VLAN Groups offer an API endpoint to list available VIDs and create new VLANs programmatically:
 

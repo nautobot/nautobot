@@ -1305,17 +1305,17 @@ class VLANGroup(PrimaryModel):
         max_boundary=constants.VLAN_VID_MAX,
     )
 
+    class Meta:
+        ordering = ("name",)
+        verbose_name = "VLAN group"
+        verbose_name_plural = "VLAN groups"
+
     @property
     def expanded_range(self):
         """
         Expand VLAN's range into a list of integers (VLAN IDs).
         """
         return parse_numeric_range(self.range)
-
-    class Meta:
-        ordering = ("name",)
-        verbose_name = "VLAN group"
-        verbose_name_plural = "VLAN groups"
 
     @property
     def available_vids(self):
