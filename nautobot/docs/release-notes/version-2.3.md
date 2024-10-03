@@ -124,6 +124,27 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
+## v2.3.6 (2024-10-02)
+
+### Added
+
+- [#5903](https://github.com/nautobot/nautobot/issues/5903) - Added range field on `VLANGroup` model.
+- [#5903](https://github.com/nautobot/nautobot/issues/5903) - Added tags on `VLANGroup` model.
+
+### Fixed
+
+- [#6304](https://github.com/nautobot/nautobot/issues/6304) - Fixed an error during startup when an App included a REST API serializer inheriting from an unexpected base class.
+- [#6304](https://github.com/nautobot/nautobot/issues/6304) - Fixed a warning during startup about the `extras.FileAttachment` model.
+
+### Documentation
+
+- [#6304](https://github.com/nautobot/nautobot/issues/6304) - Added a note to the release overview section for app developers regarding opt-in/opt-out of model features.
+- [#6304](https://github.com/nautobot/nautobot/issues/6304) - Updated app model developer documentation with more details about feature opt-out.
+
+### Housekeeping
+
+- [#6308](https://github.com/nautobot/nautobot/issues/6308) - Increase the minimum number of content-types to three and capped the maximum to five for MetadataType instances created by MetadataTypeFactory.
+
 ## v2.3.5 (2024-09-30)
 
 ### Added
