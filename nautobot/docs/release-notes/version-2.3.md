@@ -37,6 +37,7 @@ Job Authors and App Developers should take these actions to ensure compatibility
     Django 4 includes a small number of breaking changes compared to Django 3. In our experience, most Apps have required few (or zero) updates to be Django 4 compatible, but your mileage may vary.
 
 - Python 3.12 is now supported by Nautobot and is now the default recommended version of Python. Apps will likely need to update their packaging in order to explicitly declare support for Python 3.12.
+- App Developers should review the feature set of their data models and consider whether their models should opt into or out of inclusion in Dynamic Groups, Contacts/Teams, Object Metadata, and Saved Views via the inclusion or omission of appropriate model mixins and flag variables. Refer to the [developer documentation](../development/apps/api/models/index.md#adding-database-models) for details.
 
 ## Release Overview
 
@@ -69,6 +70,12 @@ Added [a set of functionality](../user-guide/platform-functionality/objectmetada
 #### Python 3.12 Support ([#5429](https://github.com/nautobot/nautobot/issues/5429))
 
 Nautobot now supports Python 3.12, and Python 3.12 is now the default Python version included in the `nautobot` Docker images.
+
+#### VLANGroup Model Enhancement ([#6309](https://github.com/nautobot/nautobot/issues/6309))
+
++++ 2.3.6
+
+Added a `range` field on the `VLANGroup` model with a default value of `1-4094`. `VLANGroup` model now also supports `custom_links`, `export_templates`, `tags`, and `webhooks`.
 
 #### Saved Views ([#1758](https://github.com/nautobot/nautobot/issues/1758))
 
@@ -117,6 +124,27 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
+## v2.3.6 (2024-10-02)
+
+### Added
+
+- [#5903](https://github.com/nautobot/nautobot/issues/5903) - Added range field on `VLANGroup` model.
+- [#5903](https://github.com/nautobot/nautobot/issues/5903) - Added tags on `VLANGroup` model.
+
+### Fixed
+
+- [#6304](https://github.com/nautobot/nautobot/issues/6304) - Fixed an error during startup when an App included a REST API serializer inheriting from an unexpected base class.
+- [#6304](https://github.com/nautobot/nautobot/issues/6304) - Fixed a warning during startup about the `extras.FileAttachment` model.
+
+### Documentation
+
+- [#6304](https://github.com/nautobot/nautobot/issues/6304) - Added a note to the release overview section for app developers regarding opt-in/opt-out of model features.
+- [#6304](https://github.com/nautobot/nautobot/issues/6304) - Updated app model developer documentation with more details about feature opt-out.
+
+### Housekeeping
+
+- [#6308](https://github.com/nautobot/nautobot/issues/6308) - Increase the minimum number of content-types to three and capped the maximum to five for MetadataType instances created by MetadataTypeFactory.
+
 ## v2.3.5 (2024-09-30)
 
 ### Added

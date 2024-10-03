@@ -1302,7 +1302,7 @@ class TestVLANGroup(ModelTestCases.BaseModelTestCase):
         self.assertIn(f'VLAN groups may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
     def test_get_next_available_vid(self):
-        vlangroup = VLANGroup.objects.create(name="VLAN Group 1")
+        vlangroup = VLANGroup.objects.create(name="VLAN Group 1", range="1-6")
         status = Status.objects.get_for_model(VLAN).first()
         VLAN.objects.bulk_create(
             (
@@ -1316,6 +1316,40 @@ class TestVLANGroup(ModelTestCases.BaseModelTestCase):
 
         VLAN.objects.bulk_create((VLAN(name="VLAN 4", vid=4, vlan_group=vlangroup, status=status),))
         self.assertEqual(vlangroup.get_next_available_vid(), 6)
+        # Next out of range.
+        VLAN.objects.bulk_create((VLAN(name="VLAN 6", vid=6, vlan_group=vlangroup, status=status),))
+        self.assertEqual(vlangroup.get_next_available_vid(), None)
+
+    def test_range_resize(self):
+        vlangroup = VLANGroup.objects.create(name="VLAN Group 1", range="1-3")
+        status = Status.objects.get_for_model(VLAN).first()
+        VLAN.objects.bulk_create(
+            (
+                VLAN(name="VLAN 1", vid=1, vlan_group=vlangroup, status=status),
+                VLAN(name="VLAN 2", vid=2, vlan_group=vlangroup, status=status),
+                VLAN(name="VLAN 3", vid=3, vlan_group=vlangroup, status=status),
+            )
+        )
+        with self.assertRaises(ValidationError) as exc:
+            vlangroup.range = "1-2"
+            vlangroup.validated_save()
+        self.assertEqual(
+            str(exc.exception), "{'range': ['VLAN group range may not be re-sized due to existing VLANs (IDs: 3).']}"
+        )
+
+    def test_assign_vlan_out_of_range(self):
+        vlangroup = VLANGroup.objects.create(name="VLAN Group 1", range="1-2")
+        status = Status.objects.get_for_model(VLAN).first()
+        VLAN.objects.bulk_create(
+            (
+                VLAN(name="VLAN 1", vid=1, vlan_group=vlangroup, status=status),
+                VLAN(name="VLAN 2", vid=2, vlan_group=vlangroup, status=status),
+            )
+        )
+        with self.assertRaises(ValidationError) as exc:
+            vlan = VLAN(name="VLAN 3", vid=3, vlan_group=vlangroup, status=status)
+            vlan.validated_save()
+        self.assertEqual(str(exc.exception), "{'vid': ['VLAN ID is not contained in VLAN Group range (1-2)']}")
 
 
 class TestVLAN(ModelTestCases.BaseModelTestCase):

@@ -246,7 +246,8 @@ class MetadataTypeFactory(PrimaryModelFactory):
                         lambda: ContentType.objects.filter(
                             FeatureQuery("metadata").get_query(), pk__in=existing_content_type_pks
                         ),
-                        minimum=1,
+                        minimum=3,
+                        maximum=5,
                     )
                 )
 
