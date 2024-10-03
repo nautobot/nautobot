@@ -272,6 +272,7 @@ class MetadataTypeFactory(PrimaryModelFactory):
                             FeatureQuery("metadata").get_query(), pk__in=existing_content_type_pks
                         ),
                         minimum=3,
+                        maximum=5,
                     )
                 )
 

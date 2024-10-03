@@ -95,9 +95,7 @@ def add_available_vlans(vlan_group, vlans):
     ]
 
     vlans = list(vlans) + fake_vlans
-
     vlans.sort(key=lambda v: v.vid if isinstance(v, VLAN) else v["vid"])
-
     return vlans
 
 
