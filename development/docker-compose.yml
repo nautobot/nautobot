@@ -9,6 +9,8 @@ services:
       context: ../
       dockerfile: docker/Dockerfile
       target: dev
+    healthcheck:
+      start_period: 10m
     image: "local/nautobot-dev:local-py${PYTHON_VER}"
     ports:
       - "8080:8080"
