@@ -1233,7 +1233,7 @@ class VLANGroupView(generic.ObjectView):
             .prefetch_related(Prefetch("prefixes", queryset=Prefix.objects.restrict(request.user)))
         )
         vlans_count = vlans.count()
-        vlans = add_available_vlans(instance, vlans)
+        vlans = add_available_vlans(vlan_group=instance, vlans=vlans)
 
         vlan_table = tables.VLANDetailTable(vlans)
         if request.user.has_perm("ipam.change_vlan") or request.user.has_perm("ipam.delete_vlan"):

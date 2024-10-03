@@ -539,7 +539,7 @@ class IPAddressToInterfaceFilterSet(NautobotFilterSet):
 class VLANGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSearchFilterSet):
     class Meta:
         model = VLANGroup
-        fields = ["id", "name", "description"]
+        fields = ["id", "name", "description", "tags"]
 
 
 class VLANFilterSet(

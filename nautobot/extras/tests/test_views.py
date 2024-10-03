@@ -3595,11 +3595,11 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     def test_create_tags_with_invalid_content_types(self):
         self.add_permissions("extras.add_tag")
-        vlangroup_content_type = ContentType.objects.get_for_model(VLANGroup)
+        manufacturer_content_type = ContentType.objects.get_for_model(Manufacturer)
 
         form_data = {
             **self.form_data,
-            "content_types": [vlangroup_content_type.id],
+            "content_types": [manufacturer_content_type.id],
         }
 
         request = {
