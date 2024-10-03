@@ -6,7 +6,7 @@ from .base import EventBroker
 from .redis_broker import RedisEventBroker
 from .syslog_broker import SyslogEventBroker
 
-_EVENT_BROKERS = list()
+_EVENT_BROKERS = []
 
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ def register_event_broker(event_broker):
         event_broker (EventBroker): The initialized/configured EventBroker instance to register.
     """
     _EVENT_BROKERS.append(event_broker)
-    logger.debug("Registered %s as an event broker; registered brokers are now %s", event_broker, _EVENT_BROKERS)
+    logger.debug("Registered %s as an event broker", event_broker)
 
 
 def publish_event(*, topic, payload):
