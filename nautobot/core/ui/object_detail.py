@@ -385,8 +385,8 @@ class ObjectsTablePanel(Panel):
         *,
         table_key,
         max_display_count=None,
-        include_fields=[],
-        exclude_fields=[],
+        include_fields=None,
+        exclude_fields=None,
         add_button_route="default",
         add_permissions=None,
         related_field_name=None,
@@ -459,9 +459,9 @@ class ObjectsTablePanel(Panel):
         body_content_table = context[self.table_key]
         request = context["request"]
 
-        if self.exclude_fields:
+        if self.exclude_fields is not None:
             body_content_table.exclude = self.exclude_fields
-        elif self.include_fields:
+        elif self.include_fields is not None:
             body_content_table.Meta.default_columns = self.include_fields
 
         per_page = self.max_display_count if self.max_display_count is not None else get_paginate_count(request)
