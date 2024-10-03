@@ -746,20 +746,10 @@ class JSONArrayChoiceFormField(JSONArrayFormField):
 
     choices = property(_get_choices, _set_choices)
 
-    def clean(self, value):
-        """
-        Validate `value` and return its "cleaned" value as an appropriate
-        Python object. Raise ValidationError for any errors.
-        """
-        value = super().clean(value)
-        return [self.base_field.clean(val) for val in value]
-
-    def bound_data(self, data, initial):
-        if data is None:
-            return None
-        if isinstance(data, list):
-            data = json.dumps(data)
-        return super().bound_data(data, initial)
+    def prepare_value(self, value):
+        if isinstance(value, list):
+            return value
+        return []
 
     def validate(self, value):
         """
