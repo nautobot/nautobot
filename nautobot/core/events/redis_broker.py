@@ -3,10 +3,13 @@
 To verify that an instance of this broker is working, you can do the following in `nautobot-server nbshell`:
 
 ```python
-import redis
 import json
 
+import redis
+
+
 connection = redis.StrictRedis(host="redis", port=6379, db=2, password="...", charset="utf-8", decode_responses=True)
+
 
 def listen():
     sub = connection.pubsub()
@@ -15,6 +18,7 @@ def listen():
         if message["type"] == "pmessage":
             print(f"Got a pmessage on channel {message['channel']}")
             print(json.dumps(json.loads(message["data"]), indent=2))
+
 
 listen()
 ```

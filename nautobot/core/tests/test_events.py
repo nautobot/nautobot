@@ -1,8 +1,19 @@
 """Test cases for the event notification APIs."""
 
 from collections import defaultdict
+import json
 
-from nautobot.core.events import deregister_event_broker, EventBroker, publish_event, register_event_broker
+from django.conf import settings
+import redis
+
+from nautobot.core.events import (
+    deregister_event_broker,
+    EventBroker,
+    publish_event,
+    RedisEventBroker,
+    register_event_broker,
+    SyslogEventBroker,
+)
 from nautobot.core.testing import TestCase
 
 
@@ -71,3 +82,38 @@ class EventNotificationTest(TestCase):
         # Duplicate deregistration is a no-op
         deregister_event_broker(event_broker)
         deregister_event_broker(event_broker_2)
+
+    def test_publish_events_to_syslog(self):
+        event_broker = SyslogEventBroker()
+        register_event_broker(event_broker)
+
+        try:
+            with self.assertLogs("nautobot.events.nautobot.test.event") as cm:
+                publish_event(topic="nautobot.test.event", payload={"a": 1})
+            self.assertEqual(cm.output, ["INFO:nautobot.events.nautobot.test.event:" + json.dumps({"a": 1}, indent=4)])
+        finally:
+            deregister_event_broker(event_broker)
+
+    def test_publish_events_to_redis(self):
+        url = settings.CACHES["default"]["LOCATION"]
+        event_broker = RedisEventBroker(url=url)
+        register_event_broker(event_broker)
+
+        sub = None
+        try:
+            connection = redis.StrictRedis.from_url(url, decode_responses=True)
+            sub = connection.pubsub()
+            sub.psubscribe("nautobot.*")
+            self.assertEqual(
+                sub.get_message(timeout=5.0),
+                {"type": "psubscribe", "pattern": None, "channel": "nautobot.*", "data": 1},
+            )
+            publish_event(topic="nautobot.test.event", payload={"b": 2})
+            self.assertEqual(
+                sub.get_message(timeout=5.0),
+                {"type": "pmessage", "pattern": "nautobot.*", "channel": "nautobot.test.event", "data": '{"b": 2}'},
+            )
+        finally:
+            if sub is not None:
+                sub.close()
+            deregister_event_broker(event_broker)
