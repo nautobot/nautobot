@@ -69,6 +69,7 @@ from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VLANLoca
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
+from nautobot.wireless.models import AccessPointGroup
 
 from .choices import (
     CableLengthUnitChoices,
@@ -1947,6 +1948,10 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         queryset=SoftwareVersion.objects.all(),
         required=False,
     )
+    access_point_groups = DynamicModelMultipleChoiceField(
+        queryset=AccessPointGroup.objects.all(),
+        required=False,
+    )
     comments = CommentField()
 
     class Meta:
@@ -1964,6 +1969,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "device_redundancy_group",
             "device_redundancy_group_priority",
             "controller_managed_device_group",
+            "access_point_groups",
             "position",
             "face",
             "status",

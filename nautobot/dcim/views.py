@@ -59,6 +59,8 @@ from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, 
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
 from nautobot.virtualization.models import VirtualMachine
+from nautobot.wireless.models import AccessPointGroupWirelessNetworkAssignment, AccessPointGroupRadioProfileAssignment
+from nautobot.wireless.tables import AccessPointGroupWirelessNetworkAssignmentTable, AccessPointGroupRadioProfileAssignmentTable
 
 from . import filters, forms, tables
 from .api import serializers
@@ -2138,6 +2140,26 @@ class DeviceBulkDeleteView(generic.BulkDeleteView):
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
 
+
+class DeviceWirelessView(generic.ObjectView):
+    queryset = Device.objects.all()
+    template_name = "dcim/device/wireless.html"
+
+    def get_extra_context(self, request, instance):
+        access_point_groups = instance.access_point_groups.restrict(request.user, "view").values_list('pk', flat=True)
+        wireless_networks = AccessPointGroupWirelessNetworkAssignment.objects.filter(access_point_group__in=access_point_groups).select_related('wireless_network', 'access_point_group', 'vlan')
+        wireless_networks_table = AccessPointGroupWirelessNetworkAssignmentTable(data=wireless_networks, user=request.user, orderable=False)
+        RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(wireless_networks_table)
+
+        radio_profiles = AccessPointGroupRadioProfileAssignment.objects.filter(access_point_group__in=access_point_groups).select_related('radio_profile', 'access_point_group')
+        radio_profiles_table = AccessPointGroupRadioProfileAssignmentTable(data=radio_profiles, user=request.user, orderable=False)
+        RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(radio_profiles_table)
+
+        return {
+            "wireless_networks_table": wireless_networks_table,
+            "radio_profiles_table": radio_profiles_table,
+            "active_tab": "wireless",
+        }
 
 #
 # Modules
