@@ -2,7 +2,6 @@ import logging
 from urllib.parse import parse_qs
 
 from celery import chain
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -18,16 +17,12 @@ from django.utils import timezone
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.timezone import get_current_timezone
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
-
-try:
-    from zoneinfo import ZoneInfo
-except ImportError:  # python 3.8
-    from backports.zoneinfo import ZoneInfo
 
 from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
@@ -57,8 +52,15 @@ from nautobot.core.views.mixins import (
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.models import Controller, Device, Interface, Module, Rack
-from nautobot.dcim.tables import ControllerTable, DeviceTable, InterfaceTable, ModuleTable, RackTable
+from nautobot.dcim.models import Controller, Device, Interface, Module, Rack, VirtualDeviceContext
+from nautobot.dcim.tables import (
+    ControllerTable,
+    DeviceTable,
+    InterfaceTable,
+    ModuleTable,
+    RackTable,
+    VirtualDeviceContextTable,
+)
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.signals import change_context_state
@@ -71,7 +73,13 @@ from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 
 from . import filters, forms, tables
 from .api import serializers
-from .choices import DynamicGroupTypeChoices, JobExecutionType, JobResultStatusChoices, LogLevelChoices
+from .choices import (
+    DynamicGroupTypeChoices,
+    JobExecutionType,
+    JobQueueTypeChoices,
+    JobResultStatusChoices,
+    LogLevelChoices,
+)
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
     enqueue_pull_git_repository_and_refresh_data,
@@ -96,6 +104,7 @@ from .models import (
     JobButton,
     JobHook,
     JobLogEntry,
+    JobQueue,
     JobResult,
     MetadataType,
     Note,
@@ -1317,9 +1326,14 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     # for example "?kwargs_from_job_result=<UUID>&integervar=22"
                     explicit_initial = initial
                     initial = job_result.task_kwargs.copy()
-                    task_queue = job_result.celery_kwargs.get("queue", None)
-                    if task_queue is not None:
-                        initial["_task_queue"] = task_queue
+                    job_queue = job_result.celery_kwargs.get("queue", None)
+                    jq = None
+                    if job_queue is not None:
+                        try:
+                            jq = JobQueue.objects.get(name=job_queue, queue_type=JobQueueTypeChoices.TYPE_CELERY)
+                        except JobQueue.DoesNotExist:
+                            pass
+                    initial["_job_queue"] = jq
                     initial["_profile"] = job_result.celery_kwargs.get("nautobot_job_profile", False)
                     initial.update(explicit_initial)
                 except JobResult.DoesNotExist:
@@ -1358,7 +1372,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         job_class = get_job(job_model.class_path, reload=True)
         job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
         schedule_form = forms.JobScheduleForm(request.POST)
-        task_queue = request.POST.get("_task_queue")
+        job_queue = request.POST.get("_job_queue")
 
         return_url = request.POST.get("_return_url")
         if return_url is not None and url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
@@ -1367,7 +1381,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             return_url = None
 
         # Allow execution only if a worker process is running and the job is runnable.
-        if not get_worker_count(queue=task_queue):
+        if not get_worker_count(queue=job_queue):
             messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
         elif not job_model.installed or job_class is None:
             messages.error(request, "Unable to run or schedule job: Job is not presently installed.")
@@ -1386,7 +1400,14 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                 "One of these two flags must be removed before this job can be scheduled or run.",
             )
         elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
-            task_queue = job_form.cleaned_data.pop("_task_queue", None)
+            job_queue = job_form.cleaned_data.pop("_job_queue", None)
+            jq = None
+            if job_queue is not None:
+                try:
+                    jq = JobQueue.objects.get(pk=job_queue)
+                except JobQueue.DoesNotExist:
+                    pass
+
             dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
             profile = job_form.cleaned_data.pop("_profile")
@@ -1401,7 +1422,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     interval=schedule_type,
                     crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
                     approval_required=job_model.approval_required,
-                    task_queue=task_queue,
+                    task_queue=jq.name if jq else None,
                     profile=profile,
                     **job_class.serialize_data(job_form.cleaned_data),
                 )
@@ -1420,7 +1441,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     job_model,
                     request.user,
                     profile=profile,
-                    task_queue=task_queue,
+                    task_queue=jq.name if jq else None,
                     **job_class.serialize_data(job_kwargs),
                 )
 
@@ -1491,6 +1512,24 @@ class JobBulkEditView(generic.BulkEditView):
                 setattr(obj, override_field, True)
                 setattr(obj, overridable_field, override_value)
 
+        # Handle job queues
+        clear_override_field = "clear_job_queues_override"
+        reset_override = cleaned_data.get(clear_override_field, False)
+        if reset_override:
+            meta_task_queues = obj.job_class.task_queues
+            job_queues = []
+            for queue_name in meta_task_queues:
+                try:
+                    job_queues.append(JobQueue.objects.get(name=queue_name))
+                except JobQueue.DoesNotExist:
+                    # Do we want to create the Job Queue for the users here if we do not have it in the database?
+                    pass
+            obj.job_queues_override = False
+            obj.job_queues.set(job_queues)
+        else:
+            obj.job_queues_override = True
+            obj.job_queues.set(cleaned_data["job_queues"])
+
         obj.validated_save()
 
 
@@ -1532,7 +1571,7 @@ class JobApprovalRequestView(generic.ObjectView):
         if job_class is not None:
             # Render the form with all fields disabled
             initial = instance.kwargs
-            initial["_task_queue"] = instance.queue
+            initial["_job_queue"] = instance.queue
             initial["_profile"] = instance.celery_kwargs.get("profile", False)
             job_form = job_class().as_form(initial=initial, approval_view=True)
         else:
@@ -1630,6 +1669,28 @@ class JobApprovalRequestView(generic.ObjectView):
                 **self.get_extra_context(request, scheduled_job),
             },
         )
+
+
+class JobQueueUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.JobQueueBulkEditForm
+    filterset_form_class = forms.JobQueueFilterForm
+    queryset = JobQueue.objects.all()
+    form_class = forms.JobQueueForm
+    filterset_class = filters.JobQueueFilterSet
+    serializer_class = serializers.JobQueueSerializer
+    table_class = tables.JobQueueTable
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        if self.action == "retrieve":
+            jobs = instance.jobs.restrict(request.user, "view")
+            jobs_table = tables.JobTable(jobs, orderable=False)
+            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            RequestConfig(request, paginate).configure(jobs_table)
+            context["jobs_table"] = jobs_table
+
+        return context
 
 
 #
@@ -1925,7 +1986,7 @@ class ScheduledJobView(generic.ObjectView):
         return {
             "labels": labels,
             "job_class_found": (job_class is not None),
-            "default_time_zone": ZoneInfo(settings.TIME_ZONE),
+            "default_time_zone": get_current_timezone(),
             **super().get_extra_context(request, instance),
         }
 
@@ -2465,6 +2526,12 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 module_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(module_table)
                 context["module_table"] = module_table
+            if ContentType.objects.get_for_model(VirtualDeviceContext) in context["content_types"]:
+                vdcs = instance.virtual_device_contexts.restrict(request.user, "view")
+                vdc_table = VirtualDeviceContextTable(vdcs)
+                vdc_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(vdc_table)
+                context["vdc_table"] = vdc_table
         return context
 
 

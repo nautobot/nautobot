@@ -49,9 +49,11 @@ __all__ = (
     "Device",
     "DeviceRedundancyGroup",
     "DeviceType",
+    "InterfaceVDCAssignment",
     "Manufacturer",
     "Platform",
     "VirtualChassis",
+    "VirtualDeviceContext",
 )
 
 
@@ -1838,3 +1840,127 @@ class Module(PrimaryModel):
         Return the set of child Modules installed in ModuleBays within this Module.
         """
         return Module.objects.filter(parent_module_bay__parent_module=self)
+
+
+#
+# Virtual Device Contexts
+#
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "statuses",
+    "webhooks",
+)
+class VirtualDeviceContext(PrimaryModel):
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    device = models.ForeignKey("dcim.Device", on_delete=models.CASCADE, related_name="virtual_device_contexts")
+    identifier = models.PositiveSmallIntegerField(
+        help_text="Unique identifier provided by the platform being virtualized (Example: Nexus VDC Identifier)",
+        blank=True,
+        null=True,
+    )
+    status = StatusField(blank=False, null=False)
+    role = RoleField(blank=True, null=True)
+    primary_ip4 = models.OneToOneField(
+        to="ipam.IPAddress",
+        on_delete=models.SET_NULL,
+        related_name="ip4_vdcs",
+        blank=True,
+        null=True,
+        verbose_name="Primary IPv4",
+    )
+    primary_ip6 = models.OneToOneField(
+        to="ipam.IPAddress",
+        on_delete=models.SET_NULL,
+        related_name="ip6_vdcs",
+        blank=True,
+        null=True,
+        verbose_name="Primary IPv6",
+    )
+    tenant = models.ForeignKey(
+        "tenancy.Tenant", on_delete=models.CASCADE, related_name="virtual_device_contexts", blank=True, null=True
+    )
+    interfaces = models.ManyToManyField(
+        blank=True,
+        related_name="virtual_device_contexts",
+        to="dcim.Interface",
+        through="dcim.InterfaceVDCAssignment",
+    )
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+
+    class Meta:
+        ordering = ("name",)
+        unique_together = (("device", "identifier"), ("device", "name"))
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def primary_ip(self):
+        if get_settings_or_config("PREFER_IPV4") and self.primary_ip4:
+            return self.primary_ip4
+        elif self.primary_ip6:
+            return self.primary_ip6
+        elif self.primary_ip4:
+            return self.primary_ip4
+        else:
+            return None
+
+    def validate_primary_ips(self):
+        for field in ["primary_ip4", "primary_ip6"]:
+            ip = getattr(self, field)
+            if ip is not None:
+                if field == "primary_ip4" and ip.ip_version != 4:
+                    raise ValidationError({f"{field}": f"{ip} is not an IPv4 address."})
+                if field == "primary_ip6" and ip.ip_version != 6:
+                    raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
+                if not ip.interfaces.filter(device=self.device).exists():
+                    raise ValidationError(
+                        {f"{field}": f"{ip} is not part of an interface that belongs to this VDC's device."}
+                    )
+                # Note: The validation for primary IPs `validate_primary_ips` is commented out due to the order in which Django processes form validation with
+                # Many-to-Many (M2M) fields. During form saving, Django creates the instance first before assigning the M2M fields (in this case, interfaces).
+                # As a result, the primary_ips fields could fail validation at this point because the interfaces are not yet linked to the instance,
+                # leading to validation errors.
+                # interfaces = self.interfaces.all()
+                # if IPAddressToInterface.objects.filter(ip_address=ip, interface__in=interfaces).exists():
+                #     pass
+                # elif (
+                #     ip.nat_inside is None
+                #     or not IPAddressToInterface.objects.filter(
+                #         ip_address=ip.nat_inside, interface__in=interfaces
+                #     ).exists()
+                # ):
+                #     raise ValidationError(
+                #         {f"{field}": f"The specified IP address ({ip}) is not assigned to this Virtual Device Context."}
+                #     )
+
+    def clean(self):
+        super().clean()
+        self.validate_primary_ips()
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+)
+class InterfaceVDCAssignment(BaseModel):
+    virtual_device_context = models.ForeignKey(
+        VirtualDeviceContext, on_delete=models.CASCADE, related_name="interface_assignments"
+    )
+    interface = models.ForeignKey(
+        Interface, on_delete=models.CASCADE, related_name="virtual_device_context_assignments"
+    )
+
+    class Meta:
+        unique_together = ["virtual_device_context", "interface"]
+        ordering = ["virtual_device_context", "interface"]
+
+    def __str__(self):
+        return f"{self.virtual_device_context}: {self.interface}"

@@ -80,6 +80,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
 
     queryset = None
     template_name = None
+    object_detail_content = None
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -119,6 +120,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             "content_type": content_type,
             "verbose_name": self.queryset.model._meta.verbose_name,
             "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+            "object_detail_content": self.object_detail_content,
             **common_detail_view_context(request, instance),
             **self.get_extra_context(request, instance),
         }

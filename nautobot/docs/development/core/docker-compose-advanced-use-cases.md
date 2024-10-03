@@ -7,7 +7,7 @@ This section describes some of the more advanced use cases for the [Docker Compo
 The Invoke tasks have some default [configuration](http://docs.pyinvoke.org/en/stable/concepts/configuration.html) which you may want to override. Configuration properties include:
 
 - `project_name`: The name that all Docker containers will be grouped together under (default: `nautobot`, resulting in containers named `nautobot_nautobot_1`, `nautobot_redis_1`, etc.)
-- `python_ver`: the Python version which is used to build the Docker container (default: `3.8`)
+- `python_ver`: the Python version which is used to build the Docker container (default: `3.12`)
 - `local`: run the commands in the local environment vs the Docker container (default: `False`)
 - `compose_dir`: the full path to the directory containing the Docker Compose YAML files (default: `"<nautobot source directory>/development"`)
 - `compose_files`: the Docker Compose YAML file(s) to use (default: `["docker-compose.yml", "docker-compose.postgres.yml", "docker-compose.dev.yml"]`)

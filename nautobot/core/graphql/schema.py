@@ -43,7 +43,7 @@ from nautobot.dcim.graphql.types import (
     RearPortType,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
-from nautobot.extras.graphql.types import ContactAssociationType, DynamicGroupType, TagType
+from nautobot.extras.graphql.types import ContactAssociationType, DynamicGroupType, JobType, ScheduledJobType, TagType
 from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import check_if_key_is_graphql_safe
@@ -71,6 +71,8 @@ registry["graphql_types"]["dcim.rearport"] = RearPortType
 registry["graphql_types"]["dcim.location"] = LocationType
 registry["graphql_types"]["extras.contactassociation"] = ContactAssociationType
 registry["graphql_types"]["extras.dynamicgroup"] = DynamicGroupType
+registry["graphql_types"]["extras.job"] = JobType
+registry["graphql_types"]["extras.scheduledjob"] = ScheduledJobType
 registry["graphql_types"]["extras.tag"] = TagType
 registry["graphql_types"]["ipam.ipaddress"] = IPAddressType
 registry["graphql_types"]["ipam.prefix"] = PrefixType

@@ -12,6 +12,7 @@ from nautobot.core.tables import (
     ColorColumn,
     ColoredLabelColumn,
     ContentTypesColumn,
+    LinkedCountColumn,
     TagColumn,
     ToggleColumn,
 )
@@ -37,6 +38,7 @@ from .models import (
     JobButton,
     JobHook,
     JobLogEntry,
+    JobQueue,
     JobResult,
     MetadataType,
     Note,
@@ -699,7 +701,9 @@ class JobTable(BaseTable):
     supports_dryrun = BooleanColumn()
     soft_time_limit = tables.Column()
     time_limit = tables.Column()
-    actions = ButtonsColumn(JobModel, prepend_template=JOB_BUTTONS)
+    job_queues_count = LinkedCountColumn(
+        viewname="extras:jobqueue_list", url_params={"jobs": "pk"}, verbose_name="Job Queues"
+    )
     last_run = tables.TemplateColumn(
         accessor="latest_result",
         template_code="""
@@ -715,6 +719,7 @@ class JobTable(BaseTable):
         template_code="{% include 'extras/inc/job_label.html' with result=record.latest_result %}",
     )
     tags = TagColumn(url_name="extras:job_list")
+    actions = ButtonsColumn(JobModel, prepend_template=JOB_BUTTONS)
 
     def render_description(self, value):
         return render_markdown(value)
@@ -745,6 +750,7 @@ class JobTable(BaseTable):
             "supports_dryrun",
             "soft_time_limit",
             "time_limit",
+            "job_queues_count",
             "last_run",
             "last_status",
             "tags",
@@ -824,6 +830,32 @@ class JobLogEntryTable(BaseTable):
             "class": "table table-hover table-headings",
             "id": "logs",
         }
+
+
+class JobQueueTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    tenant = TenantColumn()
+    jobs_count = LinkedCountColumn(viewname="extras:job_list", url_params={"job_queues": "pk"}, verbose_name="Jobs")
+
+    class Meta(BaseTable.Meta):
+        model = JobQueue
+        fields = (
+            "pk",
+            "name",
+            "queue_type",
+            "tenant",
+            "jobs_count",
+            "description",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "queue_type",
+            "tenant",
+            "jobs_count",
+            "description",
+        )
 
 
 class JobResultTable(BaseTable):
