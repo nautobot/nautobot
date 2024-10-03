@@ -498,6 +498,9 @@ class BaseJob:
             help_text="The job queue to route this job to",
             label="Job queue",
         )
+        # Populate the job queue field on the JobRun Form
+        form.fields["_job_queue"].initial = job_model.default_job_queue.pk
+
         if cls.supports_dryrun and (not initial or "dryrun" not in initial):
             # Set initial "dryrun" checkbox state based on the Meta parameter
             form.fields["dryrun"].initial = dryrun_default
