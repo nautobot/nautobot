@@ -1572,6 +1572,7 @@ class JobTest(
             name="No such job",
             installed=False,
             enabled=True,
+            default_job_queue=JobQueue.objects.get(name="default", queue_type=JobQueueTypeChoices.TYPE_CELERY),
         )
         job_model.validated_save()
 
@@ -1607,7 +1608,8 @@ class JobTest(
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(
-            response.data["detail"], "Unable to process request: No celery workers running on queue default."
+            response.data["detail"],
+            f"Unable to process request: No celery workers running on queue {job_model.default_job_queue.name}.",
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1729,7 +1731,7 @@ class JobTest(
         # Ensure the enqueue_job args deserialize to the same as originally inputted
         expected_enqueue_job_args = (self.job_model, self.user)
         expected_enqueue_job_kwargs = {
-            "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
+            "task_queue": self.job_model.default_job_queue.name,
             **self.job_class.serialize_data(deserialized_data),
         }
         mock_enqueue_job.assert_called_with(*expected_enqueue_job_args, **expected_enqueue_job_kwargs)
@@ -1752,7 +1754,7 @@ class JobTest(
         response = self.client.post(url, {"data": job_data}, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        job_result = JobResult.objects.get(name=self.job_model.name)
+        job_result = JobResult.objects.filter(name=self.job_model.name).latest()
 
         self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
@@ -2126,11 +2128,11 @@ class JobTest(
     @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
     def test_run_job_with_default_queue_with_empty_job_model_job_queues(self, _):
         self.add_permissions("extras.run_job")
+        job_model = Job.objects.get_for_class_path("pass.TestPass")
         data = {
-            "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
+            "task_queue": job_model.default_job_queue.name,
         }
 
-        job_model = Job.objects.get_for_class_path("pass.TestPass")
         job_model.job_queues.set([])
         job_model.enabled = True
         job_model.validated_save()

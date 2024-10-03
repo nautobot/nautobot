@@ -600,11 +600,9 @@ class JobViewSetBase(
                 request.method, detail="This job's source code could not be located and cannot be run"
             )
 
-        job_queues = job_model.job_queues.all().values_list("name", flat=True)
-        valid_queues = job_queues if job_queues else [settings.CELERY_TASK_DEFAULT_QUEUE]
-        # Get a default queue from either the job model's specified task queue or
-        # the system default to fall back on if request doesn't provide one
-        default_valid_queue = valid_queues[0]
+        valid_queues = job_model.task_queues if job_model.task_queues else [settings.CELERY_TASK_DEFAULT_QUEUE]
+        # default queue should be specified on the default_job_queue.
+        default_valid_queue = job_model.default_job_queue.name
 
         # We need to call request.data for both cases as this is what pulls and caches the request data
         data = request.data

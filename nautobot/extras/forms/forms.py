@@ -957,6 +957,12 @@ class JobEditForm(NautobotModelForm):
         label="Job Queues",
         queryset=JobQueue.objects.all(),
     )
+    default_job_queue = DynamicModelChoiceField(
+        label="Default Job Queue",
+        queryset=JobQueue.objects.all(),
+        help_text="The default job queue to route this job to",
+        required=False,
+    )
 
     class Meta:
         model = Job
@@ -982,6 +988,8 @@ class JobEditForm(NautobotModelForm):
             "has_sensitive_variables",
             "job_queues_override",
             "job_queues",
+            "default_job_queue_override",
+            "default_job_queue",
             "tags",
         ]
 
@@ -997,10 +1005,21 @@ class JobEditForm(NautobotModelForm):
             for field_name in JOB_OVERRIDABLE_FIELDS:
                 if not cleaned_data.get(f"{field_name}_override", False):
                     cleaned_data[field_name] = getattr(job_class, field_name)
-            if not cleaned_data.get("job_queues_override", False):
-                cleaned_data["job_queues"] = JobQueue.objects.filter(
-                    name__in=getattr(job_class, "task_queues", []) or [settings.CELERY_TASK_DEFAULT_QUEUE]
+            # Get default Job Queue first
+            if not cleaned_data.get("default_job_queue_override", False):
+                meta_task_queues = getattr(job_class, "task_queues", []) or [settings.CELERY_TASK_DEFAULT_QUEUE]
+                cleaned_data["default_job_queue"], _ = JobQueue.objects.get_or_create(
+                    name=meta_task_queues[0], defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
                 )
+            default_job_queue = cleaned_data["default_job_queue"]
+            # Include the default Job Queue in the Job Queues selection
+            if not cleaned_data.get("job_queues_override", False):
+                names = getattr(job_class, "task_queues", []) or [settings.CELERY_TASK_DEFAULT_QUEUE]
+            else:
+                names = list(cleaned_data["job_queues"].values_list("name", flat=True))
+            names += [default_job_queue]
+            cleaned_data["job_queues"] = JobQueue.objects.filter(name__in=names)
+
         return cleaned_data
 
     def save(self, *args, **kwargs):
@@ -1064,6 +1083,12 @@ class JobBulkEditForm(NautobotBulkEditForm):
         required=False,
         help_text="Job Queue instances that this job can run on",
     )
+    default_job_queue = DynamicModelChoiceField(
+        label="Default Job Queue",
+        queryset=JobQueue.objects.all(),
+        required=False,
+        help_text="Default Job Queue the job runs on if no Job Queue is specified",
+    )
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
     # Text field overrides
     clear_grouping_override = forms.BooleanField(
@@ -1085,6 +1110,10 @@ class JobBulkEditForm(NautobotBulkEditForm):
     clear_job_queues_override = forms.BooleanField(
         required=False,
         help_text="If checked, the selected job queues will be reverted to the default values defined in each Job's source code",
+    )
+    clear_default_job_queue_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, the default job queue will be reverted to the first value of task_queues defined in each Job's source code",
     )
     # Boolean overrides
     clear_approval_required_override = forms.BooleanField(
