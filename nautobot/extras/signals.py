@@ -478,7 +478,9 @@ def add_default_job_queue_to_job_queues(instance, action, model, pk_set, **kwarg
 
 
 @receiver(post_save, sender=JobModel)
-def add_default_job_queue_to_job_queues_after_save(instance, **kwargs):
+def add_default_job_queue_to_job_queues_after_save(instance, raw=False, **kwargs):
+    if raw:
+        return
     # Add specified default_job_queue to job.job_queues if it is not included.
     default_job_queue = instance.default_job_queue
     instance.job_queues.add(default_job_queue)
