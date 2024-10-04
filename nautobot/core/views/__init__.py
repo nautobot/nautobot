@@ -1,3 +1,5 @@
+import contextlib
+import logging
 import os
 import platform
 import re
@@ -32,6 +34,7 @@ from prometheus_client import (
 )
 from prometheus_client.metrics_core import GaugeMetricFamily
 from prometheus_client.registry import Collector
+import redis.exceptions
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.renderers import BaseRenderer
 from rest_framework.response import Response
@@ -47,6 +50,8 @@ from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.extras.models import FileProxy, GraphQLQuery, Status
 from nautobot.extras.registry import registry
+
+logger = logging.getLogger(__name__)
 
 
 class HomeView(AccessMixin, TemplateView):
@@ -154,26 +159,37 @@ class WorkerStatusView(UserPassesTestMixin, TemplateView):
             timeout = max_timeout
         else:
             timeout = int(timeout)
+
         celery_inspect = app.control.inspect(timeout=timeout)
 
-        # stats() returns a dict of {worker_name: stats_dict}
-        worker_stats = celery_inspect.stats()
+        try:
+            # stats() returns a dict of {worker_name: stats_dict}
+            worker_stats = celery_inspect.stats()
+        except redis.exceptions.ConnectionError:
+            # Celery seems to be not smart enough to auto-retry on intermittent failures, so let's do it ourselves:
+            try:
+                worker_stats = celery_inspect.stats()
+            except redis.exceptions.ConnectionError as err:
+                logger.error("Repeated ConnectionError from Celery/Redis: %s", err)
+                worker_stats = None
 
+        active_tasks = reserved_tasks = active_queues = {}
         if worker_stats:
             # Set explicit list of workers to speed up subsequent queries
             celery_inspect = app.control.inspect(list(worker_stats.keys()), timeout=5.0)
 
-            # active() returns a dict of {worker_name: [task_dict, task_dict, ...]}
-            active_tasks = celery_inspect.active() or {}
+            with contextlib.suppress(redis.exceptions.ConnectionError):
+                # active() returns a dict of {worker_name: [task_dict, task_dict, ...]}
+                active_tasks = celery_inspect.active() or {}
 
-            # reserved() returns a dict of {worker_name: [task_dict, task_dict, ...]}
-            reserved_tasks = celery_inspect.reserved() or {}
+                # reserved() returns a dict of {worker_name: [task_dict, task_dict, ...]}
+                reserved_tasks = celery_inspect.reserved() or {}
 
-            # active_queues() returns a dict of {worker_name: [queue_dict, queue_dict, ...]}
-            active_queues = celery_inspect.active_queues() or {}
+                # active_queues() returns a dict of {worker_name: [queue_dict, queue_dict, ...]}
+                active_queues = celery_inspect.active_queues() or {}
         else:
-            # No workers were found, default to empty dicts for all commands
-            worker_stats = active_tasks = reserved_tasks = active_queues = {}
+            # No workers were found
+            worker_stats = {}
 
         workers = []
         for worker_name in sorted(worker_stats, key=sort_workers):
