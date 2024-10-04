@@ -164,7 +164,7 @@ example-app = {path = "examples/example_app", develop = true}
 example-app-with-view-override = {path = "examples/example_app_with_view_override", develop = true}
 # Random data generation
 factory-boy = "~3.3.1"
-# Factory Boy dependency. Don't upgrade to v26.x until breaking change is fixed https://github.com/joke2k/faker/issues/2070
+# Factory Boy dependency.
 faker = ">=30.1.0,<30.2.0"
 # Library to access Kubernetes API used to develop K8s integration
 kubernetes = "^31.0.0"
