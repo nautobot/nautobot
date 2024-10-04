@@ -387,8 +387,7 @@ def get_celery_queues():
         for task_queue_list in active_queues.values():
             distinct_queues = {q["name"] for q in task_queue_list}
             for queue in distinct_queues:
-                celery_queues.setdefault(queue, 0)
-                celery_queues[queue] += 1
+                celery_queues[queue] = celery_queues.get(queue, 0) + 1
         with contextlib.suppress(redis.exceptions.ConnectionError):
             cache.set("nautobot.extras.utils.get_celery_queues", celery_queues, timeout=5)
 
