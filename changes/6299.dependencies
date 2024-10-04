@@ -1,0 +1,1 @@
+Added a direct dependency on `kombu` to guarantee the presence of some essential fixes for this Celery dependency.

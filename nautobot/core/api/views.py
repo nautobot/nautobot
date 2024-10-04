@@ -24,6 +24,7 @@ from graphql import get_default_backend
 from graphql.execution import ExecutionResult
 from graphql.execution.middleware import MiddlewareManager
 from graphql.type.schema import GraphQLSchema
+import redis.exceptions
 from rest_framework import routers, status
 from rest_framework.exceptions import ParseError, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
@@ -57,6 +58,10 @@ HTTP_ACTIONS = {
     "PATCH": "change",
     "DELETE": "delete",
 }
+
+
+logger = logging.getLogger(__name__)
+
 
 #
 # Mixins
@@ -467,7 +472,16 @@ class StatusView(NautobotAPIVersionMixin, APIView):
         nautobot_apps = dict(sorted(nautobot_apps.items()))
 
         # Gather Celery workers
-        workers = celery_app.control.inspect().active()  # list or None
+        try:
+            workers = celery_app.control.inspect().active()  # list or None
+        except redis.exceptions.ConnectionError:
+            # Celery seems to be not smart enough to auto-retry on intermittent failures, so let's do it ourselves:
+            try:
+                workers = celery_app.control.inspect().active()  # list or None
+            except redis.exceptions.ConnectionError as err:
+                logger.error("Repeated ConnectionError from Celery/Redis: %s", err)
+                workers = None
+
         worker_count = len(workers) if workers is not None else 0
 
         return Response(
@@ -872,7 +886,6 @@ class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
             try:
                 data["url"] = django_reverse(get_route_for_model(model, "list"))
             except NoReverseMatch:
-                logger = logging.getLogger(__name__)
                 route = get_route_for_model(model, "list")
                 logger.warning(f"Handled expected exception when generating filter field: {route}")
             manager = model.objects
@@ -975,7 +988,6 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
             # Cant determine the exceptions to handle because any exception could be raised,
             # e.g InterfaceForm would raise a ObjectDoesNotExist Error since no device was provided
             # While other forms might raise other errors, also if model_form is None a TypeError would be raised.
-            logger = logging.getLogger(__name__)
             logger.debug(f"Handled expected exception when generating filter field: {err}")
 
             # Create a temporary form and get a BoundField for the specified field

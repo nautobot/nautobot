@@ -366,17 +366,30 @@ def get_celery_queues():
     """
     from nautobot.core.celery import app  # prevent circular import
 
-    celery_queues = {}
+    celery_queues = None
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        celery_queues = cache.get("nautobot.extras.utils.get_celery_queues")
 
-    celery_inspect = app.control.inspect()
-    active_queues = celery_inspect.active_queues()
-    if active_queues is None:
-        return celery_queues
-    for task_queue_list in active_queues.values():
-        distinct_queues = {q["name"] for q in task_queue_list}
-        for queue in distinct_queues:
-            celery_queues.setdefault(queue, 0)
-            celery_queues[queue] += 1
+    if celery_queues is None:
+        celery_queues = {}
+        celery_inspect = app.control.inspect()
+        try:
+            active_queues = celery_inspect.active_queues()
+        except redis.exceptions.ConnectionError:
+            # Celery seems to be not smart enough to auto-retry on intermittent failures, so let's do it ourselves:
+            try:
+                active_queues = celery_inspect.active_queues()
+            except redis.exceptions.ConnectionError as err:
+                logger.error("Repeated ConnectionError from Celery/Redis: %s", err)
+                active_queues = None
+        if active_queues is None:
+            return celery_queues
+        for task_queue_list in active_queues.values():
+            distinct_queues = {q["name"] for q in task_queue_list}
+            for queue in distinct_queues:
+                celery_queues[queue] = celery_queues.get(queue, 0) + 1
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            cache.set("nautobot.extras.utils.get_celery_queues", celery_queues, timeout=5)
 
     return celery_queues
 
