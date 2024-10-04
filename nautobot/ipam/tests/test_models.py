@@ -1316,7 +1316,6 @@ class TestVLANGroup(ModelTestCases.BaseModelTestCase):
 
         VLAN.objects.bulk_create((VLAN(name="VLAN 4", vid=4, vlan_group=vlangroup, status=status),))
         self.assertEqual(vlangroup.get_next_available_vid(), 6)
-
         # Next out of range.
         VLAN.objects.bulk_create((VLAN(name="VLAN 6", vid=6, vlan_group=vlangroup, status=status),))
         self.assertEqual(vlangroup.get_next_available_vid(), None)

@@ -62,6 +62,7 @@ from nautobot.extras.models import (
     GitRepository,
     Job as JobModel,
     JobLogEntry,
+    JobQueue,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -1236,6 +1237,17 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             handler.exception.message_dict["approval_required"][0],
             "A job that may have sensitive variables cannot be marked as requiring approval",
         )
+
+    def test_default_job_queue_always_included_in_job_queues(self):
+        default_job_queue = JobQueue.objects.first()
+        job_queues = list(JobQueue.objects.exclude(pk=default_job_queue.pk))[:3]
+
+        job = JobModel.objects.first()
+        job.default_job_queue = default_job_queue
+        job.save()
+        job.job_queues.set(job_queues)
+
+        self.assertTrue(job.job_queues.filter(pk=default_job_queue.pk).exists())
 
 
 class MetadataChoiceTest(ModelTestCases.BaseModelTestCase):

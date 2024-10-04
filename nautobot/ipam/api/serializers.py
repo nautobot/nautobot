@@ -489,8 +489,8 @@ class VLANAllocationSerializer(NautobotModelSerializer, TaggedModelSerializerMix
     vid = serializers.IntegerField(required=False, min_value=constants.VLAN_VID_MIN, max_value=constants.VLAN_VID_MAX)
 
     def validate(self, data):
-        """Skip `ValidatedModel` validation.
-
+        """
+        Skip `ValidatedModel` validation.
         This allows to skip `vid` attribute of `VLAN` model, while validate name and status.
         """
         return data

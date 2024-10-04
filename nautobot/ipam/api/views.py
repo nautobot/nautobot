@@ -430,7 +430,6 @@ class VLANGroupViewSet(NautobotModelViewSet):
     def available_vlans(self, request, pk=None):
         """
         A convenience method for listing available VLAN IDs within a VLANGroup.
-
         By default, the number of VIDs returned will be equivalent to PAGINATE_COUNT.
         An arbitrary limit (up to MAX_PAGE_SIZE, if set) may be passed, however results will not be paginated.
         """
