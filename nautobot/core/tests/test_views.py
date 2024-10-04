@@ -639,15 +639,12 @@ class TestObjectDetailView(TestCase):
         response = self.client.get(f"{url}?tab=main")
         self.assertHttpStatus(response, 200)
         response_data = response.content.decode(response.charset)
-        print(response_data)
+        view_move_url = reverse("circuits:circuit_list") + f"?provider={provider.id}"
 
         # Assert Badge Count in table panel header
-        panel_header = (
-            """<div class="panel-heading"><strong>Circuits</strong> <span class="badge badge-default">10</span></div>"""
-        )
+        panel_header = f"""<div class="panel-heading"><strong>Circuits</strong> <a href=""{view_move_url} class="badge badge-primary">10</a></div>"""
         self.assertInHTML(panel_header, response_data)
 
         # Assert view X more btn
-        view_move_url = reverse("circuits:circuit_list") + f"?provider={provider.id}"
         view_more_btn = f"""<a href="{view_move_url}" class="btn btn-default btn-xs"><span class="mdi mdi-database-search-outline" aria-hidden="true"></span>View 5 more object(s)</a>"""
         self.assertInHTML(view_more_btn, response_data)
