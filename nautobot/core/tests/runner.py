@@ -157,7 +157,8 @@ class NautobotTestRunner(DiscoverRunner):
                                     suffix=str(index + 1),
                                     verbosity=self.verbosity,
                                     keepdb=self.keepdb
-                                    # Extra check added for Nautobot:
+                                    # Extra checks added for Nautobot:
+                                    and not settings.TEST_USE_FACTORIES
                                     and self.reusedb,
                                 )
 

@@ -6,11 +6,8 @@ from nautobot.extras.registry import registry
 from nautobot.extras.tasks import process_webhook
 
 
-def enqueue_webhooks(object_change):
-    """
-    Find Webhook(s) assigned to this instance + action and enqueue them
-    to be processed
-    """
+def enqueue_webhooks(object_change, snapshots):
+    """Find Webhook(s) assigned to this instance + action and enqueue them to be processed."""
     # Determine whether this type of object supports webhooks
     app_label = object_change.changed_object_type.app_label
     model_name = object_change.changed_object_type.model
@@ -42,6 +39,6 @@ def enqueue_webhooks(object_change):
                 str(timezone.now()),
                 object_change.user_name,
                 object_change.request_id,
-                object_change.get_snapshots(),
+                snapshots,
             ]
             process_webhook.apply_async(args=args)
