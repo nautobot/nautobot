@@ -646,5 +646,5 @@ class TestObjectDetailView(TestCase):
         self.assertInHTML(panel_header, response_data)
 
         # Assert view X more btn
-        view_more_btn = f"""<a href="{view_move_url}" class="btn btn-default btn-xs"><span class="mdi mdi-database-search-outline" aria-hidden="true"></span>View 5 more object(s)</a>"""
+        view_more_btn = f"""<a href="{view_move_url}"><span class="mdi mdi-dots-horizontal" aria-hidden="true"></span>View 5 more circuits</a>"""
         self.assertInHTML(view_more_btn, response_data)

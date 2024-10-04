@@ -394,8 +394,8 @@ class ObjectsTablePanel(Panel):
         related_field_name=None,
         body_wrapper_template_path="components/panel/body_wrapper_table.html",
         body_content_template_path="components/panel/body_content_table.html",
-        header_extra_content_template_path="components/panel/header_table.html",
-        footer_content_template_path="components/panel/footer_table.html",
+        header_extra_content_template_path="components/panel/header_extra_content_table.html",
+        footer_content_template_path="components/panel/footer_content_table.html",
         **kwargs,
     ):
         """Instantiate an ObjectsTable panel.
@@ -508,7 +508,7 @@ class ObjectsTablePanel(Panel):
             "body_content_table_add_url": body_content_table_add_url,
             "body_content_table_list_url": body_content_table_list_url,
             "body_content_table_verbose_name": body_content_table_model._meta.verbose_name,
-            "body_content_table_verbose_name_plural": bettertitle(body_content_table_verbose_name_plural),
+            "body_content_table_verbose_name_plural": body_content_table_verbose_name_plural,
             "more_queryset_count": more_queryset_count,
         }
 

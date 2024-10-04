@@ -98,15 +98,6 @@ def hyperlinked_phone_number(value):
 
 @library.filter()
 @register.filter()
-def hyperlinked_field(value, hyperlink):
-    """Render a value as a hyperlink."""
-    if not value:
-        return placeholder(value)
-    return format_html('<a href="{}">{}</a>', value, hyperlink)
-
-
-@library.filter()
-@register.filter()
 def placeholder(value):
     """Render a muted placeholder if value is falsey, else render the value.
 

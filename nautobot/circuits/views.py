@@ -109,7 +109,7 @@ class ProviderUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields="__all__",
-                exclude_fields=["name", "comments"],
+                exclude_fields=["comments"],
             ),
             ObjectFieldsPanel(
                 label="Comments",
@@ -119,8 +119,7 @@ class ProviderUIViewSet(NautobotUIViewSet):
                 value_transforms={"comments": [render_markdown, placeholder]},
             ),
             ObjectsTablePanel(
-                weight=100,
-                table_key="circuits_table",
+                weight=300, table_key="circuits_table", section=SectionChoices.FULL_WIDTH, max_display_count=2
             ),
         ),
     )
