@@ -16,7 +16,6 @@ from .models import (
     Interface,
     InventoryItem,
     Location,
-    LocationType,
     Manufacturer,
     Platform,
     PowerFeed,
@@ -46,28 +45,9 @@ router.register("module-bays", views.ModuleBayUIViewSet)
 router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
 router.register("module-types", views.ModuleTypeUIViewSet)
 router.register("virtual-device-contexts", views.VirtualDeviceContextUIViewSet)
+router.register("location-types", views.LocationTypeUIViewSet)
 
 urlpatterns = [
-    # Location types
-    path("location-types/", views.LocationTypeListView.as_view(), name="locationtype_list"),
-    path("location-types/add/", views.LocationTypeEditView.as_view(), name="locationtype_add"),
-    path("location-types/import/", views.LocationTypeBulkImportView.as_view(), name="locationtype_import"),  # 3.0 TODO
-    path("location-types/delete/", views.LocationTypeBulkDeleteView.as_view(), name="locationtype_bulk_delete"),
-    path("location-types/<uuid:pk>/", views.LocationTypeView.as_view(), name="locationtype"),
-    path("location-types/<uuid:pk>/edit/", views.LocationTypeEditView.as_view(), name="locationtype_edit"),
-    path("location-types/<uuid:pk>/delete/", views.LocationTypeDeleteView.as_view(), name="locationtype_delete"),
-    path(
-        "location-types/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="locationtype_changelog",
-        kwargs={"model": LocationType},
-    ),
-    path(
-        "location-types/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="locationtype_notes",
-        kwargs={"model": LocationType},
-    ),
     # Locations
     path("locations/", views.LocationListView.as_view(), name="location_list"),
     path("locations/add/", views.LocationEditView.as_view(), name="location_add"),

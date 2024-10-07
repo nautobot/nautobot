@@ -616,6 +616,48 @@ def render_uptime(seconds):
     )
 
 
+@library.filter()
+@register.filter()
+def hyperlinked_field(value, hyperlink):
+    """Render a value as a hyperlink."""
+    if not value:
+        return placeholder(value)
+    return format_html('<a href="{}">{}</a>', value, hyperlink)
+
+
+@library.filter()
+@register.filter()
+def render_m2m(value):
+    """Render sorted by model and app_label ManyToManyField value"""
+    if value.exists() is False:
+        return HTML_NONE
+    sorted_content_types = sorted(value, key=lambda ct: (ct.model, ct.app_label))
+
+    output = "<ul>"
+    for content_type in sorted_content_types:
+        output += f"<li>{content_type}</li>"
+    output += "</ul>"
+
+    return format_html(output)
+
+
+@library.filter()
+@register.filter()
+def render_tree_queryset(value):
+    """Renders a tree queryset as an HTML nested list."""
+    result = '<ul class="tree-hierarchy">'
+    append_to_result = ""
+    for ancestor in value.ancestors():
+        nestable_tag = '<span title="nestable">↺</span>' if ancestor.nestable else ""
+        result += f'<li>{hyperlinked_object(ancestor, "name")} {nestable_tag}<ul>'
+        append_to_result += "</ul></li>"
+    nestable_tag = '<span title="nestable">↺</span>' if value.nestable else ""
+    result += f"<li><strong>{value}{nestable_tag}</strong></li>"
+    result += f"{append_to_result}</ul>"
+
+    return format_html(result)
+
+
 #
 # Tags
 #

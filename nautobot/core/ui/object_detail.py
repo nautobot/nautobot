@@ -6,6 +6,8 @@ import logging
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
+from django.db.models.fields import BooleanField, URLField
+from django.db.models.fields.related import ManyToManyField
 from django.template import Context
 from django.template.defaultfilters import truncatechars
 from django.template.loader import get_template, render_to_string
@@ -14,15 +16,19 @@ from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
 from django_tables2 import RequestConfig
 
+from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags.helpers import (
     badge,
     bettertitle,
+    hyperlinked_field,
     hyperlinked_object,
     hyperlinked_object_with_color,
     placeholder,
     render_boolean,
     render_json,
+    render_m2m,
     render_markdown,
+    render_tree_queryset,
     validated_viewname,
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
@@ -732,6 +738,26 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             return bettertitle(context["object"]._meta.verbose_name)
         return super().render_label(context)
 
+    def render_value(self, key, value, context):
+        try:
+            field_instance = context["obj"]._meta.get_field(key)
+        except FieldDoesNotExist:
+            field_instance = None
+
+        if key == "_hierarchy":
+            return render_tree_queryset(value)
+
+        if isinstance(field_instance, URLField):
+            return hyperlinked_field(value, value)
+
+        if isinstance(field_instance, BooleanField):
+            return render_boolean(value)
+
+        if isinstance(field_instance, ManyToManyField):
+            return render_m2m(value.all())
+
+        return super().render_value(key, value, context)
+
     def get_data(self, context):
         """
         Load data from the object provided in the render context based on the given set of `fields`.
@@ -754,13 +780,18 @@ class ObjectFieldsPanel(KeyValueTablePanel):
                 if field.name in ("id", "created", "last_updated"):
                     # Handled elsewhere in the detail view
                     continue
-                if field.is_relation and (field.many_to_many or field.one_to_many):
+                if field.is_relation and field.one_to_many:
                     continue
                 fields.append(field.name)
             # TODO: apply a default ordering "smarter" than declaration order? Alphabetical? By field type?
             # TODO: allow model to specify an alternative field ordering?
 
         data = {}
+
+        if isinstance(instance, TreeModel):
+            # using `_hierarchy` with the prepended `_` to try to archive a unique name, in cases where a model might have hierarchy field.
+            data["_hierarchy"] = instance
+
         for field_name in fields:
             if field_name in self.exclude_fields:
                 continue
