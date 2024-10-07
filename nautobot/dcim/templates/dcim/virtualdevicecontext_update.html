@@ -1,11 +1,9 @@
 {% extends 'generic/object_create.html' %}
 {% load form_helpers %}
-{% load helpers %}
-{% load static %}
 
 {% block form %}
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Device</strong></div>
+        <div class="panel-heading"><strong>Virtual Device Context</strong></div>
         <div class="panel-body">
             {% render_field form.name %}
             {% render_field form.device %}
