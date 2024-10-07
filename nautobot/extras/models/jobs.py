@@ -829,6 +829,7 @@ class JobResult(BaseModel, CustomFieldModel):
             redirect_logger = get_logger("celery.redirected")
             proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
             with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
+
                 def alarm_handler(*args, **kwargs):
                     raise SoftTimeLimitExceeded()
 
@@ -856,9 +857,15 @@ class JobResult(BaseModel, CustomFieldModel):
                     "exc_message": sanitize(str(eager_result.result)),
                 }
             else:
-                job_result.result = sanitize(eager_result.result)
+                if eager_result.result is not None:
+                    job_result.result = sanitize(eager_result.result)
+                else:
+                    job_result.result = None
             job_result.status = eager_result.status
-            job_result.traceback = sanitize(eager_result.traceback)
+            if eager_result.traceback is not None:
+                job_result.traceback = sanitize(eager_result.traceback)
+            else:
+                job_result.traceback = None
             job_result.date_done = timezone.now()
             job_result.save()
         else:
