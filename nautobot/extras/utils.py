@@ -597,7 +597,7 @@ def fixup_null_statuses(*, model, model_contenttype, status_model):
         print(f"    Found and fixed {updated_count} instances of {model.__name__} that had null 'status' fields.")
 
 
-def fixup_dynamic_group_group_types(apps, *args, **kwargs):
+def fixup_dynamic_group_group_types(apps, *args, **kwargs):  # pylint: disable=redefined-outer-name
     """Set dynamic group group_type values correctly."""
     DynamicGroup = apps.get_model("extras", "DynamicGroup")
     DynamicGroupMembership = apps.get_model("extras", "DynamicGroupMembership")
