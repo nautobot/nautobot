@@ -750,6 +750,13 @@ class JSONArrayChoiceFormField(JSONArrayFormField):
             return value
         return []
 
+    def bound_data(self, data, initial):
+        if data is None:
+            return None
+        if isinstance(data, list):
+            data = json.dumps(data)
+        return super().bound_data(data, initial)
+
     def validate(self, value):
         """
         Validate `value` and raise ValidationError if necessary.

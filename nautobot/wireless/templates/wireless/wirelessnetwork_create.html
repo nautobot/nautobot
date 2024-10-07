@@ -6,14 +6,14 @@
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Wireless Network</strong></div>
         <div class="panel-body">
-            {% render_field form.ssid %}
             {% render_field form.name %}
+            {% render_field form.ssid %}
             {% render_field form.description %}
             {% render_field form.mode %}
-            {% render_field form.enabled %}
             {% render_field form.authentication %}
             {% render_field form.secrets_group %}
             {% render_field form.hidden %}
+            {% render_field form.enabled %}
         </div>
     </div>
     <div class="panel panel-default">
