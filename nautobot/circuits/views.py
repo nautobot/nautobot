@@ -119,7 +119,9 @@ class ProviderUIViewSet(NautobotUIViewSet):
                 value_transforms={"comments": [render_markdown, placeholder]},
             ),
             ObjectsTablePanel(
-                weight=300, table_key="circuits_table", section=SectionChoices.FULL_WIDTH, max_display_count=2
+                weight=300,
+                table_key="circuits_table",
+                section=SectionChoices.FULL_WIDTH,
             ),
         ),
     )
