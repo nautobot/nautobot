@@ -1948,7 +1948,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         queryset=SoftwareVersion.objects.all(),
         required=False,
     )
-    access_point_groups = DynamicModelMultipleChoiceField(
+    access_point_group = DynamicModelChoiceField(
         queryset=AccessPointGroup.objects.all(),
         required=False,
     )
@@ -1969,7 +1969,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "device_redundancy_group",
             "device_redundancy_group_priority",
             "controller_managed_device_group",
-            "access_point_groups",
+            "access_point_group",
             "position",
             "face",
             "status",

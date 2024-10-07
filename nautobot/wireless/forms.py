@@ -39,13 +39,13 @@ class AccessPointGroupWirelessNetworkVLANForm(BootstrapMixin, forms.ModelForm):
     locations = DynamicModelMultipleChoiceField(
         queryset=Location.objects.all(),
         required=False,
-        label="Locations",
+        label="VLAN Locations (filter)",
         null_option="None",
     )
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
-        label="VLAN group",
+        label="VLAN group (filter)",
         null_option="None",
         initial_params={"vlans": "$vlan"},
     )

@@ -52,6 +52,12 @@ class SupportedDataRateFilterSet(BaseFilterSet):
             },
         }
     )
+    radio_profiles = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="radio_profiles",
+        queryset=models.RadioProfile.objects.all(),
+        to_field_name="name",
+        label="Radio Profile (name or ID)",
+    )
 
     class Meta:
         model = models.SupportedDataRate

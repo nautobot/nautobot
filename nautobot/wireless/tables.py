@@ -53,6 +53,12 @@ class RadioProfileTable(BaseTable):
     name = tables.Column(linkify=True)
     tags = TagColumn(url_name="wireless:radioprofile_list")
     actions = ButtonsColumn(RadioProfile)
+    # supported_data_rates = LinkedCountColumn(
+    #     viewname="wireless:supporteddatarate_list",
+    #     url_params={"radio_profiles": "pk"},
+    #     verbose_name="Supported Data Rates",
+    #     reverse_lookup="radio_profiles",
+    # )
 
     class Meta(BaseTable.Meta):
         model = RadioProfile
@@ -62,6 +68,7 @@ class RadioProfileTable(BaseTable):
             "frequency",
             "channel_width",
             "allowed_channel_list",
+            # "supported_data_rates",
             "tx_power_min",
             "tx_power_max",
             "rx_power_min",
@@ -75,6 +82,7 @@ class RadioProfileTable(BaseTable):
             "frequency",
             "channel_width",
             "allowed_channel_list",
+            # "supported_data_rates",
             "actions",
         )
 
