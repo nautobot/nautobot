@@ -32,7 +32,7 @@ class RefreshDynamicGroupCaches(Job):
             groups = groups.filter(pk=single_group.pk)
 
         for group in groups:
-            group.update_cached_members()
+            group.update_cached_members(force=True)
             self.logger.info("Cache refreshed successfully, now with %d members", group.count, extra={"object": group})
 
         self.logger.info("Cache(s) refreshed")

@@ -1,5 +1,6 @@
 import logging
 
+from django.db.models.signals import post_migrate
 from django.db.utils import ProgrammingError
 import graphene
 from health_check.plugins import plugin_dir
@@ -24,8 +25,9 @@ class ExtrasConfig(NautobotConfig):
     def ready(self):
         super().ready()
         import nautobot.extras.signals  # noqa: F401  # unused-import -- but this import installs the signals
-        from nautobot.extras.signals import refresh_job_models
+        from nautobot.extras.signals import apply_dynamic_group_table_triggers, refresh_job_models
 
+        post_migrate.connect(apply_dynamic_group_table_triggers, sender=self)
         nautobot_database_ready.connect(refresh_job_models, sender=self)
 
         from graphene_django.converter import convert_django_field
