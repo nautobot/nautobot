@@ -5223,7 +5223,7 @@ class VirtualDeviceContextForm(NautobotModelForm):
     )
     role = DynamicModelChoiceField(
         queryset=Role.objects.all(),
-        required=True,
+        required=False,
         query_params={"content_types": VirtualDeviceContext._meta.label_lower},
     )
     status = DynamicModelChoiceField(
