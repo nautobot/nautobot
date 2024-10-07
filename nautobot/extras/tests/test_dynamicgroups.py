@@ -1,5 +1,6 @@
 import random
 
+from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError, QuerySet
@@ -40,6 +41,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
 )
+from nautobot.extras.utils import fixup_dynamic_group_group_types
 from nautobot.ipam.models import IPAddress, Prefix
 from nautobot.ipam.querysets import PrefixQuerySet
 from nautobot.tenancy.models import Tenant
@@ -1224,3 +1226,117 @@ class DynamicGroupMembershipFilterTest(DynamicGroupTestBase, FilterTestCases.Fil
         for value, cnt in tests.items():
             params = {"q": value}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), cnt)
+
+
+class DynamicGroupFixupTestCase(TestCase):
+    """Check for the correct functioning of the fixup_dynamic_group_group_types() data migration helper function."""
+
+    def test_fixup_dynamic_group_group_types(self):
+        device_ct = ContentType.objects.get_for_model(Device)
+
+        good_grandparent_group = DynamicGroup.objects.create(
+            name="Good Grandparent",
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+            content_type=device_ct,
+        )
+        bad_grandparent_group = DynamicGroup.objects.create(
+            name="Bad Grandparent",
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,  # wrong, but possible due to #6329
+            content_type=device_ct,
+        )
+        good_parent_group = DynamicGroup.objects.create(
+            name="Good Parent",
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+            content_type=device_ct,
+        )
+        bad_parent_group = DynamicGroup.objects.create(
+            name="Bad Parent",
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,  # wrong, #6329 again
+            content_type=device_ct,
+        )
+        good_child_group = DynamicGroup.objects.create(
+            name="Good Child",
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            content_type=device_ct,
+            filter={"status": [Status.objects.get_for_model(Device).first().name]},
+        )
+        bad_child_group = DynamicGroup.objects.create(
+            name="Bad Child",
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,  # wrong, #6329 again
+            content_type=device_ct,
+            filter={"status": [Status.objects.get_for_model(Device).first().name]},
+        )
+
+        DynamicGroupMembership.objects.create(
+            parent_group=good_grandparent_group,
+            group=good_parent_group,
+            weight=10,
+            operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=bad_grandparent_group,
+            group=bad_parent_group,
+            weight=10,
+            operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=good_parent_group,
+            group=good_child_group,
+            weight=10,
+            operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=bad_parent_group,
+            group=bad_child_group,
+            weight=10,
+            operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+        )
+
+        good_standalone_group_1 = DynamicGroup.objects.create(
+            name="Good Standalone Group 1",
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            content_type=device_ct,
+            # empty filter - this is OK!
+        )
+        good_standalone_group_2 = DynamicGroup.objects.create(
+            name="Good Standalone Group 2",
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+            content_type=device_ct,
+        )
+        bad_standalone_group = DynamicGroup.objects.create(
+            name="Bad Standalone Group",
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+            content_type=device_ct,
+            filter={"status": [Status.objects.get_for_model(Device).first().name]},
+        )
+
+        # DynamicGroupMembership.save() will actually auto-fixup the type on bad_parent_group and bad_grandparent_group.
+        # Make them wrong again:
+        bad_grandparent_group.group_type = DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER
+        bad_grandparent_group.save()
+        bad_parent_group.group_type = DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER
+        bad_parent_group.save()
+
+        count_1, count_2 = fixup_dynamic_group_group_types(apps)
+
+        self.assertEqual(count_1, 2)  # bad_grandparent_group, bad_parent_group
+        self.assertEqual(count_2, 2)  # bad_child_group, bad_standalone_group
+
+        good_grandparent_group.refresh_from_db()
+        self.assertEqual(good_grandparent_group.group_type, DynamicGroupTypeChoices.TYPE_DYNAMIC_SET)  # unchanged
+        bad_grandparent_group.refresh_from_db()
+        self.assertEqual(bad_grandparent_group.group_type, DynamicGroupTypeChoices.TYPE_DYNAMIC_SET)  # fixed
+        good_parent_group.refresh_from_db()
+        self.assertEqual(good_parent_group.group_type, DynamicGroupTypeChoices.TYPE_DYNAMIC_SET)  # unchanged
+        bad_parent_group.refresh_from_db()
+        self.assertEqual(bad_parent_group.group_type, DynamicGroupTypeChoices.TYPE_DYNAMIC_SET)  # fixed
+        good_child_group.refresh_from_db()
+        self.assertEqual(good_child_group.group_type, DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER)  # unchanged
+        bad_child_group.refresh_from_db()
+        self.assertEqual(bad_child_group.group_type, DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER)  # fixed
+        good_standalone_group_1.refresh_from_db()
+        self.assertEqual(good_standalone_group_1.group_type, DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER)  # unchanged
+        good_standalone_group_2.refresh_from_db()
+        self.assertEqual(good_standalone_group_2.group_type, DynamicGroupTypeChoices.TYPE_DYNAMIC_SET)  # unchanged
+        bad_standalone_group.refresh_from_db()
+        self.assertEqual(bad_standalone_group.group_type, DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER)  # fixed
