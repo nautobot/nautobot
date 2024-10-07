@@ -3,7 +3,9 @@
 import contextlib
 from datetime import timedelta
 import logging
+import signal
 
+from billiard.exceptions import SoftTimeLimitExceeded
 from celery.exceptions import NotRegistered
 from celery.utils.log import get_logger, LoggingProxy
 from django.conf import settings
@@ -827,12 +829,23 @@ class JobResult(BaseModel, CustomFieldModel):
             redirect_logger = get_logger("celery.redirected")
             proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
             with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
-                eager_result = run_job.apply(
-                    args=[job_model.class_path, *job_args],
-                    kwargs=job_kwargs,
-                    task_id=str(job_result.id),
-                    **job_celery_kwargs,
-                )
+                def alarm_handler(*args, **kwargs):
+                    raise SoftTimeLimitExceeded()
+
+                # Set alarm_handler to be called on a SIGALRM, and schedule a SIGALRM based on the soft time limit
+                signal.signal(signal.SIGALRM, alarm_handler)
+                signal.alarm(int(job_model.soft_time_limit) or settings.CELERY_TASK_SOFT_TIME_LIMIT)
+
+                try:
+                    eager_result = run_job.apply(
+                        args=[job_model.class_path, *job_args],
+                        kwargs=job_kwargs,
+                        task_id=str(job_result.id),
+                        **job_celery_kwargs,
+                    )
+                finally:
+                    # Cancel the scheduled SIGALRM if it hasn't fired already
+                    signal.alarm(0)
 
             # copy fields from eager result to job result
             job_result.refresh_from_db()
