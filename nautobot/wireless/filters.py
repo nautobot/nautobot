@@ -1,7 +1,13 @@
 import django_filters
 
-from nautobot.core.filters import BaseFilterSet, NaturalKeyOrPKMultipleChoiceFilter, NumericArrayFilter, SearchFilter
-from nautobot.dcim.models import Controller, Device
+from nautobot.core.filters import (
+    BaseFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
+    NumericArrayFilter,
+    RelatedMembershipBooleanFilter,
+    SearchFilter,
+)
+from nautobot.dcim.models import Controller
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import SecretsGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
@@ -21,6 +27,10 @@ class AccessPointGroupFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         queryset=Controller.objects.all(),
         to_field_name="name",
         label="Controller (name or ID)",
+    )
+    has_devices = RelatedMembershipBooleanFilter(
+        field_name="devices",
+        label="Has devices",
     )
 
     class Meta:
@@ -152,29 +162,4 @@ class AccessPointGroupRadioProfileAssignmentFilterSet(BaseFilterSet):
 
     class Meta:
         model = models.AccessPointGroupRadioProfileAssignment
-        fields = "__all__"
-
-
-class AccessPointGroupDeviceAssignmentFilterSet(BaseFilterSet):
-    q = SearchFilter(
-        filter_predicates={
-            "access_point_group__name": "icontains",
-            "device__name": "icontains",
-        }
-    )
-    access_point_group = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="access_point_group",
-        queryset=models.AccessPointGroup.objects.all(),
-        to_field_name="name",
-        label="Access Point Group (name or ID)",
-    )
-    device = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="device",
-        queryset=Device.objects.all(),
-        to_field_name="name",
-        label="Device (name or ID)",
-    )
-
-    class Meta:
-        model = models.AccessPointGroupDeviceAssignment
         fields = "__all__"

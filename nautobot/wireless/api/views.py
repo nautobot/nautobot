@@ -38,9 +38,3 @@ class AccessPointGroupRadioProfileAssignmentViewSet(NautobotModelViewSet):
     queryset = models.AccessPointGroupRadioProfileAssignment.objects.all()
     serializer_class = serializers.AccessPointGroupRadioProfileAssignmentSerializer
     filterset_class = filters.AccessPointGroupRadioProfileAssignmentFilterSet
-
-
-class AccessPointGroupDeviceAssignmentViewSet(NautobotModelViewSet):
-    queryset = models.AccessPointGroupDeviceAssignment.objects.all()
-    serializer_class = serializers.AccessPointGroupDeviceAssignmentSerializer
-    filterset_class = filters.AccessPointGroupDeviceAssignmentFilterSet

@@ -1,7 +1,6 @@
 import json
 import re
 
-from django import forms
 from django.core import exceptions
 from django.core.validators import MaxLengthValidator, RegexValidator
 from django.db import models

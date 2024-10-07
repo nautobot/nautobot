@@ -3,42 +3,68 @@
 {% load static %}
 
 {% block content %}
-    <form method="post">
-        {% csrf_token %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>Wireless Networks</strong>
-                <div class="pull-right noprint">
-                    {% if request.user.is_authenticated %}
-                        {% table_config_button_small wireless_networks_table %}
-                    {% endif %}
+    <div class="row">
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Access Point Group</strong>
                 </div>
-            </div>
-            {% include 'responsive_table.html' with table=wireless_networks_table %}
-            <div class="panel-footer noprint">
-                <div class="clearfix"></div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Name</td>
+                        <td>
+                            {{ object.access_point_group|hyperlinked_object }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Controller</td>
+                        <td>{{ object.access_point_group.controller|hyperlinked_object }}</td>
+                    </tr>
+                </table>
             </div>
         </div>
-    </form>
-    {% table_config_form wireless_networks_table %}
-    <form method="post">
-        {% csrf_token %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>Radio Profiles</strong>
-                <div class="pull-right noprint">
-                    {% if request.user.is_authenticated %}
-                        {% table_config_button_small radio_profiles_table %}
-                    {% endif %}
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <form method="post">
+                {% csrf_token %}
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Wireless Networks</strong>
+                        <div class="pull-right noprint">
+                            {% if request.user.is_authenticated %}
+                                {% table_config_button_small wireless_networks_table %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% include 'responsive_table.html' with table=wireless_networks_table %}
+                    <div class="panel-footer noprint">
+                        <div class="clearfix"></div>
+                    </div>
                 </div>
-            </div>
-            {% include 'responsive_table.html' with table=radio_profiles_table %}
-            <div class="panel-footer noprint">
-                <div class="clearfix"></div>
-            </div>
+            </form>
+            {% table_config_form wireless_networks_table %}
+            <form method="post">
+                {% csrf_token %}
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Radio Profiles</strong>
+                        <div class="pull-right noprint">
+                            {% if request.user.is_authenticated %}
+                                {% table_config_button_small radio_profiles_table %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% include 'responsive_table.html' with table=radio_profiles_table %}
+                    <div class="panel-footer noprint">
+                        <div class="clearfix"></div>
+                    </div>
+                </div>
+            </form>
+            {% table_config_form radio_profiles_table %}
         </div>
-    </form>
-    {% table_config_form radio_profiles_table %}
+    </div>
 {% endblock content %}
 
 {% block javascript %}

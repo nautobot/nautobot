@@ -38,6 +38,6 @@ layout = (
                 permissions=["wireless.view_wirelessnetwork"],
                 weight=400,
             ),
-        )
+        ),
     ),
 )

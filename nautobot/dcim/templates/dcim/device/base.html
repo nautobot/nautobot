@@ -134,14 +134,12 @@
                 </li>
             {% endif %}
         {% endwith %}
-        {% with access_point_group_count=object.access_point_groups.count %}
-            {% if access_point_group_count %}
-                <li role="presentation" {% if active_tab == 'wireless' %} class="active"{% endif %}>
-                    {% comment %} Not placing a badge as we are using the access_point_groups count to see if there are any attached access_point_groups, but the count for wireless networks will be larger {% endcomment %}
-                    <a href="{% url 'dcim:device_wireless' pk=object.pk %}">Wireless</a>
-                </li>
-            {% endif %}
-        {% endwith %}
+        {% if object.access_point_group %}
+            <li role="presentation" {% if active_tab == 'wireless' %} class="active"{% endif %}>
+                {% comment %} Not placing a badge as we are using the access_point_groups count to see if there are any attached access_point_groups, but the count for wireless networks will be larger {% endcomment %}
+                <a href="{% url 'dcim:device_wireless' pk=object.pk %}">Wireless</a>
+            </li>
+        {% endif %}
         {% if perms.dcim.napalm_read_device %}
             {% if not object.platform %}
                 {% include 'dcim/inc/device_napalm_tabs.html' with disabled_message='No platform assigned to this device' %}

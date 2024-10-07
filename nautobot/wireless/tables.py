@@ -8,6 +8,7 @@ from nautobot.core.tables import (
     ToggleColumn,
 )
 from nautobot.core.templatetags.helpers import render_boolean
+
 from .models import AccessPointGroup, RadioProfile, SupportedDataRate, WirelessNetwork
 
 
@@ -156,7 +157,6 @@ class AccessPointGroupWirelessNetworkAssignmentTable(BaseTable):
     access_point_group = tables.Column(linkify=True)
     wireless_network = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True)
-    actions = ButtonsColumn(AccessPointGroup)
     ssid = tables.Column(accessor="wireless_network.ssid")
     mode = tables.Column(accessor="wireless_network.mode")
     authentication = tables.Column(accessor="wireless_network.authentication")
@@ -164,41 +164,56 @@ class AccessPointGroupWirelessNetworkAssignmentTable(BaseTable):
     hidden = tables.Column(accessor="wireless_network.hidden")
     secrets_group = tables.Column(accessor="wireless_network.secrets_group", linkify=True)
     controller = tables.Column(accessor="access_point_group.controller", linkify=True)
+    prefix_count = LinkedCountColumn(
+        viewname="ipam:prefix_list",
+        url_params={"vlan_id": "vlan_id"},
+        verbose_name="Prefixes",
+        reverse_lookup="vlan__access_point_group_wireless_network_assignments",
+    )
 
     class Meta(BaseTable.Meta):
         model = AccessPointGroup
         fields = (
             "wireless_network",
             "access_point_group",
-            "vlan",
             "ssid",
             "mode",
             "authentication",
+            "vlan",
+            "prefix_count",
             "enabled",
             "hidden",
             "secrets_group",
             "controller",
-            "actions",
         )
         default_columns = (
             "wireless_network",
             "access_point_group",
             "vlan",
             "ssid",
+            "prefix_count",
             "mode",
             "authentication",
-            "enabled",
-            "hidden",
-            "secrets_group",
             "controller",
-            "actions",
+        )
+
+
+class ControllerAccessPointGroupWirelessNetworkAssignmentTable(AccessPointGroupWirelessNetworkAssignmentTable):
+    class Meta(AccessPointGroupWirelessNetworkAssignmentTable.Meta):
+        default_columns = (
+            "wireless_network",
+            "access_point_group",
+            "vlan",
+            "ssid",
+            "prefix_count",
+            "mode",
+            "authentication",
         )
 
 
 class AccessPointGroupRadioProfileAssignmentTable(BaseTable):
     access_point_group = tables.Column(linkify=True)
     radio_profile = tables.Column(linkify=True)
-    actions = ButtonsColumn(AccessPointGroup)
     frequency = tables.Column(accessor="radio_profile.frequency")
     channel_width = tables.Column(accessor="radio_profile.channel_width")
     allowed_channel_list = tables.Column(accessor="radio_profile.allowed_channel_list")
@@ -219,7 +234,6 @@ class AccessPointGroupRadioProfileAssignmentTable(BaseTable):
             "tx_power_max",
             "rx_power_min",
             "regulatory_domain",
-            "actions",
         )
         default_columns = (
             "radio_profile",
@@ -231,7 +245,6 @@ class AccessPointGroupRadioProfileAssignmentTable(BaseTable):
             "tx_power_max",
             "rx_power_min",
             "regulatory_domain",
-            "actions",
         )
 
     def render_channel_width(self, value):

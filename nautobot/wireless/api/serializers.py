@@ -64,9 +64,3 @@ class AccessPointGroupRadioProfileAssignmentSerializer(ValidatedModelSerializer)
     class Meta:
         model = models.AccessPointGroupRadioProfileAssignment
         fields = "__all__"
-
-
-class AccessPointGroupDeviceAssignmentSerializer(ValidatedModelSerializer):
-    class Meta:
-        model = models.AccessPointGroupDeviceAssignment
-        fields = "__all__"

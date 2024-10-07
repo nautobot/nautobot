@@ -8,14 +8,12 @@ from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.tables import DeviceTable
 from nautobot.wireless.api.serializers import (
     AccessPointGroupSerializer,
-    AccessPointGroupDeviceAssignmentSerializer,
     RadioProfileSerializer,
     SupportedDataRateSerializer,
     WirelessNetworkSerializer,
 )
 from nautobot.wireless.filters import (
     AccessPointGroupFilterSet,
-    AccessPointGroupDeviceAssignmentFilterSet,
     RadioProfileFilterSet,
     SupportedDataRateFilterSet,
     WirelessNetworkFilterSet,
@@ -31,12 +29,12 @@ from nautobot.wireless.forms import (
     SupportedDataRateBulkEditForm,
     SupportedDataRateFilterForm,
     SupportedDataRateForm,
+    WirelessNetworkAccessPointGroupFormSet,
     WirelessNetworkBulkEditForm,
     WirelessNetworkFilterForm,
     WirelessNetworkForm,
-    WirelessNetworkAccessPointGroupFormSet,
 )
-from nautobot.wireless.models import AccessPointGroup, RadioProfile, SupportedDataRate, WirelessNetwork, AccessPointGroupDeviceAssignment
+from nautobot.wireless.models import AccessPointGroup, RadioProfile, SupportedDataRate, WirelessNetwork
 from nautobot.wireless.tables import (
     AccessPointGroupTable,
     AccessPointGroupWirelessNetworkAssignmentTable,
@@ -67,7 +65,9 @@ class AccessPointGroupUIViewSet(NautobotUIViewSet):
             wireless_networks_table = AccessPointGroupWirelessNetworkAssignmentTable(wireless_networks)
             wireless_networks_table.columns.hide("access_point_group")
             wireless_networks_table.columns.hide("controller")
-            RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(wireless_networks_table)
+            RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(
+                wireless_networks_table
+            )
             context["wireless_networks_table"] = wireless_networks_table
 
             # Radio Profiles
@@ -106,13 +106,10 @@ class AccessPointGroupUIViewSet(NautobotUIViewSet):
         if form.cleaned_data.get("remove_devices", None):
             obj.devices.remove(*form.cleaned_data["remove_devices"])
 
-
     @action(detail=True, url_path="devices")
     def devices(self, request, *args, **kwargs):
         instance = self.get_object()
-        devices = (
-            instance.devices.restrict(request.user, "view")
-        )
+        devices = instance.devices.restrict(request.user, "view")
         device_table = DeviceTable(devices)
         RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(device_table)
 
@@ -123,6 +120,7 @@ class AccessPointGroupUIViewSet(NautobotUIViewSet):
                 "device_count": devices.count(),
             }
         )
+
 
 class RadioProfileUIViewSet(NautobotUIViewSet):
     queryset = RadioProfile.objects.all()
@@ -139,7 +137,9 @@ class RadioProfileUIViewSet(NautobotUIViewSet):
             # Supported Data Rates
             supported_data_rates = instance.supported_data_rates.restrict(request.user, "view")
             supported_data_rates_table = SupportedDataRateTable(supported_data_rates)
-            RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(supported_data_rates_table)
+            RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(
+                supported_data_rates_table
+            )
             context["supported_data_rates_table"] = supported_data_rates_table
 
         return context
@@ -187,7 +187,9 @@ class WirelessNetworkUIViewSet(NautobotUIViewSet):
             access_point_groups_table.columns.hide("authentication")
             access_point_groups_table.columns.hide("hidden")
             access_point_groups_table.columns.hide("secrets_group")
-            RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(access_point_groups_table)
+            RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(
+                access_point_groups_table
+            )
             context["access_point_groups_table"] = access_point_groups_table
 
         if self.action in ["create", "update"]:
@@ -209,13 +211,3 @@ class WirelessNetworkUIViewSet(NautobotUIViewSet):
             raise ValidationError(access_point_groups.errors)
 
         return obj
-
-
-class AccessPointGroupDeviceAssignmentViewSet(NautobotUIViewSet):
-    queryset = AccessPointGroupDeviceAssignment.objects.all()
-    serializer_class = AccessPointGroupDeviceAssignmentSerializer
-    filterset_class = AccessPointGroupDeviceAssignmentFilterSet
-    filterset_form_class = None
-    table_class = None
-    form_class = None
-    bulk_update_form_class = None

@@ -720,12 +720,11 @@ class JSONArrayChoiceFormField(JSONArrayFormField):
     """
     A FormField counterpart to JSONArrayField that supports choice validation.
     """
+
     hidden_widget = MultipleHiddenInput
     widget = widgets.StaticSelect2Multiple()
     default_error_messages = {
-        "invalid_choice": _(
-            "Select a valid choice. %(value)s is not one of the available choices."
-        ),
+        "invalid_choice": _("Select a valid choice. %(value)s is not one of the available choices."),
         "invalid_list": _("Enter a list of values."),
     }
 

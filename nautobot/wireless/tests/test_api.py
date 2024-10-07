@@ -1,5 +1,5 @@
 from nautobot.core.testing import APIViewTestCases
-from nautobot.dcim.models import Controller, Device
+from nautobot.dcim.models import Controller
 from nautobot.extras.models import SecretsGroup
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.models import Tenant
@@ -210,28 +210,6 @@ class WirelessNetworkTest(APIViewTestCases.APIViewTestCase):
         cls.bulk_update_data = {
             "tenant": tenants[6].pk,
         }
-
-
-class AccessPointGroupDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
-    model = models.AccessPointGroupDeviceAssignment
-
-    @classmethod
-    def setUpTestData(cls):
-        access_point_groups = models.AccessPointGroup.objects.all()[:3]
-        cls.create_data = [
-            {
-                "access_point_group": access_point_groups[0].pk,
-                "device": Device.objects.exclude(access_point_groups=access_point_groups[0]).first().pk,
-            },
-            {
-                "access_point_group": access_point_groups[1].pk,
-                "device": Device.objects.exclude(access_point_groups=access_point_groups[1]).first().pk,
-            },
-            {
-                "access_point_group": access_point_groups[2].pk,
-                "device": Device.objects.exclude(access_point_groups=access_point_groups[2]).first().pk,
-            },
-        ]
 
 
 class AccessPointGroupRadioProfileAssignmentTest(APIViewTestCases.APIViewTestCase):

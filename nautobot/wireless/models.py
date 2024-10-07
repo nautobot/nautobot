@@ -45,14 +45,6 @@ class AccessPointGroup(PrimaryModel):
         null=True,
     )
 
-    devices = models.ManyToManyField(
-        to="dcim.Device",
-        related_name="access_point_groups",
-        through="wireless.AccessPointGroupDeviceAssignment",
-        through_fields=("access_point_group", "device"),
-        blank=True,
-    )
-
     radio_profiles = models.ManyToManyField(
         to="wireless.RadioProfile",
         related_name="access_point_groups",
@@ -127,11 +119,10 @@ class RadioProfile(PrimaryModel):
     tx_power_max = models.IntegerField(blank=True, null=True)
     channel_width = JSONArrayField(
         base_field=models.IntegerField(choices=RadioProfileChannelWidthChoices),
-        default=list,
         blank=True,
         null=True,
     )
-    allowed_channel_list = JSONArrayField(base_field=models.IntegerField(), default=list, blank=True, null=True)
+    allowed_channel_list = JSONArrayField(base_field=models.IntegerField(), blank=True, null=True)
     supported_data_rates = models.ManyToManyField(
         to="wireless.SupportedDataRate",
         related_name="radio_profiles",
@@ -261,34 +252,3 @@ class AccessPointGroupRadioProfileAssignment(BaseModel):
 
     def __str__(self):
         return f"{self.access_point_group}: {self.radio_profile}"
-
-
-@extras_features(
-    "custom_links",
-    "custom_validators",
-    "export_templates",
-    "graphql",
-)
-class AccessPointGroupDeviceAssignment(BaseModel):
-    """
-    An AccessPointGroupDeviceAssignment represents the assignment of a Device to an AccessPointGroup.
-    """
-
-    access_point_group = models.ForeignKey(
-        to="wireless.AccessPointGroup",
-        on_delete=models.CASCADE,
-        related_name="device_assignments",
-    )
-    device = models.ForeignKey(
-        to="dcim.Device",
-        on_delete=models.CASCADE,
-        related_name="access_point_group_assignments",
-    )
-    is_metadata_associable_model = False
-
-    class Meta:
-        unique_together = ["access_point_group", "device"]
-        ordering = ["access_point_group", "device"]
-
-    def __str__(self):
-        return f"{self.access_point_group}: {self.device}"

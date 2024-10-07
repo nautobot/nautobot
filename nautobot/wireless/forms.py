@@ -1,14 +1,19 @@
 from django import forms
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
+    add_blank_choice,
     BootstrapMixin,
+    BulkEditNullBooleanSelect,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     NumericArrayField,
+    StaticSelect2,
     TagFilterField,
 )
 from nautobot.dcim.models import Controller, Device, Location
 from nautobot.extras.forms import NautobotBulkEditForm, NautobotFilterForm, NautobotModelForm, TagsBulkEditFormMixin
+from nautobot.extras.models import SecretsGroup
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.tenancy.forms import TenancyFilterForm
 from nautobot.tenancy.models import Tenant
@@ -18,6 +23,15 @@ from nautobot.wireless.models import (
     RadioProfile,
     SupportedDataRate,
     WirelessNetwork,
+)
+
+from .choices import (
+    RadioProfileChannelWidthChoices,
+    RadioProfileFrequencyChoices,
+    RadioProfileRegulatoryDomainChoices,
+    SupportedDataRateStandardChoices,
+    WirelessNetworkAuthenticationChoices,
+    WirelessNetworkModeChoices,
 )
 
 
@@ -70,6 +84,7 @@ class AccessPointGroupWirelessNetworkVLANForm(BootstrapMixin, forms.ModelForm):
             "vlan",
         ]
 
+
 AccessPointGroupWirelessNetworkFormSet = forms.inlineformset_factory(
     parent_model=AccessPointGroup,
     model=AccessPointGroupWirelessNetworkAssignment,
@@ -104,6 +119,7 @@ class AccessPointGroupForm(NautobotModelForm):
         required=False,
         label="Radio Profiles",
     )
+
     class Meta:
         model = AccessPointGroup
         fields = [
@@ -113,7 +129,6 @@ class AccessPointGroupForm(NautobotModelForm):
             "tenant",
             "devices",
             "radio_profiles",
-            # "wireless_networks",
             "tags",
         ]
 
@@ -141,6 +156,35 @@ class AccessPointGroupBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         queryset=Tenant.objects.all(),
         required=False,
     )
+    name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    add_devices = DynamicModelMultipleChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        label="Add Devices",
+    )
+    remove_devices = DynamicModelMultipleChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        label="Remove Devices",
+    )
+    add_radio_profiles = DynamicModelMultipleChoiceField(
+        queryset=RadioProfile.objects.all(),
+        required=False,
+        label="Add Radio Profiles",
+    )
+    remove_radio_profiles = DynamicModelMultipleChoiceField(
+        queryset=RadioProfile.objects.all(),
+        required=False,
+        label="Remove Radio Profiles",
+    )
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    class Meta:
+        nullable_fields = [
+            "controller",
+            "tenant",
+            "description",
+        ]
 
 
 class RadioProfileForm(NautobotModelForm):
@@ -159,6 +203,7 @@ class RadioProfileForm(NautobotModelForm):
         required=False,
         label="Supported Data Rates",
     )
+
     class Meta:
         model = RadioProfile
         fields = "__all__"
@@ -172,6 +217,56 @@ class RadioProfileFilterForm(NautobotFilterForm):
 
 class RadioProfileBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=RadioProfile.objects.all(), widget=forms.MultipleHiddenInput)
+    name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    frequency = forms.ChoiceField(
+        choices=add_blank_choice(RadioProfileFrequencyChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    add_supported_data_rates = DynamicModelMultipleChoiceField(
+        queryset=SupportedDataRate.objects.all(),
+        required=False,
+        label="Add Supported Data Rates",
+    )
+    remove_supported_data_rates = DynamicModelMultipleChoiceField(
+        queryset=SupportedDataRate.objects.all(),
+        required=False,
+        label="Remove Supported Data Rates",
+    )
+    add_access_point_groups = DynamicModelMultipleChoiceField(
+        queryset=AccessPointGroup.objects.all(),
+        required=False,
+        label="Add Access Point Groups",
+    )
+    remove_access_point_groups = DynamicModelMultipleChoiceField(
+        queryset=AccessPointGroup.objects.all(),
+        required=False,
+        label="Remove Access Point Groups",
+    )
+    allowed_channel_list = NumericArrayField(
+        base_field=forms.IntegerField(),
+        required=False,
+        label="Allowed Channel List",
+    )
+    tx_power_min = forms.IntegerField(required=False, label="TX Power Min")
+    tx_power_max = forms.IntegerField(required=False, label="TX Power Max")
+    rx_power_min = forms.IntegerField(required=False, label="RX Power Min")
+    regulatory_domain = forms.ChoiceField(
+        choices=add_blank_choice(RadioProfileRegulatoryDomainChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    # TODO - channel_width on bulk edit form
+
+    class Meta:
+        nullable_fields = [
+            "frequency",
+            "allowed_channel_list",
+            "regulatory_domain",
+            "tx_power_min",
+            "tx_power_max",
+            "rx_power_min",
+        ]
 
 
 class SupportedDataRateForm(NautobotModelForm):
@@ -188,6 +283,18 @@ class SupportedDataRateFilterForm(NautobotFilterForm):
 
 class SupportedDataRateBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=SupportedDataRate.objects.all(), widget=forms.MultipleHiddenInput)
+    standard = forms.ChoiceField(
+        choices=add_blank_choice(SupportedDataRateStandardChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    rate = forms.IntegerField(min_value=1, required=False, label="Rate (Kbps)")
+    mcs_index = forms.IntegerField(required=False, label="MCS Index")
+
+    class Meta:
+        nullable_fields = [
+            "mcs_index",
+        ]
 
 
 class WirelessNetworkForm(NautobotModelForm):
@@ -209,3 +316,38 @@ class WirelessNetworkFilterForm(NautobotFilterForm):
 
 class WirelessNetworkBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=WirelessNetwork.objects.all(), widget=forms.MultipleHiddenInput)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    add_access_point_groups = DynamicModelMultipleChoiceField(
+        queryset=AccessPointGroup.objects.all(),
+        required=False,
+        label="Add Access Point Groups",
+    )
+    remove_access_point_groups = DynamicModelMultipleChoiceField(
+        queryset=AccessPointGroup.objects.all(),
+        required=False,
+        label="Remove Access Point Groups",
+    )
+    ssid = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    mode = forms.ChoiceField(
+        choices=add_blank_choice(WirelessNetworkModeChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    hidden = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    authentication = forms.ChoiceField(
+        choices=add_blank_choice(WirelessNetworkAuthenticationChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    secrets_group = DynamicModelChoiceField(
+        queryset=SecretsGroup.objects.all(),
+        required=False,
+    )
+    class Meta:
+        nullable_fields = [
+            "description",
+            "secrets_group",
+            "enabled",
+            "hidden",
+        ]

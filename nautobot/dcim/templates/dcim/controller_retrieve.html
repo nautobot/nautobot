@@ -1,4 +1,4 @@
-{% extends 'generic/object_retrieve.html' %}
+{% extends 'dcim/controller/base.html' %}
 {% load helpers %}
 
 {% block content_left_page %}
@@ -85,3 +85,8 @@
         </div>
         {% include 'inc/paginator.html' with paginator=devices_table.paginator page=devices_table.page %}
 {% endblock content_full_width_page %}
+
+{% block javascript %}
+{{ block.super }}
+
+{% endblock javascript %}

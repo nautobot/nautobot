@@ -1,0 +1,10 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block extra_nav_tabs %}
+    {% if object.access_point_groups %}
+        <li role="presentation" {% if active_tab == 'wireless' %} class="active"{% endif %}>
+            <a href="{% url 'dcim:controller_wireless' pk=object.pk %}">Wireless</a>
+        </li>
+    {% endif %}
+{% endblock extra_nav_tabs %}

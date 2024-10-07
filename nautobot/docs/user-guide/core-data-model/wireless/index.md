@@ -51,7 +51,7 @@ erDiagram
 
     Device {
         string name UK
-        AccessPointGroup access_point_groups FK
+        AccessPointGroup access_point_group FK
         Interface interfaces FK
     }
 
@@ -87,7 +87,7 @@ erDiagram
 
     AccessPointGroup ||--o{ Controller : has
     AccessPointGroup }o--o{ RadioProfile : "through AccessPointGroupRadioProfileAssignment"
-    AccessPointGroup }o--o{ Device : "through AccessPointGroupDeviceAssignment"
+    AccessPointGroup }o--|| Device : "has"
     AccessPointGroup }o--o{ AccessPointGroupWirelessNetworkAssignment : has
     WirelessNetwork }o--o{ AccessPointGroupWirelessNetworkAssignment : has
     WirelessNetwork }o--o{ SecretsGroup : has
