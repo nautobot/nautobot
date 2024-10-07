@@ -2,6 +2,7 @@
 
 import contextlib
 from dataclasses import dataclass
+import logging
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
@@ -9,8 +10,9 @@ from django.template import Context
 from django.template.defaultfilters import truncatechars
 from django.template.loader import get_template, render_to_string
 from django.templatetags.l10n import localize
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
+from django_tables2 import RequestConfig
 
 from nautobot.core.templatetags.helpers import (
     badge,
@@ -24,8 +26,13 @@ from nautobot.core.templatetags.helpers import (
     validated_viewname,
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
+from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.tenancy.models import Tenant
+
+logger = logging.getLogger(__name__)
 
 
 class ObjectDetailContent:
@@ -378,25 +385,132 @@ class ObjectsTablePanel(Panel):
         self,
         *,
         table_key,
+        table_title=None,
+        max_display_count=None,
+        include_fields=None,
+        exclude_fields=None,
+        add_button_route="default",
+        add_permissions=None,
+        related_field_name=None,
         body_wrapper_template_path="components/panel/body_wrapper_table.html",
         body_content_template_path="components/panel/body_content_table.html",
+        header_extra_content_template_path="components/panel/header_extra_content_table.html",
+        footer_content_template_path="components/panel/footer_content_table.html",
         **kwargs,
     ):
         """Instantiate an ObjectsTable panel.
 
         Args:
             table_key (str): The render context key string that contains the BaseTable instance of interest.
+            max_display_count (int, optional):  Maximum number of items to display in the table.
+                If None, defaults to the `get_paginate_count()`(which is user's preference or a global setting).
+            table_title (str, optional): The title to display in the panel heading for the table.
+                If None, defaults to the plural verbose name of the table model.
+            include_fields (list, optional): A list of field names to include in the table display.
+                If provided, only these fields will be displayed in the table.
+            exclude_fields (list, optional): A list of field names to exclude from the table display.
+                Cannot be used together with `include_fields`.
+            add_button_route (str, optional): The route used to generate the "add" button URL. Defaults to "default",
+                which uses the default table's model `add` route.
+            add_permissions (list, optional): A list of permissions required for the "add" button to be displayed. If not provided,
+                permissions are determined by default based on the model.
+            related_field_name (str, optional): The name of the field used to filter related objects (typically for query string parameters).
         """
         self.table_key = table_key
+        self.table_title = table_title
+        self.max_display_count = max_display_count
+        if exclude_fields and include_fields:
+            raise ValueError("You can only specify either `exclude_fields` or `include_fields`")
+        self.include_fields = include_fields
+        self.exclude_fields = exclude_fields
+        self.add_button_route = add_button_route
+        self.add_permissions = add_permissions
+        self.related_field_name = related_field_name
+
         super().__init__(
             body_wrapper_template_path=body_wrapper_template_path,
             body_content_template_path=body_content_template_path,
+            header_extra_content_template_path=header_extra_content_template_path,
+            footer_content_template_path=footer_content_template_path,
             **kwargs,
         )
 
+    def _get_table_add_url(self, context):
+        """Generate the URL for the "Add" button in the table panel.
+
+        This method determines the URL for adding a new object to the table. It checks if the user has
+        the necessary permissions and creates the appropriate URL based on the specified add button route.
+        """
+        obj = context["obj"]
+        body_content_table_add_url = None
+        request = context["request"]
+        related_field_name = self.related_field_name or obj._meta.model_name
+        return_url = context.get("return_url", obj.get_absolute_url())
+
+        if self.add_button_route == "default":
+            body_content_table = context[self.table_key]
+
+            body_content_table_model = body_content_table.Meta.model
+            permission_name = get_permission_for_model(body_content_table_model, "add")
+            if request.user.has_perms([permission_name]):
+                try:
+                    add_route = reverse(get_route_for_model(body_content_table_model, "add"))
+                    body_content_table_add_url = f"{add_route}?{related_field_name}={obj.pk}&return_url={return_url}"
+                except NoReverseMatch:
+                    logger.warning("add route for `body_content_table_model` not found")
+
+        elif self.add_button_route is not None:
+            if request.user.has_perms(self.add_permissions or []):
+                add_route = reverse(self.add_button_route)
+                body_content_table_add_url = f"{add_route}?{related_field_name}={obj.pk}&return_url={return_url}"
+
+        return body_content_table_add_url
+
     def get_extra_context(self, context):
-        """Take the context value under `self.table_key` and add it to the context under key `"body_content_table"`."""
-        return {"body_content_table": context[self.table_key]}
+        """Add additional context for rendering the table panel.
+
+        This method processes the table data, configures pagination, and generates URLs
+        for listing and adding objects. It also handles field inclusion/exclusion and
+        displays the appropriate table title if provided.
+        """
+        body_content_table = context[self.table_key]
+        request = context["request"]
+
+        if self.exclude_fields or self.include_fields:
+            for column in body_content_table.columns:
+                if (self.exclude_fields and column.name in self.exclude_fields) or (
+                    self.include_fields and column.name not in self.include_fields
+                ):
+                    body_content_table.columns.hide(column.name)
+                else:
+                    body_content_table.columns.show(column.name)
+
+        per_page = self.max_display_count if self.max_display_count is not None else get_paginate_count(request)
+        paginate = {"paginator_class": EnhancedPaginator, "per_page": per_page}
+        RequestConfig(request, paginate).configure(body_content_table)
+        more_queryset_count = max(body_content_table.data.data.count() - per_page, 0)
+
+        obj = context["obj"]
+        body_content_table_model = body_content_table.Meta.model
+        related_field_name = self.related_field_name or obj._meta.model_name
+
+        try:
+            list_route = reverse(get_route_for_model(body_content_table_model, "list"))
+            body_content_table_list_url = f"{list_route}?{related_field_name}={obj.pk}"
+        except NoReverseMatch:
+            body_content_table_list_url = None
+
+        body_content_table_add_url = self._get_table_add_url(context)
+        body_content_table_verbose_name_plural = self.table_title or body_content_table_model._meta.verbose_name_plural
+
+        return {
+            "body_content_table": body_content_table,
+            "body_content_table_add_url": body_content_table_add_url,
+            "body_content_table_list_url": body_content_table_list_url,
+            "body_content_table_verbose_name": body_content_table_model._meta.verbose_name,
+            "body_content_table_verbose_name_plural": body_content_table_verbose_name_plural,
+            "more_queryset_count": more_queryset_count,
+        }
 
 
 class KeyValueTablePanel(Panel):
@@ -502,7 +616,6 @@ class KeyValueTablePanel(Panel):
         - Etc.
         """
         display = value
-
         if key in self.value_transforms:
             for transform in self.value_transforms[key]:
                 display = transform(display)
@@ -555,7 +668,6 @@ class KeyValueTablePanel(Panel):
                             count - 3,
                             model._meta.verbose_name if count - 3 == 1 else model._meta.verbose_name_plural,
                         )
-
         else:
             display = placeholder(localize(value))
 
@@ -1059,6 +1171,7 @@ class _ObjectDetailContactsTab(Tab):
                     table_key="associated_contacts_table",
                     # TODO: we should provide a standard reusable component template for bulk-actions in the footer
                     footer_content_template_path="components/panel/footer_contacts_table.html",
+                    header_extra_content_template_path=None,
                 ),
             )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)

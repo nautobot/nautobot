@@ -1,0 +1,3 @@
+{% load helpers %}
+
+<strong>{{ body_content_table_verbose_name_plural|bettertitle }}</strong>  {% if body_content_table_list_url %}<a href="{{ body_content_table_list_url }}" class="badge badge-primary">{{ body_content_table.rows|length }}</a>{% endif %}
