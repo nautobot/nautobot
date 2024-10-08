@@ -890,6 +890,7 @@ class APIViewTestCases:
             self.assertIn("actions", data)
 
             # Grab any field that has choices defined (fields with enums)
+            field_choices = {}
             if "POST" in data["actions"]:
                 field_choices = {k for k, v in data["actions"]["POST"].items() if "choices" in v}
             elif "PUT" in data["actions"]:
