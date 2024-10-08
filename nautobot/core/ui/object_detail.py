@@ -24,6 +24,7 @@ from nautobot.core.templatetags.helpers import (
     validated_viewname,
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
+from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.tenancy.models import Tenant
 
@@ -733,8 +734,8 @@ class StatsPanel(Panel):
     def __init__(
         self,
         *,
+        filter_name,
         stats=None,
-        filter_name=None,
         body_content_template_path="components/panel/stats_panel_body.html",
         **kwargs,
     ):
@@ -768,12 +769,7 @@ class StatsPanel(Panel):
             stats = {}
             for related_object_model_class, related_object_count in self.stats.items():
                 related_object_model_class_meta = related_object_model_class._meta
-                app_label, model_name = (
-                    related_object_model_class_meta.app_label,
-                    related_object_model_class_meta.model_name,
-                )
-
-                related_object_list_url = f"{app_label}:{model_name}_list"
+                related_object_list_url = get_route_for_model(related_object_model_class, "list")
                 related_object_title = bettertitle(related_object_model_class_meta.verbose_name_plural)
                 value = [related_object_list_url, related_object_count, related_object_title]
                 stats[related_object_model_class] = value

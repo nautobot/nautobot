@@ -1,8 +1,8 @@
 <div class="panel-body">
-    {% for key, value in stats.items %}
+    {% for url, value, title in stats.values %}
         <div class="col-md-4 text-center">
-            <h2><a href="{% url value.0 %}?{{ filter_name }}={{ object.pk }}" class="btn {% if value.1 > 0 %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ value.1 }}</a></h2>
-            <p>{{ value.2 }}</p>
+            <h2><a href="{% url url %}?{{ filter_name }}={{ object.pk }}" class="btn {% if value > 0 %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ value }}</a></h2>
+            <p>{{ title }}</p>
         </div>
     {% endfor %}
 </div>
