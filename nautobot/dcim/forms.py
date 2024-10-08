@@ -5200,18 +5200,31 @@ class VirtualDeviceContextForm(NautobotModelForm):
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
     )
+    tenant_group = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), to_field_name="name", required=False)
     tenant = DynamicModelChoiceField(
         queryset=Tenant.objects.all(),
+        query_params={"tenant_group": "$tenant_group"},
         required=False,
     )
     interfaces = DynamicModelMultipleChoiceField(
         queryset=Interface.objects.all(), required=False, query_params={"device": "$device"}
     )
     primary_ip4 = DynamicModelChoiceField(
-        queryset=IPAddress.objects.all(), required=False, query_params={"ip_version": 4, "interfaces": "$interfaces"}
+        queryset=IPAddress.objects.all(),
+        required=False,
+        query_params={"ip_version": 4, "interfaces": "$interfaces"},
+        label="Primary IPv4",
     )
     primary_ip6 = DynamicModelChoiceField(
-        queryset=IPAddress.objects.all(), required=False, query_params={"ip_version": 6, "interfaces": "$interfaces"}
+        queryset=IPAddress.objects.all(),
+        required=False,
+        query_params={"ip_version": 6, "interfaces": "$interfaces"},
+        label="Primary IPv4",
+    )
+    role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        required=False,
+        query_params={"content_types": VirtualDeviceContext._meta.label_lower},
     )
     status = DynamicModelChoiceField(
         queryset=Status.objects.all(),
@@ -5224,6 +5237,7 @@ class VirtualDeviceContextForm(NautobotModelForm):
         fields = [
             "name",
             "device",
+            "role",
             "status",
             "identifier",
             "interfaces",
