@@ -729,6 +729,66 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
         return result
 
 
+class StatsPanel(Panel):
+    def __init__(
+        self,
+        *,
+        stats=None,
+        filter_name=None,
+        body_content_template_path="components/panel/stats_panel_body.html",
+        **kwargs,
+    ):
+        """Instantiate a `StatsPanel`.
+
+        Args:
+            stats (dict): key/value pair of { <model_class>: <count of related_objects> }.
+            filter_name (str): a valid query filter append to the anchor tag for each stat button.
+        """
+
+        self.stats = stats
+        self.filter_name = filter_name
+        self.body_content_template_path = body_content_template_path
+        super().__init__(body_content_template_path="components/panel/stats_panel_body.html", **kwargs)
+
+    def should_render(self, context):
+        """Always should render this panel as the permission is reinforced in python with .restrict(request.user, "view")"""
+        return True
+
+    def render_body_content(self, context):
+        """
+        Transform self.stats to a dictionary with key, value pairs as follows:
+        {
+            <related_object_model_class_1>: [related_object_model_class_list_url_1, related_object_count_1, related_object_title_1],
+            <related_object_model_class_2>: [related_object_model_class_list_url_2, related_object_count_2, related_object_title_2],
+            <related_object_model_class_3>: [related_object_model_class_list_url_3, related_object_count_3, related_object_title_3],
+            ...
+        }
+        """
+        if self.body_content_template_path:
+            stats = {}
+            for related_object_model_class, related_object_count in self.stats.items():
+                related_object_model_class_meta = related_object_model_class._meta
+                app_label, model_name = (
+                    related_object_model_class_meta.app_label,
+                    related_object_model_class_meta.model_name,
+                )
+
+                related_object_list_url = f"{app_label}:{model_name}_list"
+                related_object_title = bettertitle(related_object_model_class_meta.verbose_name_plural)
+                value = [related_object_list_url, related_object_count, related_object_title]
+                stats[related_object_model_class] = value
+
+            return get_template(self.body_content_template_path).render(
+                {
+                    **context,
+                    "stats": stats,
+                    # TODO validate the filter
+                    "filter_name": self.filter_name,
+                }
+            )
+        return ""
+
+
 class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
     """A panel that renders a table of object custom fields."""
 

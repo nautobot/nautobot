@@ -33,6 +33,8 @@ from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import has_perms
+from nautobot.core.ui.choices import SectionChoices
+from nautobot.core.ui.object_detail import StatsPanel
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
@@ -281,24 +283,23 @@ class LocationView(generic.ObjectView):
             instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
         )
         stats = {
-            "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
-            "device_count": Device.objects.restrict(request.user, "view")
-            .filter(location__in=related_locations)
-            .count(),
-            "prefix_count": Prefix.objects.restrict(request.user, "view")
-            .filter(locations__in=related_locations)
-            .count(),
-            "vlan_count": VLAN.objects.restrict(request.user, "view")
+            Rack: Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
+            Device: Device.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
+            Prefix: Prefix.objects.restrict(request.user, "view").filter(locations__in=related_locations).count(),
+            VLAN: VLAN.objects.restrict(request.user, "view")
             .filter(locations__in=related_locations)
             .distinct()
             .count(),
-            "circuit_count": Circuit.objects.restrict(request.user, "view")
+            Circuit: Circuit.objects.restrict(request.user, "view")
             .filter(circuit_terminations__location__in=related_locations)
             .count(),
-            "vm_count": VirtualMachine.objects.restrict(request.user, "view")
+            VirtualMachine: VirtualMachine.objects.restrict(request.user, "view")
             .filter(cluster__location__in=related_locations)
             .count(),
         }
+        stats_panel = StatsPanel(
+            label="Stats", section=SectionChoices.RIGHT_HALF, weight=100, filter_name="location", stats=stats
+        )
         rack_groups = (
             RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
             .restrict(request.user, "view")
@@ -330,6 +331,7 @@ class LocationView(generic.ObjectView):
             "contact_association_permission": ["extras.add_contactassociation"],
             # show the button if any of these fields have non-empty value.
             "show_convert_to_contact_button": instance.contact_name or instance.contact_phone or instance.contact_email,
+            "stats_panel": [stats_panel],
             **super().get_extra_context(request, instance),
         }
 

@@ -1,6 +1,8 @@
 from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
+from nautobot.core.ui.choices import SectionChoices
+from nautobot.core.ui.object_detail import StatsPanel
 from nautobot.core.views import generic
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.dcim.models import Device, Location, Rack, RackReservation
@@ -81,26 +83,25 @@ class TenantView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         stats = {
-            "circuit_count": Circuit.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "cluster_count": Cluster.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "device_count": Device.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "ipaddress_count": IPAddress.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            Circuit: Circuit.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            Cluster: Cluster.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            Device: Device.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            IPAddress: IPAddress.objects.restrict(request.user, "view").filter(tenant=instance).count(),
             # TODO: Should we include child locations of the filtered locations in the location_count below?
-            "location_count": Location.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "prefix_count": Prefix.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "rack_count": Rack.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "rackreservation_count": RackReservation.objects.restrict(request.user, "view")
-            .filter(tenant=instance)
-            .count(),
-            "dynamicgroup_count": DynamicGroup.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "virtualmachine_count": VirtualMachine.objects.restrict(request.user, "view")
-            .filter(tenant=instance)
-            .count(),
-            "vlan_count": VLAN.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "vrf_count": VRF.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            Location: Location.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            Prefix: Prefix.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            Rack: Rack.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            RackReservation: RackReservation.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            DynamicGroup: DynamicGroup.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            VirtualMachine: VirtualMachine.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            VLAN: VLAN.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            VRF: VRF.objects.restrict(request.user, "view").filter(tenant=instance).count(),
         }
+        stats_panel = StatsPanel(
+            label="Stats", section=SectionChoices.RIGHT_HALF, weight=100, filter_name="tenant", stats=stats
+        )
 
-        return {"stats": stats, **super().get_extra_context(request, instance)}
+        return {"stats_panel": [stats_panel], **super().get_extra_context(request, instance)}
 
 
 class TenantEditView(generic.ObjectEditView):

@@ -1,0 +1,1 @@
+Refactored Location detail view and tenant detail view to use UI component Python class `StatsPanel`.
