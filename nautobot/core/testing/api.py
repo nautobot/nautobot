@@ -890,24 +890,10 @@ class APIViewTestCases:
             self.assertIn("actions", data)
 
             # Grab any field that has choices defined (fields with enums)
-            if any(
-                [
-                    "POST" in data["actions"],
-                    "PUT" in data["actions"],
-                ]
-            ):
-                schema = data["schema"]
-                props = schema["properties"]
-                fields = props.keys()
-                field_choices = set()
-                for field_name in fields:
-                    obj = props[field_name]
-                    if "enum" in obj and "enumNames" in obj:
-                        enum = obj["enum"]
-                        # Zipping to assert that the enum and the mapping have the same number of items.
-                        model_field_choices = dict(zip(obj["enumNames"], enum))
-                        self.assertEqual(len(enum), len(model_field_choices))
-                        field_choices.add(field_name)
+            if "POST" in data["actions"]:
+                field_choices = {k for k, v in data["actions"]["POST"].items() if "choices" in v}
+            elif "PUT" in data["actions"]:
+                field_choices = {k for k, v in data["actions"]["PUT"].items() if "choices" in v}
             else:
                 self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
 
