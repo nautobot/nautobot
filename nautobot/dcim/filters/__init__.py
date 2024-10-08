@@ -101,6 +101,7 @@ from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
+from nautobot.wireless.models import AccessPointGroup
 
 __all__ = (
     "CableFilterSet",
@@ -902,6 +903,11 @@ class DeviceFilterSet(
         queryset=SoftwareVersion.objects.all(),
         to_field_name="version",
         label="Software version (version or ID)",
+    )
+    access_point_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=AccessPointGroup.objects.all(),
+        to_field_name="name",
+        label="Access Point Group (name or ID)",
     )
 
     class Meta:

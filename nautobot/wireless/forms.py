@@ -11,7 +11,7 @@ from nautobot.core.forms import (
     StaticSelect2,
     TagFilterField,
 )
-from nautobot.core.forms.fields import JSONArrayChoiceFormField
+from nautobot.core.forms.fields import JSONArrayFormField
 from nautobot.dcim.models import Controller, Device, Location
 from nautobot.extras.forms import NautobotBulkEditForm, NautobotFilterForm, NautobotModelForm, TagsBulkEditFormMixin
 from nautobot.extras.models import SecretsGroup
@@ -120,6 +120,11 @@ class AccessPointGroupForm(NautobotModelForm):
         required=False,
         label="Radio Profiles",
     )
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+        label="Tenant",
+    )
 
     class Meta:
         model = AccessPointGroup
@@ -132,6 +137,10 @@ class AccessPointGroupForm(NautobotModelForm):
             "radio_profiles",
             "tags",
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["devices"].initial = self.instance.devices.all()
 
 
 class AccessPointGroupFilterForm(NautobotFilterForm, TenancyFilterForm):
@@ -257,7 +266,7 @@ class RadioProfileBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         required=False,
         widget=StaticSelect2(),
     )
-    channel_width = JSONArrayChoiceFormField(
+    channel_width = JSONArrayFormField(
         choices=add_blank_choice(RadioProfileChannelWidthChoices),
         base_field=forms.IntegerField(),
         required=False,

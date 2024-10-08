@@ -181,7 +181,7 @@ class RadioProfileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "rx_power_min": -90,
             "tags": [t.pk for t in Tag.objects.get_for_model(RadioProfile)],
         }
-        # Form data for JSONArrayChoiceField requires a JSON object, not a string
+        # Form data for JSONArrayField with choices requires a JSON object, not a string
         # but JSONArrayField renders the data as a string
         cls.expected_data = {
             "name": "New Radio Profile",
@@ -203,7 +203,7 @@ class RadioProfileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "regulatory_domain": choices.RadioProfileRegulatoryDomainChoices.JP,
             "rx_power_min": -89,
         }
-        # Form data for JSONArrayChoiceField requires a JSON object, not a string
+        # Form data for JSONArrayField with choices requires a JSON object, not a string
         # but JSONArrayField renders the data as a string
         cls.bulk_edit_expected_data = {
             "frequency": choices.RadioProfileFrequencyChoices.FREQUENCY_2_4G,
@@ -238,13 +238,16 @@ class RadioProfileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         if isinstance(self._get_queryset().first(), TreeNode):
             filter_by = self.slug_source if getattr(self, "slug_source", None) else "name"
             instance = self._get_queryset().get(**{filter_by: self.form_data.get(filter_by)})
+            # Override the self.form_data with self.expected_data in this overridden method
             self.assertInstanceEqual(instance, self.expected_data)
         else:
             if hasattr(self.model, "last_updated"):
                 instance = self._get_queryset().order_by("last_updated").last()
+                # Override the self.form_data with self.expected_data in this overridden method
                 self.assertInstanceEqual(instance, self.expected_data)
             else:
                 instance = self._get_queryset().last()
+                # Override the self.form_data with self.expected_data in this overridden method
                 self.assertInstanceEqual(instance, self.expected_data)
 
         if hasattr(self.model, "to_objectchange"):
@@ -310,11 +313,14 @@ class RadioProfileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         if isinstance(self._get_queryset().first(), TreeNode):
             filter_by = self.slug_source if getattr(self, "slug_source", None) else "name"
             instance = self._get_queryset().get(**{filter_by: self.form_data.get(filter_by)})
+            # Override the self.form_data with self.expected_data in this overridden method
             self.assertInstanceEqual(instance, self.expected_data)
         else:
             if hasattr(self.model, "last_updated"):
+                # Override the self.form_data with self.expected_data in this overridden method
                 self.assertInstanceEqual(self._get_queryset().order_by("last_updated").last(), self.expected_data)
             else:
+                # Override the self.form_data with self.expected_data in this overridden method
                 self.assertInstanceEqual(self._get_queryset().last(), self.expected_data)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -335,6 +341,7 @@ class RadioProfileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": utils.post_data(update_data),
         }
         self.assertHttpStatus(self.client.post(**request), 302)
+        # Override update_data with self.expected_data in this overridden method
         self.assertInstanceEqual(self._get_queryset().get(pk=instance.pk), self.expected_data)
 
         if hasattr(self.model, "to_objectchange"):
@@ -384,6 +391,7 @@ class RadioProfileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": utils.post_data(update_data),
         }
         self.assertHttpStatus(self.client.post(**request), 302)
+        # Override update_data with self.expected_data in this overridden method
         self.assertInstanceEqual(self._get_queryset().get(pk=instance1.pk), self.expected_data)
 
         # Try to edit a non-permitted object
@@ -395,4 +403,5 @@ class RadioProfileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     def validate_object_data_after_bulk_edit(self, pk_list):
         for instance in self._get_queryset().filter(pk__in=pk_list):
+            # Override the self.bulk_edit_data with self.bulk_edit_expected_data in this overridden method
             self.assertInstanceEqual(instance, self.bulk_edit_expected_data)

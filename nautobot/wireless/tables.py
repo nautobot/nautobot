@@ -269,3 +269,12 @@ class AccessPointGroupRadioProfileAssignmentTable(BaseTable):
 
     def render_allowed_channel_list(self, value):
         return ", ".join(f"{v}" for v in value)
+
+    def render_tx_power_min(self, value):
+        return f"{value} dBm"
+
+    def render_tx_power_max(self, value):
+        return f"{value} dBm"
+
+    def render_rx_power_min(self, value):
+        return f"{value} dBm"

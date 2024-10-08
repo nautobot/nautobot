@@ -114,6 +114,12 @@ class WirelessNetworkFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         to_field_name="name",
         label="Secrets group (name or ID)",
     )
+    access_point_groups = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="access_point_groups",
+        queryset=models.AccessPointGroup.objects.all(),
+        to_field_name="name",
+        label="Access Point Group (name or ID)",
+    )
     hidden = django_filters.BooleanFilter()
 
     class Meta:

@@ -4241,8 +4241,8 @@ class ControllerUIViewSet(NautobotUIViewSet):
 
         return context
 
-    @action(detail=True, url_path="wireless")
-    def wireless(self, request, *args, **kwargs):
+    @action(detail=True, url_path="wireless-networks", url_name="wirelessnetworks")
+    def wirelessnetworks(self, request, *args, **kwargs):
         instance = self.get_object()
         access_point_groups = instance.access_point_groups.restrict(request.user, "view").values_list("pk", flat=True)
         wireless_networks = AccessPointGroupWirelessNetworkAssignment.objects.filter(
@@ -4257,6 +4257,24 @@ class ControllerUIViewSet(NautobotUIViewSet):
         return Response(
             {
                 "wireless_networks_table": wireless_networks_table,
+                "active_tab": "wireless",
+            }
+        )
+
+    @action(detail=True, url_path="wireless-devices", url_name="wirelessdevices")
+    def wirelessdevices(self, request, *args, **kwargs):
+        instance = self.get_object()
+        access_point_groups = instance.access_point_groups.restrict(request.user, "view").values_list("pk", flat=True)
+        devices = Device.objects.filter(access_point_group__in=list(access_point_groups)).select_related(
+            "access_point_group"
+        )
+        wireless_devices_table = tables.AccessPointGroupDeviceTable(data=devices, user=request.user, orderable=False)
+
+        RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(wireless_devices_table)
+
+        return Response(
+            {
+                "wireless_devices_table": wireless_devices_table,
                 "active_tab": "wireless",
             }
         )
