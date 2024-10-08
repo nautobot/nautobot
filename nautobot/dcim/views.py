@@ -234,6 +234,7 @@ class LocationTypeUIViewSet(
                 weight=200,
                 table_key="locations_table",
                 table_title="Location(s) of this Type",
+                exclude_fields=["location_type"],
             ),
         ),
     )
@@ -249,13 +250,6 @@ class LocationTypeUIViewSet(
         children_table = tables.LocationTypeTable(children)
         locations_table = tables.LocationTable(locations)
         locations_table.columns.hide("location_type")
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(children_table)
-        RequestConfig(request, paginate).configure(locations_table)
 
         return {
             "children_table": children_table,

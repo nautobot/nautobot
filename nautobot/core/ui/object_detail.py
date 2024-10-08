@@ -4,6 +4,7 @@ import contextlib
 from dataclasses import dataclass
 import logging
 
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.db.models.fields import BooleanField, URLField
@@ -25,8 +26,8 @@ from nautobot.core.templatetags.helpers import (
     hyperlinked_object_with_color,
     placeholder,
     render_boolean,
+    render_content_types,
     render_json,
-    render_m2m,
     render_markdown,
     render_tree_queryset,
     validated_viewname,
@@ -691,10 +692,23 @@ class KeyValueTablePanel(Panel):
         result = format_html("")
         for key, value in data.items():
             key_display = self.render_key(key, value, context)
-            value_display = self.render_value(key, value, context)
-            if value_display:
-                # TODO: add a copy button on hover to all display items
-                result += format_html("<tr><td>{key}</td><td>{value}</td></tr>", key=key_display, value=value_display)
+            if value_display := self.render_value(key, value, context):
+                if value in [None, ""]:
+                    value_tag = value_display
+                else:
+                    value_tag = format_html(
+                        """
+                            <span class="hover_copy">
+                                <span id="{key}_copy">{value}</span>
+                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#{key}_copy">
+                                    <span class="mdi mdi-content-copy"></span>
+                                </button>
+                            </span>
+                        """,
+                        key=key,
+                        value=value_display,
+                    )
+                result += format_html("<tr><td>{key}</td><td>{value}</td></tr>", key=key_display, value=value_tag)
 
         return result
 
@@ -748,13 +762,13 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             return render_tree_queryset(value)
 
         if isinstance(field_instance, URLField):
-            return hyperlinked_field(value, value)
+            return hyperlinked_field(value)
 
         if isinstance(field_instance, BooleanField):
             return render_boolean(value)
 
-        if isinstance(field_instance, ManyToManyField):
-            return render_m2m(value.all())
+        if isinstance(field_instance, ManyToManyField) and field_instance.related_model == ContentType:
+            return render_content_types(value)
 
         return super().render_value(key, value, context)
 
@@ -777,7 +791,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             for field in instance._meta.get_fields():
                 if field.hidden or field.name.startswith("_"):
                     continue
-                if field.name in ("id", "created", "last_updated"):
+                if field.name in ("id", "created", "last_updated", "tags", "comments"):
                     # Handled elsewhere in the detail view
                     continue
                 if field.is_relation and field.one_to_many:
