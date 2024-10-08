@@ -170,9 +170,7 @@ class RadioProfileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "frequency": choices.RadioProfileFrequencyChoices.FREQUENCY_5G,
             "tx_power_min": 1,
             "tx_power_max": 10,
-            # Due to a bug in the way this is stored, using numbers that will be in order
-            # whether sorting by string or integer.
-            "allowed_channel_list": "1,11,36",
+            "allowed_channel_list": "1,6,11,36,161,165",
             "channel_width": [20, 40],
             "regulatory_domain": choices.RadioProfileRegulatoryDomainChoices.US,
             "rx_power_min": -90,
@@ -185,7 +183,7 @@ class RadioProfileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "frequency": choices.RadioProfileFrequencyChoices.FREQUENCY_5G,
             "tx_power_min": 1,
             "tx_power_max": 10,
-            "allowed_channel_list": "1,11,36",
+            "allowed_channel_list": "1,6,11,36,161,165",
             "channel_width": "20,40",
             "regulatory_domain": choices.RadioProfileRegulatoryDomainChoices.US,
             "rx_power_min": -90,
