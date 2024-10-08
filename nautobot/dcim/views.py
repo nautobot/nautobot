@@ -265,7 +265,6 @@ class LocationListView(generic.ObjectListView):
     filterset = filters.LocationFilterSet
     filterset_form = forms.LocationFilterForm
     table = tables.LocationTable
-    use_new_ui = True
 
 
 class LocationView(generic.ObjectView):
@@ -274,7 +273,6 @@ class LocationView(generic.ObjectView):
     # automatically issue a second query (similar to behavior for
     # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
     queryset = Location.objects.without_tree_fields().all()
-    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         related_locations = (
@@ -813,12 +811,10 @@ class DeviceTypeListView(generic.ObjectListView):
     filterset_form = forms.DeviceTypeFilterForm
     table = tables.DeviceTypeTable
     template_name = "dcim/devicetype_list.html"
-    use_new_ui = True
 
 
 class DeviceTypeView(generic.ObjectView):
     queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_image_files")
-    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         instance_count = Device.objects.restrict(request.user).filter(device_type=instance).count()
@@ -1756,7 +1752,6 @@ class DeviceListView(generic.ObjectListView):
     filterset_form = forms.DeviceFilterForm
     table = tables.DeviceTable
     template_name = "dcim/device_list.html"
-    use_new_ui = True
 
 
 class DeviceView(generic.ObjectView):
@@ -1771,7 +1766,6 @@ class DeviceView(generic.ObjectView):
         "software_version",
         "status",
     )
-    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         # VirtualChassis members
