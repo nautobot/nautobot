@@ -207,8 +207,6 @@
   Public Interface: "nautobot.apps.exceptions.CeleryWorkerNotRunningException"
 - Nautobot Location: "nautobot.core.exceptions.FilterSetFieldNotFound"
   Public Interface: "nautobot.apps.exceptions.FilterSetFieldNotFound"
-- Nautobot Location: "nautobot.core.exceptions.ViewConfigException"
-  Public Interface: "nautobot.apps.exceptions.ViewConfigException"
 - Nautobot Location: "nautobot.core.runner.importer.ConfigurationError"
   Public Interface: "nautobot.apps.exceptions.ConfigurationError"
 - Nautobot Location: "nautobot.extras.secrets.exceptions.SecretError"
