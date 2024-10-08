@@ -1,7 +1,18 @@
-from nautobot.core.testing import ViewTestCases
+import uuid
+
+from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
+from django.test import override_settings
+from tree_queries.models import TreeNode
+
+from nautobot.core.testing import utils, ViewTestCases
+from nautobot.core.utils import lookup
 from nautobot.dcim.models import Controller
+from nautobot.extras import choices as extras_choices
 from nautobot.extras.models import SecretsGroup, Tag
 from nautobot.tenancy.models import Tenant
+from nautobot.users import models as users_models
 from nautobot.wireless import choices
 from nautobot.wireless.models import AccessPointGroup, RadioProfile, SupportedDataRate, WirelessNetwork
 
@@ -159,7 +170,23 @@ class RadioProfileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "frequency": choices.RadioProfileFrequencyChoices.FREQUENCY_5G,
             "tx_power_min": 1,
             "tx_power_max": 10,
-            # "allowed_channel_list": "36,37",
+            # Due to a bug in the way this is stored, using numbers that will be in order
+            # whether sorting by string or integer.
+            "allowed_channel_list": "1,11,36",
+            "channel_width": [20, 40],
+            "regulatory_domain": choices.RadioProfileRegulatoryDomainChoices.US,
+            "rx_power_min": -90,
+            "tags": [t.pk for t in Tag.objects.get_for_model(RadioProfile)],
+        }
+        # Form data for JSONArrayChoiceField requires a JSON object, not a string
+        # but JSONArrayField renders the data as a string
+        cls.expected_data = {
+            "name": "New Radio Profile",
+            "frequency": choices.RadioProfileFrequencyChoices.FREQUENCY_5G,
+            "tx_power_min": 1,
+            "tx_power_max": 10,
+            "allowed_channel_list": "1,11,36",
+            "channel_width": "20,40",
             "regulatory_domain": choices.RadioProfileRegulatoryDomainChoices.US,
             "rx_power_min": -90,
             "tags": [t.pk for t in Tag.objects.get_for_model(RadioProfile)],
@@ -168,7 +195,201 @@ class RadioProfileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "frequency": choices.RadioProfileFrequencyChoices.FREQUENCY_2_4G,
             "tx_power_min": 2,
             "tx_power_max": 11,
-            # "allowed_channel_list": "1,2",
+            "allowed_channel_list": "1,2",
+            "channel_width": [20, 40, 80, 160],
             "regulatory_domain": choices.RadioProfileRegulatoryDomainChoices.JP,
             "rx_power_min": -89,
         }
+        # Form data for JSONArrayChoiceField requires a JSON object, not a string
+        # but JSONArrayField renders the data as a string
+        cls.bulk_edit_expected_data = {
+            "frequency": choices.RadioProfileFrequencyChoices.FREQUENCY_2_4G,
+            "tx_power_min": 2,
+            "tx_power_max": 11,
+            "allowed_channel_list": "1,2",
+            "channel_width": "20,40,80,160",
+            "regulatory_domain": choices.RadioProfileRegulatoryDomainChoices.JP,
+            "rx_power_min": -89,
+        }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_object_with_permission(self):
+        """Override the default test to support the channel_width field."""
+        initial_count = self._get_queryset().count()
+
+        # Assign unconstrained permission
+        self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+
+        # Try GET with model-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+
+        # Try POST with model-level permission
+        request = {
+            "path": self._get_url("add"),
+            "data": utils.post_data(self.form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(initial_count + 1, self._get_queryset().count())
+        # order_by() is no supported by django TreeNode,
+        # So we directly retrieve the instance by "slug" or "name".
+        if isinstance(self._get_queryset().first(), TreeNode):
+            filter_by = self.slug_source if getattr(self, "slug_source", None) else "name"
+            instance = self._get_queryset().get(**{filter_by: self.form_data.get(filter_by)})
+            self.assertInstanceEqual(instance, self.expected_data)
+        else:
+            if hasattr(self.model, "last_updated"):
+                instance = self._get_queryset().order_by("last_updated").last()
+                self.assertInstanceEqual(instance, self.expected_data)
+            else:
+                instance = self._get_queryset().last()
+                self.assertInstanceEqual(instance, self.expected_data)
+
+        if hasattr(self.model, "to_objectchange"):
+            # Verify ObjectChange creation
+            objectchanges = lookup.get_changes_for_model(instance)
+            self.assertEqual(len(objectchanges), 1)
+            # Assert that Created By table row is updated with the user that created the object
+            self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_CREATE)
+            # Validate if detail view exists
+            validate = URLValidator()
+            try:
+                detail_url = instance.get_absolute_url()
+                validate(detail_url)
+                response = self.client.get(detail_url)
+                response_body = utils.extract_page_body(response.content.decode(response.charset))
+                advanced_tab_href = f"{detail_url}#advanced"
+                self.assertIn(advanced_tab_href, response_body)
+                self.assertIn("<td>Created By</td>", response_body)
+                self.assertIn("<td>nautobotuser</td>", response_body)
+            except (AttributeError, ValidationError):
+                # Instance does not have a valid detail view, do nothing here.
+                pass
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_object_with_constrained_permission(self):
+        """Override the default test to support the channel_width field."""
+        initial_count = self._get_queryset().count()
+
+        # Assign constrained permission
+        obj_perm = users_models.ObjectPermission(
+            name="Test permission",
+            constraints={"pk": str(uuid.uuid4())},  # Match a non-existent pk (i.e., deny all)
+            actions=["add"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with object-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+
+        # Try to create an object (not permitted)
+        request = {
+            "path": self._get_url("add"),
+            "data": utils.post_data(self.form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 200)
+        self.assertEqual(initial_count, self._get_queryset().count())  # Check that no object was created
+
+        # Update the ObjectPermission to allow creation
+        obj_perm.constraints = {"pk__isnull": False}
+        obj_perm.save()
+
+        # Try to create an object (permitted)
+        request = {
+            "path": self._get_url("add"),
+            "data": utils.post_data(self.form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(initial_count + 1, self._get_queryset().count())
+        # order_by() is no supported by django TreeNode,
+        # So we directly retrieve the instance by "slug".
+        if isinstance(self._get_queryset().first(), TreeNode):
+            filter_by = self.slug_source if getattr(self, "slug_source", None) else "name"
+            instance = self._get_queryset().get(**{filter_by: self.form_data.get(filter_by)})
+            self.assertInstanceEqual(instance, self.expected_data)
+        else:
+            if hasattr(self.model, "last_updated"):
+                self.assertInstanceEqual(self._get_queryset().order_by("last_updated").last(), self.expected_data)
+            else:
+                self.assertInstanceEqual(self._get_queryset().last(), self.expected_data)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_object_with_permission(self):
+        """Override the default test to support the channel_width field."""
+        instance = self._get_queryset().first()
+
+        # Assign model-level permission
+        self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+
+        # Try GET with model-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("edit", instance)), 200)
+
+        # Try POST with model-level permission
+        update_data = self.update_data or self.form_data
+        request = {
+            "path": self._get_url("edit", instance),
+            "data": utils.post_data(update_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertInstanceEqual(self._get_queryset().get(pk=instance.pk), self.expected_data)
+
+        if hasattr(self.model, "to_objectchange"):
+            # Verify ObjectChange creation
+            objectchanges = lookup.get_changes_for_model(instance)
+            self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
+            # Validate if detail view exists
+            validate = URLValidator()
+            try:
+                detail_url = instance.get_absolute_url()
+                validate(detail_url)
+                response = self.client.get(detail_url)
+                response_body = utils.extract_page_body(response.content.decode(response.charset))
+                advanced_tab_href = f"{detail_url}#advanced"
+                self.assertIn(advanced_tab_href, response_body)
+                self.assertIn("<td>Last Updated By</td>", response_body)
+                self.assertIn("<td>nautobotuser</td>", response_body)
+            except (AttributeError, ValidationError):
+                # Instance does not have a valid detail view, do nothing here.
+                pass
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_object_with_constrained_permission(self):
+        """Override the default test to support the channel_width field."""
+        instance1, instance2 = self._get_queryset().all()[:2]
+
+        # Assign constrained permission
+        obj_perm = users_models.ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance1.pk},
+            actions=["change"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Try GET with a permitted object
+        self.assertHttpStatus(self.client.get(self._get_url("edit", instance1)), 200)
+
+        # Try GET with a non-permitted object
+        self.assertHttpStatus(self.client.get(self._get_url("edit", instance2)), 404)
+
+        # Try to edit a permitted object
+        update_data = self.update_data or self.form_data
+        request = {
+            "path": self._get_url("edit", instance1),
+            "data": utils.post_data(update_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertInstanceEqual(self._get_queryset().get(pk=instance1.pk), self.expected_data)
+
+        # Try to edit a non-permitted object
+        request = {
+            "path": self._get_url("edit", instance2),
+            "data": utils.post_data(update_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 404)
+
+    def validate_object_data_after_bulk_edit(self, pk_list):
+        for instance in self._get_queryset().filter(pk__in=pk_list):
+            self.assertInstanceEqual(instance, self.bulk_edit_expected_data)

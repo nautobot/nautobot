@@ -9,8 +9,10 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
     NumericArrayField,
     StaticSelect2,
+#    StaticSelect2Multiple,
     TagFilterField,
 )
+from nautobot.core.forms.fields import JSONArrayChoiceFormField
 from nautobot.dcim.models import Controller, Device, Location
 from nautobot.extras.forms import NautobotBulkEditForm, NautobotFilterForm, NautobotModelForm, TagsBulkEditFormMixin
 from nautobot.extras.models import SecretsGroup
@@ -256,7 +258,11 @@ class RadioProfileBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         required=False,
         widget=StaticSelect2(),
     )
-    # TODO - channel_width on bulk edit form
+    channel_width = JSONArrayChoiceFormField(
+        choices=add_blank_choice(RadioProfileChannelWidthChoices),
+        base_field=forms.IntegerField(),
+        required=False,
+    )
 
     class Meta:
         nullable_fields = [
@@ -266,6 +272,7 @@ class RadioProfileBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
             "tx_power_min",
             "tx_power_max",
             "rx_power_min",
+            "channel_width",
         ]
 
 
