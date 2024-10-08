@@ -5,16 +5,21 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('wireless', '0001_initial'),
-        ('dcim', '0062_module_data_migration'),
+        ("wireless", "0001_initial"),
+        ("dcim", "0062_module_data_migration"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='device',
-            name='access_point_group',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='devices', to='wireless.accesspointgroup'),
+            model_name="device",
+            name="access_point_group",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="devices",
+                to="wireless.accesspointgroup",
+            ),
         ),
     ]

@@ -124,13 +124,18 @@ class SupportedDataRateTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 class RadioProfileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = RadioProfile
 
-
     @classmethod
     def setUpTestData(cls):
         supported_data_rates = (
-            SupportedDataRate.objects.create(rate=10000, standard=choices.SupportedDataRateStandardChoices.AC, mcs_index=1),
-            SupportedDataRate.objects.create(rate=60000, standard=choices.SupportedDataRateStandardChoices.AX, mcs_index=2),
-            SupportedDataRate.objects.create(rate=128000, standard=choices.SupportedDataRateStandardChoices.BE, mcs_index=3),
+            SupportedDataRate.objects.create(
+                rate=10000, standard=choices.SupportedDataRateStandardChoices.AC, mcs_index=1
+            ),
+            SupportedDataRate.objects.create(
+                rate=60000, standard=choices.SupportedDataRateStandardChoices.AX, mcs_index=2
+            ),
+            SupportedDataRate.objects.create(
+                rate=128000, standard=choices.SupportedDataRateStandardChoices.BE, mcs_index=3
+            ),
         )
         rp1 = RadioProfile.objects.create(
             name="Deletable Radio Profile 1",

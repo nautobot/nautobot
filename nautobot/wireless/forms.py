@@ -9,7 +9,6 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
     NumericArrayField,
     StaticSelect2,
-#    StaticSelect2Multiple,
     TagFilterField,
 )
 from nautobot.core.forms.fields import JSONArrayChoiceFormField
@@ -351,6 +350,7 @@ class WirelessNetworkBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         queryset=SecretsGroup.objects.all(),
         required=False,
     )
+
     class Meta:
         nullable_fields = [
             "description",
