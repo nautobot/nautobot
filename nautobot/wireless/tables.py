@@ -106,7 +106,7 @@ class SupportedDataRateTable(BaseTable):
     pk = ToggleColumn()
     rate = tables.Column(linkify=True)
     standard = tables.Column()
-    mcs_index = tables.Column()
+    mcs_index = tables.Column(verbose_name="MCS Index")
     tags = TagColumn(url_name="wireless:supporteddatarate_list")
     actions = ButtonsColumn(SupportedDataRate)
 
