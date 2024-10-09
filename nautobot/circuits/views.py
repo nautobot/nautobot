@@ -7,7 +7,7 @@ from django.utils.html import format_html
 from django_tables2 import RequestConfig
 
 from nautobot.core.forms import ConfirmationForm
-from nautobot.core.templatetags.helpers import bettertitle, humanize_speed, placeholder, render_markdown
+from nautobot.core.templatetags.helpers import bettertitle, humanize_speed, placeholder
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
@@ -109,17 +109,9 @@ class ProviderUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields="__all__",
-                exclude_fields=["comments"],
-            ),
-            ObjectFieldsPanel(
-                label="Comments",
-                weight=200,
-                section=SectionChoices.RIGHT_HALF,
-                fields=["comments"],
-                value_transforms={"comments": [render_markdown, placeholder]},
             ),
             ObjectsTablePanel(
-                weight=300,
+                weight=200,
                 table_key="circuits_table",
                 section=SectionChoices.FULL_WIDTH,
             ),
@@ -258,13 +250,6 @@ class CircuitUIViewSet(NautobotUIViewSet):
                 fields="__all__",
                 exclude_fields=["comments", "circuit_termination_a", "circuit_termination_z"],
                 value_transforms={"commit_rate": [humanize_speed, placeholder]},
-            ),
-            ObjectFieldsPanel(
-                label="Comments",
-                weight=200,
-                section=SectionChoices.LEFT_HALF,
-                fields=["comments"],
-                value_transforms={"comments": [render_markdown, placeholder]},
             ),
             CircuitTerminationPanel(
                 label="Termination - A Side",

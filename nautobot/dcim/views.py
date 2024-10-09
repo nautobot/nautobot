@@ -47,7 +47,7 @@ from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPane
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
-from nautobot.core.views import generic
+from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
     ObjectBulkDestroyViewMixin,
@@ -210,15 +210,43 @@ class BaseDeviceComponentTemplatesBulkRenameView(generic.BulkRenameView):
 #
 
 
-class LocationTypeListView(generic.ObjectListView):
+class LocationTypeUIViewSet(
+    view_mixins.ObjectDetailViewMixin,
+    view_mixins.ObjectListViewMixin,
+    view_mixins.ObjectEditViewMixin,
+    view_mixins.ObjectDestroyViewMixin,
+    view_mixins.ObjectBulkDestroyViewMixin,
+    view_mixins.ObjectBulkCreateViewMixin,  # 3.0 TODO: remove this mixin as it's no longer used
+    view_mixins.ObjectChangeLogViewMixin,
+    view_mixins.ObjectNotesViewMixin,
+):
     queryset = LocationType.objects.all()
-    filterset = filters.LocationTypeFilterSet
-    filterset_form = forms.LocationTypeFilterForm
-    table = tables.LocationTypeTable
+    filterset_class = filters.LocationTypeFilterSet
+    filterset_form_class = forms.LocationTypeFilterForm
+    table_class = tables.LocationTypeTable
+    form_class = forms.LocationTypeForm
+    serializer_class = serializers.LocationSerializer
 
-
-class LocationTypeView(generic.ObjectView):
-    queryset = LocationType.objects.all()
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            ObjectsTablePanel(
+                weight=100,
+                table_key="children_table",
+                table_title="Child Location Type(s)",
+            ),
+            ObjectsTablePanel(
+                weight=200,
+                table_key="locations_table",
+                table_title="Location(s) of this Type",
+                exclude_fields=["location_type"],
+            ),
+        ),
+    )
 
     def get_extra_context(self, request, instance):
         children = LocationType.objects.restrict(request.user, "view").filter(parent=instance).select_related("parent")
@@ -230,40 +258,12 @@ class LocationTypeView(generic.ObjectView):
 
         children_table = tables.LocationTypeTable(children)
         locations_table = tables.LocationTable(locations)
-        locations_table.columns.hide("location_type")
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(children_table)
-        RequestConfig(request, paginate).configure(locations_table)
 
         return {
             "children_table": children_table,
             "locations_table": locations_table,
             **super().get_extra_context(request, instance),
         }
-
-
-class LocationTypeEditView(generic.ObjectEditView):
-    queryset = LocationType.objects.all()
-    model_form = forms.LocationTypeForm
-
-
-class LocationTypeDeleteView(generic.ObjectDeleteView):
-    queryset = LocationType.objects.all()
-
-
-class LocationTypeBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = LocationType.objects.all()
-    table = tables.LocationTypeTable
-
-
-class LocationTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = LocationType.objects.all()
-    filterset = filters.LocationTypeFilterSet
-    table = tables.LocationTypeTable
 
 
 #
