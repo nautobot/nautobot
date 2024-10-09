@@ -108,11 +108,12 @@ class SupportedDataRateTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        SupportedDataRate.objects.create(rate=10000, standard=choices.SupportedDataRateStandardChoices.B, mcs_index=1)
-        SupportedDataRate.objects.create(rate=60000, standard=choices.SupportedDataRateStandardChoices.G, mcs_index=2)
-        SupportedDataRate.objects.create(rate=128000, standard=choices.SupportedDataRateStandardChoices.N, mcs_index=3)
+        # Use high rate values that won't conflict with the factory rates
+        SupportedDataRate.objects.create(rate=165000, standard=choices.SupportedDataRateStandardChoices.B, mcs_index=1)
+        SupportedDataRate.objects.create(rate=169000, standard=choices.SupportedDataRateStandardChoices.G, mcs_index=2)
+        SupportedDataRate.objects.create(rate=280000, standard=choices.SupportedDataRateStandardChoices.N, mcs_index=3)
         cls.form_data = {
-            "rate": 30000,
+            "rate": 300000,
             "standard": "802.11ac",
             "tags": [t.pk for t in Tag.objects.get_for_model(SupportedDataRate)],
         }
@@ -128,13 +129,13 @@ class RadioProfileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
         supported_data_rates = (
             SupportedDataRate.objects.create(
-                rate=10000, standard=choices.SupportedDataRateStandardChoices.AC, mcs_index=1
+                rate=1000000, standard=choices.SupportedDataRateStandardChoices.AC, mcs_index=1
             ),
             SupportedDataRate.objects.create(
-                rate=60000, standard=choices.SupportedDataRateStandardChoices.AX, mcs_index=2
+                rate=600000, standard=choices.SupportedDataRateStandardChoices.AX, mcs_index=2
             ),
             SupportedDataRate.objects.create(
-                rate=128000, standard=choices.SupportedDataRateStandardChoices.BE, mcs_index=3
+                rate=1280000, standard=choices.SupportedDataRateStandardChoices.BE, mcs_index=3
             ),
         )
         rp1 = RadioProfile.objects.create(
