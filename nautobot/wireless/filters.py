@@ -7,7 +7,7 @@ from nautobot.core.filters import (
     RelatedMembershipBooleanFilter,
     SearchFilter,
 )
-from nautobot.dcim.models import Controller
+from nautobot.dcim.models import Controller, Device
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import SecretsGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
@@ -27,6 +27,10 @@ class AccessPointGroupFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         queryset=Controller.objects.all(),
         to_field_name="name",
         label="Controller (name or ID)",
+    )
+    devices = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        label="Devices (name or ID)",
     )
     has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
@@ -57,6 +61,10 @@ class SupportedDataRateFilterSet(BaseFilterSet):
         queryset=models.RadioProfile.objects.all(),
         to_field_name="name",
         label="Radio Profile (name or ID)",
+    )
+    has_radio_profiles = RelatedMembershipBooleanFilter(
+        field_name="radio_profiles",
+        label="Has radio profiles",
     )
 
     class Meta:

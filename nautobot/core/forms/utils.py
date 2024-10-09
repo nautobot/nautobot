@@ -36,7 +36,7 @@ def parse_numeric_range(string, base=10):
         begin, end = int(begin.strip(), base=base), int(end.strip(), base=base) + 1
         values.extend(range(begin, end))
     # Remove duplicates and sort
-    return list(sorted(set(values)))
+    return sorted(set(values))
 
 
 def parse_alphanumeric_range(string):

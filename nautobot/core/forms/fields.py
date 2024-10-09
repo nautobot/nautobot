@@ -726,7 +726,7 @@ class JSONArrayFormField(django_forms.JSONField):
         for k, v in self.choices:
             if isinstance(v, (list, tuple)):
                 # This is an optgroup, so look inside the group for options
-                for k2, v2 in v:
+                for k2, _ in v:
                     if value == k2 or text_value == str(k2):
                         return True
             else:
