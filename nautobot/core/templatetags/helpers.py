@@ -370,6 +370,36 @@ def tzoffset(value):
 
 @library.filter()
 @register.filter()
+def format_time_zone(value):
+    """
+    Returns the timezone and the hour offset of the time zone using the current time.
+    """
+    timezone = value
+    offset = tzoffset(value)
+    # TODO: This should be but it is not working for some reason
+    # {% timezone "{}" %}{% now "SHORT_DATETIME_FORMAT" %}{% endtimezone %}
+    html_template = "{} (UTC {}) <br />" '<small class="text-muted">Local time: {}</small>'
+    return format_html(html_template, timezone, offset, timezone)
+
+
+@library.filter()
+@register.filter()
+def render_child_count(value):
+    """
+    Render the count of the location's child locations
+    """
+    if not value.all().exists():
+        return HTML_NONE
+
+    parent = value.first().parent
+    child_count = value.filter(parent=parent).count()
+    url = reverse("dcim:location_list")
+    html_template = '<a href="{}?parent={}">{}</a>'
+    return format_html(html_template, url, parent.pk, child_count)
+
+
+@library.filter()
+@register.filter()
 def fgcolor(value):
     """
     Return the ideal foreground color (block or white) given an arbitrary background color in RRGGBB format.

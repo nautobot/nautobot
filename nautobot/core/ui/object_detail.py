@@ -29,6 +29,7 @@ from nautobot.core.ui.choices import LayoutChoices, SectionChoices
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.dcim.models import Location
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.tenancy.models import Tenant
 
@@ -672,7 +673,8 @@ class KeyValueTablePanel(Panel):
             display = placeholder(localize(value))
 
         # TODO: apply additional smart formatting such as JSON/Markdown rendering, etc.
-
+        # TODO: apply template rendering as well. {% include 'dcim/inc/location_hierarchy.html' with location=object %}
+        # Not sure if that is possible
         return display
 
     def render_body_content(self, context):
@@ -783,7 +785,8 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             try:
                 field = instance._meta.get_field(key)
                 return bettertitle(field.verbose_name)
-            except FieldDoesNotExist:
+            # Not all fields have a verbose name, ManyToOneRel for example.
+            except (FieldDoesNotExist, AttributeError):
                 pass
 
         return super().render_key(key, value, context)
@@ -846,7 +849,8 @@ class StatsPanel(Panel):
         self,
         *,
         filter_name,
-        stats=None,
+        filter_pks=[],
+        related_field_names={},
         body_content_template_path="components/panel/stats_panel_body.html",
         **kwargs,
     ):
@@ -857,8 +861,9 @@ class StatsPanel(Panel):
             filter_name (str): a valid query filter append to the anchor tag for each stat button.
         """
 
-        self.stats = stats
         self.filter_name = filter_name
+        self.related_field_names = related_field_names
+        self.filter_pks = filter_pks
         self.body_content_template_path = body_content_template_path
         super().__init__(body_content_template_path="components/panel/stats_panel_body.html", **kwargs)
 
@@ -876,9 +881,24 @@ class StatsPanel(Panel):
             ...
         }
         """
+        instance = context["obj"]
+        request = context["request"]
+        if isinstance(instance, Location):
+            self.filter_pks = (
+                instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
+            )
+        else:
+            self.filter_pks = [instance.pk]
+
         if self.body_content_template_path:
             stats = {}
-            for related_object_model_class, related_object_count in self.stats.items():
+            if not self.related_field_names:
+                return ""
+            for related_object_model_class, query in self.related_field_names.items():
+                filter_dict = {query: self.filter_pks}
+                related_object_count = (
+                    related_object_model_class.objects.restrict(request.user, "view").filter(**filter_dict).count()
+                )
                 related_object_model_class_meta = related_object_model_class._meta
                 related_object_list_url = get_route_for_model(related_object_model_class, "list")
                 related_object_title = bettertitle(related_object_model_class_meta.verbose_name_plural)
