@@ -21,6 +21,7 @@ from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags.helpers import (
     badge,
     bettertitle,
+    HTML_NONE,
     hyperlinked_field,
     hyperlinked_object,
     hyperlinked_object_with_color,
@@ -698,8 +699,9 @@ class KeyValueTablePanel(Panel):
         panel_label = slugify(self.label or "")
         for key, value in data.items():
             key_display = self.render_key(key, value, context)
+
             if value_display := self.render_value(key, value, context):
-                if value in [None, ""]:
+                if value_display is HTML_NONE:
                     value_tag = value_display
                 else:
                     value_tag = format_html(
@@ -1113,11 +1115,12 @@ class _ObjectCommentPanel(ObjectFieldsPanel):
         label="Comments",
         section=SectionChoices.LEFT_HALF,
         weight=Panel.WEIGHT_COMMENTS_PANEL,
-        value_transforms={"comments": [render_markdown, placeholder]},
+        value_transforms=None,
         **kwargs,
     ):
         """Instantiate an `_ObjectCommentPanel`."""
         fields = ["comments"]
+        value_transforms = value_transforms or {"comments": [render_markdown, placeholder]}
         super().__init__(
             weight=weight,
             label=label,

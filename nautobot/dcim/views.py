@@ -257,17 +257,6 @@ class LocationTypeUIViewSet(
         }
 
 
-class LocationTypeBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = LocationType.objects.all()
-    table = tables.LocationTypeTable
-
-
-class LocationTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = LocationType.objects.all()
-    filterset = filters.LocationTypeFilterSet
-    table = tables.LocationTypeTable
-
-
 #
 # Locations
 #

@@ -630,16 +630,15 @@ def hyperlinked_field(value, hyperlink=None):
 @register.filter()
 def render_content_types(value):
     """Render sorted by model and app_label ContentTypes value"""
-    if value.exists() is False:
+    if not value.exists():
         return HTML_NONE
-    sorted_content_types = sorted(value.all(), key=lambda ct: (ct.model, ct.app_label))
-
     output = format_html("<ul>")
-    for content_type in sorted_content_types:
+    sorted_value = value.order_by("app_label", "model")
+    for content_type in sorted_value:
         output += format_html("<li>{content_type}</li>", content_type=content_type)
     output += format_html("</ul>")
 
-    return format_html(output)
+    return output
 
 
 @library.filter()

@@ -109,7 +109,6 @@ class ProviderUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields="__all__",
-                exclude_fields=["comments"],
             ),
             ObjectsTablePanel(
                 weight=200,
