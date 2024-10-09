@@ -623,7 +623,7 @@ def hyperlinked_field(value, hyperlink=None):
     if not value:
         return placeholder(value)
     hyperlink = hyperlink or value
-    return format_html('<a href="{}">{}</a>', value, hyperlink)
+    return format_html('<a href="{}">{}</a>', hyperlink, value)
 
 
 @library.filter()
@@ -647,18 +647,18 @@ def render_content_types(value):
 def render_tree_queryset(value):
     """Renders a tree queryset as an HTML nested list."""
     result = format_html('<ul class="tree-hierarchy">')
-    append_to_result = format_html("")
+    append_to_result = format_html("</ul>")
     for ancestor in value.ancestors():
         nestable_tag = format_html('<span title="nestable">↺</span>' if getattr(ancestor, "nestable", False) else "")
         result += format_html(
             "<li>{value} {nestable_tag}<ul>", value=hyperlinked_object(ancestor, "name"), nestable_tag=nestable_tag
         )
         append_to_result += format_html("</ul></li>")
-    nestable_tag = format_html('<span title="nestable">↺</span>' if getattr(ancestor, "nestable", False) else "")
-    result += format_html("<li><strong>{value}{nestable_tag}</strong></li>", value=value, nestable_tag=nestable_tag)
-    result += format_html("{value}</ul>", value=append_to_result)
+    nestable_tag = format_html('<span title="nestable">↺</span>' if getattr(value, "nestable", False) else "")
+    result += format_html("<li><strong>{value} {nestable_tag}</strong></li>", value=value, nestable_tag=nestable_tag)
+    result += append_to_result
 
-    return format_html(result)
+    return result
 
 
 #

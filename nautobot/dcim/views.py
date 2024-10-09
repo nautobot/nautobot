@@ -249,7 +249,6 @@ class LocationTypeUIViewSet(
 
         children_table = tables.LocationTypeTable(children)
         locations_table = tables.LocationTable(locations)
-        locations_table.columns.hide("location_type")
 
         return {
             "children_table": children_table,
