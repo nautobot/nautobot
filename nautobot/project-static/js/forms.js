@@ -271,7 +271,7 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                                     }
                                     // If the element is in a table row with a class containing "dynamic-formset"
                                     // We need to find the reference field in the same row
-                                    else if ($(element).closest("tr") && $(element).closest("tr").attr("class").includes("dynamic-formset")){
+                                    else if ($(element).closest("tr") && $(element).closest("tr").attr("class") && $(element).closest("tr").attr("class").includes("dynamic-formset")){
                                         ref_field = $(element).closest("tr").find("select[id*=" + value.slice(1) + "]");
                                     }
                                     else {
