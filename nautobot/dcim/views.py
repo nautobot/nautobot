@@ -4257,7 +4257,7 @@ class ControllerUIViewSet(NautobotUIViewSet):
         return Response(
             {
                 "wireless_networks_table": wireless_networks_table,
-                "active_tab": "wireless",
+                "active_tab": "wireless-networks",
             }
         )
 
@@ -4275,7 +4275,7 @@ class ControllerUIViewSet(NautobotUIViewSet):
         return Response(
             {
                 "wireless_devices_table": wireless_devices_table,
-                "active_tab": "wireless",
+                "active_tab": "wireless-devices",
             }
         )
 
