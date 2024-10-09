@@ -220,10 +220,6 @@ class Location(TreeModel, PrimaryModel):
     def __str__(self):
         return self.name
 
-    @property
-    def hierarchy(self):
-        return self
-
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def natural_key_field_lookups(cls):  # pylint: disable=no-self-argument
         """

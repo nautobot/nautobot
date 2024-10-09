@@ -38,7 +38,6 @@ from nautobot.core.ui.choices import LayoutChoices, SectionChoices
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.dcim.models import Location
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.tenancy.models import Tenant
 
@@ -937,7 +936,7 @@ class StatsPanel(Panel):
         """
         instance = context.get("obj") or context.get("object")
         request = context["request"]
-        if isinstance(instance, Location):
+        if isinstance(instance, TreeModel):
             self.filter_pks = (
                 instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
             )

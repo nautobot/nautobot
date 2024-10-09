@@ -39,7 +39,6 @@ from nautobot.core.templatetags.helpers import (
     hyperlinked_email,
     hyperlinked_phone_number,
     placeholder,
-    render_child_count,
 )
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel, StatsPanel
@@ -289,6 +288,7 @@ class LocationView(generic.ObjectView):
     class ContactPanel(ObjectFieldsPanel):
         def __init__(self, **kwargs):
             super().__init__(
+                footer_content_template_path="dcim/inc/location_contact_panel_footer.html",
                 fields=(
                     "contact_name",
                     "contact_phone",
@@ -313,7 +313,6 @@ class LocationView(generic.ObjectView):
                 fields=[
                     "location_type",
                     "status",
-                    "hierarchy",
                     "tenant",
                     "facility",
                     "asn",
@@ -322,10 +321,8 @@ class LocationView(generic.ObjectView):
                     "children",
                 ],
                 value_transforms={
-                    # TODO figure out how to render this
-                    # "hierarchy": ["dcim/inc/location_hierarchy.html"],
                     "time_zone": [format_time_zone],
-                    "children": [render_child_count, placeholder],
+                    "children": [placeholder],
                 },
             ),
             ObjectFieldsPanel(
@@ -342,7 +339,6 @@ class LocationView(generic.ObjectView):
                 label="Contact Info",
                 section=SectionChoices.LEFT_HALF,
                 weight=120,
-                footer_content_template_path="components/panel/contact_panel_footer.html",
             ),
             StatsPanel(
                 label="Stats",
@@ -361,7 +357,7 @@ class LocationView(generic.ObjectView):
             ),
             ObjectsTablePanel(
                 label="Child",
-                weight=300,
+                weight=100,
                 table_key="children_table",
                 section=SectionChoices.FULL_WIDTH,
             ),
