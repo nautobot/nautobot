@@ -40,7 +40,6 @@ from nautobot.core.templatetags.helpers import (
     hyperlinked_phone_number,
     placeholder,
     render_child_count,
-    render_markdown,
 )
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel, StatsPanel
@@ -344,13 +343,6 @@ class LocationView(generic.ObjectView):
                 section=SectionChoices.LEFT_HALF,
                 weight=120,
                 footer_content_template_path="components/panel/contact_panel_footer.html",
-            ),
-            ObjectFieldsPanel(
-                label="Comments",
-                weight=130,
-                section=SectionChoices.LEFT_HALF,
-                fields=["comments"],
-                value_transforms={"comments": [render_markdown, placeholder]},
             ),
             StatsPanel(
                 label="Stats",

@@ -910,7 +910,8 @@ class StatsPanel(Panel):
         """Instantiate a `StatsPanel`.
 
         Args:
-            stats (dict): key/value pair of { <model_class>: <count of related_objects> }.
+            related_field_names (dict): key/value pair of { <model_class>: <query_strings> }.
+            filter_pks (list of uuids): the list of pks work in tandem with the query_strings.
             filter_name (str): a valid query filter append to the anchor tag for each stat button.
         """
 
@@ -926,7 +927,7 @@ class StatsPanel(Panel):
 
     def render_body_content(self, context):
         """
-        Transform self.stats to a dictionary with key, value pairs as follows:
+        Transform self.related_field_names to a dictionary with key, value pairs as follows:
         {
             <related_object_model_class_1>: [related_object_model_class_list_url_1, related_object_count_1, related_object_title_1],
             <related_object_model_class_2>: [related_object_model_class_list_url_2, related_object_count_2, related_object_title_2],

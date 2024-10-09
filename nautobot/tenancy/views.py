@@ -1,7 +1,6 @@
 from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
-from nautobot.core.templatetags.helpers import placeholder, render_markdown
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, StatsPanel
 from nautobot.core.views import generic
@@ -90,13 +89,6 @@ class TenantView(generic.ObjectView):
                     "tenant_group",
                     "description",
                 ],
-            ),
-            ObjectFieldsPanel(
-                label="Comments",
-                weight=150,
-                section=SectionChoices.LEFT_HALF,
-                fields=["comments"],
-                value_transforms={"comments": [render_markdown, placeholder]},
             ),
             StatsPanel(
                 label="Stats",
