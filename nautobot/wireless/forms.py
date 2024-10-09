@@ -179,16 +179,6 @@ class AccessPointGroupBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         required=False,
     )
     name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-    add_devices = DynamicModelMultipleChoiceField(
-        queryset=Device.objects.all(),
-        required=False,
-        label="Add Devices",
-    )
-    remove_devices = DynamicModelMultipleChoiceField(
-        queryset=Device.objects.all(),
-        required=False,
-        label="Remove Devices",
-    )
     add_radio_profiles = DynamicModelMultipleChoiceField(
         queryset=RadioProfile.objects.all(),
         required=False,
@@ -376,6 +366,4 @@ class WirelessNetworkBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         nullable_fields = [
             "description",
             "secrets_group",
-            "enabled",
-            "hidden",
         ]

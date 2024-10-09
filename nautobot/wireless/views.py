@@ -109,10 +109,6 @@ class AccessPointGroupUIViewSet(NautobotUIViewSet):
             obj.radio_profiles.add(*form.cleaned_data["add_radio_profiles"])
         if form.cleaned_data.get("remove_radio_profiles", None):
             obj.radio_profiles.remove(*form.cleaned_data["remove_radio_profiles"])
-        # if form.cleaned_data.get("add_devices", None):
-        #     obj.devices.add(*form.cleaned_data["add_devices"])
-        # if form.cleaned_data.get("remove_devices", None):
-        #     obj.devices.remove(*form.cleaned_data["remove_devices"])
 
     @action(detail=True, url_path="devices")
     def devices(self, request, *args, **kwargs):
