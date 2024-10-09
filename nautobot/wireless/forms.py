@@ -1,4 +1,3 @@
-from typing import Any
 from django import forms
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -35,19 +34,6 @@ from .choices import (
     WirelessNetworkAuthenticationChoices,
     WirelessNetworkModeChoices,
 )
-
-
-class AccessPointGroupWirelessNetworkAssignmentBaseFormSet(forms.BaseInlineFormSet):
-    def clean(self):
-        super().clean()
-        raise forms.ValidationError(f"This is a test.")
-        raise forms.ValidationError(f"self.instance: {self.instance}")
-        for form in self.forms:
-            if form.cleaned_data:
-                vlan = form.cleaned_data["vlan"]
-                if vlan in vlans:
-                    raise forms.ValidationError("Duplicate VLAN assignment detected")
-                vlans.add(vlan)
 
 
 class AccessPointGroupWirelessNetworkAssignmentForm(BootstrapMixin, forms.ModelForm):
@@ -116,7 +102,6 @@ AccessPointGroupWirelessNetworkFormSet = forms.inlineformset_factory(
     parent_model=AccessPointGroup,
     model=AccessPointGroupWirelessNetworkAssignment,
     form=AccessPointGroupWirelessNetworkAssignmentForm,
-    # formset=AccessPointGroupWirelessNetworkAssignmentBaseFormSet,
     exclude=["access_point_group"],
     extra=5,
 )
@@ -126,7 +111,6 @@ WirelessNetworkAccessPointGroupFormSet = forms.inlineformset_factory(
     parent_model=WirelessNetwork,
     model=AccessPointGroupWirelessNetworkAssignment,
     form=AccessPointGroupWirelessNetworkAssignmentForm,
-    formset=AccessPointGroupWirelessNetworkAssignmentBaseFormSet,
     exclude=["wireless_network"],
     extra=5,
 )
