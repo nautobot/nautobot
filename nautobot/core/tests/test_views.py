@@ -648,3 +648,15 @@ class TestObjectDetailView(TestCase):
         # Assert view X more btn
         view_more_btn = f"""<a href="{view_move_url}"><span class="mdi mdi-dots-horizontal" aria-hidden="true"></span>View 5 more circuits</a>"""
         self.assertInHTML(view_more_btn, response_data)
+
+        # Validate Copy btn on all rows excluding empty rows
+        name_copy = f"""
+        <span class="hover_copy">
+            <span id="_value_name">{provider.name}</span>
+            <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#_value_name">
+                <span class="mdi mdi-content-copy"></span>
+            </button>
+        </span>"""
+        self.assertInHTML(name_copy, response_data)
+        # ASN do not have a value, therefore no copy btn
+        self.assertNotIn("#asn_copy", response_data)
