@@ -2159,7 +2159,9 @@ class DeviceWirelessView(generic.ObjectView):
         )
         wireless_networks_table.columns.hide("access_point_group")
         wireless_networks_table.columns.hide("controller")
-        RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(wireless_networks_table)
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(wireless_networks_table)
 
         radio_profiles = AccessPointGroupRadioProfileAssignment.objects.filter(
             access_point_group=access_point_group
@@ -2168,7 +2170,9 @@ class DeviceWirelessView(generic.ObjectView):
             data=radio_profiles, user=request.user, orderable=False
         )
         radio_profiles_table.columns.hide("access_point_group")
-        RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(radio_profiles_table)
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(radio_profiles_table)
 
         return {
             "wireless_networks_table": wireless_networks_table,
@@ -4252,7 +4256,9 @@ class ControllerUIViewSet(NautobotUIViewSet):
             data=wireless_networks, user=request.user, orderable=False
         )
 
-        RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(wireless_networks_table)
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(wireless_networks_table)
 
         return Response(
             {

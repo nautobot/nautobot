@@ -263,7 +263,7 @@ class RadioProfileRegulatoryDomainChoices(ChoiceSet):
         (GR, "Greece (GR)"),
         (GT, "Guatemala (GT)"),
         (GY, "Guyana (GY)"),
-        (HN, "Hondura (HN)"),
+        (HN, "Honduras (HN)"),
         (HK, "Hong Kong (HK)"),
         (HR, "Croatia (HR)"),
         (HU, "Hungary (HU)"),

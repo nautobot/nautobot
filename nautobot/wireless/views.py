@@ -3,7 +3,7 @@ from django_tables2 import RequestConfig
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from nautobot.core.views.paginator import get_paginate_count
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.tables import DeviceTable
 from nautobot.wireless.api.serializers import (
@@ -65,15 +65,17 @@ class AccessPointGroupUIViewSet(NautobotUIViewSet):
             wireless_networks_table = AccessPointGroupWirelessNetworkAssignmentTable(wireless_networks)
             wireless_networks_table.columns.hide("access_point_group")
             wireless_networks_table.columns.hide("controller")
-            RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(
-                wireless_networks_table
-            )
+            RequestConfig(
+                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            ).configure(wireless_networks_table)
             context["wireless_networks_table"] = wireless_networks_table
 
             # Radio Profiles
             radio_profiles = instance.radio_profiles.restrict(request.user, "view")
             radio_profiles_table = RadioProfileTable(radio_profiles)
-            RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(radio_profiles_table)
+            RequestConfig(
+                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            ).configure(radio_profiles_table)
             context["radio_profiles_table"] = radio_profiles_table
 
         if self.action in ["create", "update"]:
@@ -115,7 +117,9 @@ class AccessPointGroupUIViewSet(NautobotUIViewSet):
         instance = self.get_object()
         devices = instance.devices.restrict(request.user, "view")
         device_table = DeviceTable(devices)
-        RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(device_table)
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(device_table)
 
         return Response(
             {
@@ -141,9 +145,9 @@ class RadioProfileUIViewSet(NautobotUIViewSet):
             # Supported Data Rates
             supported_data_rates = instance.supported_data_rates.restrict(request.user, "view")
             supported_data_rates_table = SupportedDataRateTable(supported_data_rates)
-            RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(
-                supported_data_rates_table
-            )
+            RequestConfig(
+                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            ).configure(supported_data_rates_table)
             context["supported_data_rates_table"] = supported_data_rates_table
 
         return context
@@ -191,9 +195,9 @@ class WirelessNetworkUIViewSet(NautobotUIViewSet):
             access_point_groups_table.columns.hide("authentication")
             access_point_groups_table.columns.hide("hidden")
             access_point_groups_table.columns.hide("secrets_group")
-            RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(
-                access_point_groups_table
-            )
+            RequestConfig(
+                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            ).configure(access_point_groups_table)
             context["access_point_groups_table"] = access_point_groups_table
 
         if self.action in ["create", "update"]:
