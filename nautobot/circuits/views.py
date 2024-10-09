@@ -12,6 +12,7 @@ from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
     ObjectFieldsPanel,
+    ObjectsTablePanel,
 )
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
@@ -102,6 +103,28 @@ class ProviderUIViewSet(NautobotUIViewSet):
     queryset = Provider.objects.all()
     serializer_class = serializers.ProviderSerializer
     table_class = tables.ProviderTable
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+                exclude_fields=["comments"],
+            ),
+            ObjectFieldsPanel(
+                label="Comments",
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                fields=["comments"],
+                value_transforms={"comments": [render_markdown, placeholder]},
+            ),
+            ObjectsTablePanel(
+                weight=300,
+                table_key="circuits_table",
+                section=SectionChoices.FULL_WIDTH,
+            ),
+        ),
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
