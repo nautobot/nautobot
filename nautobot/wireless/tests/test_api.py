@@ -95,6 +95,7 @@ class RadioProfileTest(APIViewTestCases.APIViewTestCase):
             rx_power_min=-70,
             regulatory_domain=choices.RadioProfileRegulatoryDomainChoices.US,
             allowed_channel_list=[1, 6, 11],
+            channel_width=[],
         )
         models.RadioProfile.objects.create(
             name="Radio Profile 2",
@@ -104,6 +105,7 @@ class RadioProfileTest(APIViewTestCases.APIViewTestCase):
             rx_power_min=-75,
             regulatory_domain=choices.RadioProfileRegulatoryDomainChoices.GB,
             allowed_channel_list=[36, 40, 44],
+            channel_width=[20, 40, 160],
         )
         models.RadioProfile.objects.create(
             name="Radio Profile 3",
@@ -113,6 +115,7 @@ class RadioProfileTest(APIViewTestCases.APIViewTestCase):
             rx_power_min=-80,
             regulatory_domain=choices.RadioProfileRegulatoryDomainChoices.JP,
             allowed_channel_list=[],
+            channel_width=[20],
         )
         cls.create_data = [
             {
@@ -135,9 +138,7 @@ class RadioProfileTest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "name": "Radio Profile 6",
-                "channel_width": [
-                    20,
-                ],
+                "channel_width": [],
                 "frequency": "6GHz",
                 "regulatory_domain": "CA",
                 "tx_power_min": 20,
