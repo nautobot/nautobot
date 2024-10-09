@@ -901,8 +901,8 @@ class StatsPanel(Panel):
         self,
         *,
         filter_name,
-        filter_pks=[],
-        related_field_names={},
+        filter_pks=None,
+        related_field_names=None,
         body_content_template_path="components/panel/stats_panel_body.html",
         **kwargs,
     ):
