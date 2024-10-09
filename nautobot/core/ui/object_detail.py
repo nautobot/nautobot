@@ -716,7 +716,7 @@ class KeyValueTablePanel(Panel):
                         # key might not be globally unique in a page, but is unique to a panel;
                         # Hence we add the panel label to make it globally unique to the page
                         unique_id=panel_label,
-                        key=key,
+                        key=slugify(key),
                         value=value_display,
                     )
                 result += format_html("<tr><td>{key}</td><td>{value}</td></tr>", key=key_display, value=value_tag)
