@@ -32,20 +32,20 @@ from .models import (
 app_name = "dcim"
 
 router = NautobotUIViewSetRouter()
-router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
+router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
+router.register("controllers", views.ControllerUIViewSet)
 router.register("device-families", views.DeviceFamilyUIViewSet)
+router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
-router.register("software-image-files", views.SoftwareImageFileUIViewSet)
-router.register("software-versions", views.SoftwareVersionUIViewSet)
-router.register("controllers", views.ControllerUIViewSet)
-router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
-router.register("modules", views.ModuleUIViewSet)
+router.register("location-types", views.LocationTypeUIViewSet)
 router.register("module-bays", views.ModuleBayUIViewSet)
 router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
+router.register("modules", views.ModuleUIViewSet)
 router.register("module-types", views.ModuleTypeUIViewSet)
+router.register("software-image-files", views.SoftwareImageFileUIViewSet)
+router.register("software-versions", views.SoftwareVersionUIViewSet)
 router.register("virtual-device-contexts", views.VirtualDeviceContextUIViewSet)
-router.register("location-types", views.LocationTypeUIViewSet)
 
 urlpatterns = [
     # Locations
