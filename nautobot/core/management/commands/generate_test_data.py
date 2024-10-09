@@ -324,6 +324,8 @@ class Command(BaseCommand):
         _create_batch(AccessPointGroupWithMembersFactory, 5, description="with members")
         _create_batch(RadioProfilesWithMembersFactory, 5, description="with members")
         _create_batch(WirelessNetworksWithMembersFactory, 5, description="with members")
+        # make sure we have some supported data rates that have null relationships to make filter tests happy
+        _create_batch(SupportedDataRateFactory, 10, description="without any associated objects")
         # make sure we have some tenants that have null relationships to make filter tests happy
         _create_batch(TenantFactory, 10, description="without any associated objects")
         # TODO: nautobot.tenancy.tests.test_filters currently calls the following additional factories:

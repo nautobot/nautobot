@@ -80,7 +80,7 @@ class RadioProfileFactory(PrimaryModelFactory):
             if extracted:
                 self.supported_data_rates.set(extracted)
             else:
-                self.supported_data_rates.set(get_random_instances(models.SupportedDataRate, minimum=1))
+                self.supported_data_rates.set(get_random_instances(models.SupportedDataRate, minimum=0))
 
 
 class WirelessNetworkFactory(PrimaryModelFactory):
