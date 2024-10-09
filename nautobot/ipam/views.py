@@ -16,6 +16,7 @@ from django_tables2 import RequestConfig
 import netaddr
 
 from nautobot.cloud.tables import CloudNetworkTable
+from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -911,7 +912,7 @@ class IPAddressAssignView(view_mixins.GetReturnURLMixin, generic.ObjectView):
                 "per_page": get_paginate_count(request),
             }
             RequestConfig(request, paginate).configure(table)
-            max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
+            max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
             if max_page_size and paginate["per_page"] > max_page_size:
                 messages.warning(
                     request,
