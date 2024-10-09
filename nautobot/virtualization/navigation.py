@@ -1,7 +1,4 @@
 from nautobot.core.apps import (
-    NavContext,
-    NavGrouping,
-    NavItem,
     NavMenuAddButton,
     NavMenuGroup,
     NavMenuItem,
@@ -95,51 +92,6 @@ menu_items = (
                                 ],
                             ),
                         ),
-                    ),
-                ),
-            ),
-        ),
-    ),
-)
-
-
-navigation = (
-    NavContext(
-        name="Inventory",
-        groups=(
-            NavGrouping(
-                name="Virtualization",
-                weight=600,
-                items=(
-                    NavItem(
-                        name="Virtual Machines",
-                        weight=100,
-                        link="virtualization:virtualmachine_list",
-                        permissions=["virtualization.view_virtualmachine"],
-                    ),
-                    NavItem(
-                        name="VM Interfaces",
-                        weight=200,
-                        link="virtualization:vminterface_list",
-                        permissions=["virtualization.view_vminterface"],
-                    ),
-                    NavItem(
-                        name="Clusters",
-                        weight=300,
-                        link="virtualization:cluster_list",
-                        permissions=["virtualization.view_cluster"],
-                    ),
-                    NavItem(
-                        name="Cluster Types",
-                        weight=400,
-                        link="virtualization:clustertype_list",
-                        permissions=["virtualization.view_clustertype"],
-                    ),
-                    NavItem(
-                        name="Cluster Groups",
-                        weight=500,
-                        link="virtualization:clustergroup_list",
-                        permissions=["virtualization.view_clustergroup"],
                     ),
                 ),
             ),

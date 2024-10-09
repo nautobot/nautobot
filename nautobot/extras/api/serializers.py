@@ -880,7 +880,6 @@ class NoteSerializer(BaseModelSerializer):
     class Meta:
         model = Note
         fields = "__all__"
-        list_display_fields = ["note", "assigned_object_type", "assigned_object_id", "user"]
 
     @extend_schema_field(
         PolymorphicProxySerializer(
@@ -920,7 +919,6 @@ class ObjectChangeSerializer(BaseModelSerializer):
     class Meta:
         model = ObjectChange
         fields = "__all__"
-        list_display_fields = ["changed_object_id", "related_object_id", "related_object_type", "user"]
 
     @extend_schema_field(
         PolymorphicProxySerializer(

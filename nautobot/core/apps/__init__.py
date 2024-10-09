@@ -4,7 +4,6 @@ import os
 
 from constance.apps import ConstanceConfig
 from django.apps import AppConfig, apps as global_apps
-from django.contrib.admin.sites import NotRegistered
 from django.db.models import BigIntegerField, BinaryField, JSONField
 from django.db.models.signals import post_migrate
 from django.urls import reverse
@@ -22,9 +21,6 @@ from nautobot.core.ui.homepage import (  # isort: skip  # noqa: F401
     HomePagePanel,
 )
 from nautobot.core.ui.nav import (  # isort: skip  # noqa: F401
-    NavContext,
-    NavGrouping,
-    NavItem,
     NavMenuAddButton,
     NavMenuBase,
     NavMenuButton,
@@ -35,14 +31,11 @@ from nautobot.core.ui.nav import (  # isort: skip  # noqa: F401
     NAV_CONTEXT_NAMES,
 )
 
-from nautobot.core.utils.navigation import get_all_new_ui_ready_routes
 from nautobot.extras.registry import registry
 
 logger = logging.getLogger(__name__)
 registry["nav_menu"] = {"tabs": {}}
-registry["new_ui_nav_menu"] = {}
 registry["homepage_layout"] = {"panels": {}}
-registry["new_ui_ready_routes"] = set()
 
 
 class NautobotConfig(AppConfig):
@@ -78,19 +71,6 @@ class NautobotConfig(AppConfig):
         except ImportError:
             pass
 
-        # TODO we should remove this because it is no longer relevant.
-        try:
-            navigation = import_string(f"{self.name}.{self.navigation}")
-            register_new_ui_menu_items(navigation)
-        except ImportError:
-            pass
-
-        try:
-            registry["new_ui_ready_routes"].update(get_all_new_ui_ready_routes())
-        except NotRegistered:
-            # NOTE: Catch this error: The "Tag" model is not registered, which may be related to the admin not registering Tags. Further research is needed on this.
-            pass
-
 
 def create_or_check_entry(grouping, record, key, path):
     """
@@ -114,14 +94,6 @@ def create_or_check_entry(grouping, record, key, path):
         for attr, value in record.fixed_fields:
             if grouping[key][attr] != value:
                 logger.error("Unable to redefine %s on %s from %s to %s", attr, path, grouping[key][attr], value)
-
-    # TODO: remove?
-    # React-UI specific: recursive population/validation of `data` for NavContext -> NavGrouping -> NavItem records
-    if isinstance(record, (NavContext, NavGrouping)):
-        groups = record.groups if isinstance(record, NavContext) else record.items
-        for item in groups:
-            create_or_check_entry(grouping[key]["data"], item, item.name, f"{path} -> {item.name}")
-            grouping[key]["data"] = dict(sorted(grouping[key]["data"].items(), key=lambda x: x[1]["weight"]))
 
 
 def register_menu_items(tab_list):
@@ -251,11 +223,6 @@ def register_menu_items(tab_list):
         registry["nav_menu"]["tabs"] = OrderedDict(
             sorted(registry["nav_menu"]["tabs"].items(), key=lambda kv_pair: kv_pair[1]["weight"])
         )
-
-
-def register_new_ui_menu_items(context_list):
-    for nav_context in context_list:
-        create_or_check_entry(registry["new_ui_nav_menu"], nav_context, nav_context.name, nav_context.name)
 
 
 def register_homepage_panels(path, label, homepage_layout):
