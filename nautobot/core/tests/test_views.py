@@ -652,8 +652,8 @@ class TestObjectDetailView(TestCase):
         # Validate Copy btn on all rows excluding empty rows
         name_copy = f"""
         <span class="hover_copy">
-            <span id="name_copy">{provider.name}</span>
-            <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#name_copy">
+            <span id="_value_name">{provider.name}</span>
+            <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#_value_name">
                 <span class="mdi mdi-content-copy"></span>
             </button>
         </span>"""

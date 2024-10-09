@@ -7,7 +7,7 @@ import logging
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
-from django.db.models.fields import BooleanField, URLField
+from django.db.models.fields import URLField
 from django.db.models.fields.related import ManyToManyField
 from django.template import Context
 from django.template.defaultfilters import truncatechars
@@ -25,11 +25,12 @@ from nautobot.core.templatetags.helpers import (
     hyperlinked_object,
     hyperlinked_object_with_color,
     placeholder,
+    render_ancestor_hierarchy,
     render_boolean,
     render_content_types,
     render_json,
     render_markdown,
-    render_tree_queryset,
+    slugify,
     validated_viewname,
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
@@ -267,10 +268,11 @@ class Tab(Component):
 class Panel(Component):
     """Base class for defining an individual display panel within a Layout within a Tab."""
 
-    WEIGHT_CUSTOM_FIELDS_PANEL = 200
-    WEIGHT_COMPUTED_FIELDS_PANEL = 300
-    WEIGHT_RELATIONSHIPS_PANEL = 400
-    WEIGHT_TAGS_PANEL = 500
+    WEIGHT_COMMENTS_PANEL = 200
+    WEIGHT_CUSTOM_FIELDS_PANEL = 300
+    WEIGHT_COMPUTED_FIELDS_PANEL = 400
+    WEIGHT_RELATIONSHIPS_PANEL = 500
+    WEIGHT_TAGS_PANEL = 600
 
     def __init__(
         self,
@@ -633,6 +635,9 @@ class KeyValueTablePanel(Panel):
             else:
                 display = placeholder(value)
 
+        elif isinstance(value, bool):
+            return render_boolean(value)
+
         elif isinstance(value, models.Model):
             if hasattr(value, "color"):
                 display = hyperlinked_object_with_color(value)
@@ -690,6 +695,7 @@ class KeyValueTablePanel(Panel):
             return format_html('<tr><td colspan="2">{}</td></tr>', placeholder(data))
 
         result = format_html("")
+        panel_label = slugify(self.label or "")
         for key, value in data.items():
             key_display = self.render_key(key, value, context)
             if value_display := self.render_value(key, value, context):
@@ -699,12 +705,15 @@ class KeyValueTablePanel(Panel):
                     value_tag = format_html(
                         """
                             <span class="hover_copy">
-                                <span id="{key}_copy">{value}</span>
-                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#{key}_copy">
+                                <span id="{unique_id}_value_{key}">{value}</span>
+                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#{unique_id}_value_{key}">
                                     <span class="mdi mdi-content-copy"></span>
                                 </button>
                             </span>
                         """,
+                        # key might not be globally unique in a page, but is unique to a panel;
+                        # Hence we add the panel label to make it globally unique to the page
+                        unique_id=panel_label,
                         key=key,
                         value=value_display,
                     )
@@ -759,13 +768,10 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             field_instance = None
 
         if key == "_hierarchy":
-            return render_tree_queryset(value)
+            return render_ancestor_hierarchy(value)
 
         if isinstance(field_instance, URLField):
             return hyperlinked_field(value)
-
-        if isinstance(field_instance, BooleanField):
-            return render_boolean(value)
 
         if isinstance(field_instance, ManyToManyField) and field_instance.related_model == ContentType:
             return render_content_types(value)
@@ -1098,6 +1104,33 @@ class _ObjectTagsPanel(Panel):
         }
 
 
+class _ObjectCommentPanel(ObjectFieldsPanel):
+    """Panel displaying an object's comments as a space-separated panel."""
+
+    def __init__(
+        self,
+        *,
+        label="Comments",
+        section=SectionChoices.LEFT_HALF,
+        weight=Panel.WEIGHT_COMMENTS_PANEL,
+        value_transforms={"comments": [render_markdown, placeholder]},
+        **kwargs,
+    ):
+        """Instantiate an `_ObjectCommentPanel`."""
+        fields = ["comments"]
+        super().__init__(
+            weight=weight,
+            label=label,
+            fields=fields,
+            section=section,
+            value_transforms=value_transforms,
+            **kwargs,
+        )
+
+    def should_render(self, context):
+        return hasattr(context["object"], "comments")
+
+
 class _ObjectDetailMainTab(Tab):
     """Base class for a main display tab containing an overview of object fields and similar data."""
 
@@ -1112,6 +1145,7 @@ class _ObjectDetailMainTab(Tab):
     ):
         panels = list(panels)
         # Inject standard panels (custom fields, relationships, tags, etc.) as appropriate
+        panels.append(_ObjectCommentPanel())
         panels.append(_ObjectCustomFieldsPanel())
         panels.append(_ObjectComputedFieldsPanel())
         panels.append(_ObjectRelationshipsPanel())

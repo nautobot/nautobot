@@ -644,8 +644,8 @@ def render_content_types(value):
 
 @library.filter()
 @register.filter()
-def render_tree_queryset(value):
-    """Renders a tree queryset as an HTML nested list."""
+def render_ancestor_hierarchy(value):
+    """Renders a nested HTML list representing the hierarchy of ancestors for a given object."""
     result = format_html('<ul class="tree-hierarchy">')
     append_to_result = format_html("</ul>")
     for ancestor in value.ancestors():
