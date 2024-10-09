@@ -8,7 +8,6 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.core.templatetags.helpers import render_boolean
 
 from .models import AccessPointGroup, RadioProfile, SupportedDataRate, WirelessNetwork
 
