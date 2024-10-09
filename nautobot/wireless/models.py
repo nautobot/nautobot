@@ -94,7 +94,7 @@ class SupportedDataRate(PrimaryModel):
         unique_together = ["standard", "rate"]
 
     def __str__(self):
-        return f"{self.standard}: {self.rate} Mbps"
+        return f"{self.standard}: {self.rate} Kbps"
 
 
 @extras_features(

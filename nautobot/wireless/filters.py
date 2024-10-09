@@ -93,6 +93,16 @@ class RadioProfileFilterSet(NautobotFilterSet):
         choices=choices.RadioProfileFrequencyChoices,
         null_value=None,
     )
+    access_point_groups = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="access_point_groups",
+        queryset=models.AccessPointGroup.objects.all(),
+        to_field_name="name",
+        label="Access Point Group (name or ID)",
+    )
+    has_access_point_groups = RelatedMembershipBooleanFilter(
+        field_name="access_point_groups",
+        label="Has access point groups",
+    )
 
     class Meta:
         model = models.RadioProfile
@@ -127,6 +137,10 @@ class WirelessNetworkFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         queryset=models.AccessPointGroup.objects.all(),
         to_field_name="name",
         label="Access Point Group (name or ID)",
+    )
+    has_access_point_groups = RelatedMembershipBooleanFilter(
+        field_name="access_point_groups",
+        label="Has access point groups",
     )
     hidden = django_filters.BooleanFilter()
 

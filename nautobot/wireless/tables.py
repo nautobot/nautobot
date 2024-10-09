@@ -2,6 +2,7 @@ import django_tables2 as tables
 
 from nautobot.core.tables import (
     BaseTable,
+    BooleanColumn,
     ButtonsColumn,
     LinkedCountColumn,
     TagColumn,
@@ -15,12 +16,23 @@ from .models import AccessPointGroup, RadioProfile, SupportedDataRate, WirelessN
 class AccessPointGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    description = tables.Column()
     controller = tables.Column(linkify=True)
     tenant = tables.Column(linkify=True)
-    # devices = LinkedCountColumn()
-    # radio_profiles = LinkedCountColumn()
-    # wireless_networks = LinkedCountColumn()
+    devices_count = LinkedCountColumn(
+        viewname="dcim:device_list",
+        url_params={"access_point_group": "pk"},
+        verbose_name="Devices",
+    )
+    radio_profiles_count = LinkedCountColumn(
+        viewname="wireless:radioprofile_list",
+        url_params={"access_point_groups": "pk"},
+        verbose_name="Radio Profiles",
+    )
+    wireless_networks_count = LinkedCountColumn(
+        viewname="wireless:wirelessnetwork_list",
+        url_params={"access_point_groups": "pk"},
+        verbose_name="Wireless Networks",
+    )
     tags = TagColumn(url_name="wireless:accesspointgroup_list")
     actions = ButtonsColumn(AccessPointGroup)
 
@@ -32,9 +44,9 @@ class AccessPointGroupTable(BaseTable):
             "description",
             "controller",
             "tenant",
-            # "devices",
-            # "radio_profiles",
-            # "wireless_networks",
+            "devices_count",
+            "radio_profiles_count",
+            "wireless_networks_count",
             "tags",
             "actions",
         )
@@ -44,6 +56,9 @@ class AccessPointGroupTable(BaseTable):
             "description",
             "controller",
             "tenant",
+            "devices_count",
+            "radio_profiles_count",
+            "wireless_networks_count",
             "actions",
         )
 
@@ -135,6 +150,8 @@ class WirelessNetworkTable(BaseTable):
     description = tables.Column()
     tags = TagColumn(url_name="wireless:wirelessnetwork_list")
     actions = ButtonsColumn(WirelessNetwork)
+    enabled = BooleanColumn()
+    hidden = BooleanColumn()
 
     class Meta(BaseTable.Meta):
         model = WirelessNetwork
@@ -163,12 +180,6 @@ class WirelessNetworkTable(BaseTable):
             "actions",
         )
 
-    def render_enabled(self, value):
-        return render_boolean(value)
-
-    def render_hidden(self, value):
-        return render_boolean(value)
-
 
 class AccessPointGroupWirelessNetworkAssignmentTable(BaseTable):
     access_point_group = tables.Column(linkify=True)
@@ -177,8 +188,8 @@ class AccessPointGroupWirelessNetworkAssignmentTable(BaseTable):
     ssid = tables.Column(accessor="wireless_network.ssid")
     mode = tables.Column(accessor="wireless_network.mode")
     authentication = tables.Column(accessor="wireless_network.authentication")
-    enabled = tables.Column(accessor="wireless_network.enabled")
-    hidden = tables.Column(accessor="wireless_network.hidden")
+    enabled = BooleanColumn(accessor="wireless_network.enabled")
+    hidden = BooleanColumn(accessor="wireless_network.hidden")
     secrets_group = tables.Column(accessor="wireless_network.secrets_group", linkify=True)
     controller = tables.Column(accessor="access_point_group.controller", linkify=True)
     prefix_count = LinkedCountColumn(

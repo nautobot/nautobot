@@ -48,36 +48,24 @@
             <tr>
                 <td>Transmit Power Minimum</td>
                 <td>
-                    {% if object.tx_power_min %}
-                        {{ object.tx_power_min }} dBm
-                    {% else %}
-                        {{ None|placeholder }}
-                    {% endif %}
+                    {{ object.tx_power_min|dbm}}
                 </td>
             </tr>
             <tr>
                 <td>Transmit Power Maximum</td>
                 <td>
-                    {% if object.tx_power_max %}
-                        {{ object.tx_power_max }} dBm
-                    {% else %}
-                        {{ None|placeholder }}
-                    {% endif %}
+                    {{ object.tx_power_max|dbm}}
                 </td>
             </tr>
             <tr>
                 <td>Recieve Power Minimum</td>
                 <td>
-                    {% if object.rx_power_min %}
-                        {{ object.rx_power_min }} dBm
-                    {% else %}
-                        {{ None|placeholder }}
-                    {% endif %}
+                    {{ object.rx_power_min|dbm}}
                 </td>
             </tr>
             <tr>
                 <td>Regulatory Domain</td>
-                <td>{{ object.regulatory_domain }}</td>
+                <td>{{ object.get_regulatory_domain_display }}</td>
             </tr>
         </table>
     </div>
