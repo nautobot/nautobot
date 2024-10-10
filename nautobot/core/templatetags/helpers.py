@@ -370,6 +370,19 @@ def tzoffset(value):
 
 @library.filter()
 @register.filter()
+def format_time_zone(value):
+    """
+    Returns the timezone and the hour offset of the time zone using the current time.
+    """
+    timezone = value
+    offset = tzoffset(value)
+    current_time = datetime.datetime.now(timezone).strftime("%Y-%m-%d %I:%M %p")
+    html_template = '{} (UTC {}) <br /> <small class="text-muted">Local time: {}</small>'
+    return format_html(html_template, timezone, offset, current_time)
+
+
+@library.filter()
+@register.filter()
 def fgcolor(value):
     """
     Return the ideal foreground color (block or white) given an arbitrary background color in RRGGBB format.
