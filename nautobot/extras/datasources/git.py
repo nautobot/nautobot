@@ -178,7 +178,7 @@ def ensure_git_repository(repository_record, logger=None, head=None):  # pylint:
         if changed:
             logger.info("Repository successfully refreshed")
         logger.info(
-            f'The current Git repository hash is "{repository_record.current_head}"',
+            f'{repository_record.name}: the current Git repository hash is "{repository_record.current_head}"',
             extra={"object": repository_record},
         )
 
