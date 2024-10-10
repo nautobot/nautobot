@@ -685,8 +685,6 @@ class KeyValueTablePanel(Panel):
             display = placeholder(localize(value))
 
         # TODO: apply additional smart formatting such as JSON/Markdown rendering, etc.
-        # TODO: apply template rendering as well. {% include 'dcim/inc/location_hierarchy.html' with location=object %}
-        # Not sure if that is possible
         return display
 
     def render_body_content(self, context):
@@ -811,7 +809,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
         data = {}
 
-        if isinstance(instance, TreeModel):
+        if isinstance(instance, TreeModel) and self.label is None:
             # using `_hierarchy` with the prepended `_` to try to archive a unique name, in cases where a model might have hierarchy field.
             data["_hierarchy"] = instance
 

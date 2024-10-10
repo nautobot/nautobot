@@ -378,7 +378,10 @@ def format_time_zone(value):
     offset = tzoffset(value)
     # TODO: This should be but it is not working for some reason
     # {% timezone "{}" %}{% now "SHORT_DATETIME_FORMAT" %}{% endtimezone %}
-    html_template = "{} (UTC {}) <br />" '<small class="text-muted">Local time: {}</small>'
+    html_template = (
+                    '{} (UTC {}) <br />'
+                    '<small class="text-muted">Local time: {}</small>'
+                    )
     return format_html(html_template, timezone, offset, timezone)
 
 
