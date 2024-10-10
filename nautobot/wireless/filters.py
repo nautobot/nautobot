@@ -36,6 +36,22 @@ class AccessPointGroupFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         field_name="devices",
         label="Has devices",
     )
+    radio_profiles = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.RadioProfile.objects.all(),
+        label="Radio Profiles (name or ID)",
+    )
+    has_radio_profiles = RelatedMembershipBooleanFilter(
+        field_name="radio_profiles",
+        label="Has radio profiles",
+    )
+    wireless_networks = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.WirelessNetwork.objects.all(),
+        label="Wireless Networks (name or ID)",
+    )
+    has_wireless_networks = RelatedMembershipBooleanFilter(
+        field_name="wireless_networks",
+        label="Has wireless networks",
+    )
 
     class Meta:
         model = models.AccessPointGroup

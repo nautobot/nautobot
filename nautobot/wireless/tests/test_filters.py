@@ -11,6 +11,12 @@ class AccessPointGroupTestCase(FilterTestCases.FilterTestCase):
         ("name",),
         ("tenant", "tenant__id"),
         ("tenant", "tenant__name"),
+        ("devices", "devices__id"),
+        ("devices", "devices__name"),
+        ("radio_profiles", "radio_profiles__id"),
+        ("radio_profiles", "radio_profiles__name"),
+        ("wireless_networks", "wireless_networks__id"),
+        ("wireless_networks", "wireless_networks__name"),
     ]
 
 
