@@ -16,7 +16,6 @@ from django.forms import (
     MultipleHiddenInput,
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
-from django.template.defaultfilters import linebreaksbr
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
 from django.utils.html import format_html
@@ -33,15 +32,9 @@ from nautobot.cloud.tables import CloudAccountTable
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
-from nautobot.core.templatetags.helpers import (
-    format_time_zone,
-    has_perms,
-    hyperlinked_email,
-    hyperlinked_phone_number,
-    placeholder,
-)
+from nautobot.core.templatetags.helpers import has_perms
 from nautobot.core.ui.choices import SectionChoices
-from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel, StatsPanel
+from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
@@ -285,89 +278,29 @@ class LocationView(generic.ObjectView):
     queryset = Location.objects.without_tree_fields().all()
     use_new_ui = True
 
-    class ContactPanel(ObjectFieldsPanel):
-        def __init__(self, **kwargs):
-            super().__init__(
-                footer_content_template_path="dcim/inc/location_contact_panel_footer.html",
-                fields=(
-                    "contact_name",
-                    "contact_phone",
-                    "contact_email",
-                ),
-                value_transforms={
-                    "contact_name": [placeholder],
-                    "contact_phone": [hyperlinked_phone_number],
-                    "contact_email": [hyperlinked_email],
-                },
-                **kwargs,
-            )
-
-        def should_render(self, context):
-            return context["show_convert_to_contact_button"]
-
-    object_detail_content = ObjectDetailContent(
-        panels=(
-            ObjectFieldsPanel(
-                section=SectionChoices.LEFT_HALF,
-                weight=100,
-                fields=[
-                    "location_type",
-                    "status",
-                    "tenant",
-                    "facility",
-                    "asn",
-                    "time_zone",
-                    "description",
-                    "children",
-                ],
-                value_transforms={
-                    "time_zone": [format_time_zone],
-                    "children": [placeholder],
-                },
-            ),
-            ObjectFieldsPanel(
-                label="Geographical Info",
-                section=SectionChoices.LEFT_HALF,
-                weight=110,
-                fields=["physical_address", "shipping_address", "latitude", "longitude"],
-                value_transforms={
-                    "physical_address": [linebreaksbr, placeholder],
-                    "shipping_address": [linebreaksbr, placeholder],
-                },
-            ),
-            ContactPanel(
-                label="Contact Info",
-                section=SectionChoices.LEFT_HALF,
-                weight=120,
-            ),
-            StatsPanel(
-                label="Stats",
-                filter_name="location",
-                filter_pks=[],
-                related_field_names={
-                    Rack: "location__in",
-                    Device: "location__in",
-                    Prefix: "location__in",
-                    VLAN: "location__in",
-                    Circuit: "circuit_terminations__location__in",
-                    VirtualMachine: "cluster__location__in",
-                },
-                section=SectionChoices.RIGHT_HALF,
-                weight=100,
-            ),
-            ObjectsTablePanel(
-                label="Child",
-                weight=100,
-                table_key="children_table",
-                section=SectionChoices.FULL_WIDTH,
-            ),
-        ),
-    )
-
     def get_extra_context(self, request, instance):
         related_locations = (
             instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
         )
+        stats = {
+            "rack_count": Rack.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
+            "device_count": Device.objects.restrict(request.user, "view")
+            .filter(location__in=related_locations)
+            .count(),
+            "prefix_count": Prefix.objects.restrict(request.user, "view")
+            .filter(locations__in=related_locations)
+            .count(),
+            "vlan_count": VLAN.objects.restrict(request.user, "view")
+            .filter(locations__in=related_locations)
+            .distinct()
+            .count(),
+            "circuit_count": Circuit.objects.restrict(request.user, "view")
+            .filter(circuit_terminations__location__in=related_locations)
+            .count(),
+            "vm_count": VirtualMachine.objects.restrict(request.user, "view")
+            .filter(cluster__location__in=related_locations)
+            .count(),
+        }
         rack_groups = (
             RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
             .restrict(request.user, "view")
@@ -393,9 +326,9 @@ class LocationView(generic.ObjectView):
         RequestConfig(request, paginate).configure(children_table)
 
         return {
-            "obj": instance,
             "children_table": children_table,
             "rack_groups": rack_groups,
+            "stats": stats,
             "contact_association_permission": ["extras.add_contactassociation"],
             # show the button if any of these fields have non-empty value.
             "show_convert_to_contact_button": instance.contact_name or instance.contact_phone or instance.contact_email,
