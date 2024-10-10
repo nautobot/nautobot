@@ -297,6 +297,10 @@ class Panel(Component):
         super().__init__(**kwargs)
 
     def render(self, context):
+        import ipdb
+
+        ipdb.set_trace()
+        print("c", self.label, context)
         """
         Render the panel as a whole.
 
@@ -727,6 +731,59 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
                     )
 
         return result
+
+
+class _BaseTextPanel(Panel):
+    """A panel that renders simple text or markdown"""
+
+    def __init__(
+        self, *, enable_markdown=True, body_content_template_path="components/panel/body_content_text.html", **kwargs
+    ):
+        self.enable_markdown = enable_markdown
+        self.body_content_template_path = body_content_template_path
+        super().__init__(**kwargs)
+
+    def render_body_content(self, context):
+        text_content = self.get_text(context)
+        if self.body_content_template_path:
+            return get_template(self.body_content_template_path).render(
+                {**context, "enable_markdown": self.enable_markdown, "text_content": text_content}
+            )
+        return text_content
+
+    def get_text(self, context):
+        raise NotImplementedError
+
+
+class ObjectTextPanel(_BaseTextPanel):
+    """
+    Panel that renders text or markdown from given object in the context and given field.
+    """
+
+    def __init__(self, *, object_field=None, **kwargs):
+        self.object_field = object_field
+
+        super().__init__(**kwargs)
+
+    def get_text(self, context):
+        if not context.get("object"):
+            return ""
+        return getattr(context["object"], self.object_field, "")
+
+
+class TextPanel(_BaseTextPanel):
+    """Panel that render text or markdown from given value in the context."""
+
+    def __init__(self, *, context_field="text", **kwargs):
+        self.context_field = context_field
+        super().__init__(**kwargs)
+
+    def get_text(self, context):
+        return context.get(self.context_field, "")
+
+
+class CustomTemplate(Panel):
+    """A panel that renders custom template as panel"""
 
 
 class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):

@@ -1,0 +1,6 @@
+{% load helpers %}
+{%  if enable_markdown %}
+    {{ text_content | render_markdown }}
+{% else %}
+    {{ text_content }}
+{% endif %}
