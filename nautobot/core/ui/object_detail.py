@@ -782,10 +782,6 @@ class TextPanel(_BaseTextPanel):
         return context.get(self.context_field, "")
 
 
-class CustomTemplate(Panel):
-    """A panel that renders custom template as panel"""
-
-
 class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
     """A panel that renders a table of object custom fields."""
 
