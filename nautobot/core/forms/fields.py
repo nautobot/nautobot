@@ -640,7 +640,7 @@ class JSONArrayFormField(django_forms.JSONField):
 
     # TODO: change this when we upgrade to Django 5, it uses a getter/setter for choices
     def _get_choices(self):
-        return self._choices if hasattr(self, "_choices") else None
+        return getattr(self, "_choices", None)
 
     def _set_choices(self, value):
         if callable(value):

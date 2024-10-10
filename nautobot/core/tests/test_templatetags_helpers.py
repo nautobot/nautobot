@@ -332,4 +332,4 @@ class NautobotTemplatetagsHelperTest(TestCase):
             helpers.dbm(-85),
             "-85 dBm",
         )
-        self.assertEqual(helpers.dbm(None), '<span class="text-muted">&mdash;</span>')
+        self.assertEqual(helpers.dbm(None), helpers.placeholder(None))

@@ -57,7 +57,6 @@ class SupportedDataRateFilterSet(BaseFilterSet):
         }
     )
     radio_profiles = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="radio_profiles",
         queryset=models.RadioProfile.objects.all(),
         to_field_name="name",
         label="Radio Profile (name or ID)",
@@ -94,10 +93,9 @@ class RadioProfileFilterSet(NautobotFilterSet):
         null_value=None,
     )
     access_point_groups = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="access_point_groups",
         queryset=models.AccessPointGroup.objects.all(),
         to_field_name="name",
-        label="Access Point Group (name or ID)",
+        label="Access Point Groups (name or ID)",
     )
     has_access_point_groups = RelatedMembershipBooleanFilter(
         field_name="access_point_groups",
@@ -133,10 +131,9 @@ class WirelessNetworkFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         label="Secrets group (name or ID)",
     )
     access_point_groups = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="access_point_groups",
         queryset=models.AccessPointGroup.objects.all(),
         to_field_name="name",
-        label="Access Point Group (name or ID)",
+        label="Access Point Groups (name or ID)",
     )
     has_access_point_groups = RelatedMembershipBooleanFilter(
         field_name="access_point_groups",
