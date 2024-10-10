@@ -1,6 +1,10 @@
 """Module providing for the publication of event notifications via mechanisms such as Redis, Kafka, syslog, etc."""
 
+import fnmatch
+import importlib
 import logging
+
+from nautobot.core.events.exceptions import EventPublisherNotFound
 
 from .base import EventBroker
 from .redis_broker import RedisEventBroker
@@ -10,6 +14,32 @@ _EVENT_BROKERS = []
 
 
 logger = logging.getLogger(__name__)
+
+
+def load_event_brokers(settings):
+    """Process plugins and log errors if they can't be loaded."""
+    if not getattr(settings, "NAUTOBOT_EVENT_BROKERS", None):
+        return
+
+    for publisher_name, publisher in settings.NAUTOBOT_EVENT_BROKERS.items():
+        options = publisher.get("OPTIONS", {})
+        include_topics = None
+        exclude_topics = None
+        if topics := publisher.get("TOPICS"):
+            include_topics = topics.get("INCLUDE")
+            exclude_topics = topics.get("EXCLUDE")
+        options.update({"include_topics": include_topics, "exclude_topics": exclude_topics})
+        try:
+            event_publisher_path = publisher["CLASS"]
+            module_path, class_name = event_publisher_path.rsplit(".", 1)
+            module = importlib.import_module(module_path)
+            event_publisher_class = getattr(module, class_name)
+            event_broker = event_publisher_class(**options)
+            register_event_broker(event_broker)
+        except ModuleNotFoundError as err:
+            raise EventPublisherNotFound(
+                f"Unable to import event publisher {publisher_name}: Module not found"
+            ) from err
 
 
 def register_event_broker(event_broker):
@@ -41,6 +71,10 @@ def deregister_event_broker(event_broker):
         logger.warning("Tried to deregister event broker %s but it wasn't previously registered", event_broker)
 
 
+def is_topic_match(topic, patterns):
+    return any(fnmatch.fnmatch(topic, pattern) for pattern in patterns)
+
+
 def publish_event(*, topic, payload):
     """Publish the given event payload to the given topic via all registered `EventBroker` instances.
 
@@ -55,7 +89,12 @@ def publish_event(*, topic, payload):
             lowest common denominator for serializability.
     """
     for event_broker in _EVENT_BROKERS:
-        event_broker.publish(topic=topic, payload=payload)
+        exclude_topics = event_broker.exclude_topics
+        include_topics = event_broker.include_topics
+        if (include_topics and is_topic_match(topic, include_topics)) or (
+            exclude_topics and not is_topic_match(topic, exclude_topics)
+        ):
+            event_broker.publish(topic=topic, payload=payload)
 
 
 __all__ = (

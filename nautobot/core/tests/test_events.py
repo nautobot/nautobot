@@ -4,15 +4,14 @@ from collections import defaultdict
 import json
 
 from django.conf import settings
+from django.test import override_settings
 import redis
 
 from nautobot.core.events import (
     deregister_event_broker,
     EventBroker,
     publish_event,
-    RedisEventBroker,
     register_event_broker,
-    SyslogEventBroker,
 )
 from nautobot.core.testing import TestCase
 
@@ -83,37 +82,42 @@ class EventNotificationTest(TestCase):
         deregister_event_broker(event_broker)
         deregister_event_broker(event_broker_2)
 
+    @override_settings(
+        NAUTOBOT_EVENT_BROKERS={
+            "SyslogEventBroker": {
+                "CLASS": "nautobot.core.events.SyslogEventBroker",
+                "TOPICS": {
+                    "INCLUDE": ["nautobot.test.*"],
+                },
+            }
+        }
+    )
     def test_publish_events_to_syslog(self):
-        event_broker = SyslogEventBroker()
-        register_event_broker(event_broker)
+        with self.assertLogs("nautobot.events.nautobot.test.event") as cm:
+            publish_event(topic="nautobot.test.event", payload={"a": 1})
+            publish_event(topic="nautobot.no-publish.event", payload={"a": 1})
+        # This test assets that only `nautobot.test.event` topic was published
+        self.assertEqual(cm.output, ["INFO:nautobot.events.nautobot.test.event:" + json.dumps({"a": 1}, indent=4)])
 
-        try:
-            with self.assertLogs("nautobot.events.nautobot.test.event") as cm:
-                publish_event(topic="nautobot.test.event", payload={"a": 1})
-            self.assertEqual(cm.output, ["INFO:nautobot.events.nautobot.test.event:" + json.dumps({"a": 1}, indent=4)])
-        finally:
-            deregister_event_broker(event_broker)
-
+    @override_settings(
+        NAUTOBOT_EVENT_BROKERS={
+            "RedisEventBroker": {
+                "CLASS": "nautobot.core.events.RedisEventBroker",
+                "OPTIONS": {"url": settings.CACHES["default"]["LOCATION"]},
+            }
+        }
+    )
     def test_publish_events_to_redis(self):
         url = settings.CACHES["default"]["LOCATION"]
-        event_broker = RedisEventBroker(url=url)
-        register_event_broker(event_broker)
-
-        sub = None
-        try:
-            connection = redis.StrictRedis.from_url(url, decode_responses=True)
-            sub = connection.pubsub()
-            sub.psubscribe("nautobot.*")
-            self.assertEqual(
-                sub.get_message(timeout=5.0),
-                {"type": "psubscribe", "pattern": None, "channel": "nautobot.*", "data": 1},
-            )
-            publish_event(topic="nautobot.test.event", payload={"b": 2})
-            self.assertEqual(
-                sub.get_message(timeout=5.0),
-                {"type": "pmessage", "pattern": "nautobot.*", "channel": "nautobot.test.event", "data": '{"b": 2}'},
-            )
-        finally:
-            if sub is not None:
-                sub.close()
-            deregister_event_broker(event_broker)
+        connection = redis.StrictRedis.from_url(url, decode_responses=True)
+        sub = connection.pubsub()
+        sub.psubscribe("nautobot.*")
+        self.assertEqual(
+            sub.get_message(timeout=5.0),
+            {"type": "psubscribe", "pattern": None, "channel": "nautobot.*", "data": 1},
+        )
+        publish_event(topic="nautobot.test.event", payload={"b": 2})
+        self.assertEqual(
+            sub.get_message(timeout=5.0),
+            {"type": "pmessage", "pattern": "nautobot.*", "channel": "nautobot.test.event", "data": '{"b": 2}'},
+        )

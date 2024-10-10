@@ -2,9 +2,18 @@
 
 from abc import ABC, abstractmethod
 
+from nautobot.core.events.exceptions import EventPublisherImproperlyConfigured
+
 
 class EventBroker(ABC):
     """Abstract base class for concrete implementations of event brokers such as syslog, Redis, Kafka, etc."""
+
+    def __init__(self, *args, include_topics=None, exclude_topics=None, **kwargs) -> None:
+        if include_topics and exclude_topics:
+            raise EventPublisherImproperlyConfigured("You can only provide either include or exclude_topics not both.")
+        self.include_topics = include_topics
+        self.exclude_topics = exclude_topics
+        super().__init__(*args, **kwargs)
 
     @abstractmethod
     def publish(self, *, topic, payload):
