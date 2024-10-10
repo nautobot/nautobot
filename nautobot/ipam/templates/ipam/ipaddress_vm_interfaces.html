@@ -21,6 +21,9 @@
             {% render_table vm_interface_table 'inc/table.html' %}
         </div>
     </form>
+    {% if vm_interface_table.paginator.num_pages > 1 %}
+        {% include "inc/paginator.html" with paginator=vm_interface_table.paginator page=vm_interface_table.page %}
+    {% endif %}
     {% table_config_form vm_interface_table %}
 {% endblock content %}
 

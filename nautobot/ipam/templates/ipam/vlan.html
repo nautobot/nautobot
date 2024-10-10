@@ -86,4 +86,7 @@
                     </div>
                 {% endif %}
             </div>
+            {% if prefix_table.paginator.num_pages > 1 %}
+                {% include "inc/paginator.html" with paginator=prefix_table.paginator page=prefix_table.page %}
+            {% endif %}
 {% endblock content_full_width_page %}

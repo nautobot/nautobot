@@ -1,0 +1,2 @@
+Fixed paginator widget to display the current selected `per_page` value even if it's not one of the `PER_PAGE_DEFAULTS` options.
+Added pagination of related-object tables to many IPAM views to avoid errors when very large quantities of related records are present.

@@ -150,9 +150,9 @@
                 </tr>
             </table>
         </div>
-        {% include 'panel_table.html' with table=parent_prefixes_table heading='Parent Prefixes' %}
 {% endblock content_right_page %}
 
 {% block content_full_width_page %}
-        {% include 'utilities/obj_table.html' with table=related_ips_table table_template='panel_table.html' heading='Related IP Addresses' panel_class='default' %}
+    {% include 'utilities/obj_table.html' with table=parent_prefixes_table table_template='panel_table.html' heading='Parent Prefixes' %}
+    {% include 'utilities/obj_table.html' with table=related_ips_table table_template='panel_table.html' heading='Related IP Addresses' %}
 {% endblock content_full_width_page %}
