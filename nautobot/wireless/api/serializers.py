@@ -37,7 +37,7 @@ class SupportedDataRateSerializer(TaggedModelSerializerMixin, NautobotModelSeria
 
 
 class RadioProfileSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
-    channel_width = serializers.ListField(child=ChoiceField(choices=RadioProfileChannelWidthChoices))
+    channel_width = serializers.ListField(child=ChoiceField(choices=RadioProfileChannelWidthChoices), allow_empty=True)
     allowed_channel_list = serializers.ListField(
         child=serializers.IntegerField(required=False),
         allow_empty=True,
@@ -63,10 +63,4 @@ class AccessPointGroupWirelessNetworkAssignmentSerializer(ValidatedModelSerializ
 class AccessPointGroupRadioProfileAssignmentSerializer(ValidatedModelSerializer):
     class Meta:
         model = models.AccessPointGroupRadioProfileAssignment
-        fields = "__all__"
-
-
-class AccessPointGroupDeviceAssignmentSerializer(ValidatedModelSerializer):
-    class Meta:
-        model = models.AccessPointGroupDeviceAssignment
         fields = "__all__"

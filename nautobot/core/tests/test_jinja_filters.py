@@ -45,6 +45,7 @@ class NautobotJinjaFilterTest(TestCase):
             "get_item",
             "settings_or_config",
             "slugify",
+            "dbm",
         ]
 
         # For each helper, try to render jinja template with render_jinja2 and fail if TemplateAssertionError is raised

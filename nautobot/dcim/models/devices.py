@@ -612,6 +612,14 @@ class Device(PrimaryModel, ConfigContextModel):
         null=True,
     )
 
+    access_point_group = models.ForeignKey(
+        to="wireless.AccessPointGroup",
+        on_delete=models.SET_NULL,
+        related_name="devices",
+        blank=True,
+        null=True,
+    )
+
     objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
 
     clone_fields = [

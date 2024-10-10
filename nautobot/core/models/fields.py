@@ -1,7 +1,6 @@
 import json
 import re
 
-from django import forms
 from django.core import exceptions
 from django.core.validators import MaxLengthValidator, RegexValidator
 from django.db import models
@@ -380,10 +379,9 @@ class JSONArrayField(models.JSONField):
             "form_class": fields.JSONArrayFormField,
             "base_field": self.base_field.formfield(),
         }
-        # If the base field has choices, pass them to the form field and use a MultipleChoiceField.
+        # If the base field has choices, pass them to the form field.
         if self.base_field.choices:
             defaults["choices"] = self.base_field.choices
-            defaults["form_class"] = forms.MultipleChoiceField
         defaults.update(**kwargs)
         return super().formfield(**defaults)
 

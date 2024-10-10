@@ -5,7 +5,6 @@ from . import views
 router = OrderedDefaultRouter(view_name="Wireless")
 
 router.register("access-point-groups", views.AccessPointGroupViewSet)
-router.register("access-point-group-device-assignments", views.AccessPointGroupDeviceAssignmentViewSet)
 router.register("access-point-group-radio-profile-assignments", views.AccessPointGroupRadioProfileAssignmentViewSet)
 router.register(
     "access-point-group-wireless-network-assignments", views.AccessPointGroupWirelessNetworkAssignmentViewSet

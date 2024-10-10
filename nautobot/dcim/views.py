@@ -59,6 +59,12 @@ from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, 
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
 from nautobot.virtualization.models import VirtualMachine
+from nautobot.wireless.models import AccessPointGroupRadioProfileAssignment, AccessPointGroupWirelessNetworkAssignment
+from nautobot.wireless.tables import (
+    AccessPointGroupRadioProfileAssignmentTable,
+    AccessPointGroupWirelessNetworkAssignmentTable,
+    ControllerAccessPointGroupWirelessNetworkAssignmentTable,
+)
 
 from . import filters, forms, tables
 from .api import serializers
@@ -2139,6 +2145,42 @@ class DeviceBulkDeleteView(generic.BulkDeleteView):
     table = tables.DeviceTable
 
 
+class DeviceWirelessView(generic.ObjectView):
+    queryset = Device.objects.all()
+    template_name = "dcim/device/wireless.html"
+
+    def get_extra_context(self, request, instance):
+        access_point_group = instance.access_point_group
+        wireless_networks = AccessPointGroupWirelessNetworkAssignment.objects.filter(
+            access_point_group=access_point_group
+        ).select_related("wireless_network", "access_point_group", "vlan")
+        wireless_networks_table = AccessPointGroupWirelessNetworkAssignmentTable(
+            data=wireless_networks, user=request.user, orderable=False
+        )
+        wireless_networks_table.columns.hide("access_point_group")
+        wireless_networks_table.columns.hide("controller")
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(wireless_networks_table)
+
+        radio_profiles = AccessPointGroupRadioProfileAssignment.objects.filter(
+            access_point_group=access_point_group
+        ).select_related("radio_profile", "access_point_group")
+        radio_profiles_table = AccessPointGroupRadioProfileAssignmentTable(
+            data=radio_profiles, user=request.user, orderable=False
+        )
+        radio_profiles_table.columns.hide("access_point_group")
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(radio_profiles_table)
+
+        return {
+            "wireless_networks_table": wireless_networks_table,
+            "radio_profiles_table": radio_profiles_table,
+            "active_tab": "wireless",
+        }
+
+
 #
 # Modules
 #
@@ -4202,6 +4244,46 @@ class ControllerUIViewSet(NautobotUIViewSet):
             context["devices_table"] = devices_table
 
         return context
+
+    @action(detail=True, url_path="wireless-networks", url_name="wirelessnetworks")
+    def wirelessnetworks(self, request, *args, **kwargs):
+        instance = self.get_object()
+        access_point_groups = instance.access_point_groups.restrict(request.user, "view").values_list("pk", flat=True)
+        wireless_networks = AccessPointGroupWirelessNetworkAssignment.objects.filter(
+            access_point_group__in=list(access_point_groups)
+        ).select_related("wireless_network")
+        wireless_networks_table = ControllerAccessPointGroupWirelessNetworkAssignmentTable(
+            data=wireless_networks, user=request.user, orderable=False
+        )
+
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(wireless_networks_table)
+
+        return Response(
+            {
+                "wireless_networks_table": wireless_networks_table,
+                "active_tab": "wireless-networks",
+            }
+        )
+
+    @action(detail=True, url_path="wireless-devices", url_name="wirelessdevices")
+    def wirelessdevices(self, request, *args, **kwargs):
+        instance = self.get_object()
+        access_point_groups = instance.access_point_groups.restrict(request.user, "view").values_list("pk", flat=True)
+        devices = Device.objects.filter(access_point_group__in=list(access_point_groups)).select_related(
+            "access_point_group"
+        )
+        wireless_devices_table = tables.AccessPointGroupDeviceTable(data=devices, user=request.user, orderable=False)
+
+        RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(wireless_devices_table)
+
+        return Response(
+            {
+                "wireless_devices_table": wireless_devices_table,
+                "active_tab": "wireless-devices",
+            }
+        )
 
 
 class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
