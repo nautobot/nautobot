@@ -739,7 +739,7 @@ class BaseJob:
         """
         if isinstance(content, str):
             content = content.encode("utf-8")
-        max_size = get_settings_or_config("JOB_CREATE_FILE_MAX_SIZE")
+        max_size = get_settings_or_config("JOB_CREATE_FILE_MAX_SIZE", fallback=10 << 20)
         actual_size = len(content)
         if actual_size > max_size:
             raise ValueError(f"Provided {actual_size} bytes of content, but JOB_CREATE_FILE_MAX_SIZE is {max_size}")

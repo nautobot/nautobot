@@ -9,6 +9,7 @@ from django.urls import resolve
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
+from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.forms import (
     restrict_form_fields,
     SearchForm,
@@ -124,7 +125,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request, self.saved_view),
             }
-            max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
+            max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
             if max_page_size and paginate["per_page"] > max_page_size:
                 messages.warning(
                     request,

@@ -21,6 +21,7 @@ import yaml
 
 from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
+from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
@@ -890,11 +891,11 @@ def saved_view_modal(
     elif current_saved_view is not None and not per_page:
         # no changes made, display current saved view pagination count
         param_dict["per_page"] = current_saved_view.config.get(
-            "pagination_count", config.get_settings_or_config("PAGINATE_COUNT")
+            "pagination_count", config.get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
         )
     else:
         # display default pagination count
-        param_dict["per_page"] = config.get_settings_or_config("PAGINATE_COUNT")
+        param_dict["per_page"] = config.get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
 
     if sort_order:
         # user made changes to saved view sort order

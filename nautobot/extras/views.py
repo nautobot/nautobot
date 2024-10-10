@@ -25,6 +25,7 @@ from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
+from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
@@ -1907,7 +1908,7 @@ class SavedViewUIViewSet(
             if derived_instance and derived_instance.config.get("pagination_count", None):
                 pagination_count = derived_instance.config["pagination_count"]
             else:
-                pagination_count = get_settings_or_config("PAGINATE_COUNT")
+                pagination_count = get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
         sv.config["pagination_count"] = int(pagination_count)
         sort_order = param_dict.get("sort", [])
         if not sort_order:

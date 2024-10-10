@@ -25,6 +25,7 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -349,7 +350,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             }
             RequestConfig(request, paginate).configure(table)
             table_config_form = TableConfigForm(table=table)
-            max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
+            max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
             if max_page_size and paginate["per_page"] > max_page_size:
                 messages.warning(
                     request,

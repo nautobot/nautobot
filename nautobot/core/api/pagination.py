@@ -1,5 +1,6 @@
 from rest_framework.pagination import LimitOffsetPagination
 
+from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT, PAGINATE_COUNT_DEFAULT
 from nautobot.core.utils.config import get_settings_or_config
 
 
@@ -38,7 +39,7 @@ class OptionalLimitOffsetPagination(LimitOffsetPagination):
                 if limit < 0:
                     raise ValueError()
                 # Enforce maximum page size, if defined
-                max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
+                max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
                 if max_page_size:
                     if limit == 0:
                         return max_page_size
@@ -48,7 +49,7 @@ class OptionalLimitOffsetPagination(LimitOffsetPagination):
             except (KeyError, ValueError):
                 pass
 
-        return get_settings_or_config("PAGINATE_COUNT")
+        return get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
 
     def get_next_link(self):
         # Pagination has been disabled

@@ -10,7 +10,11 @@ import django.forms
 from django.utils.safestring import mark_safe
 
 from nautobot import __version__
-from nautobot.core.constants import CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR
+from nautobot.core.constants import (
+    CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR,
+    MAX_PAGE_SIZE_DEFAULT as _MAX_PAGE_SIZE_DEFAULT,
+    PAGINATE_COUNT_DEFAULT as _PAGINATE_COUNT_DEFAULT,
+)
 from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
 
 #
@@ -726,13 +730,13 @@ CONSTANCE_CONFIG = {
         field_type=bool,
     ),
     "MAX_PAGE_SIZE": ConstanceConfigItem(
-        default=1000,
+        default=_MAX_PAGE_SIZE_DEFAULT,
         help_text="Maximum number of objects that a user can list in one UI page or one API call.\n"
         "If set to 0, a user can retrieve an unlimited number of objects.",
         field_type=int,
     ),
     "PAGINATE_COUNT": ConstanceConfigItem(
-        default=50,
+        default=_PAGINATE_COUNT_DEFAULT,
         help_text="Default number of objects to display per page when listing objects in the UI and/or REST API.",
         field_type=int,
     ),

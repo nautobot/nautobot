@@ -391,9 +391,9 @@ class Rack(PrimaryModel):
             Defaults to True, showing device full name and hiding truncated.
         """
         if unit_width is None:
-            unit_width = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH")
+            unit_width = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH", fallback=230)
         if unit_height is None:
-            unit_height = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_HEIGHT")
+            unit_height = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", fallback=22)
         elevation = RackElevationSVG(
             self, user=user, include_images=include_images, base_url=base_url, display_fullname=display_fullname
         )
