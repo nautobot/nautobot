@@ -326,6 +326,7 @@ class Command(BaseCommand):
         _create_batch(WirelessNetworksWithMembersFactory, 5, description="with members")
         # make sure we have some supported data rates that have null relationships to make filter tests happy
         _create_batch(SupportedDataRateFactory, 10, description="without any associated objects")
+        _create_batch(JobQueueFactory, 20)
         # make sure we have some tenants that have null relationships to make filter tests happy
         _create_batch(TenantFactory, 10, description="without any associated objects")
         # TODO: nautobot.tenancy.tests.test_filters currently calls the following additional factories:
@@ -351,7 +352,6 @@ class Command(BaseCommand):
         )
         _create_batch(MetadataChoiceFactory, 100)
         _create_batch(ObjectChangeFactory, 100)
-        _create_batch(JobQueueFactory, 10)
         _create_batch(JobResultFactory, 20)
         _create_batch(JobLogEntryFactory, 100)
         _create_batch(ObjectMetadataFactory, 100)
