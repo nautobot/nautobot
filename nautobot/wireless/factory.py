@@ -44,11 +44,14 @@ class AccessPointGroupFactory(PrimaryModelFactory):
     def devices(self, create, extracted, **kwargs):
         if create:
             if extracted:
-                self.devices.set(extracted)
+                for device in extracted:
+                    device.access_point_group = self
+                    device.save()
             else:
-                self.devices.set(
-                    get_random_instances(Device.objects.filter(access_point_group__isnull=True), minimum=1)
-                )
+                devices = get_random_instances(Device.objects.filter(access_point_group__isnull=True), minimum=0, maximum=5)
+                for device in devices:
+                    device.access_point_group = self
+                    device.save()
 
 
 class SupportedDataRateFactory(PrimaryModelFactory):
