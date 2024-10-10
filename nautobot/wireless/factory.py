@@ -48,7 +48,9 @@ class AccessPointGroupFactory(PrimaryModelFactory):
                     device.access_point_group = self
                     device.save()
             else:
-                devices = get_random_instances(Device.objects.filter(access_point_group__isnull=True), minimum=0, maximum=5)
+                devices = get_random_instances(
+                    Device.objects.filter(access_point_group__isnull=True), minimum=0, maximum=5
+                )
                 for device in devices:
                     device.access_point_group = self
                     device.save()

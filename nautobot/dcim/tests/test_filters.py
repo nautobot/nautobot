@@ -117,7 +117,7 @@ from nautobot.extras.models import ExternalIntegration, Role, SecretsGroup, Stat
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
-from nautobot.wireless.models import AccessPointGroup, WirelessNetwork
+from nautobot.wireless.models import AccessPointGroup
 
 # Use the proper swappable User model
 User = get_user_model()
