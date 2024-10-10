@@ -376,10 +376,9 @@ def format_time_zone(value):
     """
     timezone = value
     offset = tzoffset(value)
-    # TODO: This should be but it is not working for some reason
-    # {% timezone "{}" %}{% now "SHORT_DATETIME_FORMAT" %}{% endtimezone %}
+    current_time = datetime.datetime.now(timezone).strftime("%Y-%m-%d %I:%M %p")
     html_template = '{} (UTC {}) <br /> <small class="text-muted">Local time: {}</small>'
-    return format_html(html_template, timezone, offset, timezone)
+    return format_html(html_template, timezone, offset, current_time)
 
 
 @library.filter()

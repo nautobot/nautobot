@@ -35,7 +35,7 @@ from nautobot.core.templatetags.helpers import (
     validated_viewname,
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
-from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -809,7 +809,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
         data = {}
 
-        if isinstance(instance, TreeModel) and self.label is None:
+        if isinstance(instance, TreeModel) and (self.fields == "__all__" or "_hierarchy" in self.fields):
             # using `_hierarchy` with the prepended `_` to try to archive a unique name, in cases where a model might have hierarchy field.
             data["_hierarchy"] = instance
 
@@ -910,13 +910,12 @@ class StatsPanel(Panel):
             related_field_names (dict): key/value pair of { <model_class>: <query_strings> }.
             filter_pks (list of uuids): the list of pks work in tandem with the query_strings.
             filter_name (str): a valid query filter append to the anchor tag for each stat button.
+            e.g. the `tenant` query parameter in the url `/circuits/circuits/?tenant=f4b48e9d-56fc-4090-afa5-dcbe69775b13`.
         """
 
         self.filter_name = filter_name
         self.related_field_names = related_field_names
-        self.filter_pks = filter_pks
-        self.body_content_template_path = body_content_template_path
-        super().__init__(body_content_template_path="components/panel/stats_panel_body.html", **kwargs)
+        super().__init__(body_content_template_path=body_content_template_path, **kwargs)
 
     def should_render(self, context):
         """Always should render this panel as the permission is reinforced in python with .restrict(request.user, "view")"""
@@ -955,12 +954,16 @@ class StatsPanel(Panel):
                 related_object_title = bettertitle(related_object_model_class_meta.verbose_name_plural)
                 value = [related_object_list_url, related_object_count, related_object_title]
                 stats[related_object_model_class] = value
+                related_object_model_filterset = get_filterset_for_model(related_object_model_class)
+                if self.filter_name not in related_object_model_filterset.declared_filters:
+                    raise FieldDoesNotExist(
+                        f"{self.filter_name} is not a valid filter field for {related_object_model_class_meta.verbose_name}"
+                    )
 
             return get_template(self.body_content_template_path).render(
                 {
                     **context,
                     "stats": stats,
-                    # TODO validate the filter
                     "filter_name": self.filter_name,
                 }
             )

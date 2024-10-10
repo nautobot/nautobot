@@ -85,10 +85,7 @@ class TenantView(generic.ObjectView):
             ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
-                fields=[
-                    "tenant_group",
-                    "description",
-                ],
+                fields="__all__",
             ),
             StatsPanel(
                 label="Stats",
