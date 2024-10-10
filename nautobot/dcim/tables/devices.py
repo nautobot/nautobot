@@ -61,6 +61,7 @@ from .template_code import (
 )
 
 __all__ = (
+    "AccessPointGroupDeviceTable",
     "ConsolePortTable",
     "ConsoleServerPortTable",
     "ControllerTable",
@@ -215,6 +216,44 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "role",
             "device_type",
             "primary_ip",
+        )
+
+
+class AccessPointGroupDeviceTable(DeviceTable):
+    access_point_group = tables.Column(linkify=True)
+    wireless_network_count = LinkedCountColumn(
+        viewname="wireless:wirelessnetwork_list",
+        url_params={"access_point_groups": "access_point_group_id"},
+        verbose_name="Wireless Networks",
+        reverse_lookup="access_point_groups__devices",
+    )
+
+    class Meta(DeviceTable.Meta):
+        fields = (
+            "pk",
+            "name",
+            "access_point_group",
+            "status",
+            "tenant",
+            "location",
+            "rack",
+            "role",
+            "device_type",
+            "primary_ip",
+            "wireless_network_count",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "access_point_group",
+            "status",
+            "tenant",
+            "location",
+            "rack",
+            "role",
+            "device_type",
+            "primary_ip",
+            "wireless_network_count",
         )
 
 

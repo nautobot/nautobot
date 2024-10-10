@@ -24,7 +24,3 @@ class AccessPointGroupWirelessNetworkAssignmentTestCase(ModelTestCases.BaseModel
 
 class AccessPointGroupRadioProfileAssignmentTestCase(ModelTestCases.BaseModelTestCase):
     model = models.AccessPointGroupRadioProfileAssignment
-
-
-class AccessPointGroupDeviceAssignmentTestCase(ModelTestCases.BaseModelTestCase):
-    model = models.AccessPointGroupDeviceAssignment

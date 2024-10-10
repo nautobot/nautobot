@@ -158,6 +158,15 @@ class JobQueueFactory(PrimaryModelFactory):
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
 
 
+class JobQueueFactoryWithTenancy(JobQueueFactory):
+    class Meta:
+        model = JobQueue
+
+    class Params:
+        has_description = NautobotBoolIterator()
+        has_tenant = NautobotBoolIterator(chance_of_getting_true=100)
+
+
 class JobResultFactory(BaseModelFactory):
     """JobResult model factory."""
 

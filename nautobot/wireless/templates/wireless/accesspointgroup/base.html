@@ -1,0 +1,10 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block extra_nav_tabs %}
+    {% if device_count %}
+        <li role="presentation" {% if active_tab == 'devices' %} class="active"{% endif %}>
+            <a href="{% url 'wireless:accesspointgroup_devices' pk=object.pk %}">Devices {% badge device_count %}</a>
+        </li>
+    {% endif %}
+{% endblock extra_nav_tabs %}

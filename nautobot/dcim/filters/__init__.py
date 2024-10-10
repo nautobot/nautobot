@@ -101,6 +101,7 @@ from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
+from nautobot.wireless.models import AccessPointGroup, WirelessNetwork
 
 __all__ = (
     "CableFilterSet",
@@ -902,6 +903,17 @@ class DeviceFilterSet(
         queryset=SoftwareVersion.objects.all(),
         to_field_name="version",
         label="Software version (version or ID)",
+    )
+    access_point_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=AccessPointGroup.objects.all(),
+        to_field_name="name",
+        label="Access Point Group (name or ID)",
+    )
+    wireless_networks = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="access_point_group__wireless_networks",
+        queryset=WirelessNetwork.objects.all(),
+        to_field_name="name",
+        label="Wireless Networks (name or ID)",
     )
 
     class Meta:
@@ -1831,6 +1843,17 @@ class ControllerFilterSet(
         queryset=DeviceRedundancyGroup.objects.all(),
         to_field_name="name",
         label="Controller device redundancy group (name or ID)",
+    )
+    access_point_groups = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=AccessPointGroup.objects.all(),
+        to_field_name="name",
+        label="Access Point Groups (name or ID)",
+    )
+    wireless_networks = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="access_point_groups__wireless_networks",
+        queryset=WirelessNetwork.objects.all(),
+        to_field_name="name",
+        label="Wireless Networks (name or ID)",
     )
 
     class Meta:

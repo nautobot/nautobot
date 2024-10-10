@@ -1,5 +1,5 @@
 from nautobot.core.testing import APIViewTestCases
-from nautobot.dcim.models import Controller, Device
+from nautobot.dcim.models import Controller
 from nautobot.extras.models import SecretsGroup
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.models import Tenant
@@ -95,6 +95,7 @@ class RadioProfileTest(APIViewTestCases.APIViewTestCase):
             rx_power_min=-70,
             regulatory_domain=choices.RadioProfileRegulatoryDomainChoices.US,
             allowed_channel_list=[1, 6, 11],
+            channel_width=[],
         )
         models.RadioProfile.objects.create(
             name="Radio Profile 2",
@@ -104,6 +105,7 @@ class RadioProfileTest(APIViewTestCases.APIViewTestCase):
             rx_power_min=-75,
             regulatory_domain=choices.RadioProfileRegulatoryDomainChoices.GB,
             allowed_channel_list=[36, 40, 44],
+            channel_width=[20, 40, 160],
         )
         models.RadioProfile.objects.create(
             name="Radio Profile 3",
@@ -113,6 +115,7 @@ class RadioProfileTest(APIViewTestCases.APIViewTestCase):
             rx_power_min=-80,
             regulatory_domain=choices.RadioProfileRegulatoryDomainChoices.JP,
             allowed_channel_list=[],
+            channel_width=[20],
         )
         cls.create_data = [
             {
@@ -135,9 +138,7 @@ class RadioProfileTest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "name": "Radio Profile 6",
-                "channel_width": [
-                    20,
-                ],
+                "channel_width": [],
                 "frequency": "6GHz",
                 "regulatory_domain": "CA",
                 "tx_power_min": 20,
@@ -210,28 +211,6 @@ class WirelessNetworkTest(APIViewTestCases.APIViewTestCase):
         cls.bulk_update_data = {
             "tenant": tenants[6].pk,
         }
-
-
-class AccessPointGroupDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
-    model = models.AccessPointGroupDeviceAssignment
-
-    @classmethod
-    def setUpTestData(cls):
-        access_point_groups = models.AccessPointGroup.objects.all()[:3]
-        cls.create_data = [
-            {
-                "access_point_group": access_point_groups[0].pk,
-                "device": Device.objects.exclude(access_point_groups=access_point_groups[0]).first().pk,
-            },
-            {
-                "access_point_group": access_point_groups[1].pk,
-                "device": Device.objects.exclude(access_point_groups=access_point_groups[1]).first().pk,
-            },
-            {
-                "access_point_group": access_point_groups[2].pk,
-                "device": Device.objects.exclude(access_point_groups=access_point_groups[2]).first().pk,
-            },
-        ]
 
 
 class AccessPointGroupRadioProfileAssignmentTest(APIViewTestCases.APIViewTestCase):

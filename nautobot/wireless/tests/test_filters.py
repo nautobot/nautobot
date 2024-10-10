@@ -11,6 +11,12 @@ class AccessPointGroupTestCase(FilterTestCases.FilterTestCase):
         ("name",),
         ("tenant", "tenant__id"),
         ("tenant", "tenant__name"),
+        ("devices", "devices__id"),
+        ("devices", "devices__name"),
+        ("radio_profiles", "radio_profiles__id"),
+        ("radio_profiles", "radio_profiles__name"),
+        ("wireless_networks", "wireless_networks__id"),
+        ("wireless_networks", "wireless_networks__name"),
     ]
 
 
@@ -63,15 +69,4 @@ class AccessPointGroupRadioProfileAssignmentTestCase(FilterTestCases.FilterTestC
         ("access_point_group", "access_point_group__name"),
         ("radio_profile", "radio_profile__id"),
         ("radio_profile", "radio_profile__name"),
-    ]
-
-
-class AccessPointGroupDeviceAssignmentTestCase(FilterTestCases.FilterTestCase):
-    queryset = models.AccessPointGroupDeviceAssignment.objects.all()
-    filterset = filters.AccessPointGroupDeviceAssignmentFilterSet
-    generic_filter_tests = [
-        ("access_point_group", "access_point_group__id"),
-        ("access_point_group", "access_point_group__name"),
-        ("device", "device__id"),
-        ("device", "device__name"),
     ]

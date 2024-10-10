@@ -9,7 +9,7 @@ from nautobot.core.factory import (
     UniqueFaker,
 )
 from nautobot.dcim.factory import DeviceFactory
-from nautobot.dcim.models import Controller
+from nautobot.dcim.models import Controller, Device
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.models import Tenant
 from nautobot.wireless import models
@@ -26,14 +26,34 @@ from nautobot.wireless.choices import (
 class AccessPointGroupFactory(PrimaryModelFactory):
     class Meta:
         model = models.AccessPointGroup
-        exclude = ("has_description", "has_tenant")
+        exclude = ("has_description", "has_tenant", "has_controller")
 
     name = UniqueFaker("company")
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
-    controller = random_instance(lambda: Controller.objects.filter(controller_device__isnull=True), allow_null=True)
+    has_controller = NautobotBoolIterator()
+    controller = factory.Maybe(
+        "has_controller",
+        random_instance(lambda: Controller.objects.filter(controller_device__isnull=True), allow_null=True),
+        None,
+    )
     has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
+
+    @factory.post_generation
+    def devices(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                for device in extracted:
+                    device.access_point_group = self
+                    device.save()
+            else:
+                devices = get_random_instances(
+                    Device.objects.filter(access_point_group__isnull=True), minimum=0, maximum=5
+                )
+                for device in devices:
+                    device.access_point_group = self
+                    device.save()
 
 
 class SupportedDataRateFactory(PrimaryModelFactory):
@@ -52,12 +72,12 @@ class RadioProfileFactory(PrimaryModelFactory):
 
     name = UniqueFaker("word")
     frequency = factory.Faker("random_element", elements=RadioProfileFrequencyChoices.values())
-    channel_width = factory.Faker("random_elements", elements=RadioProfileChannelWidthChoices.values())
+    channel_width = factory.Faker("random_elements", elements=RadioProfileChannelWidthChoices.values(), unique=True)
     regulatory_domain = factory.Faker("random_element", elements=RadioProfileRegulatoryDomainChoices.values())
     tx_power_min = factory.Faker("pyint", min_value=1, max_value=5)
     tx_power_max = factory.Faker("pyint", min_value=6, max_value=30)
     rx_power_min = factory.Faker("pyint", min_value=1, max_value=10)
-    allowed_channel_list = factory.Faker("random_elements", elements=[1, 6, 11, 36, 161, 165])
+    allowed_channel_list = factory.Faker("random_elements", elements=[1, 6, 11, 36, 161, 165], unique=True)
 
     @factory.post_generation
     def supported_data_rates(self, create, extracted, **kwargs):
@@ -65,7 +85,7 @@ class RadioProfileFactory(PrimaryModelFactory):
             if extracted:
                 self.supported_data_rates.set(extracted)
             else:
-                self.supported_data_rates.set(get_random_instances(models.SupportedDataRate, minimum=1))
+                self.supported_data_rates.set(get_random_instances(models.SupportedDataRate, minimum=0))
 
 
 class WirelessNetworkFactory(PrimaryModelFactory):
@@ -108,14 +128,6 @@ class AccessPointGroupRadioProfileAssignmentFactory(BaseModelFactory):
     radio_profile = factory.SubFactory(RadioProfileFactory)
 
 
-class AccessPointGroupDeviceAssignmentFactory(BaseModelFactory):
-    class Meta:
-        model = models.AccessPointGroupDeviceAssignment
-
-    access_point_group = factory.SubFactory(AccessPointGroupFactory)
-    device = factory.SubFactory(DeviceFactory)
-
-
 class AccessPointGroupWithMembersFactory(AccessPointGroupFactory):
     wireless1 = factory.RelatedFactory(
         AccessPointGroupWirelessNetworkAssignmentFactory, factory_related_name="access_point_group"
@@ -129,8 +141,8 @@ class AccessPointGroupWithMembersFactory(AccessPointGroupFactory):
     radio2 = factory.RelatedFactory(
         AccessPointGroupRadioProfileAssignmentFactory, factory_related_name="access_point_group"
     )
-    device1 = factory.RelatedFactory(AccessPointGroupDeviceAssignmentFactory, factory_related_name="access_point_group")
-    device2 = factory.RelatedFactory(AccessPointGroupDeviceAssignmentFactory, factory_related_name="access_point_group")
+    device1 = factory.RelatedFactory(DeviceFactory, factory_related_name="access_point_group")
+    device2 = factory.RelatedFactory(DeviceFactory, factory_related_name="access_point_group")
 
 
 class RadioProfilesWithMembersFactory(RadioProfileFactory):

@@ -1,6 +1,12 @@
 import django_filters
 
-from nautobot.core.filters import BaseFilterSet, NaturalKeyOrPKMultipleChoiceFilter, NumericArrayFilter, SearchFilter
+from nautobot.core.filters import (
+    BaseFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
+    NumericArrayFilter,
+    RelatedMembershipBooleanFilter,
+    SearchFilter,
+)
 from nautobot.dcim.models import Controller, Device
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import SecretsGroup
@@ -22,6 +28,30 @@ class AccessPointGroupFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         to_field_name="name",
         label="Controller (name or ID)",
     )
+    devices = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        label="Devices (name or ID)",
+    )
+    has_devices = RelatedMembershipBooleanFilter(
+        field_name="devices",
+        label="Has devices",
+    )
+    radio_profiles = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.RadioProfile.objects.all(),
+        label="Radio Profiles (name or ID)",
+    )
+    has_radio_profiles = RelatedMembershipBooleanFilter(
+        field_name="radio_profiles",
+        label="Has radio profiles",
+    )
+    wireless_networks = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.WirelessNetwork.objects.all(),
+        label="Wireless Networks (name or ID)",
+    )
+    has_wireless_networks = RelatedMembershipBooleanFilter(
+        field_name="wireless_networks",
+        label="Has wireless networks",
+    )
 
     class Meta:
         model = models.AccessPointGroup
@@ -41,6 +71,15 @@ class SupportedDataRateFilterSet(BaseFilterSet):
                 "preprocessor": int,
             },
         }
+    )
+    radio_profiles = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.RadioProfile.objects.all(),
+        to_field_name="name",
+        label="Radio Profile (name or ID)",
+    )
+    has_radio_profiles = RelatedMembershipBooleanFilter(
+        field_name="radio_profiles",
+        label="Has radio profiles",
     )
 
     class Meta:
@@ -68,6 +107,15 @@ class RadioProfileFilterSet(NautobotFilterSet):
     frequency = django_filters.MultipleChoiceFilter(
         choices=choices.RadioProfileFrequencyChoices,
         null_value=None,
+    )
+    access_point_groups = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.AccessPointGroup.objects.all(),
+        to_field_name="name",
+        label="Access Point Groups (name or ID)",
+    )
+    has_access_point_groups = RelatedMembershipBooleanFilter(
+        field_name="access_point_groups",
+        label="Has access point groups",
     )
 
     class Meta:
@@ -97,6 +145,15 @@ class WirelessNetworkFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         queryset=SecretsGroup.objects.all(),
         to_field_name="name",
         label="Secrets group (name or ID)",
+    )
+    access_point_groups = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.AccessPointGroup.objects.all(),
+        to_field_name="name",
+        label="Access Point Groups (name or ID)",
+    )
+    has_access_point_groups = RelatedMembershipBooleanFilter(
+        field_name="access_point_groups",
+        label="Has access point groups",
     )
     hidden = django_filters.BooleanFilter()
 
@@ -152,29 +209,4 @@ class AccessPointGroupRadioProfileAssignmentFilterSet(BaseFilterSet):
 
     class Meta:
         model = models.AccessPointGroupRadioProfileAssignment
-        fields = "__all__"
-
-
-class AccessPointGroupDeviceAssignmentFilterSet(BaseFilterSet):
-    q = SearchFilter(
-        filter_predicates={
-            "access_point_group__name": "icontains",
-            "device__name": "icontains",
-        }
-    )
-    access_point_group = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="access_point_group",
-        queryset=models.AccessPointGroup.objects.all(),
-        to_field_name="name",
-        label="Access Point Group (name or ID)",
-    )
-    device = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="device",
-        queryset=Device.objects.all(),
-        to_field_name="name",
-        label="Device (name or ID)",
-    )
-
-    class Meta:
-        model = models.AccessPointGroupDeviceAssignment
         fields = "__all__"

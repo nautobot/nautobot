@@ -1,0 +1,85 @@
+from nautobot.core.apps import (
+    NavMenuAddButton,
+    NavMenuGroup,
+    NavMenuItem,
+    NavMenuTab,
+)
+
+menu_items = (
+    NavMenuTab(
+        name="Wireless",
+        weight=200,
+        groups=(
+            NavMenuGroup(
+                name="Wireless",
+                weight=100,
+                items=(
+                    NavMenuItem(
+                        link="wireless:accesspointgroup_list",
+                        name="Access Point Groups",
+                        weight=100,
+                        permissions=[
+                            "wireless.view_accesspointgroup",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="wireless:accesspointgroup_add",
+                                permissions=[
+                                    "wireless.add_accesspointgroup",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="wireless:radioprofile_list",
+                        name="Radio Profiles",
+                        weight=200,
+                        permissions=[
+                            "wireless.view_radioprofile",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="wireless:radioprofile_add",
+                                permissions=[
+                                    "wireless.add_radioprofile",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="wireless:supporteddatarate_list",
+                        name="Supported Data Rates",
+                        weight=300,
+                        permissions=[
+                            "wireless.view_supporteddatarate",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="wireless:supporteddatarate_add",
+                                permissions=[
+                                    "wireless.add_supporteddatarate",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="wireless:wirelessnetwork_list",
+                        name="Wireless Networks",
+                        weight=400,
+                        permissions=[
+                            "wireless.view_wirelessnetwork",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="wireless:wirelessnetwork_add",
+                                permissions=[
+                                    "wireless.add_wirelessnetwork",
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    ),
+)
