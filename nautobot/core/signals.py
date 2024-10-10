@@ -62,10 +62,12 @@ def disable_for_loaddata(signal_handler):
     return wrapper
 
 
-@receiver(post_save)
-@receiver(post_delete)
 def invalidate_max_depth_cache(sender, **kwargs):
-    """Clear the appropriate TreeManager.max_depth cache as the create/update/delete may have changed the tree."""
+    """
+    Clear the appropriate TreeManager.max_depth cache as the create/update/delete may have changed the tree.
+
+    Note that this signal is connected in `TreeModel.__init_subclass__()` so as to only apply to those models.
+    """
     from nautobot.core.models.tree_queries import TreeManager
 
     if not isinstance(sender.objects, TreeManager):
