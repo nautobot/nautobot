@@ -7,7 +7,6 @@ import logging
 
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.core.cache import cache
-from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver, Signal
 import redis.exceptions
 
