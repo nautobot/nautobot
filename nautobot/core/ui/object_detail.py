@@ -35,9 +35,10 @@ from nautobot.core.templatetags.helpers import (
     validated_viewname,
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
-from nautobot.core.utils.lookup import get_filterset_for_model, get_obj_from_context, get_route_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.utils import get_obj_from_context
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.tenancy.models import Tenant
 
