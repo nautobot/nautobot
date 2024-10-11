@@ -35,7 +35,7 @@ from nautobot.core.templatetags.helpers import (
     validated_viewname,
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
-from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_object_from_context, get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -451,7 +451,7 @@ class ObjectsTablePanel(Panel):
         This method determines the URL for adding a new object to the table. It checks if the user has
         the necessary permissions and creates the appropriate URL based on the specified add button route.
         """
-        obj = context.get("obj") or context.get("object")
+        obj = get_object_from_context(context)
         body_content_table_add_url = None
         request = context["request"]
         related_field_name = self.related_field_name or obj._meta.model_name
@@ -500,7 +500,7 @@ class ObjectsTablePanel(Panel):
         RequestConfig(request, paginate).configure(body_content_table)
         more_queryset_count = max(body_content_table.data.data.count() - per_page, 0)
 
-        obj = context.get("obj") or context.get("object")
+        obj = get_object_from_context(context)
         body_content_table_model = body_content_table.Meta.model
         related_field_name = self.related_field_name or obj._meta.model_name
 
@@ -764,7 +764,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
     def render_value(self, key, value, context):
         try:
-            field_instance = context.get("obj") or context.get("object")._meta.get_field(key)
+            field_instance = get_object_from_context(context)._meta.get_field(key)
         except FieldDoesNotExist:
             field_instance = None
 
@@ -899,20 +899,21 @@ class StatsPanel(Panel):
         self,
         *,
         filter_name,
-        related_field_names=None,
+        related_models=None,
         body_content_template_path="components/panel/stats_panel_body.html",
         **kwargs,
     ):
         """Instantiate a `StatsPanel`.
 
         Args:
-            related_field_names (dict): key/value pair of { <model_class>: <query_strings> }.
+            related_models (list): list of model classes and/or tuples of (model_class, query_string).
+            e.g. [Device, Prefix, (Circuit, "circuit_terminations__location__in"), (VirtualMachine, "cluster__location__in")]
             filter_name (str): a valid query filter append to the anchor tag for each stat button.
             e.g. the `tenant` query parameter in the url `/circuits/circuits/?tenant=f4b48e9d-56fc-4090-afa5-dcbe69775b13`.
         """
 
         self.filter_name = filter_name
-        self.related_field_names = related_field_names
+        self.related_models = related_models
         super().__init__(body_content_template_path=body_content_template_path, **kwargs)
 
     def should_render(self, context):
@@ -921,7 +922,7 @@ class StatsPanel(Panel):
 
     def render_body_content(self, context):
         """
-        Transform self.related_field_names to a dictionary with key, value pairs as follows:
+        Transform self.related_models to a dictionary with key, value pairs as follows:
         {
             <related_object_model_class_1>: [related_object_model_class_list_url_1, related_object_count_1, related_object_title_1],
             <related_object_model_class_2>: [related_object_model_class_list_url_2, related_object_count_2, related_object_title_2],
@@ -929,7 +930,7 @@ class StatsPanel(Panel):
             ...
         }
         """
-        instance = context.get("obj") or context.get("object")
+        instance = get_object_from_context(context)
         request = context["request"]
         if isinstance(instance, TreeModel):
             self.filter_pks = (
@@ -940,9 +941,9 @@ class StatsPanel(Panel):
 
         if self.body_content_template_path:
             stats = {}
-            if not self.related_field_names:
+            if not self.related_models:
                 return ""
-            for related_field in self.related_field_names:
+            for related_field in self.related_models:
                 if isinstance(related_field, tuple):
                     related_object_model_class, query = related_field
                 else:
@@ -952,7 +953,7 @@ class StatsPanel(Panel):
                     related_object_model_class.objects.restrict(request.user, "view").filter(**filter_dict).count()
                 )
                 related_object_model_class_meta = related_object_model_class._meta
-                related_object_list_url = get_route_for_model(related_object_model_class, "list")
+                related_object_list_url = validated_viewname(related_object_model_class, "list")
                 related_object_title = bettertitle(related_object_model_class_meta.verbose_name_plural)
                 value = [related_object_list_url, related_object_count, related_object_title]
                 stats[related_object_model_class] = value

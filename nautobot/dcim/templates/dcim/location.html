@@ -52,7 +52,12 @@
             <tr>
                 <td>Time Zone</td>
                  <td>
-                    {{ object.time_zone | format_time_zone}}
+                    {% if object.time_zone %}
+                        {{ object.time_zone }} (UTC {{ object.time_zone|tzoffset }})<br />
+                        <small class="text-muted">Local time: {% timezone object.time_zone %}{% now "SHORT_DATETIME_FORMAT" %}{% endtimezone %}</small>
+                    {% else %}
+                        <span class="text-muted">&mdash;</span>
+                    {% endif %}
                 </td>
             </tr>
             <tr>

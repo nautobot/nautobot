@@ -90,7 +90,7 @@ class TenantView(generic.ObjectView):
             StatsPanel(
                 label="Stats",
                 filter_name="tenant",
-                related_field_names=[
+                related_models=[
                     Circuit,
                     Cluster,
                     Device,
