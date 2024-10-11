@@ -394,8 +394,8 @@ class RackElevationDetailFilterSerializer(serializers.Serializer):
     is_occupied = serializers.BooleanField(required=False, allow_null=True, default=None)
 
     def validate(self, attrs):
-        attrs.setdefault("unit_width", get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH"))
-        attrs.setdefault("unit_height", get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_HEIGHT"))
+        attrs.setdefault("unit_width", get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH", fallback=230))
+        attrs.setdefault("unit_height", get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", fallback=22))
         return attrs
 
 
