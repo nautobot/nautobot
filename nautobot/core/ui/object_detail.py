@@ -147,6 +147,9 @@ class Component:
             context = context.flatten()
         return {**context, **kwargs}
 
+    def get_obj_from_context(self, context):
+        return context.get("obj") or context.get("object")
+
 
 class Tab(Component):
     """Base class for UI framework definition of a single tabbed pane within an Object Detail (Object Retrieve) page."""
@@ -768,7 +771,8 @@ class ObjectTextPanel(_BaseTextPanel):
     def get_text(self, context):
         if not context.get("object"):
             return ""
-        return getattr(context["object"], self.object_field, "")
+        obj = self.get_obj_from_context(context)
+        return getattr(obj, self.object_field, "")
 
 
 class TextPanel(_BaseTextPanel):
