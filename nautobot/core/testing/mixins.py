@@ -316,7 +316,7 @@ class NautobotTestCaseMixin:
             text = str(text)
             content = content.decode(response.charset)
             content = utils.extract_page_body(content)  # Nautobot-specific
-            text_repr = "'%s'" % text
+            text_repr = f"'{text}'"
         else:
             text_repr = repr(text)
 
