@@ -21,6 +21,7 @@ import yaml
 
 from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
+from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
@@ -616,6 +617,50 @@ def render_uptime(seconds):
     )
 
 
+@library.filter()
+@register.filter()
+def hyperlinked_field(value, hyperlink=None):
+    """Render a value as a hyperlink."""
+    if not value:
+        return placeholder(value)
+    hyperlink = hyperlink or value
+    return format_html('<a href="{}">{}</a>', hyperlink, value)
+
+
+@library.filter()
+@register.filter()
+def render_content_types(value):
+    """Render sorted by model and app_label ContentTypes value"""
+    if not value.exists():
+        return HTML_NONE
+    output = format_html("<ul>")
+    sorted_value = value.order_by("app_label", "model")
+    for content_type in sorted_value:
+        output += format_html("<li>{content_type}</li>", content_type=content_type)
+    output += format_html("</ul>")
+
+    return output
+
+
+@library.filter()
+@register.filter()
+def render_ancestor_hierarchy(value):
+    """Renders a nested HTML list representing the hierarchy of ancestors for a given object."""
+    result = format_html('<ul class="tree-hierarchy">')
+    append_to_result = format_html("</ul>")
+    for ancestor in value.ancestors():
+        nestable_tag = format_html('<span title="nestable">↺</span>' if getattr(ancestor, "nestable", False) else "")
+        result += format_html(
+            "<li>{value} {nestable_tag}<ul>", value=hyperlinked_object(ancestor, "name"), nestable_tag=nestable_tag
+        )
+        append_to_result += format_html("</ul></li>")
+    nestable_tag = format_html('<span title="nestable">↺</span>' if getattr(value, "nestable", False) else "")
+    result += format_html("<li><strong>{value} {nestable_tag}</strong></li>", value=value, nestable_tag=nestable_tag)
+    result += append_to_result
+
+    return result
+
+
 #
 # Tags
 #
@@ -846,11 +891,11 @@ def saved_view_modal(
     elif current_saved_view is not None and not per_page:
         # no changes made, display current saved view pagination count
         param_dict["per_page"] = current_saved_view.config.get(
-            "pagination_count", config.get_settings_or_config("PAGINATE_COUNT")
+            "pagination_count", config.get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
         )
     else:
         # display default pagination count
-        param_dict["per_page"] = config.get_settings_or_config("PAGINATE_COUNT")
+        param_dict["per_page"] = config.get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
 
     if sort_order:
         # user made changes to saved view sort order
