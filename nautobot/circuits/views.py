@@ -114,6 +114,7 @@ class ProviderUIViewSet(NautobotUIViewSet):
                 weight=200,
                 table_key="circuits_table",
                 section=SectionChoices.FULL_WIDTH,
+                exclude_fields=["provider"],
             ),
         ),
     )
@@ -127,16 +128,7 @@ class ProviderUIViewSet(NautobotUIViewSet):
                 .select_related("circuit_type", "tenant")
                 .prefetch_related("circuit_terminations__location")
             )
-            circuits_table = tables.CircuitTable(circuits)
-            circuits_table.columns.hide("provider")
-
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(circuits_table)
-
-            context["circuits_table"] = circuits_table
+            context["circuits_table"] = (tables.CircuitTable, circuits)
         return context
 
 

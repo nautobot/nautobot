@@ -247,8 +247,8 @@ class LocationTypeUIViewSet(
             .select_related("parent", "location_type")
         )
 
-        children_table = tables.LocationTypeTable(children)
-        locations_table = tables.LocationTable(locations)
+        children_table = (tables.LocationTypeTable, children)
+        locations_table = (tables.LocationTable, locations)
 
         return {
             "children_table": children_table,

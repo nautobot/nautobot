@@ -458,8 +458,10 @@ class ObjectsTablePanel(Panel):
         return_url = context.get("return_url", obj.get_absolute_url())
 
         if self.add_button_route == "default":
-            body_content_table = context[self.table_key]
-
+            if isinstance(context[self.table_key], tuple):
+                body_content_table, _ = context[self.table_key]
+            else:
+                body_content_table = context[self.table_key]
             body_content_table_model = body_content_table.Meta.model
             permission_name = get_permission_for_model(body_content_table_model, "add")
             if request.user.has_perms([permission_name]):
@@ -483,17 +485,26 @@ class ObjectsTablePanel(Panel):
         for listing and adding objects. It also handles field inclusion/exclusion and
         displays the appropriate table title if provided.
         """
-        body_content_table = context[self.table_key]
+        if isinstance(context[self.table_key], tuple):
+            body_content_table_class, body_content_table_queryset = context[self.table_key]
+            body_content_table = body_content_table_class(body_content_table_queryset)
+        else:
+            body_content_table = context[self.table_key]
         request = context["request"]
 
         if self.exclude_fields or self.include_fields:
-            for column in body_content_table.columns:
-                if (self.exclude_fields and column.name in self.exclude_fields) or (
-                    self.include_fields and column.name not in self.include_fields
+            for column in body_content_table._sequence:
+                if (self.exclude_fields and column in self.exclude_fields) or (
+                    self.include_fields and column not in self.include_fields
                 ):
-                    body_content_table.columns.hide(column.name)
+                    body_content_table.columns.hide(column)
                 else:
-                    body_content_table.columns.show(column.name)
+                    body_content_table.columns.show(column)
+        else:
+            # If no exclude and include fields are specified
+            # show all columns
+            for column in body_content_table._sequence:
+                body_content_table.columns.show(column)
 
         per_page = self.max_display_count if self.max_display_count is not None else get_paginate_count(request)
         paginate = {"paginator_class": EnhancedPaginator, "per_page": per_page}
@@ -1283,7 +1294,11 @@ class _ObjectDetailGroupsTab(Tab):
         **kwargs,
     ):
         if panels is None:
-            panels = (ObjectsTablePanel(weight=100, table_key="associated_dynamic_groups_table"),)
+            panels = (
+                ObjectsTablePanel(
+                    weight=100, table_key="associated_dynamic_groups_table", exclude_fields=["pk", "content_type"]
+                ),
+            )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
 
     def should_render(self, context):
@@ -1315,7 +1330,11 @@ class _ObjectDetailMetadataTab(Tab):
         **kwargs,
     ):
         if panels is None:
-            panels = (ObjectsTablePanel(weight=100, table_key="associated_object_metadata_table"),)
+            panels = (
+                ObjectsTablePanel(
+                    weight=100, table_key="associated_object_metadata_table", exclude_fields=["assigned_object"]
+                ),
+            )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
 
     def should_render(self, context):
