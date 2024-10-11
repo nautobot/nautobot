@@ -904,13 +904,12 @@ class StatsPanel(Panel):
         body_content_template_path="components/panel/stats_panel_body.html",
         **kwargs,
     ):
-        """Instantiate a `StatsPanel`.
-
-        Args:
-            related_models (list): list of model classes and/or tuples of (model_class, query_string).
-            e.g. [Device, Prefix, (Circuit, "circuit_terminations__location__in"), (VirtualMachine, "cluster__location__in")]
-            filter_name (str): a valid query filter append to the anchor tag for each stat button.
-            e.g. the `tenant` query parameter in the url `/circuits/circuits/?tenant=f4b48e9d-56fc-4090-afa5-dcbe69775b13`.
+        """
+        Instantiate a `StatsPanel`.
+        filter_name (str) is a valid query filter append to the anchor tag for each stat button.
+        e.g. the `tenant` query parameter in the url `/circuits/circuits/?tenant=f4b48e9d-56fc-4090-afa5-dcbe69775b13`.
+        related_models is a list of model classes and/or tuples of (model_class, query_string).
+        e.g. [Device, Prefix, (Circuit, "circuit_terminations__location__in"), (VirtualMachine, "cluster__location__in")]
         """
 
         self.filter_name = filter_name
