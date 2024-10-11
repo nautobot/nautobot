@@ -173,8 +173,12 @@ class NautobotTestCaseMixin:
                 # REST API response; pass the response data through directly
                 err_message += f"\n{response.data}"
             # Attempt to extract form validation errors from the response HTML
-            form_errors = utils.extract_form_failures(response.content.decode(response.charset))
-            err_message += "\n" + str(form_errors or response.content.decode(response.charset) or "No data")
+            elif form_errors := utils.extract_form_failures(response.content.decode(response.charset)):
+                err_message += f"\n{form_errors}"
+            elif body_content := utils.extract_page_body(response.content.decode(response.charset)):
+                err_message += f"\n{body_content}"
+            else:
+                err_message += "No data"
             if msg:
                 err_message = f"{msg}\n{err_message}"
         self.assertIn(response.status_code, expected_status, err_message)
@@ -300,7 +304,7 @@ class NautobotTestCaseMixin:
             msg_prefix += ": "
 
         self.assertHttpStatus(  # Nautobot-specific, original uses simple assertEqual()
-            response, status_code, msg_prefix + "Couldn't retrieve content:"
+            response, status_code, msg_prefix
         )
 
         if response.streaming:
