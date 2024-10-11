@@ -35,7 +35,7 @@ from nautobot.core.templatetags.helpers import (
     validated_viewname,
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
-from nautobot.core.utils.lookup import get_filterset_for_model, get_object_from_context, get_route_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_obj_from_context, get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -451,7 +451,7 @@ class ObjectsTablePanel(Panel):
         This method determines the URL for adding a new object to the table. It checks if the user has
         the necessary permissions and creates the appropriate URL based on the specified add button route.
         """
-        obj = get_object_from_context(context)
+        obj = get_obj_from_context(context)
         body_content_table_add_url = None
         request = context["request"]
         related_field_name = self.related_field_name or obj._meta.model_name
@@ -500,7 +500,7 @@ class ObjectsTablePanel(Panel):
         RequestConfig(request, paginate).configure(body_content_table)
         more_queryset_count = max(body_content_table.data.data.count() - per_page, 0)
 
-        obj = get_object_from_context(context)
+        obj = get_obj_from_context(context)
         body_content_table_model = body_content_table.Meta.model
         related_field_name = self.related_field_name or obj._meta.model_name
 
@@ -764,7 +764,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
     def render_value(self, key, value, context):
         try:
-            field_instance = get_object_from_context(context)._meta.get_field(key)
+            field_instance = get_obj_from_context(context)._meta.get_field(key)
         except FieldDoesNotExist:
             field_instance = None
 
@@ -930,7 +930,7 @@ class StatsPanel(Panel):
             ...
         }
         """
-        instance = get_object_from_context(context)
+        instance = get_obj_from_context(context)
         request = context["request"]
         if isinstance(instance, TreeModel):
             self.filter_pks = (
