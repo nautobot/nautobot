@@ -358,6 +358,7 @@ def humanize_speed(speed):
     else:
         return f"{speed} Kbps"
 
+
 @library.filter()
 @register.filter()
 def fgcolor(value):
