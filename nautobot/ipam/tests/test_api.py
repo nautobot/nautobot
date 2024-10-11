@@ -200,14 +200,19 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
         }
         self.add_permissions("ipam.add_vrfdeviceassignment")
         response = self.client.post(self._get_list_url(), duplicate_device_create_data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("The fields device, vrf must make a unique set.", str(response.content))
+        self.assertContains(
+            response, "The fields device, vrf must make a unique set.", status_code=status.HTTP_400_BAD_REQUEST
+        )
         response = self.client.post(self._get_list_url(), duplicate_vm_create_data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("The fields virtual_machine, vrf must make a unique set.", str(response.content))
+        self.assertContains(
+            response, "The fields virtual_machine, vrf must make a unique set.", status_code=status.HTTP_400_BAD_REQUEST
+        )
         response = self.client.post(self._get_list_url(), invalid_create_data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("A VRF cannot be associated with both a device and a virtual machine.", str(response.content))
+        self.assertContains(
+            response,
+            "A VRF cannot be associated with both a device and a virtual machine.",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
@@ -266,14 +271,15 @@ class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
         }
         self.add_permissions("ipam.add_vrfprefixassignment")
         response = self.client.post(self._get_list_url(), duplicate_create_data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("The fields vrf, prefix must make a unique set.", str(response.content))
+        self.assertContains(
+            response, "The fields vrf, prefix must make a unique set.", status_code=status.HTTP_400_BAD_REQUEST
+        )
         response = self.client.post(self._get_list_url(), wrong_namespace_create_data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Prefix must be in same namespace as VRF", str(response.content))
+        self.assertContains(
+            response, "Prefix must be in same namespace as VRF", status_code=status.HTTP_400_BAD_REQUEST
+        )
         response = self.client.post(self._get_list_url(), missing_field_create_data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("This field may not be null.", str(response.content))
+        self.assertContains(response, "This field may not be null.", status_code=status.HTTP_400_BAD_REQUEST)
 
 
 class RouteTargetTest(APIViewTestCases.APIViewTestCase):
