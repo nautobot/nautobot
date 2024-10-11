@@ -508,6 +508,7 @@ nav:
           - Dynamic Groups:
               - "user-guide/platform-functionality/dynamicgroup.md"
               - Static Group Associations: "user-guide/platform-functionality/staticgroupassociation.md"
+          - Event Notifications: "user-guide/platform-functionality/events.md"
           - Export Templates: "user-guide/platform-functionality/exporttemplate.md"
           - External Integrations: "user-guide/platform-functionality/externalintegration.md"
           - Git Repositories: "user-guide/platform-functionality/gitrepository.md"
@@ -598,6 +599,7 @@ nav:
               - nautobot.apps.config: "code-reference/nautobot/apps/config.md"
               - nautobot.apps.constants: "code-reference/nautobot/apps/constants.md"
               - nautobot.apps.datasources: "code-reference/nautobot/apps/datasources.md"
+              - nautobot.apps.events: "code-reference/nautobot/apps/events.md"
               - nautobot.apps.exceptions: "code-reference/nautobot/apps/exceptions.md"
               - nautobot.apps.factory: "code-reference/nautobot/apps/factory.md"
               - nautobot.apps.filters: "code-reference/nautobot/apps/filters.md"

@@ -347,6 +347,15 @@ ul.software-image-hierarchy {
     padding-left: 18px;
 }
 
+ul.tree-hierarchy {
+    list-style-type: none;
+    padding-left: 0px;
+}
+ul.tree-hierarchy ul {
+    list-style-type: "↳ ";
+    padding-left: 18px;
+}
+
 /* Filters */
 .filter-container {
     box-sizing: border-box;

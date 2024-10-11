@@ -47,7 +47,7 @@ django-celery-beat = "~2.6.0"
 # Provides a database backend & models for Celery task results
 django-celery-results = "~2.5.1"
 # Management of app configuration via the Django admin UI
-django-constance = "~3.1.0"
+django-constance = "~4.1.0"
 # Permit cross-domain API requests
 django-cors-headers = "~4.4.0"
 # Store files in the database for background tasks
@@ -74,7 +74,7 @@ django-structlog = {version = "^8.1.0", extras = ["celery"]}
 # Advanced HTML tables
 django-tables2 = "~2.7.0"
 # Tags
-django-taggit = "~5.0.0"
+django-taggit = "~6.1.0"
 # Represent time zones in Django
 django-timezone-field = "~7.0"
 # Tree database structures based on Common Table Expressions
@@ -164,8 +164,8 @@ example-app = {path = "examples/example_app", develop = true}
 example-app-with-view-override = {path = "examples/example_app_with_view_override", develop = true}
 # Random data generation
 factory-boy = "~3.3.1"
-# Factory Boy dependency. Don't upgrade to v26.x until breaking change is fixed https://github.com/joke2k/faker/issues/2070
-faker = ">=0.7.0,<26.0.0"
+# Factory Boy dependency.
+faker = ">=30.1.0,<30.2.0"
 # Library to access Kubernetes API used to develop K8s integration
 kubernetes = "^31.0.0"
 # Alternative to Make, CLI based on `tasks.py`
@@ -173,9 +173,9 @@ invoke = "~2.2.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
 rich = "~13.7.1"
 # Change log management and generation
-towncrier = "~23.11.0"
+towncrier = "~24.8.0"
 # Watch files for celery and mkdocs reload
-watchdog = "~4.0.2"
+watchdog = "~5.0.0"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
