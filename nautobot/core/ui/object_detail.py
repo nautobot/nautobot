@@ -899,7 +899,6 @@ class StatsPanel(Panel):
         self,
         *,
         filter_name,
-        filter_pks=None,
         related_field_names=None,
         body_content_template_path="components/panel/stats_panel_body.html",
         **kwargs,
@@ -908,7 +907,6 @@ class StatsPanel(Panel):
 
         Args:
             related_field_names (dict): key/value pair of { <model_class>: <query_strings> }.
-            filter_pks (list of uuids): the list of pks work in tandem with the query_strings.
             filter_name (str): a valid query filter append to the anchor tag for each stat button.
             e.g. the `tenant` query parameter in the url `/circuits/circuits/?tenant=f4b48e9d-56fc-4090-afa5-dcbe69775b13`.
         """
@@ -944,7 +942,11 @@ class StatsPanel(Panel):
             stats = {}
             if not self.related_field_names:
                 return ""
-            for related_object_model_class, query in self.related_field_names.items():
+            for related_field in self.related_field_names:
+                if isinstance(related_field, tuple):
+                    related_object_model_class, query = related_field
+                else:
+                    related_object_model_class, query = related_field, f"{self.filter_name}__in"
                 filter_dict = {query: self.filter_pks}
                 related_object_count = (
                     related_object_model_class.objects.restrict(request.user, "view").filter(**filter_dict).count()

@@ -358,29 +358,6 @@ def humanize_speed(speed):
     else:
         return f"{speed} Kbps"
 
-
-@library.filter()
-@register.filter()
-def tzoffset(value):
-    """
-    Returns the hour offset of a given time zone using the current time.
-    """
-    return datetime.datetime.now(value).strftime("%z")
-
-
-@library.filter()
-@register.filter()
-def format_time_zone(value):
-    """
-    Returns the timezone and the hour offset of the time zone using the current time.
-    """
-    timezone = value
-    offset = tzoffset(value)
-    current_time = datetime.datetime.now(timezone).strftime("%Y-%m-%d %I:%M %p")
-    html_template = '{} (UTC {}) <br /> <small class="text-muted">Local time: {}</small>'
-    return format_html(html_template, timezone, offset, current_time)
-
-
 @library.filter()
 @register.filter()
 def fgcolor(value):
