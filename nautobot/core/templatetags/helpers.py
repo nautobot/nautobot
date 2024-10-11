@@ -362,6 +362,15 @@ def humanize_speed(speed):
 
 @library.filter()
 @register.filter()
+def tzoffset(value):
+    """
+    Returns the hour offset of a given time zone using the current time.
+    """
+    return datetime.datetime.now(value).strftime("%z")
+
+
+@library.filter()
+@register.filter()
 def fgcolor(value):
     """
     Return the ideal foreground color (block or white) given an arbitrary background color in RRGGBB format.
