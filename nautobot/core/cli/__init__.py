@@ -130,7 +130,7 @@ def _preprocess_settings(settings, config_path):
     # Event Publisher
     #
 
-    load_event_brokers(settings)
+    load_event_brokers(settings.NAUTOBOT_EVENT_BROKERS)
 
 
 def load_settings(config_path):

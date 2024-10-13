@@ -1078,3 +1078,5 @@ def silk_request_logging_intercept_logic(request):
 
 
 SILKY_INTERCEPT_FUNC = silk_request_logging_intercept_logic
+
+NAUTOBOT_EVENT_BROKERS = {}
