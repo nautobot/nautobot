@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.serializers import IntegerField, ListSerializer
 
 from nautobot.core.api.authentication import TokenPermissions
+from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT, PAGINATE_COUNT_DEFAULT
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.models import Location
@@ -324,11 +325,15 @@ class PrefixViewSet(NautobotModelViewSet):
         # Determine the maximum number of IPs to return
         else:
             try:
-                limit = int(request.query_params.get("limit", get_settings_or_config("PAGINATE_COUNT")))
+                limit = int(
+                    request.query_params.get(
+                        "limit", get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
+                    )
+                )
             except ValueError:
-                limit = get_settings_or_config("PAGINATE_COUNT")
-            if get_settings_or_config("MAX_PAGE_SIZE"):
-                limit = min(limit, get_settings_or_config("MAX_PAGE_SIZE"))
+                limit = get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
+            if get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT):
+                limit = min(limit, get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT))
 
             # Calculate available IPs within the prefix
             ip_list = []
@@ -525,12 +530,16 @@ class VLANGroupViewSet(NautobotModelViewSet):
 
         else:
             try:
-                limit = int(request.query_params.get("limit", get_settings_or_config("PAGINATE_COUNT")))
+                limit = int(
+                    request.query_params.get(
+                        "limit", get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
+                    )
+                )
             except ValueError:
-                limit = get_settings_or_config("PAGINATE_COUNT")
+                limit = get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
 
-            if get_settings_or_config("MAX_PAGE_SIZE"):
-                limit = min(limit, get_settings_or_config("MAX_PAGE_SIZE"))
+            if get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT):
+                limit = min(limit, get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT))
 
             if isinstance(limit, int) and limit >= 0:
                 vids = vlan_group.available_vids[0:limit]
