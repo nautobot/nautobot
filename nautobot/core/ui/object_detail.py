@@ -1,5 +1,6 @@
 """Classes and utilities for defining an object detail view through a NautobotUIViewSet."""
 
+from collections import namedtuple
 import contextlib
 from dataclasses import dataclass
 import logging
@@ -317,10 +318,6 @@ class Panel(Component):
         super().__init__(**kwargs)
 
     def render(self, context):
-        import ipdb
-
-        ipdb.set_trace()
-        print("c", self.label, context)
         """
         Render the panel as a whole.
 
@@ -904,18 +901,28 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
 class _BaseTextPanel(Panel):
     """A panel that renders simple text or markdown"""
 
+    RENDER_OPTIONS = namedtuple("RENDER_OPTIONS", ["text", "json", "yaml", "markdown"])
+
     def __init__(
-        self, *, enable_markdown=True, body_content_template_path="components/panel/body_content_text.html", **kwargs
+        self,
+        *,
+        render_as=RENDER_OPTIONS.markdown,
+        body_content_template_path="components/panel/body_content_text.html",
+        **kwargs,
     ):
-        self.enable_markdown = enable_markdown
-        self.body_content_template_path = body_content_template_path
-        super().__init__(**kwargs)
+        self.render_as = render_as
+        super().__init__(body_content_template_path=body_content_template_path, **kwargs)
 
     def render_body_content(self, context):
         text_content = self.get_text(context)
         if self.body_content_template_path:
             return get_template(self.body_content_template_path).render(
-                {**context, "enable_markdown": self.enable_markdown, "text_content": text_content}
+                {
+                    **context,
+                    "render_as": self.render_as,
+                    "text_content": text_content,
+                    "render_options": self.RENDER_OPTIONS,
+                }
             )
         return text_content
 
@@ -1163,7 +1170,7 @@ class _ObjectTagsPanel(Panel):
         }
 
 
-class _ObjectCommentPanel(ObjectFieldsPanel):
+class _ObjectCommentPanel(ObjectTextPanel):
     """Panel displaying an object's comments as a space-separated panel."""
 
     def __init__(
@@ -1172,18 +1179,14 @@ class _ObjectCommentPanel(ObjectFieldsPanel):
         label="Comments",
         section=SectionChoices.LEFT_HALF,
         weight=Panel.WEIGHT_COMMENTS_PANEL,
-        value_transforms=None,
+        object_field="comments",
         **kwargs,
     ):
-        """Instantiate an `_ObjectCommentPanel`."""
-        fields = ["comments"]
-        value_transforms = value_transforms or {"comments": [render_markdown, placeholder]}
         super().__init__(
             weight=weight,
             label=label,
-            fields=fields,
             section=section,
-            value_transforms=value_transforms,
+            object_field=object_field,
             **kwargs,
         )
 
