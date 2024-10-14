@@ -26,9 +26,10 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
+from nautobot.core.events import publish_event
 from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
-from nautobot.core.models.utils import pretty_print_query
+from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
@@ -1672,6 +1673,9 @@ class JobApprovalRequestView(generic.ObjectView):
                 scheduled_job.approved_by_user = request.user
                 scheduled_job.approved_at = timezone.now()
                 scheduled_job.save()
+
+                payload = serialize_object_v2(scheduled_job)
+                publish_event(topic="nautobot.events.jobs.approved", payload=payload)
 
                 messages.success(request, f"{scheduled_job.name} was approved and will now begin execution")
 

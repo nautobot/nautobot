@@ -30,6 +30,7 @@ import netaddr
 import yaml
 
 from nautobot.core.celery import import_jobs, nautobot_task
+from nautobot.core.events import publish_event
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -1153,9 +1154,11 @@ def run_job(self, job_class_path, *args, **kwargs):
     job.request = self.request
     try:
         job.before_start(self.request.id, args, kwargs)
+        publish_event(topic="nautobot.events.jobs.started", payload=kwargs)
         result = job(*args, **kwargs)
         job.on_success(result, self.request.id, args, kwargs)
         job.after_return(JobResultStatusChoices.STATUS_SUCCESS, result, self.request.id, args, kwargs, None)
+        publish_event(topic="nautobot.events.jobs.finished", payload=kwargs)
         return result
     except Exception as exc:
         einfo = ExceptionInfo(sys.exc_info())
