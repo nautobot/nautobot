@@ -114,23 +114,13 @@ class ProviderUIViewSet(NautobotUIViewSet):
                 weight=200,
                 table_class=tables.CircuitTable,
                 table_filter="provider",
+                select_related_fields=["circuit_type", "tenant"],
+                prefetch_related_fields=["circuit_terminations__location"],
                 section=SectionChoices.FULL_WIDTH,
                 exclude_fields=["pk", "provider"],
             ),
         ),
     )
-
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            circuits = (
-                Circuit.objects.restrict(request.user, "view")
-                .filter(provider=instance)
-                .select_related("circuit_type", "tenant")
-                .prefetch_related("circuit_terminations__location")
-            )
-            context["circuits_table"] = (tables.CircuitTable, circuits)
-        return context
 
 
 class CircuitUIViewSet(NautobotUIViewSet):
