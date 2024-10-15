@@ -39,7 +39,6 @@ from nautobot.core.api.utils import (
 from nautobot.core.api.views import (
     BulkDestroyModelMixin,
     BulkUpdateModelMixin,
-    GetObjectCountsView,
     ModelViewSet,
     ModelViewSetMixin,
     ReadOnlyModelViewSet,
@@ -62,7 +61,6 @@ __all__ = (
     "get_api_version_serializer",
     "get_serializer_for_model",
     "get_view_name",
-    "GetObjectCountsView",
     "is_api_request",
     "LaxURLField",
     "ModelViewSet",
