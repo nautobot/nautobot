@@ -1,10 +1,11 @@
 """Module providing for the publication of event notifications via mechanisms such as Redis, Kafka, syslog, etc."""
 
 import fnmatch
-import importlib
 import logging
 
-from nautobot.core.events.exceptions import EventPublisherImproperlyConfigured, EventPublisherNotFound
+from django.utils.module_loading import import_string
+
+from nautobot.core.events.exceptions import EventBrokerImproperlyConfigured, EventBrokerNotFound
 
 from .base import EventBroker
 from .redis_broker import RedisEventBroker
@@ -16,41 +17,37 @@ _EVENT_BROKERS = []
 logger = logging.getLogger(__name__)
 
 
-def load_event_brokers(nautobt_event_brokers):
+def load_event_brokers(event_broker_configs):
     """Process plugins and log errors if they can't be loaded."""
-    for publisher_name, publisher in nautobt_event_brokers.items():
-        options = publisher.get("OPTIONS", {})
-        topics = publisher.get("TOPICS", {})
+    for broker_name, broker in event_broker_configs.items():
+        options = broker.get("OPTIONS", {})
+        topics = broker.get("TOPICS", {})
         if not isinstance(topics, dict):
-            raise EventPublisherImproperlyConfigured(
-                f"Malformed Event Publisher Settings: Expected `TOPICS` to be a 'dict', instead a '{type(topics).__name__}' was provided"
+            raise EventBrokerImproperlyConfigured(
+                f" {broker_name} Malformed Event Broker Settings: Expected `TOPICS` to be a 'dict', instead a '{type(topics).__name__}' was provided"
             )
-        include_topics = topics.get("INCLUDE", ["*"])
-        if not isinstance(include_topics, list):
-            raise EventPublisherImproperlyConfigured(
-                f"Malformed Event Publisher Settings: Expected `INCLUDE` to be a 'list', instead a '{type(include_topics).__name__}' was provided"
+        include_topics = topics.get("INCLUDE")
+        if not isinstance(include_topics, (list, tuple)):
+            raise EventBrokerImproperlyConfigured(
+                f"{broker_name} Malformed Event Broker Settings: Expected `INCLUDE` to be a 'list' or 'tuple`, instead a '{type(include_topics).__name__}' was provided"
             )
         exclude_topics = topics.get("EXCLUDE", [])
-        if not isinstance(exclude_topics, list):
-            raise EventPublisherImproperlyConfigured(
-                f"Malformed Event Publisher Settings: Expected `EXCLUDE` to be a 'list', instead a '{type(exclude_topics).__name__}' was provided"
+        if not isinstance(exclude_topics, (list, tuple)):
+            raise EventBrokerImproperlyConfigured(
+                f"{broker_name} Malformed Event Broker Settings: Expected `EXCLUDE` to be a 'list' or 'tuple`, instead a '{type(exclude_topics).__name__}' was provided"
             )
         options.update({"include_topics": include_topics, "exclude_topics": exclude_topics})
+
         try:
-            event_publisher_path = publisher["CLASS"]
-            module_path, class_name = event_publisher_path.rsplit(".", 1)
-            module = importlib.import_module(module_path)
-            event_publisher_class = getattr(module, class_name)
-            event_broker = event_publisher_class(**options)
+            event_broker_class = import_string(broker["CLASS"])
+            if not issubclass(event_broker_class, EventBroker):
+                raise EventBrokerImproperlyConfigured(
+                    f"{broker_name} Malformed Event Broker Settings: Broker provided is not an EventBroker"
+                )
+            event_broker = event_broker_class(**options)
             register_event_broker(event_broker)
-        except ModuleNotFoundError as err:
-            raise EventPublisherNotFound(
-                f"Unable to import event publisher {publisher_name}: Module {module_path} not found"
-            ) from err
-        except AttributeError as err:
-            raise EventPublisherNotFound(
-                f"Unable to import event publisher {publisher_name}: {publisher_name} not found in module {module_path}"
-            ) from err
+        except ImportError as err:
+            raise EventBrokerNotFound(f"Unable to import Event Broker {broker_name}.") from err
 
 
 def register_event_broker(event_broker):
@@ -102,7 +99,7 @@ def publish_event(*, topic, payload):
     for event_broker in _EVENT_BROKERS:
         exclude_topics = event_broker.exclude_topics
         include_topics = event_broker.include_topics
-        if not is_topic_match(topic, exclude_topics) and is_topic_match(topic, include_topics):
+        if is_topic_match(topic, include_topics) and not is_topic_match(topic, exclude_topics):
             event_broker.publish(topic=topic, payload=payload)
 
 

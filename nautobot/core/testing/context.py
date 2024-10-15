@@ -10,7 +10,7 @@ class load_event_broker_override_settings(TestContextDecorator):
 
     def enable(self):
         """Registered event brokers"""
-        load_event_brokers(self.options["NAUTOBOT_EVENT_BROKERS"])
+        load_event_brokers(self.options["EVENT_BROKERS"])
 
     def disable(self):
         """Clear all registered event brokers"""

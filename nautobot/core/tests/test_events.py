@@ -13,7 +13,7 @@ from nautobot.core.events import (
     publish_event,
     register_event_broker,
 )
-from nautobot.core.events.exceptions import EventPublisherImproperlyConfigured, EventPublisherNotFound
+from nautobot.core.events.exceptions import EventBrokerImproperlyConfigured, EventBrokerNotFound
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
 
@@ -86,7 +86,7 @@ class EventNotificationTest(TestCase):
         deregister_event_broker(event_broker_2)
 
     @load_event_broker_override_settings(
-        NAUTOBOT_EVENT_BROKERS={
+        EVENT_BROKERS={
             "SyslogEventBroker": {
                 "CLASS": "nautobot.core.events.SyslogEventBroker",
                 "TOPICS": {
@@ -104,30 +104,45 @@ class EventNotificationTest(TestCase):
         self.assertEqual(cm.output, ["INFO:nautobot.events.nautobot.test.event:" + json.dumps({"a": 1}, indent=4)])
 
     @load_event_broker_override_settings(
-        NAUTOBOT_EVENT_BROKERS={
+        EVENT_BROKERS={
             "RedisEventBroker": {
                 "CLASS": "nautobot.core.events.RedisEventBroker",
                 "OPTIONS": {"url": settings.CACHES["default"]["LOCATION"]},
+                "TOPICS": {"EXCLUDE": "*.test.event.no-publish"},
             }
         }
     )
     def test_publish_events_to_redis(self):
         url = settings.CACHES["default"]["LOCATION"]
         connection = redis.StrictRedis.from_url(url, decode_responses=True)
-        sub = connection.pubsub()
-        sub.psubscribe("nautobot.*")
-        self.assertEqual(
-            sub.get_message(timeout=5.0),
-            {"type": "psubscribe", "pattern": None, "channel": "nautobot.*", "data": 1},
-        )
-        publish_event(topic="nautobot.test.event", payload={"b": 2})
-        self.assertEqual(
-            sub.get_message(timeout=5.0),
-            {"type": "pmessage", "pattern": "nautobot.*", "channel": "nautobot.test.event", "data": '{"b": 2}'},
-        )
+
+        sub = None
+        try:
+            connection = redis.StrictRedis.from_url(url, decode_responses=True)
+            sub = connection.pubsub()
+            sub.psubscribe("nautobot.*")
+            self.assertEqual(
+                sub.get_message(timeout=5.0),
+                {"type": "psubscribe", "pattern": None, "channel": "nautobot.*", "data": 1},
+            )
+            publish_event(topic="nautobot.test.event", payload={"b": 2})
+            self.assertEqual(
+                sub.get_message(timeout=5.0),
+                {"type": "pmessage", "pattern": "nautobot.*", "channel": "nautobot.test.event", "data": '{"b": 2}'},
+            )
+
+            # Assert exclude topics are not published
+            publish_event(topic="nautobot.test.event.no-publish", payload={"c": 3})
+            self.assertNotEqual(
+                sub.get_message(timeout=5.0),
+                {"type": "pmessage", "pattern": "nautobot.*", "channel": "nautobot.test.event", "data": '{"c": 3}'},
+            )
+        finally:
+            if sub is not None:
+                sub.close()
 
     def test_invalid_event_broker_config(self):
-        with self.assertRaises(EventPublisherNotFound) as err:
+        with self.assertRaises(EventBrokerNotFound) as err:
             broker_config = {
                 "TestEventBroker": {
                     "CLASS": "nautobot.core.tests.invalid_path.TestEventBroker",
@@ -136,32 +151,32 @@ class EventNotificationTest(TestCase):
             load_event_brokers(broker_config)
         self.assertEqual(
             str(err.exception),
-            "Unable to import event publisher TestEventBroker: Module nautobot.core.tests.invalid_path not found",
+            "Unable to import Event Broker TestEventBroker",
         )
 
-        with self.assertRaises(EventPublisherNotFound) as err:
+        with self.assertRaises(EventBrokerNotFound) as err:
             broker_config = {
                 "TestEventBroker": {
-                    "CLASS": "nautobot.core.tests.test_events.InvalidBroker",
+                    "CLASS": "nautobot.core.tests.invalid_path.TestEventBroker",
                 }
             }
             load_event_brokers(broker_config)
         self.assertEqual(
             str(err.exception),
-            "Unable to import event publisher TestEventBroker: TestEventBroker not found in module nautobot.core.tests.test_events",
+            "TestEventBroker Malformed Event Broker Settings: Broker provided is not an EventBroker",
         )
 
-        with self.assertRaises(EventPublisherImproperlyConfigured) as err:
+        with self.assertRaises(EventBrokerImproperlyConfigured) as err:
             broker_config = {
                 "TestEventBroker": {"CLASS": "nautobot.core.tests.test_events.TestEventBroker", "TOPICS": []}
             }
             load_event_brokers(broker_config)
         self.assertEqual(
             str(err.exception),
-            "Malformed Event Publisher Settings: Expected `TOPICS` to be a 'dict', instead a 'list' was provided",
+            "TestEventBroker Malformed Event Broker Settings: Expected `TOPICS` to be a 'dict', instead a 'list' was provided",
         )
 
-        with self.assertRaises(EventPublisherImproperlyConfigured) as err:
+        with self.assertRaises(EventBrokerImproperlyConfigured) as err:
             broker_config = {
                 "TestEventBroker": {
                     "CLASS": "nautobot.core.tests.test_events.TestEventBroker",
@@ -173,10 +188,10 @@ class EventNotificationTest(TestCase):
             load_event_brokers(broker_config)
         self.assertEqual(
             str(err.exception),
-            "Malformed Event Publisher Settings: Expected `INCLUDE` to be a 'list', instead a 'str' was provided",
+            "TestEventBroker Malformed Event Broker Settings: Expected `INCLUDE` to be a 'list' or 'tuple', instead a 'str' was provided",
         )
 
-        with self.assertRaises(EventPublisherImproperlyConfigured) as err:
+        with self.assertRaises(EventBrokerImproperlyConfigured) as err:
             broker_config = {
                 "TestEventBroker": {
                     "CLASS": "nautobot.core.tests.test_events.TestEventBroker",
@@ -188,5 +203,5 @@ class EventNotificationTest(TestCase):
             load_event_brokers(broker_config)
         self.assertEqual(
             str(err.exception),
-            "Malformed Event Publisher Settings: Expected `EXCLUDE` to be a 'list', instead a 'str' was provided",
+            "TestEventBroker Malformed Event Broker Settings: Expected `EXCLUDE` to be a 'list' or 'tuple', instead a 'str' was provided",
         )

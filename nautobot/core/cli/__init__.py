@@ -45,7 +45,7 @@ def _preprocess_settings(settings, config_path):
     - Set up 'job_logs' database mirror
     - Handle our custom `STORAGE_BACKEND` setting.
     - Load plugins based on settings.PLUGINS (potentially affecting INSTALLED_APPS, MIDDLEWARE, and CONSTANCE_CONFIG)
-    - Load event publishers based on settings.NAUTOBOT_EVENT_BROKERS
+    - Load event brokers based on settings.EVENT_BROKERS
     """
     settings.SETTINGS_PATH = config_path
 
@@ -127,10 +127,10 @@ def _preprocess_settings(settings, config_path):
     load_plugins(settings)
 
     #
-    # Event Publisher
+    # Event Broker
     #
 
-    load_event_brokers(settings.NAUTOBOT_EVENT_BROKERS)
+    load_event_brokers(settings.EVENT_BROKERS)
 
 
 def load_settings(config_path):

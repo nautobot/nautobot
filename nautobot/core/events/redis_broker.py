@@ -36,7 +36,7 @@ from .base import EventBroker
 class RedisEventBroker(EventBroker):
     """EventBroker for publishing events to Redis."""
 
-    def __init__(self, url, *args, **kwargs):
+    def __init__(self, *args, url, **kwargs):
         """Initialize and configure a RedisEventBroker.
 
         Args:

@@ -756,6 +756,10 @@ properties:
     is_constance_config: true
     type: "boolean"
     version_added: "2.0.0"
+  EVENT_BROKERS:
+    default: {}
+    description: "Event brokers"
+    version_added: "2.4.0"
   EXEMPT_VIEW_PERMISSIONS:
     default: []
     description: "A list of Nautobot models to exempt from the enforcement of view permissions."

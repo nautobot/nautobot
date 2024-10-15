@@ -360,6 +360,17 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"] != "":
 #     DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
 
+# Event Brokers
+# EVENT_BROKERS = {
+#     "SyslogEventBroker": {
+#         "CLASS": "nautobot.core.events.SyslogEventBroker",
+#         "TOPICS": {
+#             "INCLUDE": ["nautobot.test.*"],
+#             "EXCLUDE": ["*.no-publish*"],
+#         },
+#     }
+# }
+
 # Exempt certain models from the enforcement of view permissions. Models listed here will be viewable by all users and
 # by anonymous users. List models in the form `<app>.<model>`. Add '*' to this list to exempt all models.
 # Defaults to [].

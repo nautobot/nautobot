@@ -1,10 +1,10 @@
-class EventPublisherError(Exception):
-    """Base exception for all event-publisher-related errors."""
+class EventBrokerError(Exception):
+    """Base exception for all event-broker-related errors."""
 
 
-class EventPublisherNotFound(EventPublisherError):
-    """Raised when a specified event publisher module cannot be found."""
+class EventBrokerNotFound(EventBrokerError):
+    """Raised when a specified event broker module cannot be found."""
 
 
-class EventPublisherImproperlyConfigured(EventPublisherError):
+class EventBrokerImproperlyConfigured(EventBrokerError):
     """Raised when a event is not properly configured."""
