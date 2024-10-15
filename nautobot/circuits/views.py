@@ -112,9 +112,10 @@ class ProviderUIViewSet(NautobotUIViewSet):
             ),
             ObjectsTablePanel(
                 weight=200,
-                table_key="circuits_table",
+                table_class=tables.CircuitTable,
+                table_filter="provider",
                 section=SectionChoices.FULL_WIDTH,
-                exclude_fields=["provider"],
+                exclude_fields=["pk", "provider"],
             ),
         ),
     )

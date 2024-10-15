@@ -39,6 +39,7 @@ from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
 from nautobot.tenancy.models import Tenant
 
 logger = logging.getLogger(__name__)
@@ -394,7 +395,9 @@ class ObjectsTablePanel(Panel):
     def __init__(
         self,
         *,
-        table_key,
+        table_class,
+        table_filter=None,
+        table_attribute=None,
         table_title=None,
         max_display_count=None,
         include_fields=None,
@@ -426,7 +429,13 @@ class ObjectsTablePanel(Panel):
                 permissions are determined by default based on the model.
             related_field_name (str, optional): The name of the field used to filter related objects (typically for query string parameters).
         """
-        self.table_key = table_key
+        self.table_class = table_class
+        if table_filter and table_attribute:
+            raise ValueError("You can only specify either `table_filter` or `table_attribute`")
+        if not table_filter and not table_attribute:
+            raise ValueError("You cannot specify both `table_filter` and `table_attribute`")
+        self.table_filter = table_filter
+        self.table_attribute = table_attribute
         self.table_title = table_title
         self.max_display_count = max_display_count
         if exclude_fields and include_fields:
@@ -458,10 +467,7 @@ class ObjectsTablePanel(Panel):
         return_url = context.get("return_url", obj.get_absolute_url())
 
         if self.add_button_route == "default":
-            if isinstance(context[self.table_key], tuple):
-                body_content_table, _ = context[self.table_key]
-            else:
-                body_content_table = context[self.table_key]
+            body_content_table = self.table_class
             body_content_table_model = body_content_table.Meta.model
             permission_name = get_permission_for_model(body_content_table_model, "add")
             if request.user.has_perms([permission_name]):
@@ -485,12 +491,19 @@ class ObjectsTablePanel(Panel):
         for listing and adding objects. It also handles field inclusion/exclusion and
         displays the appropriate table title if provided.
         """
-        if isinstance(context[self.table_key], tuple):
-            body_content_table_class, body_content_table_queryset = context[self.table_key]
-            body_content_table = body_content_table_class(body_content_table_queryset)
-        else:
-            body_content_table = context[self.table_key]
+        body_content_table_class = self.table_class
+        body_content_table_model = body_content_table_class.Meta.model
+        # TODO prefetch_related and select_related
         request = context["request"]
+        instance = context.get("object") or context.get("obj")
+        body_content_table_queryset = body_content_table_model
+        if self.table_attribute:
+            body_content_table_queryset = getattr(instance, self.table_attribute).restrict(request.user, "view")
+        if self.table_filter:
+            body_content_table_queryset = body_content_table_model.objects.restrict(request.user, "view").filter(
+                **{self.table_filter: instance}
+            )
+        body_content_table = body_content_table_class(body_content_table_queryset)
 
         if self.exclude_fields or self.include_fields:
             for column in body_content_table._sequence:
@@ -1261,7 +1274,8 @@ class _ObjectDetailContactsTab(Tab):
             panels = (
                 ObjectsTablePanel(
                     weight=100,
-                    table_key="associated_contacts_table",
+                    table_class=AssociatedContactsTable,
+                    table_attribute="associated_contacts",
                     # TODO: we should provide a standard reusable component template for bulk-actions in the footer
                     footer_content_template_path="components/panel/footer_contacts_table.html",
                     header_extra_content_template_path=None,
@@ -1296,7 +1310,10 @@ class _ObjectDetailGroupsTab(Tab):
         if panels is None:
             panels = (
                 ObjectsTablePanel(
-                    weight=100, table_key="associated_dynamic_groups_table", exclude_fields=["pk", "content_type"]
+                    weight=100,
+                    table_class=DynamicGroupTable,
+                    table_attribute="dynamic_groups",
+                    exclude_fields=["pk", "content_type"],
                 ),
             )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
@@ -1332,7 +1349,10 @@ class _ObjectDetailMetadataTab(Tab):
         if panels is None:
             panels = (
                 ObjectsTablePanel(
-                    weight=100, table_key="associated_object_metadata_table", exclude_fields=["assigned_object"]
+                    weight=100,
+                    table_class=ObjectMetadataTable,
+                    table_attribute="associated_object_metadata",
+                    exclude_fields=["pk", "assigned_object"],
                 ),
             )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
