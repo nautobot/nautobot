@@ -509,7 +509,7 @@ class ObjectsTablePanel(Panel):
         body_content_table_model = body_content_table_class.Meta.model
         # TODO prefetch_related and select_related
         request = context["request"]
-        instance = context.get("object") or context.get("obj")
+        instance = get_obj_from_context(context)
         body_content_table_queryset = body_content_table_model
         if self.table_attribute:
             object_manager = getattr(instance, self.table_attribute)
