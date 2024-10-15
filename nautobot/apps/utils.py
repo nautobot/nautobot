@@ -37,11 +37,6 @@ from nautobot.core.utils.lookup import (
     get_view_for_model,
 )
 from nautobot.core.utils.migrations import migrate_content_type_references_to_new_model
-from nautobot.core.utils.navigation import (
-    get_all_new_ui_ready_routes,
-    get_only_new_ui_ready_routes,
-    is_route_new_ui_ready,
-)
 from nautobot.core.utils.permissions import (
     get_permission_for_model,
     permission_is_exempt,
@@ -96,7 +91,6 @@ __all__ = (
     "foreground_color",
     "generate_signature",
     "get_all_lookup_expr_for_field",
-    "get_all_new_ui_ready_routes",
     "get_base_template",
     "get_celery_queues",
     "get_changes_for_model",
@@ -108,7 +102,6 @@ __all__ = (
     "get_form_for_model",
     "get_latest_release",
     "get_model_from_name",
-    "get_only_new_ui_ready_routes",
     "get_permission_for_model",
     "get_related_class_for_model",
     "get_route_for_model",
@@ -121,7 +114,6 @@ __all__ = (
     "GitRepo",
     "hex_to_rgb",
     "image_upload",
-    "is_route_new_ui_ready",
     "is_single_choice_field",
     "is_url",
     "is_uuid",

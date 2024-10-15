@@ -83,8 +83,6 @@ django-tree-queries = "~0.19.0"
 django-webserver = "~1.2.0"
 # REST API framework
 djangorestframework = "~3.15.2"
-# Adds JSON schema support to API endpoints for rendering JSON schema forms.
-drf-react-template-framework = "^0.0.17"
 # OpenAPI 3.0 schema generation for the REST API
 drf-spectacular = {version = "~0.27.2", extras = ["sidecar"]}
 # Emoji terminal output for Python.
