@@ -399,8 +399,6 @@ class ObjectsTablePanel(Panel):
         table_class,
         table_filter=None,
         table_attribute=None,
-        select_related_fields=None,
-        prefetch_related_fields=None,
         order_by_fields=None,
         table_title=None,
         max_display_count=None,
@@ -423,8 +421,6 @@ class ObjectsTablePanel(Panel):
                 Cannot be used together with `table_attribute`
             table_attribute (str, optional): The attribute of the detail view instance that contains the queryset to initialize the table class. e.g. `instance.dynamic_groups`
                 Cannot be used together with `table_filter`
-            select_related_fields (list, optional): list of fields to pass to table queryset's select_related method.
-            prefetch_related_fields (list, optional): list of fields to pass to table queryset's prefetch_related method.
             order_by_fields (list, optional): list of fields to order the table queryset by.
             max_display_count (int, optional):  Maximum number of items to display in the table.
                 If None, defaults to the `get_paginate_count()`(which is user's preference or a global setting).
@@ -447,8 +443,6 @@ class ObjectsTablePanel(Panel):
             raise ValueError("You cannot specify both `table_filter` and `table_attribute`")
         self.table_filter = table_filter
         self.table_attribute = table_attribute
-        self.select_related_fields = select_related_fields
-        self.prefetch_related_fields = prefetch_related_fields
         self.order_by_fields = order_by_fields
         self.table_title = table_title
         self.max_display_count = max_display_count
@@ -507,7 +501,6 @@ class ObjectsTablePanel(Panel):
         """
         body_content_table_class = self.table_class
         body_content_table_model = body_content_table_class.Meta.model
-        # TODO prefetch_related and select_related
         request = context["request"]
         instance = get_obj_from_context(context)
         body_content_table_queryset = body_content_table_model
@@ -517,8 +510,6 @@ class ObjectsTablePanel(Panel):
             object_manager = body_content_table_model.objects.filter(**{self.table_filter: instance})
         body_content_table_queryset = (
             object_manager.restrict(request.user, "view")
-            .select_related(*self.select_related_fields or [])
-            .prefetch_related(*self.prefetch_related_fields or [])
             .order_by(*self.order_by_fields or [])
         )
         body_content_table = body_content_table_class(body_content_table_queryset)

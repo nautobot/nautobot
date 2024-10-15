@@ -114,8 +114,6 @@ class ProviderUIViewSet(NautobotUIViewSet):
                 weight=200,
                 table_class=tables.CircuitTable,
                 table_filter="provider",
-                select_related_fields=["circuit_type", "tenant"],
-                prefetch_related_fields=["circuit_terminations__location"],
                 section=SectionChoices.FULL_WIDTH,
                 exclude_fields=["pk", "provider"],
             ),
