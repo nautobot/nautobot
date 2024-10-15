@@ -15,7 +15,7 @@ from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.tables import CustomFieldColumn
 from nautobot.core.testing import APITestCase, TestCase, TransactionTestCase
 from nautobot.core.testing.models import ModelTestCases
-from nautobot.core.testing.utils import post_data
+from nautobot.core.testing.utils import extract_page_body, post_data
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.filters import LocationFilterSet
 from nautobot.dcim.forms import RackFilterForm
@@ -995,18 +995,15 @@ class CustomFieldDataAPITest(APITestCase):
             },
         }
         response = self.client.post(self.list_url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Value must be a string", str(response.content))
+        self.assertContains(response, "Value must be a string", status_code=status.HTTP_400_BAD_REQUEST)
 
         data["custom_fields"].update({self.cf_text.key: 2})
         response = self.client.post(self.list_url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Value must be a string", str(response.content))
+        self.assertContains(response, "Value must be a string", status_code=status.HTTP_400_BAD_REQUEST)
 
         data["custom_fields"].update({self.cf_text.key: True})
         response = self.client.post(self.list_url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Value must be a string", str(response.content))
+        self.assertContains(response, "Value must be a string", status_code=status.HTTP_400_BAD_REQUEST)
 
     def test_create_without_required_field(self):
         self.cf_text.default = None
@@ -1019,8 +1016,7 @@ class CustomFieldDataAPITest(APITestCase):
             "status": self.statuses[0].pk,
         }
         response = self.client.post(self.list_url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Required field cannot be empty", str(response.content))
+        self.assertContains(response, "Required field cannot be empty", status_code=status.HTTP_400_BAD_REQUEST)
 
         # Try in CSV format too
         csvdata = "\n".join(
@@ -1030,8 +1026,7 @@ class CustomFieldDataAPITest(APITestCase):
             ]
         )
         response = self.client.post(self.list_url, csvdata, content_type="text/csv", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Required field cannot be empty", str(response.content))
+        self.assertContains(response, "Required field cannot be empty", status_code=status.HTTP_400_BAD_REQUEST)
 
     def test_create_invalid_select_choice(self):
         data = {
@@ -1043,8 +1038,7 @@ class CustomFieldDataAPITest(APITestCase):
             },
         }
         response = self.client.post(self.list_url, data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Invalid choice", str(response.content))
+        self.assertContains(response, "Invalid choice", status_code=status.HTTP_400_BAD_REQUEST)
 
         # Try in CSV format too
         csvdata = "\n".join(
@@ -1054,8 +1048,7 @@ class CustomFieldDataAPITest(APITestCase):
             ]
         )
         response = self.client.post(self.list_url, csvdata, content_type="text/csv", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Invalid choice", str(response.content))
+        self.assertContains(response, "Invalid choice", status_code=status.HTTP_400_BAD_REQUEST)
 
 
 class CustomFieldImportTest(TestCase):
@@ -1157,7 +1150,7 @@ class CustomFieldImportTest(TestCase):
         try:
             location1 = Location.objects.get(name="Location 1")
         except Location.DoesNotExist:
-            self.fail(str(response.content))
+            self.fail(extract_page_body(response.content.decode(response.charset)))
         self.assertEqual(len(location1.cf), 8)
         self.assertEqual(location1.cf["text"], "ABC")
         self.assertEqual(location1.cf["integer"], 123)
