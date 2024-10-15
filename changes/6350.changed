@@ -1,1 +1,0 @@
-Changed the way that ensure_git_repository logs hashes to include the name of the repository.

@@ -1,1 +1,0 @@
-Added a data migration to fix DynamicGroup `group_type` values set incorrectly in upgrading to Nautobot 2.3.x.

@@ -124,6 +124,38 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
+## v2.3.7 (2024-10-15)
+
+### Added
+
+- [#2784](https://github.com/nautobot/nautobot/issues/2784) - Added `assertBodyContains()` test helper API to `NautobotTestCaseMixin`.
+
+### Changed
+
+- [#6205](https://github.com/nautobot/nautobot/issues/6205) - Changed initial `Nautobot initialized!` message logged on startup to include the Nautobot version number.
+- [#6350](https://github.com/nautobot/nautobot/issues/6350) - Changed the way that ensure_git_repository logs hashes to include the name of the repository.
+
+### Fixed
+
+- [#6158](https://github.com/nautobot/nautobot/issues/6158) - Fixed a UI overflow issue with the Tenant Stats panel.
+- [#6299](https://github.com/nautobot/nautobot/issues/6299) - Added retry logic and error handling for several cases where an intermittent Redis connection error could cause Celery to throw an exception.
+- [#6318](https://github.com/nautobot/nautobot/issues/6318) - Fixed duplicate loading of `nautobot_config.py` during Nautobot startup.
+- [#6329](https://github.com/nautobot/nautobot/issues/6329) - Added a data migration to fix DynamicGroup `group_type` values set incorrectly in upgrading to Nautobot 2.3.x.
+
+### Dependencies
+
+- [#6299](https://github.com/nautobot/nautobot/issues/6299) - Added a direct dependency on `kombu` to guarantee the presence of some essential fixes for this Celery dependency.
+
+### Housekeeping
+
+- [#2784](https://github.com/nautobot/nautobot/issues/2784) - Added usage of `extract_page_body()` to many view-related test cases in order to make their failure output more readable.
+- [#2784](https://github.com/nautobot/nautobot/issues/2784) - Modified many view-related test cases to use new `assertBodyContains()` test helper method for brevity.
+- [#6283](https://github.com/nautobot/nautobot/issues/6283) - Updated documentation dependency `mkdocs-material` to `~9.5.39`.
+- [#6318](https://github.com/nautobot/nautobot/issues/6318) - Fixed an error when rerunning parallel tests with a cached database and test factories enabled.
+- [#6318](https://github.com/nautobot/nautobot/issues/6318) - Fixed a permission-denied error on the `MEDIA_ROOT` volume when running the local development environment with `docker-compose.final.yml`.
+- [#6318](https://github.com/nautobot/nautobot/issues/6318) - Increased the healthcheck start_period in the local development environment to 10 minutes.
+- [#6318](https://github.com/nautobot/nautobot/issues/6318) - Added `--remove-orphans` to the docker compose commands for `invoke stop` and `invoke destroy`.
+
 ## v2.3.6 (2024-10-02)
 
 ### Added
