@@ -37,6 +37,7 @@ from nautobot.core.views.utils import (
     check_filter_for_display,
     csv_format,
     get_csv_form_fields_from_serializer_class,
+    get_obj_from_context,
     handle_protectederror,
     prepare_cloned_fields,
 )
@@ -60,6 +61,7 @@ __all__ = (
     "EnhancedPaginator",
     "GenericView",
     "get_csv_form_fields_from_serializer_class",
+    "get_obj_from_context",
     "get_paginate_count",
     "GetReturnURLMixin",
     "handle_protectederror",
