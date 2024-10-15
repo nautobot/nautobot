@@ -133,7 +133,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 ### Changed
 
 - [#6205](https://github.com/nautobot/nautobot/issues/6205) - Changed initial `Nautobot initialized!` message logged on startup to include the Nautobot version number.
-- [#6350](https://github.com/nautobot/nautobot/issues/6350) - Changed the way that ensure_git_repository logs hashes to include the name of the repository.
+- [#6350](https://github.com/nautobot/nautobot/issues/6350) - Changed the way that `ensure_git_repository` logs hashes to include the name of the repository.
 
 ### Fixed
 
