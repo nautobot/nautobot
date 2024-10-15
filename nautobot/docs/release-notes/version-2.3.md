@@ -153,7 +153,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6283](https://github.com/nautobot/nautobot/issues/6283) - Updated documentation dependency `mkdocs-material` to `~9.5.39`.
 - [#6318](https://github.com/nautobot/nautobot/issues/6318) - Fixed an error when rerunning parallel tests with a cached database and test factories enabled.
 - [#6318](https://github.com/nautobot/nautobot/issues/6318) - Fixed a permission-denied error on the `MEDIA_ROOT` volume when running the local development environment with `docker-compose.final.yml`.
-- [#6318](https://github.com/nautobot/nautobot/issues/6318) - Increased the healthcheck start_period in the local development environment to 10 minutes.
+- [#6318](https://github.com/nautobot/nautobot/issues/6318) - Increased the healthcheck `start_period` in the local development environment to 10 minutes.
 - [#6318](https://github.com/nautobot/nautobot/issues/6318) - Added `--remove-orphans` to the docker compose commands for `invoke stop` and `invoke destroy`.
 
 ## v2.3.6 (2024-10-02)
