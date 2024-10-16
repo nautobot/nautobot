@@ -6,7 +6,7 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0117_task_queue_to_job_queue_migration"),
+        ("extras", "0118_task_queue_to_job_queue_migration"),
     ]
 
     operations = [
