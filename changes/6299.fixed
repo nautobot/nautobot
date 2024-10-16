@@ -1,1 +1,0 @@
-Added retry logic and error handling for several cases where an intermittent Redis connection error could cause Celery to throw an exception.

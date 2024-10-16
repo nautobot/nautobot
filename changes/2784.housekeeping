@@ -1,2 +1,0 @@
-Added usage of `extract_page_body()` to many view-related test cases in order to make their failure output more readable.
-Modified many view-related test cases to use new `assertBodyContains()` test helper method for brevity.
