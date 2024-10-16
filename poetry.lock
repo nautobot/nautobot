@@ -729,14 +729,17 @@ Django = ">=3.2.18"
 
 [[package]]
 name = "django-constance"
-version = "4.1.2"
+version = "3.1.0"
 description = "Django live settings with pluggable backends, including Redis."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.7"
 files = [
-    {file = "django_constance-4.1.2-py3-none-any.whl", hash = "sha256:bd8e847a5a6225cfc69da9d87de909dbb765e4150507eb3f555327ba32ac6fd6"},
-    {file = "django_constance-4.1.2.tar.gz", hash = "sha256:52163529d4b1be4404d4f8568c6742f76f4d4fc90dc31355849ea2c1e0c525d7"},
+    {file = "django-constance-3.1.0.tar.gz", hash = "sha256:2b96e51de63751ef63f8f92f74e0f6aea30fb6453f3a736c21e1f8b3f6cf0b4f"},
+    {file = "django_constance-3.1.0-py3-none-any.whl", hash = "sha256:6242486a346e396d765a9333d17f3101c8613cabc92e0b98dcb70c2a391bc53b"},
 ]
+
+[package.dependencies]
+django-picklefield = "*"
 
 [package.extras]
 redis = ["redis"]
@@ -859,6 +862,23 @@ files = [
 [package.dependencies]
 django = ">=3.2"
 jinja2 = ">=3"
+
+[[package]]
+name = "django-picklefield"
+version = "3.2"
+description = "Pickled object field for Django"
+optional = false
+python-versions = ">=3"
+files = [
+    {file = "django-picklefield-3.2.tar.gz", hash = "sha256:aa463f5d79d497dbe789f14b45180f00a51d0d670067d0729f352a3941cdfa4d"},
+    {file = "django_picklefield-3.2-py3-none-any.whl", hash = "sha256:e9a73539d110f69825d9320db18bcb82e5189ff48dbed41821c026a20497764c"},
+]
+
+[package.dependencies]
+Django = ">=3.2"
+
+[package.extras]
+tests = ["tox"]
 
 [[package]]
 name = "django-prometheus"
@@ -4280,4 +4300,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "0ecae313305b11ab59eb623f0ddd4356870c6f6bd67f9a179f4eec444863c6bc"
+content-hash = "1b2701cbe4dfdaf2274da769c7f9f8e4f2d63d95fdcdd264368b2ca89a4c73fc"
