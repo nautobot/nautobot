@@ -777,7 +777,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         self,
         *,
         fields="__all__",
-        exclude_columns=(),
+        exclude_fields=(),
         context_object_key="object",
         ignore_nonexistent_fields=False,
         label=None,
@@ -790,7 +790,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             fields (str, list): The ordered list of fields to display, or `"__all__"` to display fields automatically.
                 Note that ManyToMany fields and reverse relations are **not** included in `"__all__"` at this time, nor
                 are any hidden fields, nor the specially handled `id`, `created`, `last_updated` fields on most models.
-            exclude_columns (list): Only relevant if `fields == "__all__"`, in which case it excludes the given fields.
+            exclude_fields (list): Only relevant if `fields == "__all__"`, in which case it excludes the given fields.
             context_object_key (str): The key in the render context that will contain the object to derive fields from.
             ignore_nonexistent_fields (bool): If True, `fields` is permitted to include field names that don't actually
                 exist on the provided object; otherwise an exception will be raised at render time.
@@ -798,7 +798,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
                 (see `render_label()`).
         """
         self.fields = fields
-        self.exclude_columns = exclude_columns
+        self.exclude_fields = exclude_fields
         self.context_object_key = context_object_key
         self.ignore_nonexistent_fields = ignore_nonexistent_fields
         super().__init__(data=None, label=label, **kwargs)

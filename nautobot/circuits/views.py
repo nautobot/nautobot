@@ -229,7 +229,7 @@ class CircuitUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields="__all__",
-                exclude_columns=["comments", "circuit_termination_a", "circuit_termination_z"],
+                exclude_fields=["comments", "circuit_termination_a", "circuit_termination_z"],
                 value_transforms={"commit_rate": [humanize_speed, placeholder]},
             ),
             CircuitTerminationPanel(
