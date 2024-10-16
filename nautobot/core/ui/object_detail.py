@@ -409,6 +409,7 @@ class ObjectsTablePanel(Panel):
         add_button_route="default",
         add_permissions=None,
         related_field_name=None,
+        enable_bulk_actions=False,
         body_wrapper_template_path="components/panel/body_wrapper_table.html",
         body_content_template_path="components/panel/body_content_table.html",
         header_extra_content_template_path="components/panel/header_extra_content_table.html",
@@ -439,6 +440,7 @@ class ObjectsTablePanel(Panel):
             add_permissions (list, optional): A list of permissions required for the "add" button to be displayed. If not provided,
                 permissions are determined by default based on the model.
             related_field_name (str, optional): The name of the field used to filter related objects (typically for query string parameters).
+            enable_bulk_actions (bool, optional): Show the pk toggle columns on the table if the user has the appropriate permissions.
         """
         self.table_class = table_class
         if table_filter and table_attribute:
@@ -459,6 +461,7 @@ class ObjectsTablePanel(Panel):
         self.add_button_route = add_button_route
         self.add_permissions = add_permissions
         self.related_field_name = related_field_name
+        self.enable_bulk_actions = enable_bulk_actions
 
         super().__init__(
             body_wrapper_template_path=body_wrapper_template_path,
@@ -524,12 +527,18 @@ class ObjectsTablePanel(Panel):
 
         if self.exclude_fields or self.include_fields:
             for column in body_content_table.columns:
-                if (self.exclude_fields and column in self.exclude_fields) or (
-                    self.include_fields and column not in self.include_fields
+                if (self.exclude_fields and column.name in self.exclude_fields) or (
+                    self.include_fields and column.name not in self.include_fields
                 ):
-                    body_content_table.columns.hide(column)
+                    body_content_table.columns.hide(column.name)
                 else:
-                    body_content_table.columns.show(column)
+                    body_content_table.columns.show(column.name)
+        # Enable bulk action toggle if the user has appropriate permissions
+        app_label = body_content_table_model._meta.app_label
+        model_name = body_content_table_model._meta.model_name
+        user = request.user
+        if self.enable_bulk_actions and (user.has_perm(f"{app_label}.delete_{model_name}") or user.has_perm(f"{app_label}.change_{model_name}")):
+            body_content_table.columns.show("pk")
 
         per_page = self.max_display_count if self.max_display_count is not None else get_paginate_count(request)
         paginate = {"paginator_class": EnhancedPaginator, "per_page": per_page}
@@ -1366,8 +1375,8 @@ class _ObjectDetailContactsTab(Tab):
                     weight=100,
                     table_class=AssociatedContactsTable,
                     table_attribute="associated_contacts",
-                    include_fields=["pk"],
                     order_by_fields=["role__name"],
+                    enable_bulk_actions=True,
                     # TODO: we should provide a standard reusable component template for bulk-actions in the footer
                     footer_content_template_path="components/panel/footer_contacts_table.html",
                     header_extra_content_template_path=None,
