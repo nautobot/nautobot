@@ -399,6 +399,8 @@ class ObjectsTablePanel(Panel):
         table_class,
         table_filter=None,
         table_attribute=None,
+        select_related_fields=None,
+        prefetch_related_fields=None,
         order_by_fields=None,
         table_title=None,
         max_display_count=None,
@@ -419,8 +421,10 @@ class ObjectsTablePanel(Panel):
             table_class (obj): The table class object used for render the table e.g. CircuitTable, DeviceTable.
             table_filter (str, optional): The name of the filter to filter the queryset to initialize the table class.
                 Cannot be used together with `table_attribute`
-            table_attribute (str, optional): The attribute of the detail view instance that contains the queryset to initialize the table class. e.g. `instance.dynamic_groups`
+            table_attribute (str, optional): The attribute of the detail view instance that contains the queryset to initialize the table class. e.g. `dynamic_groups`
                 Cannot be used together with `table_filter`
+            select_related_fields (list, optional): list of fields to pass to table queryset's select_related method.
+            prefetch_related_fields (list, optional): list of fields to pass to table queryset's prefetch_related method.
             order_by_fields (list, optional): list of fields to order the table queryset by.
             max_display_count (int, optional):  Maximum number of items to display in the table.
                 If None, defaults to the `get_paginate_count()`(which is user's preference or a global setting).
@@ -443,6 +447,8 @@ class ObjectsTablePanel(Panel):
             raise ValueError("You cannot specify both `table_filter` and `table_attribute`")
         self.table_filter = table_filter
         self.table_attribute = table_attribute
+        self.select_related_fields = select_related_fields
+        self.prefetch_related_fields = prefetch_related_fields
         self.order_by_fields = order_by_fields
         self.table_title = table_title
         self.max_display_count = max_display_count
@@ -503,30 +509,27 @@ class ObjectsTablePanel(Panel):
         body_content_table_model = body_content_table_class.Meta.model
         request = context["request"]
         instance = get_obj_from_context(context)
-        body_content_table_queryset = body_content_table_model
         if self.table_attribute:
             object_manager = getattr(instance, self.table_attribute)
         if self.table_filter:
             object_manager = body_content_table_model.objects.filter(**{self.table_filter: instance})
         body_content_table_queryset = (
             object_manager.restrict(request.user, "view")
-            .order_by(*self.order_by_fields or [])
+            .select_related(*self.select_related_fields or [])
+            .prefetch_related(*self.prefetch_related_fields or [])
         )
+        if self.order_by_fields:
+            body_content_table_queryset = body_content_table_queryset.order_by(*self.order_by_fields)
         body_content_table = body_content_table_class(body_content_table_queryset)
 
         if self.exclude_fields or self.include_fields:
-            for column in body_content_table._sequence:
+            for column in body_content_table.columns:
                 if (self.exclude_fields and column in self.exclude_fields) or (
                     self.include_fields and column not in self.include_fields
                 ):
                     body_content_table.columns.hide(column)
                 else:
                     body_content_table.columns.show(column)
-        else:
-            # If no exclude and include fields are specified
-            # show all columns
-            for column in body_content_table._sequence:
-                body_content_table.columns.show(column)
 
         per_page = self.max_display_count if self.max_display_count is not None else get_paginate_count(request)
         paginate = {"paginator_class": EnhancedPaginator, "per_page": per_page}
@@ -1363,6 +1366,7 @@ class _ObjectDetailContactsTab(Tab):
                     weight=100,
                     table_class=AssociatedContactsTable,
                     table_attribute="associated_contacts",
+                    include_fields=["pk"],
                     order_by_fields=["role__name"],
                     # TODO: we should provide a standard reusable component template for bulk-actions in the footer
                     footer_content_template_path="components/panel/footer_contacts_table.html",
