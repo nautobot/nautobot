@@ -727,12 +727,9 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                     )
 
         # Validate untagged VLAN
-        location = None
-        if self.parent:
-            location = self.parent.location
+        location = self.parent.location if self.parent is not None else None
         if location:
-            location_ids = [ancestor.id for ancestor in location.ancestors()]
-            location_ids.append(location.id)
+            location_ids = location.ancestors(include_self=True).values_list("id", flat=True)
         else:
             location_ids = []
         if (
@@ -745,7 +742,7 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                 {
                     "untagged_vlan": (
                         f"The untagged VLAN ({self.untagged_vlan}) must have a common location as the interface's parent "
-                        f"device, or it must be global."
+                        f"device, or is in one of the parents of the interface's parent device's location, or it must be global."
                     )
                 }
             )

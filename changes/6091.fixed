@@ -1,1 +1,0 @@
-Allow VLANs assigned to a device's location's parent locations (incl. parents of parents etc) to be assigned to that device's interfaces

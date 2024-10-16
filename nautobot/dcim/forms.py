@@ -232,8 +232,9 @@ class InterfaceCommonForm(forms.Form):
             if invalid_vlans:
                 raise forms.ValidationError(
                     {
-                        "tagged_vlans": f"The tagged VLANs ({', '.join(invalid_vlans)}) must belong to the same location as "
-                        f"the interface's parent device/VM, or they must be global"
+                        "tagged_vlans": f"The tagged VLANs ({', '.join(invalid_vlans)}) must have the same location as the "
+                        "interface's parent device, or is in one of the parents of the interface's parent device's location, "
+                        "or it must be global."
                     }
                 )
 
