@@ -5,7 +5,7 @@ from nautobot.extras.utils import fixup_dynamic_group_group_types
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0115_scheduledjob_time_zone"),
+        ("extras", "0118_remove_task_queues_from_job_and_queue_from_scheduled_job"),
     ]
 
     operations = [
