@@ -941,7 +941,7 @@ class _BaseTextPanel(Panel):
 
 class ObjectTextPanel(_BaseTextPanel):
     """
-    Panel that renders text or markdown from given object in the context and given field.
+    Panel that renders text, Markdown, JSON or YAML from the given field on the given object in the context.
     """
 
     def __init__(self, *, object_field=None, **kwargs):
