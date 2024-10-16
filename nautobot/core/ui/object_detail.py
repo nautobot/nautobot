@@ -512,6 +512,7 @@ class ObjectsTablePanel(Panel):
         body_content_table_model = body_content_table_class.Meta.model
         request = context["request"]
         instance = get_obj_from_context(context)
+        object_manager = None # This is to make pylint happy
         if self.table_attribute:
             object_manager = getattr(instance, self.table_attribute)
         if self.table_filter:
