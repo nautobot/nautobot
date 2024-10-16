@@ -382,21 +382,14 @@ class DynamicGroup(PrimaryModel):
         if isinstance(objects_to_remove, models.QuerySet):
             if objects_to_remove.model != self.model:
                 raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
-            objects_to_remove = self.members.only("id").intersection(objects_to_remove.only("id"))
         else:
             for obj in objects_to_remove:
                 if not isinstance(obj, self.model):
                     raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
-            existing_members = self.members
-            objects_to_remove = [obj for obj in objects_to_remove if obj in existing_members]
         return self._remove_members(objects_to_remove)
 
     def _remove_members(self, objects_to_remove):
-        """
-        Internal API for removing the given list or QuerySet from the cached/static members of this Group.
-
-        Assumes that objects_to_remove has already been filtered to exclude any irrelevant (non-member) objects.
-        """
+        """Internal API for removing the given list or QuerySet from the cached/static members of this Group."""
         from nautobot.extras.signals import _handle_deleted_object  # avoid circular import
 
         # For non-static groups, we aren't going to change log the StaticGroupAssociation deletes anyway,

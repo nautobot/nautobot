@@ -333,6 +333,10 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         # test property setter
         sg.members = Prefix.objects.filter(ip_version=4)
         self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=4))
+        sg.members = Prefix.objects.filter(ip_version=6)
+        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))
+        sg.members = list(Prefix.objects.filter(ip_version=4))
+        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=4))
         sg.members = list(Prefix.objects.filter(ip_version=6))
         self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))
 
