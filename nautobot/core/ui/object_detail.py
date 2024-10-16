@@ -900,7 +900,7 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
 
 
 class _BaseTextPanel(Panel):
-    """A panel that renders simple text or markdown"""
+    """A panel that renders a single value as text, Markdown, JSON, or YAML."""
 
     RENDER_OPTIONS = namedtuple("RENDER_OPTIONS", ["plaintext", "json", "yaml", "markdown"])
 
