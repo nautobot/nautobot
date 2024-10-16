@@ -512,7 +512,7 @@ class ObjectsTablePanel(Panel):
         body_content_table_model = body_content_table_class.Meta.model
         request = context["request"]
         instance = get_obj_from_context(context)
-        object_manager = None # This is to make pylint happy
+        object_manager = None  # This is to make pylint happy
         if self.table_attribute:
             object_manager = getattr(instance, self.table_attribute)
         if self.table_filter:
@@ -538,7 +538,9 @@ class ObjectsTablePanel(Panel):
         app_label = body_content_table_model._meta.app_label
         model_name = body_content_table_model._meta.model_name
         user = request.user
-        if self.enable_bulk_actions and (user.has_perm(f"{app_label}.delete_{model_name}") or user.has_perm(f"{app_label}.change_{model_name}")):
+        if self.enable_bulk_actions and (
+            user.has_perm(f"{app_label}.delete_{model_name}") or user.has_perm(f"{app_label}.change_{model_name}")
+        ):
             body_content_table.columns.show("pk")
 
         per_page = self.max_display_count if self.max_display_count is not None else get_paginate_count(request)
