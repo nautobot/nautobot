@@ -35,9 +35,10 @@ from nautobot.core.templatetags.helpers import (
     validated_viewname,
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
-from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.utils import get_obj_from_context
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.tenancy.models import Tenant
 
@@ -451,7 +452,7 @@ class ObjectsTablePanel(Panel):
         This method determines the URL for adding a new object to the table. It checks if the user has
         the necessary permissions and creates the appropriate URL based on the specified add button route.
         """
-        obj = context["obj"]
+        obj = get_obj_from_context(context)
         body_content_table_add_url = None
         request = context["request"]
         related_field_name = self.related_field_name or obj._meta.model_name
@@ -500,7 +501,7 @@ class ObjectsTablePanel(Panel):
         RequestConfig(request, paginate).configure(body_content_table)
         more_queryset_count = max(body_content_table.data.data.count() - per_page, 0)
 
-        obj = context["obj"]
+        obj = get_obj_from_context(context)
         body_content_table_model = body_content_table.Meta.model
         related_field_name = self.related_field_name or obj._meta.model_name
 
@@ -685,7 +686,6 @@ class KeyValueTablePanel(Panel):
             display = placeholder(localize(value))
 
         # TODO: apply additional smart formatting such as JSON/Markdown rendering, etc.
-
         return display
 
     def render_body_content(self, context):
@@ -765,7 +765,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
     def render_value(self, key, value, context):
         try:
-            field_instance = context["obj"]._meta.get_field(key)
+            field_instance = get_obj_from_context(context)._meta.get_field(key)
         except FieldDoesNotExist:
             field_instance = None
 
@@ -810,7 +810,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
         data = {}
 
-        if isinstance(instance, TreeModel):
+        if isinstance(instance, TreeModel) and (self.fields == "__all__" or "_hierarchy" in self.fields):
             # using `_hierarchy` with the prepended `_` to try to archive a unique name, in cases where a model might have hierarchy field.
             data["_hierarchy"] = instance
 
@@ -836,7 +836,8 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             try:
                 field = instance._meta.get_field(key)
                 return bettertitle(field.verbose_name)
-            except FieldDoesNotExist:
+            # Not all fields have a verbose name, ManyToOneRel for example.
+            except (FieldDoesNotExist, AttributeError):
                 pass
 
         return super().render_key(key, value, context)
@@ -892,6 +893,84 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
                     )
 
         return result
+
+
+class StatsPanel(Panel):
+    def __init__(
+        self,
+        *,
+        filter_name,
+        related_models=None,
+        body_content_template_path="components/panel/stats_panel_body.html",
+        **kwargs,
+    ):
+        """
+        Instantiate a `StatsPanel`.
+        filter_name (str) is a valid query filter append to the anchor tag for each stat button.
+        e.g. the `tenant` query parameter in the url `/circuits/circuits/?tenant=f4b48e9d-56fc-4090-afa5-dcbe69775b13`.
+        related_models is a list of model classes and/or tuples of (model_class, query_string).
+        e.g. [Device, Prefix, (Circuit, "circuit_terminations__location__in"), (VirtualMachine, "cluster__location__in")]
+        """
+
+        self.filter_name = filter_name
+        self.related_models = related_models
+        super().__init__(body_content_template_path=body_content_template_path, **kwargs)
+
+    def should_render(self, context):
+        """Always should render this panel as the permission is reinforced in python with .restrict(request.user, "view")"""
+        return True
+
+    def render_body_content(self, context):
+        """
+        Transform self.related_models to a dictionary with key, value pairs as follows:
+        {
+            <related_object_model_class_1>: [related_object_model_class_list_url_1, related_object_count_1, related_object_title_1],
+            <related_object_model_class_2>: [related_object_model_class_list_url_2, related_object_count_2, related_object_title_2],
+            <related_object_model_class_3>: [related_object_model_class_list_url_3, related_object_count_3, related_object_title_3],
+            ...
+        }
+        """
+        instance = get_obj_from_context(context)
+        request = context["request"]
+        if isinstance(instance, TreeModel):
+            self.filter_pks = (
+                instance.descendants(include_self=True).restrict(request.user, "view").values_list("pk", flat=True)
+            )
+        else:
+            self.filter_pks = [instance.pk]
+
+        if self.body_content_template_path:
+            stats = {}
+            if not self.related_models:
+                return ""
+            for related_field in self.related_models:
+                if isinstance(related_field, tuple):
+                    related_object_model_class, query = related_field
+                else:
+                    related_object_model_class, query = related_field, f"{self.filter_name}__in"
+                filter_dict = {query: self.filter_pks}
+                related_object_count = (
+                    related_object_model_class.objects.restrict(request.user, "view").filter(**filter_dict).count()
+                )
+                related_object_model_class_meta = related_object_model_class._meta
+                related_object_list_url = validated_viewname(related_object_model_class, "list")
+                related_object_title = bettertitle(related_object_model_class_meta.verbose_name_plural)
+                value = [related_object_list_url, related_object_count, related_object_title]
+                stats[related_object_model_class] = value
+                related_object_model_filterset = get_filterset_for_model(related_object_model_class)
+                if self.filter_name not in related_object_model_filterset.declared_filters:
+                    raise FieldDoesNotExist(
+                        f"{self.filter_name} is not a valid filter field for {related_object_model_class_meta.verbose_name}"
+                    )
+
+            return get_template(self.body_content_template_path).render(
+                {
+                    **context,
+                    "stats": stats,
+                    "filter_name": self.filter_name,
+                }
+            )
+        return ""
 
 
 class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
