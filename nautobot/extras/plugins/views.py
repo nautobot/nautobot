@@ -30,6 +30,18 @@ class InstalledAppsView(GenericView):
         data = []
         for app in apps.get_app_configs():
             if app.name in settings.PLUGINS:
+                try:
+                    app.home_view_name = reverse(app.home_view_name)
+                except NoReverseMatch:
+                    app.home_view_name = None
+                try:
+                    app.config_view_name = reverse(app.config_view_name)
+                except NoReverseMatch:
+                    app.config_view_name = None
+                try:
+                    app.docs_view_name = reverse(app.docs_view_name)
+                except NoReverseMatch:
+                    app.docs_view_name = None
                 data.append(
                     {
                         "name": app.verbose_name,
