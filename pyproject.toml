@@ -47,7 +47,8 @@ django-celery-beat = "~2.6.0"
 # Provides a database backend & models for Celery task results
 django-celery-results = "~2.5.1"
 # Management of app configuration via the Django admin UI
-django-constance = "~4.1.0"
+# TODO: Do not upgrade to 4.x until https://github.com/jazzband/django-constance/issues/592 is resolved
+django-constance = "~3.1.0"
 # Permit cross-domain API requests
 django-cors-headers = "~4.4.0"
 # Store files in the database for background tasks
