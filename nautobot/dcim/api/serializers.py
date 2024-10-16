@@ -802,16 +802,15 @@ class InterfaceSerializer(
         if device:
             location = device.location
         if location:
-            location_ids = [ancestor.id for ancestor in location.ancestors()]
-            location_ids.append(location.id)
+            location_ids = location.ancestors(include_self=True).values_list("id", flat=True)
         else:
             location_ids = []
         for vlan in data.get("tagged_vlans", []):
             if vlan.locations.exists() and not vlan.locations.filter(pk__in=location_ids).exists():
                 raise serializers.ValidationError(
                     {
-                        "tagged_vlans": f"VLAN {vlan} must have the same location as the interface's parent device, or is in one of the parents of the interface's parent device's location, or "
-                        f"it must be global."
+                        "tagged_vlans": f"VLAN {vlan} must have the same location as the interface's parent device, "
+                        f"or is in one of the parents of the interface's parent device's location, or it must be global."
                     }
                 )
 

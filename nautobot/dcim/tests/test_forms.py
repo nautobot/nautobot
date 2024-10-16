@@ -341,14 +341,10 @@ class InterfaceTestCase(TestCase):
             "tagged_vlans": [cls.vlan.pk],
         }
 
-    def test_interface_form_clean_vlan_location_fail(self):
-        """Assert that form validation fails when no matching locations are associated to tagged VLAN"""
+    def test_interface_form_clean_vlan_location_success(self):
+        """Assert that form validation succeeds when matching locations/parent locations are associated to tagged VLAN"""
         location = self.device.location
-        location_ids = [ancestor.id for ancestor in location.ancestors()]
-        self.vlan.locations.set(list(Location.objects.exclude(pk__in=location_ids))[:2])
-        self.data["tagged_vlans"] = [self.vlan]
-        form = InterfaceForm(data=self.data, instance=self.interface)
-        self.assertFalse(form.is_valid())
+        location_ids = location.ancestors(include_self=True).values_list("id", flat=True)
         self.vlan.locations.set([location.id])
         self.data["tagged_vlans"] = [self.vlan]
         form = InterfaceForm(data=self.data, instance=self.interface)
@@ -357,6 +353,15 @@ class InterfaceTestCase(TestCase):
         self.data["tagged_vlans"] = [self.vlan]
         form = InterfaceForm(data=self.data, instance=self.interface)
         self.assertTrue(form.is_valid())
+
+    def test_interface_form_clean_vlan_location_fail(self):
+        """Assert that form validation fails when no matching locations are associated to tagged VLAN"""
+        location = self.device.location
+        location_ids = location.ancestors(include_self=True).values_list("id", flat=True)
+        self.vlan.locations.set(list(Location.objects.exclude(pk__in=location_ids))[:2])
+        self.data["tagged_vlans"] = [self.vlan]
+        form = InterfaceForm(data=self.data, instance=self.interface)
+        self.assertFalse(form.is_valid())
 
     def test_interface_vlan_location_clean_multiple_locations_pass(self):
         """Assert that form validation passes when multiple locations are associated to tagged VLAN with one matching"""

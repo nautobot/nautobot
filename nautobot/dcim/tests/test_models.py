@@ -2379,8 +2379,7 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         intf_status = Status.objects.get_for_model(Interface).first()
         intf_role = Role.objects.get_for_model(Interface).first()
         location_type = LocationType.objects.get(name="Campus")
-        parent_location = Location.objects.filter(children__isnull=False, location_type=location_type).first()
-        child_location = Location.objects.filter(parent=parent_location, location_type=location_type).first()
+        child_location = Location.objects.filter(parent__isnull=False, location_type=location_type).first()
         self.device.location = child_location
         self.device.validated_save()
         # Same location as the device
