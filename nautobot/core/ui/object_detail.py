@@ -901,25 +901,33 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
 class _BaseTextPanel(Panel):
     """A panel that renders simple text or markdown"""
 
-    RENDER_OPTIONS = namedtuple("RENDER_OPTIONS", ["text", "json", "yaml", "markdown"])
+    RENDER_OPTIONS = namedtuple("RENDER_OPTIONS", ["plaintext", "json", "yaml", "markdown"])
 
     def __init__(
         self,
         *,
         render_as=RENDER_OPTIONS.markdown,
         body_content_template_path="components/panel/body_content_text.html",
+        render_placeholder=True,
         **kwargs,
     ):
         self.render_as = render_as
+        self.render_placeholder = render_placeholder
         super().__init__(body_content_template_path=body_content_template_path, **kwargs)
 
     def render_body_content(self, context):
         text_content = self.get_text(context)
+        render_as = self.render_as
+
+        if not text_content and self.render_placeholder:
+            text_content = HTML_NONE
+            render_as = self.RENDER_OPTIONS.plaintext
+
         if self.body_content_template_path:
             return get_template(self.body_content_template_path).render(
                 {
                     **context,
-                    "render_as": self.render_as,
+                    "render_as": render_as,
                     "text_content": text_content,
                     "render_options": self.RENDER_OPTIONS,
                 }
