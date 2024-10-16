@@ -14,6 +14,7 @@ from prometheus_client.parser import text_string_to_metric_families
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
+from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
@@ -154,16 +155,15 @@ class HomeViewTestCase(TestCase):
             BANNER_BOTTOM="[info](https://nautobot.com)",
         ):
             response = self.client.get(url)
-        self.assertInHTML("<h1>Hello world</h1>", response.content.decode(response.charset))
-        self.assertInHTML(
-            '<a href="https://nautobot.com" rel="noopener noreferrer">info</a>',
-            response.content.decode(response.charset),
+        self.assertBodyContains(response, "<h1>Hello world</h1>", html=True)
+        self.assertBodyContains(
+            response, '<a href="https://nautobot.com" rel="noopener noreferrer">info</a>', html=True
         )
 
         with override_settings(BANNER_LOGIN="_Welcome to Nautobot!_"):
             self.client.logout()
             response = self.client.get(reverse("login"))
-        self.assertInHTML("<em>Welcome to Nautobot!</em>", response.content.decode(response.charset))
+        self.assertBodyContains(response, "<em>Welcome to Nautobot!</em>", html=True)
 
     def test_banners_no_xss(self):
         url = reverse("home")
@@ -195,21 +195,24 @@ class SearchFieldsTestCase(TestCase):
 
         # Assert model search bar present in list UI
         response = self.client.get(reverse("dcim:location_list"))
-        self.assertInHTML(
+        self.assertBodyContains(
+            response,
             '<input type="text" name="q" class="form-control" required placeholder="Search Locations" id="id_q">',
-            response.content.decode(response.charset),
+            html=True,
         )
 
         response = self.client.get(reverse("dcim:device_list"))
-        self.assertInHTML(
+        self.assertBodyContains(
+            response,
             '<input type="text" name="q" class="form-control" required placeholder="Search Devices" id="id_q">',
-            response.content.decode(response.charset),
+            html=True,
         )
 
         # Assert global search bar present in UI
-        self.assertInHTML(
+        self.assertContains(  # not using assertBodyContains because this is in the nav
+            response,
             '<input type="text" name="q" class="form-control" placeholder="Search Nautobot">',
-            response.content.decode(response.charset),
+            html=True,
         )
 
 
@@ -233,16 +236,10 @@ class FilterFormsTestCase(TestCase):
             """
 
         response = self.client.get(reverse("dcim:location_list"))
-        self.assertInHTML(
-            filter_tabs,
-            response.content.decode(response.charset),
-        )
+        self.assertBodyContains(response, filter_tabs, html=True)
 
         response = self.client.get(reverse("circuits:circuit_list"))
-        self.assertInHTML(
-            filter_tabs,
-            response.content.decode(response.charset),
-        )
+        self.assertBodyContains(response, filter_tabs, html=True)
 
     def test_filtering_on_custom_select_filter_field(self):
         """Assert CustomField select and multiple select fields can be filtered using multiple entries"""
@@ -271,10 +268,8 @@ class FilterFormsTestCase(TestCase):
         )
         url = reverse("dcim:location_list") + query_param
         response = self.client.get(url)
-        self.assertHttpStatus(response, 200)
-        response_content = response.content.decode(response.charset).replace("\n", "")
-        self.assertInHTML(locations[0].name, response_content)
-        self.assertInHTML(locations[1].name, response_content)
+        self.assertBodyContains(response, locations[0].name, html=True)
+        self.assertBodyContains(response, locations[1].name, html=True)
 
     def test_filtering_crafted_query_params(self):
         """Test for reflected-XSS vulnerability GHSA-jxgr-gcj5-cqqg."""
@@ -282,17 +277,16 @@ class FilterFormsTestCase(TestCase):
         query_param = "?location_type=1 onmouseover=alert('hi') foo=bar"
         url = reverse("dcim:location_list") + query_param
         response = self.client.get(url)
-        self.assertHttpStatus(response, 200)
-        response_content = response.content.decode(response.charset)
         # The important thing here is that the data-field-parent and data-field-value are correctly quoted
-        self.assertInHTML(
+        self.assertBodyContains(
+            response,
             """
 <span class="filter-selection-choice-remove remove-filter-param"
       data-field-type="child"
       data-field-parent="location_type"
       data-field-value="1 onmouseover=alert(&#x27;hi&#x27;) foo=bar"
 >×</span>""",  # noqa: RUF001 - ambiguous-unicode-character-string
-            response_content,
+            html=True,
         )
 
 
@@ -327,21 +321,18 @@ class NavAppsUITestCase(TestCase):
         self.url = reverse("apps:apps_list")
         self.item_weight = 100  # TODO: not easy to introspect from the nav menu struct, so hard-code it here for now
 
-    def make_request(self):
-        response = self.client.get(reverse("home"))
-        return response.content.decode(response.charset)
-
     def test_installed_apps_visible(self):
         """The "Installed Apps" menu item should be available to an authenticated user regardless of permissions."""
-        response_content = self.make_request()
-        self.assertInHTML(
+        response = self.client.get(reverse("home"))
+        self.assertContains(
+            response,
             f"""
             <a href="{self.url}"
                 data-item-weight="{self.item_weight}">
                 Installed Apps
             </a>
             """,
-            response_content,
+            html=True,
         )
 
 
@@ -361,7 +352,7 @@ class LoginUITestCase(TestCase):
     def make_request(self):
         response = self.client.get(reverse("login"))
         sso_login_pattern = re.compile('<a href=".*">Continue with SSO</a>')
-        return sso_login_pattern.search(response.content.decode(response.charset))
+        return sso_login_pattern.search(extract_page_body(response.content.decode(response.charset)))
 
     def test_sso_login_button_not_visible(self):
         """Test Continue with SSO button not visible if SSO is enabled"""
@@ -458,13 +449,13 @@ class ErrorPagesTestCase(TestCase):
         """Nautobot's custom 404 page should be used and should include a default support message."""
         with self.assertTemplateUsed("404.html"):
             response = self.client.get("/foo/bar")
-        self.assertContains(response, "Network to Code", status_code=404)
-        response_content = response.content.decode(response.charset)
-        self.assertInHTML(
+        self.assertBodyContains(
+            response,
             "If further assistance is required, please join the <code>#nautobot</code> channel on "
             '<a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
             "Slack community</a> and post your question.",
-            response_content,
+            html=True,
+            status_code=404,
         )
 
     @override_settings(DEBUG=False, SUPPORT_MESSAGE="Hello world!")
@@ -473,8 +464,7 @@ class ErrorPagesTestCase(TestCase):
         with self.assertTemplateUsed("404.html"):
             response = self.client.get("/foo/bar")
         self.assertNotContains(response, "Network to Code", status_code=404)
-        response_content = response.content.decode(response.charset)
-        self.assertInHTML("Hello world!", response_content)
+        self.assertBodyContains(response, "Hello world!", status_code=404)
 
     @override_settings(DEBUG=False)
     @mock.patch("nautobot.core.views.HomeView.get", side_effect=Exception)
@@ -484,13 +474,13 @@ class ErrorPagesTestCase(TestCase):
         self.client.raise_request_exception = False
         response = self.client.get(url)
         self.assertTemplateUsed(response, "500.html")
-        self.assertContains(response, "Network to Code", status_code=500)
-        response_content = response.content.decode(response.charset)
-        self.assertInHTML(
+        self.assertBodyContains(
+            response,
             "If further assistance is required, please join the <code>#nautobot</code> channel on "
             '<a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
             "Slack community</a> and post your question.",
-            response_content,
+            html=True,
+            status_code=500,
         )
 
     @override_settings(DEBUG=False, SUPPORT_MESSAGE="Hello world!")
@@ -502,8 +492,7 @@ class ErrorPagesTestCase(TestCase):
         response = self.client.get(url)
         self.assertTemplateUsed(response, "500.html")
         self.assertNotContains(response, "Network to Code", status_code=500)
-        response_content = response.content.decode(response.charset)
-        self.assertInHTML("Hello world!", response_content)
+        self.assertBodyContains(response, "Hello world!", status_code=500)
 
 
 class DBFileStorageViewTestCase(TestCase):
@@ -591,23 +580,17 @@ class ExampleViewWithCustomPermissionsTest(TestCase):
         self.client.logout()
         url = reverse("plugins:example_app:view_with_custom_permissions")
         response = self.client.get(url, follow=True)
-        self.assertHttpStatus(response, 200)
-        response_body = response.content.decode(response.charset)
         # check if the user is redirected to the login page
-        self.assertIn(f'<input type="hidden" name="next" value="{url}" />', response_body)
+        self.assertBodyContains(response, f'<input type="hidden" name="next" value="{url}" />', html=True)
 
         # Test IsAdmin permission
         self.client.force_login(self.user)
         response = self.client.get(url, follow=True)
-        self.assertHttpStatus(response, 403)
-        response_body = response.content.decode(response.charset)
         # check if the users have to have the permission to access the page
-        self.assertIn("You do not have permission to access this page.", response_body)
+        self.assertBodyContains(response, "You do not have permission to access this page", status_code=403)
 
         # View should be successfully accessed
         self.user.is_staff = True
         self.user.save()
         response = self.client.get(url)
-        self.assertHttpStatus(response, 200)
-        response_body = response.content.decode(response.charset)
-        self.assertIn("You are viewing a table of example models", response_body)
+        self.assertBodyContains(response, "You are viewing a table of example models")
