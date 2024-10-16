@@ -957,7 +957,7 @@ class ObjectTextPanel(_BaseTextPanel):
 
 
 class TextPanel(_BaseTextPanel):
-    """Panel that render text or markdown from given value in the context."""
+    """Panel that renders text, Markdown, JSON or YAML from the given value in the context."""
 
     def __init__(self, *, context_field="text", **kwargs):
         self.context_field = context_field
