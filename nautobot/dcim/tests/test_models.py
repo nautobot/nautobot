@@ -65,7 +65,6 @@ from nautobot.dcim.models import (
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Role, SecretsGroup, Status
-from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import User
@@ -2351,7 +2350,6 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
             vid=100,
             location=location_2,
             status=vlan_status,
-            vlan_group=VLANGroupFactory.create(location=location_2),
         )
 
         cls.namespace = Namespace.objects.create(name="dcim_test_interface_ip_addresses")

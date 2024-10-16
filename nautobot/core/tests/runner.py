@@ -64,9 +64,16 @@ class NautobotTestRunner(DiscoverRunner):
             action="store_true",
             help="Save test database to a json fixture file to re-use on subsequent tests.",
         )
+        parser.add_argument(
+            "--no-reusedb",
+            action="store_false",
+            dest="reusedb",
+            help="Supplement to --keepdb; if --no-reusedb is set an existing database will NOT be reused.",
+        )
 
-    def __init__(self, cache_test_fixtures=False, **kwargs):
+    def __init__(self, cache_test_fixtures=False, reusedb=True, **kwargs):
         self.cache_test_fixtures = cache_test_fixtures
+        self.reusedb = reusedb
 
         # Assert "integration" hasn't been provided w/ --tag
         incoming_tags = kwargs.get("tags") or []
@@ -118,7 +125,9 @@ class NautobotTestRunner(DiscoverRunner):
                         connection.creation.create_test_db(
                             verbosity=self.verbosity,
                             autoclobber=not self.interactive,
-                            keepdb=self.keepdb,
+                            keepdb=self.keepdb
+                            # Extra check added for Nautobot:
+                            and self.reusedb,
                             serialize=connection.settings_dict["TEST"].get("SERIALIZE", True),
                         )
 
@@ -148,8 +157,9 @@ class NautobotTestRunner(DiscoverRunner):
                                     suffix=str(index + 1),
                                     verbosity=self.verbosity,
                                     keepdb=self.keepdb
-                                    # Extra check added for Nautobot:
-                                    and not settings.TEST_USE_FACTORIES,
+                                    # Extra checks added for Nautobot:
+                                    and self.reusedb
+                                    and not settings.TEST_USE_FACTORIES,  # w/ factory data, clones can't be reused
                                 )
 
                 # Configure all other connections as mirrors of the first one
@@ -181,7 +191,7 @@ class NautobotTestRunner(DiscoverRunner):
                             verbosity=self.verbosity,
                             keepdb=self.keepdb
                             # Extra check added for Nautobot
-                            and not settings.TEST_USE_FACTORIES,
+                            and not settings.TEST_USE_FACTORIES,  # with factory data, clones cannot be reused
                         )
 
                 # Extra block added for Nautobot

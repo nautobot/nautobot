@@ -575,6 +575,8 @@ class FileAttachment(BaseModel):
     filename = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     mimetype = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
 
+    is_metadata_associable_model = False
+
     natural_key_field_names = ["pk"]
 
     def __str__(self):

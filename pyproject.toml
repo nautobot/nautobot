@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.3.5b1"
+version = "2.3.8b1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -71,7 +71,7 @@ django-silk = "~5.1.0"
 # Pinned temporarily to 1.14.3 due to https://github.com/revsys/django-health-check/issues/434
 django-storages = {version = "1.14.3", optional = true}
 # Structured logging for Django
-django-structlog = {version = "^8.1.0", extras = ["all"]}
+django-structlog = {version = "^8.1.0", extras = ["celery"]}
 # Advanced HTML tables
 django-tables2 = "~2.7.0"
 # Tags
@@ -102,6 +102,9 @@ graphene-django-optimizer = "~0.8.0"
 Jinja2 = "~3.1.4"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
 jsonschema = "^4.7.0"
+# Messaging library for Python - dependency of Celery
+# Included as an explicit dependency (for now?) to require a version with https://github.com/celery/kombu/pull/2007
+kombu = "~5.4.2"
 # Rendering of markdown files to HTML
 Markdown = "~3.6"
 # Escape text to use HTML and XML
@@ -193,7 +196,7 @@ mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see optional-settings.md and required-settings.md
 mkdocs-macros-plugin = "~1.0.5"
 # Material for mkdocs theme
-mkdocs-material = "~9.5.35"
+mkdocs-material = "~9.5.39"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.1"
 # Automatically handle index pages for docs sections

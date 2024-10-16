@@ -1,1 +1,0 @@
-Override `get_required_permission()` in SavedViewUIViewSet to achieve the intended behavior.
