@@ -26,6 +26,14 @@ class TestEventBroker(EventBroker):
     def publish(self, *, topic, payload):
         self.events[topic].append(payload)
 
+class InvalidTestEventBroker:
+    """Broker that do not inherit from EventBroker"""
+    def __init__(self):
+        self.events = defaultdict(list)
+
+    def publish(self, *, topic, payload):
+        self.events[topic].append(payload)
+
 
 class EventNotificationTest(TestCase):
     def test_publish_events_to_broker(self):
@@ -108,7 +116,7 @@ class EventNotificationTest(TestCase):
             "RedisEventBroker": {
                 "CLASS": "nautobot.core.events.RedisEventBroker",
                 "OPTIONS": {"url": settings.CACHES["default"]["LOCATION"]},
-                "TOPICS": {"EXCLUDE": "*.test.event.no-publish"},
+                "TOPICS": {"EXCLUDE": ["*.test.event.no-publish"]},
             }
         }
     )
@@ -151,13 +159,13 @@ class EventNotificationTest(TestCase):
             load_event_brokers(broker_config)
         self.assertEqual(
             str(err.exception),
-            "Unable to import Event Broker TestEventBroker",
+            "Unable to import Event Broker TestEventBroker.",
         )
 
-        with self.assertRaises(EventBrokerNotFound) as err:
+        with self.assertRaises(EventBrokerImproperlyConfigured) as err:
             broker_config = {
                 "TestEventBroker": {
-                    "CLASS": "nautobot.core.tests.invalid_path.TestEventBroker",
+                    "CLASS": "nautobot.core.tests.test_events.InvalidTestEventBroker",
                 }
             }
             load_event_brokers(broker_config)

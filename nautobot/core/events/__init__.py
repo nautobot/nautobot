@@ -24,17 +24,17 @@ def load_event_brokers(event_broker_configs):
         topics = broker.get("TOPICS", {})
         if not isinstance(topics, dict):
             raise EventBrokerImproperlyConfigured(
-                f" {broker_name} Malformed Event Broker Settings: Expected `TOPICS` to be a 'dict', instead a '{type(topics).__name__}' was provided"
+                f"{broker_name} Malformed Event Broker Settings: Expected `TOPICS` to be a 'dict', instead a '{type(topics).__name__}' was provided"
             )
         include_topics = topics.get("INCLUDE")
-        if not isinstance(include_topics, (list, tuple)):
+        if include_topics and not isinstance(include_topics, (list, tuple)):
             raise EventBrokerImproperlyConfigured(
-                f"{broker_name} Malformed Event Broker Settings: Expected `INCLUDE` to be a 'list' or 'tuple`, instead a '{type(include_topics).__name__}' was provided"
+                f"{broker_name} Malformed Event Broker Settings: Expected `INCLUDE` to be a 'list' or 'tuple', instead a '{type(include_topics).__name__}' was provided"
             )
         exclude_topics = topics.get("EXCLUDE", [])
-        if not isinstance(exclude_topics, (list, tuple)):
+        if exclude_topics and not isinstance(exclude_topics, (list, tuple)):
             raise EventBrokerImproperlyConfigured(
-                f"{broker_name} Malformed Event Broker Settings: Expected `EXCLUDE` to be a 'list' or 'tuple`, instead a '{type(exclude_topics).__name__}' was provided"
+                f"{broker_name} Malformed Event Broker Settings: Expected `EXCLUDE` to be a 'list' or 'tuple', instead a '{type(exclude_topics).__name__}' was provided"
             )
         options.update({"include_topics": include_topics, "exclude_topics": exclude_topics})
 
