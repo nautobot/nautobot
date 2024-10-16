@@ -347,6 +347,15 @@ ul.software-image-hierarchy {
     padding-left: 18px;
 }
 
+ul.tree-hierarchy {
+    list-style-type: none;
+    padding-left: 0px;
+}
+ul.tree-hierarchy ul {
+    list-style-type: "↳ ";
+    padding-left: 18px;
+}
+
 /* Filters */
 .filter-container {
     box-sizing: border-box;
@@ -581,7 +590,8 @@ td span.hover_copy:hover .hover_copy_button {
 .accordion-toggle {
     border: 0;
     color: black;
-    font-size: 24px;
+    font-size: 14px;
+    font-weight: 700;
     padding: 0;
     text-decoration: none;
 }
@@ -592,7 +602,7 @@ td span.hover_copy:hover .hover_copy_button {
     padding: 0;
     text-decoration: none;
 }
-#accordion-toggle-all {
+.accordion-toggle-all {
     display: inline;
 }
 

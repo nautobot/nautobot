@@ -33,6 +33,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 from nautobot.dcim.utils import cable_status_color_css
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
@@ -94,6 +95,7 @@ __all__ = (
     "SoftwareImageFileTable",
     "SoftwareVersionTable",
     "VirtualChassisTable",
+    "VirtualDeviceContextTable",
 )
 
 
@@ -635,6 +637,11 @@ class BaseInterfaceTable(BaseTable):
 class InterfaceTable(StatusTableMixin, ModularDeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
     mgmt_only = BooleanColumn()
     tags = TagColumn(url_name="dcim:interface_list")
+    virtual_device_context_count = LinkedCountColumn(
+        viewname="dcim:virtualdevicecontext_list",
+        url_params={"interfaces": "pk"},
+        verbose_name="Virtual Device Contexts",
+    )
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = Interface
@@ -660,6 +667,7 @@ class InterfaceTable(StatusTableMixin, ModularDeviceComponentTable, BaseInterfac
             "tags",
             "ip_addresses",
             "untagged_vlan",
+            "virtual_device_context_count",
             "tagged_vlans",
         )
         default_columns = (
@@ -716,6 +724,7 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "ip_addresses",
             "untagged_vlan",
             "tagged_vlans",
+            "virtual_device_context_count",
             "actions",
         )
         default_columns = [
@@ -734,6 +743,7 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "mode",
             "description",
             "ip_addresses",
+            "virtual_device_context_count",
             "cable",
             "connection",
             "actions",
@@ -1410,4 +1420,49 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "weight",
             "tags",
             "actions",
+        )
+
+
+class VirtualDeviceContextTable(StatusTableMixin, BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    role = tables.Column(linkify=True)
+    tenant = TenantColumn()
+    device = tables.Column(linkify=True)
+    primary_ip = tables.Column(linkify=True, order_by=("primary_ip6", "primary_ip4"), verbose_name="IP Address")
+    primary_ip4 = tables.Column(linkify=True, verbose_name="IPv4 Address")
+    primary_ip6 = tables.Column(linkify=True, verbose_name="IPv6 Address")
+    interface_count = LinkedCountColumn(
+        viewname="dcim:interface_list",
+        url_params={"virtual_device_contexts": "pk"},
+        verbose_name="Interfaces",
+    )
+    tags = TagColumn(url_name="dcim:device_list")
+
+    class Meta(BaseTable.Meta):
+        model = VirtualDeviceContext
+        fields = (
+            "pk",
+            "name",
+            "identifier",
+            "device",
+            "status",
+            "role",
+            "tenant",
+            "primary_ip",
+            "primary_ip4",
+            "primary_ip6",
+            "interface_count",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "identifier",
+            "device",
+            "status",
+            "role",
+            "tenant",
+            "primary_ip",
+            "interface_count",
         )

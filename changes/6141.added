@@ -1,0 +1,3 @@
+Added `KeyValueTablePanel` and `GroupedKeyValueTablePanel` generic panel classes to Python UI framework.
+Added `RelationshipModel.get_relationships_with_related_objects()` API allowing direct querying for all objects related to a given object by Relationships.
+Added object `tags` display to detail views using the Python UI framework.

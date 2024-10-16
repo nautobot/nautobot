@@ -5,9 +5,11 @@ from django.contrib.auth import get_user_model
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import override_settings, RequestFactory
 from django.urls import reverse
+from django.utils import timezone
 from social_django.utils import load_backend, load_strategy
 
 from nautobot.core.testing import TestCase, utils
+from nautobot.core.testing.utils import post_data
 
 User = get_user_model()
 
@@ -133,3 +135,24 @@ class AdvancedProfileSettingsViewTest(TestCase):
 
         # Check if the session has the correct value
         self.assertFalse(self.client.session.get("silk_record_requests"))
+
+
+class PreferenceTestCase(TestCase):
+    def test_timezone_change(self):
+        self.user.is_superuser = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        timezone_name = timezone.get_current_timezone_name()
+        new_timezone_name = "US/Eastern"
+        form_data = {"timezone": new_timezone_name, "_update_preference_form": [""]}
+        url = reverse("user:preferences")
+        request = {
+            "path": url,
+            "data": post_data(form_data),
+        }
+        response = self.client.post(**request)
+        response = self.client.get(url)
+        self.assertEqual(timezone.get_current_timezone_name(), new_timezone_name)
+        self.assertNotEqual(timezone_name, new_timezone_name)
+        self.assertHttpStatus(response, 200)

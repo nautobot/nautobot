@@ -1,0 +1,6 @@
+{% load helpers %}
+{% for tag in tags %}
+    {% tag tag list_url_name %}
+{% empty %}
+    <span class="text-muted">No tags assigned</span>
+{% endfor %}

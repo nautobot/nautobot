@@ -16,6 +16,7 @@ from django_tables2 import RequestConfig
 import netaddr
 
 from nautobot.cloud.tables import CloudNetworkTable
+from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -448,7 +449,6 @@ class PrefixListView(generic.ObjectListView):
     table = tables.PrefixDetailTable
     template_name = "ipam/prefix_list.html"
     queryset = Prefix.objects.all()
-    use_new_ui = True
 
 
 class PrefixView(generic.ObjectView):
@@ -461,7 +461,6 @@ class PrefixView(generic.ObjectView):
         "vlan__vlan_group",
         "namespace",
     ).prefetch_related("locations")
-    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         # Parent prefixes table
@@ -772,12 +771,10 @@ class IPAddressListView(generic.ObjectListView):
     filterset_form = forms.IPAddressFilterForm
     table = tables.IPAddressDetailTable
     template_name = "ipam/ipaddress_list.html"
-    use_new_ui = True
 
 
 class IPAddressView(generic.ObjectView):
     queryset = IPAddress.objects.select_related("tenant", "status", "role")
-    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         # Parent prefixes table
@@ -936,7 +933,7 @@ class IPAddressAssignView(view_mixins.GetReturnURLMixin, generic.ObjectView):
                 "per_page": get_paginate_count(request),
             }
             RequestConfig(request, paginate).configure(table)
-            max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
+            max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
             if max_page_size and paginate["per_page"] > max_page_size:
                 messages.warning(
                     request,

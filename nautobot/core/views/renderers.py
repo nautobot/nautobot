@@ -9,6 +9,7 @@ from django.urls import resolve
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
+from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.forms import (
     restrict_form_fields,
     SearchForm,
@@ -124,7 +125,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request, self.saved_view),
             }
-            max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
+            max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
             if max_page_size and paginate["per_page"] > max_page_size:
                 messages.warning(
                     request,
@@ -291,6 +292,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "verbose_name_plural": queryset.model._meta.verbose_name_plural,
         }
         if view.action == "retrieve":
+            context["object_detail_content"] = view.object_detail_content
             context.update(common_detail_view_context(request, instance))
         elif view.action == "list":
             # Construct valid actions for list view.
@@ -362,6 +364,4 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         # See form_valid() for self.action == "bulk_create".
         self.template = data.get("template", view.get_template_name())
 
-        # NautobotUIViewSets pass "use_new_ui" in context as they share the same class and are just different methods
-        self.use_new_ui = data.get("use_new_ui", False)
         return super().render(data, accepted_media_type=accepted_media_type, renderer_context=renderer_context)

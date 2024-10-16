@@ -15,6 +15,7 @@ from .models import (
     Device,
     DeviceRedundancyGroup,
     Interface,
+    InterfaceVDCAssignment,
     PathEndpoint,
     PowerPanel,
     Rack,
@@ -287,6 +288,49 @@ def prevent_adding_tagged_vlans_with_incorrect_mode_or_site(sender, instance, ac
         return
 
     validate_interface_tagged_vlans(instance, kwargs["model"], kwargs["pk_set"])
+
+
+#
+# VirtualDeviceContext Interfaces
+#
+
+
+@receiver(m2m_changed, sender=InterfaceVDCAssignment)
+@disable_for_loaddata
+def validate_vdcs_interface_relationships(sender, instance, action, **kwargs):
+    if action != "pre_add":
+        return
+
+    pk_set = kwargs["pk_set"]
+    if isinstance(instance, Interface):
+        invalid_vdcs = kwargs["model"].objects.filter(pk__in=pk_set).exclude(device=instance.device)
+        if invalid_vdcs.count():
+            raise ValidationError(
+                {
+                    "virtual_device_contexts": (
+                        f"Virtual Device Context with names {list(invalid_vdcs.values_list('name', flat=True))} must all belong to the "
+                        f"same device as the interface's device."
+                    )
+                }
+            )
+    else:
+        vc_interfaces_ids = instance.device.vc_interfaces.values_list("pk", flat=True)
+        invalid_interfaces = (
+            kwargs["model"]
+            .objects.filter(pk__in=pk_set)
+            .exclude(device=instance.device)
+            .exclude(id__in=vc_interfaces_ids)
+        )
+
+        if invalid_interfaces.count():
+            raise ValidationError(
+                {
+                    "interfaces": (
+                        f"Interfaces with names {list(invalid_interfaces.values_list('name', flat=True))} must all belong to the "
+                        f"same device as the Virtual Device Context's device."
+                    )
+                }
+            )
 
 
 #

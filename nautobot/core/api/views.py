@@ -1,5 +1,4 @@
 from collections import OrderedDict
-import itertools
 import logging
 import os
 import platform
@@ -13,7 +12,6 @@ from django.db import transaction
 from django.db.models import ProtectedError
 from django.http.response import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import NoReverseMatch, reverse as django_reverse
 from drf_spectacular.plumbing import get_relative_url, set_query_parameters
 from drf_spectacular.renderers import OpenApiJsonRenderer
 from drf_spectacular.utils import extend_schema
@@ -41,11 +39,9 @@ from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
-from nautobot.core.utils.lookup import get_form_for_model, get_route_for_model
-from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
 from nautobot.core.views.utils import get_csv_form_fields_from_serializer_class
-from nautobot.extras.registry import registry
 
 from . import serializers
 
@@ -749,154 +745,6 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
 #
 # UI Views
 #
-
-
-class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
-    """API View that returns the nav-menu content applicable to the requesting user."""
-
-    permission_classes = [IsAuthenticated]
-
-    def format_and_remove_hidden_menu(self, request, data):
-        """
-        Formats the menu data and removes hidden menu items based on user permissions.
-
-        Args:
-            request (HttpRequest): The request object.
-            data (dict): The menu data to format and filter.
-
-        Returns:
-            (dict): The formatted menu data without hidden items.
-
-        Example:
-            Input:
-            {
-                "Devices": {
-                    "permission": [...],
-                    "weight": "",
-                    "data": "data value"
-                },
-            }
-
-            Output:
-            {"Devices": "data value"}
-        """
-        return_value = {}
-        for name, value in data.items():
-            if "permissions" in value:
-                permissions = value["permissions"]
-                user_has_permission = (
-                    any(request.user.has_perm(permission) for permission in permissions) or not permissions
-                )
-                if user_has_permission:
-                    return_value[name] = value["data"]
-            else:
-                return_data = self.format_and_remove_hidden_menu(request, value["data"])
-                if return_data:
-                    return_value[name] = return_data
-        return return_value
-
-    @extend_schema(exclude=True)
-    def get(self, request):
-        """Get the menu data for the requesting user.
-
-        Returns the following data-structure (as not all context in registry["nav_menu"] is relevant to the UI):
-
-        {
-            "Inventory": {
-                "Devices": {
-                    "Devices": "/dcim/devices/",
-                    "Device Types": "/dcim/device-types/",
-                    ...
-                    "Connections": {
-                        "Cables": "/dcim/cables/",
-                        "Console Connections": "/dcim/console-connections/",
-                        ...
-                    },
-                    ...
-                },
-                "Organization": {
-                    ...
-                },
-                ...
-            },
-            "Networks": {
-                ...
-            },
-            "Security": {
-                ...
-            },
-            "Automation": {
-                ...
-            },
-            "Platform": {
-                ...
-            },
-        }
-        """
-        base_menu = registry["new_ui_nav_menu"]
-        formatted_data = self.format_and_remove_hidden_menu(request, base_menu)
-        return Response(formatted_data)
-
-
-class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
-    """
-    Enumerate the models listed on the Nautobot home page and return data structure
-    containing verbose_name_plural, url and count.
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(exclude=True)
-    def get(self, request):
-        object_counts = {
-            "Inventory": [
-                {"model": "dcim.rack"},
-                {"model": "dcim.devicetype"},
-                {"model": "dcim.device"},
-                {"model": "dcim.virtualchassis"},
-                {"model": "dcim.deviceredundancygroup"},
-                {"model": "dcim.cable"},
-            ],
-            "Networks": [
-                {"model": "ipam.vrf"},
-                {"model": "ipam.prefix"},
-                {"model": "ipam.ipaddress"},
-                {"model": "ipam.vlan"},
-            ],
-            "Security": [{"model": "extras.secret"}],
-            "Platform": [
-                {"model": "extras.gitrepository"},
-                {"model": "extras.relationship"},
-                {"model": "extras.computedfield"},
-                {"model": "extras.customfield"},
-                {"model": "extras.customlink"},
-                {"model": "extras.tag"},
-                {"model": "extras.status"},
-                {"model": "extras.role"},
-            ],
-        }
-
-        for entry in itertools.chain(*object_counts.values()):
-            app_label, model_name = entry["model"].split(".")
-            model = apps.get_model(app_label, model_name)
-            permission = get_permission_for_model(model, "view")
-            if not request.user.has_perm(permission):
-                continue
-            data = {"name": model._meta.verbose_name_plural}
-            try:
-                data["url"] = django_reverse(get_route_for_model(model, "list"))
-            except NoReverseMatch:
-                route = get_route_for_model(model, "list")
-                logger.warning(f"Handled expected exception when generating filter field: {route}")
-            manager = model.objects
-            if request.user.has_perm(permission):
-                if hasattr(manager, "restrict"):
-                    data["count"] = model.objects.restrict(request.user).count()
-                else:
-                    data["count"] = model.objects.count()
-            entry.update(data)
-
-        return Response(object_counts)
 
 
 class CSVImportFieldsForContentTypeAPIView(NautobotAPIVersionMixin, APIView):

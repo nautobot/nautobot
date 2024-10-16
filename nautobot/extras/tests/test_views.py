@@ -3,7 +3,6 @@ from unittest import mock
 import urllib.parse
 import uuid
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -35,6 +34,7 @@ from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
+    JobQueueTypeChoices,
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
@@ -59,6 +59,7 @@ from nautobot.extras.models import (
     Job,
     JobButton,
     JobLogEntry,
+    JobQueue,
     JobResult,
     MetadataType,
     Note,
@@ -2149,6 +2150,27 @@ class ApprovalQueueTestCase(
         self.assertIsNone(instance.approved_by_user)
 
 
+class JobQueueTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = JobQueue
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.form_data = {
+            "name": "Test Job Queue",
+            "queue_type": JobQueueTypeChoices.TYPE_CELERY,
+            "description": "This is a very detailed description",
+            "tenant": Tenant.objects.first().pk,
+            "tags": [t.pk for t in Tag.objects.get_for_model(JobQueue)],
+        }
+
+        cls.bulk_edit_data = {
+            "queue_type": JobQueueTypeChoices.TYPE_KUBERNETES,
+            "description": "This is a very detailed new description",
+            "tenant": Tenant.objects.last().pk,
+            # TODO add tests for add_tags/remove_tags fields in TagsBulkEditFormMixin
+        }
+
+
 class JobResultTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
@@ -2215,6 +2237,8 @@ class JobTestCase(
 
         # But we do need to make sure the ones we're testing are flagged appropriately
         cls.test_pass = Job.objects.get(job_class_name="TestPass")
+        default_job_queue = JobQueue.objects.get(name="default", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+        cls.test_pass.default_job_queue = default_job_queue
         cls.test_pass.enabled = True
         cls.test_pass.save()
 
@@ -2227,6 +2251,7 @@ class JobTestCase(
 
         cls.test_required_args = Job.objects.get(job_class_name="TestRequired")
         cls.test_required_args.enabled = True
+        cls.test_pass.default_job_queue = default_job_queue
         cls.test_required_args.save()
 
         cls.extra_run_urls = (
@@ -2245,12 +2270,16 @@ class JobTestCase(
             enabled=True,
             installed=False,
         )
+        cls.test_not_installed.default_job_queue = default_job_queue
         cls.test_not_installed.validated_save()
 
         cls.data_run_immediately = {
             "_schedule_type": "immediately",
         }
-
+        job_queues = JobQueue.objects.all()[:3]
+        pk_list = [queue.pk for queue in job_queues]
+        pk_list += [default_job_queue.pk]
+        job_queues = JobQueue.objects.filter(pk__in=pk_list)
         cls.form_data = {
             "enabled": True,
             "grouping_override": True,
@@ -2271,8 +2300,9 @@ class JobTestCase(
             "time_limit": 650,
             "has_sensitive_variables": False,
             "has_sensitive_variables_override": True,
-            "task_queues": "overridden,priority",
-            "task_queues_override": True,
+            "job_queues": [queue.pk for queue in job_queues],
+            "job_queues_override": True,
+            "default_job_queue": default_job_queue.pk,
         }
         # This form is emulating the non-conventional JobBulkEditForm
         cls.bulk_edit_data = {
@@ -2293,8 +2323,10 @@ class JobTestCase(
             "time_limit": "",
             "has_sensitive_variables": False,
             "clear_has_sensitive_variables_override": False,
-            "task_queues": "overridden,priority",
-            "clear_task_queues_override": False,
+            "job_queues": [queue.pk for queue in job_queues],
+            "clear_job_queues_override": False,
+            "clear_default_job_queue_override": False,
+            "default_job_queue": default_job_queue.pk,
         }
 
     def get_deletable_object(self):
@@ -2400,6 +2432,10 @@ class JobTestCase(
                     else:
                         self.assertEqual(getattr(instance, overridable_field), old_data[instance.pk][overridable_field])
                         self.assertEqual(getattr(instance, override_field), old_data[instance.pk][overridable_field])
+                # Special case for task queues/job queues
+                override_value = self.bulk_edit_data.get("job_queues")
+                self.assertEqual(list(instance.job_queues.values_list("pk", flat=True)), override_value)
+                self.assertEqual(instance.job_queues_override, True)
 
     def validate_object_data_after_bulk_edit(self, pk_list):
         instances = self._get_queryset().filter(pk__in=pk_list)
@@ -2565,19 +2601,18 @@ class JobTestCase(
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
-    @mock.patch("nautobot.extras.jobs.task_queues_as_choices")
-    def test_rerun_job(self, mock_task_queues_as_choices):
+    def test_rerun_job(self):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_jobresult")
 
-        mock_task_queues_as_choices.return_value = [("default", ""), ("queue1", ""), ("uniquequeue", "")]
+        job_queue = JobQueue.objects.create(name="uniquequeue", queue_type=JobQueueTypeChoices.TYPE_CELERY)
         job_celery_kwargs = {
             "nautobot_job_job_model_id": self.test_required_args.id,
             "nautobot_job_profile": True,
             "nautobot_job_user_id": self.user.id,
-            "queue": "uniquequeue",
+            "queue": job_queue.name,
         }
-
+        self.test_required_args.job_queues.set([job_queue])
         previous_result = JobResult.objects.create(
             job_model=self.test_required_args,
             user=self.user,
@@ -2588,8 +2623,7 @@ class JobTestCase(
         run_url = reverse("extras:job_run", kwargs={"pk": self.test_required_args.pk})
         response = self.client.get(f"{run_url}?kwargs_from_job_result={previous_result.pk!s}")
         content = extract_page_body(response.content.decode(response.charset))
-
-        self.assertInHTML('<option value="uniquequeue" selected>', content)
+        self.assertInHTML(f'<option value="{job_queue.pk}" selected>{job_queue}</option>', content)
         self.assertInHTML(
             '<input type="text" name="var" value="456" class="form-control" required placeholder="None" id="id_var">',
             content,
@@ -2702,12 +2736,12 @@ class JobTestCase(
         self.add_permissions("extras.view_jobresult")
 
         self.test_pass.task_queues = []
-        self.test_pass.task_queues_override = True
+        self.test_pass.job_queues_override = True
         self.test_pass.validated_save()
-
+        job_queue = JobQueue.objects.create(name="invalid", queue_type=JobQueueTypeChoices.TYPE_CELERY)
         data = {
             "_schedule_type": "immediately",
-            "_task_queue": "invalid",
+            "_job_queue": job_queue.pk,
         }
 
         for run_url in self.run_urls:
@@ -2717,7 +2751,7 @@ class JobTestCase(
             errors = extract_form_failures(response.content.decode(response.charset))
             self.assertEqual(
                 errors,
-                ["_task_queue: Select a valid choice. invalid is not one of the available choices."],
+                ["_job_queue: Select a valid choice. That choice is not one of the available choices."],
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
@@ -2866,18 +2900,28 @@ class JobButtonRenderingTestCase(TestCase):
 
     def test_task_queue_hidden_input_is_present(self):
         """
-        Ensure that the job button respects the job class' task_queues and the job class task_queues[0]/default is passed as a hidden form input.
+        Ensure that the job button respects the job class' task_queues and the job class default job queue is passed as a hidden form input.
         """
-        self.job.task_queues_override = True
+        self.job.job_queues_override = True
+        task_queues = ["overriden_queue", "default", "priority"]
+        for queue in task_queues:
+            JobQueue.objects.get_or_create(name=queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY})
         self.job.task_queues = ["overriden_queue", "default", "priority"]
         self.job.save()
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
-        self.assertBodyContains(response, f'<input type="hidden" name="_task_queue" value="{self.job.task_queues[0]}">')
-        self.job.task_queues_override = False
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        job_queues = self.job.job_queues.all().values_list("name", flat=True)
+        self.assertIn(f'<input type="hidden" name="_job_queue" value="{job_queues[0]}">', content, content)
+
+        self.job.job_queues_override = False
         self.job.save()
+        self.job.job_queues.set([])
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
-        self.assertBodyContains(
-            response, f'<input type="hidden" name="_task_queue" value="{settings.CELERY_TASK_DEFAULT_QUEUE}">'
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            f'<input type="hidden" name="_job_queue" value="{self.job.default_job_queue.name}">', content, content
         )
 
     def test_view_object_with_unsafe_text(self):

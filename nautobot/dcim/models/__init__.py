@@ -35,6 +35,7 @@ from .devices import (
     DeviceRedundancyGroup,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
+    InterfaceVDCAssignment,
     Manufacturer,
     Module,
     ModuleType,
@@ -42,6 +43,7 @@ from .devices import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 from .locations import Location, LocationType
 from .power import PowerFeed, PowerPanel
@@ -71,6 +73,7 @@ __all__ = (
     "InterfaceRedundancyGroup",
     "InterfaceRedundancyGroupAssociation",
     "InterfaceTemplate",
+    "InterfaceVDCAssignment",
     "InventoryItem",
     "Location",
     "LocationType",
@@ -95,4 +98,5 @@ __all__ = (
     "SoftwareImageFile",
     "SoftwareVersion",
     "VirtualChassis",
+    "VirtualDeviceContext",
 )

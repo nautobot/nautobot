@@ -1329,7 +1329,6 @@ class VLANGroup(PrimaryModel):
 
     def clean(self):
         super().clean()
-
         # Validate location
         if self.location is not None:
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():

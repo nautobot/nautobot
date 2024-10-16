@@ -1,0 +1,1 @@
+Fixed accordion collapse/expand behavior when grouped computed fields and/or custom fields are present in a detail view.

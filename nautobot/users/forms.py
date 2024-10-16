@@ -3,8 +3,10 @@ from django.contrib.auth.forms import (
     AuthenticationForm,
     PasswordChangeForm as DjangoPasswordChangeForm,
 )
+from timezone_field import TimeZoneFormField
 
 from nautobot.core.forms import BootstrapMixin, DateTimePicker
+from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.utils.config import get_settings_or_config
 
 from .models import Token
@@ -64,3 +66,7 @@ class AdvancedProfileSettingsForm(BootstrapMixin, forms.Form):
             raise forms.ValidationError(
                 {"request_profiling": "Request profiling has been globally disabled by an administrator."}
             )
+
+
+class PreferenceProfileSettingsForm(BootstrapMixin, forms.Form):
+    timezone = TimeZoneFormField(required=False, help_text="Set your default timezone", widget=StaticSelect2)

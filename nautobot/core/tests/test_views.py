@@ -11,6 +11,7 @@ from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
 
+from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
@@ -20,7 +21,7 @@ from nautobot.core.views import NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.dcim.models.locations import Location
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import FileProxy
+from nautobot.extras.models import FileProxy, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
 from nautobot.users.models import ObjectPermission
@@ -593,4 +594,54 @@ class ExampleViewWithCustomPermissionsTest(TestCase):
         self.user.is_staff = True
         self.user.save()
         response = self.client.get(url)
-        self.assertBodyContains(response, "You are viewing a table of example models")
+        self.assertHttpStatus(response, 200)
+        response_body = response.content.decode(response.charset)
+        self.assertIn("You are viewing a table of example models", response_body)
+
+
+class TestObjectDetailView(TestCase):
+    @override_settings(PAGINATE_COUNT=5)
+    def test_object_table_panel(self):
+        provider = Provider.objects.create(name="A Test Provider 1")
+        circuit_type = CircuitType.objects.create(
+            name="A Test Circuit Type",
+        )
+        circuit_status = Status.objects.get_for_model(Circuit).first()
+
+        circuits = [
+            Circuit(
+                provider=provider,
+                cid=f"00121{x}",
+                circuit_type=circuit_type,
+                status=circuit_status,
+            )
+            for x in range(10)
+        ]
+        Circuit.objects.bulk_create(circuits)
+
+        self.add_permissions("circuits.view_provider", "circuits.view_circuit")
+        url = reverse("circuits:provider", args=(provider.pk,))
+        response = self.client.get(f"{url}?tab=main")
+        self.assertHttpStatus(response, 200)
+        response_data = response.content.decode(response.charset)
+        view_move_url = reverse("circuits:circuit_list") + f"?provider={provider.id}"
+
+        # Assert Badge Count in table panel header
+        panel_header = f"""<div class="panel-heading"><strong>Circuits</strong> <a href="{view_move_url}" class="badge badge-primary">10</a></div>"""
+        self.assertInHTML(panel_header, response_data)
+
+        # Assert view X more btn
+        view_more_btn = f"""<a href="{view_move_url}"><span class="mdi mdi-dots-horizontal" aria-hidden="true"></span>View 5 more circuits</a>"""
+        self.assertInHTML(view_more_btn, response_data)
+
+        # Validate Copy btn on all rows excluding empty rows
+        name_copy = f"""
+        <span class="hover_copy">
+            <span id="_value_name">{provider.name}</span>
+            <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#_value_name">
+                <span class="mdi mdi-content-copy"></span>
+            </button>
+        </span>"""
+        self.assertInHTML(name_copy, response_data)
+        # ASN do not have a value, therefore no copy btn
+        self.assertNotIn("#asn_copy", response_data)

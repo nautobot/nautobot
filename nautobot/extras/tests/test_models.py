@@ -4,6 +4,7 @@ import tempfile
 from unittest import expectedFailure, mock
 import uuid
 import warnings
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -18,11 +19,6 @@ from django.utils.timezone import get_default_timezone, now
 from django_celery_beat.tzcrontab import TzAwareCrontab
 from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
 import time_machine
-
-try:
-    from zoneinfo import ZoneInfo
-except ImportError:  # python 3.8
-    from backports.zoneinfo import ZoneInfo
 
 from nautobot.circuits.models import CircuitType
 from nautobot.core.choices import ColorChoices
@@ -66,6 +62,7 @@ from nautobot.extras.models import (
     GitRepository,
     Job as JobModel,
     JobLogEntry,
+    JobQueue,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -1135,6 +1132,11 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
                                 getattr(job_model.job_class, field_name),
                                 field_name,
                             )
+                    if not job_model.job_queues_override:
+                        self.assertEqual(
+                            sorted(job_model.task_queues),
+                            sorted(job_model.job_class.task_queues) or [settings.CELERY_TASK_DEFAULT_QUEUE],
+                        )
                 except AssertionError:
                     print(list(JobModel.objects.all()))
                     print(registry["jobs"])
@@ -1159,7 +1161,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             "has_sensitive_variables": not self.job_containing_sensitive_variables.has_sensitive_variables,
             "soft_time_limit": 350,
             "time_limit": 650,
-            "task_queues": ["overridden", "worker", "queues"],
         }
 
         # Override values to non-defaults and ensure they are preserved
@@ -1236,6 +1237,17 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             handler.exception.message_dict["approval_required"][0],
             "A job that may have sensitive variables cannot be marked as requiring approval",
         )
+
+    def test_default_job_queue_always_included_in_job_queues(self):
+        default_job_queue = JobQueue.objects.first()
+        job_queues = list(JobQueue.objects.exclude(pk=default_job_queue.pk))[:3]
+
+        job = JobModel.objects.first()
+        job.default_job_queue = default_job_queue
+        job.save()
+        job.job_queues.set(job_queues)
+
+        self.assertTrue(job.job_queues.filter(pk=default_job_queue.pk).exists())
 
 
 class MetadataChoiceTest(ModelTestCases.BaseModelTestCase):
@@ -1861,6 +1873,14 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             interval=JobExecutionType.TYPE_FUTURE,
             start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("America/New_York")),
         )
+
+    def test_scheduled_job_queue_setter(self):
+        """Test the queue property setter on ScheduledJob."""
+        invalid_queue = "Invalid job Queue"
+        with self.assertRaises(ValidationError) as cm:
+            self.daily_utc_job.queue = invalid_queue
+            self.daily_utc_job.validated_save()
+        self.assertIn(f"Job Queue {invalid_queue} does not exist in the database.", str(cm.exception))
 
     def test_schedule(self):
         """Test the schedule property."""

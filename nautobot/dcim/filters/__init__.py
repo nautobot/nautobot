@@ -65,6 +65,7 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
+    InterfaceVDCAssignment,
     InventoryItem,
     Location,
     LocationType,
@@ -88,6 +89,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 from nautobot.extras.filters import (
     LocalContextModelFilterSetMixin,
@@ -1130,6 +1132,15 @@ class InterfaceFilterSet(
         queryset=InterfaceRedundancyGroup.objects.all(),
         to_field_name="name",
     )
+    virtual_device_contexts = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VirtualDeviceContext.objects.all(),
+        to_field_name="name",
+        label="Virtual Device Context (name or ID)",
+    )
+    has_virtual_device_contexts = RelatedMembershipBooleanFilter(
+        field_name="virtual_device_contexts",
+        label="Has Virtual Device Context",
+    )
 
     class Meta:
         model = Interface
@@ -1144,6 +1155,7 @@ class InterfaceFilterSet(
             "description",
             "label",
             "tags",
+            "virtual_device_contexts",
             "interface_redundancy_groups",
         ]
 
@@ -2104,3 +2116,133 @@ class ModuleBayFilterSet(NautobotFilterSet):
     class Meta:
         model = ModuleBay
         fields = "__all__"
+
+
+class VirtualDeviceContextFilterSet(
+    NautobotFilterSet, TenancyModelFilterSetMixin, RoleModelFilterSetMixin, StatusModelFilterSetMixin
+):
+    q = SearchFilter(
+        filter_predicates={
+            "device__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "tenant__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+        }
+    )
+    primary_ip4 = MultiValueCharFilter(
+        method="filter_primary_ip4",
+        label="Primary IPv4 Address (address or ID)",
+    )
+    primary_ip6 = MultiValueCharFilter(
+        method="filter_primary_ip6",
+        label="Primary IPv6 Address (address or ID)",
+    )
+    has_primary_ip = django_filters.BooleanFilter(
+        method="_has_primary_ip",
+        label="Has a primary IP",
+    )
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Device (name or ID)",
+    )
+    interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        queryset=Interface.objects.all(),
+        to_field_name="name",
+        label="Interface (name or ID)",
+    )
+    has_interfaces = RelatedMembershipBooleanFilter(
+        field_name="interfaces",
+        label="Has Interfaces",
+    )
+
+    class Meta:
+        model = VirtualDeviceContext
+        fields = [
+            "identifier",
+            "name",
+            "device",
+            "tenant",
+            "interfaces",
+            "has_interfaces",
+            "has_primary_ip",
+            "primary_ip4",
+            "primary_ip6",
+            "role",
+            "status",
+            "tags",
+            "description",
+        ]
+
+    # TODO(timizuo): Make a mixin for ip filterset fields to reduce code duplication
+    # VirtualMachineFilterSet,
+    def generate_query__has_primary_ip(self, value):
+        query = Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)
+        return ~query if not value else query
+
+    def _has_primary_ip(self, queryset, name, value):
+        params = self.generate_query__has_primary_ip(value)
+        return queryset.filter(params)
+
+    def get_ip_queryset(self, value):
+        pk_values = {item for item in value if is_uuid(item)}
+        addresses = {item for item in value if item not in pk_values}
+
+        return IPAddress.objects.filter_address_or_pk_in(addresses, pk_values)
+
+    def filter_primary_ip4(self, queryset, name, value):
+        ip_queryset = self.get_ip_queryset(value)
+        return queryset.filter(primary_ip4__in=ip_queryset)
+
+    def filter_primary_ip6(self, queryset, name, value):
+        ip_queryset = self.get_ip_queryset(value)
+        return queryset.filter(primary_ip6__in=ip_queryset)
+
+
+class InterfaceVDCAssignmentFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "interface__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "virtual_device_context__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+        }
+    )
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="interface__device",
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Device (name or ID)",
+    )
+    virtual_device_context = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VirtualDeviceContext.objects.all(),
+        to_field_name="name",
+        label="Virtual Device Context (name or ID)",
+    )
+    interface = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        queryset=Interface.objects.all(),
+        to_field_name="name",
+        label="Interface (name or ID)",
+    )
+
+    class Meta:
+        model = InterfaceVDCAssignment
+        fields = [
+            "device",
+            "interface",
+            "virtual_device_context",
+        ]

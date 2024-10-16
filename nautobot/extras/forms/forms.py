@@ -9,6 +9,7 @@ from django.core.validators import MinValueValidator
 from django.db.models.fields import TextField
 from django.forms import inlineformset_factory, ModelMultipleChoiceField
 from django.urls.base import reverse
+from django.utils.timezone import get_current_timezone_name
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
@@ -25,7 +26,6 @@ from nautobot.core.forms import (
     DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
-    JSONArrayFormField,
     JSONField,
     LaxURLField,
     MultipleContentTypeField,
@@ -40,6 +40,7 @@ from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Loca
 from nautobot.extras.choices import (
     DynamicGroupTypeChoices,
     JobExecutionType,
+    JobQueueTypeChoices,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
     RelationshipTypeChoices,
@@ -65,6 +66,7 @@ from nautobot.extras.models import (
     Job,
     JobButton,
     JobHook,
+    JobQueue,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -106,6 +108,7 @@ from .mixins import (
     CustomFieldModelFormMixin,
     NoteModelBulkEditFormMixin,
     NoteModelFormMixin,
+    TagsBulkEditFormMixin,
 )
 
 __all__ = (
@@ -149,6 +152,9 @@ __all__ = (
     "JobFilterForm",
     "JobHookForm",
     "JobHookFilterForm",
+    "JobQueueBulkEditForm",
+    "JobQueueFilterForm",
+    "JobQueueForm",
     "JobScheduleForm",
     "JobResultFilterForm",
     "LocalContextFilterForm",
@@ -945,28 +951,19 @@ class JobForm(BootstrapMixin, forms.Form):
     controlled by the job definition. See `nautobot.extras.jobs.BaseJob.as_form`
     """
 
-    _profile = forms.BooleanField(
-        required=False,
-        initial=False,
-        label="Profile job execution",
-        help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
-    )
-    _task_queue = forms.ChoiceField(
-        required=False,
-        help_text="The task queue to route this job to",
-        label="Task queue",
-    )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Move special fields to the end of the form
-        for field in ["_task_queue", "_profile"]:
-            value = self.fields.pop(field)
-            self.fields[field] = value
-
 
 class JobEditForm(NautobotModelForm):
+    job_queues = DynamicModelMultipleChoiceField(
+        label="Job Queues",
+        queryset=JobQueue.objects.all(),
+    )
+    default_job_queue = DynamicModelChoiceField(
+        label="Default Job Queue",
+        queryset=JobQueue.objects.all(),
+        help_text="The default job queue to route this job to",
+        required=False,
+    )
+
     class Meta:
         model = Job
         fields = [
@@ -989,8 +986,10 @@ class JobEditForm(NautobotModelForm):
             "time_limit",
             "has_sensitive_variables_override",
             "has_sensitive_variables",
-            "task_queues_override",
-            "task_queues",
+            "job_queues_override",
+            "job_queues",
+            "default_job_queue_override",
+            "default_job_queue",
             "tags",
         ]
 
@@ -1006,7 +1005,27 @@ class JobEditForm(NautobotModelForm):
             for field_name in JOB_OVERRIDABLE_FIELDS:
                 if not cleaned_data.get(f"{field_name}_override", False):
                     cleaned_data[field_name] = getattr(job_class, field_name)
+            # Get default Job Queue first
+            if not cleaned_data.get("default_job_queue_override", False):
+                meta_task_queues = getattr(job_class, "task_queues", []) or [settings.CELERY_TASK_DEFAULT_QUEUE]
+                cleaned_data["default_job_queue"], _ = JobQueue.objects.get_or_create(
+                    name=meta_task_queues[0], defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+                )
+            default_job_queue = cleaned_data["default_job_queue"]
+            # Include the default Job Queue in the Job Queues selection
+            if not cleaned_data.get("job_queues_override", False):
+                names = getattr(job_class, "task_queues", []) or [settings.CELERY_TASK_DEFAULT_QUEUE]
+            else:
+                names = list(cleaned_data["job_queues"].values_list("name", flat=True))
+            names += [default_job_queue]
+            cleaned_data["job_queues"] = JobQueue.objects.filter(name__in=names)
+
         return cleaned_data
+
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        instance.job_queues.set(self.cleaned_data["job_queues"])
+        return instance
 
 
 class JobBulkEditForm(NautobotBulkEditForm):
@@ -1058,10 +1077,17 @@ class JobBulkEditForm(NautobotBulkEditForm):
         help_text="Maximum runtime in seconds before the job will be forcibly terminated."
         "<br>Set to 0 to use Nautobot system default",
     )
-    task_queues = JSONArrayFormField(
-        base_field=forms.CharField(max_length=CHARFIELD_MAX_LENGTH),
-        help_text="Comma separated list of task queues that this job can run on. A blank list will use the default queue",
+    job_queues = DynamicModelMultipleChoiceField(
+        label="Job Queues",
+        queryset=JobQueue.objects.all(),
         required=False,
+        help_text="Job Queue instances that this job can run on",
+    )
+    default_job_queue = DynamicModelChoiceField(
+        label="Default Job Queue",
+        queryset=JobQueue.objects.all(),
+        required=False,
+        help_text="Default Job Queue the job runs on if no Job Queue is specified",
     )
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
     # Text field overrides
@@ -1081,9 +1107,13 @@ class JobBulkEditForm(NautobotBulkEditForm):
         required=False,
         help_text="If checked, time limits will be reverted to the default values defined in each Job's source code",
     )
-    clear_task_queues_override = forms.BooleanField(
+    clear_job_queues_override = forms.BooleanField(
         required=False,
-        help_text="If checked, task queue overrides will be reverted to the default values defined in each Job's source code",
+        help_text="If checked, the selected job queues will be reverted to the default values defined in each Job's source code",
+    )
+    clear_default_job_queue_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, the default job queue will be reverted to the first value of task_queues defined in each Job's source code",
     )
     # Boolean overrides
     clear_approval_required_override = forms.BooleanField(
@@ -1201,6 +1231,63 @@ class JobHookFilterForm(BootstrapMixin, forms.Form):
     type_delete = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
 
 
+class JobQueueBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(
+        queryset=JobQueue.objects.all(),
+        widget=forms.MultipleHiddenInput(),
+    )
+    queue_type = forms.ChoiceField(
+        choices=JobQueueTypeChoices,
+        help_text="The job can either run immediately, once in the future, or on a recurring schedule.",
+        label="Type",
+        required=False,
+    )
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+    )
+    description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
+
+    class Meta:
+        model = JobQueue
+        nullable_fields = [
+            "description",
+            "tenant",
+        ]
+
+
+class JobQueueFilterForm(NautobotFilterForm):
+    model = JobQueue
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False)
+    jobs = DynamicModelMultipleChoiceField(queryset=Job.objects.all(), required=False)
+    queue_type = forms.MultipleChoiceField(
+        choices=JobQueueTypeChoices,
+        required=False,
+        widget=StaticSelect2Multiple(),
+    )
+    tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="name", required=False)
+    tags = TagFilterField(model)
+
+
+class JobQueueForm(NautobotModelForm):
+    name = forms.CharField(required=True, max_length=CHARFIELD_MAX_LENGTH)
+    queue_type = forms.ChoiceField(
+        choices=JobQueueTypeChoices,
+        label="Queue Type",
+    )
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+    )
+    description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
+    tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+
+    class Meta:
+        model = JobQueue
+        fields = ("name", "queue_type", "description", "tenant", "tags")
+
+
 class JobScheduleForm(BootstrapMixin, forms.Form):
     """
     This form is rendered alongside the JobForm but deals specifically with the fields needed to either
@@ -1223,7 +1310,6 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
         required=False,
         label="Starting date and time",
         widget=DateTimePicker(),
-        help_text=f"The scheduled time is relative to the Nautobot configured timezone: {settings.TIME_ZONE}.",
     )
     _recurrence_custom_time = forms.CharField(
         required=False,
@@ -1259,6 +1345,16 @@ class JobScheduleForm(BootstrapMixin, forms.Form):
                     ScheduledJob.get_crontab(cleaned_data.get("_recurrence_custom_time"))
                 except Exception as e:
                     raise ValidationError({"_recurrence_custom_time": e})
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # setting the help_text for `_schedule_start_time` here instead of in the field definition
+        # because Django needs to be fully initialized before we can accurately retrieve the current timezone.
+        self.fields[
+            "_schedule_start_time"
+        ].help_text = (
+            f"The scheduled time is relative to the Nautobot configured timezone: {get_current_timezone_name()}."
+        )
 
 
 class JobResultFilterForm(BootstrapMixin, forms.Form):
@@ -1429,7 +1525,7 @@ class MetadataTypeFilterForm(NautobotFilterForm):
     tags = TagFilterField(model)
 
 
-class MetadataTypeBulkEditForm(NautobotBulkEditForm):
+class MetadataTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=MetadataType.objects.all(), widget=forms.MultipleHiddenInput)
     description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
 

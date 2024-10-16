@@ -611,12 +611,13 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
     UI mixin to retrieve a model instance.
     """
 
+    object_detail_content = None
+
     def retrieve(self, request, *args, **kwargs):
         """
         Retrieve a model instance.
         """
-        context = {"use_new_ui": True}
-        return Response(context)
+        return Response({})
 
 
 class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
@@ -702,7 +703,6 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         """
         List the model instances.
         """
-        context = {"use_new_ui": True}
         queryset = self.get_queryset()
         clear_view = request.GET.get("clear_view", False)
         if "export" in request.GET:  # 3.0 TODO: remove, irrelevant after #4746
@@ -740,7 +740,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             except ObjectDoesNotExist:
                 pass
 
-        return Response(context)
+        return Response({})
 
 
 class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):

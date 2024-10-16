@@ -1,6 +1,6 @@
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
-from netaddr import IPAddress, IPNetwork
 
 from nautobot.dcim.models import Device
 from nautobot.extras.jobs import (
@@ -11,7 +11,6 @@ from nautobot.extras.jobs import (
     IPAddressVar,
     IPAddressWithMaskVar,
     IPNetworkVar,
-    Job,
     JSONVar,
     MultiChoiceVar,
     MultiObjectVar,
@@ -26,238 +25,160 @@ CHOICES = (("ff0000", "Red"), ("00ff00", "Green"), ("0000ff", "Blue"))
 
 class JobVariablesTest(TestCase):
     def test_stringvar(self):
-        class StringVarJob(Job):
-            var1 = StringVar(min_length=3, max_length=3, regex=r"[a-z]+")
+        field = StringVar(min_length=3, max_length=3, regex=r"[a-z]+").as_field()
 
         # Validate min_length enforcement
-        data = {"var1": "xx"}
-        form = StringVarJob().as_form(data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("var1", form.errors)
+        with self.assertRaises(ValidationError) as cm:
+            field.clean("xx")
+        self.assertIn("Ensure this value has at least 3 characters (it has 2).", str(cm.exception))
 
         # Validate max_length enforcement
-        data = {"var1": "xxxx"}
-        form = StringVarJob().as_form(data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("var1", form.errors)
+        with self.assertRaises(ValidationError) as cm:
+            field.clean("xxxx")
+        self.assertIn("Ensure this value has at most 3 characters (it has 4).", str(cm.exception))
 
         # Validate regex enforcement
-        data = {"var1": "ABC"}
-        form = StringVarJob().as_form(data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("var1", form.errors)
+        with self.assertRaises(ValidationError) as cm:
+            field.clean("ABC")
+        self.assertIn("Invalid value. Must match regex: [a-z]+'", str(cm.exception))
 
         # Validate valid data
-        data = {"var1": "abc"}
-        form = StringVarJob().as_form(data)
-        self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data["var1"], data["var1"])
+        field.clean("abc")
 
     def test_textvar(self):
-        class TextVarJob(Job):
-            var1 = TextVar()
+        field = TextVar().as_field()
 
         # Validate valid data
-        data = {"var1": "This is a test string"}
-        form = TextVarJob().as_form(data)
-        self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data["var1"], data["var1"])
+        field.clean("This is a test string")
 
     def test_integervar(self):
-        class IntegerVarJob(Job):
-            var1 = IntegerVar(min_value=5, max_value=10)
+        field = IntegerVar(min_value=5, max_value=10).as_field()
 
         # Validate min_value enforcement
-        data = {"var1": 4}
-        form = IntegerVarJob().as_form(data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("var1", form.errors)
+        with self.assertRaises(ValidationError) as cm:
+            field.clean(4)
+        self.assertIn("Ensure this value is greater than or equal to 5.", str(cm.exception))
 
         # Validate max_value enforcement
-        data = {"var1": 11}
-        form = IntegerVarJob().as_form(data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("var1", form.errors)
+        with self.assertRaises(ValidationError) as cm:
+            field.clean(11)
+        self.assertIn("Ensure this value is less than or equal to 10.", str(cm.exception))
 
         # Validate valid data
-        data = {"var1": 7}
-        form = IntegerVarJob().as_form(data)
-        self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data["var1"], data["var1"])
+        field.clean(7)
 
     def test_booleanvar(self):
-        class BooleanVarJob(Job):
-            var1 = BooleanVar()
+        field = BooleanVar().as_field()
 
         # Validate True
-        data = {"var1": True}
-        form = BooleanVarJob().as_form(data)
-        self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data["var1"], True)
+        field.clean(True)
 
         # Validate False
-        data = {"var1": False}
-        form = BooleanVarJob().as_form(data)
-        self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data["var1"], False)
+        field.clean(False)
 
     def test_choicevar(self):
-        class ChoiceVarJob(Job):
-            var1 = ChoiceVar(choices=CHOICES)
+        field = ChoiceVar(choices=CHOICES).as_field()
 
         # Validate valid choice
-        data = {"var1": "ff0000"}
-        form = ChoiceVarJob().as_form(data)
-        self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data["var1"], "ff0000")
+        field.clean("ff0000")
 
         # Validate invalid choice
-        data = {"var1": "taupe"}
-        form = ChoiceVarJob().as_form(data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("var1", form.errors)
+        with self.assertRaises(ValidationError) as cm:
+            field.clean("taupe")
+        self.assertIn("Select a valid choice. taupe is not one of the available choices.", str(cm.exception))
 
     def test_multichoicevar(self):
-        class MultiChoiceVarJob(Job):
-            var1 = MultiChoiceVar(choices=CHOICES)
+        field = MultiChoiceVar(choices=CHOICES).as_field()
 
-        # Validate single choice
-        data = {"var1": ["ff0000"]}
-        form = MultiChoiceVarJob().as_form(data)
-        self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data["var1"], ["ff0000"])
+        # Validate valid choice
+        field.clean(["ff0000"])
 
         # Validate multiple choices
-        data = {"var1": ("ff0000", "00ff00")}
-        form = MultiChoiceVarJob().as_form(data)
-        self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data["var1"], ["ff0000", "00ff00"])
+        field.clean(("ff0000", "00ff00"))
 
         # Validate invalid choice
-        data = {"var1": "taupe"}
-        form = MultiChoiceVarJob().as_form(data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("var1", form.errors)
+        with self.assertRaises(ValidationError) as cm:
+            field.clean(["taupe"])
+        self.assertIn("Select a valid choice. taupe is not one of the available choices.", str(cm.exception))
 
     def test_objectvar(self):
-        class ObjectVarJob(Job):
-            var1 = ObjectVar(model=Role)
+        field = ObjectVar(model=Role).as_field()
 
         # Validate valid data
-        data = {"var1": Role.objects.get_for_model(Device).first().pk}
-        form = ObjectVarJob().as_form(data)
-        self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data["var1"].pk, data["var1"])
+        field.clean(Role.objects.get_for_model(Device).first().pk)
 
     def test_multiobjectvar(self):
-        class MultiObjectVarJob(Job):
-            var1 = MultiObjectVar(model=Role)
+        field = MultiObjectVar(model=Role).as_field()
 
         # Validate valid data
-        data = {"var1": [role.pk for role in Role.objects.all()[:3]]}
-        form = MultiObjectVarJob().as_form(data)
-        self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data["var1"][0].pk, data["var1"][0])
-        self.assertEqual(form.cleaned_data["var1"][1].pk, data["var1"][1])
-        self.assertEqual(form.cleaned_data["var1"][2].pk, data["var1"][2])
+        field.clean([role.pk for role in Role.objects.all()[:3]])
 
     def test_filevar(self):
-        class FileVarJob(Job):
-            var1 = FileVar()
+        field = FileVar().as_field()
 
         # Test file
         testfile = SimpleUploadedFile(name="test_file.txt", content=b"This is an test file for testing")
-
         # Validate valid data
-        file_data = {"var1": testfile}
-        form = FileVarJob().as_form(data=None, files=file_data)
-        self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data["var1"], testfile)
+        field.clean(testfile)
 
     def test_ipaddressvar(self):
-        class IPAddressVarJob(Job):
-            var1 = IPAddressVar()
+        field = IPAddressVar().as_field()
 
         # Validate IP network enforcement
-        data = {"var1": "1.2.3"}
-        form = IPAddressVarJob().as_form(data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("var1", form.errors)
+        with self.assertRaises(ValidationError) as cm:
+            field.clean("1.2.3")
+        self.assertIn("Invalid IPv4/IPv6 address format: 1.2.3", str(cm.exception))
 
         # Validate IP mask exclusion
-        data = {"var1": "192.0.2.0/24"}
-        form = IPAddressVarJob().as_form(data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("var1", form.errors)
+        with self.assertRaises(ValidationError) as cm:
+            field.clean("192.0.2.0/24")
+        self.assertIn("Invalid IPv4/IPv6 address format: 192.0.2.0/24", str(cm.exception))
 
         # Validate valid data
-        data = {"var1": "192.0.2.1"}
-        form = IPAddressVarJob().as_form(data)
-        self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data["var1"], IPAddress(data["var1"]))
+        field.clean("192.0.2.1")
 
     def test_ipaddresswithmaskvar(self):
-        class IPAddressWithMaskVarJob(Job):
-            var1 = IPAddressWithMaskVar()
+        field = IPAddressWithMaskVar().as_field()
 
         # Validate IP network enforcement
-        data = {"var1": "1.2.3"}
-        form = IPAddressWithMaskVarJob().as_form(data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("var1", form.errors)
+        with self.assertRaises(ValidationError) as cm:
+            field.clean("1.2.3")
+        self.assertIn("CIDR mask (e.g. /24) is required.", str(cm.exception))
 
         # Validate IP mask requirement
-        data = {"var1": "192.0.2.0"}
-        form = IPAddressWithMaskVarJob().as_form(data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("var1", form.errors)
+        with self.assertRaises(ValidationError) as cm:
+            field.clean("192.0.2.0")
+        self.assertIn("CIDR mask (e.g. /24) is required.", str(cm.exception))
 
         # Validate valid data
-        data = {"var1": "192.0.2.0/24"}
-        form = IPAddressWithMaskVarJob().as_form(data)
-        self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data["var1"], IPNetwork(data["var1"]))
+        field.clean("192.0.2.0/24")
 
     def test_ipnetworkvar(self):
-        class IPNetworkVarJob(Job):
-            var1 = IPNetworkVar()
+        field = IPNetworkVar().as_field()
 
         # Validate IP network enforcement
-        data = {"var1": "1.2.3"}
-        form = IPNetworkVarJob().as_form(data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("var1", form.errors)
+        with self.assertRaises(ValidationError) as cm:
+            field.clean("1.2.3")
+        self.assertIn("CIDR mask (e.g. /24) is required.", str(cm.exception))
 
         # Validate host IP check
-        data = {"var1": "192.0.2.1/24"}
-        form = IPNetworkVarJob().as_form(data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("var1", form.errors)
+        with self.assertRaises(ValidationError) as cm:
+            field.clean("192.0.2.1/24")
+        self.assertIn("192.0.2.1/24 is not a valid prefix. Did you mean 192.0.2.0/24?", str(cm.exception))
 
         # Validate valid data
-        data = {"var1": "192.0.2.0/24"}
-        form = IPNetworkVarJob().as_form(data)
-        self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data["var1"], IPNetwork(data["var1"]))
+        field.clean("192.0.2.0/24")
 
     def test_jsonvar(self):
-        class JSONVarJob(Job):
-            var1 = JSONVar()
+        field = JSONVar().as_field()
 
         # Valid JSON value as dictionary
-        data = {"var1": {"key1": "value1"}}
-        form = JSONVarJob().as_form(data)
-        self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data["var1"], {"key1": "value1"})
+        field.clean({"key1": "value1"})
 
         # Valid JSON value as jsonified dictionary
-        data = {"var1": '{"key1": "value1"}'}
-        form = JSONVarJob().as_form(data)
-        self.assertTrue(form.is_valid())
-        self.assertEqual(form.cleaned_data["var1"], {"key1": "value1"})
+        field.clean('{"key1": "value1"}')
 
         # Invalid JSON value
-        data = {"var1": '{"key1": True}'}
-        form = JSONVarJob().as_form(data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("var1", form.errors)
+        with self.assertRaises(ValidationError) as cm:
+            field.clean('{"key1": True}')
+        self.assertIn("Enter a valid JSON.", str(cm.exception))

@@ -348,7 +348,7 @@ def docker_push(context, branch, commit="", datestamp=""):
         f"{nautobot_version}-py{context.nautobot.python_ver}",
     ]
 
-    if context.nautobot.python_ver == "3.8":
+    if context.nautobot.python_ver == "3.12":
         docker_image_tags_main += ["stable", f"{nautobot_version}"]
     if branch == "main":
         docker_image_names = context.nautobot.docker_image_names_main
@@ -432,9 +432,12 @@ def vscode(context):
 # ACTIONS
 # ------------------------------------------------------------------------------
 @task
-def nbshell(context):
+def nbshell(context, quiet=False):
     """Launch an interactive Nautobot shell."""
     command = "nautobot-server nbshell"
+
+    if quiet:
+        command += " --quiet"
 
     run_command(context, command)
 
