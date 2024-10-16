@@ -10,6 +10,9 @@ def set_dynamic_group_group_types(apps, schema_editor):
     # The group_type field defaults to TYPE_DYNAMIC_FILTER
     # There are no preexisting TYPE_STATIC groups as that's a new feature
     # Any group that has children should be converted to TYPE_DYNAMIC_SET
+    # NOTE: The below is actually incorrect (see migration 0116) as for some reason, during migrations ONLY,
+    # Django somehow swaps the `parent` and `children` relations on DynamicGroup such that the below actually detects
+    # the opposite set of groups from what would be expected.
     DynamicGroup.objects.filter(children__isnull=False).distinct().update(
         group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET
     )

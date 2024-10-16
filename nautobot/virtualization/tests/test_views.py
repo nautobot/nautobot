@@ -239,11 +239,9 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.add_permissions("virtualization.view_virtualmachine")
         url = self._get_url("list") + "?sort=primary_ip"
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        response = response.content.decode(response.charset)
-        self.assertInHTML("Virtual Machine 1", response)
-        self.assertInHTML("Virtual Machine 2", response)
-        self.assertInHTML("Virtual Machine 3", response)
+        self.assertBodyContains(response, "Virtual Machine 1")
+        self.assertBodyContains(response, "Virtual Machine 2")
+        self.assertBodyContains(response, "Virtual Machine 3")
 
 
 class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):

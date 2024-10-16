@@ -9,6 +9,7 @@ from django.core.exceptions import FieldDoesNotExist
 from django.db import connections, DEFAULT_DB_ALIAS
 from django.db.models import JSONField, ManyToManyField, ManyToManyRel
 from django.forms.models import model_to_dict
+from django.test.testcases import assert_and_parse_html
 from django.test.utils import CaptureQueriesContext
 from netaddr import IPNetwork
 from rest_framework.test import APIClient, APIRequestFactory
@@ -172,8 +173,12 @@ class NautobotTestCaseMixin:
                 # REST API response; pass the response data through directly
                 err_message += f"\n{response.data}"
             # Attempt to extract form validation errors from the response HTML
-            form_errors = utils.extract_form_failures(response.content.decode(response.charset))
-            err_message += "\n" + str(form_errors or response.content.decode(response.charset) or "No data")
+            elif form_errors := utils.extract_form_failures(response.content.decode(response.charset)):
+                err_message += f"\n{form_errors}"
+            elif body_content := utils.extract_page_body(response.content.decode(response.charset)):
+                err_message += f"\n{body_content}"
+            else:
+                err_message += "No data"
             if msg:
                 err_message = f"{msg}\n{err_message}"
         self.assertIn(response.status_code, expected_status, err_message)
@@ -276,6 +281,58 @@ class NautobotTestCaseMixin:
             func(*args, **kwargs)
 
         return None
+
+    def assertBodyContains(self, response, text, count=None, status_code=200, msg_prefix="", html=False):
+        """
+        Like Django's `assertContains`, but uses `extract_page_body` utility function to scope the check more narrowly.
+
+        Args:
+            response (HttpResponse): The response to inspect
+            text (str): Plaintext or HTML to check for in the response body
+            count (int, optional): Number of times the `text` should occur, or None if we don't care as long as
+                it's present at all.
+            status_code (int): HTTP status code expected
+            html (bool): If True, handle `text` as HTML, ignoring whitespace etc, as in Django's `assertHTMLEqual()`.
+        """
+        # The below is copied from SimpleTestCase._assert_contains and SimpleTestCase.assertContains
+        # If the response supports deferred rendering and hasn't been rendered
+        # yet, then ensure that it does get rendered before proceeding further.
+        if hasattr(response, "render") and callable(response.render) and not response.is_rendered:
+            response.render()
+
+        if msg_prefix:
+            msg_prefix += ": "
+
+        self.assertHttpStatus(  # Nautobot-specific, original uses simple assertEqual()
+            response, status_code, msg_prefix
+        )
+
+        if response.streaming:
+            content = b"".join(response.streaming_content)
+        else:
+            content = response.content
+
+        if not isinstance(text, bytes) or html:
+            text = str(text)
+            content = content.decode(response.charset)
+            content = utils.extract_page_body(content)  # Nautobot-specific
+            text_repr = f"'{text}'"
+        else:
+            text_repr = repr(text)
+
+        if html:
+            content = assert_and_parse_html(self, content, None, "Response's content is not valid HTML:")
+            text = assert_and_parse_html(self, text, None, "Second argument is not valid HTML:")
+        real_count = content.count(text)
+
+        if count is not None:
+            self.assertEqual(
+                real_count,
+                count,
+                msg_prefix + f"Found {real_count} instances of {text_repr} in response (expected {count}):\n{content}",
+            )
+        else:
+            self.assertTrue(real_count != 0, msg_prefix + f"Couldn't find {text_repr} in response:\n{content}")
 
     #
     # Convenience methods
