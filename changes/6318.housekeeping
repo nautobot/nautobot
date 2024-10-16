@@ -1,4 +1,0 @@
-Fixed an error when rerunning parallel tests with a cached database and test factories enabled.
-Fixed a permission-denied error on the `MEDIA_ROOT` volume when running the local development environment with `docker-compose.final.yml`.
-Increased the healthcheck start_period in the local development environment to 10 minutes.
-Added `--remove-orphans` to the docker compose commands for `invoke stop` and `invoke destroy`.
