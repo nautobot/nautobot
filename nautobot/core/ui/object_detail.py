@@ -404,8 +404,8 @@ class ObjectsTablePanel(Panel):
         order_by_fields=None,
         table_title=None,
         max_display_count=None,
-        include_fields=None,
-        exclude_fields=None,
+        include_columns=None,
+        exclude_columns=None,
         add_button_route="default",
         add_permissions=None,
         related_field_name=None,
@@ -431,10 +431,10 @@ class ObjectsTablePanel(Panel):
                 If None, defaults to the `get_paginate_count()`(which is user's preference or a global setting).
             table_title (str, optional): The title to display in the panel heading for the table.
                 If None, defaults to the plural verbose name of the table model.
-            include_fields (list, optional): A list of field names to include in the table display.
+            include_columns (list, optional): A list of field names to include in the table display.
                 If provided, only these fields will be displayed in the table.
-            exclude_fields (list, optional): A list of field names to exclude from the table display.
-                Cannot be used together with `include_fields`.
+            exclude_columns (list, optional): A list of field names to exclude from the table display.
+                Cannot be used together with `include_columns`.
             add_button_route (str, optional): The route used to generate the "add" button URL. Defaults to "default",
                 which uses the default table's model `add` route.
             add_permissions (list, optional): A list of permissions required for the "add" button to be displayed. If not provided,
@@ -446,7 +446,7 @@ class ObjectsTablePanel(Panel):
         if table_filter and table_attribute:
             raise ValueError("You can only specify either `table_filter` or `table_attribute`")
         if not table_filter and not table_attribute:
-            raise ValueError("You cannot specify both `table_filter` and `table_attribute`")
+            raise ValueError("You must specify either `table_filter` or `table_attribute`")
         self.table_filter = table_filter
         self.table_attribute = table_attribute
         self.select_related_fields = select_related_fields
@@ -454,10 +454,10 @@ class ObjectsTablePanel(Panel):
         self.order_by_fields = order_by_fields
         self.table_title = table_title
         self.max_display_count = max_display_count
-        if exclude_fields and include_fields:
-            raise ValueError("You can only specify either `exclude_fields` or `include_fields`")
-        self.include_fields = include_fields
-        self.exclude_fields = exclude_fields
+        if exclude_columns and include_columns:
+            raise ValueError("You can only specify either `exclude_columns` or `include_columns`")
+        self.include_columns = include_columns
+        self.exclude_columns = exclude_columns
         self.add_button_route = add_button_route
         self.add_permissions = add_permissions
         self.related_field_name = related_field_name
@@ -512,34 +512,33 @@ class ObjectsTablePanel(Panel):
         body_content_table_model = body_content_table_class.Meta.model
         request = context["request"]
         instance = get_obj_from_context(context)
-        object_manager = None  # This is to make pylint happy
+
         if self.table_attribute:
-            object_manager = getattr(instance, self.table_attribute)
-        if self.table_filter:
-            object_manager = body_content_table_model.objects.filter(**{self.table_filter: instance})
-        body_content_table_queryset = (
-            object_manager.restrict(request.user, "view")
-            .select_related(*self.select_related_fields or [])
-            .prefetch_related(*self.prefetch_related_fields or [])
-        )
+            body_content_table_queryset = getattr(instance, self.table_attribute)
+        else:
+            body_content_table_queryset = body_content_table_model.objects.filter(**{self.table_filter: instance})
+        body_content_table_queryset = body_content_table_queryset.restrict(request.user, "view")
+        if self.select_related_fields:
+            body_content_table_queryset = body_content_table_queryset.select_related(*self.select_related_fields)
+        if self.prefetch_related_fields:
+            body_content_table_queryset = body_content_table_queryset.prefetch_related(*self.prefetch_related_fields)
         if self.order_by_fields:
             body_content_table_queryset = body_content_table_queryset.order_by(*self.order_by_fields)
         body_content_table = body_content_table_class(body_content_table_queryset)
 
-        if self.exclude_fields or self.include_fields:
+        if self.exclude_columns or self.include_columns:
             for column in body_content_table.columns:
-                if (self.exclude_fields and column.name in self.exclude_fields) or (
-                    self.include_fields and column.name not in self.include_fields
+                if (self.exclude_columns and column.name in self.exclude_columns) or (
+                    self.include_columns and column.name not in self.include_columns
                 ):
                     body_content_table.columns.hide(column.name)
                 else:
                     body_content_table.columns.show(column.name)
         # Enable bulk action toggle if the user has appropriate permissions
-        app_label = body_content_table_model._meta.app_label
-        model_name = body_content_table_model._meta.model_name
         user = request.user
         if self.enable_bulk_actions and (
-            user.has_perm(f"{app_label}.delete_{model_name}") or user.has_perm(f"{app_label}.change_{model_name}")
+            user.has_perm(get_permission_for_model(body_content_table_model, "delete"))
+            or user.has_perm(get_permission_for_model(body_content_table_model, "change"))
         ):
             body_content_table.columns.show("pk")
 
@@ -778,7 +777,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         self,
         *,
         fields="__all__",
-        exclude_fields=(),
+        exclude_columns=(),
         context_object_key="object",
         ignore_nonexistent_fields=False,
         label=None,
@@ -791,7 +790,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             fields (str, list): The ordered list of fields to display, or `"__all__"` to display fields automatically.
                 Note that ManyToMany fields and reverse relations are **not** included in `"__all__"` at this time, nor
                 are any hidden fields, nor the specially handled `id`, `created`, `last_updated` fields on most models.
-            exclude_fields (list): Only relevant if `fields == "__all__"`, in which case it excludes the given fields.
+            exclude_columns (list): Only relevant if `fields == "__all__"`, in which case it excludes the given fields.
             context_object_key (str): The key in the render context that will contain the object to derive fields from.
             ignore_nonexistent_fields (bool): If True, `fields` is permitted to include field names that don't actually
                 exist on the provided object; otherwise an exception will be raised at render time.
@@ -799,7 +798,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
                 (see `render_label()`).
         """
         self.fields = fields
-        self.exclude_fields = exclude_fields
+        self.exclude_columns = exclude_columns
         self.context_object_key = context_object_key
         self.ignore_nonexistent_fields = ignore_nonexistent_fields
         super().__init__(data=None, label=label, **kwargs)
@@ -862,7 +861,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             data["_hierarchy"] = instance
 
         for field_name in fields:
-            if field_name in self.exclude_fields:
+            if field_name in self.exclude_columns:
                 continue
             try:
                 field_value = getattr(instance, field_name)
@@ -1417,7 +1416,7 @@ class _ObjectDetailGroupsTab(Tab):
                     weight=100,
                     table_class=DynamicGroupTable,
                     table_attribute="dynamic_groups",
-                    exclude_fields=["pk", "content_type"],
+                    exclude_columns=["content_type"],
                 ),
             )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
@@ -1457,7 +1456,7 @@ class _ObjectDetailMetadataTab(Tab):
                     table_class=ObjectMetadataTable,
                     table_attribute="associated_object_metadata",
                     order_by_fields=["metadata_type", "scoped_fields"],
-                    exclude_fields=["pk", "assigned_object"],
+                    exclude_columns=["assigned_object"],
                 ),
             )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)

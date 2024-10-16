@@ -234,8 +234,9 @@ class LocationTypeUIViewSet(
             ObjectsTablePanel(
                 weight=200,
                 table_class=tables.LocationTable,
+                table_title="Location(s) of this Type",
                 table_filter="location_type",
-                exclude_fields=["location_type"],
+                exclude_columns=["location_type"],
             ),
         ),
     )
