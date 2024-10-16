@@ -1179,7 +1179,7 @@ class _ObjectTagsPanel(Panel):
 
 
 class _ObjectCommentPanel(ObjectTextPanel):
-    """Panel displaying an object's comments as a space-separated panel."""
+    """Panel displaying an object's comments as a Markdown formatted panel."""
 
     def __init__(
         self,
