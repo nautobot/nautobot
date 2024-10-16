@@ -109,8 +109,8 @@ class EventNotificationTest(TestCase):
     def test_publish_events_to_syslog(self):
         with self.assertLogs("nautobot.events.nautobot.test.event") as cm:
             publish_event(topic="nautobot.test.event", payload={"a": 1})
-            publish_event(topic="nautobot.test.no-publish.event", payload={"a": 1})
-        # This test assets that only `nautobot.test.event` topic was published
+            publish_event(topic="nautobot.test.event.no-publish", payload={"a": 1})
+        # This test assets that only `nautobot.test.event` topic was published and `nautobot.test.event.no-publish` was not published
         self.assertEqual(cm.output, ["INFO:nautobot.events.nautobot.test.event:" + json.dumps({"a": 1}, indent=4)])
 
     @load_event_broker_override_settings(
@@ -143,10 +143,7 @@ class EventNotificationTest(TestCase):
 
             # Assert exclude topics are not published
             publish_event(topic="nautobot.test.event.no-publish", payload={"c": 3})
-            self.assertNotEqual(
-                sub.get_message(timeout=5.0),
-                {"type": "pmessage", "pattern": "nautobot.*", "channel": "nautobot.test.event", "data": '{"c": 3}'},
-            )
+            self.assertIsNone(sub.get_message(timeout=5.0))
         finally:
             if sub is not None:
                 sub.close()
