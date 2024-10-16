@@ -26,8 +26,10 @@ class TestEventBroker(EventBroker):
     def publish(self, *, topic, payload):
         self.events[topic].append(payload)
 
+
 class InvalidTestEventBroker:
     """Broker that do not inherit from EventBroker"""
+
     def __init__(self):
         self.events = defaultdict(list)
 
