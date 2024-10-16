@@ -861,7 +861,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             data["_hierarchy"] = instance
 
         for field_name in fields:
-            if field_name in self.exclude_columns:
+            if field_name in self.exclude_fields:
                 continue
             try:
                 field_value = getattr(instance, field_name)
