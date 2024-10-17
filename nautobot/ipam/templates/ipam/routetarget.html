@@ -24,6 +24,6 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-        {% include 'panel_table.html' with table=importing_vrfs_table heading="Importing VRFs" %}
-        {% include 'panel_table.html' with table=exporting_vrfs_table heading="Exporting VRFs" %}
+    {% include 'utilities/obj_table.html' with table=importing_vrfs_table table_template='panel_table.html' heading="Importing VRFs" %}
+    {% include 'utilities/obj_table.html' with table=exporting_vrfs_table table_template='panel_table.html' heading="Exporting VRFs" %}
 {% endblock content_right_page %}

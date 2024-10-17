@@ -890,12 +890,39 @@ class Prefix(PrimaryModel):
         )
         return available_ips
 
+    def get_child_ips(self):
+        """
+        Return IP addresses with this prefix as their *direct* parent.
+
+        Does *not* include IPs that descend from a descendant prefix; if those are desired, use get_all_ips() instead.
+
+        ```
+        Prefix 10.0.0.0/16
+            IPAddress 10.0.0.1/24
+            Prefix 10.0.1.0/24
+                IPAddress 10.0.1.1/24
+        ```
+
+        In the above example, `<Prefix 10.0.0.0/16>.get_child_ips()` will *only* return 10.0.0.1/24,
+        while `<Prefix 10.0.0.0/16>.get_all_ips()` will return *both* 10.0.0.1.24 and 10.0.1.1/24.
+        """
+        return self.ip_addresses.all()
+
     def get_all_ips(self):
         """
         Return all IP addresses contained within this prefix, including child prefixes' IP addresses.
 
-        Returns:
-            IPAddress QuerySet
+        This is distinct from the behavior of `get_child_ips()` and in *most* cases is probably preferred.
+
+        ```
+        Prefix 10.0.0.0/16
+            IPAddress 10.0.0.1/24
+            Prefix 10.0.1.0/24
+                IPAddress 10.0.1.1/24
+        ```
+
+        In the above example, `<Prefix 10.0.0.0/16>.get_child_ips()` will *only* return 10.0.0.1/24,
+        while `<Prefix 10.0.0.0/16>.get_all_ips()` will return *both* 10.0.0.1.24 and 10.0.1.1/24.
         """
         return IPAddress.objects.filter(
             parent__namespace=self.namespace, host__gte=self.network, host__lte=self.broadcast

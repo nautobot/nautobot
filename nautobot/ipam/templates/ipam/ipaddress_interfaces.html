@@ -21,6 +21,9 @@
             {% render_table interface_table 'inc/table.html' %}
         </div>
     </form>
+    {% if interface_table.paginator.num_pages > 1 %}
+        {% include "inc/paginator.html" with paginator=interface_table.paginator page=interface_table.page %}
+    {% endif %}
     {% table_config_form interface_table %}
 {% endblock content %}
 

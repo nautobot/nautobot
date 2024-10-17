@@ -555,8 +555,9 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             IPAddress.objects.create(address="10.0.2.1/24", status=self.status, namespace=self.namespace),
             IPAddress.objects.create(address="10.0.3.1/24", status=self.status, namespace=self.namespace),
         )
+        self.assertQuerysetEqualAndNotEmpty(parent_prefix.ip_addresses.all(), parent_prefix.get_child_ips())
+        self.assertQuerysetEqualAndNotEmpty(parent_prefix.ip_addresses.all(), parent_prefix.get_all_ips())
         child_ip_pks = {p.pk for p in parent_prefix.ip_addresses.all()}
-
         # Global container should return all children
         self.assertSetEqual(child_ip_pks, {ips[0].pk, ips[1].pk, ips[2].pk, ips[3].pk})
 
@@ -566,6 +567,8 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             IPAddress.objects.create(address="20.0.4.0/31", status=self.status, namespace=self.namespace),
             IPAddress.objects.create(address="20.0.4.1/31", status=self.status, namespace=self.namespace),
         )
+        self.assertQuerysetEqualAndNotEmpty(parent_prefix_31.ip_addresses.all(), parent_prefix_31.get_child_ips())
+        self.assertQuerysetEqualAndNotEmpty(parent_prefix_31.ip_addresses.all(), parent_prefix_31.get_all_ips())
         child_ip_pks = {p.pk for p in parent_prefix_31.ip_addresses.all()}
         self.assertSetEqual(child_ip_pks, {ips_31[0].pk, ips_31[1].pk})
 
@@ -660,9 +663,21 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         slash25 = Prefix.objects.create(prefix="10.0.0.128/25", status=self.status, namespace=self.namespace)
         self.assertEqual(prefix.get_utilization(), (192, 256))
 
-        # Create 32 IPAddresses within the Prefix
+        # Create 32 IPAddresses within the /26 Prefix
         for i in range(1, 33):
             IPAddress.objects.create(address=f"10.0.0.{i}/32", status=self.status, namespace=self.namespace)
+
+        # Assert differing behavior of get_all_ips() versus get_child_ips() for the /24 and /26 prefixes
+        self.assertQuerysetEqual(prefix.get_child_ips(), IPAddress.objects.none())
+        self.assertQuerysetEqualAndNotEmpty(
+            prefix.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            slash26.get_child_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            slash26.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
+        )
 
         # The parent prefix utilization does not change because the ip addresses are parented to the child /26 prefix.
         self.assertEqual(prefix.get_utilization(), (192, 256))
@@ -673,6 +688,17 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         # Create IPAddress objects for network and broadcast addresses
         IPAddress.objects.create(address="10.0.0.0/32", status=self.status, namespace=self.namespace)
         IPAddress.objects.create(address="10.0.0.63/32", status=self.status, namespace=self.namespace)
+
+        self.assertQuerysetEqual(prefix.get_child_ips(), IPAddress.objects.none())
+        self.assertQuerysetEqualAndNotEmpty(
+            prefix.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            slash26.get_child_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            slash26.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
+        )
 
         # The /26 denominator will change to 64
         self.assertEqual(slash26.get_utilization(), (34, 64))
@@ -688,30 +714,60 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         pool.save()
         self.assertEqual(slash25.get_utilization(), (4, 126))
 
+        # Further distinguishing between get_child_ips() and get_all_ips():
+        IPAddress.objects.create(address="10.0.0.64/32", status=self.status, namespace=self.namespace)
+        self.assertQuerysetEqualAndNotEmpty(
+            prefix.get_child_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.64/26")
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            prefix.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
+        )
+
+        slash27 = Prefix.objects.create(prefix="10.0.0.0/27", status=self.status, namespace=self.namespace)
+        self.assertEqual(slash27.get_utilization(), (32, 32))
+        self.assertQuerysetEqualAndNotEmpty(
+            prefix.get_child_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.64/26")
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            prefix.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            slash26.get_child_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.32/27")
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            slash26.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/26")
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            slash27.get_child_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/27")
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            slash27.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/27")
+        )
+
         # IPv4 Non-container Prefix /31, network and broadcast addresses count toward utilization
-        prefix = Prefix.objects.create(prefix="10.0.1.0/31", status=self.status, namespace=self.namespace)
+        slash31 = Prefix.objects.create(prefix="10.0.1.0/31", status=self.status, namespace=self.namespace)
         IPAddress.objects.create(address="10.0.1.0/32", status=self.status, namespace=self.namespace)
         IPAddress.objects.create(address="10.0.1.1/32", status=self.status, namespace=self.namespace)
-        self.assertEqual(prefix.get_utilization(), (2, 2))
+        self.assertEqual(slash31.get_utilization(), (2, 2))
 
         # IPv6 Non-container Prefix, first and last addresses count toward utilization
-        prefix = Prefix.objects.create(prefix="aaab::/124", status=self.status, namespace=self.namespace)
+        slash124_1 = Prefix.objects.create(prefix="aaab::/124", status=self.status, namespace=self.namespace)
         IPAddress.objects.create(address="aaab::1/128", status=self.status, namespace=self.namespace)
         IPAddress.objects.create(address="aaab::2/128", status=self.status, namespace=self.namespace)
-        self.assertEqual(prefix.get_utilization(), (2, 16))
+        self.assertEqual(slash124_1.get_utilization(), (2, 16))
 
-        prefix = Prefix.objects.create(prefix="aaaa::/124", status=self.status, namespace=self.namespace)
+        slash124_2 = Prefix.objects.create(prefix="aaaa::/124", status=self.status, namespace=self.namespace)
         IPAddress.objects.create(address="aaaa::0/128", status=self.status, namespace=self.namespace)
         IPAddress.objects.create(address="aaaa::f/128", status=self.status, namespace=self.namespace)
-        self.assertEqual(prefix.get_utilization(), (2, 16))
+        self.assertEqual(slash124_2.get_utilization(), (2, 16))
 
         # single address prefixes
-        prefix = Prefix.objects.create(prefix="cccc::1/128", status=self.status, namespace=self.namespace)
+        slash128 = Prefix.objects.create(prefix="cccc::1/128", status=self.status, namespace=self.namespace)
         IPAddress.objects.create(address="cccc::1/128", status=self.status, namespace=self.namespace)
-        self.assertEqual(prefix.get_utilization(), (1, 1))
-        prefix = Prefix.objects.create(prefix="1.1.1.1/32", status=self.status, namespace=self.namespace)
+        self.assertEqual(slash128.get_utilization(), (1, 1))
+        slash32 = Prefix.objects.create(prefix="1.1.1.1/32", status=self.status, namespace=self.namespace)
         IPAddress.objects.create(address="1.1.1.1/32", status=self.status, namespace=self.namespace)
-        self.assertEqual(prefix.get_utilization(), (1, 1))
+        self.assertEqual(slash32.get_utilization(), (1, 1))
 
         # Large Prefix
         large_prefix = Prefix.objects.create(

@@ -117,7 +117,7 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-            {% include 'panel_table.html' with table=parent_prefix_table heading='Parent Prefixes' panel_class='default' %}
-            {% include "utilities/obj_table.html" with table=vrf_table table_template="panel_table.html" heading="Assigned VRFs" disable_pagination=False %}
-            {% include "utilities/obj_table.html" with table=cloud_network_table table_template="panel_table.html" heading="Assigned Cloud Networks" disable_pagination=False %}
+    {% include "utilities/obj_table.html" with table=parent_prefix_table table_template="panel_table.html" heading="Parent Prefixes" %}
+    {% include "utilities/obj_table.html" with table=vrf_table table_template="panel_table.html" heading="Assigned VRFs" %}
+    {% include "utilities/obj_table.html" with table=cloud_network_table table_template="panel_table.html" heading="Assigned Cloud Networks" %}
 {% endblock content_right_page %}

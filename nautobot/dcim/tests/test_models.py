@@ -2376,19 +2376,57 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         )
 
     def test_error_raised_when_adding_tagged_vlan_with_different_location_from_interface_parent_location(self):
+        intf_status = Status.objects.get_for_model(Interface).first()
+        intf_role = Role.objects.get_for_model(Interface).first()
+        location_type = LocationType.objects.get(name="Campus")
+        child_location = Location.objects.filter(parent__isnull=False, location_type=location_type).first()
+        self.device.location = child_location
+        self.device.validated_save()
+        # Same location as the device
+        interface = Interface.objects.create(
+            name="Test Interface 2",
+            mode=InterfaceModeChoices.MODE_TAGGED,
+            device=self.device,
+            status=intf_status,
+            role=intf_role,
+        )
+        self.other_location_vlan.locations.set([self.device.location.pk])
+        interface.tagged_vlans.set([self.other_location_vlan.pk])
+
+        # One of the parent locations of the device's location
+        interface = Interface.objects.create(
+            name="Test Interface 3",
+            mode=InterfaceModeChoices.MODE_TAGGED,
+            device=self.device,
+            status=intf_status,
+            role=intf_role,
+        )
+        self.other_location_vlan.locations.set([self.device.location.ancestors().first().pk])
+        interface.tagged_vlans.set([self.other_location_vlan.pk])
+
         with self.assertRaises(ValidationError) as err:
             interface = Interface.objects.create(
-                name="Test Interface",
+                name="Test Interface 1",
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 device=self.device,
-                status=Status.objects.get_for_model(Interface).first(),
-                role=Role.objects.get_for_model(Interface).first(),
+                status=intf_status,
+                role=intf_role,
             )
+            location_3 = Location.objects.create(
+                name="Invalid VLAN Location",
+                location_type=LocationType.objects.get(name="Campus"),
+                status=Status.objects.get_for_model(Location).first(),
+            )
+            # clear the valid locations
+            self.other_location_vlan.locations.set([])
+            # assign the invalid location
+            self.other_location_vlan.location = location_3
+            self.other_location_vlan.validated_save()
             interface.tagged_vlans.add(self.other_location_vlan)
         self.assertEqual(
             err.exception.message_dict["tagged_vlans"][0],
             f"Tagged VLAN with names {[self.other_location_vlan.name]} must all belong to the "
-            f"same location as the interface's parent device, or it must be global.",
+            f"same location as the interface's parent device, one of the parent locations of the interface's parent device's location, or it must be global.",
         )
 
     def test_add_ip_addresses(self):
