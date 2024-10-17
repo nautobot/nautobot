@@ -31,15 +31,18 @@ class InstalledAppsView(GenericView):
         for app in apps.get_app_configs():
             if app.name in settings.PLUGINS:
                 try:
-                    home_url = reverse(app.home_view_name)
+                    reverse(app.home_view_name)
+                    home_url = app.home_view_name
                 except NoReverseMatch:
                     home_url = None
                 try:
-                    config_url = reverse(app.config_view_name)
+                    reverse(app.config_view_name)
+                    config_url = app.config_view_name
                 except NoReverseMatch:
                     config_url = None
                 try:
-                    docs_url = reverse(app.docs_view_name)
+                    reverse(app.docs_view_name)
+                    docs_url = app.docs_view_name
                 except NoReverseMatch:
                     docs_url = None
                 data.append(
