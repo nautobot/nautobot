@@ -267,7 +267,8 @@ class CSVParsingRelatedTestCase(TestCase):
         url = reverse("dcim:device_import")
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(Device.objects.count(), 4)
+        # since the same IDs are used the existing records were updated instead of created new
+        self.assertEqual(Device.objects.count(), 2)
 
         # Assert TestDevice3 got created with the right fields
         device3 = Device.objects.get(
