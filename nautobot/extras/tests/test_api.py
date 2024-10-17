@@ -2412,6 +2412,7 @@ class JobQueueTestCase(APIViewTestCases.APIViewTestCase):
                 "queue_type": JobQueueTypeChoices.TYPE_KUBERNETES,
                 "description": "Job Queue 2 for API Testing",
                 "tenant": Tenant.objects.first().pk,
+                "external_integration": ExternalIntegration.objects.first(),
             },
             {
                 "name": "Test API Job Queue 3",

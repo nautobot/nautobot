@@ -916,11 +916,20 @@ class JobQueueFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         filter_predicates={
             "name": "icontains",
             "queue_type": "icontains",
+            "external_integration__name": "icontains",
             "description": "icontains",
             "tenant__name": "icontains",
         },
     )
     queue_type = django_filters.MultipleChoiceFilter(choices=JobQueueTypeChoices, null_value=None)
+    external_integration = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ExternalIntegration.objects.all(),
+        label="External Integration (name or ID)",
+    )
+    has_external_integration = RelatedMembershipBooleanFilter(
+        field_name="external_integration",
+        label="Has external integration",
+    )
     jobs = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Job.objects.all(),
         label="Job (name or ID)",

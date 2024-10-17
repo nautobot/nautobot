@@ -41,6 +41,7 @@ from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
     JobExecutionType,
+    JobQueueTypeChoices,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
 )
@@ -568,6 +569,21 @@ class JobQueueSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = JobQueue
         fields = "__all__"
+
+    def validate(self, data):
+        if self.instance:
+            job_queue_type = data.get("queue_type", self.instance.queue_type)
+            external_integration = data.get("external_integration", self.instance.external_integration)
+
+            if external_integration and job_queue_type != JobQueueTypeChoices.TYPE_KUBERNETES:
+                error_message = f"Only job queues with type {JobQueueTypeChoices.TYPE_KUBERNETES} can be linked to external integration objects."
+                errors = {}
+                if "external_integration" in data:
+                    errors["external_integration"] = [error_message]
+
+                raise serializers.ValidationError(errors)
+
+        return super().validate(data)
 
 
 class JobQueueAssignmentSerializer(ValidatedModelSerializer):
