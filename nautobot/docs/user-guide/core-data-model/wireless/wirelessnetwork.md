@@ -19,4 +19,4 @@ Future extensions could include captive_portal attribute, but are not scoped in 
 
 ## Wireless Networks VLAN field
 
-When adding an Access Point Group to a Wireless Network, there is the ability to add a VLAN. This VLAN is stored on a table that references the Wireless Network and the Access Point Group this is the [AccessPointGroupWirelessNetworkAssignment](accesspointgroupwirelessnetworkassignment.md). This allows the ability to use specific VLAN for each Wireless Network/Access Point Group relationship.
+When adding an Access Point Group to a Wireless Network, there is the ability to add a VLAN. This VLAN is stored on the through table between Wireless Network and the Access Point Group. This allows the ability to use specific VLAN for each Wireless Network/Access Point Group relationship.

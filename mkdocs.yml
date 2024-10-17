@@ -507,8 +507,6 @@ nav:
               - Supported Data Rate: "user-guide/core-data-model/wireless/supporteddatarate.md"
               - Radio Profile: "user-guide/core-data-model/wireless/radioprofile.md"
               - Wireless Network: "user-guide/core-data-model/wireless/wirelessnetwork.md"
-              - Access Point Group Radio Profile Assignment: "user-guide/core-data-model/wireless/accesspointgroupradioprofileassignment.md"
-              - Access Point Group Wireless Network Assignment: "user-guide/core-data-model/wireless/accesspointgroupwirelessnetworkassignment.md"
       - Platform Functionality:
           - Change Logging: "user-guide/platform-functionality/change-logging.md"
           - Computed Fields: "user-guide/platform-functionality/computedfield.md"
