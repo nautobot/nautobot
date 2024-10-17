@@ -356,11 +356,10 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
-        content = response.content.decode(response.charset)
+        content = extract_page_body(response.content.decode(response.charset))
         # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
         self.assertIn("5.5.10.1/23", strip_tags(content))
         self.assertIn("5.5.10.4/23", strip_tags(content))
-        print(response.content.decode(response.charset))
         ip_address_tab = (
             f'<li role="presentation" class="active"><a href="{url}">IP Addresses <span class="badge">2</span></a></li>'
         )
@@ -440,8 +439,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(self.form_data),
         }
         response = self.client.post(**request)
-        self.assertEqual(200, response.status_code)
-        self.assertIn("Host address cannot be changed once created", str(response.content))
+        self.assertBodyContains(response, "Host address cannot be changed once created")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_move_ip_addresses_between_namespaces(self):
@@ -461,8 +459,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(form_data),
         }
         response = self.client.post(**request)
-        self.assertEqual(200, response.status_code)
-        self.assertIn("No suitable parent Prefix exists in this Namespace", str(response.content))
+        self.assertBodyContains(response, "No suitable parent Prefix exists in this Namespace")
         # Create an exact copy of the parent prefix but in a different namespace. See if the re-parenting is successful
         new_parent = Prefix.objects.create(
             prefix=instance.parent.prefix,
@@ -1151,9 +1148,7 @@ class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(self.form_data),
         }
         response = self.client.post(**request)
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("Service with this Name and Device already exists.", response_body)
+        self.assertBodyContains(response, "Service with this Name and Device already exists.")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_service_cannot_be_assigned_to_both_device_and_vm(self):
@@ -1173,9 +1168,7 @@ class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(self.form_data),
         }
         response = self.client.post(**request)
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("A service cannot be associated with both a device and a virtual machine.", response_body)
+        self.assertBodyContains(response, "A service cannot be associated with both a device and a virtual machine.")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_service_cannot_be_assigned_to_neither_device_nor_vm(self):
@@ -1195,6 +1188,4 @@ class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(self.form_data),
         }
         response = self.client.post(**request)
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("A service must be associated with either a device or a virtual machine.", response_body)
+        self.assertBodyContains(response, "A service must be associated with either a device or a virtual machine.")

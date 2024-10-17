@@ -694,17 +694,15 @@ class TestAppCoreViewOverrides(TestCase):
 
     def test_views_are_overridden(self):
         response = self.client.get(reverse("plugins:example_app:view_to_be_overridden"))
-        self.assertEqual(b"Hello world! I'm an overridden view.", response.content)
+        self.assertEqual("Hello world! I'm an overridden view.", response.content.decode(response.charset))
 
         response = self.client.get(
             f'{reverse("plugins:plugin_detail", kwargs={"plugin": "example_app_with_view_override"})}'
         )
         self.assertIn(
-            (
-                b"plugins:example_app:view_to_be_overridden <code>"
-                b"example_app_with_view_override.views.ViewOverride</code>"
-            ),
-            response.content,
+            "plugins:example_app:view_to_be_overridden <code>"
+            "example_app_with_view_override.views.ViewOverride</code>",
+            extract_page_body(response.content.decode(response.charset)),
         )
 
 

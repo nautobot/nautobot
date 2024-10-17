@@ -67,7 +67,7 @@ def reverse_migrate_task_queues_to_job_queues(apps, schema):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0116_create_job_queue_model"),
+        ("extras", "0117_create_job_queue_model"),
     ]
 
     operations = [

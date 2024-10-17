@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("tenancy", "0009_update_all_charfields_max_length_to_255"),
         ("ipam", "0049_vrf_data_migration"),
-        ("extras", "0118_remove_task_queues_from_job_and_queue_from_scheduled_job"),
+        ("extras", "0119_remove_task_queues_from_job_and_queue_from_scheduled_job"),
         ("dcim", "0062_module_data_migration"),
     ]
 
