@@ -36,7 +36,7 @@ from .base import EventBroker
 class RedisEventBroker(EventBroker):
     """EventBroker for publishing events to Redis."""
 
-    def __init__(self, *, url):
+    def __init__(self, *args, url, **kwargs):
         """Initialize and configure a RedisEventBroker.
 
         Args:
@@ -44,6 +44,7 @@ class RedisEventBroker(EventBroker):
         """
         self.url = url
         self.connection = redis.StrictRedis.from_url(self.url)
+        super().__init__(*args, **kwargs)
 
     def publish(self, *, topic, payload):
         self.connection.publish(topic, json.dumps(payload))
