@@ -1151,19 +1151,29 @@ def run_job(self, job_class_path, *args, **kwargs):
     if job_class is None:
         raise KeyError(f"Job class not found for class path {job_class_path}")
     job = job_class()
-    job.request = self.request
     try:
+        job_result = JobResult.objects.get(id=self.request.id)
+        payload = {
+            "job_result_id": self.request.id,
+            "job_name": job.name,
+            "user_name": job_result.user.name,
+            "job_kwargs": kwargs,
+            "job_output": None,
+        }
+        publish_event(topic="nautobot.jobs.job.started", payload=payload)
         job.before_start(self.request.id, args, kwargs)
-        publish_event(topic="nautobot.events.jobs.started", payload=kwargs)
         result = job(*args, **kwargs)
         job.on_success(result, self.request.id, args, kwargs)
         job.after_return(JobResultStatusChoices.STATUS_SUCCESS, result, self.request.id, args, kwargs, None)
-        publish_event(topic="nautobot.events.jobs.finished", payload=kwargs)
+        payload["job_output"] = result
+        publish_event(topic="nautobot.jobs.job.completed", payload=payload)
         return result
     except Exception as exc:
         einfo = ExceptionInfo(sys.exc_info())
         job.on_failure(exc, self.request.id, args, kwargs, einfo)
         job.after_return(JobResultStatusChoices.STATUS_FAILURE, exc, self.request.id, args, kwargs, einfo)
+        payload["einfo"] = einfo
+        publish_event(topic="nautobot.jobs.job.completed", payload=payload)
         raise
 
 
