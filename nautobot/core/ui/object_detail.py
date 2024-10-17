@@ -1,5 +1,6 @@
 """Classes and utilities for defining an object detail view through a NautobotUIViewSet."""
 
+from collections import namedtuple
 import contextlib
 from dataclasses import dataclass
 import logging
@@ -941,6 +942,81 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
         return result
 
 
+class BaseTextPanel(Panel):
+    """A panel that renders a single value as text, Markdown, JSON, or YAML."""
+
+    RENDER_OPTIONS = namedtuple("RENDER_OPTIONS", ["plaintext", "json", "yaml", "markdown"])
+
+    def __init__(
+        self,
+        *,
+        render_as=RENDER_OPTIONS.markdown,
+        body_content_template_path="components/panel/body_content_text.html",
+        render_placeholder=True,
+        **kwargs,
+    ):
+        """
+
+        Args:
+            render_as(str): One of BaseTextPanel.RENDER_OPTIONS to define rendering function.
+            render_placeholder(bool): Whether to render placeholder text if given value is "falsy".
+            body_content_template_path(str): The path of the template to use for the body content. Can be overridden for custom use cases.
+            kwargs: Additional keyword arguments passed to Panel.__init__.
+        """
+        self.render_as = render_as
+        self.render_placeholder = render_placeholder
+        super().__init__(body_content_template_path=body_content_template_path, **kwargs)
+
+    def render_body_content(self, context):
+        text_content = self.get_text(context)
+        render_as = self.render_as
+
+        if not text_content and self.render_placeholder:
+            return HTML_NONE
+
+        if self.body_content_template_path:
+            return get_template(self.body_content_template_path).render(
+                {
+                    **context,
+                    "render_as": render_as,
+                    "text_content": text_content,
+                    "render_options": self.RENDER_OPTIONS,
+                }
+            )
+        return text_content
+
+    def get_text(self, context):
+        raise NotImplementedError
+
+
+class ObjectTextPanel(BaseTextPanel):
+    """
+    Panel that renders text, Markdown, JSON or YAML from the given field on the given object in the context.
+    """
+
+    def __init__(self, *, object_field=None, **kwargs):
+        self.object_field = object_field
+
+        super().__init__(**kwargs)
+
+    def get_text(self, context):
+        obj = get_obj_from_context(context)
+        if not obj:
+            return ""
+        return getattr(obj, self.object_field, "")
+
+
+class TextPanel(BaseTextPanel):
+    """Panel that renders text, Markdown, JSON or YAML from the given value in the context."""
+
+    def __init__(self, *, context_field="text", **kwargs):
+        self.context_field = context_field
+        super().__init__(**kwargs)
+
+    def get_text(self, context):
+        return context.get(self.context_field, "")
+
+
 class StatsPanel(Panel):
     def __init__(
         self,
@@ -1231,8 +1307,8 @@ class _ObjectTagsPanel(Panel):
         }
 
 
-class _ObjectCommentPanel(ObjectFieldsPanel):
-    """Panel displaying an object's comments as a space-separated panel."""
+class _ObjectCommentPanel(ObjectTextPanel):
+    """Panel displaying an object's comments as a Markdown formatted panel."""
 
     def __init__(
         self,
@@ -1240,18 +1316,14 @@ class _ObjectCommentPanel(ObjectFieldsPanel):
         label="Comments",
         section=SectionChoices.LEFT_HALF,
         weight=Panel.WEIGHT_COMMENTS_PANEL,
-        value_transforms=None,
+        object_field="comments",
         **kwargs,
     ):
-        """Instantiate an `_ObjectCommentPanel`."""
-        fields = ["comments"]
-        value_transforms = value_transforms or {"comments": [render_markdown, placeholder]}
         super().__init__(
             weight=weight,
             label=label,
-            fields=fields,
             section=section,
-            value_transforms=value_transforms,
+            object_field=object_field,
             **kwargs,
         )
 

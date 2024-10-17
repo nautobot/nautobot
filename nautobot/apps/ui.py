@@ -25,9 +25,11 @@ from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
     ObjectFieldsPanel,
     ObjectsTablePanel,
+    ObjectTextPanel,
     Panel,
     StatsPanel,
     Tab,
+    TextPanel,
 )
 from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.plugins import Banner, TemplateExtension
@@ -54,10 +56,12 @@ __all__ = (
     "ObjectDetailContent",
     "ObjectFieldsPanel",
     "ObjectsTablePanel",
+    "ObjectTextPanel",
     "Panel",
     "PermissionsMixin",
     "SectionChoices",
     "StatsPanel",
     "Tab",
     "TemplateExtension",
+    "TextPanel",
 )
