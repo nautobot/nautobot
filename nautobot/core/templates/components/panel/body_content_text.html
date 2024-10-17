@@ -1,10 +1,10 @@
 {% load helpers %}
 {%  if render_as == render_options.json %}
-    {{ text_content | placeholder | render_json }}
+    {{ text_content | render_json }}
 {% elif render_as == render_options.yaml %}
-    {{ text_content | placeholder | render_ysml }}
+    {{ text_content | render_yaml }}
 {% elif render_as == render_options.markdown %}
-    {{ text_content | placeholder | render_markdown }}
+    {{ text_content | render_markdown }}
 {% else %}
-    {{ text_content | placeholder }}
+    {{ text_content }}
 {% endif %}

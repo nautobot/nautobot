@@ -165,9 +165,6 @@ class Component:
             context = context.flatten()
         return {**context, **kwargs}
 
-    def get_obj_from_context(self, context):
-        return context.get("obj") or context.get("object")
-
 
 class Tab(Component):
     """Base class for UI framework definition of a single tabbed pane within an Object Detail (Object Retrieve) page."""
@@ -899,7 +896,7 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
         return result
 
 
-class _BaseTextPanel(Panel):
+class BaseTextPanel(Panel):
     """A panel that renders a single value as text, Markdown, JSON, or YAML."""
 
     RENDER_OPTIONS = namedtuple("RENDER_OPTIONS", ["plaintext", "json", "yaml", "markdown"])
@@ -912,6 +909,14 @@ class _BaseTextPanel(Panel):
         render_placeholder=True,
         **kwargs,
     ):
+        """
+
+        Args:
+            render_as(str): One of BaseTextPanel.RENDER_OPTIONS to define rendering function.
+            render_placeholder(bool): Whether to render placeholder text if given value is "falsy".
+            body_content_template_path(str): The path of the template to use for the body content. Can be overridden for custom use cases.
+            kwargs: Additional keyword arguments passed to Panel.__init__.
+        """
         self.render_as = render_as
         self.render_placeholder = render_placeholder
         super().__init__(body_content_template_path=body_content_template_path, **kwargs)
@@ -939,7 +944,7 @@ class _BaseTextPanel(Panel):
         raise NotImplementedError
 
 
-class ObjectTextPanel(_BaseTextPanel):
+class ObjectTextPanel(BaseTextPanel):
     """
     Panel that renders text, Markdown, JSON or YAML from the given field on the given object in the context.
     """
@@ -952,11 +957,11 @@ class ObjectTextPanel(_BaseTextPanel):
     def get_text(self, context):
         if not context.get("object"):
             return ""
-        obj = self.get_obj_from_context(context)
+        obj = get_obj_from_context(context)
         return getattr(obj, self.object_field, "")
 
 
-class TextPanel(_BaseTextPanel):
+class TextPanel(BaseTextPanel):
     """Panel that renders text, Markdown, JSON or YAML from the given value in the context."""
 
     def __init__(self, *, context_field="text", **kwargs):
@@ -965,7 +970,7 @@ class TextPanel(_BaseTextPanel):
 
     def get_text(self, context):
         return context.get(self.context_field, "")
-      
+
 
 class StatsPanel(Panel):
     def __init__(
