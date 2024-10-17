@@ -418,7 +418,14 @@ if "NAUTOBOT_ALLOWED_HOSTS" in os.environ and os.environ["NAUTOBOT_ALLOWED_HOSTS
     ALLOWED_HOSTS = os.environ["NAUTOBOT_ALLOWED_HOSTS"].split(" ")
 else:
     ALLOWED_HOSTS = []
+
+# Allow CSRF trusted origins to be set via an environment variable
+# This allows Nautobot to be run behind a reverse proxy that terminates TLS
+# and fix potential issues with CSRF validation
 CSRF_TRUSTED_ORIGINS = []
+if "NAUTOBOT_CSRF_TRUSTED_ORIGINS" in os.environ and os.environ["NAUTOBOT_CSRF_TRUSTED_ORIGINS"] != "":
+    CSRF_TRUSTED_ORIGINS = os.getenv("NAUTOBOT_CSRF_TRUSTED_ORIGINS", "").split(_CONFIG_SETTING_SEPARATOR)
+
 CSRF_FAILURE_VIEW = "nautobot.core.views.csrf_failure"
 DATE_FORMAT = os.getenv("NAUTOBOT_DATE_FORMAT", "N j, Y")
 DATETIME_FORMAT = os.getenv("NAUTOBOT_DATETIME_FORMAT", "N j, Y g:i a")

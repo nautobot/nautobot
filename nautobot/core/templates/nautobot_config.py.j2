@@ -94,9 +94,13 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # FQDNs that are considered trusted origins for secure, cross-domain, requests such as HTTPS POST.
 # If running Nautobot under a single domain, you may not need to set this variable;
 # if running on multiple domains, you *may* need to set this variable to more or less the same as ALLOWED_HOSTS above.
+# You also want to set this variable if you are facing CSRF validation issues such as 
+# 'CSRF failure has occured' or 'Origin checking failed - https://subdomain.example.com does not match any trusted origins.'
 # https://docs.djangoproject.com/en/stable/ref/settings/#csrf-trusted-origins
 #
 # CSRF_TRUSTED_ORIGINS = []
+# if "NAUTOBOT_CSRF_TRUSTED_ORIGINS" in os.environ and os.environ["NAUTOBOT_CSRF_TRUSTED_ORIGINS"] != "":
+#    CSRF_TRUSTED_ORIGINS = os.getenv("NAUTOBOT_CSRF_TRUSTED_ORIGINS", "").split(_CONFIG_SETTING_SEPARATOR)
 
 # Date/time formatting. See the following link for supported formats:
 # https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date
