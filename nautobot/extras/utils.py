@@ -21,7 +21,7 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
-from nautobot.extras.choices import JobQueueTypeChoices, ObjectChangeActionChoices
+from nautobot.extras.choices import DynamicGroupTypeChoices, JobQueueTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import (
     CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL,
     EXTRAS_FEATURES,
@@ -373,14 +373,21 @@ def get_celery_queues():
     if celery_queues is None:
         celery_queues = {}
         celery_inspect = app.control.inspect()
-        active_queues = celery_inspect.active_queues()
+        try:
+            active_queues = celery_inspect.active_queues()
+        except redis.exceptions.ConnectionError:
+            # Celery seems to be not smart enough to auto-retry on intermittent failures, so let's do it ourselves:
+            try:
+                active_queues = celery_inspect.active_queues()
+            except redis.exceptions.ConnectionError as err:
+                logger.error("Repeated ConnectionError from Celery/Redis: %s", err)
+                active_queues = None
         if active_queues is None:
             return celery_queues
         for task_queue_list in active_queues.values():
             distinct_queues = {q["name"] for q in task_queue_list}
             for queue in distinct_queues:
-                celery_queues.setdefault(queue, 0)
-                celery_queues[queue] += 1
+                celery_queues[queue] = celery_queues.get(queue, 0) + 1
         with contextlib.suppress(redis.exceptions.ConnectionError):
             cache.set("nautobot.extras.utils.get_celery_queues", celery_queues, timeout=5)
 
@@ -625,6 +632,32 @@ def fixup_null_statuses(*, model, model_contenttype, status_model):
         null_status.content_types.add(model_contenttype)
         updated_count = instances_to_fixup.update(status=null_status)
         print(f"    Found and fixed {updated_count} instances of {model.__name__} that had null 'status' fields.")
+
+
+def fixup_dynamic_group_group_types(apps, *args, **kwargs):  # pylint: disable=redefined-outer-name
+    """Set dynamic group group_type values correctly."""
+    DynamicGroup = apps.get_model("extras", "DynamicGroup")
+    DynamicGroupMembership = apps.get_model("extras", "DynamicGroupMembership")
+    count_1 = count_2 = 0
+    # See note in migration 0112 - for some reason, if we were to do the "intuitive" thing, and call
+    # `DynamicGroup.objects.filter(children__isnull=False)`, we would unexpectedly get those groups for which their
+    # *parent* is non-null. The below is an alternate approach that should remain correct even if that issue gets fixed.
+    parent_group_names = set(DynamicGroupMembership.objects.values_list("parent_group__name", flat=True))
+    parent_groups_with_wrong_type = DynamicGroup.objects.filter(name__in=parent_group_names).exclude(
+        group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET
+    )
+    if parent_groups_with_wrong_type.exists():
+        count_1 = parent_groups_with_wrong_type.update(group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET)
+        print(f'\n    Found and fixed {count_1} DynamicGroup(s) that should be typed as "Group of groups".')
+
+    filter_groups_with_wrong_type = DynamicGroup.objects.exclude(filter__exact={}).exclude(
+        group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER
+    )
+    if filter_groups_with_wrong_type.exists():
+        count_2 = filter_groups_with_wrong_type.update(group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER)
+        print(f'\n    Found and fixed {count_2} DynamicGroup(s) that should be typed as "Filter-defined".')
+
+    return count_1, count_2
 
 
 def migrate_role_data(
