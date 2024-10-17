@@ -47,7 +47,8 @@ django-celery-beat = "~2.6.0"
 # Provides a database backend & models for Celery task results
 django-celery-results = "~2.5.1"
 # Management of app configuration via the Django admin UI
-django-constance = "~4.1.0"
+# TODO: Do not upgrade to 4.x until https://github.com/jazzband/django-constance/issues/592 is resolved
+django-constance = "~3.1.0"
 # Permit cross-domain API requests
 django-cors-headers = "~4.4.0"
 # Store files in the database for background tasks
@@ -83,8 +84,6 @@ django-tree-queries = "~0.19.0"
 django-webserver = "~1.2.0"
 # REST API framework
 djangorestframework = "~3.15.2"
-# Adds JSON schema support to API endpoints for rendering JSON schema forms.
-drf-react-template-framework = "^0.0.17"
 # OpenAPI 3.0 schema generation for the REST API
 drf-spectacular = {version = "~0.27.2", extras = ["sidecar"]}
 # Emoji terminal output for Python.

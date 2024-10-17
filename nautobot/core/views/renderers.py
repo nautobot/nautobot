@@ -364,6 +364,4 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         # See form_valid() for self.action == "bulk_create".
         self.template = data.get("template", view.get_template_name())
 
-        # NautobotUIViewSets pass "use_new_ui" in context as they share the same class and are just different methods
-        self.use_new_ui = data.get("use_new_ui", False)
         return super().render(data, accepted_media_type=accepted_media_type, renderer_context=renderer_context)

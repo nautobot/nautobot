@@ -10,9 +10,6 @@ from nautobot.core.ui.homepage import (
     HomePagePanel,
 )
 from nautobot.core.ui.nav import (
-    NavContext,
-    NavGrouping,
-    NavItem,
     NavMenuAddButton,
     NavMenuBase,
     NavMenuButton,
@@ -29,6 +26,7 @@ from nautobot.core.ui.object_detail import (
     ObjectFieldsPanel,
     ObjectsTablePanel,
     Panel,
+    StatsPanel,
     Tab,
 )
 from nautobot.extras.choices import BannerClassChoices
@@ -46,9 +44,6 @@ __all__ = (
     "HomePagePanel",
     "KeyValueTablePanel",
     "LayoutChoices",
-    "NavContext",
-    "NavGrouping",
-    "NavItem",
     "NavMenuAddButton",
     "NavMenuBase",
     "NavMenuButton",
@@ -62,6 +57,7 @@ __all__ = (
     "Panel",
     "PermissionsMixin",
     "SectionChoices",
+    "StatsPanel",
     "Tab",
     "TemplateExtension",
 )
