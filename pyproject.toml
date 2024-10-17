@@ -129,7 +129,7 @@ Pillow = "~10.3.0"
 prometheus-client = "~0.20.0"
 # PostgreSQL database adapter
 # NOTE: psycopg3 is available now and nominally replaces psycopg2
-psycopg2-binary = "~2.9.9"
+psycopg2-binary = "~2.9.10"
 # A Python slugify application that handles unicode.
 python-slugify = "~8.0.3"
 # The uWSGI WSGI HTTP server as a Python module
@@ -196,7 +196,7 @@ mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see optional-settings.md and required-settings.md
 mkdocs-macros-plugin = "~1.0.5"
 # Material for mkdocs theme
-mkdocs-material = "~9.5.39"
+mkdocs-material = "~9.5.41"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.1"
 # Automatically handle index pages for docs sections
