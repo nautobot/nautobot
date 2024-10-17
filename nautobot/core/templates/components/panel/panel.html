@@ -1,5 +1,5 @@
 <div class="panel panel-default">
-    {% if label or header_extra_content %}
+    {% if label.strip or header_extra_content.strip %}
         <div class="panel-heading">
             {% if label %}
                 <strong>{{ label }}</strong>
@@ -8,7 +8,7 @@
         </div>
     {% endif %}
     {{ body }}
-    {% if footer_content %}
+    {% if footer_content.strip %}
         <div class="panel-footer">
             {{ footer_content }}
         </div>
