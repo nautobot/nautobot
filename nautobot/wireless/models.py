@@ -214,6 +214,7 @@ class AccessPointGroupWirelessNetworkAssignment(BaseModel):
         null=True,
     )
     is_metadata_associable_model = False
+    documentation_static_path = "docs/user-guide/core-data-model/wireless/accesspointgroup.html"
 
     class Meta:
         unique_together = ["access_point_group", "wireless_network"]
@@ -245,6 +246,7 @@ class AccessPointGroupRadioProfileAssignment(BaseModel):
         related_name="access_point_group_assignments",
     )
     is_metadata_associable_model = False
+    documentation_static_path = "docs/user-guide/core-data-model/wireless/accesspointgroup.html"
 
     class Meta:
         unique_together = ["access_point_group", "radio_profile"]
