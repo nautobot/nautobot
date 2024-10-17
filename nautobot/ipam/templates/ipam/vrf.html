@@ -38,8 +38,11 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-        {% include 'panel_table.html' with table=import_targets_table heading="Import Route Targets" %}
-        {% include 'panel_table.html' with table=export_targets_table heading="Export Route Targets" %}
-	{% include 'panel_table.html' with table=prefix_table heading="Assigned Prefixes" %}
-	{% include 'panel_table.html' with table=device_table heading="Assigned Devices" %}
+    {% include 'utilities/obj_table.html' with table=import_targets_table table_template='panel_table.html' heading="Import Route Targets" %}
+    {% include 'utilities/obj_table.html' with table=export_targets_table table_template='panel_table.html' heading="Export Route Targets" %}
 {% endblock content_right_page %}
+
+{% block content_full_width_page %}
+	{% include 'utilities/obj_table.html' with table=prefix_table table_template='panel_table.html' heading="Assigned Prefixes" %}
+	{% include 'utilities/obj_table.html' with table=device_table table_template='panel_table.html' heading="Assigned Devices" %}
+{% endblock content_full_width_page %}
