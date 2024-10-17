@@ -245,7 +245,7 @@ class VRFUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.VRFFilterForm
     table_class = tables.VRFTable
     form_class = forms.VRFForm
-    bulk_edit_form_class = forms.VRFBulkEditForm
+    bulk_update_form_class = forms.VRFBulkEditForm
     serializer_class = serializers.VRFSerializer
 
     object_detail_content = ObjectDetailContent(
@@ -315,7 +315,7 @@ class RouteTargetUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.RouteTargetFilterForm
     table_class = tables.RouteTargetTable
     form_class = forms.RouteTargetForm
-    bulk_edit_form_class = forms.RouteTargetBulkEditForm
+    bulk_update_form_class = forms.RouteTargetBulkEditForm
     serializer_class = serializers.RouteTargetSerializer
 
     object_detail_content = ObjectDetailContent(
