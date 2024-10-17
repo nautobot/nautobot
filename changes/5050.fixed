@@ -1,0 +1,1 @@
+Changed logic to permit VLANs assigned to a device's location's parent locations (including parents of parents, etc.) to be assigned to that device's interfaces.
