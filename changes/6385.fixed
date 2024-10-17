@@ -1,0 +1,1 @@
+Restored `Prefix.get_child_ips()` API mistakenly removed from v2.3.5 through v2.3.7.
