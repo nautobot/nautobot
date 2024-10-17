@@ -6,6 +6,11 @@ from abc import ABC, abstractmethod
 class EventBroker(ABC):
     """Abstract base class for concrete implementations of event brokers such as syslog, Redis, Kafka, etc."""
 
+    def __init__(self, *args, include_topics=None, exclude_topics=None, **kwargs) -> None:
+        self.include_topics = include_topics or ["*"]
+        self.exclude_topics = exclude_topics or []
+        super().__init__(*args, **kwargs)
+
     @abstractmethod
     def publish(self, *, topic, payload):
         """

@@ -1,6 +1,11 @@
 """Module providing for the publication of event notifications via mechanisms such as Redis, Kafka, syslog, etc."""
 
+import fnmatch
 import logging
+
+from django.utils.module_loading import import_string
+
+from nautobot.core.events.exceptions import EventBrokerImproperlyConfigured, EventBrokerNotFound
 
 from .base import EventBroker
 from .redis_broker import RedisEventBroker
@@ -10,6 +15,39 @@ _EVENT_BROKERS = []
 
 
 logger = logging.getLogger(__name__)
+
+
+def load_event_brokers(event_broker_configs):
+    """Process plugins and log errors if they can't be loaded."""
+    for broker_name, broker in event_broker_configs.items():
+        options = broker.get("OPTIONS", {})
+        topics = broker.get("TOPICS", {})
+        if not isinstance(topics, dict):
+            raise EventBrokerImproperlyConfigured(
+                f"{broker_name} Malformed Event Broker Settings: Expected `TOPICS` to be a 'dict', instead a '{type(topics).__name__}' was provided"
+            )
+        include_topics = topics.get("INCLUDE")
+        if include_topics and not isinstance(include_topics, (list, tuple)):
+            raise EventBrokerImproperlyConfigured(
+                f"{broker_name} Malformed Event Broker Settings: Expected `INCLUDE` to be a 'list' or 'tuple', instead a '{type(include_topics).__name__}' was provided"
+            )
+        exclude_topics = topics.get("EXCLUDE", [])
+        if exclude_topics and not isinstance(exclude_topics, (list, tuple)):
+            raise EventBrokerImproperlyConfigured(
+                f"{broker_name} Malformed Event Broker Settings: Expected `EXCLUDE` to be a 'list' or 'tuple', instead a '{type(exclude_topics).__name__}' was provided"
+            )
+        options.update({"include_topics": include_topics, "exclude_topics": exclude_topics})
+
+        try:
+            event_broker_class = import_string(broker["CLASS"])
+            if not issubclass(event_broker_class, EventBroker):
+                raise EventBrokerImproperlyConfigured(
+                    f"{broker_name} Malformed Event Broker Settings: Broker provided is not an EventBroker"
+                )
+            event_broker = event_broker_class(**options)
+            register_event_broker(event_broker)
+        except ImportError as err:
+            raise EventBrokerNotFound(f"Unable to import Event Broker {broker_name}.") from err
 
 
 def register_event_broker(event_broker):
@@ -41,6 +79,10 @@ def deregister_event_broker(event_broker):
         logger.warning("Tried to deregister event broker %s but it wasn't previously registered", event_broker)
 
 
+def is_topic_match(topic, patterns):
+    return any(fnmatch.fnmatch(topic, pattern) for pattern in patterns)
+
+
 def publish_event(*, topic, payload):
     """Publish the given event payload to the given topic via all registered `EventBroker` instances.
 
@@ -55,7 +97,10 @@ def publish_event(*, topic, payload):
             lowest common denominator for serializability.
     """
     for event_broker in _EVENT_BROKERS:
-        event_broker.publish(topic=topic, payload=payload)
+        exclude_topics = event_broker.exclude_topics
+        include_topics = event_broker.include_topics
+        if is_topic_match(topic, include_topics) and not is_topic_match(topic, exclude_topics):
+            event_broker.publish(topic=topic, payload=payload)
 
 
 __all__ = (
