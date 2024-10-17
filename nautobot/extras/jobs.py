@@ -1159,6 +1159,7 @@ def run_job(self, job_class_path, *args, **kwargs):
             "user_name": job_result.user.name,
             "job_kwargs": kwargs,
             "job_output": None,
+            "einfo": None,
         }
         publish_event(topic="nautobot.jobs.job.started", payload=payload)
         job.before_start(self.request.id, args, kwargs)
