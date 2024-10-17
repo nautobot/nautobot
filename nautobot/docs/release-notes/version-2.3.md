@@ -124,6 +124,16 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
+## v2.3.8 (2024-10-17)
+
+### Fixed
+
+- [#5050](https://github.com/nautobot/nautobot/issues/5050) - Changed logic to permit VLANs assigned to a device's location's parent locations (including parents of parents, etc.) to be assigned to that device's interfaces.
+- [#6297](https://github.com/nautobot/nautobot/issues/6297) - Fixed paginator widget to display the current selected `per_page` value even if it's not one of the `PER_PAGE_DEFAULTS` options.
+- [#6297](https://github.com/nautobot/nautobot/issues/6297) - Added pagination of related-object tables to many IPAM views to avoid errors when very large quantities of related records are present.
+- [#6380](https://github.com/nautobot/nautobot/issues/6380) - Fixed issue with Installed Apps page trying to render invalid links.
+- [#6385](https://github.com/nautobot/nautobot/issues/6385) - Restored `Prefix.get_child_ips()` API mistakenly removed from v2.3.5 through v2.3.7.
+
 ## v2.3.7 (2024-10-15)
 
 ### Added
