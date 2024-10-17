@@ -15,7 +15,7 @@ Fields on the Wireless Network include:
 - VLAN
 - [Access Point Groups](accesspointgroup.md)
 
-Future extensions could include captive_portal attribute, but are not scoped in the initial release. It should be implemented using Nautobot’s external integrations.
+Future extensions could include captive_portal attribute, but are not scoped in the initial release. It should be implemented using [External Integrations](../../platform-functionality/externalintegration.md).
 
 ## Wireless Networks VLAN field
 
