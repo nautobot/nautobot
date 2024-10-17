@@ -926,8 +926,7 @@ class BaseTextPanel(Panel):
         render_as = self.render_as
 
         if not text_content and self.render_placeholder:
-            text_content = HTML_NONE
-            render_as = self.RENDER_OPTIONS.plaintext
+            return HTML_NONE
 
         if self.body_content_template_path:
             return get_template(self.body_content_template_path).render(
@@ -955,9 +954,9 @@ class ObjectTextPanel(BaseTextPanel):
         super().__init__(**kwargs)
 
     def get_text(self, context):
-        if not context.get("object"):
-            return ""
         obj = get_obj_from_context(context)
+        if not obj:
+            return ""
         return getattr(obj, self.object_field, "")
 
 
