@@ -227,34 +227,19 @@ class LocationTypeUIViewSet(
             ),
             ObjectsTablePanel(
                 weight=100,
-                table_key="children_table",
+                table_class=tables.LocationTypeTable,
+                table_filter="parent",
                 table_title="Child Location Type(s)",
             ),
             ObjectsTablePanel(
                 weight=200,
-                table_key="locations_table",
+                table_class=tables.LocationTable,
                 table_title="Location(s) of this Type",
-                exclude_fields=["location_type"],
+                table_filter="location_type",
+                exclude_columns=["location_type"],
             ),
         ),
     )
-
-    def get_extra_context(self, request, instance):
-        children = LocationType.objects.restrict(request.user, "view").filter(parent=instance).select_related("parent")
-        locations = (
-            Location.objects.restrict(request.user, "view")
-            .filter(location_type=instance)
-            .select_related("parent", "location_type")
-        )
-
-        children_table = tables.LocationTypeTable(children)
-        locations_table = tables.LocationTable(locations)
-
-        return {
-            "children_table": children_table,
-            "locations_table": locations_table,
-            **super().get_extra_context(request, instance),
-        }
 
 
 #

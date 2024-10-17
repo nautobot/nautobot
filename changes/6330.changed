@@ -1,0 +1,1 @@
+Refactored `ObjectsTablePanel` to accept either a table class and a queryset or an already initialized table.
