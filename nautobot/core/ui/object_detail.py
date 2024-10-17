@@ -40,6 +40,7 @@ from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context
 from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
 from nautobot.tenancy.models import Tenant
 
 logger = logging.getLogger(__name__)
@@ -395,14 +396,20 @@ class ObjectsTablePanel(Panel):
     def __init__(
         self,
         *,
-        table_key,
+        table_class,
+        table_filter=None,
+        table_attribute=None,
+        select_related_fields=None,
+        prefetch_related_fields=None,
+        order_by_fields=None,
         table_title=None,
         max_display_count=None,
-        include_fields=None,
-        exclude_fields=None,
+        include_columns=None,
+        exclude_columns=None,
         add_button_route="default",
         add_permissions=None,
         related_field_name=None,
+        enable_bulk_actions=False,
         body_wrapper_template_path="components/panel/body_wrapper_table.html",
         body_content_template_path="components/panel/body_content_table.html",
         header_extra_content_template_path="components/panel/header_extra_content_table.html",
@@ -412,31 +419,49 @@ class ObjectsTablePanel(Panel):
         """Instantiate an ObjectsTable panel.
 
         Args:
-            table_key (str): The render context key string that contains the BaseTable instance of interest.
+            table_class (obj): The table class object used for render the table e.g. CircuitTable, DeviceTable.
+            table_filter (str, optional): The name of the filter to filter the queryset to initialize the table class.
+                Cannot be used together with `table_attribute`
+            table_attribute (str, optional): The attribute of the detail view instance that contains the queryset to initialize the table class. e.g. `dynamic_groups`
+                Cannot be used together with `table_filter`
+            select_related_fields (list, optional): list of fields to pass to table queryset's select_related method.
+            prefetch_related_fields (list, optional): list of fields to pass to table queryset's prefetch_related method.
+            order_by_fields (list, optional): list of fields to order the table queryset by.
             max_display_count (int, optional):  Maximum number of items to display in the table.
                 If None, defaults to the `get_paginate_count()`(which is user's preference or a global setting).
             table_title (str, optional): The title to display in the panel heading for the table.
                 If None, defaults to the plural verbose name of the table model.
-            include_fields (list, optional): A list of field names to include in the table display.
+            include_columns (list, optional): A list of field names to include in the table display.
                 If provided, only these fields will be displayed in the table.
-            exclude_fields (list, optional): A list of field names to exclude from the table display.
-                Cannot be used together with `include_fields`.
+            exclude_columns (list, optional): A list of field names to exclude from the table display.
+                Cannot be used together with `include_columns`.
             add_button_route (str, optional): The route used to generate the "add" button URL. Defaults to "default",
                 which uses the default table's model `add` route.
             add_permissions (list, optional): A list of permissions required for the "add" button to be displayed. If not provided,
                 permissions are determined by default based on the model.
             related_field_name (str, optional): The name of the field used to filter related objects (typically for query string parameters).
+            enable_bulk_actions (bool, optional): Show the pk toggle columns on the table if the user has the appropriate permissions.
         """
-        self.table_key = table_key
+        self.table_class = table_class
+        if table_filter and table_attribute:
+            raise ValueError("You can only specify either `table_filter` or `table_attribute`")
+        if not table_filter and not table_attribute:
+            raise ValueError("You must specify either `table_filter` or `table_attribute`")
+        self.table_filter = table_filter
+        self.table_attribute = table_attribute
+        self.select_related_fields = select_related_fields
+        self.prefetch_related_fields = prefetch_related_fields
+        self.order_by_fields = order_by_fields
         self.table_title = table_title
         self.max_display_count = max_display_count
-        if exclude_fields and include_fields:
-            raise ValueError("You can only specify either `exclude_fields` or `include_fields`")
-        self.include_fields = include_fields
-        self.exclude_fields = exclude_fields
+        if exclude_columns and include_columns:
+            raise ValueError("You can only specify either `exclude_columns` or `include_columns`")
+        self.include_columns = include_columns
+        self.exclude_columns = exclude_columns
         self.add_button_route = add_button_route
         self.add_permissions = add_permissions
         self.related_field_name = related_field_name
+        self.enable_bulk_actions = enable_bulk_actions
 
         super().__init__(
             body_wrapper_template_path=body_wrapper_template_path,
@@ -459,8 +484,7 @@ class ObjectsTablePanel(Panel):
         return_url = context.get("return_url", obj.get_absolute_url())
 
         if self.add_button_route == "default":
-            body_content_table = context[self.table_key]
-
+            body_content_table = self.table_class
             body_content_table_model = body_content_table.Meta.model
             permission_name = get_permission_for_model(body_content_table_model, "add")
             if request.user.has_perms([permission_name]):
@@ -484,17 +508,39 @@ class ObjectsTablePanel(Panel):
         for listing and adding objects. It also handles field inclusion/exclusion and
         displays the appropriate table title if provided.
         """
-        body_content_table = context[self.table_key]
+        body_content_table_class = self.table_class
+        body_content_table_model = body_content_table_class.Meta.model
         request = context["request"]
+        instance = get_obj_from_context(context)
 
-        if self.exclude_fields or self.include_fields:
+        if self.table_attribute:
+            body_content_table_queryset = getattr(instance, self.table_attribute)
+        else:
+            body_content_table_queryset = body_content_table_model.objects.filter(**{self.table_filter: instance})
+        body_content_table_queryset = body_content_table_queryset.restrict(request.user, "view")
+        if self.select_related_fields:
+            body_content_table_queryset = body_content_table_queryset.select_related(*self.select_related_fields)
+        if self.prefetch_related_fields:
+            body_content_table_queryset = body_content_table_queryset.prefetch_related(*self.prefetch_related_fields)
+        if self.order_by_fields:
+            body_content_table_queryset = body_content_table_queryset.order_by(*self.order_by_fields)
+        body_content_table = body_content_table_class(body_content_table_queryset)
+
+        if self.exclude_columns or self.include_columns:
             for column in body_content_table.columns:
-                if (self.exclude_fields and column.name in self.exclude_fields) or (
-                    self.include_fields and column.name not in self.include_fields
+                if (self.exclude_columns and column.name in self.exclude_columns) or (
+                    self.include_columns and column.name not in self.include_columns
                 ):
                     body_content_table.columns.hide(column.name)
                 else:
                     body_content_table.columns.show(column.name)
+        # Enable bulk action toggle if the user has appropriate permissions
+        user = request.user
+        if self.enable_bulk_actions and (
+            user.has_perm(get_permission_for_model(body_content_table_model, "delete"))
+            or user.has_perm(get_permission_for_model(body_content_table_model, "change"))
+        ):
+            body_content_table.columns.show("pk")
 
         per_page = self.max_display_count if self.max_display_count is not None else get_paginate_count(request)
         paginate = {"paginator_class": EnhancedPaginator, "per_page": per_page}
@@ -1329,7 +1375,10 @@ class _ObjectDetailContactsTab(Tab):
             panels = (
                 ObjectsTablePanel(
                     weight=100,
-                    table_key="associated_contacts_table",
+                    table_class=AssociatedContactsTable,
+                    table_attribute="associated_contacts",
+                    order_by_fields=["role__name"],
+                    enable_bulk_actions=True,
                     # TODO: we should provide a standard reusable component template for bulk-actions in the footer
                     footer_content_template_path="components/panel/footer_contacts_table.html",
                     header_extra_content_template_path=None,
@@ -1362,7 +1411,14 @@ class _ObjectDetailGroupsTab(Tab):
         **kwargs,
     ):
         if panels is None:
-            panels = (ObjectsTablePanel(weight=100, table_key="associated_dynamic_groups_table"),)
+            panels = (
+                ObjectsTablePanel(
+                    weight=100,
+                    table_class=DynamicGroupTable,
+                    table_attribute="dynamic_groups",
+                    exclude_columns=["content_type"],
+                ),
+            )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
 
     def should_render(self, context):
@@ -1394,7 +1450,15 @@ class _ObjectDetailMetadataTab(Tab):
         **kwargs,
     ):
         if panels is None:
-            panels = (ObjectsTablePanel(weight=100, table_key="associated_object_metadata_table"),)
+            panels = (
+                ObjectsTablePanel(
+                    weight=100,
+                    table_class=ObjectMetadataTable,
+                    table_attribute="associated_object_metadata",
+                    order_by_fields=["metadata_type", "scoped_fields"],
+                    exclude_columns=["assigned_object"],
+                ),
+            )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
 
     def should_render(self, context):

@@ -112,32 +112,13 @@ class ProviderUIViewSet(NautobotUIViewSet):
             ),
             ObjectsTablePanel(
                 weight=200,
-                table_key="circuits_table",
+                table_class=tables.CircuitTable,
+                table_filter="provider",
                 section=SectionChoices.FULL_WIDTH,
+                exclude_columns=["provider"],
             ),
         ),
     )
-
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            circuits = (
-                Circuit.objects.restrict(request.user, "view")
-                .filter(provider=instance)
-                .select_related("circuit_type", "tenant")
-                .prefetch_related("circuit_terminations__location")
-            )
-            circuits_table = tables.CircuitTable(circuits)
-            circuits_table.columns.hide("provider")
-
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(circuits_table)
-
-            context["circuits_table"] = circuits_table
-        return context
 
 
 class CircuitUIViewSet(NautobotUIViewSet):
