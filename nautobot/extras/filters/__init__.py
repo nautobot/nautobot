@@ -926,10 +926,6 @@ class JobQueueFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         queryset=ExternalIntegration.objects.all(),
         label="External Integration (name or ID)",
     )
-    has_external_integration = RelatedMembershipBooleanFilter(
-        field_name="external_integration",
-        label="Has external integration",
-    )
     jobs = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Job.objects.all(),
         label="Job (name or ID)",
