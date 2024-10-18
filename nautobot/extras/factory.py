@@ -160,7 +160,7 @@ class JobQueueFactory(PrimaryModelFactory):
     external_integration = factory.Maybe(
         "has_external_integration",
         factory.LazyAttribute(
-            lambda obj: random_instance(ExternalIntegration)
+            lambda obj: get_random_instances(ExternalIntegration, minimum=1)[0]
             if obj.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES
             else None
         ),
