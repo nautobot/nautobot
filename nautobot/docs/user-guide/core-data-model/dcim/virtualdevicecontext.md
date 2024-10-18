@@ -4,19 +4,17 @@
 
 A Virtual Device Context (VDC) refers to a logical partition of a physical network device, allowing it to function as multiple independent devices. Each VDC operates separately, with its own configuration, interfaces, and IP addresses. VDCs are particularly useful for multi-tenant environments, where different customers or applications require isolated configurations.
 
-VDCs are created first before interfaces can be assigned to them, and each VDC can efficiently share the physical resources of a device while retaining its own operational independence. This enables enhanced scalability and flexibility in network setups.
-
 ## Overview
 
-Virtual Device Contexts (VDCs) allow a single physical device to be divided into multiple virtual instances, each functioning independently. They enable network administrators to separate operational environments within a single piece of hardware, which is beneficial for organizations that need distinct configurations for different departments, customers, or applications.
+![Virtual Device Context Overview](../../../media/models/virtual_device_context_overview.png)
 
-Each VDC can be assigned its own roles, IP addresses, and configurations, providing a high level of isolation while leveraging shared resources from the underlying physical device. This can help optimize hardware utilization while maintaining the necessary separation between different environments.
+In the above example, the physical device `ams01-edge01` has been "sliced" into two customer VDCs (`cust1-vdc` and `cust2-vdc`). Each of the VDCs contain much of the same data as regular devices, like roles, statuses, tenant relationships, primary IP addresses, etc. As for interfaces, the host device's interfaces can be assigned to one or more VDCs that live on the device. From the example, devices may also retain interfaces that are not assigned to any VDC.
 
 ## Key Features
 
 - **Isolation**: Each VDC operates as a separate entity with its own configurations, providing isolation between different contexts.
 
-- **Shared Resources**: VDCs share the physical device's resources, such as processing power and memory, but still function as independent units.
+- **Shared Resources**: VDCs share the physical device's resources, such as processing power and memory, and namely interfaces.
 
 - **Multi-Tenant Support**: Ideal for service providers and enterprises, VDCs help create isolated environments for multiple clients on the same hardware.
 
@@ -24,11 +22,15 @@ Each VDC can be assigned its own roles, IP addresses, and configurations, provid
 
 ## Example Use Cases
 
-1. **Service Providers**: VDCs enable service providers to offer isolated network environments to multiple clients while optimizing the use of hardware resources.
+The VDC concept goes by several different names, depending on the vendor, and like other Nautobot features, there are nuances to a specific implication, but Nautobot atempts to cover the most broad set of applicable use cases.
 
-2. **Separate Environments**: Organizations can use VDCs to separate testing environments from production, reducing the risk of conflicts or outages.
+Some vendor examples of VDCs include:
 
-3. **Resource Optimization**: VDCs allow for efficient resource management by dynamically allocating network resources to different contexts based on demand.
+1. Cisco Nexus Virtual Device Contexts
+2. Juniper Logical Systems
+3. Arista Multi-instance EOS
+4. Nokia Virtual Service Router
+5. F5 Virtual Clustered Multiprocessing
 
 
 ## VDC Fields Overview
