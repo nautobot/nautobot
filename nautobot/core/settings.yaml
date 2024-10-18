@@ -587,6 +587,16 @@ properties:
     description: >-
       A list of hosts (fully-qualified domain names (FQDNs) or subdomains) that are considered trusted origins
       for cross-site secure requests such as HTTPS POST.
+
+      You might need to set this if you are using a reverse proxy or load balancer that changes the host header or if you face the error
+      'Invalid Form Submission - CSRF failure has occured' and 'Origin checking failed - https://subdomain.example.com does not match any trusted origins.'
+
+      Example:
+
+      ```python
+      CSRF_TRUSTED_ORIGINS = ['https://subdomain.example.com', 'https://*.example.com']
+      ```
+    environment_variable: "NAUTOBOT_CSRF_TRUSTED_ORIGINS"
     items:
       type: "string"
     see_also:
