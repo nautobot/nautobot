@@ -48,6 +48,7 @@ from .devices import (
 from .locations import Location, LocationType
 from .power import PowerFeed, PowerPanel
 from .racks import Rack, RackGroup, RackReservation
+from .zones import ZoneType, Zone, ZoneDeviceAssignment, ZoneInterfaceAssignment, ZonePrefixAssignment, ZoneVLANAssignment, ZoneVRFAssignment
 
 __all__ = (
     "BaseInterface",
@@ -99,4 +100,11 @@ __all__ = (
     "SoftwareVersion",
     "VirtualChassis",
     "VirtualDeviceContext",
+    "Zone",
+    "ZoneType",
+    "ZoneDeviceAssignment",
+    "ZoneInterfaceAssignment",
+    "ZonePrefixAssignment",
+    "ZoneVLANAssignment",
+    "ZoneVRFAssignment",
 )
