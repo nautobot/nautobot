@@ -798,14 +798,19 @@ class InterfaceSerializer(
     def validate(self, data):
         # Validate many-to-many VLAN assignments
         device = self.instance.device if self.instance else data.get("device")
-        # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to assign a VLAN belongs to
-        # the parent Location or the child location of `device.location`?
+        location = None
+        if device:
+            location = device.location
+        if location:
+            location_ids = location.ancestors(include_self=True).values_list("id", flat=True)
+        else:
+            location_ids = []
         for vlan in data.get("tagged_vlans", []):
-            if vlan.locations.exists() and not vlan.locations.filter(pk=device.location.pk).exists():
+            if vlan.locations.exists() and not vlan.locations.filter(pk__in=location_ids).exists():
                 raise serializers.ValidationError(
                     {
-                        "tagged_vlans": f"VLAN {vlan} must have a common location as the interface's parent device, or "
-                        f"it must be global."
+                        "tagged_vlans": f"VLAN {vlan} must have the same location as the interface's parent device, "
+                        f"or is in one of the parents of the interface's parent device's location, or it must be global."
                     }
                 )
 

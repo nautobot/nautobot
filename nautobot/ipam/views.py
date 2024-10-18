@@ -270,6 +270,15 @@ class VRFView(generic.ObjectView):
         vrf_table.exclude = ("vrf",)
         # context["vrf_table"] = vrf_table
 
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(prefix_table)
+        RequestConfig(request, paginate).configure(vrf_table)
+        RequestConfig(request, paginate).configure(import_targets_table)
+        RequestConfig(request, paginate).configure(export_targets_table)
+
         context.update(
             {
                 "device_table": vrf_table,
@@ -336,6 +345,13 @@ class RouteTargetView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         importing_vrfs_table = tables.VRFTable(instance.importing_vrfs.select_related("tenant"), orderable=False)
         exporting_vrfs_table = tables.VRFTable(instance.exporting_vrfs.select_related("tenant"), orderable=False)
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(importing_vrfs_table)
+        RequestConfig(request, paginate).configure(exporting_vrfs_table)
 
         return {
             "importing_vrfs_table": importing_vrfs_table,
@@ -459,6 +475,14 @@ class PrefixView(generic.ObjectView):
         cloud_networks = instance.cloud_networks.restrict(request.user, "view")
         cloud_network_table = CloudNetworkTable(cloud_networks, orderable=False)
         cloud_network_table.exclude = ("actions", "assigned_prefix_count", "circuit_count", "cloud_service_count")
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(parent_prefix_table)
+        RequestConfig(request, paginate).configure(vrf_table)
+        RequestConfig(request, paginate).configure(cloud_network_table)
 
         return {
             "vrf_table": vrf_table,
@@ -778,6 +802,7 @@ class IPAddressView(generic.ObjectView):
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
         }
+        RequestConfig(request, paginate).configure(parent_prefixes_table)
         RequestConfig(request, paginate).configure(related_ips_table)
 
         return {
@@ -1158,6 +1183,12 @@ class IPAddressInterfacesView(generic.ObjectView):
         if request.user.has_perm("dcim.change_interface") or request.user.has_perm("dcim.delete_interface"):
             interface_table.columns.show("pk")
 
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(interface_table)
+
         return {
             "interface_table": interface_table,
             "active_tab": "interfaces",
@@ -1177,6 +1208,12 @@ class IPAddressVMInterfacesView(generic.ObjectView):
             "virtualization.delete_vminterface"
         ):
             vm_interface_table.columns.show("pk")
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(vm_interface_table)
 
         return {
             "vm_interface_table": vm_interface_table,
@@ -1315,6 +1352,12 @@ class VLANView(generic.ObjectView):
         )
         prefix_table = tables.PrefixTable(list(prefixes), hide_hierarchy_ui=True)
         prefix_table.exclude = ("vlan",)
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(prefix_table)
 
         return {"prefix_table": prefix_table, **super().get_extra_context(request, instance)}
 
