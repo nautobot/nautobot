@@ -13,7 +13,7 @@ import nautobot.extras.models.mixins
 class Migration(migrations.Migration):
     dependencies = [
         ("tenancy", "0009_update_all_charfields_max_length_to_255"),
-        ("extras", "0115_scheduledjob_time_zone"),
+        ("extras", "0116_fix_dynamic_group_group_type_data_migration"),
     ]
 
     operations = [

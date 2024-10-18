@@ -756,6 +756,57 @@ properties:
     is_constance_config: true
     type: "boolean"
     version_added: "2.0.0"
+  EVENT_BROKERS:
+    default: {}
+    description: >-
+      A dictionary defining event brokers that handle event publishing in Nautobot.
+      Each broker specifies its import path, along with topics to include or exclude
+      when publishing events.
+    details: |-
+      Each broker consists of a name, the class it uses for publishing events, and the topics
+      it filters. Topics are the categories of events that a broker will publish or exclude
+      based on the provided filters.
+
+      Example:
+
+      ```python
+      EVENT_BROKERS = {
+          "SyslogEventBroker": {
+              "CLASS": "nautobot.core.events.SyslogEventBroker",
+              "TOPICS": {
+                  "INCLUDE": ["nautobot.test.*"],
+                  "EXCLUDE": ["*.no-publish*"],
+              },
+          },
+      }
+      ```
+
+      In this example:
+      - **SyslogEventBroker** is the broker name.
+      - **CLASS** specifies the path to the event broker's Python class.
+      - **INCLUDE** filters the events the broker will publish, such as all topics starting with "nautobot.test."
+      - **EXCLUDE** filters out specific topics like those with "no-publish" in the name.
+
+      !!! note
+          If **INCLUDE** is set to ["*"], all topics will be published unless excluded by **EXCLUDE**.
+    properties:
+      CLASS:
+        type: "string"
+      TOPICS:
+        type: "object"
+        properties:
+          INCLUDE:
+            type: "array"
+            description: >-
+              List of topics that the broker should publish events for.
+              If empty or set to ["*"], all topics will be included.
+          EXCLUDE:
+            type: "array"
+            description: >-
+              List of topics that the broker should exclude from publishing.
+              If empty, no topics are excluded.
+    type: "object"
+    version_added: "2.4.0"
   EXEMPT_VIEW_PERMISSIONS:
     default: []
     description: "A list of Nautobot models to exempt from the enforcement of view permissions."

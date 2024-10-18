@@ -408,7 +408,7 @@ def stop(context, service=None):
     """Stop Nautobot and its dependencies."""
     print("Stopping Nautobot...")
     if not service:
-        docker_compose(context, "--profile '*' down")
+        docker_compose(context, "--profile '*' down --remove-orphans")
     else:
         docker_compose(context, "stop", service=service)
 
@@ -417,7 +417,7 @@ def stop(context, service=None):
 def destroy(context):
     """Destroy all containers and volumes."""
     print("Destroying Nautobot...")
-    docker_compose(context, "down --volumes")
+    docker_compose(context, "down --volumes --remove-orphans")
 
 
 @task

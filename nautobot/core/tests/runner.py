@@ -189,7 +189,9 @@ class NautobotTestRunner(DiscoverRunner):
                         connection.creation.destroy_test_db(
                             suffix=str(index + 1),
                             verbosity=self.verbosity,
-                            keepdb=self.keepdb,
+                            keepdb=self.keepdb
+                            # Extra check added for Nautobot
+                            and not settings.TEST_USE_FACTORIES,  # with factory data, clones cannot be reused
                         )
 
                 # Extra block added for Nautobot
