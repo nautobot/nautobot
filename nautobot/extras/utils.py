@@ -5,13 +5,11 @@ import hmac
 import logging
 import re
 import sys
-import uuid
 
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
-from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import ValidationError
 from django.db import transaction
 from django.db.models import Q
@@ -23,6 +21,7 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
+from nautobot.core.utils.data import is_uuid
 from nautobot.extras.choices import DynamicGroupTypeChoices, JobQueueTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import (
     CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL,
@@ -405,12 +404,13 @@ def get_worker_count(request=None, queue=None):
 
     celery_queues = get_celery_queues()
     if isinstance(queue, str):
-        try:
-            # check if the string passed in is a valid UUID
-            pk = uuid.UUID(queue)
-            queue = JobQueue.objects.get(pk=pk).name
-        except (TypeError, ValueError, ObjectDoesNotExist):
-            # if not then `queue` should be the name of the queue
+        if is_uuid(queue):
+            try:
+                # check if the string passed in is a valid UUID
+                queue = JobQueue.objects.get(pk=queue).name
+            except JobQueue.DoesNotExist:
+                return 0
+        else:
             return celery_queues.get(queue, 0)
     elif isinstance(queue, JobQueue):
         queue = queue.name
