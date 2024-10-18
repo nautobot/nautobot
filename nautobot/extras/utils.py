@@ -5,11 +5,13 @@ import hmac
 import logging
 import re
 import sys
+import uuid
 
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import ValidationError
 from django.db import transaction
 from django.db.models import Q
@@ -396,20 +398,21 @@ def get_celery_queues():
 
 def get_worker_count(request=None, queue=None):
     """
-    Return a count of the active Celery workers in a specified queue. Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
+    Return a count of the active Celery workers in a specified queue (Could be a JobQueue instance, instance pk or instance name).
+    Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
     """
     from nautobot.extras.models import JobQueue
 
     celery_queues = get_celery_queues()
     if isinstance(queue, str):
         try:
-            queue = JobQueue.objects.get(name=queue).name
-        except JobQueue.DoesNotExist:
-            try:
-                queue = JobQueue.objects.get(pk=queue).name
-            except JobQueue.DoesNotExist:
-                queue = settings.CELERY_TASK_DEFAULT_QUEUE
-    if isinstance(queue, JobQueue):
+            # check if the string passed in is a valid UUID
+            pk = uuid.UUID(queue)
+            queue = JobQueue.objects.get(pk=pk).name
+        except (TypeError, ValueError, ObjectDoesNotExist):
+            # if not then `queue` should be the name of the queue
+            return celery_queues.get(queue, 0)
+    elif isinstance(queue, JobQueue):
         queue = queue.name
     else:
         queue = settings.CELERY_TASK_DEFAULT_QUEUE
