@@ -558,6 +558,13 @@ class JobQueue(PrimaryModel):
         blank=True,
         null=True,
     )
+    external_integration = models.ForeignKey(
+        to="extras.ExternalIntegration",
+        on_delete=models.PROTECT,
+        related_name="job_queues",
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         ordering = ["name"]
@@ -570,6 +577,16 @@ class JobQueue(PrimaryModel):
         worker_count = get_job_queue_worker_count(job_queue=self)
         workers = "worker" if worker_count == 1 else "workers"
         return f"{self.queue_type}: {self.name} ({worker_count} {workers})"
+
+    def clean(self):
+        super().clean()
+        # Validate that only kubernetes job queue can be linked to an external integration object.
+        if self.external_integration and self.queue_type != JobQueueTypeChoices.TYPE_KUBERNETES:
+            raise ValidationError(
+                {
+                    "external_integration": f"Only job queues with type {JobQueueTypeChoices.TYPE_KUBERNETES} can be linked to external integration objects."
+                }
+            )
 
 
 @extras_features(
