@@ -2145,6 +2145,34 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             self.client.post(url, self.untagged_vlan_data, format="json", **self.header), status.HTTP_201_CREATED
         )
 
+    def test_tagged_vlan_must_be_in_the_location_or_parent_locations_of_the_parent_device(self):
+        self.add_permissions("dcim.add_interface")
+
+        interface_status = Status.objects.get_for_model(Interface).first()
+        location = self.devices[0].location
+        location_ids = [ancestor.id for ancestor in location.ancestors()]
+        non_valid_locations = Location.objects.exclude(pk__in=location_ids)
+        faulty_vlan = self.vlans[0]
+        faulty_vlan.locations.set([non_valid_locations.first().pk])
+        faulty_vlan.validated_save()
+        faulty_data = {
+            "device": self.devices[0].pk,
+            "name": "Test Vlans Interface",
+            "type": "virtual",
+            "status": interface_status.pk,
+            "mode": InterfaceModeChoices.MODE_TAGGED,
+            "parent_interface": self.interfaces[1].pk,
+            "tagged_vlans": [faulty_vlan.pk, self.vlans[1].pk],
+            "untagged_vlan": self.vlans[2].pk,
+        }
+        response = self.client.post(self._get_list_url(), data=faulty_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(
+            b"must have the same location as the interface's parent device, or is in one of the parents of the interface's parent device's location, or "
+            b"it must be global.",
+            response.content,
+        )
+
     def test_interface_belonging_to_common_device_or_vc_allowed(self):
         """Test parent, bridge, and LAG interfaces belonging to common device or VC is valid"""
         self.add_permissions("dcim.add_interface")
