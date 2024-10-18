@@ -1615,7 +1615,6 @@ class JobApprovalRequestView(generic.ObjectView):
 
         job_model = scheduled_job.job_model
         job_class = get_job(job_model.class_path, reload=True)
-        publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
 
         if dry_run:
             # To dry-run a job, a user needs the same permissions that would be needed to run the job directly
@@ -1653,6 +1652,8 @@ class JobApprovalRequestView(generic.ObjectView):
                     messages.error(request, f"Approval request for {scheduled_job.name} was revoked")
                 else:
                     messages.error(request, f"Approval of {scheduled_job.name} was denied")
+
+                publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
                 publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
 
                 return redirect("extras:scheduledjob_approval_queue_list")
@@ -1675,6 +1676,8 @@ class JobApprovalRequestView(generic.ObjectView):
                 scheduled_job.approved_by_user = request.user
                 scheduled_job.approved_at = timezone.now()
                 scheduled_job.save()
+
+                publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
                 publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
 
                 messages.success(request, f"{scheduled_job.name} was approved and will now begin execution")

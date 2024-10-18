@@ -1151,16 +1151,15 @@ def run_job(self, job_class_path, *args, **kwargs):
     if job_class is None:
         raise KeyError(f"Job class not found for class path {job_class_path}")
     job = job_class()
+    job.request = self.request
+    job_result = JobResult.objects.get(id=self.request.id)
+    payload = {
+        "job_result_id": self.request.id,
+        "job_name": job.name,
+        "user_name": job_result.user.get_full_name(),
+        "job_kwargs": kwargs,
+    }
     try:
-        job_result = JobResult.objects.get(id=self.request.id)
-        payload = {
-            "job_result_id": self.request.id,
-            "job_name": job.name,
-            "user_name": job_result.user.name,
-            "job_kwargs": kwargs,
-            "job_output": None,
-            "einfo": None,
-        }
         publish_event(topic="nautobot.jobs.job.started", payload=payload)
         job.before_start(self.request.id, args, kwargs)
         result = job(*args, **kwargs)

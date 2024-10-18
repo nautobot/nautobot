@@ -68,8 +68,8 @@ The data payload associated with events of any of the above topics has the follo
 * `job_name` - The name of the job.
 * `user_name` - The name of the user account associated with the job.
 * `job_kwargs` - The job data.
-* `job_output` - The output of the completed job (or null, in the case of `nautobot.jobs.job.started`).
-* `einfo` - The stacktrace of job failure (or null, in the case of `nautobot.jobs.job.started` and job competed without a failure).
+* `job_output` - The output of the completed job (only in case of `nautobot.jobs.job.completed`).
+* `einfo` - The stacktrace of job failure (only in the case of `nautobot.jobs.job.completed` and null if job competed without a failure).
 
 ### Scheduled Job Approval Events
 
