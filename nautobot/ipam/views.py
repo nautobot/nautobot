@@ -18,8 +18,8 @@ import netaddr
 from nautobot.cloud.tables import CloudNetworkTable
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.models.querysets import count_related
+from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
-from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import generic, mixins as view_mixins
@@ -248,14 +248,14 @@ class VRFUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.VRFBulkEditForm
     serializer_class = serializers.VRFSerializer
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields="__all__",
             ),
-            ObjectsTablePanel(
+            object_detail.ObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
                 table_class=tables.RouteTargetTable,
@@ -264,7 +264,7 @@ class VRFUIViewSet(NautobotUIViewSet):
                 related_field_name="importing_vrfs",
                 add_button_route=None,
             ),
-            ObjectsTablePanel(
+            object_detail.ObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
                 weight=200,
                 table_class=tables.RouteTargetTable,
@@ -273,7 +273,7 @@ class VRFUIViewSet(NautobotUIViewSet):
                 related_field_name="exporting_vrfs",
                 add_button_route=None,
             ),
-            ObjectsTablePanel(
+            object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
                 weight=100,
                 table_class=tables.PrefixTable,
@@ -284,7 +284,7 @@ class VRFUIViewSet(NautobotUIViewSet):
                 exclude_columns=["namespace"],
                 add_button_route=None,
             ),
-            ObjectsTablePanel(
+            object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
                 weight=200,
                 table_class=tables.VRFDeviceAssignmentTable,
@@ -318,14 +318,14 @@ class RouteTargetUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.RouteTargetBulkEditForm
     serializer_class = serializers.RouteTargetSerializer
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields="__all__",
             ),
-            ObjectsTablePanel(
+            object_detail.ObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
                 table_class=tables.VRFTable,
@@ -333,7 +333,7 @@ class RouteTargetUIViewSet(NautobotUIViewSet):
                 table_title="Importing VRFs",
                 related_field_name="import_targets",
             ),
-            ObjectsTablePanel(
+            object_detail.ObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
                 weight=200,
                 table_class=tables.VRFTable,
