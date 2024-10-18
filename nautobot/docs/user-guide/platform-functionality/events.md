@@ -58,8 +58,9 @@ The data payload associated with events of any of the above topics has the follo
 * `differences` - a dictionary with keys `added` and `removed`, each of which is a dictionary of record attributes that changed in the event, providing a convenient alternative to manually comparing the prechange and postchange data.
 
 ### Job Events
-* `nautobot.jobs.job.completed` A job gets completed.
-* `nautobot.jobs.job.started` A job started.
+
+* `nautobot.jobs.job.started` - A job has started.
+* `nautobot.jobs.job.completed` - A job has completed (successfully or not).
 
 The data payload associated with events of any of the above topics has the following keys:
 
@@ -71,8 +72,9 @@ The data payload associated with events of any of the above topics has the follo
 * `einfo` - The stacktrace of job failure (or null, in the case of `nautobot.jobs.job.started` and job competed without a failure).
 
 ### Scheduled Job Approval Events
-* `nautobot.jobs.approval.approved` A scheduled job that requires approval gets approved.
-* `nautobot.jobs.approval.denied` A scheduled job that requires approval gets denied.
+
+* `nautobot.jobs.approval.approved` - A scheduled job that requires approval has been approved.
+* `nautobot.jobs.approval.denied` - A scheduled job that requires approval has been denied.
 
 The data payload associated with events of any of the above topics has the following keys:
 
