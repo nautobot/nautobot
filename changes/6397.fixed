@@ -1,1 +1,1 @@
-Fixed false warning about Job Queue in JobRunView.
+Fixed incorrect handling of JobQueue objects in `get_worker_count()`.
