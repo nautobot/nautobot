@@ -1,4 +1,2 @@
-Fixed paginator widget to display the current selected `per_page` value even if it's not one of the `PER_PAGE_DEFAULTS` options.
-Added pagination of related-object tables to many IPAM views to avoid errors when very large quantities of related records are present.
 Fixed overly broad scope of the TreeModel `invalidate_max_depth_cache` signal so that it now correctly only fires for TreeModel instances rather than all models.
 Improved performance of DynamicGroup membership updates/recalculations when dealing with large numbers of member objects.
