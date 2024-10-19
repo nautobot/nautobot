@@ -22,7 +22,7 @@ In the above example, the physical device `ams01-edge01` has been "sliced" into 
 
 ## Example Use Cases
 
-The VDC concept goes by several different names, depending on the vendor, and like other Nautobot features, there are nuances to a specific implication, but Nautobot atempts to cover the most broad set of applicable use cases.
+The VDC concept goes by several different names, depending on the vendor, and like other Nautobot features, there are nuances to a specific implementation, but Nautobot attempts to cover the most broad set of applicable use cases.
 
 Some vendor examples of VDCs include:
 
