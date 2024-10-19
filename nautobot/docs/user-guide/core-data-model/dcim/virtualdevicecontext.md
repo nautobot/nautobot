@@ -10,16 +10,6 @@ A Virtual Device Context (VDC) refers to a logical partition of a physical netwo
 
 In the above example, the physical device `ams01-edge01` has been "sliced" into two customer VDCs (`cust1-vdc` and `cust2-vdc`). Each of the VDCs contain much of the same data as regular devices, like roles, statuses, tenant relationships, primary IP addresses, etc. As for interfaces, the host device's interfaces can be assigned to one or more VDCs that live on the device. From the example, devices may also retain interfaces that are not assigned to any VDC.
 
-## Key Features
-
-- **Isolation**: Each VDC operates as a separate entity with its own configurations, providing isolation between different contexts.
-
-- **Shared Resources**: VDCs share the physical device's resources, such as processing power and memory, and namely interfaces.
-
-- **Multi-Tenant Support**: Ideal for service providers and enterprises, VDCs help create isolated environments for multiple clients on the same hardware.
-
-- **Flexibility**: VDCs allow for flexible network management, with administrators able to define roles and assign resources based on specific requirements.
-
 ## Example Use Cases
 
 The VDC concept goes by several different names, depending on the vendor, and like other Nautobot features, there are nuances to a specific implementation, but Nautobot attempts to cover the most broad set of applicable use cases.
@@ -42,8 +32,8 @@ Some vendor examples of VDCs include:
 | `identifier`  | PositiveSmallIntegerField (optional)              | Unique identifier for the VDC from the platform.     |
 | `status`      | StatusField                                       | Operational status of the VDC.                       |
 | `role`        | RoleField (optional)                              | Role assigned to the VDC.                            |
-| `primary_ip4` | OneToOneField to `ipam.IPAddress` (optional)       | Primary IPv4 address of the VDC.                     |
-| `primary_ip6` | OneToOneField to `ipam.IPAddress` (optional)       | Primary IPv6 address of the VDC.                     |
+| `primary_ip4` | ForeignKey to `ipam.IPAddress` (optional)         | Primary IPv4 address of the VDC.                     |
+| `primary_ip6` | ForeignKey to `ipam.IPAddress` (optional)         | Primary IPv6 address of the VDC.                     |
 | `tenant`      | ForeignKey to `tenancy.Tenant` (optional)         | Tenant associated with the VDC.                      |
 | `interfaces`  | ManyToManyField through `dcim.InterfaceVDCAssignment` (optional) | Interfaces assigned to the VDC. |
 | `description` | CharField (optional)                              | Description of the VDC.                              |
