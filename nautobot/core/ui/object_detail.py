@@ -1,5 +1,6 @@
 """Classes and utilities for defining an object detail view through a NautobotUIViewSet."""
 
+from collections import namedtuple
 import contextlib
 from dataclasses import dataclass
 import logging
@@ -408,6 +409,7 @@ class ObjectsTablePanel(Panel):
         exclude_columns=None,
         add_button_route="default",
         add_permissions=None,
+        hide_hierarchy_ui=False,
         related_field_name=None,
         enable_bulk_actions=False,
         body_wrapper_template_path="components/panel/body_wrapper_table.html",
@@ -439,6 +441,7 @@ class ObjectsTablePanel(Panel):
                 which uses the default table's model `add` route.
             add_permissions (list, optional): A list of permissions required for the "add" button to be displayed. If not provided,
                 permissions are determined by default based on the model.
+            hide_hierarchy_ui (bool, optional): Don't display hierarchy-based indentation of tree models in this table
             related_field_name (str, optional): The name of the field used to filter related objects (typically for query string parameters).
             enable_bulk_actions (bool, optional): Show the pk toggle columns on the table if the user has the appropriate permissions.
         """
@@ -460,6 +463,7 @@ class ObjectsTablePanel(Panel):
         self.exclude_columns = exclude_columns
         self.add_button_route = add_button_route
         self.add_permissions = add_permissions
+        self.hide_hierarchy_ui = hide_hierarchy_ui
         self.related_field_name = related_field_name
         self.enable_bulk_actions = enable_bulk_actions
 
@@ -524,7 +528,9 @@ class ObjectsTablePanel(Panel):
             body_content_table_queryset = body_content_table_queryset.prefetch_related(*self.prefetch_related_fields)
         if self.order_by_fields:
             body_content_table_queryset = body_content_table_queryset.order_by(*self.order_by_fields)
-        body_content_table = body_content_table_class(body_content_table_queryset)
+        body_content_table = body_content_table_class(
+            body_content_table_queryset, hide_hierarchy_ui=self.hide_hierarchy_ui
+        )
 
         if self.exclude_columns or self.include_columns:
             for column in body_content_table.columns:
@@ -806,7 +812,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
     def render_label(self, context):
         """Default to rendering the provided object's `verbose_name` if no more specific `label` was defined."""
         if self.label is None:
-            return bettertitle(context["object"]._meta.verbose_name)
+            return bettertitle(get_obj_from_context(context)._meta.verbose_name)
         return super().render_label(context)
 
     def render_value(self, key, value, context):
@@ -849,6 +855,11 @@ class ObjectFieldsPanel(KeyValueTablePanel):
                     # Handled elsewhere in the detail view
                     continue
                 if field.is_relation and field.one_to_many:
+                    # Reverse relations should be handled by ObjectsTablePanel
+                    continue
+                if field.is_relation and field.many_to_many and field.related_model != ContentType:
+                    # Many-to-many relations should be handled by ObjectsTablePanel, *except* for ContentTypes, where
+                    # we keep the historic pattern of just rendering them as a list since there's no need for a table
                     continue
                 fields.append(field.name)
             # TODO: apply a default ordering "smarter" than declaration order? Alphabetical? By field type?
@@ -939,6 +950,81 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
                     )
 
         return result
+
+
+class BaseTextPanel(Panel):
+    """A panel that renders a single value as text, Markdown, JSON, or YAML."""
+
+    RENDER_OPTIONS = namedtuple("RENDER_OPTIONS", ["plaintext", "json", "yaml", "markdown"])
+
+    def __init__(
+        self,
+        *,
+        render_as=RENDER_OPTIONS.markdown,
+        body_content_template_path="components/panel/body_content_text.html",
+        render_placeholder=True,
+        **kwargs,
+    ):
+        """
+
+        Args:
+            render_as(str): One of BaseTextPanel.RENDER_OPTIONS to define rendering function.
+            render_placeholder(bool): Whether to render placeholder text if given value is "falsy".
+            body_content_template_path(str): The path of the template to use for the body content. Can be overridden for custom use cases.
+            kwargs: Additional keyword arguments passed to Panel.__init__.
+        """
+        self.render_as = render_as
+        self.render_placeholder = render_placeholder
+        super().__init__(body_content_template_path=body_content_template_path, **kwargs)
+
+    def render_body_content(self, context):
+        text_content = self.get_text(context)
+        render_as = self.render_as
+
+        if not text_content and self.render_placeholder:
+            return HTML_NONE
+
+        if self.body_content_template_path:
+            return get_template(self.body_content_template_path).render(
+                {
+                    **context,
+                    "render_as": render_as,
+                    "text_content": text_content,
+                    "render_options": self.RENDER_OPTIONS,
+                }
+            )
+        return text_content
+
+    def get_text(self, context):
+        raise NotImplementedError
+
+
+class ObjectTextPanel(BaseTextPanel):
+    """
+    Panel that renders text, Markdown, JSON or YAML from the given field on the given object in the context.
+    """
+
+    def __init__(self, *, object_field=None, **kwargs):
+        self.object_field = object_field
+
+        super().__init__(**kwargs)
+
+    def get_text(self, context):
+        obj = get_obj_from_context(context)
+        if not obj:
+            return ""
+        return getattr(obj, self.object_field, "")
+
+
+class TextPanel(BaseTextPanel):
+    """Panel that renders text, Markdown, JSON or YAML from the given value in the context."""
+
+    def __init__(self, *, context_field="text", **kwargs):
+        self.context_field = context_field
+        super().__init__(**kwargs)
+
+    def get_text(self, context):
+        return context.get(self.context_field, "")
 
 
 class StatsPanel(Panel):
@@ -1048,9 +1134,10 @@ class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
 
     def should_render(self, context):
         """Render only if any custom fields are present."""
-        if not hasattr(context["object"], "get_custom_field_groupings"):
+        obj = get_obj_from_context(context)
+        if not hasattr(obj, "get_custom_field_groupings"):
             return False
-        self.custom_field_data = context["object"].get_custom_field_groupings(advanced_ui=self.advanced_ui)
+        self.custom_field_data = obj.get_custom_field_groupings(advanced_ui=self.advanced_ui)
         return bool(self.custom_field_data)
 
     def get_data(self, context):
@@ -1123,9 +1210,10 @@ class _ObjectComputedFieldsPanel(GroupedKeyValueTablePanel):
 
     def should_render(self, context):
         """Render only if any relevant computed fields are defined."""
-        if not hasattr(context["object"], "get_computed_fields_grouping"):
+        obj = get_obj_from_context(context)
+        if not hasattr(obj, "get_computed_fields_grouping"):
             return False
-        self.computed_fields_data = context["object"].get_computed_fields_grouping(advanced_ui=self.advanced_ui)
+        self.computed_fields_data = obj.get_computed_fields_grouping(advanced_ui=self.advanced_ui)
         return bool(self.computed_fields_data)
 
     def get_data(self, context):
@@ -1162,9 +1250,10 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
 
     def should_render(self, context):
         """Render only if any relevant relationships are defined."""
-        if not hasattr(context["object"], "get_relationships_with_related_objects"):
+        obj = get_obj_from_context(context)
+        if not hasattr(obj, "get_relationships_with_related_objects"):
             return False
-        self.relationships_data = context["object"].get_relationships_with_related_objects(
+        self.relationships_data = obj.get_relationships_with_related_objects(
             advanced_ui=self.advanced_ui, include_hidden=False
         )
         return bool(
@@ -1196,7 +1285,7 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
     def queryset_list_url_filter(self, key, value, context):
         """Filter the list URL based on the given relationship key and side."""
         relationship, side = key
-        obj = context["object"]
+        obj = get_obj_from_context(context)
         return f"cr_{relationship.key}__{side}={obj.pk}"
 
 
@@ -1222,17 +1311,18 @@ class _ObjectTagsPanel(Panel):
         )
 
     def should_render(self, context):
-        return hasattr(context["object"], "tags")
+        return hasattr(get_obj_from_context(context), "tags")
 
     def get_extra_context(self, context):
+        obj = get_obj_from_context(context)
         return {
-            "tags": context["object"].tags.all(),
-            "list_url_name": validated_viewname(context["object"], "list"),
+            "tags": obj.tags.all(),
+            "list_url_name": validated_viewname(obj, "list"),
         }
 
 
-class _ObjectCommentPanel(ObjectFieldsPanel):
-    """Panel displaying an object's comments as a space-separated panel."""
+class _ObjectCommentPanel(ObjectTextPanel):
+    """Panel displaying an object's comments as a Markdown formatted panel."""
 
     def __init__(
         self,
@@ -1240,23 +1330,19 @@ class _ObjectCommentPanel(ObjectFieldsPanel):
         label="Comments",
         section=SectionChoices.LEFT_HALF,
         weight=Panel.WEIGHT_COMMENTS_PANEL,
-        value_transforms=None,
+        object_field="comments",
         **kwargs,
     ):
-        """Instantiate an `_ObjectCommentPanel`."""
-        fields = ["comments"]
-        value_transforms = value_transforms or {"comments": [render_markdown, placeholder]}
         super().__init__(
             weight=weight,
             label=label,
-            fields=fields,
             section=section,
-            value_transforms=value_transforms,
+            object_field=object_field,
             **kwargs,
         )
 
     def should_render(self, context):
-        return hasattr(context["object"], "comments")
+        return hasattr(get_obj_from_context(context), "comments")
 
 
 class _ObjectDetailMainTab(Tab):
@@ -1283,7 +1369,7 @@ class _ObjectDetailMainTab(Tab):
 
     def render_label(self, context):
         """Use the `verbose_name` of the given instance's Model as the tab label by default."""
-        return bettertitle(context["object"]._meta.verbose_name)
+        return bettertitle(get_obj_from_context(context)._meta.verbose_name)
 
 
 class _ObjectDataProvenancePanel(ObjectFieldsPanel):
@@ -1387,13 +1473,15 @@ class _ObjectDetailContactsTab(Tab):
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
 
     def should_render(self, context):
-        return getattr(context["object"], "is_contact_associable_model", False)
+        return getattr(get_obj_from_context(context), "is_contact_associable_model", False)
 
     def render_label(self, context):
         return format_html(
             "{} {}",
             self.label,
-            render_to_string("utilities/templatetags/badge.html", badge(context["object"].associated_contacts.count())),
+            render_to_string(
+                "utilities/templatetags/badge.html", badge(get_obj_from_context(context).associated_contacts.count())
+            ),
         )
 
 
@@ -1422,17 +1510,20 @@ class _ObjectDetailGroupsTab(Tab):
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
 
     def should_render(self, context):
+        obj = get_obj_from_context(context)
         return (
-            getattr(context["object"], "is_dynamic_group_associable_model", False)
+            getattr(obj, "is_dynamic_group_associable_model", False)
             and context["request"].user.has_perm("extras.view_dynamicgroup")
-            and context["object"].dynamic_groups.exists()
+            and obj.dynamic_groups.exists()
         )
 
     def render_label(self, context):
         return format_html(
             "{} {}",
             self.label,
-            render_to_string("utilities/templatetags/badge.html", badge(context["object"].dynamic_groups.count())),
+            render_to_string(
+                "utilities/templatetags/badge.html", badge(get_obj_from_context(context).dynamic_groups.count())
+            ),
         )
 
 
@@ -1462,10 +1553,11 @@ class _ObjectDetailMetadataTab(Tab):
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
 
     def should_render(self, context):
+        obj = get_obj_from_context(context)
         return (
-            getattr(context["object"], "is_metadata_associable_model", False)
+            getattr(obj, "is_metadata_associable_model", False)
             and context["request"].user.has_perm("extras.view_objectmetadata")
-            and context["object"].associated_object_metadata.exists()
+            and obj.associated_object_metadata.exists()
         )
 
     def render_label(self, context):
@@ -1473,6 +1565,7 @@ class _ObjectDetailMetadataTab(Tab):
             "{} {}",
             self.label,
             render_to_string(
-                "utilities/templatetags/badge.html", badge(context["object"].associated_object_metadata.count())
+                "utilities/templatetags/badge.html",
+                badge(get_obj_from_context(context).associated_object_metadata.count()),
             ),
         )
