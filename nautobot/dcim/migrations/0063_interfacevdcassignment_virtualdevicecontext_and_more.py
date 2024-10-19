@@ -91,7 +91,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "primary_ip4",
-                    models.OneToOneField(
+                    models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
@@ -101,7 +101,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "primary_ip6",
-                    models.OneToOneField(
+                    models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
