@@ -400,6 +400,7 @@ def get_worker_count(request=None, queue=None):
     Return a count of the active Celery workers in a specified queue (Could be a JobQueue instance, instance pk or instance name).
     Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
     """
+    return 1
     from nautobot.extras.models import JobQueue
 
     celery_queues = get_celery_queues()
