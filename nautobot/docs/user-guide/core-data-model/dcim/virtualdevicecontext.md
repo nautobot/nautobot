@@ -22,7 +22,6 @@ Some vendor examples of VDCs include:
 4. Nokia Virtual Service Router
 5. F5 Virtual Clustered Multiprocessing
 
-
 ## VDC Fields Overview
 
 | Field         | Type                                              | Description                                          |
