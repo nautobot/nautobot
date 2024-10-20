@@ -1,4 +1,11 @@
-"""Example App Table Extensions."""
+"""Example App Table Extensions.
+
+TableExtensions provide a method for App developers to modify the table columns for core
+Nautobot tables.  An app developer may:
+- Add one or more new columns to a table.
+- Add one or more, new or core columns, as default visible columns.
+- Remove one or more core default columns from the default visible columns.
+"""
 
 import django_tables2 as tables
 
@@ -9,11 +16,12 @@ class CircuitTableExtension(TableExtension):
     """Example TableExtension for circuits.Circuit model.
 
     This TableExtension adds a `Provider ASN` column as a default column to the Circuit table.
+    This TableExtension also removes the `Tenant` column from the default view.
     """
 
     model = "circuits.circuit"
 
-    # Define any additional columns as {key: value} pairs.
+    # Define any additional columns as {key: value} pairs: {"name": Column}.
     table_columns = {
         # Column names must be prefixed with the app name.
         "example_app_provider_asn": tables.Column(
@@ -59,8 +67,7 @@ class DeviceTableExtension(TableExtension):
         Implementing this method is optional but is recommended to optimize
         the database queries to account for the additional columns.
         """
-        # return queryset.prefetch_related("device_type__manufacturer")    # nocommit
-        return queryset.select_related("device_type__manufacturer")  # nocommit
+        return queryset.select_related("device_type__manufacturer")
 
 
 table_extensions = [
