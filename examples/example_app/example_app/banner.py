@@ -50,7 +50,7 @@ def banner(context, *args, **kwargs) -> Optional[Banner]:
         extension_columns = [column for column in base_columns if column.startswith("example_app_")]
         if extension_columns:
             content += format_html(
-                "<div><strong>Note: Table columns have been modified by a TableExtension" ".</strong></div>"
+                "<div><strong>Note: Table columns have been modified by a TableExtension.</strong></div>"
             )
         return Banner(content=content, banner_class=BannerClassChoices.CLASS_SUCCESS)
 

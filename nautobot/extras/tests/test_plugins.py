@@ -679,7 +679,7 @@ class TableExtensionTest(TestCase):
 
         with self.subTest("error is logged"):
             mock_logger.assert_called_with(
-                "There was a conflict with table column `tenant_group`," " the custom column was ignored."
+                "There was a conflict with table column `tenant_group`, the custom column was ignored."
             )
 
     def test__add_column_to_table_base_columns(self):
@@ -736,7 +736,7 @@ class TableExtensionTest(TestCase):
             plugins._validate_table_column_name_is_prefixed_with_app_name("not_prefixed", "prefix")
             self.assertEqual(
                 context.exception,
-                "Attempted to create a custom table column `not_prefixed`" " that did not start with `prefix`",
+                "Attempted to create a custom table column `not_prefixed` that did not start with `prefix`",
             )
 
 
