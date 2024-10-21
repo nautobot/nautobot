@@ -48,9 +48,7 @@ class UtilsTestCase(TestCase):
     @mock.patch("nautobot.extras.utils.get_celery_queues")
     def test_get_worker_count(self, mock_get_celery_queues):
         mock_get_celery_queues.return_value = {"default": 12, "priority": 2, "bulk": 4, "nobody": 0}
-        JobQueue.objects.get_or_create(
-            name="default", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
-        )
+        JobQueue.objects.get_or_create(name="default", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY})
         priority_job_queue, _ = JobQueue.objects.get_or_create(
             name="priority", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
         )
