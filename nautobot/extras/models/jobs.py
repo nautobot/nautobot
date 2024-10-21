@@ -4,6 +4,7 @@ import contextlib
 from datetime import timedelta
 import logging
 import signal
+import sys
 import time
 
 from billiard.exceptions import SoftTimeLimitExceeded
@@ -836,7 +837,7 @@ class JobResult(BaseModel, CustomFieldModel):
             except ApiException as e:
                 if e.status != 404:
                     print(f"Unknown error: {e}")
-                    exit(1)
+                    sys.exit(1)
 
             if not resp:
                 print(f"Pod {name} does not exist. Creating it...")
