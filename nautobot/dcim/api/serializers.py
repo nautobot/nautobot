@@ -95,6 +95,13 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualChassis,
     VirtualDeviceContext,
+    Zone,
+    ZoneDeviceAssignment,
+    ZoneInterfaceAssignment,
+    ZonePrefixAssignment,
+    ZoneType,
+    ZoneVLANAssignment,
+    ZoneVRFAssignment
 )
 from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
@@ -1066,7 +1073,7 @@ class ModuleTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         fields = "__all__"
 
 
-class VirtualDeviceContextSerializer(NautobotModelSerializer):
+class VirtualDeviceContextSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = VirtualDeviceContext
         fields = "__all__"
@@ -1075,4 +1082,50 @@ class VirtualDeviceContextSerializer(NautobotModelSerializer):
 class InterfaceVDCAssignmentSerializer(ValidatedModelSerializer):
     class Meta:
         model = InterfaceVDCAssignment
+        fields = "__all__"
+
+
+#
+# Zones
+#
+
+class ZoneSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    class Meta:
+        model = Zone
+        fields = "__all__"
+
+
+class ZoneTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    class Meta:
+        model = ZoneType
+        fields = "__all__"
+
+
+class ZonePrefixAssignmentSerializer(NautobotModelSerializer):
+    class Meta:
+        model = ZonePrefixAssignment
+        fields = "__all__"
+
+
+class ZoneDeviceAssignmentSerializer(NautobotModelSerializer):
+    class Meta:
+        model = ZoneDeviceAssignment
+        fields = "__all__"
+
+
+class ZoneInterfaceAssignmentSerializer(NautobotModelSerializer):
+    class Meta:
+        model = ZoneInterfaceAssignment
+        fields = "__all__"
+
+
+class ZoneVLANAssignmentSerializer(NautobotModelSerializer):
+    class Meta:
+        model = ZoneVLANAssignment
+        fields = "__all__"
+
+
+class ZoneVRFAssignmentSerializer(NautobotModelSerializer):
+    class Meta:
+        model = ZoneVRFAssignment
         fields = "__all__"

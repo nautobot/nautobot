@@ -44,6 +44,15 @@ from nautobot.dcim.filters.mixins import (
     ModularDeviceComponentTemplateModelFilterSetMixin,
     PathEndpointModelFilterSetMixin,
 )
+from nautobot.dcim.filters.zones import (
+    ZoneFilterSet,
+    ZoneTypeFilterSet,
+    ZoneDeviceAssignmentFilterSet,
+    ZoneInterfaceAssignmentFilterSet,
+    ZonePrefixAssignmentFilterSet,
+    ZoneVLANAssignmentFilterSet,
+    ZoneVRFAssignmentFilterSet
+)
 from nautobot.dcim.models import (
     Cable,
     ConsolePort,
@@ -155,6 +164,13 @@ __all__ = (
     "SoftwareImageFileFilterSet",
     "SoftwareVersionFilterSet",
     "VirtualChassisFilterSet",
+    "ZoneFilterSet",
+    "ZoneTypeFilterSet",
+    "ZoneDeviceAssignmentFilterSet",
+    "ZoneInterfaceAssignmentFilterSet",
+    "ZonePrefixAssignmentFilterSet",
+    "ZoneVLANAssignmentFilterSet",
+    "ZoneVRFAssignmentFilterSe",
 )
 
 
