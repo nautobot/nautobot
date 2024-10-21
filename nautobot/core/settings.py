@@ -430,6 +430,7 @@ CSRF_FAILURE_VIEW = "nautobot.core.views.csrf_failure"
 DATE_FORMAT = os.getenv("NAUTOBOT_DATE_FORMAT", "N j, Y")
 DATETIME_FORMAT = os.getenv("NAUTOBOT_DATETIME_FORMAT", "N j, Y g:i a")
 DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "False"))
+NO_INDEX_ROBOTS = is_truthy(os.getenv("NAUTOBOT_NO_INDEX_ROBOTS", "True"))
 INTERNAL_IPS = ["127.0.0.1", "::1"]
 FORCE_SCRIPT_NAME = None
 

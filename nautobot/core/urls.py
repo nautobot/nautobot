@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.http import HttpResponse
 from django.urls import include, path
 from django.views.generic import TemplateView
 from django.views.static import serve
@@ -73,6 +74,15 @@ urlpatterns = [
         "template.css", TemplateView.as_view(template_name="template.css", content_type="text/css"), name="template_css"
     ),
 ]
+
+if settings.NO_INDEX_ROBOTS:
+    urlpatterns += [
+        path(
+            "robots.txt",
+            lambda x: HttpResponse("User-Agent: *\nDisallow: /", content_type="text/plain"),
+            name="robots_txt",
+        )
+    ]
 
 
 if settings.DEBUG:
