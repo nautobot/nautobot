@@ -828,7 +828,7 @@ class JobResult(BaseModel, CustomFieldModel):
             config.load_kube_config(config_file_path)
             core_v1 = core_v1_api.CoreV1Api()
             api_instance = core_v1
-            name = 'nautobot-pod-v1'
+            name = 'nautobot-pod-demo'
             resp = None
             try:
                 resp = api_instance.read_namespaced_pod(name=name,
@@ -879,7 +879,7 @@ class JobResult(BaseModel, CustomFieldModel):
                         stderr=True, stdin=True,
                         stdout=True, tty=False,
                         _preload_content=False)
-            resp.write_stdin("nautobot-server createsuperuser\n")
+            resp.write_stdin("nautobot-server runjob --local -u admin nautobot.core.jobs.ExportObjectList\n")
             sresult = resp.read_stdout()
             serror = resp.read_stderr()
             print(f"Job Result is: {sresult}")
