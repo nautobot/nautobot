@@ -1,8 +1,9 @@
 from django.shortcuts import HttpResponse, render
+from django.utils.html import format_html
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 
-from nautobot.apps import views
+from nautobot.apps import ui, views
 from nautobot.circuits.models import Circuit
 from nautobot.dcim.models import Device
 
@@ -77,6 +78,63 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
     queryset = ExampleModel.objects.all()
     serializer_class = serializers.ExampleModelSerializer
     table_class = tables.ExampleModelTable
+    object_detail_content = ui.ObjectDetailContent(
+        panels=(
+            ui.ObjectFieldsPanel(
+                section=ui.SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            # A table of non-object data with staticly defined columns
+            ui.DataTablePanel(
+                section=ui.SectionChoices.RIGHT_HALF,
+                label="Custom Table 1",
+                weight=100,
+                context_data_key="data_1",
+                columns=["col_1", "col_2", "col_3"],
+                column_headers=["Column 1", "Column 2", "Column 3"],
+            ),
+            # A table of non-object data with dynamic (render-time) columns
+            ui.DataTablePanel(
+                section=ui.SectionChoices.FULL_WIDTH,
+                label="Custom Table 2",
+                weight=100,
+                context_data_key="data_2",
+                context_columns_key="columns_2",
+                context_column_headers_key="column_headers_2",
+            ),
+        ),
+    )
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            # Add non-object data for object detail view custom tables
+            context["data_1"] = [
+                {"col_1": "value_1a", "col_2": "value_2", "col_3": "value_3", "col_4": "not shown"},
+                {"col_1": "value_1b", "col_2": None},
+            ]
+            context["data_2"] = [
+                {
+                    "a": format_html('<a href="https://en.wikipedia.org/wiki/{val}">{val}</a>', val=1),
+                    "e": format_html('<a href="https://en.wikipedia.org/wiki/{val}">{val}</a>', val=5),
+                    "i": format_html('<a href="https://en.wikipedia.org/wiki/{val}">{val}</a>', val=9),
+                    "o": format_html('<a href="https://en.wikipedia.org/wiki/{val}">{val}</a>', val=15),
+                    "u": format_html('<a href="https://en.wikipedia.org/wiki/{val}">{val}</a>', val=21),
+                },
+                {"a": 97, "b": 98, "c": 99, "e": 101, "i": 105, "o": 111, "u": 17},
+                {"a": "0x61", "b": "0x62", "c": "0x63", "e": "0x65", "i": "0x69", "o": "0x6f", "u": "0x75"},
+                {
+                    "u": 21 + instance.number,
+                    "o": 15 + instance.number,
+                    "i": 9 + instance.number,
+                    "e": 5 + instance.number,
+                    "a": 1 + instance.number,
+                },
+            ]
+            context["columns_2"] = ["a", "e", "i", "o", "u"]
+            context["column_headers_2"] = ["A", "E", "I", "O", "U"]
+        return context
 
     @action(detail=False, name="All Names", methods=["get"], url_path="all-names", url_name="all_names")
     def all_names(self, request):

@@ -391,8 +391,79 @@ class Panel(Component):
         return ""
 
 
+class DataTablePanel(Panel):
+    """
+    A panel that renders a table generated directly from a list of dicts, without using a django_tables2 Table class.
+    """
+
+    def __init__(
+        self,
+        *,
+        context_data_key,
+        columns=None,
+        context_columns_key=None,
+        column_headers=None,
+        context_column_headers_key=None,
+        body_wrapper_template_path="components/panel/body_wrapper_table.html",
+        body_content_template_path="components/panel/body_content_data_table.html",
+        **kwargs,
+    ):
+        """
+        Instantiate a DataDictTablePanel.
+
+        Args:
+            context_data_key (str): The key in the render context that stores the data used to populate the table.
+            columns (list, optional): Ordered list of data keys used to order the columns of the rendered table.
+                Mutually exclusive with `context_columns_key`.
+                If neither are specified, the keys of the first dict in the data will be used.
+            context_columns_key (str, optional): The key in the render context that stores the columns list, if any.
+                Mutually exclusive with `columns`.
+                If neither are specified, the keys of the first dict in the data will be used.
+            column_headers (list, optional): List of column header labels, in the same order as `columns` data.
+                Mutually exclusive with `context_column_headers_key`.
+            context_column_headers_key (str, optional): The key in the render context that stores the column headers.
+                Mutually exclusive with `column_headers`.
+        """
+        self.context_data_key = context_data_key
+        if columns and context_columns_key:
+            raise ValueError("You can only specify one of `columns` or `context_columns_key`.")
+        self.columns = columns
+        self.context_columns_key = context_columns_key
+        if column_headers and context_column_headers_key:
+            raise ValueError("You can only specify one of `column_headers` or `context_column_headers_key`.")
+        self.column_headers = column_headers
+        self.context_column_headers_key = context_column_headers_key
+
+        super().__init__(
+            body_wrapper_template_path=body_wrapper_template_path,
+            body_content_template_path=body_content_template_path,
+            **kwargs,
+        )
+
+    def get_columns(self, context):
+        if self.columns:
+            return self.columns
+        if self.context_columns_key:
+            return context.get(self.context_columns_key)
+        return context.get(self.context_data_key)[0].keys()
+
+    def get_column_headers(self, context):
+        if self.column_headers:
+            return self.column_headers
+        if self.context_column_headers_key:
+            return context.get(self.context_column_headers_key)
+        return []
+
+    def get_extra_context(self, context):
+        return {
+            "data": context.get(self.context_data_key),
+            "columns": self.get_columns(context),
+            "column_headers": self.get_column_headers(context),
+        }
+
+
 class ObjectsTablePanel(Panel):
-    """A panel that renders a table of objects (typically related objects, rather than the "main" object of a view)."""
+    """A panel that renders a Table of objects (typically related objects, rather than the "main" object of a view)."""
 
     def __init__(
         self,
@@ -413,7 +484,7 @@ class ObjectsTablePanel(Panel):
         related_field_name=None,
         enable_bulk_actions=False,
         body_wrapper_template_path="components/panel/body_wrapper_table.html",
-        body_content_template_path="components/panel/body_content_table.html",
+        body_content_template_path="components/panel/body_content_objects_table.html",
         header_extra_content_template_path="components/panel/header_extra_content_table.html",
         footer_content_template_path="components/panel/footer_content_table.html",
         **kwargs,
@@ -423,11 +494,13 @@ class ObjectsTablePanel(Panel):
         Args:
             table_class (obj): The table class object used for render the table e.g. CircuitTable, DeviceTable.
             table_filter (str, optional): The name of the filter to filter the queryset to initialize the table class.
-                Cannot be used together with `table_attribute`
-            table_attribute (str, optional): The attribute of the detail view instance that contains the queryset to initialize the table class. e.g. `dynamic_groups`
-                Cannot be used together with `table_filter`
-            select_related_fields (list, optional): list of fields to pass to table queryset's select_related method.
-            prefetch_related_fields (list, optional): list of fields to pass to table queryset's prefetch_related method.
+                Mutually exclusive with `table_attribute`.
+            table_attribute (str, optional): The attribute of the detail view instance that contains the queryset to
+                initialize the table class. e.g. `dynamic_groups`.
+                Mutually exclusive with `table_filter`.
+            select_related_fields (list, optional): list of fields to pass to table queryset's `select_related` method.
+            prefetch_related_fields (list, optional): list of fields to pass to table queryset's `prefetch_related`
+                method.
             order_by_fields (list, optional): list of fields to order the table queryset by.
             max_display_count (int, optional):  Maximum number of items to display in the table.
                 If None, defaults to the `get_paginate_count()`(which is user's preference or a global setting).
@@ -439,11 +512,13 @@ class ObjectsTablePanel(Panel):
                 Cannot be used together with `include_columns`.
             add_button_route (str, optional): The route used to generate the "add" button URL. Defaults to "default",
                 which uses the default table's model `add` route.
-            add_permissions (list, optional): A list of permissions required for the "add" button to be displayed. If not provided,
-                permissions are determined by default based on the model.
+            add_permissions (list, optional): A list of permissions required for the "add" button to be displayed.
+                If not provided, permissions are determined by default based on the model.
             hide_hierarchy_ui (bool, optional): Don't display hierarchy-based indentation of tree models in this table
-            related_field_name (str, optional): The name of the field used to filter related objects (typically for query string parameters).
-            enable_bulk_actions (bool, optional): Show the pk toggle columns on the table if the user has the appropriate permissions.
+            related_field_name (str, optional): The name of the field used to filter related objects (typically
+                for query string parameters).
+            enable_bulk_actions (bool, optional): Show the pk toggle columns on the table if the user has the
+                appropriate permissions.
         """
         self.table_class = table_class
         if table_filter and table_attribute:
