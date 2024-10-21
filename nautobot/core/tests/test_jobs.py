@@ -558,8 +558,10 @@ class LogsCleanupTestCase(TransactionTestCase):
         started_logs["job_output"] = {
             "extras.JobResult": job_results_to_be_deleted_count,
             "extras.JobLogEntry": job_log_entry_to_be_deleted_count,
-            "extras.ObjectMetadata": objectmetadata_to_be_deleted_count,
         }
+        if objectmetadata_to_be_deleted_count > 0:
+            started_logs["job_output"]["extras.ObjectMetadata"] = objectmetadata_to_be_deleted_count
+
         self.assertEqual(
             cm.output[1],
             f"INFO:nautobot.events.nautobot.jobs.job.completed:{json.dumps(started_logs, indent=4)}",
