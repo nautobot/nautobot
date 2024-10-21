@@ -1,8 +1,8 @@
 """Classes and utilities for defining an object detail view through a NautobotUIViewSet."""
 
-from collections import namedtuple
 import contextlib
 from dataclasses import dataclass
+from enum import Enum
 import logging
 
 from django.contrib.contenttypes.models import ContentType
@@ -955,12 +955,16 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
 class BaseTextPanel(Panel):
     """A panel that renders a single value as text, Markdown, JSON, or YAML."""
 
-    RENDER_OPTIONS = namedtuple("RENDER_OPTIONS", ["plaintext", "json", "yaml", "markdown"])
+    class RenderOptions(Enum):
+        PLAINTEXT = "plaintext"
+        JSON = "json"
+        YAML = "yaml"
+        MARKDOWN = "markdown"
 
     def __init__(
         self,
         *,
-        render_as=RENDER_OPTIONS.markdown,
+        render_as=RenderOptions.MARKDOWN,
         body_content_template_path="components/panel/body_content_text.html",
         render_placeholder=True,
         **kwargs,
@@ -968,7 +972,7 @@ class BaseTextPanel(Panel):
         """
 
         Args:
-            render_as(str): One of BaseTextPanel.RENDER_OPTIONS to define rendering function.
+            render_as(RenderOptions): One of BaseTextPanel.RenderOptions to define rendering function.
             render_placeholder(bool): Whether to render placeholder text if given value is "falsy".
             body_content_template_path(str): The path of the template to use for the body content. Can be overridden for custom use cases.
             kwargs: Additional keyword arguments passed to Panel.__init__.
@@ -979,7 +983,6 @@ class BaseTextPanel(Panel):
 
     def render_body_content(self, context):
         text_content = self.get_text(context)
-        render_as = self.render_as
 
         if not text_content and self.render_placeholder:
             return HTML_NONE
@@ -988,9 +991,8 @@ class BaseTextPanel(Panel):
             return get_template(self.body_content_template_path).render(
                 {
                     **context,
-                    "render_as": render_as,
+                    "render_as": self.render_as.value,
                     "text_content": text_content,
-                    "render_options": self.RENDER_OPTIONS,
                 }
             )
         return text_content
