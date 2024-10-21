@@ -18,7 +18,7 @@ There are four ways that `TableExtension` can be used to modify a table.
 * Optimizations can be applied to the view queryset, such as `.prefetch_selected`, `.select_related`, `defer`, and `.only`.
 
 !!! tip
-    While optimizations are optional, they are recommended when your custom columns are traversing foreign key relationships beyond those of the core tables.
+    While queryset optimizations are optional, they are recommended whenever your custom columns are traversing foreign key relationships beyond those of the core tables.
 
 ```python
 """table_extensions.py."""
