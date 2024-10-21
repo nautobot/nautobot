@@ -468,7 +468,8 @@ class ObjectsTablePanel(Panel):
     def __init__(
         self,
         *,
-        table_class,
+        context_table_key=None,
+        table_class=None,
         table_filter=None,
         table_attribute=None,
         select_related_fields=None,
@@ -492,7 +493,10 @@ class ObjectsTablePanel(Panel):
         """Instantiate an ObjectsTable panel.
 
         Args:
-            table_class (obj): The table class object used for render the table e.g. CircuitTable, DeviceTable.
+            context_table_key (str): The key in the render context that will contain an already-populated-and-configured
+                Table (`BaseTable`) instance. Mutually exclusive with `table_class`, `table_filter`, `table_attribute`.
+            table_class (obj): The table class that will be instantiated and rendered e.g. CircuitTable, DeviceTable.
+                Mutually exclusive with `context_table_key`.
             table_filter (str, optional): The name of the filter to filter the queryset to initialize the table class.
                 Mutually exclusive with `table_attribute`.
             table_attribute (str, optional): The attribute of the detail view instance that contains the queryset to
@@ -520,10 +524,27 @@ class ObjectsTablePanel(Panel):
             enable_bulk_actions (bool, optional): Show the pk toggle columns on the table if the user has the
                 appropriate permissions.
         """
+        if context_table_key and any(
+            [
+                table_class,
+                table_filter,
+                table_attribute,
+                select_related_fields,
+                prefetch_related_fields,
+                order_by_fields,
+                hide_hierarchy_ui,
+            ]
+        ):
+            raise ValueError(
+                "context_table_key cannot be combined with any of the args that are used to dynamically construct the "
+                "table (table_class, table_filter, table_attribute, select_related_fields, prefetch_related_fields, "
+                "order_by_fields, hide_hierarchy_ui)."
+            )
+        self.context_table_key = context_table_key
         self.table_class = table_class
         if table_filter and table_attribute:
             raise ValueError("You can only specify either `table_filter` or `table_attribute`")
-        if not table_filter and not table_attribute:
+        if table_class and not (table_filter or table_attribute):
             raise ValueError("You must specify either `table_filter` or `table_attribute`")
         self.table_filter = table_filter
         self.table_attribute = table_attribute
@@ -563,8 +584,8 @@ class ObjectsTablePanel(Panel):
         return_url = context.get("return_url", obj.get_absolute_url())
 
         if self.add_button_route == "default":
-            body_content_table = self.table_class
-            body_content_table_model = body_content_table.Meta.model
+            body_content_table_class = self.table_class or context[self.context_table_key].__class__
+            body_content_table_model = body_content_table_class.Meta.model
             permission_name = get_permission_for_model(body_content_table_model, "add")
             if request.user.has_perms([permission_name]):
                 try:
@@ -587,25 +608,31 @@ class ObjectsTablePanel(Panel):
         for listing and adding objects. It also handles field inclusion/exclusion and
         displays the appropriate table title if provided.
         """
-        body_content_table_class = self.table_class
-        body_content_table_model = body_content_table_class.Meta.model
         request = context["request"]
-        instance = get_obj_from_context(context)
-
-        if self.table_attribute:
-            body_content_table_queryset = getattr(instance, self.table_attribute)
+        if self.context_table_key:
+            body_content_table = context.get(self.context_table_key)
         else:
-            body_content_table_queryset = body_content_table_model.objects.filter(**{self.table_filter: instance})
-        body_content_table_queryset = body_content_table_queryset.restrict(request.user, "view")
-        if self.select_related_fields:
-            body_content_table_queryset = body_content_table_queryset.select_related(*self.select_related_fields)
-        if self.prefetch_related_fields:
-            body_content_table_queryset = body_content_table_queryset.prefetch_related(*self.prefetch_related_fields)
-        if self.order_by_fields:
-            body_content_table_queryset = body_content_table_queryset.order_by(*self.order_by_fields)
-        body_content_table = body_content_table_class(
-            body_content_table_queryset, hide_hierarchy_ui=self.hide_hierarchy_ui
-        )
+            body_content_table_class = self.table_class
+            body_content_table_model = body_content_table_class.Meta.model
+            instance = get_obj_from_context(context)
+
+            if self.table_attribute:
+                body_content_table_queryset = getattr(instance, self.table_attribute)
+            else:
+                body_content_table_queryset = body_content_table_model.objects.filter(**{self.table_filter: instance})
+
+            body_content_table_queryset = body_content_table_queryset.restrict(request.user, "view")
+            if self.select_related_fields:
+                body_content_table_queryset = body_content_table_queryset.select_related(*self.select_related_fields)
+            if self.prefetch_related_fields:
+                body_content_table_queryset = body_content_table_queryset.prefetch_related(
+                    *self.prefetch_related_fields
+                )
+            if self.order_by_fields:
+                body_content_table_queryset = body_content_table_queryset.order_by(*self.order_by_fields)
+            body_content_table = body_content_table_class(
+                body_content_table_queryset, hide_hierarchy_ui=self.hide_hierarchy_ui
+            )
 
         if self.exclude_columns or self.include_columns:
             for column in body_content_table.columns:

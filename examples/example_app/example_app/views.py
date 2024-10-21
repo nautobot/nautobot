@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 
 from nautobot.apps import ui, views
 from nautobot.circuits.models import Circuit
+from nautobot.circuits.tables import CircuitTable
 from nautobot.dcim.models import Device
 
 from example_app import filters, forms, tables
@@ -85,11 +86,18 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                 weight=100,
                 fields="__all__",
             ),
+            # A table of objects derived dynamically in `get_extra_context()`
+            ui.ObjectsTablePanel(
+                section=ui.SectionChoices.RIGHT_HALF,
+                weight=100,
+                context_table_key="dynamic_table",
+                max_display_count=3,
+            ),
             # A table of non-object data with staticly defined columns
             ui.DataTablePanel(
                 section=ui.SectionChoices.RIGHT_HALF,
                 label="Custom Table 1",
-                weight=100,
+                weight=200,
                 context_data_key="data_1",
                 columns=["col_1", "col_2", "col_3"],
                 column_headers=["Column 1", "Column 2", "Column 3"],
@@ -109,6 +117,8 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
+            # Add dynamic table of objects for custom panel
+            context["dynamic_table"] = CircuitTable(Circuit.objects.restrict(request.user, "view"))
             # Add non-object data for object detail view custom tables
             context["data_1"] = [
                 {"col_1": "value_1a", "col_2": "value_2", "col_3": "value_3", "col_4": "not shown"},
