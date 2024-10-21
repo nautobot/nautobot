@@ -823,7 +823,7 @@ class JobResult(BaseModel, CustomFieldModel):
 
         job_queue = JobQueue.objects.get(name=task_queue)
         # Kubernetes Job Queue logic
-        if job_queue.queue_type == JobQueueTypeChoices.TYPE_CELERY:
+        if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
             config_file_path = "./development/kind-kube-config"
             config.load_kube_config(config_file_path)
             core_v1 = core_v1_api.CoreV1Api()

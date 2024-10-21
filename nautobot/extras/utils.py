@@ -5,7 +5,6 @@ import hmac
 import logging
 import re
 import sys
-import uuid
 
 from django.apps import apps
 from django.conf import settings
