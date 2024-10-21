@@ -230,6 +230,7 @@ class LocationTypeUIViewSet(
                 table_class=tables.LocationTypeTable,
                 table_filter="parent",
                 table_title="Child Location Type(s)",
+                related_field_name="parent",
             ),
             ObjectsTablePanel(
                 weight=200,
@@ -237,6 +238,7 @@ class LocationTypeUIViewSet(
                 table_title="Location(s) of this Type",
                 table_filter="location_type",
                 exclude_columns=["location_type"],
+                related_field_name="location_type",
             ),
         ),
     )
