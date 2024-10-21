@@ -702,7 +702,7 @@ class TableExtensionTest(TestCase):
                     context.exception, "There was a conflict with table column `pk`, the custom column was ignored."
                 )
 
-        with self.subTest("raises AttributeError"):
+        with self.subTest("Adds column to base_columns"):
             column = tables.Column()
             plugins._add_column_to_table_base_columns(table, "unique_name", column)
             self.assertIn("unique_name", table.base_columns)
