@@ -748,7 +748,9 @@ class DynamicGroupView(generic.ObjectView):
 
         if table_class is not None:
             # Members table (for display on Members nav tab)
-            members_table = table_class(members.restrict(request.user, "view"), orderable=False)
+            members_table = table_class(
+                members.restrict(request.user, "view"), orderable=False, exclude=["dynamic_group_count"]
+            )
             paginate = {
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request),
@@ -1407,7 +1409,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             if job_queue is not None:
                 try:
                     jq = JobQueue.objects.get(pk=job_queue)
-                except ValidationError:
+                except (ValidationError, JobQueue.DoesNotExist):
                     try:
                         jq = JobQueue.objects.get(name=job_queue)
                     except JobQueue.DoesNotExist:

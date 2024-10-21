@@ -18,11 +18,14 @@ import netaddr
 from nautobot.cloud.tables import CloudNetworkTable
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.models.querysets import count_related
+from nautobot.core.ui import object_detail
+from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import handle_protectederror
+from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device, Interface, Location
 from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam import choices, constants
@@ -236,84 +239,63 @@ class NamespaceVRFsView(generic.ObjectView):
 #
 
 
-class VRFListView(generic.ObjectListView):
+class VRFUIViewSet(NautobotUIViewSet):
     queryset = VRF.objects.all()
-    filterset = filters.VRFFilterSet
-    filterset_form = forms.VRFFilterForm
-    table = tables.VRFTable
+    filterset_class = filters.VRFFilterSet
+    filterset_form_class = forms.VRFFilterForm
+    table_class = tables.VRFTable
+    form_class = forms.VRFForm
+    bulk_update_form_class = forms.VRFBulkEditForm
+    serializer_class = serializers.VRFSerializer
 
-
-class VRFView(generic.ObjectView):
-    queryset = VRF.objects.all()
-
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-
-        prefixes = instance.prefixes.restrict(request.user, "view")
-        prefix_count = prefixes.count()
-        prefix_table = tables.PrefixTable(prefixes.select_related("namespace"), hide_hierarchy_ui=True)
-
-        # devices = instance.devices.restrict(request.user, "view")
-        # device_count = devices.count()
-        # device_table = DeviceTable(devices.all(), orderable=False)
-
-        import_targets_table = tables.RouteTargetTable(
-            instance.import_targets.select_related("tenant"), orderable=False
-        )
-        export_targets_table = tables.RouteTargetTable(
-            instance.export_targets.select_related("tenant"), orderable=False
-        )
-
-        # TODO(jathan): This table might need to live on Device and on VRFs
-        # (possibly replacing `device_table` above.
-        vrfs = instance.device_assignments.restrict(request.user, "view")
-        vrf_table = tables.VRFDeviceAssignmentTable(vrfs)
-        vrf_table.exclude = ("vrf",)
-        # context["vrf_table"] = vrf_table
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(prefix_table)
-        RequestConfig(request, paginate).configure(vrf_table)
-        RequestConfig(request, paginate).configure(import_targets_table)
-        RequestConfig(request, paginate).configure(export_targets_table)
-
-        context.update(
-            {
-                "device_table": vrf_table,
-                # "device_table": device_table,
-                "prefix_count": prefix_count,
-                "prefix_table": prefix_table,
-                "import_targets_table": import_targets_table,
-                "export_targets_table": export_targets_table,
-            }
-        )
-
-        return context
-
-
-class VRFEditView(generic.ObjectEditView):
-    queryset = VRF.objects.all()
-    model_form = forms.VRFForm
-    template_name = "ipam/vrf_edit.html"
-
-
-class VRFDeleteView(generic.ObjectDeleteView):
-    queryset = VRF.objects.all()
-
-
-class VRFBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = VRF.objects.all()
-    table = tables.VRFTable
-
-
-class VRFBulkEditView(generic.BulkEditView):
-    queryset = VRF.objects.select_related("tenant")
-    filterset = filters.VRFFilterSet
-    table = tables.VRFTable
-    form = forms.VRFBulkEditForm
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                table_class=tables.RouteTargetTable,
+                table_attribute="import_targets",
+                table_title="Import Route Targets",
+                related_field_name="importing_vrfs",
+                add_button_route=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                table_class=tables.RouteTargetTable,
+                table_attribute="export_targets",
+                table_title="Export Route Targets",
+                related_field_name="exporting_vrfs",
+                add_button_route=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                table_class=tables.PrefixTable,
+                table_attribute="prefixes",
+                table_title="Assigned Prefixes",
+                related_field_name="vrfs",
+                hide_hierarchy_ui=True,
+                exclude_columns=["namespace"],
+                add_button_route=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=200,
+                table_class=tables.VRFDeviceAssignmentTable,
+                table_attribute="device_assignments",
+                table_title="Assigned Devices",
+                related_field_name="vrfs",
+                exclude_columns=["vrf", "namespace", "rd"],
+                add_button_route=None,
+            ),
+        ),
+    )
 
     def extra_post_save_action(self, obj, form):
         if form.cleaned_data.get("add_prefixes", None):
@@ -322,70 +304,45 @@ class VRFBulkEditView(generic.BulkEditView):
             obj.prefixes.remove(*form.cleaned_data["remove_prefixes"])
 
 
-class VRFBulkDeleteView(generic.BulkDeleteView):
-    queryset = VRF.objects.select_related("tenant")
-    filterset = filters.VRFFilterSet
-    table = tables.VRFTable
-
-
 #
 # Route targets
 #
 
 
-class RouteTargetListView(generic.ObjectListView):
+class RouteTargetUIViewSet(NautobotUIViewSet):
     queryset = RouteTarget.objects.all()
-    filterset = filters.RouteTargetFilterSet
-    filterset_form = forms.RouteTargetFilterForm
-    table = tables.RouteTargetTable
+    filterset_class = filters.RouteTargetFilterSet
+    filterset_form_class = forms.RouteTargetFilterForm
+    table_class = tables.RouteTargetTable
+    form_class = forms.RouteTargetForm
+    bulk_update_form_class = forms.RouteTargetBulkEditForm
+    serializer_class = serializers.RouteTargetSerializer
 
-
-class RouteTargetView(generic.ObjectView):
-    queryset = RouteTarget.objects.all()
-
-    def get_extra_context(self, request, instance):
-        importing_vrfs_table = tables.VRFTable(instance.importing_vrfs.select_related("tenant"), orderable=False)
-        exporting_vrfs_table = tables.VRFTable(instance.exporting_vrfs.select_related("tenant"), orderable=False)
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(importing_vrfs_table)
-        RequestConfig(request, paginate).configure(exporting_vrfs_table)
-
-        return {
-            "importing_vrfs_table": importing_vrfs_table,
-            "exporting_vrfs_table": exporting_vrfs_table,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class RouteTargetEditView(generic.ObjectEditView):
-    queryset = RouteTarget.objects.all()
-    model_form = forms.RouteTargetForm
-
-
-class RouteTargetDeleteView(generic.ObjectDeleteView):
-    queryset = RouteTarget.objects.all()
-
-
-class RouteTargetBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = RouteTarget.objects.all()
-    table = tables.RouteTargetTable
-
-
-class RouteTargetBulkEditView(generic.BulkEditView):
-    queryset = RouteTarget.objects.select_related("tenant")
-    filterset = filters.RouteTargetFilterSet
-    table = tables.RouteTargetTable
-    form = forms.RouteTargetBulkEditForm
-
-
-class RouteTargetBulkDeleteView(generic.BulkDeleteView):
-    queryset = RouteTarget.objects.select_related("tenant")
-    filterset = filters.RouteTargetFilterSet
-    table = tables.RouteTargetTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                table_class=tables.VRFTable,
+                table_attribute="importing_vrfs",
+                table_title="Importing VRFs",
+                related_field_name="import_targets",
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                table_class=tables.VRFTable,
+                table_attribute="exporting_vrfs",
+                table_title="Exporting VRFs",
+                related_field_name="export_targets",
+            ),
+        ),
+    )
 
 
 #
