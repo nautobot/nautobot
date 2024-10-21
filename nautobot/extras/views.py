@@ -1409,8 +1409,11 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             if job_queue is not None:
                 try:
                     jq = JobQueue.objects.get(pk=job_queue)
-                except JobQueue.DoesNotExist:
-                    pass
+                except (ValidationError, JobQueue.DoesNotExist):
+                    try:
+                        jq = JobQueue.objects.get(name=job_queue)
+                    except JobQueue.DoesNotExist:
+                        pass
 
             dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
