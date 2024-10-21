@@ -41,7 +41,7 @@ Django = "~4.2.16"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
-django-auth-ldap = {version = "~4.8.0", optional = true}
+django-auth-ldap = {version = "~5.1.0", optional = true}
 # Base functionality for task scheduling with Celery
 django-celery-beat = "~2.6.0"
 # Provides a database backend & models for Celery task results
@@ -105,8 +105,6 @@ jsonschema = "^4.7.0"
 kombu = "~5.4.2"
 # Rendering of markdown files to HTML
 Markdown = "~3.6"
-# Escape text to use HTML and XML
-MarkupSafe = "~2.1.5"
 # MySQL database adapter
 mysqlclient = {version = "~2.2.3", optional = true}
 # NAPALM automation library
@@ -122,7 +120,7 @@ nh3 = "~0.2.15"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
-Pillow = "~10.3.0"
+Pillow = "~11.0.0"
 # Custom prometheus metrics
 prometheus-client = "~0.20.0"
 # PostgreSQL database adapter
