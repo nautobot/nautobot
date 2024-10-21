@@ -304,6 +304,10 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         sg.add_members(Prefix.objects.filter(ip_version=4))
         self.assertIsInstance(sg.members, PrefixQuerySet)
         self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=4))
+        # test cumulative construction and alternate code path
+        sg.add_members(list(Prefix.objects.filter(ip_version=6)))
+        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.all())
+        self.assertEqual(sg.static_group_associations.count(), Prefix.objects.all().count())
         # test duplicate objects aren't re-added
         sg.add_members(Prefix.objects.all())
         self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.all())
@@ -321,9 +325,17 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         sg.remove_members(list(Prefix.objects.filter(ip_version=4)))
         self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))
         self.assertEqual(sg.static_group_associations.count(), Prefix.objects.filter(ip_version=6).count())
+        # test cumulative removal and alternate code path
+        sg.remove_members(list(Prefix.objects.filter(ip_version=6)))
+        self.assertQuerysetEqual(sg.members, Prefix.objects.none())
+        self.assertEqual(sg.static_group_associations.count(), 0)
 
         # test property setter
         sg.members = Prefix.objects.filter(ip_version=4)
+        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=4))
+        sg.members = Prefix.objects.filter(ip_version=6)
+        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))
+        sg.members = list(Prefix.objects.filter(ip_version=4))
         self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=4))
         sg.members = list(Prefix.objects.filter(ip_version=6))
         self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))

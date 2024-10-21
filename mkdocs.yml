@@ -242,6 +242,7 @@ plugins:
         "models/dcim/softwareimagefile.md": "user-guide/core-data-model/dcim/softwareimagefile.md"
         "models/dcim/softwareversion.md": "user-guide/core-data-model/dcim/softwareversion.md"
         "models/dcim/virtualchassis.md": "user-guide/core-data-model/dcim/virtualchassis.md"
+        "models/dcim/virtualdevicecontext.md": "user-guide/core-data-model/dcim/virtualdevicecontext.md"
         "models/extras/computedfield.md": "user-guide/platform-functionality/computedfield.md"
         "models/extras/configcontext.md": "user-guide/core-data-model/extras/configcontext.md"
         "models/extras/configcontextschema.md": "user-guide/core-data-model/extras/configcontextschema.md"
@@ -476,6 +477,7 @@ nav:
               - Virtual Chassis: "user-guide/core-data-model/dcim/virtualchassis.md"
               - Controller: "user-guide/core-data-model/dcim/controller.md"
               - Controller Managed Device Group: "user-guide/core-data-model/dcim/controllermanageddevicegroup.md"
+              - Virtual Device Context: "user-guide/core-data-model/dcim/virtualdevicecontext.md"
           - Extras:
               - Config Context: "user-guide/core-data-model/extras/configcontext.md"
               - Config Context Schema: "user-guide/core-data-model/extras/configcontextschema.md"

@@ -1,9 +1,11 @@
 from django.core.cache import cache
 from django.db.models import Case, When
+from django.db.models.signals import post_delete, post_save
 from tree_queries.models import TreeNode
 from tree_queries.query import TreeManager as TreeManager_, TreeQuerySet as TreeQuerySet_
 
 from nautobot.core.models import BaseManager, querysets
+from nautobot.core.signals import invalidate_max_depth_cache
 
 
 class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
@@ -117,3 +119,9 @@ class TreeModel(TreeNode):
         display_str += self.name
         cache.set(cache_key, display_str, 5)
         return display_str
+
+    @classmethod
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        post_save.connect(invalidate_max_depth_cache, sender=cls)
+        post_delete.connect(invalidate_max_depth_cache, sender=cls)

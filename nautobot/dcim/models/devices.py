@@ -1865,7 +1865,7 @@ class VirtualDeviceContext(PrimaryModel):
     )
     status = StatusField(blank=False, null=False)
     role = RoleField(blank=True, null=True)
-    primary_ip4 = models.OneToOneField(
+    primary_ip4 = models.ForeignKey(
         to="ipam.IPAddress",
         on_delete=models.SET_NULL,
         related_name="ip4_vdcs",
@@ -1873,7 +1873,7 @@ class VirtualDeviceContext(PrimaryModel):
         null=True,
         verbose_name="Primary IPv4",
     )
-    primary_ip6 = models.OneToOneField(
+    primary_ip6 = models.ForeignKey(
         to="ipam.IPAddress",
         on_delete=models.SET_NULL,
         related_name="ip6_vdcs",

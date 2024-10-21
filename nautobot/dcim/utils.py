@@ -139,12 +139,14 @@ def validate_interface_tagged_vlans(instance, model, pk_set):
         )
 
     # Filter the model objects based on the primary keys passed in kwargs and exclude the ones that have
-    # a location that is not the parent's location or None
-    # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to add a VLAN
-    # belongs to the parent Location or the child location of the parent device to the `tagged_vlan` field of the interface?
-    device_location = getattr(instance.parent, "location", None)
+    # a location that is not the parent's location, or parent's location's ancestors, or None
+    location = getattr(instance.parent, "location", None)
+    if location:
+        location_ids = location.ancestors(include_self=True).values_list("id", flat=True)
+    else:
+        location_ids = []
     tagged_vlans = (
-        model.objects.filter(pk__in=pk_set).exclude(locations__isnull=True).exclude(locations__in=[device_location])
+        model.objects.filter(pk__in=pk_set).exclude(locations__isnull=True).exclude(locations__in=location_ids)
     )
 
     if tagged_vlans.count():
@@ -152,7 +154,8 @@ def validate_interface_tagged_vlans(instance, model, pk_set):
             {
                 "tagged_vlans": (
                     f"Tagged VLAN with names {list(tagged_vlans.values_list('name', flat=True))} must all belong to the "
-                    f"same location as the interface's parent device, or it must be global."
+                    "same location as the interface's parent device, "
+                    "one of the parent locations of the interface's parent device's location, or it must be global."
                 )
             }
         )
