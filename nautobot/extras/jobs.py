@@ -30,6 +30,7 @@ import netaddr
 import yaml
 
 from nautobot.core.celery import import_jobs, nautobot_task
+from nautobot.core.events import publish_event
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -1151,16 +1152,28 @@ def run_job(self, job_class_path, *args, **kwargs):
         raise KeyError(f"Job class not found for class path {job_class_path}")
     job = job_class()
     job.request = self.request
+    job_result = JobResult.objects.get(id=self.request.id)
+    payload = {
+        "job_result_id": self.request.id,
+        "job_name": job.name,
+        "user_name": job_result.user.get_full_name(),
+        "job_kwargs": kwargs,
+    }
     try:
+        publish_event(topic="nautobot.jobs.job.started", payload=payload)
         job.before_start(self.request.id, args, kwargs)
         result = job(*args, **kwargs)
         job.on_success(result, self.request.id, args, kwargs)
         job.after_return(JobResultStatusChoices.STATUS_SUCCESS, result, self.request.id, args, kwargs, None)
+        payload["job_output"] = result
+        publish_event(topic="nautobot.jobs.job.completed", payload=payload)
         return result
     except Exception as exc:
         einfo = ExceptionInfo(sys.exc_info())
         job.on_failure(exc, self.request.id, args, kwargs, einfo)
         job.after_return(JobResultStatusChoices.STATUS_FAILURE, exc, self.request.id, args, kwargs, einfo)
+        payload["einfo"] = einfo
+        publish_event(topic="nautobot.jobs.job.completed", payload=payload)
         raise
 
 

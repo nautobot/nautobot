@@ -56,3 +56,26 @@ The data payload associated with events of any of the above topics has the follo
 * `prechange` - a dictionary of record attributes and their values *before* the event occurred (or null, in the case of a `nautobot.create` event)
 * `postchange` - a dictionary of record attributes and their values *after* the event occurred (or null, in the case of a `nautobot.delete` event)
 * `differences` - a dictionary with keys `added` and `removed`, each of which is a dictionary of record attributes that changed in the event, providing a convenient alternative to manually comparing the prechange and postchange data.
+
+### Job Events
+
+* `nautobot.jobs.job.started` - A job has started.
+* `nautobot.jobs.job.completed` - A job has completed (successfully or not).
+
+The data payload associated with events of any of the above topics has the following keys:
+
+* `job_result_id` - The id of the Job Result.
+* `job_name` - The name of the job.
+* `user_name` - The name of the user account associated with the job.
+* `job_kwargs` - The job data.
+* `job_output` - The output of the completed job (only in case of `nautobot.jobs.job.completed`).
+* `einfo` - The stacktrace of job failure (only in the case of `nautobot.jobs.job.completed` and null if job competed without a failure).
+
+### Scheduled Job Approval Events
+
+* `nautobot.jobs.approval.approved` - A scheduled job that requires approval has been approved.
+* `nautobot.jobs.approval.denied` - A scheduled job that requires approval has been denied.
+
+The data payload associated with events of any of the above topics has the following keys:
+
+* `data` - A dictionary of the scheduled job record attributes and their values.
