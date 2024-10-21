@@ -445,7 +445,7 @@ class DataTablePanel(Panel):
             return self.columns
         if self.context_columns_key:
             return context.get(self.context_columns_key)
-        return context.get(self.context_data_key)[0].keys()
+        return list(context.get(self.context_data_key)[0].keys())
 
     def get_column_headers(self, context):
         if self.column_headers:
