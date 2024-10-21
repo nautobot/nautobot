@@ -1,4 +1,5 @@
 from datetime import timedelta
+import json
 from pathlib import Path
 
 from django.contrib.contenttypes.models import ContentType
@@ -9,6 +10,7 @@ import yaml
 
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
+from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.factory import JobResultFactory, ObjectChangeFactory
@@ -23,6 +25,7 @@ from nautobot.extras.models import (
     Role,
     Status,
 )
+from nautobot.extras.models.metadata import ObjectMetadata
 from nautobot.ipam.models import Prefix
 from nautobot.users.models import ObjectPermission
 
@@ -508,19 +511,59 @@ class LogsCleanupTestCase(TransactionTestCase):
             ObjectChange.objects.get(pk=object_change_1.pk)
         ObjectChange.objects.get(pk=object_change_2.pk)
 
-    def test_cleanup_job_results(self):
-        """With unconstrained permissions, all JobResults before the cutoff should be deleted."""
+    @load_event_broker_override_settings(
+        EVENT_BROKERS={
+            "SyslogEventBroker": {
+                "CLASS": "nautobot.core.events.SyslogEventBroker",
+                "TOPICS": {
+                    "INCLUDE": ["*"],
+                },
+            }
+        }
+    )
+    def test_cleanup_job_results_and_its_event_published(self):
+        """With unconstrained permissions, all JobResults before the cutoff should be deleted and also assert event published."""
         cutoff = timezone.now() - timedelta(days=60)
-        create_job_result_and_run_job(
-            "nautobot.core.jobs.cleanup",
-            "LogsCleanup",
-            cleanup_types=[CleanupTypes.JOB_RESULT],
-            max_age=60,
-        )
+        job_results_to_be_deleted = JobResult.objects.filter(date_done__lt=cutoff)
+        job_results_to_be_deleted_count = job_results_to_be_deleted.count()
+        job_log_entry_to_be_deleted_count = JobLogEntry.objects.filter(job_result__in=job_results_to_be_deleted).count()
+        objectmetadata_to_be_deleted_count = ObjectMetadata.objects.filter(
+            assigned_object_id__in=job_results_to_be_deleted,
+            assigned_object_type=ContentType.objects.get_for_model(JobResult),
+        ).count()
+
+        with self.assertLogs("nautobot.events") as cm:
+            job_result = create_job_result_and_run_job(
+                "nautobot.core.jobs.cleanup",
+                "LogsCleanup",
+                cleanup_types=[CleanupTypes.JOB_RESULT],
+                max_age=60,
+            )
         self.assertFalse(JobResult.objects.filter(date_done__lt=cutoff).exists())
         self.assertTrue(JobResult.objects.filter(date_done__gte=cutoff).exists())
         self.assertTrue(ObjectChange.objects.filter(time__lt=cutoff).exists())
         self.assertTrue(ObjectChange.objects.filter(time__gte=cutoff).exists())
+
+        started_logs = {
+            "job_result_id": str(job_result.id),
+            "job_name": "Logs Cleanup",
+            "user_name": "",
+            "job_kwargs": {"cleanup_types": ["extras.JobResult"], "max_age": 60},
+        }
+        self.assertEqual(
+            cm.output[0],
+            f"INFO:nautobot.events.nautobot.jobs.job.started:{json.dumps(started_logs, indent=4)}",
+        )
+
+        started_logs["job_output"] = {
+            "extras.JobResult": job_results_to_be_deleted_count,
+            "extras.JobLogEntry": job_log_entry_to_be_deleted_count,
+            "extras.ObjectMetadata": objectmetadata_to_be_deleted_count,
+        }
+        self.assertEqual(
+            cm.output[1],
+            f"INFO:nautobot.events.nautobot.jobs.job.completed:{json.dumps(started_logs, indent=4)}",
+        )
 
     def test_cleanup_object_changes(self):
         """With unconstrained permissions, all ObjectChanges before the cutoff should be deleted."""
