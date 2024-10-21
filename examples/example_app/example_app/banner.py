@@ -46,6 +46,12 @@ def banner(context, *args, **kwargs) -> Optional[Banner]:
             "<div>You are viewing a table of {}</div>",
             context["table"].Meta.model._meta.verbose_name_plural,
         )
+        base_columns = context["table"].base_columns
+        extension_columns = [column for column in base_columns if column.startswith("example_app_")]
+        if extension_columns:
+            content += format_html(
+                "<div><strong>Note: Table columns have been modified by a TableExtension.</strong></div>"
+            )
         return Banner(content=content, banner_class=BannerClassChoices.CLASS_SUCCESS)
 
     content += format_html(

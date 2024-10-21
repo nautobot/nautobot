@@ -15,6 +15,7 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
+from nautobot.extras.plugins import TableExtension
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 
 __all__ = (
@@ -32,5 +33,6 @@ __all__ = (
     "RoleTableMixin",
     "StatusTableMixin",
     "TagColumn",
+    "TableExtension",
     "ToggleColumn",
 )
