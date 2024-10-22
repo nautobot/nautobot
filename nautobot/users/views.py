@@ -67,7 +67,7 @@ class LoginView(View):
             user = form.get_user()
             auth_login(request, form.get_user())
             messages.info(request, f"Logged in as {request.user}.")
-            payload = serialize_object_v2(user)
+            payload = {"data": serialize_object_v2(user)}
             publish_event(topic="nautobot.users.user.login", payload=payload)
 
             return self.redirect_to_next(request, logger)
@@ -104,7 +104,7 @@ class LogoutView(View):
 
     def get(self, request):
         # Log out the user
-        payload = serialize_object_v2(request.user)
+        payload = {"data": serialize_object_v2(request.user)}
         auth_logout(request)
         messages.info(request, "You have logged out.")
 
@@ -230,7 +230,7 @@ class ChangePasswordView(GenericView):
             form.save()
             update_session_auth_hash(request, form.user)
             messages.success(request, "Your password has been changed successfully.")
-            payload = serialize_object_v2(request.user)
+            payload = {"data": serialize_object_v2(request.user)}
             publish_event(topic="nautobot.users.user.change_password", payload=payload)
             return redirect("user:profile")
 

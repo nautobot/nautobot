@@ -79,5 +79,6 @@ class AdminPasswordChangeForm(_AdminPasswordChangeForm):
     def save(self, commit):
         # Override `_AdminPasswordChangeForm.save()` to publish admin change user password event
         instance = super().save(commit)
-        publish_event(topic="nautobot.admin.user.change_password", payload=serialize_object_v2(instance))
+        payload = {"data": serialize_object_v2(instance)}
+        publish_event(topic="nautobot.admin.user.change_password", payload=payload)
         return instance

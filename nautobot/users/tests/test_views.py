@@ -9,12 +9,23 @@ from django.utils import timezone
 from social_django.utils import load_backend, load_strategy
 
 from nautobot.core.testing import TestCase, utils
+from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import post_data
 
 User = get_user_model()
 
 
 class PasswordUITest(TestCase):
+    @load_event_broker_override_settings(
+        EVENT_BROKERS={
+            "SyslogEventBroker": {
+                "CLASS": "nautobot.core.events.SyslogEventBroker",
+                "TOPICS": {
+                    "INCLUDE": ["*"],
+                },
+            }
+        }
+    )
     def test_change_password_enabled(self):
         """
         Check that a Django-authentication-based user is allowed to change their password
@@ -29,6 +40,7 @@ class PasswordUITest(TestCase):
         get_response = self.client.get(reverse("user:change_password"))
         self.assertBodyContains(get_response, "New password confirmation")
 
+        # with self.assertLogs("nautobot.events") as cm:
         # Check POST change_password functionality
         post_response = self.client.post(
             reverse("user:change_password"),
@@ -39,6 +51,8 @@ class PasswordUITest(TestCase):
             },
         )
         self.assertBodyContains(post_response, "The two password fields")
+        # print(cm.output)
+        self.assertEqual(1, 2)
 
     @override_settings(
         AUTHENTICATION_BACKENDS=[
