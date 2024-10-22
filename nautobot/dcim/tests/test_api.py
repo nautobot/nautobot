@@ -688,9 +688,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
             status=statuses[0],
         )
         # Place a device in Rack 4
-        device = Device.objects.filter(
-            location=populated_rack.location, rack__isnull=True
-        ).first()
+        device = Device.objects.filter(location=populated_rack.location, rack__isnull=True).first()
         # Ensure the device height is 1U
         device.device_type.u_height = 1
         device.device_type.save()
