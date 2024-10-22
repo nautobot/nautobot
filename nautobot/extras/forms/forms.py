@@ -1266,7 +1266,6 @@ class JobQueueFilterForm(NautobotFilterForm):
         required=False,
         widget=StaticSelect2Multiple(),
     )
-    external_integration = DynamicModelMultipleChoiceField(queryset=ExternalIntegration.objects.all(), required=False)
     tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="name", required=False)
     tags = TagFilterField(model)
 
@@ -1277,10 +1276,6 @@ class JobQueueForm(NautobotModelForm):
         choices=JobQueueTypeChoices,
         label="Queue Type",
     )
-    external_integration = DynamicModelChoiceField(
-        queryset=ExternalIntegration.objects.all(),
-        required=False,
-    )
     tenant = DynamicModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False,
@@ -1290,7 +1285,7 @@ class JobQueueForm(NautobotModelForm):
 
     class Meta:
         model = JobQueue
-        fields = ("name", "queue_type", "external_integration", "description", "tenant", "tags")
+        fields = ("name", "queue_type", "description", "tenant", "tags")
 
 
 class JobScheduleForm(BootstrapMixin, forms.Form):

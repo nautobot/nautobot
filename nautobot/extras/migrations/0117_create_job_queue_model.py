@@ -46,16 +46,6 @@ class Migration(migrations.Migration):
                         to="tenancy.tenant",
                     ),
                 ),
-                (
-                    "external_integration",
-                    models.ForeignKey(
-                        blank=True,
-                        null=True,
-                        on_delete=django.db.models.deletion.PROTECT,
-                        related_name="job_queues",
-                        to="extras.externalintegration",
-                    ),
-                ),
             ],
             options={
                 "ordering": ["name"],

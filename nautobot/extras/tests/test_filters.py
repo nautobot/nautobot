@@ -929,8 +929,6 @@ class JobQueueFilterSetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.
     tenancy_related_name = "job_queues"
     generic_filter_tests = [
         ["name"],
-        ["external_integration", "external_integration__id"],
-        ["external_integration", "external_integration__name"],
     ]
 
     @classmethod

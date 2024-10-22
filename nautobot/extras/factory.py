@@ -151,20 +151,11 @@ class JobQueueFactory(PrimaryModelFactory):
     class Params:
         has_description = NautobotBoolIterator()
         has_tenant = NautobotBoolIterator()
-        has_external_integration = NautobotBoolIterator()
 
     name = factory.LazyAttributeSequence(lambda o, n: f"{o.queue_type} Job Queue - {n}")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
     queue_type = factory.Iterator(JobQueueTypeChoices.CHOICES, getter=lambda choice: choice[0])
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
-    external_integration = factory.Maybe(
-        "has_external_integration",
-        factory.LazyAttribute(
-            lambda obj: get_random_instances(ExternalIntegration, minimum=1)[0]
-            if obj.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES
-            else None
-        ),
-    )
 
     @factory.post_generation
     def jobs(self, create, extracted, **kwargs):
