@@ -26,9 +26,11 @@ from nautobot.core.api.views import (
     NautobotAPIVersionMixin,
     ReadOnlyModelViewSet,
 )
+from nautobot.core.events import publish_event
 from nautobot.core.exceptions import CeleryWorkerNotRunningException
 from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
+from nautobot.core.models.utils import serialize_object_v2
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType
 from nautobot.extras.filters import RoleFilterSet
@@ -966,6 +968,8 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
         scheduled_job.approved_by_user = request.user
         scheduled_job.approved_at = timezone.now()
         scheduled_job.save()
+        publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
+        publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
         serializer = serializers.ScheduledJobSerializer(scheduled_job, context={"request": request})
 
         return Response(serializer.data)
@@ -990,6 +994,8 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
         if not Job.objects.check_perms(request.user, instance=scheduled_job.job_model, action="approve"):
             raise PermissionDenied("You do not have permission to deny this request.")
 
+        publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
+        publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
         scheduled_job.delete()
 
         return Response(None)
