@@ -364,11 +364,7 @@ class AuthenticatedAPIRootView(NautobotAPIVersionMixin, routers.APIRootView):
 
 
 class APIRootView(AuthenticatedAPIRootView):
-    """
-    This is the root of the REST API.
-
-    API endpoints are arranged by app and model name; e.g. `/api/dcim/locations/`.
-    """
+    """This is the root of the REST API. API endpoints are arranged by app and model name; e.g. `/api/dcim/locations/`."""
 
     name = "API Root"
 
