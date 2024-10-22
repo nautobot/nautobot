@@ -1652,13 +1652,13 @@ class JobApprovalRequestView(generic.ObjectView):
                 messages.error(request, "You do not have permission to deny this request.")
             else:
                 # Delete the scheduled_job instance
+                publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
                 scheduled_job.delete()
                 if request.user == scheduled_job.user:
                     messages.error(request, f"Approval request for {scheduled_job.name} was revoked")
                 else:
                     messages.error(request, f"Approval of {scheduled_job.name} was denied")
 
-                publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
                 publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
 
                 return redirect("extras:scheduledjob_approval_queue_list")

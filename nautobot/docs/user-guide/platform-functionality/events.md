@@ -67,7 +67,7 @@ The data payload associated with events of any of the above topics has the follo
 * `job_result_id` - The id of the Job Result.
 * `job_name` - The name of the job.
 * `user_name` - The name of the user account associated with the job.
-* `job_kwargs` - The job data.
+* `job_kwargs` - The job data (only if job has_sensitive_variables attribute is `false`).
 * `job_output` - The output of the completed job (only in case of `nautobot.jobs.job.completed`).
 * `einfo` - The stacktrace of job failure (only in the case of `nautobot.jobs.job.completed` and null if job competed without a failure).
 

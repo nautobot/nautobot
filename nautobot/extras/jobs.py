@@ -1157,9 +1157,10 @@ def run_job(self, job_class_path, *args, **kwargs):
     payload = {
         "job_result_id": self.request.id,
         "job_name": job.name,
-        "user_name": job_result.user.get_full_name(),
-        "job_kwargs": kwargs,
+        "user_name": job_result.user.username,
     }
+    if job.has_sensitive_variables is True:
+        payload["job_kwargs"] = kwargs
     try:
         publish_event(topic="nautobot.jobs.job.started", payload=payload)
         job.before_start(self.request.id, args, kwargs)

@@ -228,8 +228,8 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
             model = self._related_model
 
         if model is None:
-            return {"id": value.pk, "object_type": "unknown.unknown", "url": url}
-        return {"id": value.pk, "object_type": model._meta.label_lower, "url": url}
+            return {"id": str(value.pk), "object_type": "unknown.unknown", "url": url}
+        return {"id": str(value.pk), "object_type": model._meta.label_lower, "url": url}
 
 
 @extend_schema_field(

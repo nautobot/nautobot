@@ -491,7 +491,7 @@ class LogsCleanupTestCase(TransactionTestCase):
         complete_logs = {
             "job_result_id": str(job_result.id),
             "job_name": "Logs Cleanup",
-            "user_name": "",
+            "user_name": self.user.username,
             "job_kwargs": {"cleanup_types": ["extras.ObjectChange"], "max_age": 0},
             "einfo": {
                 "exc_type": "PermissionDenied",
@@ -573,7 +573,7 @@ class LogsCleanupTestCase(TransactionTestCase):
         started_logs = {
             "job_result_id": str(job_result.id),
             "job_name": "Logs Cleanup",
-            "user_name": "",
+            "user_name": self.user.username,
             "job_kwargs": {"cleanup_types": ["extras.JobResult"], "max_age": 60},
         }
         self.assertEqual(
