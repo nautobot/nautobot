@@ -6,6 +6,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
 from django.test.client import RequestFactory
 
+from nautobot.core.events import publish_event
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import ObjectChange
@@ -175,11 +176,12 @@ def web_request_context(
     :param user: User object
     :param context_detail: Optional extra details about the transaction (ex: the plugin name that initiated the change)
     :param change_id: Optional uuid object to uniquely identify the transaction. One will be generated if not supplied
-    :param context: Optional string value of the generated change log entries' "change_context" field, defaults to ObjectChangeEventContextChoices.CONTEXT_ORM.
-        Valid choices are in nautobot.extras.choices.ObjectChangeEventContextChoices
+    :param context: Optional string value of the generated change log entries' "change_context" field.
+        Defaults to `ObjectChangeEventContextChoices.CONTEXT_ORM`.
+        Valid choices are in `nautobot.extras.choices.ObjectChangeEventContextChoices`.
     :param request: Optional web request instance, one will be generated if not supplied
     """
-    from nautobot.extras.jobs import enqueue_job_hooks  # prevent circular import
+    from nautobot.extras.jobs import enqueue_job_hooks, get_jobs  # prevent circular import
 
     valid_contexts = {
         ObjectChangeEventContextChoices.CONTEXT_JOB: JobChangeContext,
@@ -202,10 +204,30 @@ def web_request_context(
         with change_logging(change_context):
             yield request
     finally:
+        jobs_refreshed = False
         # enqueue jobhooks and webhooks, use change_context.change_id in case change_id was not supplied
-        for object_change in ObjectChange.objects.filter(request_id=change_context.change_id).iterator():
-            enqueue_job_hooks(object_change)
-            enqueue_webhooks(object_change)
+        for oc in ObjectChange.objects.filter(request_id=change_context.change_id).iterator():
+            if context != ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
+                # Make sure JobHooks are up to date (once) before calling them
+                if not jobs_refreshed:
+                    get_jobs(reload=True)
+                    jobs_refreshed = True
+                enqueue_job_hooks(oc)
+            # TODO: get_snapshots() currently requires a DB query per object change processed.
+            # We need to develop a more efficient approach: https://github.com/nautobot/nautobot/issues/6303
+            snapshots = oc.get_snapshots()
+            enqueue_webhooks(oc, snapshots)
+            # topic examples: "nautobot.change.dcim.device", "nautobot.add.ipam.ipaddress"
+            event_topic = f"nautobot.{oc.action}.{oc.changed_object_type.app_label}.{oc.changed_object_type.model}"
+            event_payload = snapshots.copy()
+            event_payload["context"] = {
+                "change_context": oc.get_change_context_display(),
+                "change_context_detail": oc.change_context_detail,
+                "request_id": str(oc.request_id),
+                "user_name": oc.user_name,
+                "timestamp": str(oc.time),
+            }
+            publish_event(topic=event_topic, payload=event_payload)
 
 
 @contextmanager

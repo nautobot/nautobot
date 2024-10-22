@@ -33,10 +33,12 @@ from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import has_perms
+from nautobot.core.ui.choices import SectionChoices
+from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
-from nautobot.core.views import generic
+from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
     ObjectBulkDestroyViewMixin,
@@ -115,6 +117,7 @@ from .models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 
 logger = logging.getLogger(__name__)
@@ -204,60 +207,45 @@ class BaseDeviceComponentTemplatesBulkRenameView(generic.BulkRenameView):
 #
 
 
-class LocationTypeListView(generic.ObjectListView):
+class LocationTypeUIViewSet(
+    view_mixins.ObjectDetailViewMixin,
+    view_mixins.ObjectListViewMixin,
+    view_mixins.ObjectEditViewMixin,
+    view_mixins.ObjectDestroyViewMixin,
+    view_mixins.ObjectBulkDestroyViewMixin,
+    view_mixins.ObjectBulkCreateViewMixin,  # 3.0 TODO: remove this mixin as it's no longer used
+    view_mixins.ObjectChangeLogViewMixin,
+    view_mixins.ObjectNotesViewMixin,
+):
     queryset = LocationType.objects.all()
-    filterset = filters.LocationTypeFilterSet
-    filterset_form = forms.LocationTypeFilterForm
-    table = tables.LocationTypeTable
+    filterset_class = filters.LocationTypeFilterSet
+    filterset_form_class = forms.LocationTypeFilterForm
+    table_class = tables.LocationTypeTable
+    form_class = forms.LocationTypeForm
+    serializer_class = serializers.LocationSerializer
 
-
-class LocationTypeView(generic.ObjectView):
-    queryset = LocationType.objects.all()
-
-    def get_extra_context(self, request, instance):
-        children = LocationType.objects.restrict(request.user, "view").filter(parent=instance).select_related("parent")
-        locations = (
-            Location.objects.restrict(request.user, "view")
-            .filter(location_type=instance)
-            .select_related("parent", "location_type")
-        )
-
-        children_table = tables.LocationTypeTable(children)
-        locations_table = tables.LocationTable(locations)
-        locations_table.columns.hide("location_type")
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(children_table)
-        RequestConfig(request, paginate).configure(locations_table)
-
-        return {
-            "children_table": children_table,
-            "locations_table": locations_table,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class LocationTypeEditView(generic.ObjectEditView):
-    queryset = LocationType.objects.all()
-    model_form = forms.LocationTypeForm
-
-
-class LocationTypeDeleteView(generic.ObjectDeleteView):
-    queryset = LocationType.objects.all()
-
-
-class LocationTypeBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = LocationType.objects.all()
-    table = tables.LocationTypeTable
-
-
-class LocationTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = LocationType.objects.all()
-    filterset = filters.LocationTypeFilterSet
-    table = tables.LocationTypeTable
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            ObjectsTablePanel(
+                weight=100,
+                table_class=tables.LocationTypeTable,
+                table_filter="parent",
+                table_title="Child Location Type(s)",
+            ),
+            ObjectsTablePanel(
+                weight=200,
+                table_class=tables.LocationTable,
+                table_title="Location(s) of this Type",
+                table_filter="location_type",
+                exclude_columns=["location_type"],
+            ),
+        ),
+    )
 
 
 #
@@ -270,7 +258,6 @@ class LocationListView(generic.ObjectListView):
     filterset = filters.LocationFilterSet
     filterset_form = forms.LocationFilterForm
     table = tables.LocationTable
-    use_new_ui = True
 
 
 class LocationView(generic.ObjectView):
@@ -279,7 +266,6 @@ class LocationView(generic.ObjectView):
     # automatically issue a second query (similar to behavior for
     # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
     queryset = Location.objects.without_tree_fields().all()
-    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         related_locations = (
@@ -818,12 +804,10 @@ class DeviceTypeListView(generic.ObjectListView):
     filterset_form = forms.DeviceTypeFilterForm
     table = tables.DeviceTypeTable
     template_name = "dcim/devicetype_list.html"
-    use_new_ui = True
 
 
 class DeviceTypeView(generic.ObjectView):
     queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_image_files")
-    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         instance_count = Device.objects.restrict(request.user).filter(device_type=instance).count()
@@ -1761,7 +1745,6 @@ class DeviceListView(generic.ObjectListView):
     filterset_form = forms.DeviceFilterForm
     table = tables.DeviceTable
     template_name = "dcim/device_list.html"
-    use_new_ui = True
 
 
 class DeviceView(generic.ObjectView):
@@ -1776,7 +1759,6 @@ class DeviceView(generic.ObjectView):
         "software_version",
         "status",
     )
-    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         # VirtualChassis members
@@ -1811,6 +1793,17 @@ class DeviceView(generic.ObjectView):
         modulebay_count = instance.module_bays.count()
         module_count = instance.module_bays.filter(installed_module__isnull=False).count()
 
+        vdcs = instance.virtual_device_contexts.restrict(request.user).select_related(
+            "tenant", "primary_ip4", "primary_ip6"
+        )
+        vdcs_table = tables.VirtualDeviceContextTable(vdcs, orderable=False, exclude=("device",))
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(vdcs_table)
+
         return {
             "services": services,
             "software_version_images": software_version_images,
@@ -1819,6 +1812,7 @@ class DeviceView(generic.ObjectView):
             "active_tab": "device",
             "modulebay_count": modulebay_count,
             "module_count": f"{module_count}/{modulebay_count}",
+            "vdcs_table": vdcs_table,
         }
 
 
@@ -2915,6 +2909,13 @@ class InterfaceView(generic.ObjectView):
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
 
         redundancy_table = self._get_interface_redundancy_groups_table(request, instance)
+        virtual_device_contexts_table = tables.VirtualDeviceContextTable(
+            instance.virtual_device_contexts.restrict(request.user, "view").select_related(
+                "device", "tenant", "primary_ip4", "primary_ip6"
+            ),
+            orderable=False,
+            exclude=("device",),
+        )
 
         return {
             "ipaddress_table": ipaddress_table,
@@ -2923,6 +2924,7 @@ class InterfaceView(generic.ObjectView):
             "module_breadcrumb_url": "dcim:module_interfaces",
             "child_interfaces_table": child_interfaces_tables,
             "redundancy_table": redundancy_table,
+            "virtual_device_contexts_table": virtual_device_contexts_table,
             **super().get_extra_context(request, instance),
         }
 
@@ -3190,7 +3192,7 @@ class DeviceBayPopulateView(generic.ObjectEditView):
                 f"Added {device_bay.installed_device} to {device_bay}.",
             )
 
-            return redirect("dcim:device", pk=device_bay.device.pk)
+            return redirect("dcim:device_devicebays", pk=device_bay.device.pk)
 
         return render(
             request,
@@ -3233,7 +3235,7 @@ class DeviceBayDepopulateView(generic.ObjectEditView):
                 f"Removed {removed_device} from {device_bay}.",
             )
 
-            return redirect("dcim:device", pk=device_bay.device.pk)
+            return redirect("dcim:device_devicebays", pk=device_bay.device.pk)
 
         return render(
             request,
@@ -4181,9 +4183,12 @@ class DeviceFamilyUIViewSet(NautobotUIViewSet):
             context["device_type_table"] = device_type_table
 
             total_devices = 0
+            device_type_count = 0
             for device_type in device_types:
                 total_devices += device_type.device_count
+                device_type_count += 1
             context["total_devices"] = total_devices
+            context["device_type_count"] = device_type_count
 
         return context
 
@@ -4312,3 +4317,36 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
             context["devices_table"] = devices_table
 
         return context
+
+
+#
+# Virtual Device Context
+#
+
+
+class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.VirtualDeviceContextFilterSet
+    filterset_form_class = forms.VirtualDeviceContextFilterForm
+    form_class = forms.VirtualDeviceContextForm
+    bulk_update_form_class = forms.VirtualDeviceContextBulkEditForm
+    queryset = VirtualDeviceContext.objects.all()
+    serializer_class = serializers.VirtualDeviceContextSerializer
+    table_class = tables.VirtualDeviceContextTable
+
+    def get_extra_context(self, request, instance):
+        if self.action == "retrieve":
+            interfaces_table = tables.InterfaceTable(
+                instance.interfaces.restrict(request.user, "view"), orderable=False, exclude=("device",)
+            )
+
+            return {
+                "interfaces_table": interfaces_table,
+                **super().get_extra_context(request, instance),
+            }
+        return super().get_extra_context(request, instance)
+
+    def extra_post_save_action(self, obj, form):
+        if form.cleaned_data.get("add_interfaces", None):
+            obj.prefixes.add(*form.cleaned_data["add_interfaces"])
+        if form.cleaned_data.get("remove_interfaces", None):
+            obj.prefixes.remove(*form.cleaned_data["remove_interfaces"])

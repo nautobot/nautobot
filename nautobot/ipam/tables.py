@@ -161,9 +161,9 @@ VLAN_LINK = """
 {% url 'ipam:vlan_add' %}\
 ?vid={{ record.vid }}&vlan_group={{ vlan_group.pk }}\
 {% if vlan_group.location %}&location={{ vlan_group.location.pk }}{% endif %}\
-" class="btn btn-xs btn-success">{{ record.available }} VLAN{{ record.available|pluralize }} available</a>\
+" class="btn btn-xs btn-success">{{ record.available }} VLAN{{ record.available|pluralize }} available ({{ record.range }})</a>\
 {% else %}
-    {{ record.available }} VLAN{{ record.available|pluralize }} available
+    {{ record.available }} VLAN{{ record.available|pluralize }} available ({{ record.range }})
 {% endif %}
 """
 
@@ -217,7 +217,7 @@ class NamespaceTable(BaseTable):
 #
 
 
-class VRFTable(BaseTable):
+class VRFTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     # rd = tables.Column(verbose_name="RD")
@@ -232,6 +232,7 @@ class VRFTable(BaseTable):
             "pk",
             "name",
             # "rd",
+            "status",
             "namespace",
             "tenant",
             "description",
@@ -240,7 +241,7 @@ class VRFTable(BaseTable):
             "tags",
         )
         # default_columns = ("pk", "name", "rd", "namespace", "tenant", "description")
-        default_columns = ("pk", "name", "namespace", "tenant", "description")
+        default_columns = ("pk", "name", "status", "namespace", "tenant", "description")
 
 
 class VRFDeviceAssignmentTable(BaseTable):
@@ -664,8 +665,8 @@ class VLANGroupTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = VLANGroup
-        fields = ("pk", "name", "location", "vlan_count", "description", "actions")
-        default_columns = ("pk", "name", "location", "vlan_count", "description", "actions")
+        fields = ("pk", "name", "location", "range", "vlan_count", "description", "actions")
+        default_columns = ("pk", "name", "range", "location", "vlan_count", "description", "actions")
 
 
 #

@@ -40,6 +40,7 @@ from nautobot.dcim.models import (
     DeviceRedundancyGroup,
     DeviceType,
     FrontPortTemplate,
+    Interface,
     InterfaceTemplate,
     Location,
     LocationType,
@@ -58,6 +59,7 @@ from nautobot.dcim.models import (
     RearPortTemplate,
     SoftwareImageFile,
     SoftwareVersion,
+    VirtualDeviceContext,
 )
 from nautobot.extras.models import ExternalIntegration, Role, Status
 from nautobot.extras.utils import FeatureQuery
@@ -110,7 +112,7 @@ NETWORK_DRIVERS = {
     "Palo Alto": ["paloalto_panos"],
 }
 
-TIME_ZONES = {timezone for timezone, _ in TimeZoneFormField().choices}
+TIME_ZONES = sorted(timezone for timezone, _ in TimeZoneFormField().choices)
 
 
 # Retrieve correct rack reservation units
@@ -296,7 +298,7 @@ class DeviceTypeFactory(PrimaryModelFactory):
         while not unused_models:
             unused_models = {f"{device_type} {count}" for device_type in device_types}.difference(current_models)
             count += 1
-        return factory.random.randgen.choice(list(unused_models))
+        return factory.random.randgen.choice(sorted(unused_models))
 
     has_part_number = NautobotBoolIterator()
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
@@ -784,7 +786,7 @@ class ModuleTypeFactory(PrimaryModelFactory):
         while not unused_models:
             unused_models = {f"{module_type} {count}" for module_type in module_types}.difference(current_models)
             count += 1
-        return factory.random.randgen.choice(list(unused_models))
+        return factory.random.randgen.choice(sorted(unused_models))
 
 
 class ModuleFactory(PrimaryModelFactory):
@@ -945,3 +947,42 @@ class ModuleBayTemplateFactory(ModularDeviceComponentTemplateFactory):
         factory.LazyAttribute(lambda o: o.device_type.module_bay_templates.count() + 1),
         factory.LazyAttribute(lambda o: o.module_type.module_bay_templates.count() + 1),
     )
+
+
+class VirtualDeviceContextFactory(PrimaryModelFactory):
+    class Meta:
+        model = VirtualDeviceContext
+        exclude = ("has_role", "has_tenant", "has_description")
+
+    status = random_instance(
+        lambda: Status.objects.get_for_model(VirtualDeviceContext),
+        allow_null=False,
+    )
+    has_role = NautobotBoolIterator()
+    role = factory.Maybe(
+        "has_role",
+        random_instance(
+            lambda: Role.objects.get_for_model(VirtualDeviceContext),
+            allow_null=False,
+        ),
+        None,
+    )
+    identifier = factory.Sequence(lambda n: n + 100)
+    name = factory.Sequence(lambda n: f"VirtualDeviceContext {n}")
+    device = random_instance(Device, allow_null=False)
+    has_tenant = NautobotBoolIterator()
+    tenant = factory.Maybe(
+        "has_tenant",
+        random_instance(Tenant, allow_null=False),
+        None,
+    )
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+
+    @factory.post_generation
+    def interfaces(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.interfaces.set(extracted)
+            else:
+                self.interfaces.set(get_random_instances(Interface.objects.filter(device=self.device)))

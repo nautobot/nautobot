@@ -3,7 +3,6 @@ from unittest import mock
 import urllib.parse
 import uuid
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -18,7 +17,7 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import extract_form_failures, extract_page_body, ModelViewTestCase, TestCase, ViewTestCases
-from nautobot.core.testing.utils import disable_warnings, post_data
+from nautobot.core.testing.utils import disable_warnings, get_deletable_objects, post_data
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
     ConsolePort,
@@ -35,6 +34,7 @@ from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
+    JobQueueTypeChoices,
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
@@ -59,6 +59,7 @@ from nautobot.extras.models import (
     Job,
     JobButton,
     JobLogEntry,
+    JobQueue,
     JobResult,
     MetadataType,
     Note,
@@ -865,11 +866,9 @@ class DynamicGroupTestCase(
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
         self.add_permissions("dcim.view_device", "extras.view_dynamicgroup")
         response = self.client.get(url)
-        self.assertHttpStatus(response, 200)
-        response_body = response.content.decode(response.charset)
-        self.assertIn("DG 1", response_body, msg=response_body)
-        self.assertIn("DG 2", response_body, msg=response_body)
-        self.assertIn("DG 3", response_body, msg=response_body)
+        self.assertBodyContains(response, "DG 1")
+        self.assertBodyContains(response, "DG 2")
+        self.assertBodyContains(response, "DG 3")
 
     def test_get_object_dynamic_groups_with_constrained_permission(self):
         obj_perm = ObjectPermission(
@@ -892,7 +891,7 @@ class DynamicGroupTestCase(
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
-        response_body = response.content.decode(response.charset)
+        response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn("DG 1", response_body, msg=response_body)
         self.assertNotIn("DG 2", response_body, msg=response_body)
         self.assertNotIn("DG 3", response_body, msg=response_body)
@@ -1335,18 +1334,14 @@ class SavedViewTest(ModelViewTestCase):
         # Try GET with model-level permission
         # SavedView detail view should redirect to the View from which it is derived
         response = self.client.get(instance.get_absolute_url(), follow=True)
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn(escape(instance.name), response_body, msg=response_body)
+        self.assertBodyContains(response, escape(instance.name))
 
         query_strings = ["&table_changes_pending=true", "&per_page=1234", "&status=active", "&sort=name"]
         for string in query_strings:
             view_url = self.get_view_url_for_saved_view(instance) + string
             response = self.client.get(view_url)
-            self.assertHttpStatus(response, 200)
-            response_body = extract_page_body(response.content.decode(response.charset))
             # Assert that the star sign is rendered on the page since there are unsaved changes
-            self.assertIn('<i title="Pending changes not saved">', response_body, msg=response_body)
+            self.assertBodyContains(response, '<i title="Pending changes not saved">')
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_object_with_constrained_permission(self):
@@ -1384,12 +1379,9 @@ class SavedViewTest(ModelViewTestCase):
         # Try update the saved view with a different user from the owner of the saved view
         self.client.force_login(different_user)
         response = self.client.get(update_url, follow=True)
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn(
+        self.assertBodyContains(
+            response,
             f"You do not have the required permission to modify this Saved View owned by {instance.owner}",
-            response_body,
-            msg=response_body,
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1425,12 +1417,9 @@ class SavedViewTest(ModelViewTestCase):
         # Try delete the saved view with a different user from the owner of the saved view
         self.client.force_login(different_user)
         response = self.client.post(delete_url, follow=True)
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn(
+        self.assertBodyContains(
+            response,
             f"You do not have the required permission to delete this Saved View owned by {instance.owner}",
-            response_body,
-            msg=response_body,
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1451,13 +1440,7 @@ class SavedViewTest(ModelViewTestCase):
         instance.owner.save()
         self.client.force_login(instance.owner)
         response = self.client.post(delete_url, follow=True)
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn(
-            "Are you sure you want to delete saved view",
-            response_body,
-            msg=response_body,
-        )
+        self.assertBodyContains(response, "Are you sure you want to delete saved view")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_saved_view(self):
@@ -1500,16 +1483,7 @@ class SavedViewTest(ModelViewTestCase):
         )
         response = self.client.get(reverse(view_name), follow=True)
         # Assert that Location List View got redirected to Saved View set as global default
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertInHTML(
-            """
-            <strong>
-                Global Location Default View
-            </strong>
-            """,
-            response_body,
-        )
+        self.assertBodyContains(response, "<strong>Global Location Default View</strong>", html=True)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_user_default(self):
@@ -1523,16 +1497,7 @@ class SavedViewTest(ModelViewTestCase):
         UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
         response = self.client.get(reverse(view_name), follow=True)
         # Assert that Location List View got redirected to Saved View set as user default
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertInHTML(
-            """
-            <strong>
-                User Location Default View
-            </strong>
-            """,
-            response_body,
-        )
+        self.assertBodyContains(response, "<strong>User Location Default View</strong>", html=True)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_user_default_precedes_global_default(self):
@@ -1551,16 +1516,7 @@ class SavedViewTest(ModelViewTestCase):
         UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
         response = self.client.get(reverse(view_name), follow=True)
         # Assert that Location List View got redirected to Saved View set as user default
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertInHTML(
-            """
-            <strong>
-                User Location Default View
-            </strong>
-            """,
-            response_body,
-        )
+        self.assertBodyContains(response, "<strong>User Location Default View</strong>", html=True)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_is_shared(self):
@@ -1745,16 +1701,17 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             name="test2",
             task="pass.TestPass",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            interval=JobExecutionType.TYPE_DAILY,
             user=user,
             start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test3",
             task="pass.TestPass",
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            interval=JobExecutionType.TYPE_CUSTOM,
             user=user,
             start_time=timezone.now(),
+            crontab="15 10 * * *",
         )
 
     def test_only_enabled_is_listed(self):
@@ -1840,6 +1797,9 @@ class ApprovalQueueTestCase(
             return reverse("extras:scheduledjob_approval_request_view", kwargs={"pk": instance.pk})
         raise ValueError("This override is only valid for list and view test cases")
 
+    def get_list_url(self):
+        return reverse("extras:scheduledjob_approval_queue_list")
+
     def setUp(self):
         super().setUp()
         self.job_model = Job.objects.get_for_class_path("dry_run.TestDryRun")
@@ -1911,12 +1871,8 @@ class ApprovalQueueTestCase(
 
         # Try GET with model-level permission
         response = self.client.get(self._get_url("view", instance))
-        self.assertHttpStatus(response, 200)
-
-        response_body = extract_page_body(response.content.decode(response.charset))
-
         # The object's display name or string representation should appear in the response
-        self.assertIn(getattr(instance, "display", str(instance)), response_body, msg=response_body)
+        self.assertBodyContains(response, getattr(instance, "display", str(instance)))
 
         # skip GetObjectViewTestCase checks for Relationships and Custom Fields since this isn't actually a detail view
 
@@ -1951,9 +1907,7 @@ class ApprovalQueueTestCase(
         """Anonymous users may not take any action with regard to job approval requests."""
         self.client.logout()
         response = self.client.post(self._get_url("view", self._get_queryset().first()))
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("You do not have permission to run jobs", response_body)
+        self.assertBodyContains(response, "You do not have permission to run jobs")
         # No job was submitted
         self.assertFalse(JobResult.objects.filter(name=self.job_model.name).exists())
 
@@ -1965,9 +1919,7 @@ class ApprovalQueueTestCase(
         data = {"_dry_run": True}
 
         response = self.client.post(self._get_url("view", instance), data)
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("This job cannot be run at this time", response_body)
+        self.assertBodyContains(response, "This job cannot be run at this time")
         # No job was submitted
         self.assertFalse(JobResult.objects.filter(name=instance.job_model.name).exists())
 
@@ -1981,9 +1933,7 @@ class ApprovalQueueTestCase(
         data = {"_dry_run": True}
 
         response = self.client.post(self._get_url("view", instance), data)
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("You do not have permission to run this job", response_body)
+        self.assertBodyContains(response, "You do not have permission to run this job")
         # No job was submitted
         self.assertFalse(JobResult.objects.filter(name=instance.job_model.name).exists())
 
@@ -2003,9 +1953,7 @@ class ApprovalQueueTestCase(
         instance2.job_model.save()
 
         response = self.client.post(self._get_url("view", instance2), data)
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("You do not have permission to run this job", response_body)
+        self.assertBodyContains(response, "You do not have permission to run this job")
         # No job was submitted
         job_names = [instance1.job_model.name, instance2.job_model.name]
         self.assertFalse(JobResult.objects.filter(name__in=job_names).exists())
@@ -2082,9 +2030,7 @@ class ApprovalQueueTestCase(
         for user in (user1, user2):
             self.client.force_login(user)
             response = self.client.post(self._get_url("view", instance), data)
-            self.assertHttpStatus(response, 200, msg=str(user))
-            response_body = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("You do not have permission", response_body, msg=str(user))
+            self.assertBodyContains(response, "You do not have permission")
             # Request was not deleted
             self.assertEqual(1, len(ScheduledJob.objects.filter(pk=instance.pk)), msg=str(user))
 
@@ -2117,9 +2063,7 @@ class ApprovalQueueTestCase(
         # Check object-based permissions are enforced for a different instance
         instance = self._get_queryset().first()
         response = self.client.post(self._get_url("view", instance), data)
-        self.assertHttpStatus(response, 200, msg=str(user))
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("You do not have permission", response_body, msg=str(user))
+        self.assertBodyContains(response, "You do not have permission")
         # Request was not deleted
         self.assertEqual(1, len(ScheduledJob.objects.filter(pk=instance.pk)), msg=str(user))
 
@@ -2131,9 +2075,7 @@ class ApprovalQueueTestCase(
         data = {"_approve": True}
 
         response = self.client.post(self._get_url("view", instance), data)
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("You cannot approve your own job request", response_body)
+        self.assertBodyContains(response, "You cannot approve your own job request")
         # Job was not approved
         instance.refresh_from_db()
         self.assertIsNone(instance.approved_by_user)
@@ -2168,9 +2110,7 @@ class ApprovalQueueTestCase(
         for user in (user1, user2):
             self.client.force_login(user)
             response = self.client.post(self._get_url("view", instance), data)
-            self.assertHttpStatus(response, 200, msg=str(user))
-            response_body = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("You do not have permission", response_body, msg=str(user))
+            self.assertBodyContains(response, "You do not have permission")
             # Job was not approved
             instance.refresh_from_db()
             self.assertIsNone(instance.approved_by_user)
@@ -2205,12 +2145,31 @@ class ApprovalQueueTestCase(
         # Check object-based permissions are enforced for a different instance
         instance = self._get_queryset().last()
         response = self.client.post(self._get_url("view", instance), data)
-        self.assertHttpStatus(response, 200, msg=str(user))
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("You do not have permission", response_body, msg=str(user))
+        self.assertBodyContains(response, "You do not have permission")
         # Job was not scheduled
         instance.refresh_from_db()
         self.assertIsNone(instance.approved_by_user)
+
+
+class JobQueueTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = JobQueue
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.form_data = {
+            "name": "Test Job Queue",
+            "queue_type": JobQueueTypeChoices.TYPE_CELERY,
+            "description": "This is a very detailed description",
+            "tenant": Tenant.objects.first().pk,
+            "tags": [t.pk for t in Tag.objects.get_for_model(JobQueue)],
+        }
+
+        cls.bulk_edit_data = {
+            "queue_type": JobQueueTypeChoices.TYPE_KUBERNETES,
+            "description": "This is a very detailed new description",
+            "tenant": Tenant.objects.last().pk,
+            # TODO add tests for add_tags/remove_tags fields in TagsBulkEditFormMixin
+        }
 
 
 class JobResultTestCase(
@@ -2248,9 +2207,7 @@ class JobResultTestCase(
         url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
         self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
         response = self.client.get(url)
-        self.assertHttpStatus(response, 200)
-        response_body = response.content.decode(response.charset)
-        self.assertIn("This is a test", response_body)
+        self.assertBodyContains(response, "This is a test")
 
     # TODO test with constrained permissions on both JobResult and JobLogEntry records
 
@@ -2281,6 +2238,8 @@ class JobTestCase(
 
         # But we do need to make sure the ones we're testing are flagged appropriately
         cls.test_pass = Job.objects.get(job_class_name="TestPass")
+        default_job_queue = JobQueue.objects.get(name="default", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+        cls.test_pass.default_job_queue = default_job_queue
         cls.test_pass.enabled = True
         cls.test_pass.save()
 
@@ -2293,6 +2252,7 @@ class JobTestCase(
 
         cls.test_required_args = Job.objects.get(job_class_name="TestRequired")
         cls.test_required_args.enabled = True
+        cls.test_pass.default_job_queue = default_job_queue
         cls.test_required_args.save()
 
         cls.extra_run_urls = (
@@ -2311,12 +2271,16 @@ class JobTestCase(
             enabled=True,
             installed=False,
         )
+        cls.test_not_installed.default_job_queue = default_job_queue
         cls.test_not_installed.validated_save()
 
         cls.data_run_immediately = {
             "_schedule_type": "immediately",
         }
-
+        job_queues = JobQueue.objects.all()[:3]
+        pk_list = [queue.pk for queue in job_queues]
+        pk_list += [default_job_queue.pk]
+        job_queues = JobQueue.objects.filter(pk__in=pk_list)
         cls.form_data = {
             "enabled": True,
             "grouping_override": True,
@@ -2337,8 +2301,9 @@ class JobTestCase(
             "time_limit": 650,
             "has_sensitive_variables": False,
             "has_sensitive_variables_override": True,
-            "task_queues": "overridden,priority",
-            "task_queues_override": True,
+            "job_queues": [queue.pk for queue in job_queues],
+            "job_queues_override": True,
+            "default_job_queue": default_job_queue.pk,
         }
         # This form is emulating the non-conventional JobBulkEditForm
         cls.bulk_edit_data = {
@@ -2359,9 +2324,83 @@ class JobTestCase(
             "time_limit": "",
             "has_sensitive_variables": False,
             "clear_has_sensitive_variables_override": False,
-            "task_queues": "overridden,priority",
-            "clear_task_queues_override": False,
+            "job_queues": [queue.pk for queue in job_queues],
+            "clear_job_queues_override": False,
+            "clear_default_job_queue_override": False,
+            "default_job_queue": default_job_queue.pk,
         }
+
+    def get_deletable_object(self):
+        """
+        Get an instance that can be deleted.
+        Exclude system jobs
+        """
+        # filter out the system jobs:
+        queryset = self._get_queryset().exclude(module_name__startswith="nautobot.")
+        return get_deletable_objects(self.model, queryset).first()
+
+    def get_deletable_object_pks(self):
+        """
+        Get a list of PKs corresponding to jobs that can be safely bulk-deleted.
+        Excluding system jobs
+        """
+        queryset = self._get_queryset().exclude(module_name__startswith="nautobot.")
+        return get_deletable_objects(self.model, queryset).values_list("pk", flat=True)[:3]
+
+    def test_delete_system_jobs_fail(self):
+        instance = self._get_queryset().filter(module_name__startswith="nautobot.").first()
+        job_name = instance.name
+        request = {
+            "path": self._get_url("delete", instance),
+            "data": post_data({"confirm": True}),
+        }
+
+        # Try delete with delete job permission
+        self.add_permissions("extras.delete_job")
+        response = self.client.post(**request, follow=True)
+        self.assertBodyContains(
+            response, f"Unable to delete Job {instance}. System Job cannot be deleted", status_code=403
+        )
+        # assert Job still exists
+        self.assertTrue(self._get_queryset().filter(name=job_name).exists())
+
+        # Try delete as a superuser
+        self.user.is_superuser = True
+        response = self.client.post(**request, follow=True)
+        self.assertBodyContains(
+            response, f"Unable to delete Job {instance}. System Job cannot be deleted", status_code=403
+        )
+        # assert Job still exists
+        self.assertTrue(self._get_queryset().filter(name=job_name).exists())
+
+    def test_bulk_delete_system_jobs_fail(self):
+        system_job_queryset = self.model.objects.filter(module_name__startswith="nautobot.")
+        pk_list = system_job_queryset.values_list("pk", flat=True)[:3]
+        initial_count = self._get_queryset().count()
+        data = {
+            "pk": pk_list,
+            "confirm": True,
+            "_confirm": True,  # Form button
+        }
+        # Try bulk delete with delete job permission
+        self.add_permissions("extras.delete_job")
+        response = self.client.post(self._get_url("bulk_delete"), data, follow=True)
+        self.assertBodyContains(
+            response,
+            f"Unable to delete Job {system_job_queryset.first()}. System Job cannot be deleted",
+            status_code=403,
+        )
+        self.assertEqual(self._get_queryset().count(), initial_count)
+
+        # Try bulk delete as a superuser
+        self.user.is_superuser = True
+        response = self.client.post(self._get_url("bulk_delete"), data, follow=True)
+        self.assertBodyContains(
+            response,
+            f"Unable to delete Job {system_job_queryset.first()}. System Job cannot be deleted",
+            status_code=403,
+        )
+        self.assertEqual(self._get_queryset().count(), initial_count)
 
     def validate_job_data_after_bulk_edit(self, pk_list, old_data):
         # Name is bulk-editable
@@ -2394,6 +2433,10 @@ class JobTestCase(
                     else:
                         self.assertEqual(getattr(instance, overridable_field), old_data[instance.pk][overridable_field])
                         self.assertEqual(getattr(instance, override_field), old_data[instance.pk][overridable_field])
+                # Special case for task queues/job queues
+                override_value = self.bulk_edit_data.get("job_queues")
+                self.assertEqual(list(instance.job_queues.values_list("pk", flat=True)), override_value)
+                self.assertEqual(instance.job_queues_override, True)
 
     def validate_object_data_after_bulk_edit(self, pk_list):
         instances = self._get_queryset().filter(pk__in=pk_list)
@@ -2427,10 +2470,7 @@ class JobTestCase(
         self.add_permissions("extras.run_job")
         for run_url in self.run_urls:
             response = self.client.get(run_url)
-            self.assertHttpStatus(response, 200, msg=run_url)
-
-            response_body = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("TestPass", response_body)
+            self.assertBodyContains(response, "TestPass")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_run_with_constrained_permission(self):
@@ -2473,10 +2513,7 @@ class JobTestCase(
 
         for run_url in self.run_urls:
             response = self.client.post(run_url, self.data_run_immediately)
-            self.assertHttpStatus(response, 200, msg=run_url)
-
-            content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("Celery worker process not running.", content)
+            self.assertBodyContains(response, "Celery worker process not running.")
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now(self, _):
@@ -2523,9 +2560,7 @@ class JobTestCase(
             reverse("extras:job_run", kwargs={"pk": self.test_not_installed.pk}),
         ):
             response = self.client.post(run_url, self.data_run_immediately)
-            self.assertEqual(response.status_code, 200, msg=run_url)
-            response_body = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("Job is not presently installed", response_body)
+            self.assertBodyContains(response, "Job is not presently installed")
 
             self.assertFalse(JobResult.objects.filter(name=self.test_not_installed.name).exists())
 
@@ -2538,9 +2573,7 @@ class JobTestCase(
             reverse("extras:job_run", kwargs={"pk": Job.objects.get(job_class_name="TestFail").pk}),
         ):
             response = self.client.post(run_url, self.data_run_immediately)
-            self.assertEqual(response.status_code, 200, msg=run_url)
-            response_body = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("Job is not enabled to be run", response_body)
+            self.assertBodyContains(response, "Job is not enabled to be run")
             self.assertFalse(JobResult.objects.filter(name="fail.TestFail").exists())
 
     def test_run_now_missing_args(self):
@@ -2569,19 +2602,18 @@ class JobTestCase(
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
-    @mock.patch("nautobot.extras.jobs.task_queues_as_choices")
-    def test_rerun_job(self, mock_task_queues_as_choices):
+    def test_rerun_job(self):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_jobresult")
 
-        mock_task_queues_as_choices.return_value = [("default", ""), ("queue1", ""), ("uniquequeue", "")]
+        job_queue = JobQueue.objects.create(name="uniquequeue", queue_type=JobQueueTypeChoices.TYPE_CELERY)
         job_celery_kwargs = {
             "nautobot_job_job_model_id": self.test_required_args.id,
             "nautobot_job_profile": True,
             "nautobot_job_user_id": self.user.id,
-            "queue": "uniquequeue",
+            "queue": job_queue.name,
         }
-
+        self.test_required_args.job_queues.set([job_queue])
         previous_result = JobResult.objects.create(
             job_model=self.test_required_args,
             user=self.user,
@@ -2592,8 +2624,7 @@ class JobTestCase(
         run_url = reverse("extras:job_run", kwargs={"pk": self.test_required_args.pk})
         response = self.client.get(f"{run_url}?kwargs_from_job_result={previous_result.pk!s}")
         content = extract_page_body(response.content.decode(response.charset))
-
-        self.assertInHTML('<option value="uniquequeue" selected>', content)
+        self.assertInHTML(f'<option value="{job_queue.pk}" selected>{job_queue}</option>', content)
         self.assertInHTML(
             '<input type="text" name="var" value="456" class="form-control" required placeholder="None" id="id_var">',
             content,
@@ -2698,10 +2729,7 @@ class JobTestCase(
         for i, run_url in enumerate(self.run_urls):
             data["_schedule_name"] = f"test {i}"
             response = self.client.post(run_url, data)
-            self.assertHttpStatus(response, 200, msg=self.run_urls[1])
-
-            content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("Unable to schedule job: Job may have sensitive input variables.", content)
+            self.assertBodyContains(response, "Unable to schedule job: Job may have sensitive input variables.")
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_job_with_invalid_task_queue(self, _):
@@ -2709,12 +2737,12 @@ class JobTestCase(
         self.add_permissions("extras.view_jobresult")
 
         self.test_pass.task_queues = []
-        self.test_pass.task_queues_override = True
+        self.test_pass.job_queues_override = True
         self.test_pass.validated_save()
-
+        job_queue = JobQueue.objects.create(name="invalid", queue_type=JobQueueTypeChoices.TYPE_CELERY)
         data = {
             "_schedule_type": "immediately",
-            "_task_queue": "invalid",
+            "_job_queue": job_queue.pk,
         }
 
         for run_url in self.run_urls:
@@ -2724,7 +2752,7 @@ class JobTestCase(
             errors = extract_form_failures(response.content.decode(response.charset))
             self.assertEqual(
                 errors,
-                ["_task_queue: Select a valid choice. invalid is not one of the available choices."],
+                ["_job_queue: Select a valid choice. That choice is not one of the available choices."],
             )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
@@ -2742,31 +2770,28 @@ class JobTestCase(
         for run_url in self.run_urls:
             # Assert warning message shows in get
             response = self.client.get(run_url)
-            content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn(
+            self.assertBodyContains(
+                response,
                 "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval.",
-                content,
             )
 
             # Assert run button is disabled
-            self.assertInHTML(
+            self.assertBodyContains(
+                response,
                 """
                 <button type="submit" name="_run" id="id__run" class="btn btn-primary" disabled="disabled">
                     <i class="mdi mdi-play"></i> Run Job Now
                 </button>
                 """,
-                content,
+                html=True,
             )
             # Assert error message shows after post
             response = self.client.post(run_url, data)
-            self.assertHttpStatus(response, 200, msg=self.run_urls[1])
-
-            content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn(
+            self.assertBodyContains(
+                response,
                 "Unable to run or schedule job: "
                 "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
                 "One of these two flags must be removed before this job can be scheduled or run.",
-                content,
             )
 
     def test_job_object_change_log_view(self):
@@ -2774,10 +2799,7 @@ class JobTestCase(
         instance = self.test_pass
         self.add_permissions("extras.view_objectchange", "extras.view_job")
         response = self.client.get(instance.get_changelog_url())
-        content = extract_page_body(response.content.decode(response.charset))
-
-        self.assertHttpStatus(response, 200)
-        self.assertIn(f"{instance.name} - Change Log", content)
+        self.assertBodyContains(response, f"{instance.name} - Change Log")
 
 
 class JobButtonTestCase(
@@ -2874,29 +2896,33 @@ class JobButtonRenderingTestCase(TestCase):
     def test_view_object_with_job_button(self):
         """Ensure that the job button is rendered."""
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
-        self.assertEqual(response.status_code, 200)
-        content = extract_page_body(response.content.decode(response.charset))
-        self.assertIn(f"JobButton {self.location_type.name}", content, content)
-        self.assertIn("Click me!", content, content)
+        self.assertBodyContains(response, f"JobButton {self.location_type.name}")
+        self.assertBodyContains(response, "Click me!")
 
     def test_task_queue_hidden_input_is_present(self):
         """
-        Ensure that the job button respects the job class' task_queues and the job class task_queues[0]/default is passed as a hidden form input.
+        Ensure that the job button respects the job class' task_queues and the job class default job queue is passed as a hidden form input.
         """
-        self.job.task_queues_override = True
+        self.job.job_queues_override = True
+        task_queues = ["overriden_queue", "default", "priority"]
+        for queue in task_queues:
+            JobQueue.objects.get_or_create(name=queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY})
         self.job.task_queues = ["overriden_queue", "default", "priority"]
         self.job.save()
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        self.assertIn(f'<input type="hidden" name="_task_queue" value="{self.job.task_queues[0]}">', content, content)
-        self.job.task_queues_override = False
+        job_queues = self.job.job_queues.all().values_list("name", flat=True)
+        self.assertIn(f'<input type="hidden" name="_job_queue" value="{job_queues[0]}">', content, content)
+
+        self.job.job_queues_override = False
         self.job.save()
+        self.job.job_queues.set([])
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn(
-            f'<input type="hidden" name="_task_queue" value="{settings.CELERY_TASK_DEFAULT_QUEUE}">', content, content
+            f'<input type="hidden" name="_job_queue" value="{self.job.default_job_queue.name}">', content, content
         )
 
     def test_view_object_with_unsafe_text(self):
@@ -3008,6 +3034,7 @@ class JobCustomTemplateTestCase(TestCase):
         cls.run_url = reverse("extras:job_run", kwargs={"pk": cls.example_job.pk})
 
     def test_rendering_custom_template(self):
+        self.assertIsNotNone(self.example_job.job_class)
         obj_perm = ObjectPermission(name="Test permission", actions=["view", "run"])
         obj_perm.save()
         obj_perm.users.add(self.user)
@@ -3351,7 +3378,6 @@ class RelationshipAssociationTestCase(
         response = self.client.get(self._get_url("list"))
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
         self.assertIn(instance1.source.name, content, msg=content)
         self.assertIn(instance1.destination.name, content, msg=content)
         self.assertNotIn(instance2.source.name, content, msg=content)
@@ -3395,10 +3421,7 @@ class StaticGroupAssociationTestCase(
 
         self.add_permissions("extras.view_staticgroupassociation")
         response = self.client.get(f"{self._get_url('list')}?dynamic_group={sga1.dynamic_group.pk}")
-        self.assertHttpStatus(response, 200)
-        content = extract_page_body(response.content.decode(response.charset))
-
-        self.assertIn(sga1.get_absolute_url(), content, msg=content)
+        self.assertBodyContains(response, sga1.get_absolute_url())
 
 
 class StatusTestCase(
@@ -3520,11 +3543,11 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     def test_create_tags_with_invalid_content_types(self):
         self.add_permissions("extras.add_tag")
-        vlangroup_content_type = ContentType.objects.get_for_model(VLANGroup)
+        manufacturer_content_type = ContentType.objects.get_for_model(Manufacturer)
 
         form_data = {
             **self.form_data,
-            "content_types": [vlangroup_content_type.id],
+            "content_types": [manufacturer_content_type.id],
         }
 
         request = {
@@ -3535,7 +3558,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         response = self.client.post(**request)
         tag = Tag.objects.filter(name=self.form_data["name"])
         self.assertFalse(tag.exists())
-        self.assertIn("content_types: Select a valid choice", str(response.content))
+        self.assertBodyContains(response, "content_types: Select a valid choice")
 
     def test_update_tags_remove_content_type(self):
         """Test removing a tag content_type that is been tagged to a model"""

@@ -13,13 +13,14 @@ from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.encoding import iri_to_uri
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.timezone import get_default_timezone_name
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.views.generic import GenericView
 
-from .forms import AdvancedProfileSettingsForm, LoginForm, PasswordChangeForm, TokenForm
+from .forms import AdvancedProfileSettingsForm, LoginForm, PasswordChangeForm, PreferenceProfileSettingsForm, TokenForm
 from .models import Token
 
 #
@@ -33,7 +34,6 @@ class LoginView(View):
     """
 
     template_name = "login.html"
-    use_new_ui = True
 
     @method_decorator(sensitive_post_parameters("password"))
     def dispatch(self, *args, **kwargs):
@@ -136,28 +136,51 @@ class UserConfigView(GenericView):
     template_name = "users/preferences.html"
 
     def get(self, request):
+        tzname = request.user.get_config("timezone", get_default_timezone_name())
+        form = PreferenceProfileSettingsForm(initial={"timezone": tzname})
         return render(
             request,
             self.template_name,
             {
                 "preferences": request.user.all_config(),
+                "form": form,
                 "active_tab": "preferences",
                 "is_django_auth_user": is_django_auth_user(request),
             },
         )
 
     def post(self, request):
-        user = request.user
-        data = user.all_config()
+        is_preference_update_post = "_update_preference_form" in request.POST
+        if is_preference_update_post:
+            form = PreferenceProfileSettingsForm(request.POST)
+            if form.is_valid():
+                if timezone := form.cleaned_data["timezone"]:
+                    request.user.set_config("timezone", str(timezone), commit=True)
+                return redirect("user:preferences")
 
-        # Delete selected preferences
-        for key in request.POST.getlist("pk"):
-            if key in data:
-                user.clear_config(key)
-        user.save()
-        messages.success(request, "Your preferences have been updated.")
+            return render(
+                request,
+                self.template_name,
+                {
+                    "preferences": request.user.all_config(),
+                    "form": form,
+                    "active_tab": "preferences",
+                    "is_django_auth_user": is_django_auth_user(request),
+                },
+            )
 
-        return redirect("user:preferences")
+        else:
+            user = request.user
+            data = user.all_config()
+
+            # Delete selected preferences
+            for key in request.POST.getlist("pk"):
+                if key in data:
+                    user.clear_config(key)
+            user.save()
+            messages.success(request, "Your preferences have been updated.")
+
+            return redirect("user:preferences")
 
 
 class ChangePasswordView(GenericView):

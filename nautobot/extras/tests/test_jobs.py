@@ -12,6 +12,7 @@ from constance.test import override_config
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -30,6 +31,7 @@ from nautobot.dcim.models import Device, Location, LocationType
 from nautobot.extras import models
 from nautobot.extras.choices import (
     JobExecutionType,
+    JobQueueTypeChoices,
     JobResultStatusChoices,
     LogLevelChoices,
     ObjectChangeEventContextChoices,
@@ -71,7 +73,7 @@ class JobTest(TestCase):
         name = "TestFieldOrder"
         job_class = get_job(f"{module}.{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_task_queue", "_profile"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_job_queue", "_profile"])
 
     def test_no_field_order(self):
         """
@@ -81,7 +83,7 @@ class JobTest(TestCase):
         name = "TestNoFieldOrder"
         job_class = get_job(f"{module}.{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_task_queue", "_profile"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_job_queue", "_profile"])
 
     def test_no_field_order_inherited_variable(self):
         """
@@ -93,7 +95,7 @@ class JobTest(TestCase):
         form = job_class().as_form()
         self.assertSequenceEqual(
             list(form.fields.keys()),
-            ["testvar1", "b_testvar2", "a_testvar3", "_task_queue", "_profile"],
+            ["testvar1", "b_testvar2", "a_testvar3", "_job_queue", "_profile"],
         )
 
     def test_dryrun_default(self):
@@ -115,47 +117,36 @@ class JobTest(TestCase):
         form = job_class().as_form()
         self.assertEqual(form.fields["dryrun"].initial, job_model.dryrun_default)
 
-    @mock.patch("nautobot.extras.utils.get_celery_queues")
-    def test_job_class_task_queues(self, mock_get_celery_queues):
+    def test_job_task_queues_setter(self):
+        """Test the task_queues property setter on Job."""
+        module = "dry_run"
+        name = "TestDryRun"
+        _, job_model = get_job_class_and_model(module, name)
+
+        invalid_queue = "Invalid job Queue"
+        with self.assertRaises(ValidationError) as cm:
+            job_model.task_queues = [invalid_queue]
+            job_model.validated_save()
+        self.assertIn(f"Job Queue {invalid_queue} does not exist in the database.", str(cm.exception))
+
+    def test_job_class_job_queues(self):
         """
         Test job form with custom task queues defined on the job class
         """
         module = "task_queues"
         name = "TestWorkerQueues"
-        mock_get_celery_queues.return_value = {"celery": 4, "irrelevant": 5}
-        job_class, _ = get_job_class_and_model(module, name)
-        form = job_class().as_form()
-        self.assertInHTML(
-            """<tr><th><label for="id__task_queue">Task queue:</label></th>
-            <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
-            <option value="celery">celery (4 workers)</option>
-            <option value="nonexistent">nonexistent (0 workers)</option></select><br>
-            <span class="helptext">The task queue to route this job to</span>
-            <input type="hidden" name="_profile" value="False" id="id__profile"></td></tr>""",
-            form.as_table(),
-        )
-
-    @mock.patch("nautobot.extras.utils.get_celery_queues")
-    def test_job_class_task_queues_override(self, mock_get_celery_queues):
-        """
-        Test job form with custom task queues defined on the job class and overridden on the model
-        """
-        module = "task_queues"
-        name = "TestWorkerQueues"
-        mock_get_celery_queues.return_value = {"default": 1, "irrelevant": 5}
         job_class, job_model = get_job_class_and_model(module, name)
-        job_model.task_queues = ["default", "priority"]
-        job_model.task_queues_override = True
-        job_model.save()
+        jq_1, _ = models.JobQueue.objects.get_or_create(
+            name="celery", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+        )
+        jq_2, _ = models.JobQueue.objects.get_or_create(
+            name="irrelevant", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+        )
+        job_model.job_queues.set([jq_1, jq_2])
         form = job_class().as_form()
-        self.assertInHTML(
-            """<tr><th><label for="id__task_queue">Task queue:</label></th>
-            <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
-            <option value="default">default (1 worker)</option>
-            <option value="priority">priority (0 workers)</option>
-            </select><br><span class="helptext">The task queue to route this job to</span>
-            <input type="hidden" name="_profile" value="False" id="id__profile"></td></tr>""",
-            form.as_table(),
+        self.assertQuerySetEqual(
+            form.fields["_job_queue"].queryset,
+            models.JobQueue.objects.filter(jobs=job_model),
         )
 
     def test_supports_dryrun(self):
@@ -890,9 +881,7 @@ class JobButtonReceiverTest(TestCase):
         name = "TestJobButtonReceiverSimple"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
-        self.assertSequenceEqual(
-            list(form.fields.keys()), ["object_pk", "object_model_name", "_task_queue", "_profile"]
-        )
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_pk", "object_model_name", "_job_queue", "_profile"])
 
     def test_hidden(self):
         module = "job_button_receiver"
@@ -955,7 +944,7 @@ class JobHookReceiverTest(TestCase):
         name = "TestJobHookReceiverLog"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_task_queue", "_profile"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_job_queue", "_profile"])
 
     def test_hidden(self):
         module = "job_hook_receiver"

@@ -35,10 +35,13 @@ SETTINGS_DOCUMENTATION_SCHEMA = {
         "environment_variable": {
             "type": "string",
         },
-        "is_constance_config": {
-            "type": "boolean",
+        "environment_variables": {
+            "type": "array",
+            "items": {
+                "type": "string",
+            },
         },
-        "is_required_setting": {
+        "is_constance_config": {
             "type": "boolean",
         },
         "see_also": {
@@ -122,6 +125,7 @@ class SettingsJSONSchemaTestCase(TestCase):
             "CONSTANCE_BACKEND",
             "CONSTANCE_CONFIG",
             "CONSTANCE_CONFIG_FIELDSETS",
+            "CONSTANCE_DATABASE_CACHE_AUTOFILL_TIMEOUT",
             "CONSTANCE_DATABASE_CACHE_BACKEND",
             "CONSTANCE_DATABASE_PREFIX",
             "CSRF_FAILURE_VIEW",

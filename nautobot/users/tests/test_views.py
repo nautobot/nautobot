@@ -5,9 +5,11 @@ from django.contrib.auth import get_user_model
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import override_settings, RequestFactory
 from django.urls import reverse
+from django.utils import timezone
 from social_django.utils import load_backend, load_strategy
 
-from nautobot.core.testing import TestCase
+from nautobot.core.testing import TestCase, utils
+from nautobot.core.testing.utils import post_data
 
 User = get_user_model()
 
@@ -21,11 +23,11 @@ class PasswordUITest(TestCase):
         preferences_response = self.client.get(reverse("user:preferences"))
         api_tokens_response = self.client.get(reverse("user:token_list"))
         for response in [profile_response, preferences_response, api_tokens_response]:
-            self.assertIn("Change Password", str(response.content))
+            self.assertBodyContains(response, "Change Password")
 
         # Check GET change_password functionality
         get_response = self.client.get(reverse("user:change_password"))
-        self.assertIn("New password confirmation", str(get_response.content))
+        self.assertBodyContains(get_response, "New password confirmation")
 
         # Check POST change_password functionality
         post_response = self.client.post(
@@ -36,7 +38,7 @@ class PasswordUITest(TestCase):
                 "new_password2": "baz",
             },
         )
-        self.assertIn("The two password fields", str(post_response.content))
+        self.assertBodyContains(post_response, "The two password fields")
 
     @override_settings(
         AUTHENTICATION_BACKENDS=[
@@ -77,20 +79,18 @@ class PasswordUITest(TestCase):
             preferences_response = self.client.get(reverse("user:preferences"))
             api_tokens_response = self.client.get(reverse("user:token_list"))
             for response in [profile_response, preferences_response, api_tokens_response]:
-                self.assertNotIn("Change Password", str(response.content))
+                self.assertNotIn("Change Password", utils.extract_page_body(response.content.decode(response.charset)))
 
             # Check GET and POST change_password functionality
             get_response = self.client.get(reverse("user:change_password"), follow=True)
             post_response = self.client.post(reverse("user:change_password"), follow=True)
             for response in [get_response, post_response]:
-                self.assertNotIn("New password confirmation", str(response.content))
+                content = utils.extract_page_body(response.content.decode(response.charset))
+                self.assertNotIn("New password confirmation", content)
                 # Check redirect
-                self.assertIn("User Profile", str(response.content))
+                self.assertIn("User Profile", content)
                 # Check warning message
-                self.assertIn(
-                    "Remotely authenticated user credentials cannot be changed within Nautobot.",
-                    str(response.content),
-                )
+                self.assertIn("Remotely authenticated user credentials cannot be changed within Nautobot.", content)
 
 
 class AdvancedProfileSettingsViewTest(TestCase):
@@ -135,3 +135,24 @@ class AdvancedProfileSettingsViewTest(TestCase):
 
         # Check if the session has the correct value
         self.assertFalse(self.client.session.get("silk_record_requests"))
+
+
+class PreferenceTestCase(TestCase):
+    def test_timezone_change(self):
+        self.user.is_superuser = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        timezone_name = timezone.get_current_timezone_name()
+        new_timezone_name = "US/Eastern"
+        form_data = {"timezone": new_timezone_name, "_update_preference_form": [""]}
+        url = reverse("user:preferences")
+        request = {
+            "path": url,
+            "data": post_data(form_data),
+        }
+        response = self.client.post(**request)
+        response = self.client.get(url)
+        self.assertEqual(timezone.get_current_timezone_name(), new_timezone_name)
+        self.assertNotEqual(timezone_name, new_timezone_name)
+        self.assertHttpStatus(response, 200)

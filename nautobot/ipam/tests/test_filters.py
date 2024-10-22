@@ -985,8 +985,9 @@ class VLANGroupTestCase(FilterTestCases.FilterTestCase):
     filterset = VLANGroupFilterSet
     generic_filter_tests = (
         ("description",),
-        ("location", "location__id"),
-        ("location", "location__name"),
+        # NOTE: No generic logic in place yet to test TreeNodeMultipleChoiceFilter
+        # ("location", "location__id"),
+        # ("location", "location__name"),
         ("name",),
     )
 
@@ -1180,7 +1181,7 @@ class VLANLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
         params = {"q": vlan_vid}
         queryset = VLANLocationAssignment.objects.exclude(location__name__icontains=vlan_vid)
         filterset = VLANLocationAssignmentFilterSet(params, queryset).qs
-        expected_queryset = VLANLocationAssignment.objects.filter(vlan__vid__exact=vlan_vid)
+        expected_queryset = queryset.filter(vlan__vid__exact=vlan_vid)
         self.assertQuerysetEqualAndNotEmpty(filterset, expected_queryset)
 
 

@@ -6,12 +6,16 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
 from rest_framework.response import Response
+from rest_framework.serializers import IntegerField, ListSerializer
 
+from nautobot.core.api.authentication import TokenPermissions
+from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT, PAGINATE_COUNT_DEFAULT
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.models import Location
 from nautobot.extras.api.views import NautobotModelViewSet
 from nautobot.ipam import filters
+from nautobot.ipam.api import serializers
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressToInterface,
@@ -28,8 +32,6 @@ from nautobot.ipam.models import (
     VRFDeviceAssignment,
     VRFPrefixAssignment,
 )
-
-from . import serializers
 
 #
 # Namespace
@@ -202,13 +204,17 @@ class PrefixViewSet(NautobotModelViewSet):
                         if requested_prefix["prefix_length"] >= available_prefix.prefixlen:
                             allocated_prefix = f"{available_prefix.network}/{requested_prefix['prefix_length']}"
                             requested_prefix["prefix"] = allocated_prefix
-                            requested_prefix["namespace"] = prefix.namespace.pk
+                            requested_prefix["namespace"] = prefix.namespace
                             break
                     else:
                         return Response(
                             {"detail": "Insufficient space is available to accommodate the requested prefix size(s)"},
                             status=status.HTTP_204_NO_CONTENT,
                         )
+
+                    # The serializer usage above has mapped "custom_fields" dict to "_custom_field_data".
+                    # We need to convert it back to "custom_fields" as we're going to deserialize it a second time below
+                    requested_prefix["custom_fields"] = requested_prefix.pop("_custom_field_data", {})
 
                     # Remove the allocated prefix from the list of available prefixes
                     available_prefixes.remove(allocated_prefix)
@@ -299,7 +305,10 @@ class PrefixViewSet(NautobotModelViewSet):
                 prefix_length = prefix.prefix.prefixlen
                 for requested_ip in requested_ips:
                     requested_ip["address"] = f"{next(available_ips)}/{prefix_length}"
-                    requested_ip["namespace"] = prefix.namespace.pk
+                    requested_ip["namespace"] = prefix.namespace
+                    # The serializer usage above has mapped "custom_fields" dict to "_custom_field_data".
+                    # We need to convert it back to "custom_fields" as we're going to deserialize it a second time below
+                    requested_ip["custom_fields"] = requested_ip.pop("_custom_field_data", {})
 
                 # Initialize the serializer with a list or a single object depending on what was requested
                 context = {"request": request, "depth": 0}
@@ -316,11 +325,15 @@ class PrefixViewSet(NautobotModelViewSet):
         # Determine the maximum number of IPs to return
         else:
             try:
-                limit = int(request.query_params.get("limit", get_settings_or_config("PAGINATE_COUNT")))
+                limit = int(
+                    request.query_params.get(
+                        "limit", get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
+                    )
+                )
             except ValueError:
-                limit = get_settings_or_config("PAGINATE_COUNT")
-            if get_settings_or_config("MAX_PAGE_SIZE"):
-                limit = min(limit, get_settings_or_config("MAX_PAGE_SIZE"))
+                limit = get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
+            if get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT):
+                limit = min(limit, get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT))
 
             # Calculate available IPs within the prefix
             ip_list = []
@@ -380,9 +393,174 @@ class IPAddressToInterfaceViewSet(NautobotModelViewSet):
 
 
 class VLANGroupViewSet(NautobotModelViewSet):
-    queryset = VLANGroup.objects.select_related("location").annotate(vlan_count=count_related(VLAN, "vlan_group"))
+    queryset = (
+        VLANGroup.objects.select_related("location")
+        .prefetch_related("tags")
+        .annotate(vlan_count=count_related(VLAN, "vlan_group"))
+    )
     serializer_class = serializers.VLANGroupSerializer
     filterset_class = filters.VLANGroupFilterSet
+
+    def restrict_queryset(self, request, *args, **kwargs):
+        """
+        Apply "view" permissions on the POST /available-vlans/ endpoint, otherwise as ModelViewSetMixin.
+        """
+        if request.user.is_authenticated and self.action == "available_vlans":
+            self.queryset = self.queryset.restrict(request.user, "view")
+        else:
+            super().restrict_queryset(request, *args, **kwargs)
+
+    class AvailableVLANPermissions(TokenPermissions):
+        """As nautobot.core.api.authentication.TokenPermissions, but enforcing add_vlan permission."""
+
+        perms_map = {
+            "GET": ["ipam.view_vlangroup"],
+            "POST": ["ipam.view_vlangroup", "ipam.add_vlan"],
+        }
+
+    @extend_schema(methods=["get"], responses={200: ListSerializer(child=IntegerField())})
+    @extend_schema(
+        methods=["post"],
+        responses={201: serializers.VLANSerializer(many=True)},
+        request=serializers.VLANAllocationSerializer(many=True),
+    )
+    @action(
+        detail=True,
+        name="Available VLAN IDs",
+        url_path="available-vlans",
+        methods=["get", "post"],
+        permission_classes=[AvailableVLANPermissions],
+        filterset_class=None,
+    )
+    def available_vlans(self, request, pk=None):
+        """
+        A convenience method for listing available VLAN IDs within a VLANGroup.
+        By default, the number of VIDs returned will be equivalent to PAGINATE_COUNT.
+        An arbitrary limit (up to MAX_PAGE_SIZE, if set) may be passed, however results will not be paginated.
+        """
+        vlan_group = get_object_or_404(self.queryset, pk=pk)
+
+        if request.method == "POST":
+            with cache.lock(
+                "nautobot.ipam.api.views.available_vlans", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT
+            ):
+                # Normalize to a list of objects
+                serializer = serializers.VLANAllocationSerializer(
+                    data=request.data if isinstance(request.data, list) else [request.data],
+                    many=True,
+                    context={
+                        "request": request,
+                        "vlan_group": vlan_group,
+                    },
+                )
+                serializer.is_valid(raise_exception=True)
+                requested_vlans = serializer.validated_data
+
+                # Determine if the requested number of VLANs is available
+                available_vids = vlan_group.available_vids
+                if len(available_vids) < len(requested_vlans):
+                    return Response(
+                        {
+                            "detail": (
+                                f"An insufficient number of VLANs are available within the VLANGroup {vlan_group} "
+                                f"({len(requested_vlans)} requested, {len(available_vids)} available)"
+                            )
+                        },
+                        status=status.HTTP_204_NO_CONTENT,
+                    )
+
+                # Prioritise and check for explicitly requested VIDs. Remove them from available_vids
+                for requested_vlan in requested_vlans:
+                    # Check requested `vid` for availability.
+                    # This will also catch if same `vid` was requested multiple times in a request.
+                    if "vid" in requested_vlan and requested_vlan["vid"] not in available_vids:
+                        return Response(
+                            {"detail": f"VLAN {requested_vlan['vid']} is not available within the VLANGroup."},
+                            status=status.HTTP_204_NO_CONTENT,
+                        )
+                    elif "vid" in requested_vlan and requested_vlan["vid"] in available_vids:
+                        available_vids.remove(requested_vlan["vid"])
+
+                # Assign VLAN IDs from the list of VLANGroup's available VLAN IDs.
+                # Available_vids now does not contain explicitly requested vids.
+                _available_vids = iter(available_vids)
+
+                for requested_vlan in requested_vlans:
+                    if "vid" not in requested_vlan:
+                        requested_vlan["vid"] = next(_available_vids)
+
+                    # Check requested `vlan_group`
+                    if "vlan_group" in requested_vlan and requested_vlan["vlan_group"] != vlan_group:
+                        return Response(
+                            {
+                                "detail": f"Invalid VLAN Group requested: {requested_vlan['vlan_group']}. "
+                                f"Only VLAN Group {vlan_group} is permitted."
+                            },
+                            status=status.HTTP_204_NO_CONTENT,
+                        )
+                    else:
+                        requested_vlan["vlan_group"] = vlan_group.pk
+
+                    # Rewrite custom field data
+                    requested_vlan["custom_fields"] = requested_vlan.pop("_custom_field_data", {})
+
+                # Initialize the serializer with a list or a single object depending on what was requested
+                context = {"request": request, "depth": 0}
+
+                if isinstance(request.data, list):
+                    serializer = serializers.VLANSerializer(data=requested_vlans, many=True, context=context)
+                else:
+                    serializer = serializers.VLANSerializer(data=requested_vlans[0], context=context)
+
+                # Create the new VLANs
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+
+                data = serializer.data
+
+                return Response(
+                    data={
+                        "count": len(data),
+                        "next": None,
+                        "previous": None,
+                        "results": data,
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+
+        else:
+            try:
+                limit = int(
+                    request.query_params.get(
+                        "limit", get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
+                    )
+                )
+            except ValueError:
+                limit = get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
+
+            if get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT):
+                limit = min(limit, get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT))
+
+            if isinstance(limit, int) and limit >= 0:
+                vids = vlan_group.available_vids[0:limit]
+            else:
+                vids = vlan_group.available_vids
+
+            serializer = ListSerializer(
+                child=IntegerField(),
+                data=vids,
+            )
+            serializer.is_valid(raise_exception=True)
+            data = serializer.validated_data
+
+            return Response(
+                {
+                    "count": len(data),
+                    "next": None,
+                    "previous": None,
+                    "results": data,
+                }
+            )
 
 
 #

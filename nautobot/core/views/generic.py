@@ -17,7 +17,7 @@ from django.db.models import ManyToManyField, ProtectedError, Q
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.urls import resolve, reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -25,6 +25,7 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -80,6 +81,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
 
     queryset = None
     template_name = None
+    object_detail_content = None
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -119,6 +121,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             "content_type": content_type,
             "verbose_name": self.queryset.model._meta.verbose_name,
             "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+            "object_detail_content": self.object_detail_content,
             **common_detail_view_context(request, instance),
             **self.get_extra_context(request, instance),
         }
@@ -205,17 +208,16 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         filter_form = None
         hide_hierarchy_ui = False
         clear_view = request.GET.get("clear_view", False)
+        resolved_path = resolve(request.path)
+        list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
 
         # If the user clicks on the clear view button, we do not check for global or user defaults
         if not clear_view and not request.GET.get("saved_view"):
             # Check if there is a default for this view for this specific user
-            app_label, model_name = model._meta.label.split(".")
-            view_name = f"{app_label}:{model_name.lower()}_list"
-
             if not isinstance(user, AnonymousUser):
                 try:
                     user_default_saved_view_pk = UserSavedViewAssociation.objects.get(
-                        user=user, view_name=view_name
+                        user=user, view_name=list_url
                     ).saved_view.pk
                     # Saved view should either belong to the user or be public
                     SavedView.objects.get(
@@ -229,7 +231,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
             # Check if there is a global default for this view
             try:
-                global_saved_view = SavedView.objects.get(view=view_name, is_global_default=True)
+                global_saved_view = SavedView.objects.get(view=list_url, is_global_default=True)
                 return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
             except ObjectDoesNotExist:
                 pass
@@ -302,7 +304,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         table_config_form = None
         current_saved_view = None
         current_saved_view_pk = self.request.GET.get("saved_view", None)
-        list_url = validated_viewname(model, "list")
         # We are not using .restrict(request.user, "view") here
         # User should be able to see any saved view that he has the list view access to.
         if user.has_perms(["extras.view_savedview"]):
@@ -315,15 +316,17 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 SavedView.objects.filter(view=list_url, owner=user).order_by("name").only("pk", "name")
             )
             saved_views = shared_saved_views | user_owned_saved_views
+
+        if current_saved_view_pk:
+            try:
+                # We are not using .restrict(request.user, "view") here
+                # User should be able to see any saved view that he has the list view access to.
+                current_saved_view = SavedView.objects.get(view=list_url, pk=current_saved_view_pk)
+            except ObjectDoesNotExist:
+                messages.error(request, f"Saved view {current_saved_view_pk} not found")
+
+        # Construct the objects table
         if self.table:
-            # Construct the objects table
-            if current_saved_view_pk:
-                try:
-                    # We are not using .restrict(request.user, "view") here
-                    # User should be able to see any saved view that he has the list view access to.
-                    current_saved_view = SavedView.objects.get(view=list_url, pk=current_saved_view_pk)
-                except ObjectDoesNotExist:
-                    messages.error(request, f"Saved view {current_saved_view_pk} not found")
             if self.request.GET.getlist("sort") or (
                 current_saved_view is not None and current_saved_view.config.get("sort_order")
             ):
@@ -347,7 +350,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             }
             RequestConfig(request, paginate).configure(table)
             table_config_form = TableConfigForm(table=table)
-            max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
+            max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
             if max_page_size and paginate["per_page"] > max_page_size:
                 messages.warning(
                     request,

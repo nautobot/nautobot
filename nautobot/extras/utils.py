@@ -21,7 +21,8 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
-from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.core.utils.data import is_uuid
+from nautobot.extras.choices import DynamicGroupTypeChoices, JobQueueTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import (
     CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL,
     EXTRAS_FEATURES,
@@ -366,28 +367,71 @@ def get_celery_queues():
     """
     from nautobot.core.celery import app  # prevent circular import
 
-    celery_queues = {}
+    celery_queues = None
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        celery_queues = cache.get("nautobot.extras.utils.get_celery_queues")
 
-    celery_inspect = app.control.inspect()
-    active_queues = celery_inspect.active_queues()
-    if active_queues is None:
-        return celery_queues
-    for task_queue_list in active_queues.values():
-        distinct_queues = {q["name"] for q in task_queue_list}
-        for queue in distinct_queues:
-            celery_queues.setdefault(queue, 0)
-            celery_queues[queue] += 1
+    if celery_queues is None:
+        celery_queues = {}
+        celery_inspect = app.control.inspect()
+        try:
+            active_queues = celery_inspect.active_queues()
+        except redis.exceptions.ConnectionError:
+            # Celery seems to be not smart enough to auto-retry on intermittent failures, so let's do it ourselves:
+            try:
+                active_queues = celery_inspect.active_queues()
+            except redis.exceptions.ConnectionError as err:
+                logger.error("Repeated ConnectionError from Celery/Redis: %s", err)
+                active_queues = None
+        if active_queues is None:
+            return celery_queues
+        for task_queue_list in active_queues.values():
+            distinct_queues = {q["name"] for q in task_queue_list}
+            for queue in distinct_queues:
+                celery_queues[queue] = celery_queues.get(queue, 0) + 1
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            cache.set("nautobot.extras.utils.get_celery_queues", celery_queues, timeout=5)
 
     return celery_queues
 
 
 def get_worker_count(request=None, queue=None):
     """
-    Return a count of the active Celery workers in a specified queue. Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
+    Return a count of the active Celery workers in a specified queue (Could be a JobQueue instance, instance pk or instance name).
+    Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
     """
+    from nautobot.extras.models import JobQueue
+
     celery_queues = get_celery_queues()
-    if not queue:
+    if isinstance(queue, str):
+        if is_uuid(queue):
+            try:
+                # check if the string passed in is a valid UUID
+                queue = JobQueue.objects.get(pk=queue).name
+            except JobQueue.DoesNotExist:
+                return 0
+        else:
+            return celery_queues.get(queue, 0)
+    elif isinstance(queue, JobQueue):
+        queue = queue.name
+    else:
         queue = settings.CELERY_TASK_DEFAULT_QUEUE
+
+    return celery_queues.get(queue, 0)
+
+
+def get_job_queue_worker_count(request=None, job_queue=None):
+    """
+    Return a count of the active Celery workers in a specified queue. Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
+    Same as get_worker_count() method above, but job_queue is an actual JobQueue model instance.
+    """
+    # TODO currently this method is only retrieve celery specific queues and their respective worker counts
+    # Refactor it to support retrieving kubernetes queues as well.
+    celery_queues = get_celery_queues()
+    if not job_queue:
+        queue = settings.CELERY_TASK_DEFAULT_QUEUE
+    else:
+        queue = job_queue.name
     return celery_queues.get(queue, 0)
 
 
@@ -411,13 +455,17 @@ def task_queues_as_choices(task_queues):
     return choices
 
 
-def refresh_job_model_from_job_class(job_model_class, job_class):
+def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class=None):
     """
     Create or update a job_model record based on the metadata of the provided job_class.
 
-    Note that job_model_class is a parameter (rather than doing a "from nautobot.extras.models import Job") because
+    Note that `job_model_class` and `job_queue_class` are parameters rather than local imports because
     this function may be called from various initialization processes (such as the "nautobot_database_ready" signal)
     and in that case we need to not import models ourselves.
+
+    The `job_queue_class` parameter really should be required, but for some reason we decided to make this function
+    part of the `nautobot.apps.utils` API surface and so we need it to stay backwards-compatible with Apps that might
+    be calling the two-argument form of this function.
     """
     from nautobot.extras.jobs import (
         JobButtonReceiver,
@@ -489,6 +537,10 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
 
     try:
         with transaction.atomic():
+            default_job_queue, _ = job_queue_class.objects.get_or_create(
+                name=job_class.task_queues[0] if job_class.task_queues else settings.CELERY_TASK_DEFAULT_QUEUE,
+                defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY},
+            )
             job_model, created = job_model_class.objects.get_or_create(
                 module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
                 job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
@@ -501,6 +553,7 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
                     "supports_dryrun": job_class.supports_dryrun,
                     "installed": True,
                     "enabled": False,
+                    "default_job_queue": default_job_queue,
                 },
             )
 
@@ -516,6 +569,19 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
                 if not getattr(job_model, f"{field_name}_override", False):
                     # It was inherited and not overridden
                     setattr(job_model, field_name, getattr(job_class, field_name))
+
+            # Special case for backward compatibility
+            # Note that the `job_model.task_queues` setter does NOT auto-create Celery JobQueue records;
+            # this is a special case where we DO want to do so.
+            if job_queue_class is not None and not job_model.job_queues_override:
+                job_queues = []
+                task_queues = job_class.task_queues or [settings.CELERY_TASK_DEFAULT_QUEUE]
+                for task_queue in task_queues:
+                    job_queue, _ = job_queue_class.objects.get_or_create(
+                        name=task_queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+                    )
+                    job_queues.append(job_queue)
+                job_model.job_queues.set(job_queues)
 
             if not created:
                 # Mark it as installed regardless
@@ -582,6 +648,32 @@ def fixup_null_statuses(*, model, model_contenttype, status_model):
         null_status.content_types.add(model_contenttype)
         updated_count = instances_to_fixup.update(status=null_status)
         print(f"    Found and fixed {updated_count} instances of {model.__name__} that had null 'status' fields.")
+
+
+def fixup_dynamic_group_group_types(apps, *args, **kwargs):  # pylint: disable=redefined-outer-name
+    """Set dynamic group group_type values correctly."""
+    DynamicGroup = apps.get_model("extras", "DynamicGroup")
+    DynamicGroupMembership = apps.get_model("extras", "DynamicGroupMembership")
+    count_1 = count_2 = 0
+    # See note in migration 0112 - for some reason, if we were to do the "intuitive" thing, and call
+    # `DynamicGroup.objects.filter(children__isnull=False)`, we would unexpectedly get those groups for which their
+    # *parent* is non-null. The below is an alternate approach that should remain correct even if that issue gets fixed.
+    parent_group_names = set(DynamicGroupMembership.objects.values_list("parent_group__name", flat=True))
+    parent_groups_with_wrong_type = DynamicGroup.objects.filter(name__in=parent_group_names).exclude(
+        group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET
+    )
+    if parent_groups_with_wrong_type.exists():
+        count_1 = parent_groups_with_wrong_type.update(group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET)
+        print(f'\n    Found and fixed {count_1} DynamicGroup(s) that should be typed as "Group of groups".')
+
+    filter_groups_with_wrong_type = DynamicGroup.objects.exclude(filter__exact={}).exclude(
+        group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER
+    )
+    if filter_groups_with_wrong_type.exists():
+        count_2 = filter_groups_with_wrong_type.update(group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER)
+        print(f'\n    Found and fixed {count_2} DynamicGroup(s) that should be typed as "Filter-defined".')
+
+    return count_1, count_2
 
 
 def migrate_role_data(

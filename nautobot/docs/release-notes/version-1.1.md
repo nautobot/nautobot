@@ -29,7 +29,7 @@ MySQL 8.x is now fully supported as a database backend!
 
 The installation and configuration guides have been revised to include MySQL. If you prefer MySQL or it is more easily supported in your environment, configuring Nautobot to use MySQL is as easy as changing value of `ENGINE` in your `DATABASES` setting to point to `django.db.backends.mysql` and installing the MySQL Python driver using `pip3 install nautobot[mysql]`.
 
-A new `NAUTOBOT_DB_ENGINE` environment variable has been added to allow for specifying the desired database engine at runtime without needing to modify your `nautobot_config.py`. Please see the [configuration guide on `DATABASES`](../user-guide/administration/configuration/required-settings.md#databases) for more details on how to configure Nautobot to use MySQL.
+A new `NAUTOBOT_DB_ENGINE` environment variable has been added to allow for specifying the desired database engine at runtime without needing to modify your `nautobot_config.py`. Please see the [configuration guide on `DATABASES`](../user-guide/administration/configuration/settings.md#databases) for more details on how to configure Nautobot to use MySQL.
 
 Please see the MySQL [setup guides](../user-guide/administration/installation/install_system.md#database-setup) to get started.
 

@@ -1,9 +1,12 @@
+from datetime import datetime
 import uuid
+from zoneinfo import ZoneInfo
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, RequestFactory
+from django.utils.timezone import now
 
 from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.filters import DeviceFilterSet
@@ -20,6 +23,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     DynamicGroupTypeChoices,
+    JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
     MetadataTypeDataTypeChoices,
@@ -96,6 +100,7 @@ from nautobot.extras.models import (
     RelationshipAssociation,
     Role,
     SavedView,
+    ScheduledJob,
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
@@ -926,6 +931,14 @@ class JobQueueFilterSetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.
         ["name"],
     ]
 
+    @classmethod
+    def setUpTestData(cls):
+        # create some job queues that do not have jobs attached to them
+        # for has_jobs boolean filter
+        JobQueue.objects.create(name="Empty Job Queue 1", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+        JobQueue.objects.create(name="Empty Job Queue 2", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+        JobQueue.objects.create(name="Empty Job Queue 3", queue_type=JobQueueTypeChoices.TYPE_KUBERNETES)
+
     def test_queue_type(self):
         # we cannot add this test to self.generic_filter_tests because JobQueueTypeChoices only has two values.
         # self.generic_filter_tests needs at least three.
@@ -950,14 +963,6 @@ class JobQueueAssignmentFilterSetTestCase(FilterTestCases.FilterTestCase):
         ("job_queue", "job_queue__name"),
     ]
 
-    @classmethod
-    def setUpTestData(cls):
-        jobs = Job.objects.all()[:3]
-        job_queues = JobQueue.objects.all()[:3]
-        for job in jobs:
-            for queue in job_queues:
-                JobQueueAssignment.objects.create(job=job, job_queue=queue)
-
 
 class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = JobResult.objects.all()
@@ -976,13 +981,60 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         jobs = Job.objects.all()[:3]
         cls.jobs = jobs
+        user = User.objects.create(username="user1", is_active=True)
+        job_model = Job.objects.get_for_class_path("pass.TestPass")
+        scheduled_jobs = [
+            ScheduledJob.objects.create(
+                name="test1",
+                task="pass.TestPass",
+                job_model=job_model,
+                interval=JobExecutionType.TYPE_IMMEDIATELY,
+                user=user,
+                approval_required=True,
+                start_time=now(),
+            ),
+            ScheduledJob.objects.create(
+                name="test2",
+                task="pass.TestPass",
+                job_model=job_model,
+                interval=JobExecutionType.TYPE_DAILY,
+                user=user,
+                approval_required=True,
+                start_time=datetime(2020, 1, 23, 12, 34, 56, tzinfo=ZoneInfo("America/New_York")),
+                time_zone=ZoneInfo("America/New_York"),
+            ),
+            ScheduledJob.objects.create(
+                name="test3",
+                task="pass.TestPass",
+                job_model=job_model,
+                interval=JobExecutionType.TYPE_CUSTOM,
+                crontab="34 12 * * *",
+                enabled=False,
+                user=user,
+                approval_required=True,
+                start_time=now(),
+            ),
+        ]
+        cls.scheduled_jobs = scheduled_jobs
         user = UserFactory.create()
-        for job in jobs:
+        for idx, job in enumerate(jobs):
             JobResult.objects.create(
                 job_model=job,
                 name=job.class_path,
                 user=user,
                 status=JobResultStatusChoices.STATUS_STARTED,
+                scheduled_job=scheduled_jobs[idx],
+            )
+
+    def test_scheduled_job(self):
+        scheduled_jobs = list(self.scheduled_jobs[:2])
+        filter_params = [
+            {"scheduled_job": [scheduled_jobs[0].pk, scheduled_jobs[1].name]},
+        ]
+        for params in filter_params:
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(scheduled_job__in=scheduled_jobs).distinct(),
             )
 
 

@@ -1,0 +1,2 @@
+Added support for ordering `Tab` and `Panel` instances by `weight` in code-defined detail views.
+Added `ObjectsTablePanel` class for rendering related-object tables in code-defined detail views.

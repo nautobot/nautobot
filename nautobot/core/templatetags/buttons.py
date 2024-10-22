@@ -165,7 +165,7 @@ def consolidate_bulk_action_buttons(context):
 
     render_edit_button = bool(context["bulk_edit_url"] and context["permissions"]["change"])
     render_static_group_assign_button = bool(
-        context["model"].is_dynamic_group_associable_model
+        getattr(context["model"], "is_dynamic_group_associable_model", False)
         and context["user"].has_perms(["extras.add_staticgroupassociation"])
     )
     render_delete_button = bool(context["bulk_delete_url"] and context["permissions"]["delete"])

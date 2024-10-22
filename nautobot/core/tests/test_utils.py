@@ -11,6 +11,7 @@ from django.http import QueryDict
 from nautobot.circuits import models as circuits_models
 from nautobot.core import exceptions, forms, settings_funcs
 from nautobot.core.api import utils as api_utils
+from nautobot.core.forms.utils import compress_range
 from nautobot.core.models import fields as core_fields, utils as models_utils, validators
 from nautobot.core.testing import TestCase
 from nautobot.core.utils import data as data_utils, filtering, lookup, requests
@@ -19,7 +20,6 @@ from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models a
 from nautobot.extras import models as extras_models, utils as extras_utils
 from nautobot.extras.choices import ObjectChangeActionChoices, RelationshipTypeChoices
 from nautobot.extras.models import ObjectChange
-from nautobot.extras.registry import registry
 
 from example_app.models import ExampleModel
 
@@ -234,6 +234,19 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(lookup.get_model_from_name("dcim.device"), dcim_models.Device)
         self.assertEqual(lookup.get_model_from_name("dcim.location"), dcim_models.Location)
 
+    def test_get_model_for_view_name(self):
+        """
+        Test the util function `get_model_for_view_name` returns the appropriate Model, if the colon separated view name provided.
+        """
+        with self.subTest("Test core view."):
+            self.assertEqual(lookup.get_model_for_view_name("dcim:device_list"), dcim_models.Device)
+        with self.subTest("Test app view."):
+            self.assertEqual(lookup.get_model_for_view_name("plugins:example_app:examplemodel_list"), ExampleModel)
+        with self.subTest("Test unexpected view."):
+            with self.assertRaises(ValueError) as err:
+                lookup.get_model_for_view_name("unknown:plugins:example_app:examplemodel_list")
+            self.assertEqual(str(err.exception), "Unexpected View Name: unknown:plugins:example_app:examplemodel_list")
+
 
 class IsTaggableTest(TestCase):
     def test_is_taggable_true(self):
@@ -350,6 +363,88 @@ class PrettyPrintQueryTest(TestCase):
         for query, expected in tests:
             with self.subTest(query=query):
                 self.assertEqual(models_utils.pretty_print_query(query), expected)
+
+
+class CompressRangeTest(TestCase):
+    """Tests for compress_range()."""
+
+    def test_compress_range_sparse(self):
+        values = [1500, 200, 10, 2222, 3000, 4096]
+        self.assertEqual(
+            list(compress_range(values)),
+            [
+                (10, 10),
+                (200, 200),
+                (1500, 1500),
+                (2222, 2222),
+                (3000, 3000),
+                (4096, 4096),
+            ],
+        )
+
+    def test_compress_range_dense(self):
+        values = [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            100,
+            101,
+            102,
+            103,
+            104,
+            105,
+            1100,
+            1101,
+            1102,
+            1103,
+            1104,
+            1105,
+            1106,
+        ]
+        self.assertEqual(
+            list(compress_range(values)),
+            [(1, 10), (100, 105), (1100, 1106)],
+        )
+
+    def test_compress_range_complex(self):
+        values = [
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            100,
+            200,
+            210,
+            211,
+            212,
+            222,
+            500,
+            501,
+            502,
+            503,
+            600,
+        ]
+        self.assertEqual(
+            list(compress_range(values)),
+            [
+                (10, 15),
+                (100, 100),
+                (200, 200),
+                (210, 212),
+                (222, 222),
+                (500, 503),
+                (600, 600),
+            ],
+        )
 
 
 class SlugifyFunctionsTest(TestCase):
@@ -756,22 +851,6 @@ class MergeDictsWithoutCollisionTest(TestCase):
         with self.assertRaises(ValueError) as err:
             data_utils.merge_dicts_without_collision({"a": 1}, {"a": 2})
         self.assertEqual(str(err.exception), 'Conflicting values for key "a": (1, 2)')
-
-
-class NavigationRelatedUtils(TestCase):
-    def get_all_new_ui_ready_route(self):
-        ui_ready_routes = [
-            "^\\Z",
-            "^dcim/device\\-types/(?P<pk>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/\\Z",
-            "^dcim/device\\-types/\\Z",
-            "^dcim/devices/(?P<pk>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/\\Z",
-            "^dcim/devices/\\Z",
-            "^dcim/locations/(?P<pk>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/\\Z",
-            "^dcim/locations/\\Z",
-            "^ipam/ip\\-addresses/(?P<pk>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/\\Z",
-            "^ipam/ip\\-addresses/\\Z",
-        ]
-        self.assertEqual(sorted(ui_ready_routes), sorted(list(registry["new_ui_ready_routes"])))
 
 
 class TestMigrationUtils(TestCase):
