@@ -632,7 +632,7 @@ class JSONArrayFormField(django_forms.JSONField):
         self.has_choices = False
         if choices:
             self.choices = choices
-            self.widget = widgets.StaticSelect2Multiple()
+            self.widget = widgets.StaticSelect2Multiple(choices=choices)
             self.has_choices = True
         self.base_field = base_field
         self.delimiter = delimiter
