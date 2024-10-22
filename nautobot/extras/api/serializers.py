@@ -41,7 +41,6 @@ from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
     JobExecutionType,
-    JobQueueTypeChoices,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
 )

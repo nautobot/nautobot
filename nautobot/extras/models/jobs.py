@@ -564,6 +564,16 @@ class JobQueue(PrimaryModel):
         blank=True,
         null=True,
     )
+    context = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, help_text="Kubernetes Configuration Context", blank=True
+    )
+    secrets_group = models.ForeignKey(
+        to="extras.SecretsGroup",
+        on_delete=models.SET_NULL,
+        default=None,
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         ordering = ["name"]
