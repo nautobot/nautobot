@@ -8,7 +8,7 @@ import logging
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
-from django.db.models.fields import URLField
+from django.db.models import JSONField, URLField
 from django.db.models.fields.related import ManyToManyField
 from django.template import Context
 from django.template.defaultfilters import truncatechars
@@ -497,7 +497,9 @@ class ObjectsTablePanel(Panel):
                 Table (`BaseTable`) instance. Mutually exclusive with `table_class`, `table_filter`, `table_attribute`.
             table_class (obj): The table class that will be instantiated and rendered e.g. CircuitTable, DeviceTable.
                 Mutually exclusive with `context_table_key`.
-            table_filter (str, optional): The name of the filter to filter the queryset to initialize the table class.
+            table_filter (str, optional): The name of the filter to apply to the queryset to initialize the table class.
+                For example, in a LocationType detail view, for an ObjectsTablePanel of related Locations, this would
+                be `location_type`, because `Location.objects.filter(location_type=obj)` gives the desired queryset.
                 Mutually exclusive with `table_attribute`.
             table_attribute (str, optional): The attribute of the detail view instance that contains the queryset to
                 initialize the table class. e.g. `dynamic_groups`.
@@ -507,20 +509,20 @@ class ObjectsTablePanel(Panel):
                 method.
             order_by_fields (list, optional): list of fields to order the table queryset by.
             max_display_count (int, optional):  Maximum number of items to display in the table.
-                If None, defaults to the `get_paginate_count()`(which is user's preference or a global setting).
+                If None, defaults to the `get_paginate_count()` (which is user's preference or a global setting).
             table_title (str, optional): The title to display in the panel heading for the table.
                 If None, defaults to the plural verbose name of the table model.
             include_columns (list, optional): A list of field names to include in the table display.
                 If provided, only these fields will be displayed in the table.
             exclude_columns (list, optional): A list of field names to exclude from the table display.
-                Cannot be used together with `include_columns`.
+                Mutually exclusive with `include_columns`.
             add_button_route (str, optional): The route used to generate the "add" button URL. Defaults to "default",
                 which uses the default table's model `add` route.
             add_permissions (list, optional): A list of permissions required for the "add" button to be displayed.
                 If not provided, permissions are determined by default based on the model.
             hide_hierarchy_ui (bool, optional): Don't display hierarchy-based indentation of tree models in this table
-            related_field_name (str, optional): The name of the field used to filter related objects (typically
-                for query string parameters).
+            related_field_name (str, optional): The name of the filter/form field for the related model that links back
+                to the base model. Defaults to the same as `table_filter` if unset. Used to populate URLs.
             enable_bulk_actions (bool, optional): Show the pk toggle columns on the table if the user has the
                 appropriate permissions.
         """
@@ -580,7 +582,7 @@ class ObjectsTablePanel(Panel):
         obj = get_obj_from_context(context)
         body_content_table_add_url = None
         request = context["request"]
-        related_field_name = self.related_field_name or obj._meta.model_name
+        related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
         return_url = context.get("return_url", obj.get_absolute_url())
 
         if self.add_button_route == "default":
@@ -657,7 +659,7 @@ class ObjectsTablePanel(Panel):
 
         obj = get_obj_from_context(context)
         body_content_table_model = body_content_table.Meta.model
-        related_field_name = self.related_field_name or obj._meta.model_name
+        related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
 
         try:
             list_route = reverse(get_route_for_model(body_content_table_model, "list"))
@@ -928,6 +930,9 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
         if isinstance(field_instance, URLField):
             return hyperlinked_field(value)
+
+        if isinstance(field_instance, JSONField):
+            return format_html("<pre>{}</pre>", render_json(value))
 
         if isinstance(field_instance, ManyToManyField) and field_instance.related_model == ContentType:
             return render_content_types(value)
@@ -1567,6 +1572,7 @@ class _ObjectDetailContactsTab(Tab):
                     table_attribute="associated_contacts",
                     order_by_fields=["role__name"],
                     enable_bulk_actions=True,
+                    max_display_count=100,  # since there isn't a separate list view for ContactAssociations!
                     # TODO: we should provide a standard reusable component template for bulk-actions in the footer
                     footer_content_template_path="components/panel/footer_contacts_table.html",
                     header_extra_content_template_path=None,
@@ -1607,6 +1613,8 @@ class _ObjectDetailGroupsTab(Tab):
                     table_class=DynamicGroupTable,
                     table_attribute="dynamic_groups",
                     exclude_columns=["content_type"],
+                    add_button_route=None,
+                    related_field_name="member_id",
                 ),
             )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
@@ -1650,6 +1658,9 @@ class _ObjectDetailMetadataTab(Tab):
                     table_attribute="associated_object_metadata",
                     order_by_fields=["metadata_type", "scoped_fields"],
                     exclude_columns=["assigned_object"],
+                    add_button_route=None,
+                    related_field_name="assigned_object_id",
+                    header_extra_content_template_path=None,
                 ),
             )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)

@@ -1,1 +1,2 @@
-Fixed `related_field_name` on object tables in LocationType detail view.
+Fixed `ObjectsTablePanel.related_field_name` fallback logic to be more correct.
+Fixed incorrect configuration of "Contacts", "Dynamic Groups", and "Object Metadata" tables in component-based views.
