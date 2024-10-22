@@ -958,8 +958,10 @@ class BaseTextPanel(Panel):
     class RenderOptions(Enum):
         PLAINTEXT = "plaintext"
         JSON = "json"
+        JSON_PRETTY = "json_pretty"
         YAML = "yaml"
         MARKDOWN = "markdown"
+        CODE = "code"
 
     def __init__(
         self,

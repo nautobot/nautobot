@@ -229,6 +229,16 @@ Render a dictionary as formatted JSON.
 {{ data | render_json }}
 ```
 
+### render_json_pretty
+
++++ 2.4.0
+
+Render a dictionary as pretty-formatted JSON with syntax highlighting.
+
+```django
+{{ data | render_json_pretty }}
+```
+
 ### render_markdown
 
 Render and sanitize Markdown text into HTML. A limited subset of HTML tags and attributes are permitted in the text as well; non-permitted HTML will be stripped from the output for security.
