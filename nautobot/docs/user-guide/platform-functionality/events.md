@@ -56,3 +56,15 @@ The data payload associated with events of any of the above topics has the follo
 * `prechange` - a dictionary of record attributes and their values *before* the event occurred (or null, in the case of a `nautobot.create` event)
 * `postchange` - a dictionary of record attributes and their values *after* the event occurred (or null, in the case of a `nautobot.delete` event)
 * `differences` - a dictionary with keys `added` and `removed`, each of which is a dictionary of record attributes that changed in the event, providing a convenient alternative to manually comparing the prechange and postchange data.
+
+
+### User Events
+
+* `nautobot.users.user.login` - a new record was created
+* `nautobot.users.user.logout` - a new record was created
+* `nautobot.users.user.change_password` - a new record was created
+* `nautobot.admin.user.change_password` - a new record was created
+
+The data payload associated with events of any of the above topics has the following keys:
+
+ * `data` - A dictionary of the affected user record attributes and their value.
