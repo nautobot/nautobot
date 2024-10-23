@@ -943,10 +943,22 @@ class JobQueueFilterSetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.
             SecretsGroup.objects.create(name="Secrets Group 2"),
             SecretsGroup.objects.create(name="Secrets Group 3"),
         )
-        JobQueue.objects.create(name="Empty Job Queue 1", queue_type=JobQueueTypeChoices.TYPE_CELERY, secrets_group=secrets_groups[0])
+        JobQueue.objects.create(
+            name="Empty Job Queue 1", queue_type=JobQueueTypeChoices.TYPE_CELERY, secrets_group=secrets_groups[0]
+        )
         JobQueue.objects.create(name="Empty Job Queue 2", queue_type=JobQueueTypeChoices.TYPE_CELERY)
-        JobQueue.objects.create(name="Empty Job Queue 3", queue_type=JobQueueTypeChoices.TYPE_KUBERNETES, secrets_group=secrets_groups[1], context="simple_token")
-        JobQueue.objects.create(name="Empty Job Queue 4", queue_type=JobQueueTypeChoices.TYPE_KUBERNETES, secrets_group=secrets_groups[2], context="ssl")
+        JobQueue.objects.create(
+            name="Empty Job Queue 3",
+            queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+            secrets_group=secrets_groups[1],
+            context="simple_token",
+        )
+        JobQueue.objects.create(
+            name="Empty Job Queue 4",
+            queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+            secrets_group=secrets_groups[2],
+            context="ssl",
+        )
 
     def test_queue_type(self):
         # we cannot add this test to self.generic_filter_tests because JobQueueTypeChoices only has two values.

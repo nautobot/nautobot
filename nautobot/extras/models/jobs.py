@@ -823,7 +823,7 @@ class JobResult(BaseModel, CustomFieldModel):
             pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
             nautobot_image_name = settings.KUBERNETES_JOB_IMAGE_NAME
             nautobot_container_name = settings.KUBERNETES_JOB_CONTAINER_NAME
-            nautobot_container_port_number = settings.KUBERNETES_JOB_CONTAINER_PORT_NUMBER
+            nautobot_container_port_number = 8000
 
             # Load Config file and APIs
             config.new_client_from_config(

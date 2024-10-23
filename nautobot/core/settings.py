@@ -1111,6 +1111,3 @@ KUBERNETES_JOB_CONTAINER_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_CONTAINER_NAM
 
 # Nautobot Image name used to build a container in the kubernetes pod
 KUBERNETES_JOB_IMAGE_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_IMAGE_NAME", "networktocode/nautobot:latest")
-
-# Port number to run the nautobot container on
-KUBERNETES_JOB_CONTAINER_PORT_NUMBER = os.getenv("NAUTOBOT_KUBERNETES_JOB_CONTAINER_PORT_NUMBER", 8000)
