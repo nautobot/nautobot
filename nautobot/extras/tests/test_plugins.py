@@ -660,8 +660,7 @@ class TableExtensionTest(TestCase):
         result = extension.alter_queryset(queryset)
         self.assertEqual(result, queryset)
 
-    @mock.patch("nautobot.extras.plugins.logger.error")
-    def test__register_table_base_columns(self, mock_logger):
+    def test__register_table_base_columns(self):
         """Test the '_register_table_base_columns' function."""
         extension = plugins.TableExtension()
         extension.model = "tenancy.tenant"
@@ -671,16 +670,18 @@ class TableExtensionTest(TestCase):
         }
         extension.add_to_default_columns = ["tenant_group", "tenant_success"]
 
-        plugins._register_table_base_columns(extension, "tenant")
-        table = get_table_for_model(extension.model)
+        with self.assertLogs("nautobot.extras.plugins", level="WARNING") as logger:
+            plugins._register_table_base_columns(extension, "tenant")
+            table = get_table_for_model(extension.model)
+            expected = [
+                "ERROR:nautobot.extras.plugins:There was a conflict with table column "
+                "`tenant_group`, the custom column was ignored."
+            ]
+            with self.subTest("error is logged"):
+                self.assertEqual(logger.output, expected)
 
         with self.subTest("column is added to default_columns"):
             self.assertIn("tenant_success", table.base_columns)
-
-        with self.subTest("error is logged"):
-            mock_logger.assert_called_with(
-                "There was a conflict with table column `tenant_group`, the custom column was ignored."
-            )
 
     def test__add_column_to_table_base_columns(self):
         """Test the '_add_column_to_table_base_columns' function."""
