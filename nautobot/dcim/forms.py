@@ -3565,8 +3565,8 @@ class ModuleBayForm(NautobotModelForm):
     position = forms.CharField(
         label="Position",
         max_length=CHARFIELD_MAX_LENGTH,
-        help_text="""The position of the module bay within the parent device/module.
-        Default to the name of the module bay unless manually supplied by the user.""",
+        help_text="The position of the module bay within the parent device/module. "
+        "Defaults to the name of the module bay unless overridden.",
         required=False,
     )
     parent_device = DynamicModelChoiceField(
