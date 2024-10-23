@@ -1573,7 +1573,8 @@ class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
     position_pattern = ExpandableNameField(
         label="Position",
         required=False,
-        help_text="Alphanumeric ranges are supported. (Must match the number of names being created.)",
+        help_text="Alphanumeric ranges are supported. (Must match the number of names being created.)"
+        " Default to the names of the module bays unless manually supplied by the user.",
     )
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
@@ -3566,6 +3567,13 @@ class ModuleBayFilterForm(NautobotFilterForm):
 
 
 class ModuleBayForm(NautobotModelForm):
+    position = forms.CharField(
+        label="Position",
+        max_length=CHARFIELD_MAX_LENGTH,
+        help_text="""The position of the module bay within the parent device/module.
+        Default to the name of the module bay unless manually supplied by the user.""",
+        required=False,
+    )
     parent_device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
