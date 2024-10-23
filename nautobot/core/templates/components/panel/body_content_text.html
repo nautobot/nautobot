@@ -2,7 +2,7 @@
 {%  if render_as == 'json' %}
     {{ text_content | render_json }}
 {% elif render_as == 'json_pretty' %}
-    {{ text_content | render_json_pretty }}
+    <pre>{{ text_content | render_json }}</pre>
 {% elif render_as == 'yaml' %}
     <pre>{{ text_content | render_yaml }}</pre>
 {% elif render_as == 'markdown' %}

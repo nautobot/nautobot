@@ -194,7 +194,9 @@ def render_markdown(value):
 
     return mark_safe(html)  # noqa: S308  # suspicious-mark-safe-usage, OK here since we sanitized the string earlier
 
-def _render_json(value, syntax_highlight=True, pretty_print=False):
+@library.filter()
+@register.filter()
+def render_json(value, syntax_highlight=True, pretty_print=False):
     """
     Render a dictionary as formatted JSON.
 
@@ -215,13 +217,13 @@ def _render_json(value, syntax_highlight=True, pretty_print=False):
             '{"json_key": "json_value"}' if only pretty_print is True (both syntax_highlight and pretty_print must be True for pretty print)
 
     Examples:
-        >>> _render_json({"key": "value"})
+        >>> render_json({"key": "value"})
         '<code class="language-json">{"key": "value"}</code>'
-        >>> _render_json({"key": "value"}, syntax_highlight=False)
+        >>> render_json({"key": "value"}, syntax_highlight=False)
         '{"key": "value"}'
-        >>> _render_json({"key": "value"}, pretty_print=True)
+        >>> render_json({"key": "value"}, pretty_print=True)
         '<pre><code class="language-json">{"key": "value"}</code></pre>'
-        >>> _render_json({"key": "value"}, syntax_highlight=False, pretty_print=True)
+        >>> render_json({"key": "value"}, syntax_highlight=False, pretty_print=True)
         '{"key": "value"}'
     """
     rendered_json = json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
@@ -232,60 +234,6 @@ def _render_json(value, syntax_highlight=True, pretty_print=False):
         return format_html(html_string, rendered_json)
 
     return rendered_json
-
-
-@library.filter()
-@register.filter()
-def render_json(value, syntax_highlight=True):
-    """
-    Render a dictionary as formatted JSON.
-
-    Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a
-    `<code class="language-json>` HTML tag to flag it for syntax highlighting by highlight.js.
-
-    Args:
-        value (any): Input value, can be any variable.
-        syntax_highlight (bool): Whether to highlight the JSON syntax or not.
-
-    Returns:
-        (str): HTML
-            '<code class="language-json">{"json_key": "json_value"}</code>'
-            - or -
-            '{"json_key": "json_value"}' if syntax_highlight is False
-
-    Examples:
-        >>> render_json({"key": "value"})
-        '<code class="language-json">{"key": "value"}</code>'
-        >>> render_json({"key": "value"}, syntax_highlight=False)
-        '{"key": "value"}'
-        >>> {{ some_dict | render_json }}
-        '<code class="language-json">{"key": "value"}</code>'
-        >>> {{ some_dict | render_json:False }}
-        '{"key": "value"}'
-    """
-    return _render_json(value, syntax_highlight)
-
-
-@library.filter()
-@register.filter()
-def render_json_pretty(value):
-    """
-    Render a dictionary as pretty-formatted JSON with syntax highlighting.
-
-    Args:
-        value (any): Input value, can be any variable.
-
-    Returns:
-        (str): HTML
-            '<pre><code class="language-json">{"json_key": "json_value"}</code></pre>'
-
-    Examples:
-        >>> render_json_pretty({"key": "value"})
-        '<pre><code class="language-json">{"key": "value"}</code></pre>'
-        >>> {{ some_dict | render_json_pretty }}
-        '<pre><code class="language-json">{"key": "value"}</code></pre>'
-    """
-    return _render_json(value, pretty_print=True)
 
 
 
