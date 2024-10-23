@@ -1,3 +1,4 @@
+import json
 from unittest import mock
 
 from django.conf import settings
@@ -8,6 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 from social_django.utils import load_backend, load_strategy
 
+from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.testing import TestCase, utils
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import post_data
@@ -16,16 +18,6 @@ User = get_user_model()
 
 
 class PasswordUITest(TestCase):
-    @load_event_broker_override_settings(
-        EVENT_BROKERS={
-            "SyslogEventBroker": {
-                "CLASS": "nautobot.core.events.SyslogEventBroker",
-                "TOPICS": {
-                    "INCLUDE": ["*"],
-                },
-            }
-        }
-    )
     def test_change_password_enabled(self):
         """
         Check that a Django-authentication-based user is allowed to change their password
@@ -40,7 +32,6 @@ class PasswordUITest(TestCase):
         get_response = self.client.get(reverse("user:change_password"))
         self.assertBodyContains(get_response, "New password confirmation")
 
-        # with self.assertLogs("nautobot.events") as cm:
         # Check POST change_password functionality
         post_response = self.client.post(
             reverse("user:change_password"),
@@ -51,8 +42,37 @@ class PasswordUITest(TestCase):
             },
         )
         self.assertBodyContains(post_response, "The two password fields")
-        # print(cm.output)
-        self.assertEqual(1, 2)
+
+    @load_event_broker_override_settings(
+        EVENT_BROKERS={
+            "SyslogEventBroker": {
+                "CLASS": "nautobot.core.events.SyslogEventBroker",
+                "TOPICS": {
+                    "INCLUDE": ["*"],
+                },
+            }
+        }
+    )
+    def test_change_password(self):
+        self.user.set_password("foo")
+        self.user.save()
+        self.client.force_login(self.user)
+        with self.assertLogs("nautobot.events") as cm:
+            self.client.post(
+                reverse("user:change_password"),
+                data={
+                    "old_password": "foo",
+                    "new_password1": "bar",
+                    "new_password2": "bar",
+                },
+            )
+        payload = {"data": serialize_object_v2(self.user)}
+        self.assertEqual(
+            cm.output,
+            [f"INFO:nautobot.events.nautobot.users.user.change_password:{json.dumps(payload, indent=4)}"],
+        )
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("bar"))
 
     @override_settings(
         AUTHENTICATION_BACKENDS=[

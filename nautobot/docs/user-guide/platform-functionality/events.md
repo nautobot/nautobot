@@ -60,11 +60,36 @@ The data payload associated with events of any of the above topics has the follo
 
 ### User Events
 
-* `nautobot.users.user.login` - a new record was created
-* `nautobot.users.user.logout` - a new record was created
-* `nautobot.users.user.change_password` - a new record was created
-* `nautobot.admin.user.change_password` - a new record was created
+* `nautobot.users.user.login` - a user has logged in.
+* `nautobot.users.user.logout` - a user has logged out.
+* `nautobot.users.user.change_password` - a user has changed their password
+* `nautobot.admin.user.change_password` - an admin changed a user password
 
 The data payload associated with events of any of the above topics has the following keys:
 
  * `data` - A dictionary of the affected user record attributes and their value.
+    Example payload:
+    ```json
+        {
+            "data": {
+                "id": "9747d106-02f2-40e4-bef6-2ffd88c559d6",
+                "object_type": "users.user",
+                "display": "admin",
+                "url": "/api/users/users/9747d106-02f2-40e4-bef6-2ffd88c559d6/",
+                "natural_slug": "admin_9747",
+                "last_login": "2024-10-22T08:46:08.194925Z",
+                "is_superuser": true,
+                "username": "admin",
+                "first_name": "",
+                "last_name": "",
+                "email": "a@a.com",
+                "is_staff": true,
+                "is_active": true,
+                "date_joined": "2024-10-22T04:35:28.886682Z",
+                "config_data": {},
+                "groups": [],
+                "default_saved_views": []
+            }
+        }
+    ```
+ 
