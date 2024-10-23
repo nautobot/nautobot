@@ -12,10 +12,10 @@ The requirements to extend a table are:
 
 There are four ways that `TableExtension` can be used to modify a table.
 
-* Custom columns can be added to a table.
-* Core and custom columns can be added to the default visible columns.
-* Core columns can be removed from the default visible columns when they are not used or applicable.
-* Optimizations can be applied to the view queryset, such as `.prefetch_selected`, `.select_related`, `defer`, and `.only`.
+* Custom columns can be added to a table by defining the `table_columns` dictionary.
+* Core and custom columns can be added to the default visible columns by defining the `add_to_default_columns` attribute.
+* Core columns can be removed from the default visible columns when they are not used or applicable. These are defined in the `remove_from_default_columns` attribute.
+* Optimizations can be applied to the view queryset, such as `.prefetch_selected`, `.select_related`, `defer`, and `.only`. Modify the queryset by defining the `alter_queryset` classmethod.
 
 !!! tip
     While queryset optimizations are optional, they are recommended whenever your custom columns are traversing foreign key relationships beyond those of the core tables.
@@ -31,7 +31,8 @@ class DeviceTableExtension(TableExtension):
 
     model = "dcim.device"
 
-    # Add custom columns here as {"name": Column}
+    # Add custom columns here as {"custom_app_name": Column}
+    # Note that the column name must be prefixed with the app name in `snake_case` format.
     table_columns = {
         "my_app_manufacturer": tables.Column(
             verbose_name="Manufacturer",
