@@ -30,6 +30,8 @@ from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.tables import ButtonsColumn
+from nautobot.core.ui import object_detail
+from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
@@ -1016,6 +1018,27 @@ class ExternalIntegrationUIViewSet(NautobotUIViewSet):
     queryset = ExternalIntegration.objects.select_related("secrets_group")
     serializer_class = serializers.ExternalIntegrationSerializer
     table_class = tables.ExternalIntegrationTable
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                # Default ordering with __all__ leaves something to be desired
+                fields=[
+                    "name",
+                    "remote_url",
+                    "http_method",
+                    "headers",
+                    "verify_ssl",
+                    "ca_file_path",
+                    "secrets_group",
+                    "timeout",
+                    "extra_config",
+                ],
+            ),
+        ),
+    )
 
 
 #
