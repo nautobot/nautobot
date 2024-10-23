@@ -96,7 +96,7 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
             # A table of non-object data with staticly defined columns
             ui.DataTablePanel(
                 section=ui.SectionChoices.RIGHT_HALF,
-                label="Custom Table 1",
+                label="Custom Table 1 - with dynamic data and hard-coded columns",
                 weight=200,
                 context_data_key="data_1",
                 columns=["col_1", "col_2", "col_3"],
@@ -105,7 +105,7 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
             # A table of non-object data with dynamic (render-time) columns
             ui.DataTablePanel(
                 section=ui.SectionChoices.FULL_WIDTH,
-                label="Custom Table 2",
+                label="Custom Table 2 - with dynamic data and dynamic columns",
                 weight=100,
                 context_data_key="data_2",
                 context_columns_key="columns_2",
@@ -121,17 +121,27 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
             context["dynamic_table"] = CircuitTable(Circuit.objects.restrict(request.user, "view"))
             # Add non-object data for object detail view custom tables
             context["data_1"] = [
+                # Because the DataTablePanel defined above specifies the `columns`, col_4 data will not appear
                 {"col_1": "value_1a", "col_2": "value_2", "col_3": "value_3", "col_4": "not shown"},
+                # Demonstration that null and missing column data is handled safely/correctly
                 {"col_1": "value_1b", "col_2": None},
             ]
+            # Some more arbitrary data to render
+            # Dynamically specify the columns and column_headers for this data table, instead of at declaration time
+            context["columns_2"] = ["a", "e", "i", "o", "u"]
+            context["column_headers_2"] = ["A", "E", "I", "O", "U"]
             context["data_2"] = [
                 {
-                    "a": format_html('<a href="https://en.wikipedia.org/wiki/{val}">{val}</a>', val=1),
-                    "e": format_html('<a href="https://en.wikipedia.org/wiki/{val}">{val}</a>', val=5),
-                    "i": format_html('<a href="https://en.wikipedia.org/wiki/{val}">{val}</a>', val=9),
-                    "o": format_html('<a href="https://en.wikipedia.org/wiki/{val}">{val}</a>', val=15),
-                    "u": format_html('<a href="https://en.wikipedia.org/wiki/{val}">{val}</a>', val=21),
+                    # Column values can include appropriately constructed HTML
+                    "a": format_html('<a href="https://en.wikipedia.org/wiki/{val}">{val}</a>', val="a"),
+                    # Inappropriately constructed HTML is appropriately escaped on render
+                    "e": '<a href="https://example.org/evil-link/e/">e</a>',
+                    # Unicode is handled correctly
+                    "i": "ℹ︎",  # noqa:RUF001 - intentional letter-like unicode
+                    "o": "º",
+                    "u": "µ",
                 },
+                # As above, data not matching a specific `columns` entry will not be rendered
                 {"a": 97, "b": 98, "c": 99, "e": 101, "i": 105, "o": 111, "u": 17},
                 {"a": "0x61", "b": "0x62", "c": "0x63", "e": "0x65", "i": "0x69", "o": "0x6f", "u": "0x75"},
                 {
@@ -142,8 +152,6 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                     "a": 1 + instance.number,
                 },
             ]
-            context["columns_2"] = ["a", "e", "i", "o", "u"]
-            context["column_headers_2"] = ["A", "E", "I", "O", "U"]
         return context
 
     @action(detail=False, name="All Names", methods=["get"], url_path="all-names", url_name="all_names")
