@@ -280,10 +280,12 @@ class NautobotAppConfig(NautobotConfig):
                 "add_to_default_columns": [
                     f"{table_extension.model} -> {table_extension.add_to_default_columns}"
                     for table_extension in table_extensions
+                    if table_extension.add_to_default_columns
                 ],
                 "remove_from_default_columns": [
                     f"{table_extension.model} -> {table_extension.remove_from_default_columns}"
                     for table_extension in table_extensions
+                    if table_extension.remove_from_default_columns
                 ],
             }
 
