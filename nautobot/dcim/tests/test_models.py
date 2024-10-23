@@ -2849,6 +2849,22 @@ class ModuleBayTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         self.assertIsNone(child_module_bay.parent)
         self.assertIsNone(grandchild_module_bay.parent)
 
+    def test_position_value_auto_population(self):
+        """
+        Assert that the value of the module bay position is auto-populated by its name if position is not provided by the user.
+        """
+
+        module_bay = ModuleBay.objects.create(
+            parent_device=self.device,
+            name="1111",
+        )
+        module_bay.validated_save()
+        self.assertEqual(module_bay.position, module_bay.name)
+        # Test the default value is overriden if the user provides a position value.
+        module_bay.position = "1222"
+        module_bay.validated_save()
+        self.assertEqual(module_bay.position, "1222")
+
 
 class ModuleBayTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, ModelTestCases.BaseModelTestCase):
     model = ModuleBayTemplate
