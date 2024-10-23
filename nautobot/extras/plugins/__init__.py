@@ -528,7 +528,7 @@ class TableExtension:
     - Extending the original default columns to include custom columns.
         - add_to_default_columns = ("my_new_column",)
     - Removing native columns from the default columns.
-        - remove_from_default_columns = ("tennant",)
+        - remove_from_default_columns = ("tenant",)
     """
 
     model = None
