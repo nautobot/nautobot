@@ -1,9 +1,9 @@
 {% load helpers %}
-{%  if render_as == render_options.json %}
+{%  if render_as == 'json' %}
     {{ text_content | render_json }}
-{% elif render_as == render_options.yaml %}
+{% elif render_as == 'yaml' %}
     {{ text_content | render_yaml }}
-{% elif render_as == render_options.markdown %}
+{% elif render_as == 'markdown' %}
     {{ text_content | render_markdown }}
 {% else %}
     {{ text_content }}
