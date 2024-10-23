@@ -1,6 +1,6 @@
 # Extending Tables
 
-+++ 2.9.99-alpha
++++ 2.3.9
 
 Apps can extend any model-based `Table` classes that are provided by the Nautobot core.
 
