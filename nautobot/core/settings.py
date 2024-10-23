@@ -1092,3 +1092,25 @@ def silk_request_logging_intercept_logic(request):
 
 
 SILKY_INTERCEPT_FUNC = silk_request_logging_intercept_logic
+
+#
+# Kubernetes settings variables
+#
+
+# File path to the config file used to load and configure the kubernetes cluster
+KUBERNETES_CONFIG_FILE = os.getenv("NAUTOBOT_KUBERNETES_CONFIG_FILE", "./development/kind-kube-config")
+
+# Name of the kubernetes pod created in the kubernetes cluster
+KUBERNETES_JOB_POD_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAME", "nautobot-job-pod")
+
+# Namespace of the kubernetes pod created in the kubernetes cluster
+KUBERNETES_JOB_POD_NAMESPACE = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE", "default")
+
+# Nautobot container name in the kubernetes pod
+KUBERNETES_JOB_CONTAINER_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_CONTAINER_NAME", "nautobot")
+
+# Nautobot Image name used to build a container in the kubernetes pod
+KUBERNETES_JOB_IMAGE_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_IMAGE_NAME", "networktocode/nautobot:latest")
+
+# Port number to run the nautobot container on
+KUBERNETES_JOB_CONTAINER_PORT_NUMBER = os.getenv("NAUTOBOT_KUBERNETES_JOB_CONTAINER_PORT_NUMBER", 8000)

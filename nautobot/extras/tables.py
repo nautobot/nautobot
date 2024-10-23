@@ -838,6 +838,8 @@ class JobQueueTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     tenant = TenantColumn()
+    secrets_group = tables.Column(linkify=True)
+    context = tables.Column()
     jobs_count = LinkedCountColumn(viewname="extras:job_list", url_params={"job_queues": "pk"}, verbose_name="Jobs")
 
     class Meta(BaseTable.Meta):
@@ -847,6 +849,8 @@ class JobQueueTable(BaseTable):
             "name",
             "queue_type",
             "tenant",
+            "secrets_group",
+            "context",
             "jobs_count",
             "description",
         )

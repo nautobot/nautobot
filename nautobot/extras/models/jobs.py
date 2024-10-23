@@ -4,7 +4,6 @@ import contextlib
 from datetime import timedelta
 import logging
 import signal
-import sys
 import time
 
 from billiard.exceptions import SoftTimeLimitExceeded
@@ -818,51 +817,62 @@ class JobResult(BaseModel, CustomFieldModel):
         job_queue = JobQueue.objects.get(name=task_queue)
         # Kubernetes Job Queue logic
         if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
-            config_file_path = "./development/kind-kube-config"
-            config.load_kube_config(config_file_path)
+            kube_config_context = job_queue.context
+            kube_config_file_path = settings.KUBERNETES_CONFIG_FILE
+            pod_name = settings.KUBERNETES_JOB_POD_NAME
+            pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
+            nautobot_image_name = settings.KUBERNETES_JOB_IMAGE_NAME
+            nautobot_container_name = settings.KUBERNETES_JOB_CONTAINER_NAME
+            nautobot_container_port_number = settings.KUBERNETES_JOB_CONTAINER_PORT_NUMBER
+
+            # Load Config file and APIs
+            config.new_client_from_config(
+                config_file=kube_config_file_path, context=kube_config_context, persist_config=False
+            )
             core_v1 = core_v1_api.CoreV1Api()
             api_instance = core_v1
-            name = "nautobot-pod-demo"
             resp = None
+
+            # Try to read existing pod
             try:
-                resp = api_instance.read_namespaced_pod(name=name, namespace="default")
-                print("Found old pod")
+                logger.info(f"Reading existing pod {pod_name} in namespace {pod_namespace}")
+                resp = api_instance.read_namespaced_pod(name=pod_name, namespace=pod_namespace)
+                logger.info(f"Found existing pod {pod_name} in namespace {pod_namespace}")
             except ApiException as e:
                 if e.status != 404:
-                    print(f"Unknown error: {e}")
-                    sys.exit(1)
+                    logger.info(f"Unknown error: {e}")
 
+            # If existing pod does not exist, create a new pod
             if not resp:
-                print(f"Pod {name} does not exist. Creating it...")
+                logger.info(f"Pod {pod_name} does not exist in namespace {pod_namespace}. Creating it...")
                 pod_manifest = {
                     "apiVersion": "v1",
                     "kind": "Pod",
-                    "metadata": {"name": name},
+                    "metadata": {"name": pod_name},
                     "spec": {
                         "containers": [
                             {
-                                "image": "networktocode/nautobot:latest",
-                                "name": "nautobot",
-                                "ports": [{"containerPort": 8000}],
+                                "image": nautobot_image_name,
+                                "name": nautobot_container_name,
+                                "ports": [{"containerPort": nautobot_container_port_number}],
                             }
                         ]
                     },
                 }
-                resp = api_instance.create_namespaced_pod(body=pod_manifest, namespace="default")
-                print("create pod")
-                while True:
-                    resp = api_instance.read_namespaced_pod(name=name, namespace="default")
-                    if resp.status.phase != "Pending":
-                        break
-                    time.sleep(1)
-                print("Done.")
+                logger.info(f"Creating pod {pod_name} in namespace {pod_namespace}")
+                resp = api_instance.create_namespaced_pod(body=pod_manifest, namespace=pod_namespace)
+                logger.info(f"Reading pod {pod_name} in namespace {pod_namespace}")
+                resp = api_instance.read_namespaced_pod(name=pod_name, namespace=pod_namespace)
+                logger.info("Done.")
 
             # Calling exec interactively
+            logger.info(f"Waiting for container {nautobot_container_name} to be fully set up")
+            time.sleep(10)
             exec_command = ["/bin/sh"]
             resp = stream(
                 api_instance.connect_get_namespaced_pod_exec,
-                name,
-                "default",
+                pod_name,
+                pod_namespace,
                 command=exec_command,
                 stderr=True,
                 stdin=True,
@@ -870,95 +880,95 @@ class JobResult(BaseModel, CustomFieldModel):
                 tty=False,
                 _preload_content=False,
             )
-            resp.write_stdin("nautobot-server runjob --local -u admin nautobot.core.jobs.ExportObjectList\n")
+            resp.write_stdin("nautobot-server runjob --local -u admin\n")
             sresult = resp.read_stdout()
             serror = resp.read_stderr()
-            print(f"Job Result is: {sresult}")
-            print(f"Error is: {serror}")
+            logger.info(f"Job Result is: {sresult}")
+            logger.info(f"Error is: {serror}")
             resp.close()
             return job_result
-        else:
-            job_celery_kwargs = {
-                "nautobot_job_job_model_id": job_model.id,
-                "nautobot_job_profile": profile,
-                "nautobot_job_user_id": user.id,
-                "queue": task_queue,
-            }
 
-            if schedule is not None:
-                job_celery_kwargs["nautobot_job_schedule_id"] = schedule.id
-            if job_model.soft_time_limit > 0:
-                job_celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
-            if job_model.time_limit > 0:
-                job_celery_kwargs["time_limit"] = job_model.time_limit
+        job_celery_kwargs = {
+            "nautobot_job_job_model_id": job_model.id,
+            "nautobot_job_profile": profile,
+            "nautobot_job_user_id": user.id,
+            "queue": task_queue,
+        }
 
-            if celery_kwargs is not None:
-                job_celery_kwargs.update(celery_kwargs)
+        if schedule is not None:
+            job_celery_kwargs["nautobot_job_schedule_id"] = schedule.id
+        if job_model.soft_time_limit > 0:
+            job_celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
+        if job_model.time_limit > 0:
+            job_celery_kwargs["time_limit"] = job_model.time_limit
 
-            if synchronous:
-                # synchronous tasks are run before the JobResult is saved, so any fields required by
-                # the job must be added before calling `apply()`
-                job_result.celery_kwargs = job_celery_kwargs
-                job_result.save()
+        if celery_kwargs is not None:
+            job_celery_kwargs.update(celery_kwargs)
 
-                # setup synchronous task logging
-                setup_nautobot_job_logging(None, None, app.conf)
+        if synchronous:
+            # synchronous tasks are run before the JobResult is saved, so any fields required by
+            # the job must be added before calling `apply()`
+            job_result.celery_kwargs = job_celery_kwargs
+            job_result.save()
 
-                # redirect stdout/stderr to logger and run task
-                redirect_logger = get_logger("celery.redirected")
-                proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
-                with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
+            # setup synchronous task logging
+            setup_nautobot_job_logging(None, None, app.conf)
 
-                    def alarm_handler(*args, **kwargs):
-                        raise SoftTimeLimitExceeded()
+            # redirect stdout/stderr to logger and run task
+            redirect_logger = get_logger("celery.redirected")
+            proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
+            with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
 
-                    # Set alarm_handler to be called on a SIGALRM, and schedule a SIGALRM based on the soft time limit
-                    signal.signal(signal.SIGALRM, alarm_handler)
-                    signal.alarm(int(job_model.soft_time_limit) or settings.CELERY_TASK_SOFT_TIME_LIMIT)
+                def alarm_handler(*args, **kwargs):
+                    raise SoftTimeLimitExceeded()
 
-                    try:
-                        eager_result = run_job.apply(
-                            args=[job_model.class_path, *job_args],
-                            kwargs=job_kwargs,
-                            task_id=str(job_result.id),
-                            **job_celery_kwargs,
-                        )
-                    finally:
-                        # Cancel the scheduled SIGALRM if it hasn't fired already
-                        signal.alarm(0)
+                # Set alarm_handler to be called on a SIGALRM, and schedule a SIGALRM based on the soft time limit
+                signal.signal(signal.SIGALRM, alarm_handler)
+                signal.alarm(int(job_model.soft_time_limit) or settings.CELERY_TASK_SOFT_TIME_LIMIT)
 
-                # copy fields from eager result to job result
-                job_result.refresh_from_db()
-                # Emulate prepare_exception() behavior
-                if isinstance(eager_result.result, Exception):
-                    job_result.result = {
-                        "exc_type": type(eager_result.result).__name__,
-                        "exc_message": sanitize(str(eager_result.result)),
-                    }
-                else:
-                    if eager_result.result is not None:
-                        job_result.result = sanitize(eager_result.result)
-                    else:
-                        job_result.result = None
-                job_result.status = eager_result.status
-                if eager_result.traceback is not None:
-                    job_result.traceback = sanitize(eager_result.traceback)
-                else:
-                    job_result.traceback = None
-                job_result.date_done = timezone.now()
-                job_result.save()
-            else:
-                # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
-                transaction.on_commit(
-                    lambda: run_job.apply_async(
+                try:
+                    eager_result = run_job.apply(
                         args=[job_model.class_path, *job_args],
                         kwargs=job_kwargs,
                         task_id=str(job_result.id),
                         **job_celery_kwargs,
                     )
-                )
+                finally:
+                    # Cancel the scheduled SIGALRM if it hasn't fired already
+                    signal.alarm(0)
 
-            return job_result
+            # copy fields from eager result to job result
+            job_result.refresh_from_db()
+            # Emulate prepare_exception() behavior
+            if isinstance(eager_result.result, Exception):
+                job_result.result = {
+                    "exc_type": type(eager_result.result).__name__,
+                    "exc_message": sanitize(str(eager_result.result)),
+                }
+            else:
+                if eager_result.result is not None:
+                    job_result.result = sanitize(eager_result.result)
+                else:
+                    job_result.result = None
+            job_result.status = eager_result.status
+            if eager_result.traceback is not None:
+                job_result.traceback = sanitize(eager_result.traceback)
+            else:
+                job_result.traceback = None
+            job_result.date_done = timezone.now()
+            job_result.save()
+        else:
+            # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
+            transaction.on_commit(
+                lambda: run_job.apply_async(
+                    args=[job_model.class_path, *job_args],
+                    kwargs=job_kwargs,
+                    task_id=str(job_result.id),
+                    **job_celery_kwargs,
+                )
+            )
+
+        return job_result
 
     def log(
         self,
