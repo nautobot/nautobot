@@ -1,0 +1,1 @@
+Changed `GitRepositorySync` system Job to run atomically (all-or-nothing), such that any failure in the resync will cause all associated database updates to be reverted.
