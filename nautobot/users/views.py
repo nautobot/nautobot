@@ -67,7 +67,10 @@ class LoginView(View):
             user = form.get_user()
             auth_login(request, form.get_user())
             messages.info(request, f"Logged in as {request.user}.")
-            payload = {"data": serialize_object_v2(user)}
+            serialized_data = serialize_object_v2(user)
+            serialized_data.pop("config_data")
+            serialized_data.pop("default_saved_views")
+            payload = {"data": serialized_data}
             publish_event(topic="nautobot.users.user.login", payload=payload)
 
             return self.redirect_to_next(request, logger)
