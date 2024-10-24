@@ -1159,7 +1159,7 @@ def run_job(self, job_class_path, *args, **kwargs):
         "job_name": job.name,
         "user_name": job_result.user.username,
     }
-    if job.has_sensitive_variables is True:
+    if not job.job_model.has_sensitive_variables:
         payload["job_kwargs"] = kwargs
     try:
         publish_event(topic="nautobot.jobs.job.started", payload=payload)
