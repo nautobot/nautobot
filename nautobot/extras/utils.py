@@ -625,7 +625,7 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result):
     pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
     nautobot_image_name = settings.KUBERNETES_JOB_IMAGE_NAME
     nautobot_container_name = settings.KUBERNETES_JOB_CONTAINER_NAME
-    nautobot_container_port_number = 8000
+    nautobot_container_port_number = 8080
 
     # Load Config file and APIs
     config.load_kube_config(
@@ -664,6 +664,9 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result):
                 ]
             },
         }
+        # import yaml
+        # with open('./development/pod.yaml', 'r') as f:
+        #     pod_manifest = yaml.safe_load(f)
         logger.info(f"Creating pod {pod_name} in namespace {pod_namespace}")
         resp = api_instance.create_namespaced_pod(body=pod_manifest, namespace=pod_namespace)
         logger.info(f"Reading pod {pod_name} in namespace {pod_namespace}")
@@ -684,7 +687,7 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result):
         tty=False,
         _preload_content=False,
     )
-    resp.write_stdin("nautobot-server runjob --local -u admin\n")
+    resp.write_stdin("nautobot-server runjob --local -u admin nautobot.core.jobs.ExportObjectList\n")
     sresult = resp.read_stdout()
     serror = resp.read_stderr()
     logger.info(f"Job Result is: {sresult}")
