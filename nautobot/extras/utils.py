@@ -15,6 +15,10 @@ from django.db import transaction
 from django.db.models import Q
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
+from kubernetes import config
+from kubernetes.client.api import core_v1_api
+from kubernetes.client.rest import ApiException
+from kubernetes.stream import stream
 import redis.exceptions
 
 from nautobot.core.choices import ColorChoices
@@ -609,6 +613,85 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
     )
 
     return (job_model, created)
+
+
+def run_kubernetes_job_and_return_job_result(job_queue, job_result):
+    """
+    Pass the job to a kubernetes pod and execute it there.
+    """
+    # kube_config_context = job_queue.context
+    kube_config_file_path = settings.KUBECONFIG
+    pod_name = settings.KUBERNETES_JOB_POD_NAME
+    pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
+    nautobot_image_name = settings.KUBERNETES_JOB_IMAGE_NAME
+    nautobot_container_name = settings.KUBERNETES_JOB_CONTAINER_NAME
+
+    # Load Config file and APIs
+    config.load_kube_config(
+        config_file=kube_config_file_path,
+        # context=kube_config_context,
+        # persist_config=False,
+    )
+    core_v1 = core_v1_api.CoreV1Api()
+    api_instance = core_v1
+    resp = None
+
+    # Try to read existing pod
+    try:
+        logger.info(f"Reading existing pod {pod_name} in namespace {pod_namespace}")
+        resp = api_instance.read_namespaced_pod(name=pod_name, namespace=pod_namespace)
+        logger.info(f"Found existing pod {pod_name} in namespace {pod_namespace}")
+    except ApiException as e:
+        if e.status != 404:
+            logger.error(f"Unknown error: {e}")
+            raise ApiException
+
+    # If existing pod does not exist, create a new pod
+    if not resp:
+        logger.info(f"Pod {pod_name} does not exist in namespace {pod_namespace}. Creating it...")
+        pod_manifest = {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {"name": pod_name},
+            "spec": {
+                "containers": [
+                    {
+                        "image": nautobot_image_name,
+                        "name": nautobot_container_name,
+                    }
+                ]
+            },
+        }
+        # import yaml
+        # with open('./development/pod.yaml', 'r') as f:
+        #     pod_manifest = yaml.safe_load(f)
+        logger.info(f"Creating pod {pod_name} in namespace {pod_namespace}")
+        resp = api_instance.create_namespaced_pod(body=pod_manifest, namespace=pod_namespace)
+        logger.info(f"Reading pod {pod_name} in namespace {pod_namespace}")
+        resp = api_instance.read_namespaced_pod(name=pod_name, namespace=pod_namespace)
+        logger.info("Done.")
+
+    # Calling exec interactively
+    logger.info(f"Waiting for container {nautobot_container_name} to be fully set up")
+    exec_command = ["/bin/sh"]
+    resp = stream(
+        api_instance.connect_get_namespaced_pod_exec,
+        pod_name,
+        pod_namespace,
+        command=exec_command,
+        stderr=True,
+        stdin=True,
+        stdout=True,
+        tty=False,
+        _preload_content=False,
+    )
+    resp.write_stdin("nautobot-server runjob --local -u admin nautobot.core.jobs.ExportObjectList\n")
+    sresult = resp.read_stdout()
+    serror = resp.read_stderr()
+    logger.info(f"Job Result is: {sresult}")
+    logger.info(f"Error is: {serror}")
+    resp.close()
+    return job_result
 
 
 def remove_prefix_from_cf_key(field_name):

@@ -2400,6 +2400,7 @@ class JobQueueTestCase(APIViewTestCases.APIViewTestCase):
 
     def setUp(self):
         super().setUp()
+        secrets_group = SecretsGroup.objects.create(name="Secrets Group 1")
         self.create_data = [
             {
                 "name": "Test API Job Queue 1",
@@ -2412,6 +2413,8 @@ class JobQueueTestCase(APIViewTestCases.APIViewTestCase):
                 "queue_type": JobQueueTypeChoices.TYPE_KUBERNETES,
                 "description": "Job Queue 2 for API Testing",
                 "tenant": Tenant.objects.first().pk,
+                "context": "simple_token",
+                "secrets_group": secrets_group.pk,
             },
             {
                 "name": "Test API Job Queue 3",

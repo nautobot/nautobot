@@ -915,12 +915,17 @@ class JobQueueFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
+            "context": "icontains",
             "queue_type": "icontains",
             "description": "icontains",
             "tenant__name": "icontains",
         },
     )
     queue_type = django_filters.MultipleChoiceFilter(choices=JobQueueTypeChoices, null_value=None)
+    secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SecretsGroup.objects.all(),
+        label="Secrets Group (name or ID)",
+    )
     jobs = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Job.objects.all(),
         label="Job (name or ID)",
@@ -935,6 +940,7 @@ class JobQueueFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         fields = [
             "id",
             "name",
+            "context",
             "description",
             "tags",
         ]

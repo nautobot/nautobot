@@ -90,3 +90,18 @@ METRICS_AUTHENTICATED = False
 METRICS_DISABLED_APPS = []
 
 CELERY_WORKER_PROMETHEUS_PORTS = [8080]
+
+# File path to the config file used to load and configure the kubernetes cluster
+KUBECONFIG = "./development/kind-kube-config"
+
+# Name of the kubernetes pod created in the kubernetes cluster
+KUBERNETES_JOB_POD_NAME = "nautobot-job-pod"
+
+# Namespace of the kubernetes pod created in the kubernetes cluster
+KUBERNETES_JOB_POD_NAMESPACE = "default"
+
+# Nautobot container name in the kubernetes pod
+KUBERNETES_JOB_CONTAINER_NAME = "nautobot"
+
+# Nautobot Image name used to build a container in the kubernetes pod
+KUBERNETES_JOB_IMAGE_NAME = "networktocode/nautobot:latest"
