@@ -1,3 +1,4 @@
+import json
 import re
 from unittest import mock, skipIf
 import urllib.parse
@@ -13,8 +14,10 @@ from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
+from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
+from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import NautobotMetricsView
@@ -398,6 +401,58 @@ class LoginUITestCase(TestCase):
         for url in urls:
             response = self.client.get(url)
             self.assertHttpStatus(response, 403)
+
+    @load_event_broker_override_settings(
+        EVENT_BROKERS={
+            "SyslogEventBroker": {
+                "CLASS": "nautobot.core.events.SyslogEventBroker",
+                "TOPICS": {
+                    "INCLUDE": ["*"],
+                },
+            }
+        }
+    )
+    def test_login_logout(self):
+        self.client.logout()
+        self.user.set_password("pass")
+        self.user.save()
+
+        with self.assertLogs("nautobot.events") as cm:
+            self.client.post(
+                reverse("login"),
+                data={
+                    "username": self.user.username,
+                    "password": "pass",
+                },
+            )
+        self.user.refresh_from_db()
+        serialized_data = serialize_object_v2(self.user)
+        serialized_data.pop("config_data")
+        serialized_data.pop("default_saved_views")
+        payload = {"data": serialized_data}
+        self.assertEqual(
+            cm.output,
+            [f"INFO:nautobot.events.nautobot.users.user.login:{json.dumps(payload, indent=4)}"],
+        )
+        self.assertTrue(self.user.is_authenticated)
+        self.assertNotIn("password", cm.output)
+        self.assertNotIn("pass", cm.output)
+
+        with self.assertLogs("nautobot.events") as cm:
+            self.client.get(
+                reverse("logout"),
+            )
+        self.user.refresh_from_db()
+        serialized_data = serialize_object_v2(self.user)
+        serialized_data.pop("config_data")
+        serialized_data.pop("default_saved_views")
+        payload = {"data": serialized_data}
+        self.assertEqual(
+            cm.output,
+            [f"INFO:nautobot.events.nautobot.users.user.logout:{json.dumps(payload, indent=4)}"],
+        )
+        self.assertNotIn("password", cm.output)
+        self.assertNotIn("pass", cm.output)
 
 
 class MetricsViewTestCase(TestCase):

@@ -17,7 +17,9 @@ from django.utils.timezone import get_default_timezone_name
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
+from nautobot.core.events import publish_event
 from nautobot.core.forms import ConfirmationForm
+from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.views.generic import GenericView
 
 from .forms import AdvancedProfileSettingsForm, LoginForm, PasswordChangeForm, PreferenceProfileSettingsForm, TokenForm
@@ -62,8 +64,14 @@ class LoginView(View):
             logger.debug("Login form validation was successful")
 
             # Authenticate user
+            user = form.get_user()
             auth_login(request, form.get_user())
             messages.info(request, f"Logged in as {request.user}.")
+            serialized_data = serialize_object_v2(user)
+            serialized_data.pop("config_data")
+            serialized_data.pop("default_saved_views")
+            payload = {"data": serialized_data}
+            publish_event(topic="nautobot.users.user.login", payload=payload)
 
             return self.redirect_to_next(request, logger)
 
@@ -92,19 +100,25 @@ class LoginView(View):
         return HttpResponseRedirect(iri_to_uri(redirect_to))
 
 
-class LogoutView(View):
+# TODO: LogoutView should also inherit from `django.contrib.auth.mixins.LoginRequiredMixin`
+class LogoutView(GenericView):
     """
     Deauthenticate a web user.
     """
 
     def get(self, request):
         # Log out the user
+        serialized_data = serialize_object_v2(request.user)
+        serialized_data.pop("config_data")
+        serialized_data.pop("default_saved_views")
+        payload = {"data": serialized_data}
         auth_logout(request)
         messages.info(request, "You have logged out.")
 
         # Delete session key cookie (if set) upon logout
         response = HttpResponseRedirect(reverse("home"))
         response.delete_cookie("session_key")
+        publish_event(topic="nautobot.users.user.logout", payload=payload)
 
         return response
 
@@ -223,6 +237,11 @@ class ChangePasswordView(GenericView):
             form.save()
             update_session_auth_hash(request, form.user)
             messages.success(request, "Your password has been changed successfully.")
+            serialized_data = serialize_object_v2(request.user)
+            serialized_data.pop("config_data")
+            serialized_data.pop("default_saved_views")
+            payload = {"data": serialized_data}
+            publish_event(topic="nautobot.users.user.change_password", payload=payload)
             return redirect("user:profile")
 
         return render(

@@ -1,12 +1,15 @@
 from django import forms
 from django.contrib.auth.forms import (
+    AdminPasswordChangeForm as _AdminPasswordChangeForm,
     AuthenticationForm,
     PasswordChangeForm as DjangoPasswordChangeForm,
 )
 from timezone_field import TimeZoneFormField
 
+from nautobot.core.events import publish_event
 from nautobot.core.forms import BootstrapMixin, DateTimePicker
 from nautobot.core.forms.widgets import StaticSelect2
+from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.utils.config import get_settings_or_config
 
 from .models import Token
@@ -70,3 +73,16 @@ class AdvancedProfileSettingsForm(BootstrapMixin, forms.Form):
 
 class PreferenceProfileSettingsForm(BootstrapMixin, forms.Form):
     timezone = TimeZoneFormField(required=False, help_text="Set your default timezone", widget=StaticSelect2)
+
+
+class AdminPasswordChangeForm(_AdminPasswordChangeForm):
+    def save(self, commit=True):
+        # Override `_AdminPasswordChangeForm.save()` to publish admin change user password event
+        instance = super().save(commit)
+        if commit:
+            serialized_data = serialize_object_v2(instance)
+            serialized_data.pop("config_data")
+            serialized_data.pop("default_saved_views")
+            payload = {"data": serialized_data}
+            publish_event(topic="nautobot.admin.user.change_password", payload=payload)
+        return instance

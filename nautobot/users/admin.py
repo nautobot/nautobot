@@ -12,6 +12,7 @@ from django.utils.html import escape, format_html
 from nautobot.core.admin import NautobotModelAdmin
 from nautobot.core.utils.permissions import qs_filter_from_constraints
 from nautobot.extras.admin import order_content_types
+from nautobot.users.forms import AdminPasswordChangeForm
 from nautobot.users.models import AdminGroup, ObjectPermission, Token, User
 
 #
@@ -142,6 +143,7 @@ class UserAdmin(UserAdmin_):
     filter_horizontal = ("groups",)
     formfield_overrides = NautobotModelAdmin.formfield_overrides
     readonly_fields = ("config_data",)
+    change_password_form = AdminPasswordChangeForm
 
     def get_inlines(self, request, obj):
         if obj is not None:
