@@ -101,18 +101,17 @@ class LoginView(View):
 
 
 # TODO: LogoutView should also inherit from `django.contrib.auth.mixins.LoginRequiredMixin`
-class LogoutView(View):
+class LogoutView(GenericView):
     """
     Deauthenticate a web user.
     """
 
     def get(self, request):
         # Log out the user
-        if request.user.is_authenticated:
-            serialized_data = serialize_object_v2(request.user)
-            serialized_data.pop("config_data")
-            serialized_data.pop("default_saved_views")
-            payload = {"data": serialized_data}
+        serialized_data = serialize_object_v2(request.user)
+        serialized_data.pop("config_data")
+        serialized_data.pop("default_saved_views")
+        payload = {"data": serialized_data}
         auth_logout(request)
         messages.info(request, "You have logged out.")
 
