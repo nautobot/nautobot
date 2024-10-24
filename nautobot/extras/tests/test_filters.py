@@ -944,7 +944,7 @@ class JobQueueFilterSetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.
             SecretsGroup.objects.create(name="Secrets Group 3"),
         )
         JobQueue.objects.create(
-            name="Empty Job Queue 1", queue_type=JobQueueTypeChoices.TYPE_CELERY, secrets_group=secrets_groups[0]
+            name="Empty Job Queue 1", queue_type=JobQueueTypeChoices.TYPE_KUBERNETES, secrets_group=secrets_groups[0]
         )
         JobQueue.objects.create(name="Empty Job Queue 2", queue_type=JobQueueTypeChoices.TYPE_CELERY)
         JobQueue.objects.create(

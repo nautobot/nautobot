@@ -573,6 +573,8 @@ class JobQueue(PrimaryModel):
         help_text="Secrets group that contains authentication credentials to execute jobs in the Kubernetes pod.",
     )
 
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobqueue.html"
+
     class Meta:
         ordering = ["name"]
 
@@ -584,6 +586,21 @@ class JobQueue(PrimaryModel):
         worker_count = get_job_queue_worker_count(job_queue=self)
         workers = "worker" if worker_count == 1 else "workers"
         return f"{self.queue_type}: {self.name} ({worker_count} {workers})"
+
+    def clean(self):
+        super().clean()
+
+        if self.queue_type == JobQueueTypeChoices.TYPE_CELERY and self.secrets_group:
+            raise ValidationError(
+                {
+                    "secrets_group": f"Secrets groups are not allowed on job queues of type {JobQueueTypeChoices.TYPE_CELERY}"
+                }
+            )
+
+        if self.queue_type == JobQueueTypeChoices.TYPE_CELERY and self.context:
+            raise ValidationError(
+                {"context": f"Context is not allowed on job queues of type {JobQueueTypeChoices.TYPE_CELERY}"}
+            )
 
 
 @extras_features(
