@@ -20,6 +20,7 @@ from nautobot.core.ui.nav import (
 )
 from nautobot.core.ui.object_detail import (
     Component,
+    DataTablePanel,
     GroupedKeyValueTablePanel,
     KeyValueTablePanel,
     ObjectDetailContent,
@@ -39,6 +40,7 @@ __all__ = (
     "BannerClassChoices",
     "ButtonColorChoices",
     "Component",
+    "DataTablePanel",
     "GroupedKeyValueTablePanel",
     "HomePageBase",
     "HomePageGroup",
