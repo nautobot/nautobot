@@ -1174,14 +1174,11 @@ def run_job(self, job_class_path, *args, **kwargs):
         einfo = ExceptionInfo(sys.exc_info())
         job.on_failure(exc, self.request.id, args, kwargs, einfo)
         job.after_return(JobResultStatusChoices.STATUS_FAILURE, exc, self.request.id, args, kwargs, einfo)
-        payload["einfo"] = einfo
-
-        event_payload_einfo = {
+        payload["einfo"] = {
             "exc_type": type(exc).__name__,
             "exc_message": sanitize(str(exc)),
         }
-        event_payload = {**payload, "einfo": event_payload_einfo}
-        publish_event(topic="nautobot.jobs.job.completed", payload=event_payload)
+        publish_event(topic="nautobot.jobs.job.completed", payload=payload)
         raise
 
 
