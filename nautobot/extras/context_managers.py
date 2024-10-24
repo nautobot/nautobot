@@ -180,7 +180,7 @@ def web_request_context(
         Valid choices are in `nautobot.extras.choices.ObjectChangeEventContextChoices`.
     :param request: Optional web request instance, one will be generated if not supplied
     """
-    from nautobot.extras.jobs import enqueue_job_hooks, get_jobs  # prevent circular import
+    from nautobot.extras.jobs import enqueue_job_hooks # prevent circular import
 
     valid_contexts = {
         ObjectChangeEventContextChoices.CONTEXT_JOB: JobChangeContext,
@@ -207,11 +207,9 @@ def web_request_context(
         # enqueue jobhooks and webhooks, use change_context.change_id in case change_id was not supplied
         for object_change in ObjectChange.objects.filter(request_id=change_context.change_id).iterator():
             if context != ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
-                # Make sure JobHooks are up to date (once) before calling them
-                if not jobs_refreshed:
-                    get_jobs(reload=True)
+                # Make sure JobHooks are up to date (only once) before calling them
+                if enqueue_job_hooks(object_change, may_reload_jobs=not jobs_refreshed):
                     jobs_refreshed = True
-                enqueue_job_hooks(object_change)
             enqueue_webhooks(object_change)
 
 

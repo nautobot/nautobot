@@ -68,7 +68,7 @@ class GitRepositorySync(Job):
             # Re-check-out previous commit if any
             repository.refresh_from_db()
             if repository.current_head:
-                job_result.log(f"Reverting local repository clone to previous commit {repository.current_head}")
+                job_result.log(f"Attempting to revert local repository clone to commit {repository.current_head}")
                 ensure_git_repository(repository, logger=self.logger, head=repository.current_head)
                 refresh_job_code_from_repository(repository.slug, ignore_import_errors=True)
             raise
