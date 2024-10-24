@@ -3,8 +3,9 @@
 import contextlib
 from datetime import timedelta
 import logging
+import signal
 
-from celery import schedules
+from billiard.exceptions import SoftTimeLimitExceeded
 from celery.exceptions import NotRegistered
 from celery.utils.log import get_logger, LoggingProxy
 from django.conf import settings
@@ -12,11 +13,13 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
-from django.db.models import signals
+from django.db.models import ProtectedError, signals
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django_celery_beat.clockedschedule import clocked
+from django_celery_beat.tzcrontab import TzAwareCrontab
 from prometheus_client import Histogram
+from timezone_field import TimeZoneField
 
 from nautobot.core.celery import (
     app,
@@ -25,7 +28,6 @@ from nautobot.core.celery import (
 )
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
-from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import (
@@ -49,6 +51,7 @@ from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     extras_features,
+    get_job_queue_worker_count,
 )
 
 from .customfields import CustomFieldModel
@@ -164,16 +167,25 @@ class Job(PrimaryModel):
         help_text="Maximum runtime in seconds before the job will be forcibly terminated."
         "<br>Set to 0 to use Nautobot system default",
     )
-    task_queues = JSONArrayField(
-        base_field=models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True),
-        default=list,
-        blank=True,
-        help_text="Comma separated list of task queues that this job can run on. A blank list will use the default queue",
-    )
     supports_dryrun = models.BooleanField(
         default=False,
         editable=False,
         help_text="If supported, allows the job to bypass approval when running with dryrun argument set to true",
+    )
+    job_queues = models.ManyToManyField(
+        to="extras.JobQueue",
+        related_name="jobs",
+        verbose_name="Job Queues",
+        help_text="The job queues that this job can be run on",
+        through="extras.JobQueueAssignment",
+    )
+    default_job_queue = models.ForeignKey(
+        to="extras.JobQueue",
+        related_name="default_for_jobs",
+        on_delete=models.PROTECT,
+        verbose_name="Default Job Queue",
+        null=False,
+        blank=False,
     )
 
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
@@ -213,18 +225,14 @@ class Job(PrimaryModel):
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
-    task_queues_override = models.BooleanField(
+    job_queues_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
-    job_queues = models.ManyToManyField(
-        to="extras.JobQueue",
-        related_name="jobs",
-        verbose_name="Job Queues",
-        help_text="The job queues that this job can be run on",
-        through="extras.JobQueueAssignment",
+    default_job_queue_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
-
     objects = BaseManager.from_queryset(JobQuerySet)()
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
@@ -240,6 +248,14 @@ class Job(PrimaryModel):
 
     def __str__(self):
         return self.name
+
+    def delete(self):
+        if self.module_name.startswith("nautobot."):
+            raise ProtectedError(
+                f"Unable to delete Job {self}. System Job cannot be deleted",
+                [],
+            )
+        super().delete()
 
     @property
     def job_class(self):
@@ -301,6 +317,38 @@ class Job(PrimaryModel):
         except TypeError as err:  # keep 2.0-2.2.2 exception behavior
             raise NotRegistered from err
 
+    @property
+    def task_queues(self):
+        """Deprecated backward-compatibility property for the list of queue names for this Job."""
+        return self.job_queues.values_list("name", flat=True)
+
+    @task_queues.setter
+    def task_queues(self, value):
+        job_queues = []
+        # value is going to be a comma separated list of queue names
+        if isinstance(value, str):
+            value = value.split(",")
+        for queue in value:
+            try:
+                job_queues.append(JobQueue.objects.get(name=queue))
+            except JobQueue.DoesNotExist:
+                raise ValidationError(f"Job Queue {queue} does not exist in the database.")
+        self.job_queues.set(job_queues)
+
+    @property
+    def task_queues_override(self):
+        return self.job_queues_override
+
+    @task_queues_override.setter
+    def task_queues_override(self, value):
+        if isinstance(value, bool):
+            raise ValidationError(
+                {
+                    "task_queues_override": f"{value} is invalid for field task_queues_override, use a boolean value instead"
+                }
+            )
+        self.job_queues_override = value
+
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
         from nautobot.extras.jobs import get_job
@@ -310,6 +358,9 @@ class Job(PrimaryModel):
             for field_name in JOB_OVERRIDABLE_FIELDS:
                 if not getattr(self, f"{field_name}_override", False):
                     setattr(self, field_name, getattr(job_class, field_name))
+
+            if not self.job_queues_override:
+                self.task_queues = job_class.task_queues or [settings.CELERY_TASK_DEFAULT_QUEUE]
 
         # Protect against invalid input when auto-creating Job records
         if len(self.module_name) > JOB_MAX_NAME_LENGTH:
@@ -513,6 +564,12 @@ class JobQueue(PrimaryModel):
 
     def __str__(self):
         return f"{self.queue_type}: {self.name}"
+
+    @property
+    def display(self):
+        worker_count = get_job_queue_worker_count(job_queue=self)
+        workers = "worker" if worker_count == 1 else "workers"
+        return f"{self.queue_type}: {self.name} ({worker_count} {workers})"
 
 
 @extras_features(
@@ -740,7 +797,7 @@ class JobResult(BaseModel, CustomFieldModel):
         )
 
         if task_queue is None:
-            task_queue = settings.CELERY_TASK_DEFAULT_QUEUE
+            task_queue = job_model.default_job_queue.name
 
         job_celery_kwargs = {
             "nautobot_job_job_model_id": job_model.id,
@@ -772,12 +829,24 @@ class JobResult(BaseModel, CustomFieldModel):
             redirect_logger = get_logger("celery.redirected")
             proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
             with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
-                eager_result = run_job.apply(
-                    args=[job_model.class_path, *job_args],
-                    kwargs=job_kwargs,
-                    task_id=str(job_result.id),
-                    **job_celery_kwargs,
-                )
+
+                def alarm_handler(*args, **kwargs):
+                    raise SoftTimeLimitExceeded()
+
+                # Set alarm_handler to be called on a SIGALRM, and schedule a SIGALRM based on the soft time limit
+                signal.signal(signal.SIGALRM, alarm_handler)
+                signal.alarm(int(job_model.soft_time_limit) or settings.CELERY_TASK_SOFT_TIME_LIMIT)
+
+                try:
+                    eager_result = run_job.apply(
+                        args=[job_model.class_path, *job_args],
+                        kwargs=job_kwargs,
+                        task_id=str(job_result.id),
+                        **job_celery_kwargs,
+                    )
+                finally:
+                    # Cancel the scheduled SIGALRM if it hasn't fired already
+                    signal.alarm(0)
 
             # copy fields from eager result to job result
             job_result.refresh_from_db()
@@ -788,9 +857,15 @@ class JobResult(BaseModel, CustomFieldModel):
                     "exc_message": sanitize(str(eager_result.result)),
                 }
             else:
-                job_result.result = sanitize(eager_result.result)
+                if eager_result.result is not None:
+                    job_result.result = sanitize(eager_result.result)
+                else:
+                    job_result.result = None
             job_result.status = eager_result.status
-            job_result.traceback = sanitize(eager_result.traceback)
+            if eager_result.traceback is not None:
+                job_result.traceback = sanitize(eager_result.traceback)
+            else:
+                job_result.traceback = None
             job_result.date_done = timezone.now()
             job_result.save()
         else:
@@ -987,14 +1062,6 @@ class ScheduledJob(BaseModel):
     args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
     kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
     celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
-    queue = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        blank=True,
-        default="",
-        verbose_name="Queue Override",
-        help_text="Queue defined in CELERY_TASK_QUEUES. Leave empty for default queuing.",
-        db_index=True,
-    )
     job_queue = models.ForeignKey(
         to="extras.JobQueue",
         on_delete=models.SET_NULL,
@@ -1012,6 +1079,9 @@ class ScheduledJob(BaseModel):
         verbose_name="Start Datetime",
         help_text="Datetime when the schedule should begin triggering the task to run",
     )
+    # Django always stores DateTimeField as UTC internally, but we want scheduled jobs to respect DST and similar,
+    # so we need to store the time zone the job was scheduled under as well.
+    time_zone = TimeZoneField(default=timezone.get_default_timezone_name)
     # todoindex:
     enabled = models.BooleanField(
         default=True,
@@ -1082,12 +1152,15 @@ class ScheduledJob(BaseModel):
     def __str__(self):
         return f"{self.name}: {self.interval}"
 
+    class Meta:
+        ordering = ["name"]
+
     def save(self, *args, **kwargs):
         self.queue = self.queue or ""
         # make sure non-valid crontab doesn't get saved
         if self.interval == JobExecutionType.TYPE_CUSTOM:
             try:
-                self.get_crontab(self.crontab)
+                self.get_crontab(self.crontab, tz=self.time_zone)
             except Exception as e:
                 raise ValidationError({"crontab": e})
         if not self.enabled:
@@ -1127,12 +1200,25 @@ class ScheduledJob(BaseModel):
 
         return self.to_cron()
 
+    @property
+    def queue(self):
+        """Deprecated backward-compatibility property for the queue name this job is scheduled for."""
+        return self.job_queue.name if self.job_queue else ""
+
+    @queue.setter
+    def queue(self, value):
+        if value:
+            try:
+                self.job_queue = JobQueue.objects.get(name=value)
+            except JobQueue.DoesNotExist:
+                raise ValidationError(f"Job Queue {value} does not exist in the database.")
+
     @staticmethod
     def earliest_possible_time():
         return timezone.now() + timedelta(seconds=15)
 
     @classmethod
-    def get_crontab(cls, crontab):
+    def get_crontab(cls, crontab, tz=None):
         """
         Wrapper method translates crontab syntax to Celery crontab.
 
@@ -1145,13 +1231,17 @@ class ScheduledJob(BaseModel):
 
         No support for Last (L), Weekday (W), Number symbol (#), Question mark (?), and special @ strings.
         """
+        if not tz:
+            tz = timezone.get_default_timezone()
         minute, hour, day_of_month, month_of_year, day_of_week = crontab.split(" ")
-        return schedules.crontab(
+
+        return TzAwareCrontab(
             minute=minute,
             hour=hour,
             day_of_month=day_of_month,
             month_of_year=month_of_year,
             day_of_week=day_of_week,
+            tz=tz,
         )
 
     @classmethod
@@ -1193,13 +1283,13 @@ class ScheduledJob(BaseModel):
         """
 
         if interval == JobExecutionType.TYPE_IMMEDIATELY:
-            start_time = timezone.now()
+            start_time = timezone.localtime()
             name = name or f"{job_model.name} - {start_time}"
         elif interval == JobExecutionType.TYPE_CUSTOM:
             if start_time is None:
                 # "start_time" is checked against models.ScheduledJob.earliest_possible_time()
                 # which returns timezone.now() + timedelta(seconds=15)
-                start_time = timezone.now() + timedelta(seconds=20)
+                start_time = timezone.localtime() + timedelta(seconds=20)
 
         celery_kwargs = {
             "nautobot_job_profile": profile,
@@ -1222,6 +1312,7 @@ class ScheduledJob(BaseModel):
             task=job_model.class_path,
             job_model=job_model,
             start_time=start_time,
+            time_zone=start_time.tzinfo,
             description=f"Nautobot job {name} scheduled by {user} for {start_time}",
             kwargs=job_kwargs,
             celery_kwargs=celery_kwargs,
@@ -1236,15 +1327,16 @@ class ScheduledJob(BaseModel):
         return scheduled_job
 
     def to_cron(self):
-        t = self.start_time
+        tz = self.time_zone
+        t = self.start_time.astimezone(tz)
         if self.interval == JobExecutionType.TYPE_HOURLY:
-            return schedules.crontab(minute=t.minute)
+            return TzAwareCrontab(minute=t.minute, tz=tz)
         elif self.interval == JobExecutionType.TYPE_DAILY:
-            return schedules.crontab(minute=t.minute, hour=t.hour)
+            return TzAwareCrontab(minute=t.minute, hour=t.hour, tz=tz)
         elif self.interval == JobExecutionType.TYPE_WEEKLY:
-            return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.strftime("%w"))
+            return TzAwareCrontab(minute=t.minute, hour=t.hour, day_of_week=t.strftime("%w"), tz=tz)
         elif self.interval == JobExecutionType.TYPE_CUSTOM:
-            return self.get_crontab(self.crontab)
+            return self.get_crontab(self.crontab, tz=tz)
         raise ValueError(f"I do not know to convert {self.interval} to a Cronjob!")
 
 

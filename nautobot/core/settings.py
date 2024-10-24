@@ -10,7 +10,11 @@ import django.forms
 from django.utils.safestring import mark_safe
 
 from nautobot import __version__
-from nautobot.core.constants import CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR
+from nautobot.core.constants import (
+    CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR,
+    MAX_PAGE_SIZE_DEFAULT as _MAX_PAGE_SIZE_DEFAULT,
+    PAGINATE_COUNT_DEFAULT as _PAGINATE_COUNT_DEFAULT,
+)
 from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
 
 #
@@ -95,6 +99,9 @@ if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID
 #
 if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"] != "":
     DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
+
+# Event Brokers
+EVENT_BROKERS = {}
 
 # Exclude potentially sensitive models from wildcard view exemption. These may still be exempted
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
@@ -423,7 +430,14 @@ if "NAUTOBOT_ALLOWED_HOSTS" in os.environ and os.environ["NAUTOBOT_ALLOWED_HOSTS
     ALLOWED_HOSTS = os.environ["NAUTOBOT_ALLOWED_HOSTS"].split(" ")
 else:
     ALLOWED_HOSTS = []
+
+# Allow CSRF trusted origins to be set via an environment variable
+# This allows Nautobot to be run behind a reverse proxy that terminates TLS
+# and fix potential issues with CSRF validation
 CSRF_TRUSTED_ORIGINS = []
+if "NAUTOBOT_CSRF_TRUSTED_ORIGINS" in os.environ and os.environ["NAUTOBOT_CSRF_TRUSTED_ORIGINS"] != "":
+    CSRF_TRUSTED_ORIGINS = os.getenv("NAUTOBOT_CSRF_TRUSTED_ORIGINS", "").split(_CONFIG_SETTING_SEPARATOR)
+
 CSRF_FAILURE_VIEW = "nautobot.core.views.csrf_failure"
 DATE_FORMAT = os.getenv("NAUTOBOT_DATE_FORMAT", "N j, Y")
 DATETIME_FORMAT = os.getenv("NAUTOBOT_DATETIME_FORMAT", "N j, Y g:i a")
@@ -553,6 +567,7 @@ MIDDLEWARE = [
     "nautobot.core.middleware.RemoteUserMiddleware",
     "nautobot.core.middleware.ExternalAuthMiddleware",
     "nautobot.core.middleware.ObjectChangeMiddleware",
+    "nautobot.core.middleware.UserDefinedTimeZoneMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
@@ -647,6 +662,8 @@ LOGIN_REDIRECT_URL = "home"
 CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 CONSTANCE_DATABASE_PREFIX = "constance:nautobot:"
 CONSTANCE_DATABASE_CACHE_BACKEND = "default"
+# Constance defaults to a 24-hour timeout when autofilling its cache, which is undesirable in many cases.
+CONSTANCE_DATABASE_CACHE_AUTOFILL_TIMEOUT = int(os.getenv("NAUTOBOT_CACHES_TIMEOUT", "300"))
 CONSTANCE_IGNORE_ADMIN_VERSION_CHECK = True  # avoid potential errors in a multi-node deployment
 
 CONSTANCE_ADDITIONAL_FIELDS = {
@@ -729,13 +746,13 @@ CONSTANCE_CONFIG = {
         field_type=bool,
     ),
     "MAX_PAGE_SIZE": ConstanceConfigItem(
-        default=1000,
+        default=_MAX_PAGE_SIZE_DEFAULT,
         help_text="Maximum number of objects that a user can list in one UI page or one API call.\n"
         "If set to 0, a user can retrieve an unlimited number of objects.",
         field_type=int,
     ),
     "PAGINATE_COUNT": ConstanceConfigItem(
-        default=50,
+        default=_PAGINATE_COUNT_DEFAULT,
         help_text="Default number of objects to display per page when listing objects in the UI and/or REST API.",
         field_type=int,
     ),
@@ -859,7 +876,7 @@ CACHES = {
             "django_prometheus.cache.backends.redis.RedisCache" if METRICS_ENABLED else "django_redis.cache.RedisCache",
         ),
         "LOCATION": parse_redis_connection(redis_database=1),
-        "TIMEOUT": 300,
+        "TIMEOUT": int(os.getenv("NAUTOBOT_CACHES_TIMEOUT", "300")),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "PASSWORD": "",

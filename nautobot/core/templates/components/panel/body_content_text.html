@@ -1,0 +1,10 @@
+{% load helpers %}
+{%  if render_as == render_options.json %}
+    {{ text_content | render_json }}
+{% elif render_as == render_options.yaml %}
+    {{ text_content | render_yaml }}
+{% elif render_as == render_options.markdown %}
+    {{ text_content | render_markdown }}
+{% else %}
+    {{ text_content }}
+{% endif %}

@@ -1,6 +1,7 @@
 import datetime
 from decimal import Decimal
 import unittest
+import zoneinfo
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -9,11 +10,6 @@ from django.test import override_settings
 from django.urls import reverse
 from netaddr import EUI
 import yaml
-
-try:
-    import zoneinfo
-except ImportError:  # python 3.8
-    from backports import zoneinfo
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
@@ -58,6 +54,7 @@ from nautobot.dcim.filters import (
     PowerConnectionFilterSet,
     SoftwareImageFileFilterSet,
     SoftwareVersionFilterSet,
+    VirtualDeviceContextFilterSet,
 )
 from nautobot.dcim.models import (
     Cable,
@@ -104,6 +101,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 from nautobot.dcim.views import (
     ConsoleConnectionsListView,
@@ -284,9 +282,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(test_form_data),
         }
         response = self.client.post(**request)
-        self.assertHttpStatus(response, 200)
-        response_body = response.content.decode(response.charset)
-        self.assertIn("“Generic Site” is not a valid UUID.", response_body)
+        self.assertBodyContains(response, "“Generic Site” is not a valid UUID.")
         test_form_data["parent"] = site_1.pk
         request["data"] = post_data(test_form_data)
         self.assertHttpStatus(self.client.post(**request), 302)
@@ -1172,8 +1168,7 @@ module-bays:
         }
 
         response = self.client.post(url, data)
-        self.assertHttpStatus(response, 200)
-        self.assertIn("failed validation", response.content.decode(response.charset))
+        self.assertBodyContains(response, "failed validation")
 
 
 class ModuleTypeTestCase(
@@ -2279,12 +2274,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         url = reverse("dcim:device_interfaces", kwargs={"pk": device.pk})
         response = self.client.get(url)
-        self.assertHttpStatus(response, 200)
-        response_body = response.content.decode(response.charset)
-        # Count the number of occurrences of "Add IP address" in the response_body
-        count = response_body.count("Add IP address")
         # Assert that "Add IP address" appears for each of the three interfaces
-        self.assertEqual(count, 3)
+        self.assertBodyContains(response, "Add IP address", count=3)
 
     def test_device_interface_assign_ipaddress(self):
         device = Device.objects.first()
@@ -2322,29 +2313,19 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(assign_ip_form_data),
         }
 
-        with self.subTest("Assert Cannnot assign IPAddress('Add New') without permission"):
+        with self.subTest("Assert Cannot assign IPAddress('Add New') without permission"):
             # Assert Add new IPAddress
             response = self.client.post(**add_new_ip_request, follow=True)
-            response_body = response.content.decode(response.charset)
-            self.assertHttpStatus(response, 200)
+            self.assertBodyContains(response, f"Interface with id &quot;{self.interfaces[0].pk}&quot; not found")
             self.interfaces[0].refresh_from_db()
             self.assertEqual(self.interfaces[0].ip_addresses.all().count(), 0)
-            self.assertIn(
-                f"Interface with id &quot;{self.interfaces[0].pk}&quot; not found",
-                response_body,
-            )
 
-        with self.subTest("Assert Cannnot assign IPAddress(Exsisting IP) without permission"):
+        with self.subTest("Assert Cannot assign IPAddress(Existing IP) without permission"):
             # Assert Assign Exsisting IPAddress
             response = self.client.post(**assign_ip_request, follow=True)
-            response_body = response.content.decode(response.charset)
-            self.assertHttpStatus(response, 200)
+            self.assertBodyContains(response, f"Interface with id &quot;{self.interfaces[1].pk}&quot; not found")
             self.interfaces[1].refresh_from_db()
             self.assertEqual(self.interfaces[1].ip_addresses.all().count(), 0)
-            self.assertIn(
-                f"Interface with id &quot;{self.interfaces[1].pk}&quot; not found",
-                response_body,
-            )
 
         self.add_permissions("dcim.change_interface", "ipam.view_ipaddress")
 
@@ -2375,10 +2356,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 "data": post_data(assign_ip_form_data),
             }
             response = self.client.post(**assign_ip_request, follow=True)
-            self.assertHttpStatus(response, 200)
-            self.assertIn(
-                "Please select at least one IP Address from the table.", response.content.decode(response.charset)
-            )
+            self.assertBodyContains(response, "Please select at least one IP Address from the table.")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_rearports(self):
@@ -2683,12 +2661,8 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         url = reverse("dcim:module_interfaces", kwargs={"pk": module.pk})
         response = self.client.get(url)
-        self.assertHttpStatus(response, 200)
-        response_body = response.content.decode(response.charset)
-        # Count the number of occurrences of "Add IP address" in the response_body
-        count = response_body.count("Add IP address")
         # Assert that "Add IP address" appears for each of the three interfaces
-        self.assertEqual(count, 3)
+        self.assertBodyContains(response, "Add IP address", count=3)
 
     def test_module_interface_assign_ipaddress(self):
         module = Module.objects.first()
@@ -2726,29 +2700,19 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(assign_ip_form_data),
         }
 
-        with self.subTest("Assert Cannnot assign IPAddress('Add New') without permission"):
+        with self.subTest("Assert Cannot assign IPAddress('Add New') without permission"):
             # Assert Add new IPAddress
             response = self.client.post(**add_new_ip_request, follow=True)
-            response_body = response.content.decode(response.charset)
-            self.assertHttpStatus(response, 200)
+            self.assertBodyContains(response, f"Interface with id &quot;{self.interfaces[0].pk}&quot; not found")
             self.interfaces[0].refresh_from_db()
             self.assertEqual(self.interfaces[0].ip_addresses.all().count(), 0)
-            self.assertIn(
-                f"Interface with id &quot;{self.interfaces[0].pk}&quot; not found",
-                response_body,
-            )
 
-        with self.subTest("Assert Cannnot assign IPAddress(Exsisting IP) without permission"):
+        with self.subTest("Assert Cannot assign IPAddress(Existing IP) without permission"):
             # Assert Assign Exsisting IPAddress
             response = self.client.post(**assign_ip_request, follow=True)
-            response_body = response.content.decode(response.charset)
-            self.assertHttpStatus(response, 200)
+            self.assertBodyContains(response, f"Interface with id &quot;{self.interfaces[1].pk}&quot; not found")
             self.interfaces[1].refresh_from_db()
             self.assertEqual(self.interfaces[1].ip_addresses.all().count(), 0)
-            self.assertIn(
-                f"Interface with id &quot;{self.interfaces[1].pk}&quot; not found",
-                response_body,
-            )
 
         self.add_permissions("dcim.change_interface", "ipam.view_ipaddress")
 
@@ -3114,6 +3078,15 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
                 vlan_group=vlan_group,
             ),
         )
+        vdcs = [
+            VirtualDeviceContext.objects.create(
+                name=f"Interface VirtualDeviceContext {i}",
+                device=device,
+                status=Status.objects.get_for_model(VirtualDeviceContext).first(),
+                identifier=100 + i,
+            )
+            for i in range(2)
+        ]
 
         cls.form_data = {
             "device": device.pk,
@@ -3130,6 +3103,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
+            "virtual_device_contexts": [v.pk for v in vdcs],
             "tags": [t.pk for t in Tag.objects.get_for_model(Interface)],
         }
 
@@ -3228,8 +3202,8 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         invalid_ipaddress_link = reverse("ipam:ipaddress_edit", args=(ipaddress.pk,))
         valid_ipaddress_link = ipaddress.get_absolute_url()
         response = self.client.get(interface.get_absolute_url() + "?tab=main")
-        response_content = response.content.decode(response.charset)
-        self.assertIn(valid_ipaddress_link, response_content)
+        self.assertBodyContains(response, valid_ipaddress_link)
+        response_content = extract_page_body(response.content.decode(response.charset))
         self.assertNotIn(invalid_ipaddress_link, response_content)
 
 
@@ -4113,7 +4087,6 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}")
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
         if hasattr(self.model, "name"):
             self.assertIn(instance1.name, content, msg=content)
             self.assertNotIn(instance2.name, content, msg=content)
@@ -4209,11 +4182,11 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Interface.objects.create(device=self.devices[2], name="device 2 interface 1", status=interface_status)
         Interface.objects.create(device=self.devices[2], name="device 2 interface 2", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[0].pk}))
-        self.assertIn('Interfaces <span class="badge">6</span>', str(response.content))
-        self.assertIn("device 1 interface 1", str(response.content))
-        self.assertIn("device 1 interface 2", str(response.content))
-        self.assertIn("device 2 interface 1", str(response.content))
-        self.assertIn("device 2 interface 2", str(response.content))
+        self.assertBodyContains(response, 'Interfaces <span class="badge">6</span>')
+        self.assertBodyContains(response, "device 1 interface 1")
+        self.assertBodyContains(response, "device 1 interface 2")
+        self.assertBodyContains(response, "device 2 interface 1")
+        self.assertBodyContains(response, "device 2 interface 2")
 
     def test_device_column_visible(self):
         """
@@ -4226,7 +4199,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Interface.objects.create(device=self.devices[0], name="eth0", status=interface_status)
         Interface.objects.create(device=self.devices[0], name="eth1", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[0].pk}))
-        self.assertIn("<th >Device</th>", str(response.content))
+        self.assertBodyContains(response, "<th>Device</th>", html=True)
 
     def test_device_column_not_visible(self):
         """
@@ -4239,9 +4212,9 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Interface.objects.create(device=self.devices[1], name="eth2", status=interface_status)
         Interface.objects.create(device=self.devices[1], name="eth3", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[1].pk}))
-        self.assertNotIn("<th >Device</th>", str(response.content))
+        self.assertNotIn("<th >Device</th>", extract_page_body(response.content.decode(response.charset)))
         # Sanity check:
-        self.assertIn("<th >Name</th>", str(response.content))
+        self.assertBodyContains(response, "<th>Name</th>", html=True)
 
 
 class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -4408,9 +4381,7 @@ class PathTraceViewTestCase(ModelViewTestCase):
         url = reverse("dcim:rearport_trace", args=[obj.pk])
         cablepath_id = CablePath.objects.first().id
         response = self.client.get(url + f"?cablepath_id={cablepath_id}")
-        self.assertHttpStatus(response, 200)
-        content = extract_page_body(response.content.decode(response.charset))
-        self.assertInHTML("<h1>Cable Trace for Rear Port Rear Port 1</h1>", content)
+        self.assertBodyContains(response, "<h1>Cable Trace for Rear Port Rear Port 1</h1>", html=True)
 
 
 class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -4621,10 +4592,8 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "_confirm": True,  # Form button
         }
         response = self.client.post(self._get_url("bulk_delete"), data, follow=True)
-        self.assertHttpStatus(response, 200)
-        response_body = response.content.decode(response.charset)
         # Assert protected error message included in the response body
-        self.assertInHTML(f"<span>{device_type_to_software_image_file}</span>", response_body)
+        self.assertBodyContains(response, f"<span>{device_type_to_software_image_file}</span>", html=True)
 
 
 class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -4701,10 +4670,8 @@ class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "_confirm": True,  # Form button
         }
         response = self.client.post(self._get_url("bulk_delete"), data, follow=True)
-        self.assertHttpStatus(response, 200)
-        response_body = response.content.decode(response.charset)
         # Assert protected error message included in the response body
-        self.assertInHTML(f"<span>{device_type_to_software_image_file}</span>", response_body)
+        self.assertBodyContains(response, f"<span>{device_type_to_software_image_file}</span>", html=True)
 
 
 class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -4761,3 +4728,63 @@ class ControllerManagedDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCa
         cls.bulk_edit_data = {
             "weight": 300,
         }
+
+
+class VirtualDeviceContextTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = VirtualDeviceContext
+    filterset = VirtualDeviceContextFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        devices = Device.objects.filter(interfaces__isnull=False)
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext)[0]
+        tenants = Tenant.objects.all()
+
+        cls.form_data = {
+            "name": "Virtual Device Context 1",
+            "device": devices[0].pk,
+            "identifier": 100,
+            "status": vdc_status.pk,
+            "tenant": tenants[0].pk,
+            "interfaces": [interface.pk for interface in devices[0].all_interfaces[:3]],
+            "description": "Sample Description",
+        }
+
+        cls.bulk_edit_data = {
+            "tenant": tenants[1].pk,
+        }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_vdc_primary_ips(self):
+        """Test assigning a primary IP to a virtual device context."""
+        self.add_permissions("dcim.change_virtualdevicecontext")
+        vdc = VirtualDeviceContext.objects.first()
+        device = vdc.device
+        intf_status = Status.objects.get_for_model(Interface).first()
+        intf_role = Role.objects.get_for_model(Interface).first()
+        interface = Interface.objects.create(
+            name="Int1",
+            device=device,
+            status=intf_status,
+            role=intf_role,
+            type=InterfaceTypeChoices.TYPE_100GE_CFP,
+        )
+        ip_v4 = IPAddress.objects.filter(ip_version=4).first()
+        ip_v6 = IPAddress.objects.filter(ip_version=6).first()
+        interface.virtual_device_contexts.add(vdc)
+        interface.add_ip_addresses([ip_v4, ip_v6])
+
+        form_data = self.form_data.copy()
+        form_data["device"] = vdc.device
+        form_data["interfaces"] = [interface.pk]
+        form_data["primary_ip4"] = ip_v4.pk
+        form_data["primary_ip6"] = ip_v6.pk
+        # Assert that update succeeds.
+        request = {
+            "path": self._get_url("edit", vdc),
+            "data": post_data(form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        vdc.refresh_from_db()
+        self.assertEqual(vdc.primary_ip6, ip_v6)
+        self.assertEqual(vdc.primary_ip4, ip_v4)

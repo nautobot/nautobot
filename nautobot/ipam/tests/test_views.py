@@ -73,6 +73,7 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         tenants = Tenant.objects.all()[:2]
         namespace = Prefix.objects.first().namespace
         prefixes = Prefix.objects.filter(namespace=namespace)
+        vrf_statuses = Status.objects.get_for_model(VRF)
 
         cls.form_data = {
             "name": "VRF X",
@@ -82,9 +83,11 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "A new VRF",
             "prefixes": [prefixes[1].id],
             "tags": [t.pk for t in Tag.objects.get_for_model(VRF)],
+            "status": vrf_statuses.first().pk,
         }
 
         cls.bulk_edit_data = {
+            "status": vrf_statuses.first().pk,
             "tenant": tenants[1].pk,
             "description": "New description",
             "namespace": prefixes[0].namespace.id,
@@ -325,6 +328,43 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                 strip_tags(content),
             )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_prefix_ipaddresses_table_list_includes_child_ips(self):
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        instance = Prefix.objects.create(
+            prefix="5.5.10.0/23",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=self.statuses[1],
+        )
+        Prefix.objects.create(
+            prefix="5.5.10.0/30",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_POOL,
+            status=self.statuses[1],
+        )
+        IPAddress.objects.create(
+            address="5.5.10.1/23",
+            status=ip_status,
+            namespace=self.namespace,
+        )
+        IPAddress.objects.create(
+            address="5.5.10.4/23",
+            status=ip_status,
+            namespace=self.namespace,
+        )
+        url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
+        self.assertIn("5.5.10.1/23", strip_tags(content))
+        self.assertIn("5.5.10.4/23", strip_tags(content))
+        ip_address_tab = (
+            f'<li role="presentation" class="active"><a href="{url}">IP Addresses <span class="badge">2</span></a></li>'
+        )
+        self.assertInHTML(ip_address_tab, content)
+
 
 class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = IPAddress
@@ -399,8 +439,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(self.form_data),
         }
         response = self.client.post(**request)
-        self.assertEqual(200, response.status_code)
-        self.assertIn("Host address cannot be changed once created", str(response.content))
+        self.assertBodyContains(response, "Host address cannot be changed once created")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_move_ip_addresses_between_namespaces(self):
@@ -420,8 +459,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(form_data),
         }
         response = self.client.post(**request)
-        self.assertEqual(200, response.status_code)
-        self.assertIn("No suitable parent Prefix exists in this Namespace", str(response.content))
+        self.assertBodyContains(response, "No suitable parent Prefix exists in this Namespace")
         # Create an exact copy of the parent prefix but in a different namespace. See if the re-parenting is successful
         new_parent = Prefix.objects.create(
             prefix=instance.parent.prefix,
@@ -990,6 +1028,8 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "name": "VLAN Group X",
             "location": location.pk,
             "description": "A new VLAN group",
+            "range": "1-4094",
+            "tags": [t.pk for t in Tag.objects.get_for_model(VLANGroup)],
         }
 
     def get_deletable_object(self):
@@ -1002,7 +1042,6 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))
-        location_1 = cls.locations.first()
 
         vlangroups = (
             VLANGroup.objects.create(name="VLAN Group 1", location=cls.locations.first()),
@@ -1011,51 +1050,14 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         roles = Role.objects.get_for_model(VLAN)[:2]
 
-        statuses = Status.objects.get_for_model(VLAN)
-        status_1 = statuses[0]
-        status_2 = statuses[1]
-
-        vlans = (
-            VLAN.objects.create(
-                vlan_group=vlangroups[0],
-                vid=101,
-                name="VLAN101",
-                role=roles[0],
-                status=status_1,
-                _custom_field_data={"custom_field": "Value"},
-            ),
-            VLAN.objects.create(
-                vlan_group=vlangroups[0],
-                vid=102,
-                name="VLAN102",
-                role=roles[0],
-                status=status_1,
-                _custom_field_data={"custom_field": "Value"},
-            ),
-            VLAN.objects.create(
-                vlan_group=vlangroups[0],
-                vid=103,
-                name="VLAN103",
-                role=roles[0],
-                status=status_1,
-                _custom_field_data={"custom_field": "Value"},
-            ),
-        )
-        vlans[0].locations.add(location_1)
-        vlans[1].locations.add(location_1)
-        vlans[2].locations.add(location_1)
-
-        custom_field = CustomField.objects.create(
-            type=CustomFieldTypeChoices.TYPE_TEXT, label="Custom Field", default=""
-        )
-        custom_field.content_types.set([ContentType.objects.get_for_model(VLAN)])
+        status = Status.objects.get_for_model(VLAN).first()
 
         cls.form_data = {
             "vlan_group": vlangroups[1].pk,
             "vid": 999,
             "name": "VLAN999 with an unwieldy long name since we increased the limit to more than 64 characters",
             "tenant": None,
-            "status": status_2.pk,
+            "status": status.pk,
             "role": roles[1].pk,
             "locations": list(cls.locations.values_list("pk", flat=True)[:2]),
             "description": "A new VLAN",
@@ -1065,7 +1067,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             "vlan_group": vlangroups[0].pk,
             "tenant": Tenant.objects.first().pk,
-            "status": status_2.pk,
+            "status": status.pk,
             "role": roles[0].pk,
             "description": "New description",
         }
@@ -1146,9 +1148,7 @@ class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(self.form_data),
         }
         response = self.client.post(**request)
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("Service with this Name and Device already exists.", response_body)
+        self.assertBodyContains(response, "Service with this Name and Device already exists.")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_service_cannot_be_assigned_to_both_device_and_vm(self):
@@ -1168,9 +1168,7 @@ class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(self.form_data),
         }
         response = self.client.post(**request)
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("A service cannot be associated with both a device and a virtual machine.", response_body)
+        self.assertBodyContains(response, "A service cannot be associated with both a device and a virtual machine.")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_service_cannot_be_assigned_to_neither_device_nor_vm(self):
@@ -1190,6 +1188,4 @@ class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(self.form_data),
         }
         response = self.client.post(**request)
-        self.assertHttpStatus(response, 200)
-        response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("A service must be associated with either a device or a virtual machine.", response_body)
+        self.assertBodyContains(response, "A service must be associated with either a device or a virtual machine.")

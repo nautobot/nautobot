@@ -12,6 +12,7 @@ from nautobot.core.tables import (
     ColorColumn,
     ColoredLabelColumn,
     ContentTypesColumn,
+    LinkedCountColumn,
     TagColumn,
     ToggleColumn,
 )
@@ -37,6 +38,7 @@ from .models import (
     JobButton,
     JobHook,
     JobLogEntry,
+    JobQueue,
     JobResult,
     MetadataType,
     Note,
@@ -108,6 +110,10 @@ GITREPOSITORY_BUTTONS = """
 JOB_BUTTONS = """
 <a href="{% url 'extras:job' pk=record.pk %}" class="btn btn-default btn-xs" title="Details"><i class="mdi mdi-information-outline" aria-hidden="true"></i></a>
 <a href="{% url 'extras:jobresult_list' %}?job_model={{ record.name | urlencode }}" class="btn btn-default btn-xs" title="Job Results"><i class="mdi mdi-format-list-bulleted" aria-hidden="true"></i></a>
+"""
+
+SCHEDULED_JOB_BUTTONS = """
+<a href="{% url 'extras:jobresult_list' %}?scheduled_job={{ record.name | urlencode }}" class="btn btn-default btn-xs" title="Job Results"><i class="mdi mdi-format-list-bulleted" aria-hidden="true"></i></a>
 """
 
 OBJECTCHANGE_OBJECT = """
@@ -695,7 +701,10 @@ class JobTable(BaseTable):
     supports_dryrun = BooleanColumn()
     soft_time_limit = tables.Column()
     time_limit = tables.Column()
-    actions = ButtonsColumn(JobModel, prepend_template=JOB_BUTTONS)
+    default_job_queue = tables.Column(linkify=True)
+    job_queues_count = LinkedCountColumn(
+        viewname="extras:jobqueue_list", url_params={"jobs": "pk"}, verbose_name="Job Queues"
+    )
     last_run = tables.TemplateColumn(
         accessor="latest_result",
         template_code="""
@@ -711,6 +720,7 @@ class JobTable(BaseTable):
         template_code="{% include 'extras/inc/job_label.html' with result=record.latest_result %}",
     )
     tags = TagColumn(url_name="extras:job_list")
+    actions = ButtonsColumn(JobModel, prepend_template=JOB_BUTTONS)
 
     def render_description(self, value):
         return render_markdown(value)
@@ -741,6 +751,8 @@ class JobTable(BaseTable):
             "supports_dryrun",
             "soft_time_limit",
             "time_limit",
+            "default_job_queue",
+            "job_queues_count",
             "last_run",
             "last_status",
             "tags",
@@ -822,6 +834,32 @@ class JobLogEntryTable(BaseTable):
         }
 
 
+class JobQueueTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    tenant = TenantColumn()
+    jobs_count = LinkedCountColumn(viewname="extras:job_list", url_params={"job_queues": "pk"}, verbose_name="Jobs")
+
+    class Meta(BaseTable.Meta):
+        model = JobQueue
+        fields = (
+            "pk",
+            "name",
+            "queue_type",
+            "tenant",
+            "jobs_count",
+            "description",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "queue_type",
+            "tenant",
+            "jobs_count",
+            "description",
+        )
+
+
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
     job_model = tables.Column(linkify=True)
@@ -834,6 +872,10 @@ class JobResultTable(BaseTable):
         verbose_name="Results",
         orderable=False,
         attrs={"td": {"class": "text-nowrap report-stats"}},
+    )
+    scheduled_job = tables.Column(
+        linkify=True,
+        verbose_name="Scheduled Job",
     )
     actions = tables.TemplateColumn(
         template_code="""
@@ -884,6 +926,7 @@ class JobResultTable(BaseTable):
             "date_created",
             "name",
             "job_model",
+            "scheduled_job",
             "duration",
             "date_done",
             "user",
@@ -1022,6 +1065,9 @@ class ObjectMetadataTable(BaseTable):
 class NoteTable(BaseTable):
     actions = ButtonsColumn(Note)
     created = tables.LinkColumn()
+    note = tables.Column(
+        attrs={"td": {"class": "rendered-markdown"}},
+    )
 
     class Meta(BaseTable.Meta):
         model = Note
@@ -1038,16 +1084,37 @@ class NoteTable(BaseTable):
 
 class ScheduledJobTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.LinkColumn()
+    name = tables.Column(linkify=True)
     job_model = tables.Column(verbose_name="Job", linkify=True)
     interval = tables.Column(verbose_name="Execution Type")
-    start_time = tables.Column(verbose_name="First Run")
-    last_run_at = tables.Column(verbose_name="Most Recent Run")
+    start_time = tables.DateTimeColumn(verbose_name="First Run", format=settings.SHORT_DATETIME_FORMAT)
+    last_run_at = tables.DateTimeColumn(verbose_name="Most Recent Run", format=settings.SHORT_DATETIME_FORMAT)
+    crontab = tables.Column()
     total_run_count = tables.Column(verbose_name="Total Run Count")
+    actions = ButtonsColumn(ScheduledJob, buttons=("delete"), prepend_template=SCHEDULED_JOB_BUTTONS)
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob
-        fields = ("pk", "name", "job_model", "interval", "start_time", "last_run_at")
+        fields = (
+            "pk",
+            "name",
+            "total_run_count",
+            "job_model",
+            "interval",
+            "start_time",
+            "last_run_at",
+            "crontab",
+            "time_zone",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "job_model",
+            "interval",
+            "last_run_at",
+            "actions",
+        )
 
 
 class ScheduledJobApprovalQueueTable(BaseTable):

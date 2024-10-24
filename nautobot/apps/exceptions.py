@@ -5,7 +5,6 @@ from nautobot.core.exceptions import (
     AbortTransaction,
     CeleryWorkerNotRunningException,
     FilterSetFieldNotFound,
-    ViewConfigException,
 )
 from nautobot.extras.secrets.exceptions import (
     SecretError,
@@ -30,5 +29,4 @@ __all__ = (
     "SecretValueNotFoundError",
     "SerializerNotFound",
     "ServiceUnavailable",
-    "ViewConfigException",
 )

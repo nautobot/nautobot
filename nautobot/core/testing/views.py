@@ -1,5 +1,6 @@
 import re
 from typing import Optional, Sequence
+from unittest import skipIf
 import uuid
 
 from django.apps import apps
@@ -143,6 +144,7 @@ class ViewTestCases:
             self.client.logout()
             response = self.client.get(self._get_queryset().first().get_absolute_url())
             self.assertHttpStatus(response, 200)
+            # TODO: all this is doing is checking that a login link appears somewhere on the page (i.e. in the nav).
             response_body = response.content.decode(response.charset)
             self.assertIn(
                 "/login/?next=" + self._get_queryset().first().get_absolute_url(), response_body, msg=response_body
@@ -150,8 +152,7 @@ class ViewTestCases:
 
             # The "Change Log" tab should appear in the response since we have all exempt permissions
             if issubclass(self.model, extras_models.ChangeLoggedModel):
-                response_body = utils.extract_page_body(response.content.decode(response.charset))
-                self.assertIn("Change Log", response_body, msg=response_body)
+                self.assertBodyContains(response, "Change Log")
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_get_object_without_permission(self):
@@ -173,50 +174,33 @@ class ViewTestCases:
 
             # Try GET with model-level permission
             response = self.client.get(instance.get_absolute_url())
-            self.assertHttpStatus(response, 200)
-
-            response_body = utils.extract_page_body(response.content.decode(response.charset))
-
-            with self.subTest("Assert display or string representation of object is present"):
-                # The object's display name or string representation should appear in the response
-                self.assertIn(escape(getattr(instance, "display", str(instance))), response_body, msg=response_body)
+            # The object's display name or string representation should appear in the response body
+            self.assertBodyContains(response, escape(getattr(instance, "display", str(instance))))
 
             # If any Relationships are defined, they should appear in the response
             if self.relationships is not None:
-                with self.subTest("Assert relevant relationships are present"):
-                    for relationship in self.relationships:  # false positive pylint: disable=not-an-iterable
-                        content_type = ContentType.objects.get_for_model(instance)
-                        if content_type == relationship.source_type:
-                            self.assertIn(
-                                escape(relationship.get_label(extras_choices.RelationshipSideChoices.SIDE_SOURCE)),
-                                response_body,
-                                msg=response_body,
-                            )
-                        if content_type == relationship.destination_type:
-                            self.assertIn(
-                                escape(relationship.get_label(extras_choices.RelationshipSideChoices.SIDE_DESTINATION)),
-                                response_body,
-                                msg=response_body,
-                            )
+                for relationship in self.relationships:  # false positive pylint: disable=not-an-iterable
+                    content_type = ContentType.objects.get_for_model(instance)
+                    if content_type == relationship.source_type:
+                        self.assertBodyContains(
+                            response,
+                            escape(relationship.get_label(extras_choices.RelationshipSideChoices.SIDE_SOURCE)),
+                        )
+                    if content_type == relationship.destination_type:
+                        self.assertBodyContains(
+                            response,
+                            escape(relationship.get_label(extras_choices.RelationshipSideChoices.SIDE_DESTINATION)),
+                        )
 
             # If any Custom Fields are defined, they should appear in the response
             if self.custom_fields is not None:
-                with self.subTest("Assert relevant custom fields are present"):
-                    for custom_field in self.custom_fields:  # false positive pylint: disable=not-an-iterable
-                        self.assertIn(escape(str(custom_field)), response_body, msg=response_body)
-                        if custom_field.type == extras_choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
-                            for value in instance.cf.get(custom_field.key):
-                                self.assertIn(escape(str(value)), response_body, msg=response_body)
-                        else:
-                            self.assertIn(
-                                escape(str(instance.cf.get(custom_field.key) or "")), response_body, msg=response_body
-                            )
-
-            with self.subTest("Assert advanced tab is present"):
-                advanced_tab_href = f"{instance.get_absolute_url()}#advanced"
-
-                self.assertIn(advanced_tab_href, response_body)
-                self.assertIn("Advanced", response_body)
+                for custom_field in self.custom_fields:  # false positive pylint: disable=not-an-iterable
+                    self.assertBodyContains(response, escape(str(custom_field)))
+                    if custom_field.type == extras_choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
+                        for value in instance.cf.get(custom_field.key):
+                            self.assertBodyContains(response, escape(str(value)))
+                    else:
+                        self.assertBodyContains(response, escape(str(instance.cf.get(custom_field.key) or "")))
 
             return response  # for consumption by child test cases if desired
 
@@ -245,6 +229,20 @@ class ViewTestCases:
 
             return response  # for consumption by child test cases if desired
 
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_has_advanced_tab(self):
+            instance = self._get_queryset().first()
+
+            # Add model-level permission
+            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["view"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            response = self.client.get(instance.get_absolute_url())
+            self.assertBodyContains(response, f"{instance.get_absolute_url()}#advanced")
+            self.assertBodyContains(response, "Advanced")
+
     class GetObjectChangelogViewTestCase(ModelViewTestCase):
         """
         View the changelog for an instance.
@@ -256,12 +254,16 @@ class ViewTestCases:
             url = self._get_url("changelog", obj)
             response = self.client.get(url)
             self.assertHttpStatus(response, 200)
-            response_data = response.content.decode(response.charset)
+
+            # Test for https://github.com/nautobot/nautobot/issues/5214
             if getattr(obj, "is_contact_associable_model", False):
-                self.assertInHTML(
+                self.assertBodyContains(
+                    response,
                     f'<a href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">Contacts</a>',
-                    response_data,
+                    html=True,
                 )
+            else:
+                self.assertNotContains(response, f"{obj.get_absolute_url()}#contacts")
 
     class GetObjectNotesViewTestCase(ModelViewTestCase):
         """
@@ -275,12 +277,16 @@ class ViewTestCases:
                 url = self._get_url("notes", obj)
                 response = self.client.get(url)
                 self.assertHttpStatus(response, 200)
-                response_data = response.content.decode(response.charset)
+
+                # Test for https://github.com/nautobot/nautobot/issues/5214
                 if getattr(obj, "is_contact_associable_model", False):
-                    self.assertInHTML(
+                    self.assertBodyContains(
+                        response,
                         f'<a href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">Contacts</a>',
-                        response_data,
+                        html=True,
                     )
+                else:
+                    self.assertNotContains(response, f"{obj.get_absolute_url()}#contacts")
 
     class CreateObjectViewTestCase(ModelViewTestCase):
         """
@@ -351,11 +357,9 @@ class ViewTestCases:
                     detail_url = instance.get_absolute_url()
                     validate(detail_url)
                     response = self.client.get(detail_url)
-                    response_body = utils.extract_page_body(response.content.decode(response.charset))
-                    advanced_tab_href = f"{detail_url}#advanced"
-                    self.assertIn(advanced_tab_href, response_body)
-                    self.assertIn("<td>Created By</td>", response_body)
-                    self.assertIn("<td>nautobotuser</td>", response_body)
+                    self.assertBodyContains(response, f"{detail_url}#advanced")
+                    self.assertBodyContains(response, "<td>Created By</td>", html=True)
+                    self.assertBodyContains(response, f"<td>{self.user.username}</td>", html=True)
                 except (AttributeError, ValidationError):
                     # Instance does not have a valid detail view, do nothing here.
                     pass
@@ -478,11 +482,9 @@ class ViewTestCases:
                     detail_url = instance.get_absolute_url()
                     validate(detail_url)
                     response = self.client.get(detail_url)
-                    response_body = utils.extract_page_body(response.content.decode(response.charset))
-                    advanced_tab_href = f"{detail_url}#advanced"
-                    self.assertIn(advanced_tab_href, response_body)
-                    self.assertIn("<td>Last Updated By</td>", response_body)
-                    self.assertIn("<td>nautobotuser</td>", response_body)
+                    self.assertBodyContains(response, f"{detail_url}#advanced")
+                    self.assertBodyContains(response, "<td>Last Updated By</td>", html=True)
+                    self.assertBodyContains(response, f"<td>{self.user.username}</td>", html=True)
                 except (AttributeError, ValidationError):
                     # Instance does not have a valid detail view, do nothing here.
                     pass
@@ -713,8 +715,7 @@ class ViewTestCases:
 
             with self.subTest("Assert indentation is present"):
                 response = self.client.get(f"{self._get_url('list')}")
-                response_body = response.content.decode(response.charset)
-                self.assertInHTML('<i class="mdi mdi-circle-small"></i>', response_body)
+                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
 
             with self.subTest("Assert indentation is removed on filter"):
                 queryset = (
@@ -736,6 +737,7 @@ class ViewTestCases:
             self.client.logout()
             response = self.client.get(self._get_url("list"))
             self.assertHttpStatus(response, 200)
+            # TODO: all this is doing is checking that a login link appears somewhere on the page (i.e. in the nav).
             response_body = response.content.decode(response.charset)
             self.assertIn("/login/?next=" + self._get_url("list"), response_body, msg=response_body)
 
@@ -749,7 +751,6 @@ class ViewTestCases:
             response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}")
             self.assertHttpStatus(response, 200)
             content = utils.extract_page_body(response.content.decode(response.charset))
-            # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertNotRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
@@ -760,12 +761,9 @@ class ViewTestCases:
         def test_list_objects_unknown_filter_strict_filtering(self):
             """Verify that with STRICT_FILTERING, an unknown filter results in an error message and no matches."""
             response = self.client.get(f"{self._get_url('list')}?ice_cream_flavor=chocolate")
-            self.assertHttpStatus(response, 200)
-            content = utils.extract_page_body(response.content.decode(response.charset))
-            # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
-            self.assertIn("Unknown filter field", content, msg=content)
+            self.assertBodyContains(response, "Unknown filter field")
             # There should be no table rows displayed except for the empty results row
-            self.assertIn("None", content, msg=content)
+            self.assertBodyContains(response, "None")
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=False)
         def test_list_objects_unknown_filter_no_strict_filtering(self):
@@ -792,7 +790,6 @@ class ViewTestCases:
             )
             self.assertHttpStatus(response, 200)
             content = utils.extract_page_body(response.content.decode(response.charset))
-            # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             self.assertNotIn("Unknown filter field", content, msg=content)
             self.assertIn("None", content, msg=content)
             if hasattr(self.model, "name"):
@@ -818,16 +815,13 @@ class ViewTestCases:
             # Try GET with model-level permission
             response = self.client.get(self._get_url("list"))
             self.assertHttpStatus(response, 200)
-            response_body = response.content.decode(response.charset)
+            response_body = utils.extract_page_body(response.content.decode(response.charset))
 
             list_url = self.get_list_url()
             title = self.get_title()
 
-            with self.subTest("Assert breadcrumb contains title"):
-                self.assertIn(
-                    f'<a href="{list_url}">{title}</a>',
-                    response_body,
-                )
+            # Check if breadcrumb is rendered correctly
+            self.assertBodyContains(response, f'<a href="{list_url}">{title}</a>', html=True)
 
             with self.subTest("Assert import-objects URL is absent due to user permissions"):
                 self.assertNotIn(
@@ -862,7 +856,6 @@ class ViewTestCases:
             response = self.client.get(self._get_url("list"))
             self.assertHttpStatus(response, 200)
             content = utils.extract_page_body(response.content.decode(response.charset))
-            # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertNotRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
@@ -888,6 +881,31 @@ class ViewTestCases:
                     reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"}),
                     content,
                 )
+
+        @skipIf(
+            "example_app" not in settings.PLUGINS,
+            "example_app not in settings.PLUGINS",
+        )
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_list_view_app_banner(self):
+            """
+            If example app is installed, check if the app banner is rendered correctly in ObjectListView.
+            """
+            # Add model-level permission
+            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["view"])
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            # Try GET with model-level permission
+            response = self.client.get(self._get_url("list"))
+
+            # Check app banner is rendered correctly
+            self.assertBodyContains(
+                response,
+                f"<div>You are viewing a table of {self.model._meta.verbose_name_plural}</div>",
+                html=True,
+            )
 
     class CreateMultipleObjectsViewTestCase(ModelViewTestCase):
         """
@@ -1469,7 +1487,7 @@ class ViewTestCases:
                     f"Renaming {len(objects)} {helpers.bettertitle(verbose_name_plural)} "
                     f"on {self.selected_objects_parent_name}"
                 )
-                self.assertInHTML(message, response.content.decode(response.charset))
+                self.assertBodyContains(response, message)
 
             with self.subTest("Assert update successfully"):
                 data["_apply"] = True  # Form Apply button
@@ -1484,4 +1502,4 @@ class ViewTestCases:
                     data["pk"] = values
                     response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
                     expected_message = f"No valid {verbose_name_plural} were selected."
-                    self.assertIn(expected_message, response.content.decode(response.charset))
+                    self.assertBodyContains(response, expected_message)

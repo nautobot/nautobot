@@ -632,7 +632,7 @@ class JSONArrayFormField(django_forms.JSONField):
         self.has_choices = False
         if choices:
             self.choices = choices
-            self.widget = widgets.StaticSelect2Multiple()
+            self.widget = widgets.StaticSelect2Multiple(choices=choices)
             self.has_choices = True
         self.base_field = base_field
         self.delimiter = delimiter
@@ -764,8 +764,11 @@ class NumericArrayField(SimpleArrayField):
 
     def to_python(self, value):
         try:
-            value = ",".join([str(n) for n in forms.parse_numeric_range(value)])
-        except ValueError as error:
+            if not value:
+                value = ""
+            else:
+                value = ",".join([str(n) for n in forms.parse_numeric_range(value)])
+        except (TypeError, ValueError) as error:
             raise ValidationError(error)
         return super().to_python(value)
 

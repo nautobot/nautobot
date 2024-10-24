@@ -143,6 +143,7 @@ from .models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 
 logger = logging.getLogger(__name__)
@@ -214,23 +215,27 @@ class InterfaceCommonForm(forms.Form):
         elif mode == InterfaceModeChoices.MODE_TAGGED_ALL:
             self.cleaned_data["tagged_vlans"] = []
 
-        # Validate tagged VLANs; must be a global VLAN or in the same location
-        # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to add a VLAN
-        # belongs to the parent Location or the child location of the parent device to the `tagged_vlan` field of the interface?
+        # Validate tagged VLANs; must be a global VLAN or in the same location as the
+        # parent device/VM or any of that location's parent locations
         elif mode == InterfaceModeChoices.MODE_TAGGED:
-            valid_location = self.cleaned_data[parent_field].location
+            location = self.cleaned_data[parent_field].location
+            if location:
+                location_ids = location.ancestors(include_self=True).values_list("id", flat=True)
+            else:
+                location_ids = []
             invalid_vlans = [
                 str(v)
                 for v in tagged_vlans
                 if v.locations.without_tree_fields().exists()
-                and not VLANLocationAssignment.objects.filter(location=valid_location, vlan=v).exists()
+                and not VLANLocationAssignment.objects.filter(location__in=location_ids, vlan=v).exists()
             ]
 
             if invalid_vlans:
                 raise forms.ValidationError(
                     {
-                        "tagged_vlans": f"The tagged VLANs ({', '.join(invalid_vlans)}) must belong to the same location as "
-                        f"the interface's parent device/VM, or they must be global"
+                        "tagged_vlans": f"The tagged VLANs ({', '.join(invalid_vlans)}) must have the same location as the "
+                        "interface's parent device, or is in one of the parents of the interface's parent device's location, "
+                        "or it must be global."
                     }
                 )
 
@@ -1901,7 +1906,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         widget=APISelect(
             api_url="/api/dcim/racks/{{rack}}/elevation/",
             attrs={
-                "disabled-indicator": "device",
+                "disabled-indicator": "occupied",
                 "data-query-param-face": '["$face"]',
             },
         ),
@@ -2942,6 +2947,14 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
             "device": "$device",
         },
     )
+    virtual_device_contexts = DynamicModelMultipleChoiceField(
+        queryset=VirtualDeviceContext.objects.all(),
+        label="Virtual Device Contexts",
+        required=False,
+        query_params={
+            "device": "$device",
+        },
+    )
 
     class Meta:
         model = Interface
@@ -2958,6 +2971,7 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
             "lag",
             "mac_address",
             "ip_addresses",
+            "virtual_device_contexts",
             "mtu",
             "vrf",
             "mgmt_only",
@@ -2978,6 +2992,19 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
         help_texts = {
             "mode": INTERFACE_MODE_HELP_TEXT,
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.present_in_database:
+            # Since `virtual_device_contexts` is not a concrete model field on INterface;
+            # This is the best way to pre-populate its choices
+            self.fields["virtual_device_contexts"].initial = self.instance.virtual_device_contexts.all()
+
+    def save(self, commit=True):
+        instance = super().save(commit)
+        if commit:
+            instance.virtual_device_contexts.set(self.cleaned_data["virtual_device_contexts"])
+        return instance
 
 
 class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleNotRequiredModelFormMixin):
@@ -3062,6 +3089,14 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
         required=False,
         query_params={"available_on_device": "$device"},
     )
+    virtual_device_contexts = DynamicModelChoiceField(
+        queryset=VirtualDeviceContext.objects.all(),
+        label="Virtual Device Contexts",
+        required=False,
+        query_params={
+            "device": "$device",
+        },
+    )
     field_order = (
         "device",
         "module",
@@ -3080,6 +3115,7 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
         "description",
         "mgmt_only",
         "ip_addresses",
+        "virtual_device_contexts",
         "mode",
         "untagged_vlan",
         "tagged_vlans",
@@ -5163,3 +5199,129 @@ class ControllerManagedDeviceGroupBulkEditForm(TagsBulkEditFormMixin, NautobotBu
             "weight",
             "tags",
         )
+
+
+#
+# Virtual Device Context
+#
+
+
+class VirtualDeviceContextForm(NautobotModelForm):
+    device = DynamicModelChoiceField(
+        queryset=Device.objects.all(),
+    )
+    tenant_group = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), to_field_name="name", required=False)
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        query_params={"tenant_group": "$tenant_group"},
+        required=False,
+    )
+    interfaces = DynamicModelMultipleChoiceField(
+        queryset=Interface.objects.all(), required=False, query_params={"device": "$device"}
+    )
+    primary_ip4 = DynamicModelChoiceField(
+        queryset=IPAddress.objects.all(),
+        required=False,
+        query_params={"ip_version": 4, "interfaces": "$interfaces"},
+        label="Primary IPv4",
+    )
+    primary_ip6 = DynamicModelChoiceField(
+        queryset=IPAddress.objects.all(),
+        required=False,
+        query_params={"ip_version": 6, "interfaces": "$interfaces"},
+        label="Primary IPv6",
+    )
+    role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        required=False,
+        query_params={"content_types": VirtualDeviceContext._meta.label_lower},
+    )
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        required=True,
+        query_params={"content_types": VirtualDeviceContext._meta.label_lower},
+    )
+
+    class Meta:
+        model = VirtualDeviceContext
+        fields = [
+            "name",
+            "device",
+            "role",
+            "status",
+            "identifier",
+            "interfaces",
+            "primary_ip4",
+            "primary_ip6",
+            "tenant",
+            "description",
+            "tags",
+        ]
+
+    def save(self, commit=True):
+        instance = super().save(commit)
+        if commit:
+            interfaces = self.cleaned_data["interfaces"]
+            instance.interfaces.set(interfaces)
+        return instance
+
+
+class VirtualDeviceContextBulkEditForm(
+    TagsBulkEditFormMixin,
+    StatusModelBulkEditFormMixin,
+    NautobotBulkEditForm,
+):
+    pk = forms.ModelMultipleChoiceField(queryset=VirtualDeviceContext.objects.all(), widget=forms.MultipleHiddenInput())
+    device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    add_interfaces = DynamicModelMultipleChoiceField(
+        queryset=Interface.objects.all(), required=False, query_params={"device": "$device"}
+    )
+    remove_interfaces = DynamicModelMultipleChoiceField(
+        queryset=Interface.objects.all(), required=False, query_params={"device": "$device"}
+    )
+
+    class Meta:
+        model = VirtualDeviceContext
+        nullable_fields = [
+            "tenant",
+        ]
+
+
+class VirtualDeviceContextFilterForm(
+    NautobotFilterForm,
+    StatusModelFilterFormMixin,
+):
+    model = VirtualDeviceContext
+    field_order = [
+        "q",
+        "device",
+        "status",
+        "tenant",
+        "has_tenant",
+        "has_primary_ip",
+        "tags",
+    ]
+
+    q = forms.CharField(required=False, label="Search")
+    device = DynamicModelMultipleChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        label="Device",
+    )
+    tenant = DynamicModelMultipleChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+        label="Tenant",
+    )
+    has_primary_ip = forms.NullBooleanField(
+        required=False,
+        label="Has a primary IP",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    has_tenant = forms.NullBooleanField(
+        required=False,
+        label="Has Tenant",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    tags = TagFilterField(model)

@@ -38,10 +38,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if "." not in options["job"]:
             raise CommandError('Job must be specified in the Python module form: "<module_name>.<JobClassName>"')
-        job_class = get_job(options["job"])
-        if not job_class:
-            raise CommandError(f'Job "{options["job"]}" not found')
-
         User = get_user_model()
         try:
             user = User.objects.get(username=options["username"])
@@ -54,6 +50,9 @@ class Command(BaseCommand):
                 data = json.loads(options["data"])
         except json.decoder.JSONDecodeError as error:
             raise CommandError(f"Invalid JSON data:\n{error!s}") from error
+
+        if not get_job(options["job"], reload=True):
+            raise CommandError(f'Job "{options["job"]}" not found')
 
         try:
             job_model = Job.objects.get_for_class_path(options["job"])

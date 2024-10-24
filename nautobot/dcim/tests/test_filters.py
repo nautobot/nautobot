@@ -44,6 +44,7 @@ from nautobot.dcim.filters import (
     InterfaceRedundancyGroupAssociationFilterSet,
     InterfaceRedundancyGroupFilterSet,
     InterfaceTemplateFilterSet,
+    InterfaceVDCAssignmentFilterSet,
     InventoryItemFilterSet,
     LocationFilterSet,
     LocationTypeFilterSet,
@@ -67,6 +68,7 @@ from nautobot.dcim.filters import (
     SoftwareImageFileFilterSet,
     SoftwareVersionFilterSet,
     VirtualChassisFilterSet,
+    VirtualDeviceContextFilterSet,
 )
 from nautobot.dcim.models import (
     Cable,
@@ -89,6 +91,7 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
+    InterfaceVDCAssignment,
     InventoryItem,
     Location,
     LocationType,
@@ -112,6 +115,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 from nautobot.extras.models import ExternalIntegration, Role, SecretsGroup, Status, Tag
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VLANGroup
@@ -2144,6 +2148,8 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         ("tagged_vlans", "tagged_vlans__vid"),
         ("untagged_vlan", "untagged_vlan__id"),
         ("untagged_vlan", "untagged_vlan__vid"),
+        ("virtual_device_contexts", "virtual_device_contexts__id"),
+        ("virtual_device_contexts", "virtual_device_contexts__name"),
     ]
 
     @classmethod
@@ -2367,6 +2373,18 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
             type=InterfaceTypeChoices.TYPE_1GE_SFP,
             status=interface_statuses[3],
         )
+
+        # Virtual Device Context
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext).first()
+        vdcs = [
+            VirtualDeviceContext.objects.create(
+                device=devices[2], status=vdc_status, identifier=200 + idx, name=f"Test VDC {idx}"
+            )
+            for idx in range(3)
+        ]
+        vdcs[0].interfaces.set(lag_interfaces)
+        vdcs[1].interfaces.set(lag_interfaces)
+        vdcs[2].interfaces.set(lag_interfaces)
 
     def test_enabled(self):
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
@@ -3294,7 +3312,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
 
     def test_device(self):
         """Test that the device filter returns all cables for a device and its modules."""
-        interfaces = Interface.objects.filter(cable__isnull=True)[:3]
+        interfaces = list(Interface.objects.filter(cable__isnull=True)[:3])
         manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(
             manufacturer=manufacturer, model="Test Device Filter for Cable Device Type"
@@ -4033,3 +4051,130 @@ class ModuleBayTestCase(FilterTestCases.FilterTestCase):
         module_bays = ModuleBay.objects.all()[:2]
         module_bays[0].tags.set(Tag.objects.get_for_model(ModuleBay))
         module_bays[1].tags.set(Tag.objects.get_for_model(ModuleBay)[:3])
+
+
+class VirtualDeviceContextTestCase(FilterTestCases.FilterTestCase, FilterTestCases):
+    queryset = VirtualDeviceContext.objects.all()
+    filterset = VirtualDeviceContextFilterSet
+    generic_filter_tests = [
+        ("description",),
+        ("device", "device__name"),
+        ("device", "device__id"),
+        ("tenant", "tenant__name"),
+        ("tenant", "tenant__id"),
+        ("interfaces", "interfaces__id"),
+        ("interfaces", "interfaces__name"),
+        ("name",),
+        ("role", "role__name"),
+        ("status", "status__name"),
+        ("role", "role__id"),
+        ("status", "status__id"),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        device = Device.objects.first()
+        intf_status = Status.objects.get_for_model(Interface).first()
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext).first()
+        intf_role = Role.objects.get_for_model(Interface).first()
+        interface = Interface.objects.create(
+            name="Int1", device=device, status=intf_status, role=intf_role, type=InterfaceTypeChoices.TYPE_100GE_CFP
+        )
+        cls.ips_v4 = IPAddress.objects.filter(ip_version=4)[:3]
+        cls.ips_v6 = IPAddress.objects.filter(ip_version=6)[:3]
+        interface.add_ip_addresses([*cls.ips_v4, *cls.ips_v6])
+        vdcs = [
+            VirtualDeviceContext.objects.create(
+                device=device,
+                status=vdc_status,
+                identifier=200 + idx,
+                name=f"Test VDC {idx}",
+                primary_ip4=cls.ips_v4[idx],
+                primary_ip6=cls.ips_v6[idx],
+            )
+            for idx in range(3)
+        ]
+        vdcs[0].tags.set(Tag.objects.get_for_model(VirtualDeviceContext))
+        vdcs[1].tags.set(Tag.objects.get_for_model(VirtualDeviceContext)[:3])
+
+        interfaces = [
+            Interface.objects.create(
+                device=device,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                name=f"Interface 00{idx}",
+                status=intf_status,
+            )
+            for idx in range(3)
+        ]
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[0], interface=interfaces[0])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[0])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[1])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[2], interface=interfaces[2])
+
+    def test_has_primary_ip(self):
+        # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
+        with self.subTest():
+            params = {"has_primary_ip": True}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                VirtualDeviceContext.objects.filter(Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)),
+            )
+        with self.subTest():
+            params = {"has_primary_ip": False}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                VirtualDeviceContext.objects.filter(primary_ip4__isnull=True, primary_ip6__isnull=True),
+            )
+
+    def test_primary_ip4(self):
+        params = {"primary_ip4": ["192.0.2.1/24", self.ips_v4[0].pk]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, VirtualDeviceContext.objects.filter(primary_ip4=self.ips_v4[0])
+        )
+
+    def test_primary_ip6(self):
+        params = {"primary_ip6": ["fe80::8ef:3eff:fe4c:3895/24", self.ips_v6[1].pk]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, VirtualDeviceContext.objects.filter(primary_ip6=self.ips_v6[1])
+        )
+
+
+class InterfaceVDCAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = InterfaceVDCAssignment.objects.all()
+    filterset = InterfaceVDCAssignmentFilterSet
+    generic_filter_tests = [
+        ("virtual_device_context", "virtual_device_context__id"),
+        ("virtual_device_context", "virtual_device_context__name"),
+        ("interface", "interface__id"),
+        ("interface", "interface__name"),
+        ("device", "interface__device__id"),
+        ("device", "interface__device__name"),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        device = Device.objects.first()
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext)[0]
+        interface_status = Status.objects.get_for_model(Interface)[0]
+        interfaces = [
+            Interface.objects.create(
+                device=device,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                name=f"Interface 00{idx}",
+                status=interface_status,
+            )
+            for idx in range(3)
+        ]
+        vdcs = [
+            VirtualDeviceContext.objects.create(
+                device=device,
+                status=vdc_status,
+                identifier=200 + idx,
+                name=f"Test VDC {idx}",
+            )
+            for idx in range(3)
+        ]
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[0], interface=interfaces[0])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[0])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[1], interface=interfaces[1])
+        InterfaceVDCAssignment.objects.create(virtual_device_context=vdcs[2], interface=interfaces[2])

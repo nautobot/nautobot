@@ -10,7 +10,7 @@ from nautobot.circuits.models import (
     Provider,
     ProviderNetwork,
 )
-from nautobot.core.testing import post_data, TestCase as NautobotTestCase, ViewTestCases
+from nautobot.core.testing import post_data, TestCase as NautobotTestCase, utils, ViewTestCases
 from nautobot.extras.models import Status, Tag
 
 
@@ -176,13 +176,12 @@ class CircuitTerminationTestCase(
 
         # Visit the termination detail page and assert responses:
         response = self.client.get(reverse("circuits:circuittermination", kwargs={"pk": termination.pk}))
-        self.assertEqual(200, response.status_code)
-        self.assertIn("Test Provider Network", str(response.content))
-        self.assertNotIn("</span> Connect", str(response.content))
+        self.assertBodyContains(response, "Test Provider Network")
+        self.assertNotIn("</span> Connect", utils.extract_page_body(response.content.decode(response.charset)))
 
         # Visit the circuit object detail page and check there is no connect button present:
         response = self.client.get(reverse("circuits:circuit", kwargs={"pk": circuit.pk}))
-        self.assertNotIn("</span> Connect", str(response.content))
+        self.assertNotIn("</span> Connect", utils.extract_page_body(response.content.decode(response.charset)))
 
 
 class CircuitSwapTerminationsTestCase(NautobotTestCase):

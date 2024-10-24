@@ -66,7 +66,7 @@ class NamespaceFilterSet(NautobotFilterSet):
         fields = "__all__"
 
 
-class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
+class VRFFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -539,7 +539,7 @@ class IPAddressToInterfaceFilterSet(NautobotFilterSet):
 class VLANGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSearchFilterSet):
     class Meta:
         model = VLANGroup
-        fields = ["id", "name", "description"]
+        fields = ["id", "name", "description", "tags"]
 
 
 class VLANFilterSet(
@@ -586,13 +586,13 @@ class VLANFilterSet(
         fields = ["id", "name", "tags", "vid"]
 
     def get_for_device(self, queryset, name, value):
-        # TODO: after Location model replaced Site, which was not a hierarchical model, should we consider to include
-        # VLANs that belong to the parent/child locations of the `device.location`?
         """Return all VLANs available to the specified Device(value)."""
         devices = Device.objects.select_related("location").filter(**{f"{name}__in": value})
         if not devices.exists():
             return queryset.none()
         location_ids = list(devices.values_list("location__id", flat=True))
+        for location in Location.objects.filter(pk__in=location_ids):
+            location_ids.extend([ancestor.id for ancestor in location.ancestors()])
         return queryset.filter(Q(locations__isnull=True) | Q(locations__in=location_ids))
 
 

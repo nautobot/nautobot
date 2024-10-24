@@ -1,6 +1,13 @@
 import copy
 import hashlib
 
+try:
+    from coverage import Coverage
+
+    has_coverage = True
+except ImportError:
+    has_coverage = False
+
 from django.conf import settings
 from django.core.management import call_command
 from django.db import connections
@@ -49,8 +56,24 @@ class NautobotTestRunner(DiscoverRunner):
 
     exclude_tags = ["integration"]
 
-    def __init__(self, cache_test_fixtures=False, **kwargs):
+    @classmethod
+    def add_arguments(cls, parser):
+        super().add_arguments(parser)
+        parser.add_argument(
+            "--cache-test-fixtures",
+            action="store_true",
+            help="Save test database to a json fixture file to re-use on subsequent tests.",
+        )
+        parser.add_argument(
+            "--no-reusedb",
+            action="store_false",
+            dest="reusedb",
+            help="Supplement to --keepdb; if --no-reusedb is set an existing database will NOT be reused.",
+        )
+
+    def __init__(self, cache_test_fixtures=False, reusedb=True, **kwargs):
         self.cache_test_fixtures = cache_test_fixtures
+        self.reusedb = reusedb
 
         # Assert "integration" hasn't been provided w/ --tag
         incoming_tags = kwargs.get("tags") or []
@@ -63,15 +86,6 @@ class NautobotTestRunner(DiscoverRunner):
             kwargs["exclude_tags"] = incoming_exclude_tags
 
         super().__init__(**kwargs)
-
-    @classmethod
-    def add_arguments(cls, parser):
-        super().add_arguments(parser)
-        parser.add_argument(
-            "--cache-test-fixtures",
-            action="store_true",
-            help="Save test database to a json fixture file to re-use on subsequent tests.",
-        )
 
     def setup_test_environment(self, **kwargs):
         super().setup_test_environment(**kwargs)
@@ -91,6 +105,13 @@ class NautobotTestRunner(DiscoverRunner):
 
         old_names = []
 
+        # Nautobot specific - disable coverage measurement to improve performance of (slow) database setup
+        cov = None
+        if has_coverage:
+            cov = Coverage.current()
+        if cov is not None:
+            cov.stop()
+
         for db_name, aliases in test_databases.values():
             first_alias = None
             for alias in aliases:
@@ -104,7 +125,9 @@ class NautobotTestRunner(DiscoverRunner):
                         connection.creation.create_test_db(
                             verbosity=self.verbosity,
                             autoclobber=not self.interactive,
-                            keepdb=self.keepdb,
+                            keepdb=self.keepdb
+                            # Extra check added for Nautobot:
+                            and self.reusedb,
                             serialize=connection.settings_dict["TEST"].get("SERIALIZE", True),
                         )
 
@@ -134,8 +157,9 @@ class NautobotTestRunner(DiscoverRunner):
                                     suffix=str(index + 1),
                                     verbosity=self.verbosity,
                                     keepdb=self.keepdb
-                                    # Extra check added for Nautobot:
-                                    and not settings.TEST_USE_FACTORIES,
+                                    # Extra checks added for Nautobot:
+                                    and not settings.TEST_USE_FACTORIES
+                                    and self.reusedb,
                                 )
 
                 # Configure all other connections as mirrors of the first one
@@ -150,6 +174,10 @@ class NautobotTestRunner(DiscoverRunner):
             for alias in connections:
                 connections[alias].force_debug_cursor = True
 
+        # Nautobot specific - resume test coverage measurement
+        if cov is not None:
+            cov.start()
+
         return old_names
 
     def teardown_databases(self, old_config, **kwargs):
@@ -163,7 +191,7 @@ class NautobotTestRunner(DiscoverRunner):
                             verbosity=self.verbosity,
                             keepdb=self.keepdb
                             # Extra check added for Nautobot
-                            and not settings.TEST_USE_FACTORIES,
+                            and not settings.TEST_USE_FACTORIES,  # with factory data, clones cannot be reused
                         )
 
                 # Extra block added for Nautobot

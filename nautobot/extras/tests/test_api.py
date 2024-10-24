@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import tempfile
 from unittest import mock, skip
 import uuid
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -1340,37 +1341,6 @@ class JobTest(
 
     model = Job
     choices_fields = None
-    update_data = {
-        # source, module_name, job_class_name, installed are NOT editable
-        "grouping_override": True,
-        "grouping": "Overridden grouping",
-        "name_override": True,
-        "name": "Overridden name",
-        "description_override": True,
-        "description": "This is an overridden description.",
-        "enabled": True,
-        "approval_required_override": True,
-        "approval_required": True,
-        "dryrun_default_override": True,
-        "dryrun_default": True,
-        "hidden_override": True,
-        "hidden": True,
-        "soft_time_limit_override": True,
-        "soft_time_limit": 350.1,
-        "time_limit_override": True,
-        "time_limit": 650,
-        "has_sensitive_variables": False,
-        "has_sensitive_variables_override": True,
-        "task_queues": ["default", "priority"],
-        "task_queues_override": True,
-    }
-    bulk_update_data = {
-        "enabled": True,
-        "approval_required_override": True,
-        "approval_required": True,
-        "has_sensitive_variables": False,
-        "has_sensitive_variables_override": True,
-    }
 
     def setUp(self):
         super().setUp()
@@ -1381,11 +1351,79 @@ class JobTest(
         self.job_model.enabled = True
         self.job_model.validated_save()
 
+    @classmethod
+    def setUpTestData(cls):
+        cls.update_data = {
+            # source, module_name, job_class_name, installed are NOT editable
+            "grouping_override": True,
+            "grouping": "Overridden grouping",
+            "name_override": True,
+            "name": "Overridden name",
+            "description_override": True,
+            "description": "This is an overridden description.",
+            "enabled": True,
+            "approval_required_override": True,
+            "approval_required": True,
+            "dryrun_default_override": True,
+            "dryrun_default": True,
+            "hidden_override": True,
+            "hidden": True,
+            "soft_time_limit_override": True,
+            "soft_time_limit": 350.1,
+            "time_limit_override": True,
+            "time_limit": 650,
+            "has_sensitive_variables": False,
+            "has_sensitive_variables_override": True,
+        }
+        cls.bulk_update_data = {
+            "enabled": True,
+            "approval_required_override": True,
+            "approval_required": True,
+            "has_sensitive_variables": False,
+            "has_sensitive_variables_override": True,
+        }
+
     run_success_response_status = status.HTTP_201_CREATED
 
     def get_run_url(self, class_path="api_test_job.APITestJob"):
         job_model = Job.objects.get_for_class_path(class_path)
         return reverse("extras-api:job-run", kwargs={"pk": job_model.pk})
+
+    def get_deletable_object(self):
+        """
+        Get an instance that can be deleted.
+        Exclude system jobs
+        """
+        # filter out the system jobs:
+        queryset = self._get_queryset().exclude(module_name__startswith="nautobot.")
+        instance = get_deletable_objects(self.model, queryset).first()
+        if instance is None:
+            self.fail("Couldn't find a single deletable object!")
+        return instance
+
+    def get_deletable_object_pks(self):
+        """
+        Get a list of PKs corresponding to jobs that can be safely bulk-deleted.
+        Exclude system jobs
+        """
+        queryset = self._get_queryset().exclude(module_name__startswith="nautobot.")
+        instances = get_deletable_objects(self.model, queryset).values_list("pk", flat=True)[:3]
+        if len(instances) < 3:
+            self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
+        return instances
+
+    def test_delete_system_jobs_fail(self):
+        self.add_permissions("extras.delete_job")
+        instance = self._get_queryset().filter(module_name__startswith="nautobot.").first()
+        job_name = instance.name
+        url = self._get_detail_url(instance)
+        self.client.delete(url, **self.header)
+        # assert Job still exists
+        self.assertTrue(self._get_queryset().filter(name=job_name).exists())
+        self.user.is_superuser = True
+        self.client.delete(url, **self.header)
+        # assert Job still exists
+        self.assertTrue(self._get_queryset().filter(name=job_name).exists())
 
     def test_get_job_variables(self):
         """Test the job/<pk>/variables API endpoint."""
@@ -1535,6 +1573,7 @@ class JobTest(
             name="No such job",
             installed=False,
             enabled=True,
+            default_job_queue=JobQueue.objects.get(name="default", queue_type=JobQueueTypeChoices.TYPE_CELERY),
         )
         job_model.validated_save()
 
@@ -1549,6 +1588,11 @@ class JobTest(
         """Job run cannot be requested if Celery is not running."""
         mock_get_worker_count.return_value = 0
         self.add_permissions("extras.run_job")
+        class_path = "api_test_job.APITestJob"
+        job_model = Job.objects.get_for_class_path(class_path)
+        # Make sure no queues are associated with it so it is using the celery default queue.
+        # And the error message is deterministic on line 1573
+        job_model.job_queues.set([])
         device_role = Role.objects.get_for_model(Device).first()
         job_data = {
             "var1": "FooBar",
@@ -1565,7 +1609,8 @@ class JobTest(
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(
-            response.data["detail"], "Unable to process request: No celery workers running on queue default."
+            response.data["detail"],
+            f"Unable to process request: No celery workers running on queue {job_model.default_job_queue.name}.",
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1587,7 +1632,7 @@ class JobTest(
             "schedule": {
                 "name": "test",
                 "interval": "future",
-                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "start_time": str(now() + timedelta(minutes=1)),
             },
         }
 
@@ -1673,6 +1718,7 @@ class JobTest(
         # This handles things like ObjectVar fields looked up by non-UUID
         # Jobs are executed with deserialized data
         deserialized_data = self.job_class.deserialize_data(job_data)
+        self.job_model.job_queues.set([])
 
         self.assertEqual(
             deserialized_data,
@@ -1686,7 +1732,7 @@ class JobTest(
         # Ensure the enqueue_job args deserialize to the same as originally inputted
         expected_enqueue_job_args = (self.job_model, self.user)
         expected_enqueue_job_kwargs = {
-            "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
+            "task_queue": self.job_model.default_job_queue.name,
             **self.job_class.serialize_data(deserialized_data),
         }
         mock_enqueue_job.assert_called_with(*expected_enqueue_job_args, **expected_enqueue_job_kwargs)
@@ -1709,7 +1755,7 @@ class JobTest(
         response = self.client.post(url, {"data": job_data}, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
-        job_result = JobResult.objects.get(name=self.job_model.name)
+        job_result = JobResult.objects.filter(name=self.job_model.name).latest()
 
         self.assertIn("scheduled_job", response.data)
         self.assertIn("job_result", response.data)
@@ -1717,6 +1763,36 @@ class JobTest(
         data_job_result = response.data["job_result"]
         expected_data_job_result = JobResultSerializer(job_result, context={"request": response.wsgi_request}).data
         self.assertEqual(data_job_result, expected_data_job_result)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_with_both_task_queue_and_job_queue_specified(self, mock_get_worker_count):
+        """Test job run response contains nested job result."""
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+        device_role = Role.objects.get_for_model(Device).first()
+        job_data = {
+            "var1": "FooBar",
+            "var2": 123,
+            "var3": False,
+            "var4": {"name": device_role.name},
+        }
+
+        url = self.get_run_url()
+        response = self.client.post(
+            url,
+            {
+                "data": job_data,
+                "task_queue": "default",
+                "job_queue": "default",
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(
+            "task_queue and job_queue are both specified. Please specifiy only one or another.", str(response.content)
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
@@ -1784,7 +1860,7 @@ class JobTest(
             "var2": "Ground control to Major Tom",
             "var23": "Commencing countdown, engines on",
             "var1": test_file,
-            "_schedule_start_time": str(datetime.now() + timedelta(minutes=1)),
+            "_schedule_start_time": str(now() + timedelta(minutes=1)),
             "_schedule_interval": "future",
             "_schedule_name": "test",
         }
@@ -1803,7 +1879,7 @@ class JobTest(
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "schedule": {
-                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "start_time": str(now() + timedelta(minutes=1)),
                 "interval": "future",
                 "name": "test",
             },
@@ -1842,7 +1918,7 @@ class JobTest(
         data = {
             "data": {},
             "schedule": {
-                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "start_time": str(now() + timedelta(minutes=1)),
                 "interval": "future",
                 "name": "test",
             },
@@ -1918,7 +1994,7 @@ class JobTest(
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "schedule": {
-                "start_time": str(datetime.now() - timedelta(minutes=1)),
+                "start_time": str(now() - timedelta(minutes=1)),
                 "interval": "future",
                 "name": "test",
             },
@@ -1937,7 +2013,7 @@ class JobTest(
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "schedule": {
-                "start_time": str(datetime.now() + timedelta(minutes=1)),
+                "start_time": str(now() + timedelta(minutes=1)),
                 "interval": "hourly",
                 "name": "test",
             },
@@ -2041,20 +2117,24 @@ class JobTest(
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
             "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
         }
-
+        jq, _ = JobQueue.objects.get_or_create(
+            name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+        )
+        self.job_model.job_queues.set([jq])
         url = self.get_run_url()
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, self.run_success_response_status)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
-    def test_run_job_with_default_queue_with_empty_job_model_task_queues(self, _):
+    def test_run_job_with_default_queue_with_empty_job_model_job_queues(self, _):
         self.add_permissions("extras.run_job")
+        job_model = Job.objects.get_for_class_path("pass.TestPass")
         data = {
-            "task_queue": settings.CELERY_TASK_DEFAULT_QUEUE,
+            "task_queue": job_model.default_job_queue.name,
         }
 
-        job_model = Job.objects.get_for_class_path("pass.TestPass")
+        job_model.job_queues.set([])
         job_model.enabled = True
         job_model.validated_save()
         url = self.get_run_url("pass.TestPass")
@@ -2351,6 +2431,7 @@ class JobQueueAssignmentTestCase(APIViewTestCases.APIViewTestCase):
         super().setUp()
         jobs = Job.objects.all()[:3]
         job_queues = JobQueue.objects.all()[:3]
+        JobQueueAssignment.objects.all().delete()
         JobQueueAssignment.objects.create(job=jobs[0], job_queue=job_queues[0])
         JobQueueAssignment.objects.create(job=jobs[1], job_queue=job_queues[1])
         JobQueueAssignment.objects.create(job=jobs[2], job_queue=job_queues[2])
@@ -2497,29 +2578,23 @@ class ScheduledJobTest(
             name="test2",
             task="pass.TestPass",
             job_model=job_model,
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            interval=JobExecutionType.TYPE_DAILY,
             user=user,
             approval_required=True,
-            start_time=now(),
+            start_time=datetime(2020, 1, 23, 12, 34, 56, tzinfo=ZoneInfo("America/New_York")),
+            time_zone=ZoneInfo("America/New_York"),
         )
         ScheduledJob.objects.create(
             name="test3",
             task="pass.TestPass",
             job_model=job_model,
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            interval=JobExecutionType.TYPE_CUSTOM,
+            crontab="34 12 * * *",
+            enabled=False,
             user=user,
             approval_required=True,
             start_time=now(),
         )
-
-    # TODO: Unskip after resolving #2908, #2909
-    @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
-    def test_list_objects_ascending_ordered(self):
-        pass
-
-    @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
-    def test_list_objects_descending_ordered(self):
-        pass
 
 
 class JobApprovalTest(APITestCase):
@@ -4105,14 +4180,14 @@ class TagTest(APIViewTestCases.APIViewTestCase):
     def test_create_tags_with_invalid_content_types(self):
         self.add_permissions("extras.add_tag")
 
-        # VLANGroup is an OrganizationalModel, not a PrimaryModel, and therefore does not support tags
-        data = {**self.create_data[0], "content_types": [VLANGroup._meta.label_lower]}
+        # Manufacturer is an OrganizationalModel, not a PrimaryModel, and therefore does not support tags
+        data = {**self.create_data[0], "content_types": [Manufacturer._meta.label_lower]}
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
 
         tag = Tag.objects.filter(name=data["name"])
         self.assertHttpStatus(response, 400)
         self.assertFalse(tag.exists())
-        self.assertIn(f"Invalid content type: {VLANGroup._meta.label_lower}", response.data["content_types"])
+        self.assertIn(f"Invalid content type: {Manufacturer._meta.label_lower}", response.data["content_types"])
 
     def test_create_tags_without_content_types(self):
         self.add_permissions("extras.add_tag")

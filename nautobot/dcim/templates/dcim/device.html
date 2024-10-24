@@ -335,6 +335,9 @@
                             {% plugin_right_page object %}
                         </div>
                     </div>
+                    {% block content_full_width_page %}
+                        {% include 'panel_table.html' with table=vdcs_table heading="Virtual Device Contexts" %}
+                    {% endblock content_full_width_page %}
                     <div class="row">
                         <div class="col-md-12">
                             {% plugin_full_width_page object %}
@@ -406,6 +409,18 @@
 {% endif %}
 {% if object.is_dynamic_group_associable_model and perms.extras.view_dynamicgroup %}
     <div id="dynamic_groups" role="tabpanel" class="tab-pane {% if request.GET.tab == 'dynamic_groups' %}active{% else %}fade{% endif %}">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="alert alert-warning">
+                    Dynamic group membership is cached for performance reasons,
+                    therefore this table may not always be up-to-date.
+                    <br>You can refresh the membership of any specific group by navigating to it from the list below
+                    or from the <a href="{% url 'extras:dynamicgroup_list' %}">Dynamic Groups list view</a>.
+                    <br>You can also refresh the membership of all groups by running the
+                    <a href="{% url 'extras:job_run_by_class_path' class_path='nautobot.core.jobs.groups.RefreshDynamicGroupCaches' %}">Refresh Dynamic Group Caches job</a>.
+                </div>
+            </div>
+        </div>
         <div class="row">
             <div class="col-md-12">
                 <form method="post">

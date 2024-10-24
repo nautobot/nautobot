@@ -234,6 +234,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     serializer_class = None
     table_class = None
     notes_form_class = NoteForm
+    permission_classes = []
 
     def get_permissions_for_model(self, model, actions):
         """
@@ -267,7 +268,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         user = self.request.user
         permission_required = self.get_required_permission()
-        # Check that the user has been granted the required permission(s) one by one.
+        # Check that the user has been granted the required Nautobot-specific object permission(s) one by one.
         # In case the permission has `message` or `code`` attribute, we want to include those information in the permission_denied error.
         for permission in permission_required:
             # If the user does not have the permission required, we raise DRF's `NotAuthenticated` or `PermissionDenied` exception
@@ -278,6 +279,16 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
                     request,
                     message=getattr(permission, "message", None),
                     code=getattr(permission, "code", None),
+                )
+
+        # Check for drf-specific permissions (IsAutheticated, etc) in permission_classes which is empty by default.
+        # self.get_permissions() iterates through permissions specified in the `permission_classes` attribute.
+        for permission in self.get_permissions():
+            # If the user does not have the permission required, we raise DRF's `NotAuthenticated` or `PermissionDenied` exception
+            # which will be handled by self.handle_no_permission() in the UI appropriately in the dispatch() method
+            if not permission.has_permission(request, self):
+                self.permission_denied(
+                    request, message=getattr(permission, "message", None), code=getattr(permission, "code", None)
                 )
 
     def dispatch(self, request, *args, **kwargs):
@@ -600,12 +611,13 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
     UI mixin to retrieve a model instance.
     """
 
+    object_detail_content = None
+
     def retrieve(self, request, *args, **kwargs):
         """
         Retrieve a model instance.
         """
-        context = {"use_new_ui": True}
-        return Response(context)
+        return Response({})
 
 
 class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
@@ -691,7 +703,6 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         """
         List the model instances.
         """
-        context = {"use_new_ui": True}
         queryset = self.get_queryset()
         clear_view = request.GET.get("clear_view", False)
         if "export" in request.GET:  # 3.0 TODO: remove, irrelevant after #4746
@@ -729,7 +740,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             except ObjectDoesNotExist:
                 pass
 
-        return Response(context)
+        return Response({})
 
 
 class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):

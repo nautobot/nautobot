@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import ProtectedError
 from django.forms import ValidationError as FormsValidationError
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
@@ -600,9 +601,8 @@ class JobViewSetBase(
             )
 
         valid_queues = job_model.task_queues if job_model.task_queues else [settings.CELERY_TASK_DEFAULT_QUEUE]
-        # Get a default queue from either the job model's specified task queue or
-        # the system default to fall back on if request doesn't provide one
-        default_valid_queue = valid_queues[0]
+        # default queue should be specified on the default_job_queue.
+        default_valid_queue = job_model.default_job_queue.name
 
         # We need to call request.data for both cases as this is what pulls and caches the request data
         data = request.data
@@ -623,7 +623,23 @@ class JobViewSetBase(
             input_serializer = serializers.JobMultiPartInputSerializer(data=data, context={"request": request})
             input_serializer.is_valid(raise_exception=True)
 
-            task_queue = input_serializer.validated_data.get("_task_queue", default_valid_queue)
+            # TODO remove _task_queue related code in 3.0
+            # _task_queue and _job_queue are both valid arguments in v2.4
+            task_queue = input_serializer.validated_data.get(
+                "_task_queue", None
+            ) or input_serializer.validated_data.get("_job_queue", None)
+            if not task_queue:
+                task_queue = default_valid_queue
+
+            # Log a warning if _task_queue and _job_queue fields are both specified out
+            if input_serializer.validated_data.get("_task_queue", None) and input_serializer.validated_data.get(
+                "_job_queue", None
+            ):
+                raise ValidationError(
+                    {
+                        "_task_queue": "_task_queue and _job_queue are both specified. Please specifiy only one or another."
+                    }
+                )
 
             # JobMultiPartInputSerializer only has keys for executing job (task_queue, etc),
             # everything else is a candidate for the job form's data.
@@ -651,7 +667,21 @@ class JobViewSetBase(
             input_serializer.is_valid(raise_exception=True)
 
             data = input_serializer.validated_data.get("data", {})
-            task_queue = input_serializer.validated_data.get("task_queue", default_valid_queue)
+            # TODO remove _task_queue related code in 3.0
+            # _task_queue and _job_queue are both valid arguments in v2.4
+            task_queue = input_serializer.validated_data.get("task_queue", None) or input_serializer.validated_data.get(
+                "job_queue", None
+            )
+            if not task_queue:
+                task_queue = default_valid_queue
+
+            # Log a warning if _task_queue and _job_queue fields are both specified out
+            if input_serializer.validated_data.get("task_queue", None) and input_serializer.validated_data.get(
+                "job_queue", None
+            ):
+                raise ValidationError(
+                    {"task_queue": "task_queue and job_queue are both specified. Please specifiy only one or another."}
+                )
             schedule_data = input_serializer.validated_data.get("schedule", None)
 
         if task_queue not in valid_queues:
@@ -699,7 +729,7 @@ class JobViewSetBase(
                 interval=schedule_data.get("interval"),
                 crontab=schedule_data.get("crontab", ""),
                 approval_required=approval_required,
-                task_queue=input_serializer.validated_data.get("task_queue", None),
+                task_queue=task_queue,
                 **job_class.serialize_data(cleaned_data),
             )
         else:
@@ -730,6 +760,14 @@ class JobViewSet(
     BulkDestroyModelMixin,
 ):
     lookup_value_regex = r"[-0-9a-fA-F]+"
+
+    def perform_destroy(self, obj):
+        if obj.module_name.startswith("nautobot."):
+            raise ProtectedError(
+                f"Unable to delete Job {obj}. System Job cannot be deleted",
+                [],
+            )
+        super().perform_destroy(obj)
 
 
 @extend_schema_view(

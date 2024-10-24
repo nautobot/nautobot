@@ -40,6 +40,7 @@ from .devices import (
     SoftwareImageFileTable,
     SoftwareVersionTable,
     VirtualChassisTable,
+    VirtualDeviceContextTable,
 )
 from .devicetypes import (
     ConsolePortTemplateTable,
@@ -125,6 +126,7 @@ __all__ = (
     "SoftwareImageFileTable",
     "SoftwareVersionTable",
     "VirtualChassisTable",
+    "VirtualDeviceContextTable",
 )
 
 #

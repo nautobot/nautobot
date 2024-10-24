@@ -31,6 +31,7 @@ from nautobot.extras.models import (
     ExportTemplate,
     GitRepository,
     Job,
+    JobQueue,
     JobResult,
     Role,
     Tag,
@@ -177,7 +178,12 @@ def ensure_git_repository(repository_record, logger=None, head=None):  # pylint:
     if logger:
         if changed:
             logger.info("Repository successfully refreshed")
-        logger.info(f'The current Git repository hash is "{repository_record.current_head}"')
+        logger.info(
+            '%s: the current Git repository hash is "%s"',
+            repository_record.name,
+            repository_record.current_head,
+            extra={"object": repository_record},
+        )
 
     return changed
 
@@ -767,7 +773,9 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
                 if not job_class_path.startswith(f"{repository_record.slug}.jobs."):
                     continue
                 found_jobs = True
-                job_model, created = refresh_job_model_from_job_class(Job, job_class)
+                job_model, created = refresh_job_model_from_job_class(
+                    job_model_class=Job, job_class=job_class, job_queue_class=JobQueue
+                )
 
                 if job_model is None:
                     msg = "Failed to create Job record; check Nautobot logs for details"
