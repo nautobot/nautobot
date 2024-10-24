@@ -96,8 +96,11 @@ def get_repo_access_url(repository_record):
                 obj=repository_record,
             )
         except ObjectDoesNotExist:
-            # No defined secret, fall through to legacy behavior
-            pass
+            logger.warning(
+                "HTTP Token not found for secrets group %s associated with repository %s",
+                repository_record.secrets_group,
+                repository_record,
+            )
         try:
             user = repository_record.secrets_group.get_secret_value(
                 SecretsGroupAccessTypeChoices.TYPE_HTTP,
@@ -105,8 +108,12 @@ def get_repo_access_url(repository_record):
                 obj=repository_record,
             )
         except ObjectDoesNotExist:
-            # No defined secret, fall through to legacy behavior
-            pass
+            # May not be needed for this repository, so just log as debug rather than warning
+            logger.debug(
+                "HTTP Username not found for secrets group %s associated with repository %s",
+                repository_record.secrets_group,
+                repository_record,
+            )
 
     if token and token not in from_url:
         # Some git repositories require a user as well as a token.
@@ -147,7 +154,7 @@ def ensure_git_repository(repository_record, logger=None, head=None):  # pylint:
         (bool): Whether any change to the local repo actually occurred.
     """
     # We want to check if the repo is already checked out at head. We also want to avoid calling
-    # get_repo_from_utl_to_path_and_from_branch, because it will cause the URL to be rebuilt causing calls to a secrets
+    # get_repo_from_url_to_path_and_from_branch, because it will cause the URL to be rebuilt causing calls to a secrets
     # backend. As such, if head is None, we can't perform these checks.
     if head is not None:
         # If the repo exists and has HEAD already checked out, the repo is present and has the correct branch selected.
@@ -205,7 +212,6 @@ def git_repository_dry_run(repository_record, logger):  # pylint: disable=redefi
                 logger.info("%s - `%s`", item.status, item.text)
         else:
             logger.info("Repository has no changes")
-
     except Exception as exc:
         logger.error(str(exc))
         raise
@@ -435,19 +441,12 @@ def import_config_context(context_data, repository_record, job_result):
         created = False
         modified = False
         save_needed = False
-        try:
-            context_record = ConfigContext.objects.get(
-                name=context_metadata.get("name"),
-                owner_content_type=git_repository_content_type,
-                owner_object_id=repository_record.pk,
-            )
-        except ConfigContext.DoesNotExist:
-            context_record = ConfigContext(
-                name=context_metadata.get("name"),
-                owner_content_type=git_repository_content_type,
-                owner_object_id=repository_record.pk,
-            )
-            created = True
+        context_record, created = ConfigContext.objects.get_or_create(
+            name=context_metadata.get("name"),
+            owner_content_type=git_repository_content_type,
+            owner_object_id=repository_record.pk,
+            defaults={"data": {}},
+        )
 
         for field in ("weight", "description", "is_active"):
             new_value = context_metadata[field]
@@ -662,20 +661,12 @@ def import_config_context_schema(context_schema_data, repository_record, job_res
 
     schema_metadata = context_schema_data["_metadata"]
 
-    try:
-        schema_record = ConfigContextSchema.objects.get(
-            name=schema_metadata["name"],
-            owner_content_type=git_repository_content_type,
-            owner_object_id=repository_record.pk,
-        )
-    except ConfigContextSchema.DoesNotExist:
-        schema_record = ConfigContextSchema(
-            name=schema_metadata["name"],
-            owner_content_type=git_repository_content_type,
-            owner_object_id=repository_record.pk,
-            data_schema=context_schema_data["data_schema"],
-        )
-        created = True
+    schema_record, created = ConfigContextSchema.objects.get_or_create(
+        name=schema_metadata["name"],
+        owner_content_type=git_repository_content_type,
+        owner_object_id=repository_record.pk,
+        defaults={"data_schema": context_schema_data["data_schema"]},
+    )
 
     if schema_record.description != schema_metadata.get("description", ""):
         schema_record.description = schema_metadata.get("description", "")
@@ -868,22 +859,12 @@ def update_git_export_templates(repository_record, job_result):
             # To reduce noise until the base issue is fixed, we need to explicitly detect object changes:
             created = False
             modified = False
-            try:
-                template_record = ExportTemplate.objects.get(
-                    content_type=model_content_type,
-                    name=file_name,
-                    owner_content_type=git_repository_content_type,
-                    owner_object_id=repository_record.pk,
-                )
-            except ExportTemplate.DoesNotExist:
-                template_record = ExportTemplate(
-                    content_type=model_content_type,
-                    name=file_name,
-                    owner_content_type=git_repository_content_type,
-                    owner_object_id=repository_record.pk,
-                )
-                created = True
-                modified = True
+            template_record, created = ExportTemplate.objects.get_or_create(
+                content_type=model_content_type,
+                name=file_name,
+                owner_content_type=git_repository_content_type,
+                owner_object_id=repository_record.pk,
+            )
 
             if template_record.template_code != template_content:
                 template_record.template_code = template_content
