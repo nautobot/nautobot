@@ -1,0 +1,3 @@
+Added `DataTablePanel` UI component.
+Added support for `context_table_key` parameter to `ObjectsTablePanel.__init__()`.
+Added automatic formatting of `JSONField` in `ObjectFieldsPanel`.
