@@ -1149,7 +1149,7 @@ def enqueue_job_hooks(object_change, may_reload_jobs=True):
     Find job hook(s) assigned to this changed object type + action and enqueue them to be processed.
 
     Returns:
-        bool: whether Jobs needed to be refreshed to make this happen
+        jobs_reloaded (bool): whether Jobs were reloaded to make this happen
     """
 
     # Job hooks cannot trigger other job hooks
