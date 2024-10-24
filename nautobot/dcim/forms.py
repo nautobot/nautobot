@@ -5223,7 +5223,7 @@ class VirtualDeviceContextForm(NautobotModelForm):
         queryset=IPAddress.objects.all(),
         required=False,
         query_params={"ip_version": 6, "interfaces": "$interfaces"},
-        label="Primary IPv4",
+        label="Primary IPv6",
     )
     role = DynamicModelChoiceField(
         queryset=Role.objects.all(),
