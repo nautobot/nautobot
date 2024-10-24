@@ -180,7 +180,7 @@ def web_request_context(
         Valid choices are in `nautobot.extras.choices.ObjectChangeEventContextChoices`.
     :param request: Optional web request instance, one will be generated if not supplied
     """
-    from nautobot.extras.jobs import enqueue_job_hooks # prevent circular import
+    from nautobot.extras.jobs import enqueue_job_hooks  # prevent circular import
 
     valid_contexts = {
         ObjectChangeEventContextChoices.CONTEXT_JOB: JobChangeContext,
