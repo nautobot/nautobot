@@ -203,13 +203,14 @@ def web_request_context(
         with change_logging(change_context):
             yield request
     finally:
-        jobs_refreshed = False
+        jobs_reloaded = False
         # enqueue jobhooks and webhooks, use change_context.change_id in case change_id was not supplied
-        for object_change in ObjectChange.objects.filter(request_id=change_context.change_id).iterator():
+        for object_change in (
+            ObjectChange.objects.filter(request_id=change_context.change_id).order_by("time").iterator()
+        ):
             if context != ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
                 # Make sure JobHooks are up to date (only once) before calling them
-                if enqueue_job_hooks(object_change, may_reload_jobs=not jobs_refreshed):
-                    jobs_refreshed = True
+                jobs_reloaded |= enqueue_job_hooks(object_change, may_reload_jobs=(not jobs_reloaded))
             enqueue_webhooks(object_change)
 
 

@@ -1151,15 +1151,16 @@ def enqueue_job_hooks(object_change, may_reload_jobs=True):
     Returns:
         jobs_reloaded (bool): whether Jobs were reloaded to make this happen
     """
+    jobs_reloaded = False
 
     # Job hooks cannot trigger other job hooks
     if object_change.change_context == ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
-        return False
+        return jobs_reloaded
 
     # Determine whether this type of object supports job hooks
     content_type = object_change.changed_object_type
     if content_type not in change_logged_models_queryset():
-        return False
+        return jobs_reloaded
 
     # Retrieve any applicable job hooks
     action_flag = {
@@ -1170,11 +1171,12 @@ def enqueue_job_hooks(object_change, may_reload_jobs=True):
     job_hooks = JobHook.objects.filter(content_types=content_type, enabled=True, **{action_flag: True})
 
     if not job_hooks.exists():
-        return False
+        return jobs_reloaded
 
     # Enqueue the jobs related to the job_hooks
     if may_reload_jobs:
         get_jobs(reload=True)
+        jobs_reloaded = True
 
     for job_hook in job_hooks:
         job_model = job_hook.job
@@ -1187,4 +1189,4 @@ def enqueue_job_hooks(object_change, may_reload_jobs=True):
         else:
             JobResult.enqueue_job(job_model, object_change.user, object_change=object_change.pk)
 
-    return may_reload_jobs
+    return jobs_reloaded
