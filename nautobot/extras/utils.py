@@ -625,7 +625,6 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result):
     pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
     nautobot_image_name = settings.KUBERNETES_JOB_IMAGE_NAME
     nautobot_container_name = settings.KUBERNETES_JOB_CONTAINER_NAME
-    nautobot_container_port_number = 8080
 
     # Load Config file and APIs
     config.load_kube_config(
@@ -659,7 +658,6 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result):
                     {
                         "image": nautobot_image_name,
                         "name": nautobot_container_name,
-                        "ports": [{"containerPort": nautobot_container_port_number}],
                     }
                 ]
             },
