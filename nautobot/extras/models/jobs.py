@@ -4,7 +4,6 @@ import contextlib
 from datetime import timedelta
 import logging
 import signal
-import time
 
 from billiard.exceptions import SoftTimeLimitExceeded
 from celery.exceptions import NotRegistered
@@ -19,10 +18,6 @@ from django.utils import timezone
 from django.utils.functional import cached_property
 from django_celery_beat.clockedschedule import clocked
 from django_celery_beat.tzcrontab import TzAwareCrontab
-from kubernetes import config
-from kubernetes.client.api import core_v1_api
-from kubernetes.client.rest import ApiException
-from kubernetes.stream import stream
 from prometheus_client import Histogram
 from timezone_field import TimeZoneField
 
@@ -57,6 +52,7 @@ from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     extras_features,
     get_job_queue_worker_count,
+    run_kubernetes_job_and_return_job_result,
 )
 
 from .customfields import CustomFieldModel
@@ -564,7 +560,9 @@ class JobQueue(PrimaryModel):
         null=True,
     )
     context = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH, help_text="Kubernetes Configuration Context", blank=True
+        max_length=CHARFIELD_MAX_LENGTH,
+        help_text="Kubernetes configuration context",
+        blank=True,
     )
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
@@ -572,6 +570,7 @@ class JobQueue(PrimaryModel):
         default=None,
         blank=True,
         null=True,
+        help_text="Secrets group that contains authentication credentials to execute jobs in the Kubernetes pod.",
     )
 
     class Meta:
@@ -817,76 +816,7 @@ class JobResult(BaseModel, CustomFieldModel):
         job_queue = JobQueue.objects.get(name=task_queue)
         # Kubernetes Job Queue logic
         if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
-            kube_config_context = job_queue.context
-            kube_config_file_path = settings.KUBERNETES_CONFIG_FILE
-            pod_name = settings.KUBERNETES_JOB_POD_NAME
-            pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
-            nautobot_image_name = settings.KUBERNETES_JOB_IMAGE_NAME
-            nautobot_container_name = settings.KUBERNETES_JOB_CONTAINER_NAME
-            nautobot_container_port_number = 8000
-
-            # Load Config file and APIs
-            config.new_client_from_config(
-                config_file=kube_config_file_path, context=kube_config_context, persist_config=False
-            )
-            core_v1 = core_v1_api.CoreV1Api()
-            api_instance = core_v1
-            resp = None
-
-            # Try to read existing pod
-            try:
-                logger.info(f"Reading existing pod {pod_name} in namespace {pod_namespace}")
-                resp = api_instance.read_namespaced_pod(name=pod_name, namespace=pod_namespace)
-                logger.info(f"Found existing pod {pod_name} in namespace {pod_namespace}")
-            except ApiException as e:
-                if e.status != 404:
-                    logger.info(f"Unknown error: {e}")
-
-            # If existing pod does not exist, create a new pod
-            if not resp:
-                logger.info(f"Pod {pod_name} does not exist in namespace {pod_namespace}. Creating it...")
-                pod_manifest = {
-                    "apiVersion": "v1",
-                    "kind": "Pod",
-                    "metadata": {"name": pod_name},
-                    "spec": {
-                        "containers": [
-                            {
-                                "image": nautobot_image_name,
-                                "name": nautobot_container_name,
-                                "ports": [{"containerPort": nautobot_container_port_number}],
-                            }
-                        ]
-                    },
-                }
-                logger.info(f"Creating pod {pod_name} in namespace {pod_namespace}")
-                resp = api_instance.create_namespaced_pod(body=pod_manifest, namespace=pod_namespace)
-                logger.info(f"Reading pod {pod_name} in namespace {pod_namespace}")
-                resp = api_instance.read_namespaced_pod(name=pod_name, namespace=pod_namespace)
-                logger.info("Done.")
-
-            # Calling exec interactively
-            logger.info(f"Waiting for container {nautobot_container_name} to be fully set up")
-            time.sleep(10)
-            exec_command = ["/bin/sh"]
-            resp = stream(
-                api_instance.connect_get_namespaced_pod_exec,
-                pod_name,
-                pod_namespace,
-                command=exec_command,
-                stderr=True,
-                stdin=True,
-                stdout=True,
-                tty=False,
-                _preload_content=False,
-            )
-            resp.write_stdin("nautobot-server runjob --local -u admin\n")
-            sresult = resp.read_stdout()
-            serror = resp.read_stderr()
-            logger.info(f"Job Result is: {sresult}")
-            logger.info(f"Error is: {serror}")
-            resp.close()
-            return job_result
+            return run_kubernetes_job_and_return_job_result(job_queue, job_result)
 
         job_celery_kwargs = {
             "nautobot_job_job_model_id": job_model.id,
