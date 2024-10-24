@@ -66,7 +66,10 @@ class PasswordUITest(TestCase):
                     "new_password2": "bar",
                 },
             )
-        payload = {"data": serialize_object_v2(self.user)}
+        serialized_data = serialize_object_v2(self.user)
+        serialized_data.pop("config_data")
+        serialized_data.pop("default_saved_views")
+        payload = {"data": serialized_data}
         self.assertEqual(
             cm.output,
             [f"INFO:nautobot.events.nautobot.users.user.change_password:{json.dumps(payload, indent=4)}"],

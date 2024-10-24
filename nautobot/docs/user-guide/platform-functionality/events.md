@@ -86,9 +86,7 @@ The data payload associated with events of any of the above topics has the follo
                 "is_staff": true,
                 "is_active": true,
                 "date_joined": "2024-10-22T04:35:28.886682Z",
-                "config_data": {},
-                "groups": [],
-                "default_saved_views": []
+                "groups": []
             }
         }
     ```

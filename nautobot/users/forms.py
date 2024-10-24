@@ -76,10 +76,13 @@ class PreferenceProfileSettingsForm(BootstrapMixin, forms.Form):
 
 
 class AdminPasswordChangeForm(_AdminPasswordChangeForm):
-    def save(self, commit, *args, **kwargs):
+    def save(self, commit=True):
         # Override `_AdminPasswordChangeForm.save()` to publish admin change user password event
-        instance = super().save(commit, *args, **kwargs)
+        instance = super().save(commit)
         if commit:
-            payload = {"data": serialize_object_v2(instance)}
+            serialized_data = serialize_object_v2(instance)
+            serialized_data.pop("config_data")
+            serialized_data.pop("default_saved_views")
+            payload = {"data": serialized_data}
             publish_event(topic="nautobot.admin.user.change_password", payload=payload)
         return instance
