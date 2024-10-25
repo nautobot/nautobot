@@ -135,6 +135,8 @@ function initializePositionField(context){
         var length = position_field.attr('maxlength');
         if (position_field.val()) {
             position_field.attr('_changed', true);
+        } else {
+            position_field.attr('_changed', false);
         }
         position_field.change(function() {
             if (!position_field.val()) {
@@ -174,6 +176,8 @@ function initializePositionPatternField(context){
         var length = position_field.attr('maxlength');
         if (position_field.val()) {
             position_field.attr('_changed', true);
+        } else {
+            position_field.attr('_changed', false);
         }
         position_field.change(function() {
             if (!position_field.val()) {
