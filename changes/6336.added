@@ -1,2 +1,1 @@
-Added info banner on ModuleBayCreate/UpdateView to remind users that if a value for `position` field is empty, its value will be automatically populated from the `name` of the Module Bay instance.
 Added logic to ModuleBay model to ensure that if the `position` field is empty, its value will be automatically populated from the `name` of the Module Bay instance.

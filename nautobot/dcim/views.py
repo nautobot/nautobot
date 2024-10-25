@@ -1486,27 +1486,12 @@ class DeviceBayTemplateBulkDeleteView(generic.BulkDeleteView):
 class ModuleBayCommonViewSetMixin:
     """NautobotUIViewSet for ModuleBay views to handle templated create and bulk rename views."""
 
-    def update(self, request, *args, **kwargs):
-        message = format_html(
-            "<div>The value of the <strong>Position</strong> field will default to"
-            " the <strong>Name</strong> of the module bay unless supplied by the user.</div>"
-        )
-        messages.warning(request, message)
-
-        return super().update(request, *args, **kwargs)
-
     def create(self, request, *args, **kwargs):
         if request.method == "POST":
             return self.perform_create(request, *args, **kwargs)
 
         form = self.create_form_class(initial=request.GET)
         model_form = self.model_form_class(request.GET)
-
-        message = format_html(
-            "<div>The value of the <strong>Position</strong> field will default to"
-            " the <strong>Name</strong> of the module bay unless supplied by the user.</div>"
-        )
-        messages.warning(request, message)
 
         return Response(
             {
