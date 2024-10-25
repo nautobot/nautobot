@@ -194,6 +194,7 @@ def render_markdown(value):
 
     return mark_safe(html)  # noqa: S308  # suspicious-mark-safe-usage, OK here since we sanitized the string earlier
 
+
 @library.filter()
 @register.filter()
 def render_json(value, syntax_highlight=True, pretty_print=False):
@@ -234,7 +235,6 @@ def render_json(value, syntax_highlight=True, pretty_print=False):
         return format_html(html_string, rendered_json)
 
     return rendered_json
-
 
 
 @library.filter()
