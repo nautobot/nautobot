@@ -618,6 +618,8 @@ def _alter_table_view_queryset(table_extension, app_name):
     """Replace the model view queryset with an optimized queryset from the app."""
     from nautobot.core.utils.lookup import get_view_for_model
 
+    # TODO: Investigate if there is a more targeted way to patch only the list view queryset
+    # when targeting a subclass of `NautobotUIViewSet`.
     view = get_view_for_model(table_extension.model, view_type="List")
     view.queryset = table_extension.alter_queryset(view.queryset)
 
