@@ -4,6 +4,7 @@ from .git import (
     ensure_git_repository,
     get_repo_access_url,
     git_repository_dry_run,
+    refresh_job_code_from_repository,
 )
 from .registry import (
     get_datasource_content_choices,
@@ -20,4 +21,5 @@ __all__ = (
     "get_repo_access_url",
     "git_repository_dry_run",
     "refresh_datasource_content",
+    "refresh_job_code_from_repository",
 )

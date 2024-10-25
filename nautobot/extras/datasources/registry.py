@@ -32,7 +32,7 @@ def refresh_datasource_content(model_name, record, user, job_result, delete=Fals
         job_result (JobResult): Passed through to the callback functions to use with logging their actions.
         delete (bool): True if the record is being deleted; False if it is being created/updated.
     """
-    job_result.log(f"Refreshing data provided by {record}...", level_choice=LogLevelChoices.LOG_INFO)
+    job_result.log(f"Refreshing data provided by {record}...", level_choice=LogLevelChoices.LOG_INFO, obj=record)
 
     for entry in get_datasource_contents(model_name):
         job_result.log(f"Refreshing {entry.name}...", level_choice=LogLevelChoices.LOG_INFO)
@@ -54,4 +54,4 @@ def refresh_datasource_content(model_name, record, user, job_result, delete=Fals
         raise RuntimeError(msg)
 
     # Otherwise, log a friendly info message.
-    job_result.log(f"Data refresh from {record} complete!", level_choice=LogLevelChoices.LOG_INFO)
+    job_result.log(f"Data refresh from {record} complete!", level_choice=LogLevelChoices.LOG_INFO, obj=record)
