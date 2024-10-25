@@ -130,62 +130,23 @@ function initializeSlugField(context){
 }
 
 function initializePositionField(context){
-    this_context = $(context);
-    var position_field = this_context.find('#id_position');
-    if (position_field.length != 0) {
-        var source_arr = position_field.attr('source').split(" ");
-        var length = position_field.attr('maxlength');
-        if (position_field.val()) {
-            position_field.attr('_changed', true);
-        } else {
-            position_field.attr('_changed', false);
-        }
-        position_field.change(function() {
-            if (!position_field.val()) {
-                $(this).attr('_changed', false);
-            } else {
-                $(this).attr('_changed', true);
-            }
-        });
-        function repopulate() {
-            let str = "";
-            for (source_str of source_arr) {
-                if (str != "") {
-                    str += " ";
-                }
-                let source = $('#id_' + source_str);
-                str += source.val();
-            }
-            position_field.val(str, (length ? length : 100));
-        };
-        for (source_str of source_arr) {
-            let source = $('#id_' + source_str);
-            source.on('keyup change', function() {
-                if (position_field && position_field.attr('_changed')=="false") {
-                    repopulate();
-                }
-            });
-        }
-        this_context.find('button.reslugify').click(repopulate);
+    var position_field = document.getElementById('id_position');
+    if (!position_field) {
+        var position_field = document.getElementById('id_position_pattern');
     }
-}
-
-function initializePositionPatternField(context){
-    this_context = $(context);
-    var position_field = this_context.find('#id_position_pattern');
     if (position_field.length != 0) {
-        var source_arr = position_field.attr('source').split(" ");
-        var length = position_field.attr('maxlength');
-        if (position_field.val()) {
-            position_field.attr('_changed', true);
+        var source_arr = position_field.getAttribute('source').split(" ");
+        var length = position_field.getAttribute('maxlength');
+        if (position_field.value) {
+            position_field.setAttribute('_changed', true);
         } else {
-            position_field.attr('_changed', false);
+            position_field.setAttribute('_changed', false);
         }
-        position_field.change(function() {
-            if (!position_field.val()) {
-                $(this).attr('_changed', false);
+        position_field.addEventListener('change', function() {
+            if (!position_field.value) {
+                position_field.setAttribute('_changed', false);
             } else {
-                $(this).attr('_changed', true);
+                position_field.setAttribute('_changed', true);
             }
         });
         function repopulate() {
@@ -194,15 +155,17 @@ function initializePositionPatternField(context){
                 if (str != "") {
                     str += " ";
                 }
-                let source = $('#id_' + source_str);
-                str += source.val();
+                let source_id = 'id_' + source_str;
+                let source = document.getElementById(source_id)
+                str += source.value;
             }
-            position_field.val(str, (length ? length : 100));
+            position_field.value = str.slice(0, length ? length : 100);
         };
         for (source_str of source_arr) {
-            let source = $('#id_' + source_str);
-            source.on('keyup change', function() {
-                if (position_field && position_field.attr('_changed')=="false") {
+            let source_id = 'id_' + source_str;
+            let source = document.getElementById(source_id);
+            source.addEventListener('keyup', function() {
+                if (position_field && position_field.getAttribute('_changed')=="false") {
                     repopulate();
                 }
             });
@@ -973,7 +936,6 @@ function initializeInputs(context) {
     initializeCheckboxes(this_context)
     initializeSlugField(this_context)
     initializePositionField(this_context)
-    initializePositionPatternField(this_context)
     initializeFormActionClick(this_context)
     initializeBulkEditNullification(this_context)
     initializeColorPicker(this_context)
