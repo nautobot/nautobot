@@ -573,7 +573,7 @@ class LogsCleanupTestCase(TransactionTestCase):
         started_logs = {
             "job_result_id": str(job_result.id),
             "job_name": "Logs Cleanup",
-            "user_name": self.user.username,
+            "user_name": job_result.user.username,
             "job_kwargs": {"cleanup_types": ["extras.JobResult"], "max_age": 60},
         }
         self.assertEqual(

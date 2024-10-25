@@ -1,10 +1,12 @@
 """Module providing for the publication of event notifications via mechanisms such as Redis, Kafka, syslog, etc."""
 
 import fnmatch
+import json
 import logging
 
 from django.utils.module_loading import import_string
 
+from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.events.exceptions import EventBrokerImproperlyConfigured, EventBrokerNotFound
 
 from .base import EventBroker
@@ -100,7 +102,8 @@ def publish_event(*, topic, payload):
         exclude_topics = event_broker.exclude_topics
         include_topics = event_broker.include_topics
         if is_topic_match(topic, include_topics) and not is_topic_match(topic, exclude_topics):
-            event_broker.publish(topic=topic, payload=payload)
+            serialized_payload = json.dumps(payload, cls=NautobotKombuJSONEncoder)
+            event_broker.publish(topic=topic, payload=serialized_payload)
 
 
 __all__ = (

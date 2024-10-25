@@ -14,6 +14,7 @@ from django.utils import timezone
 from django.utils.html import escape, format_html
 
 from nautobot.circuits.models import Circuit
+from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.models.utils import serialize_object_v2
@@ -2076,7 +2077,9 @@ class ApprovalQueueTestCase(
         expected_payload = {"data": serialize_object_v2(instance)}
         self.assertEqual(
             cm.output,
-            [f"INFO:nautobot.events.nautobot.jobs.approval.denied:{json.dumps(expected_payload, indent=4)}"],
+            [
+                f"INFO:nautobot.events.nautobot.jobs.approval.denied:{json.dumps(expected_payload, cls=NautobotKombuJSONEncoder, indent=4)}"
+            ],
         )
 
         # Check object-based permissions are enforced for a different instance
@@ -2176,7 +2179,9 @@ class ApprovalQueueTestCase(
         expected_payload = {"data": serialize_object_v2(instance)}
         self.assertEqual(
             cm.output,
-            [f"INFO:nautobot.events.nautobot.jobs.approval.approved:{json.dumps(expected_payload, indent=4)}"],
+            [
+                f"INFO:nautobot.events.nautobot.jobs.approval.approved:{json.dumps(expected_payload, cls=NautobotKombuJSONEncoder, indent=4)}"
+            ],
         )
 
         # Check object-based permissions are enforced for a different instance

@@ -3,7 +3,6 @@ import logging
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.serializers.json import DjangoJSONEncoder
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
@@ -538,7 +537,7 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
 class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     # task_queues and task_queues_override are added to maintain backward compatibility with versions pre v2.4.
-    task_queues = serializers.JSONField(encoder=DjangoJSONEncoder, read_only=True, required=False)
+    task_queues = serializers.JSONField(read_only=True, required=False)
     task_queues_override = serializers.BooleanField(read_only=True, required=False)
 
     class Meta:
