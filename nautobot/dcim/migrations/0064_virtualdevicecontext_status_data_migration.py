@@ -13,7 +13,7 @@ def populate_virtual_device_context_status(apps, schema_editor):
 
 def clear_virtual_device_context_status(apps, schema_editor):
     """
-    Clear the status field on all VirtualDeviceContext, and de-link/delete all Status records from the VirtualDeviceContext content-type.
+    De-link/delete all Status records from the VirtualDeviceContext content-type.
     """
     clear_status_choices(apps, schema_editor, models=["dcim.VirtualDeviceContext"])
 
