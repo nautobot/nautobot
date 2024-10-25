@@ -581,15 +581,13 @@ class JobQueueSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                 error_message = (
                     f"Secrets groups are not allowed on job queues of type {JobQueueTypeChoices.TYPE_CELERY}"
                 )
-
-                if "secrets_group" in data:
-                    errors["secrets_group"] = [error_message]
+                errors["secrets_group"] = [error_message]
 
             if context and queue_type == JobQueueTypeChoices.TYPE_CELERY:
                 error_message = f"Context is not allowed on job queues of type {JobQueueTypeChoices.TYPE_CELERY}"
-                if "context" in data:
-                    errors["context"] = [error_message]
+                errors["context"] = [error_message]
 
+            if errors:
                 raise serializers.ValidationError(errors)
 
         return super().validate(data)
