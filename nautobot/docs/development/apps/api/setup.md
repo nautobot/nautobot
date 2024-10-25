@@ -34,6 +34,7 @@ app_name/
     - navigation.py         # Navigation Menu Items
     - secrets.py            # Secret Providers
     - signals.py            # Signal Handler Functions
+    - table_extensions.py   # Extending Tables
     - template_content.py   # Extending Core Templates
     - templates/
       - app_name/

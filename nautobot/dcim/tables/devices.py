@@ -618,7 +618,7 @@ class DeviceModulePowerOutletTable(PowerOutletTable):
         row_attrs = {"class": cable_status_color_css}
 
 
-class BaseInterfaceTable(BaseTable):
+class BaseInterfaceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     enabled = BooleanColumn()
     ip_addresses = tables.TemplateColumn(
         template_code=INTERFACE_IPADDRESSES,
@@ -634,7 +634,7 @@ class BaseInterfaceTable(BaseTable):
     vrf = tables.Column(linkify=True, verbose_name="VRF")
 
 
-class InterfaceTable(StatusTableMixin, ModularDeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
+class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
     mgmt_only = BooleanColumn()
     tags = TagColumn(url_name="dcim:interface_list")
 

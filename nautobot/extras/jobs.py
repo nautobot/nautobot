@@ -1144,20 +1144,23 @@ def run_job(self, job_class_path, *args, **kwargs):
         raise
 
 
-def enqueue_job_hooks(object_change):
+def enqueue_job_hooks(object_change, may_reload_jobs=True):
     """
-    Find job hook(s) assigned to this changed object type + action and enqueue them
-    to be processed
+    Find job hook(s) assigned to this changed object type + action and enqueue them to be processed.
+
+    Returns:
+        jobs_reloaded (bool): whether Jobs were reloaded to make this happen
     """
+    jobs_reloaded = False
 
     # Job hooks cannot trigger other job hooks
     if object_change.change_context == ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
-        return
+        return jobs_reloaded
 
     # Determine whether this type of object supports job hooks
     content_type = object_change.changed_object_type
     if content_type not in change_logged_models_queryset():
-        return
+        return jobs_reloaded
 
     # Retrieve any applicable job hooks
     action_flag = {
@@ -1167,7 +1170,14 @@ def enqueue_job_hooks(object_change):
     }[object_change.action]
     job_hooks = JobHook.objects.filter(content_types=content_type, enabled=True, **{action_flag: True})
 
+    if not job_hooks.exists():
+        return jobs_reloaded
+
     # Enqueue the jobs related to the job_hooks
+    if may_reload_jobs:
+        get_jobs(reload=True)
+        jobs_reloaded = True
+
     for job_hook in job_hooks:
         job_model = job_hook.job
         if not job_model.installed or not job_model.enabled:
@@ -1178,3 +1188,5 @@ def enqueue_job_hooks(object_change):
             logger.error("JobHook %s is enabled, but the underlying Job implementation is missing", job_hook)
         else:
             JobResult.enqueue_job(job_model, object_change.user, object_change=object_change.pk)
+
+    return jobs_reloaded
