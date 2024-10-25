@@ -100,25 +100,29 @@ class LoginView(View):
         return HttpResponseRedirect(iri_to_uri(redirect_to))
 
 
-# TODO: LogoutView should also inherit from `django.contrib.auth.mixins.LoginRequiredMixin`
-class LogoutView(GenericView):
+# TODO: The LogoutView should inherit from `LoginRequiredMixin` or `GenericView`
+#   to prevent unauthenticated users from accessing the logout page.
+#   However, using `LoginRequiredMixin` or `GenericView` as-is currently redirects
+#   users to the login page with `?next=/logout/`, which is not desired.
+class LogoutView(View):
     """
     Deauthenticate a web user.
     """
 
     def get(self, request):
         # Log out the user
-        serialized_data = serialize_object_v2(request.user)
-        serialized_data.pop("config_data")
-        serialized_data.pop("default_saved_views")
-        payload = {"data": serialized_data}
+        if request.user.is_authenticated:
+            serialized_data = serialize_object_v2(request.user)
+            serialized_data.pop("config_data")
+            serialized_data.pop("default_saved_views")
+            payload = {"data": serialized_data}
+            publish_event(topic="nautobot.users.user.logout", payload=payload)
         auth_logout(request)
         messages.info(request, "You have logged out.")
 
         # Delete session key cookie (if set) upon logout
         response = HttpResponseRedirect(reverse("home"))
         response.delete_cookie("session_key")
-        publish_event(topic="nautobot.users.user.logout", payload=payload)
 
         return response
 
