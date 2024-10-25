@@ -97,13 +97,9 @@ function initializeSlugField(context){
     if (slug_field.length != 0) {
         var slug_source_arr = slug_field.attr('slug-source').split(" ");
         var slug_length = slug_field.attr('maxlength');
-        if (slug_field.val()) {
-            slug_field.attr('_changed', true);
-        } else {
-            slug_field.attr('_changed', false);
-        }
+        slug_field.attr('_changed', Boolean(slug_field.val()));
         slug_field.change(function() {
-            $(this).attr('_changed', true);
+            $(this).attr('_changed', Boolean($(this).val()));
         });
         function reslugify() {
             let slug_str = "";
@@ -134,20 +130,12 @@ function initializePositionField(context){
     if (!position_field) {
         var position_field = document.getElementById('id_position_pattern');
     }
-    if (position_field.length != 0) {
+    if (position_field) {
         var source_arr = position_field.getAttribute('source').split(" ");
         var length = position_field.getAttribute('maxlength');
-        if (position_field.value) {
-            position_field.setAttribute('_changed', true);
-        } else {
-            position_field.setAttribute('_changed', false);
-        }
+        position_field.setAttribute('_changed', Boolean(position_field.value))
         position_field.addEventListener('change', function() {
-            if (!position_field.value) {
-                position_field.setAttribute('_changed', false);
-            } else {
-                position_field.setAttribute('_changed', true);
-            }
+            position_field.setAttribute('_changed', Boolean(position_field.value))
         });
         function repopulate() {
             let str = "";
@@ -159,7 +147,7 @@ function initializePositionField(context){
                 let source = document.getElementById(source_id)
                 str += source.value;
             }
-            position_field.value = str.slice(0, length ? length : 100);
+            position_field.value = str.slice(0, length ? length : 255);
         };
         for (source_str of source_arr) {
             let source_id = 'id_' + source_str;
@@ -170,7 +158,7 @@ function initializePositionField(context){
                 }
             });
         }
-        this_context.find('button.reslugify').click(repopulate);
+        document.getElementsByClassName('reslugify')[0].addEventListener('click', repopulate);
     }
 }
 
