@@ -754,7 +754,7 @@ class JobResult(BaseModel, CustomFieldModel):
         grouping="main",
     ):
         """
-        General-purpose API for storing log messages in a JobResult's 'data' field.
+        General-purpose API for creating JobLogEntry records associated with a JobResult.
 
         message (str): Message to log (an attempt will be made to sanitize sensitive information from this message)
         obj (object): Object associated with this message, if any
