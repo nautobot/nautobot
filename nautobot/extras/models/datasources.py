@@ -115,6 +115,12 @@ class GitRepository(PrimaryModel):
                     "provides contents overlapping with this repository."
                 )
 
+        # Changing branch or remote_url invalidates current_head
+        if self.present_in_database:
+            past = GitRepository.objects.get(id=self.id)
+            if self.remote_url != past.remote_url or self.branch != past.branch:
+                self.current_head = ""
+
     def get_latest_sync(self):
         """
         Return a `JobResult` for the latest sync operation.
