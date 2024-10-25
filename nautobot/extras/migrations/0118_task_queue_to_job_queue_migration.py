@@ -50,7 +50,7 @@ def reverse_migrate_task_queues_to_job_queues(apps, schema):
     JobQueueAssignment = apps.get_model("extras", "JobQueueAssignment")
 
     for job in Job.objects.all():
-        queue_names = job.job_queues.all().values_list("name", flat=True)
+        queue_names = list(job.job_queues.all().values_list("name", flat=True))
         job.task_queues = queue_names
         job.save()
     JobQueueAssignment.objects.all().delete()

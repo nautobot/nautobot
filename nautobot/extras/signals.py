@@ -493,9 +493,13 @@ def refresh_job_models(sender, *, apps, **kwargs):
     from nautobot.extras.jobs import get_jobs  # avoid circular import
 
     Job = apps.get_model("extras", "Job")
-    JobQueue = apps.get_model("extras", "JobQueue")
 
     # To make reverse migrations safe
+    try:
+        JobQueue = apps.get_model("extras", "JobQueue")
+    except LookupError:
+        JobQueue = None
+
     if not hasattr(Job, "job_class_name"):
         logger.info("Skipping refresh_job_models() as it appears Job model has not yet been migrated to latest.")
         return
