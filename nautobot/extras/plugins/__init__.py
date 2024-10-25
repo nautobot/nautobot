@@ -596,13 +596,10 @@ def _add_columns_into_model_table(table_extension, app_name):
     table = get_table_for_model(table_extension.model)
     for name, column in table_extension.table_columns.items():
         _validate_table_column_name_is_prefixed_with_app_name(name, app_name)
-        try:
-            _add_column_to_table_base_columns(table, name, column)
-        except AttributeError as error:
-            logger.error(*error.args)
+        _add_column_to_table_base_columns(table, name, column, app_name)
 
 
-def _add_column_to_table_base_columns(table, column_name, column):
+def _add_column_to_table_base_columns(table, column_name, column, app_name):
     """Attach a column to an existing table."""
     import django_tables2
 
@@ -610,9 +607,11 @@ def _add_column_to_table_base_columns(table, column_name, column):
         raise TypeError(f"Custom column `{column_name}` is not an instance of django_tables2.Column.")
 
     if column_name in table.base_columns:
-        raise AttributeError(f"There was a conflict with table column `{column_name}`, the custom column was ignored.")
-
-    table.base_columns[column_name] = column
+        logger.error(
+            f"{app_name}: There was a name conflict with existing table column `{column_name}`, the custom column was ignored."
+        )
+    else:
+        table.base_columns[column_name] = column
 
 
 def _alter_table_view_queryset(table_extension, app_name):
@@ -629,7 +628,7 @@ def _modify_default_table_columns(table_extension, app_name):
 
     table = get_table_for_model(table_extension.model)
     message = (
-        f"{app_name} Cannot {{action}} column `{{column_name}}` {{preposition}} the default columns for `{table}`."
+        f"{app_name}: Cannot {{action}} column `{{column_name}}` {{preposition}} the default columns for `{table}`."
     )
 
     for column_name in table_extension.add_to_default_columns:

@@ -674,8 +674,8 @@ class TableExtensionTest(TestCase):
             plugins._add_columns_into_model_table(extension, "tenant")
             table = get_table_for_model(extension.model)
             expected = [
-                "ERROR:nautobot.extras.plugins:There was a conflict with table column "
-                "`tenant_group`, the custom column was ignored."
+                "ERROR:nautobot.extras.plugins:tenant: There was a name conflict with existing "
+                "table column `tenant_group`, the custom column was ignored."
             ]
             with self.subTest("error is logged"):
                 self.assertEqual(logger.output, expected)
@@ -690,7 +690,7 @@ class TableExtensionTest(TestCase):
         with self.subTest("raises TypeError"):
             column = object()
             with self.assertRaises(TypeError) as context:
-                plugins._add_column_to_table_base_columns(table, "test_column", column)
+                plugins._add_column_to_table_base_columns(table, "test_column", column, "my_app")
                 self.assertEqual(
                     context.exception, "Custom column `test_column` is not an instance of django_tables2.Column."
                 )
@@ -698,14 +698,14 @@ class TableExtensionTest(TestCase):
         with self.subTest("raises AttributeError"):
             column = tables.Column()
             with self.assertRaises(AttributeError) as context:
-                plugins._add_column_to_table_base_columns(table, "pk", column)
+                plugins._add_column_to_table_base_columns(table, "pk", column, "my_app")
                 self.assertEqual(
                     context.exception, "There was a conflict with table column `pk`, the custom column was ignored."
                 )
 
         with self.subTest("Adds column to base_columns"):
             column = tables.Column()
-            plugins._add_column_to_table_base_columns(table, "unique_name", column)
+            plugins._add_column_to_table_base_columns(table, "unique_name", column, "my_app")
             self.assertIn("unique_name", table.base_columns)
 
     def test__modify_default_table_columns(self):
