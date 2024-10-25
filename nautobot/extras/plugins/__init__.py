@@ -628,23 +628,21 @@ def _modify_default_table_columns(table_extension, app_name):
     from nautobot.core.utils.lookup import get_table_for_model
 
     table = get_table_for_model(table_extension.model)
-    add_registered_columns = [name for name in table_extension.add_to_default_columns if name in table.base_columns]
+    message = (
+        f"{app_name} Cannot {{action}} column `{{column_name}}` {{preposition}} the default columns for `{table}`."
+    )
 
-    if add_registered_columns:
-        table.Meta.default_columns = (*table.Meta.default_columns, *add_registered_columns)
+    for column_name in table_extension.add_to_default_columns:
+        if column_name in table.base_columns:
+            table.Meta.default_columns = (*table.Meta.default_columns, column_name)
+        else:
+            logger.debug(message.format(action="add", column_name=column_name, preposition="to"))
 
-    if table_extension.remove_from_default_columns:
-        missing_columns = [
-            column for column in table_extension.remove_from_default_columns if column not in table.Meta.default_columns
-        ]
-        if missing_columns:
-            logger.debug(
-                f"{app_name} Cannot remove columns `{missing_columns}` from the `{table_extension.model}` table's default columns."
-            )
-
-        table.Meta.default_columns = tuple(
-            column for column in table.Meta.default_columns if column not in table_extension.remove_from_default_columns
-        )
+    for column_name in table_extension.remove_from_default_columns:
+        if column_name in table.Meta.default_columns:
+            table.Meta.default_columns = tuple(name for name in table.Meta.default_columns if name != column_name)
+        else:
+            logger.debug(message.format(action="remove", column_name=column_name, preposition="from"))
 
 
 def _validate_is_subclass_of_table_extension(table_extension):
