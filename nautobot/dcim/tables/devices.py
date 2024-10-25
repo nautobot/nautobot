@@ -634,7 +634,9 @@ class BaseInterfaceTable(BaseTable):
     vrf = tables.Column(linkify=True, verbose_name="VRF")
 
 
-class InterfaceTable(StatusTableMixin, RoleTableMixin, ModularDeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
+class InterfaceTable(
+    StatusTableMixin, RoleTableMixin, ModularDeviceComponentTable, BaseInterfaceTable, PathEndpointTable
+):
     mgmt_only = BooleanColumn()
     tags = TagColumn(url_name="dcim:interface_list")
 
