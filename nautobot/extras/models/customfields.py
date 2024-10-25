@@ -801,7 +801,7 @@ class CustomField(
         else:
             context = change_context.as_dict(instance=self)
             context["context_detail"] = "delete custom field data"
-        delete_custom_field_data.delay(self.key, content_types, context)
+        delete_custom_field_data(self.key, content_types, context)
 
     def add_prefix_to_cf_key(self):
         return "cf_" + str(self.key)
@@ -871,7 +871,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
                 context = change_context.as_dict(instance=self)
                 context["context_detail"] = "update custom field choice data"
             transaction.on_commit(
-                lambda: update_custom_field_choice_data.delay(
+                lambda: update_custom_field_choice_data(
                     self.custom_field.pk,
                     database_object.value,
                     self.value,

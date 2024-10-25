@@ -2,18 +2,17 @@ from logging import getLogger
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.db import transaction
 from jinja2.exceptions import TemplateError
 import requests
 
 from nautobot.core.celery import nautobot_task
+from nautobot.core.models.query_functions import JSONRemove, JSONSet
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.utils import generate_signature
 
 logger = getLogger("nautobot.extras.tasks")
 
 
-@nautobot_task
 def update_custom_field_choice_data(field_id, old_value, new_value, change_context=None):
     """
     Update the values for a custom field choice used in objects' _custom_field_data for the given field.
@@ -37,20 +36,11 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
         # Loop through all field content types and search for values to update
         for ct in field.content_types.all():
             model = ct.model_class()
-            if change_context is not None:
-                with web_request_context(
-                    user=change_context.get("user"),
-                    change_id=change_context.get("change_id"),
-                    context_detail=change_context.get("context_detail"),
-                    context=change_context.get("context"),
-                ):
-                    for obj in model.objects.filter(**{f"_custom_field_data__{field.key}": old_value}):
-                        obj._custom_field_data[field.key] = new_value
-                        obj.save()
-            else:
-                for obj in model.objects.filter(**{f"_custom_field_data__{field.key}": old_value}):
-                    obj._custom_field_data[field.key] = new_value
-                    obj.save()
+            # TODO: use JSONSet here
+            for obj in model.objects.filter(**{f"_custom_field_data__{field.key}": old_value}):
+                obj._custom_field_data[field.key] = new_value
+                obj.save()
+            # TODO: create ObjectChange records if change_contextis not None
 
     elif field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
         # Loop through all field content types and search for values to update
@@ -82,7 +72,6 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
     return True
 
 
-@nautobot_task
 def delete_custom_field_data(field_key, content_type_pk_set, change_context=None):
     """
     Delete the values for a custom field
@@ -91,29 +80,14 @@ def delete_custom_field_data(field_key, content_type_pk_set, change_context=None
         field_key (str): The key of the custom field which is being deleted
         content_type_pk_set (list): List of PKs for content types to act upon
     """
-    # Circular Import
-    from nautobot.extras.context_managers import web_request_context
-
-    with transaction.atomic():
-        for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
-            model = ct.model_class()
-            if change_context is not None:
-                with web_request_context(
-                    user=change_context.get("user"),
-                    change_id=change_context.get("change_id"),
-                    context_detail=change_context.get("context_detail"),
-                    context=change_context.get("context"),
-                ):
-                    for obj in model.objects.filter(**{f"_custom_field_data__{field_key}__isnull": False}):
-                        del obj._custom_field_data[field_key]
-                        obj.save()
-            else:
-                for obj in model.objects.filter(**{f"_custom_field_data__{field_key}__isnull": False}):
-                    del obj._custom_field_data[field_key]
-                    obj.save()
+    for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
+        model = ct.model_class()
+        model.objects.filter(**{f"_custom_field_data__{field_key}__isnull": False}).update(
+            _custom_field_data=JSONRemove("_custom_field_data", field_key)
+        )
+        # TODO: bulk-create ObjectChange records
 
 
-@nautobot_task
 def provision_field(field_id, content_type_pk_set, change_context=None):
     """
     Provision a new custom field on all relevant content type object instances.
@@ -123,8 +97,10 @@ def provision_field(field_id, content_type_pk_set, change_context=None):
         content_type_pk_set (list): List of PKs for content types to act upon
     """
     # Circular Import
-    from nautobot.extras.context_managers import web_request_context
     from nautobot.extras.models import CustomField
+    from nautobot.extras.signals import change_context_state
+
+    change_context = change_context_state.get()
 
     try:
         field = CustomField.objects.get(pk=field_id)
@@ -132,23 +108,30 @@ def provision_field(field_id, content_type_pk_set, change_context=None):
         logger.error(f"Custom field with ID {field_id} not found, failing to provision.")
         return False
 
-    with transaction.atomic():
-        for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
-            model = ct.model_class()
-            if change_context is not None:
-                with web_request_context(
-                    user=change_context.get("user"),
-                    change_id=change_context.get("change_id"),
-                    context_detail=change_context.get("context_detail"),
-                    context=change_context.get("context"),
+    for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
+        model = ct.model_class()
+        model.objects.filter(**{f"_custom_field_data__{field.key}__isnull": True}).update(
+            _custom_field_data=JSONSet("_custom_field_data", field.key, field.default)
+        )
+        if change_context is not None:
+            # Since we used update() above, we bypassed ObjectChange automatic creation via signals. Create them now
+            # TODO: any objects which *already* had the default value will be incorrectly included in the below
+            from nautobot.extras.signals import _handle_changed_object
+
+            change_context.defer_object_changes = True
+            try:
+                for i, instance in enumerate(
+                    model.objects.filter(**{f"_custom_field_data__{field.key}": field.default}).iterator()
                 ):
-                    for obj in model.objects.all():
-                        obj._custom_field_data.setdefault(field.key, field.default)
-                        obj.save()
-            else:
-                for obj in model.objects.all():
-                    obj._custom_field_data.setdefault(field.key, field.default)
-                    obj.save()
+                    _handle_changed_object(model, instance, created=False)
+                    if i % 1000 == 0:
+                        change_context.flush_deferred_object_changes()
+                        print(f"Flushed object changes, i={i}")
+                change_context.flush_deferred_object_changes()
+                print(f"Flushed object changes, i={i}")
+            finally:
+                change_context.defer_object_changes = False
+                change_context.reset_deferred_object_changes()
 
     return True
 
