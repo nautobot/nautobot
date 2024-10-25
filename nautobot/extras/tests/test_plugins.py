@@ -660,8 +660,8 @@ class TableExtensionTest(TestCase):
         result = extension.alter_queryset(queryset)
         self.assertEqual(result, queryset)
 
-    def test__register_table_base_columns(self):
-        """Test the '_register_table_base_columns' function."""
+    def test__add_columns_into_model_table(self):
+        """Test the '_add_columns_into_model_table' function."""
         extension = plugins.TableExtension()
         extension.model = "tenancy.tenant"
         extension.table_columns = {
@@ -671,7 +671,7 @@ class TableExtensionTest(TestCase):
         extension.add_to_default_columns = ["tenant_group", "tenant_success"]
 
         with self.assertLogs("nautobot.extras.plugins", level="WARNING") as logger:
-            plugins._register_table_base_columns(extension, "tenant")
+            plugins._add_columns_into_model_table(extension, "tenant")
             table = get_table_for_model(extension.model)
             expected = [
                 "ERROR:nautobot.extras.plugins:There was a conflict with table column "
@@ -718,7 +718,7 @@ class TableExtensionTest(TestCase):
         table = get_table_for_model(extension.model)
         table.base_columns["new_column"] = tables.Column()
 
-        plugins._modify_default_table_columns(extension)
+        plugins._modify_default_table_columns(extension, "my_app")
 
         with self.subTest("column is added to default_columns"):
             self.assertIn("new_column", table.Meta.default_columns)

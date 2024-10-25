@@ -271,23 +271,7 @@ class NautobotAppConfig(NautobotConfig):
         table_extensions = import_object(f"{self.__module__}.{self.table_extensions}")
         if table_extensions is not None:
             register_table_extensions(table_extensions, self.name)
-            self.features["table_extensions"] = {
-                "columns": [
-                    f"{table_extension.model} -> {column_name}"
-                    for table_extension in table_extensions
-                    for column_name in table_extension.table_columns
-                ],
-                "add_to_default_columns": [
-                    f"{table_extension.model} -> {table_extension.add_to_default_columns}"
-                    for table_extension in table_extensions
-                    if table_extension.add_to_default_columns
-                ],
-                "remove_from_default_columns": [
-                    f"{table_extension.model} -> {table_extension.remove_from_default_columns}"
-                    for table_extension in table_extensions
-                    if table_extension.remove_from_default_columns
-                ],
-            }
+            self.features["table_extensions"] = get_table_extension_features(table_extensions)
 
 
 @class_deprecated_in_favor_of(NautobotAppConfig)
@@ -528,7 +512,7 @@ class TableExtension:
 
     An app can override the default columns for a table by either:
     - Extending the original default columns to include custom columns.
-        - add_to_default_columns = ("my_new_column",)
+        - add_to_default_columns = ("my_app_name_new_column",)
     - Removing native columns from the default columns.
         - remove_from_default_columns = ("tenant",)
     """
@@ -548,19 +532,66 @@ class TableExtension:
         """
         return queryset
 
+    @classmethod
+    def _get_table_columns_registrations(cls):
+        """Return a list of register labels fro each column."""
+        if not cls.table_columns:
+            return []
+        return [f"{cls.model} -> {column_name}" for column_name in cls.table_columns]
+
+    @classmethod
+    def _get_add_to_default_columns_registrations(cls):
+        """Return a list of register labels for each column added to defaults."""
+        if not cls.add_to_default_columns:
+            return []
+        return [f"{cls.model} -> {cls.add_to_default_columns}"]
+
+    @classmethod
+    def _get_remove_from_default_columns_registrations(cls):
+        """Return a list of register labels for each column removed from defaults."""
+        if not cls.remove_from_default_columns:
+            return []
+        return [f"{cls.model} -> {cls.remove_from_default_columns}"]
+
+
+def get_table_extension_features(table_extensions):
+    """Return a dictionary of TableExtension features for the App detail view."""
+    return {
+        "columns": [
+            label
+            for table_extension in table_extensions
+            for label in table_extension._get_table_columns_registrations()
+        ],
+        "add_to_default_columns": [
+            label
+            for table_extension in table_extensions
+            for label in table_extension._get_add_to_default_columns_registrations()
+        ],
+        "remove_from_default_columns": [
+            label
+            for table_extension in table_extensions
+            for label in table_extension._get_remove_from_default_columns_registrations()
+        ],
+    }
+
 
 def register_table_extensions(table_extensions, app_name):
     """Register a list of TableExtension classes."""
     for table_extension in table_extensions:
         _validate_is_subclass_of_table_extension(table_extension)
-        _register_table_base_columns(table_extension, app_name)
-        _modify_default_table_columns(table_extension)
+        _add_columns_into_model_table(table_extension, app_name)
+        _modify_default_table_columns(table_extension, app_name)
         _alter_table_view_queryset(table_extension, app_name)
 
 
-def _register_table_base_columns(table_extension, app_name):
-    """Register each column in the TableExtension."""
+def _add_columns_into_model_table(table_extension, app_name):
+    """Inject each new column into the Model Table."""
     from nautobot.core.utils.lookup import get_table_for_model
+
+    if not isinstance(table_extension.table_columns, dict):
+        error = f"{app_name} TableExtension: 'table_columns' attribute must be of type 'dict'."
+        logger.error(error)
+        return
 
     table = get_table_for_model(table_extension.model)
     for name, column in table_extension.table_columns.items():
@@ -592,7 +623,7 @@ def _alter_table_view_queryset(table_extension, app_name):
     view.queryset = table_extension.alter_queryset(view.queryset)
 
 
-def _modify_default_table_columns(table_extension):
+def _modify_default_table_columns(table_extension, app_name):
     """Add or remove columns from the table default columns."""
     from nautobot.core.utils.lookup import get_table_for_model
 
@@ -603,6 +634,14 @@ def _modify_default_table_columns(table_extension):
         table.Meta.default_columns = (*table.Meta.default_columns, *add_registered_columns)
 
     if table_extension.remove_from_default_columns:
+        missing_columns = [
+            column for column in table_extension.remove_from_default_columns if column not in table.Meta.default_columns
+        ]
+        if missing_columns:
+            logger.debug(
+                f"{app_name} Cannot remove columns `{missing_columns}` from the `{table_extension.model}` table's default columns."
+            )
+
         table.Meta.default_columns = tuple(
             column for column in table.Meta.default_columns if column not in table_extension.remove_from_default_columns
         )
