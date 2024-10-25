@@ -99,6 +99,8 @@ function initializeSlugField(context){
         var slug_length = slug_field.attr('maxlength');
         if (slug_field.val()) {
             slug_field.attr('_changed', true);
+        } else {
+            slug_field.attr('_changed', false);
         }
         slug_field.change(function() {
             $(this).attr('_changed', true);
