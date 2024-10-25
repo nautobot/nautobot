@@ -391,6 +391,18 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
     get_for_model.cache_key_prefix = "nautobot.extras.customfield.get_for_model"
 
+    def keys_for_model(self, model):
+        """Return list of all keys for CustomFields assigned to the given model."""
+        concrete_model = model._meta.concrete_model
+        cache_key = f"{self.keys_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}"
+        keys = cache.get(cache_key)
+        if keys is None:
+            keys = list(self.get_for_model(model).values_list("key", flat=True))
+            cache.set(cache_key, keys)
+        return keys
+
+    keys_for_model.cache_key_prefix = "nautobot.extras.customfield.keys_for_model"
+
 
 @extras_features("webhooks")
 class CustomField(

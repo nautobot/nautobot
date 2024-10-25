@@ -43,12 +43,7 @@ class CustomFieldsDataField(Field):
         """
         Cache CustomField keys assigned to this model to avoid redundant database queries
         """
-        if not hasattr(self, "_custom_field_keys"):
-            content_type = ContentType.objects.get_for_model(self.parent.Meta.model)
-            self._custom_field_keys = CustomField.objects.filter(content_types=content_type).values_list(
-                "key", flat=True
-            )
-        return self._custom_field_keys
+        return CustomField.objects.keys_for_model(self.parent.Meta.model)
 
     def to_representation(self, obj):
         return {key: obj.get(key) for key in self.custom_field_keys}
