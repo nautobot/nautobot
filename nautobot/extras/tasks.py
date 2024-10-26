@@ -13,6 +13,21 @@ from nautobot.extras.utils import generate_signature
 logger = getLogger("nautobot.extras.tasks")
 
 
+def _generate_bulk_object_changes(change_context, queryset):
+    from nautobot.extras.signals import _handle_changed_object
+
+    change_context.defer_object_changes = True
+    try:
+        for i, instance in enumerate(queryset.iterator()):
+            _handle_changed_object(queryset.model, instance, created=False)
+            if i % 1000 == 0:
+                change_context.flush_deferred_object_changes()
+        change_context.flush_deferred_object_changes()
+    finally:
+        change_context.defer_object_changes = False
+        change_context.reset_deferred_object_changes()
+
+
 def update_custom_field_choice_data(field_id, old_value, new_value, change_context=None):
     """
     Update the values for a custom field choice used in objects' _custom_field_data for the given field.
@@ -21,9 +36,9 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
         field_id (uuid4): The PK of the custom field to which this choice value relates
         old_value (str): The existing value of the choice
         new_value (str): The value which will be used as replacement
+        change_context (ChangeContext): Optional change context for ObjectChange creation
     """
     # Circular Import
-    from nautobot.extras.context_managers import web_request_context
     from nautobot.extras.models import CustomField
 
     try:
@@ -36,34 +51,24 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
         # Loop through all field content types and search for values to update
         for ct in field.content_types.all():
             model = ct.model_class()
-            # TODO: use JSONSet here
-            for obj in model.objects.filter(**{f"_custom_field_data__{field.key}": old_value}):
-                obj._custom_field_data[field.key] = new_value
-                obj.save()
-            # TODO: create ObjectChange records if change_contextis not None
+            queryset = model.objects.filter(**{f"_custom_field_data__{field.key}": old_value})
+            if change_context is not None:
+                pk_list = list(queryset.values_list("pk", flat=True))
+            queryset.update(_custom_field_data=JSONSet("_custom_field_data", field.key, new_value))
+            if change_context is not None:
+                # Since we used update() above, we bypassed ObjectChange automatic creation via signals. Create them now
+                _generate_bulk_object_changes(change_context, model.objects.filter(pk__in=pk_list))
 
     elif field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
         # Loop through all field content types and search for values to update
+        # TODO: can we implement a bulk operator for this?
         for ct in field.content_types.all():
             model = ct.model_class()
-            if change_context is not None:
-                with web_request_context(
-                    user=change_context.get("user"),
-                    change_id=change_context.get("change_id"),
-                    context_detail=change_context.get("context_detail"),
-                    context=change_context.get("context"),
-                ):
-                    for obj in model.objects.filter(**{f"_custom_field_data__{field.key}__contains": old_value}):
-                        old_list = obj._custom_field_data[field.key]
-                        new_list = [new_value if e == old_value else e for e in old_list]
-                        obj._custom_field_data[field.key] = new_list
-                        obj.save()
-            else:
-                for obj in model.objects.filter(**{f"_custom_field_data__{field.key}__contains": old_value}):
-                    old_list = obj._custom_field_data[field.key]
-                    new_list = [new_value if e == old_value else e for e in old_list]
-                    obj._custom_field_data[field.key] = new_list
-                    obj.save()
+            for obj in model.objects.filter(**{f"_custom_field_data__{field.key}__contains": old_value}):
+                old_list = obj._custom_field_data[field.key]
+                new_list = [new_value if e == old_value else e for e in old_list]
+                obj._custom_field_data[field.key] = new_list
+                obj.save()
 
     else:
         logger.error(f"Unknown field type, failing to act on choice data for this field {field.key}.")
@@ -79,13 +84,17 @@ def delete_custom_field_data(field_key, content_type_pk_set, change_context=None
     Args:
         field_key (str): The key of the custom field which is being deleted
         content_type_pk_set (list): List of PKs for content types to act upon
+        change_context (ChangeContext): Optional change context for ObjectChange creation
     """
     for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
         model = ct.model_class()
-        model.objects.filter(**{f"_custom_field_data__{field_key}__isnull": False}).update(
-            _custom_field_data=JSONRemove("_custom_field_data", field_key)
-        )
-        # TODO: bulk-create ObjectChange records
+        queryset = model.objects.filter(**{f"_custom_field_data__{field_key}__isnull": False})
+        if change_context is not None:
+            pk_list = list(queryset.values_list("pk", flat=True))
+        queryset.update(_custom_field_data=JSONRemove("_custom_field_data", field_key))
+        if change_context is not None:
+            # Since we used update() above, we bypassed ObjectChange automatic creation via signals. Create them now
+            _generate_bulk_object_changes(change_context, model.objects.filter(pk__in=pk_list))
 
 
 def provision_field(field_id, content_type_pk_set, change_context=None):
@@ -95,12 +104,10 @@ def provision_field(field_id, content_type_pk_set, change_context=None):
     Args:
         field_id (uuid4): The PK of the custom field being provisioned
         content_type_pk_set (list): List of PKs for content types to act upon
+        change_context (ChangeContext): Optional change context for ObjectChange creation.
     """
     # Circular Import
     from nautobot.extras.models import CustomField
-    from nautobot.extras.signals import change_context_state
-
-    change_context = change_context_state.get()
 
     try:
         field = CustomField.objects.get(pk=field_id)
@@ -110,28 +117,13 @@ def provision_field(field_id, content_type_pk_set, change_context=None):
 
     for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
         model = ct.model_class()
-        model.objects.filter(**{f"_custom_field_data__{field.key}__isnull": True}).update(
-            _custom_field_data=JSONSet("_custom_field_data", field.key, field.default)
-        )
+        queryset = model.objects.filter(**{f"_custom_field_data__{field.key}__isnull": True})
+        if change_context is not None:
+            pk_list = list(queryset.values_list("pk", flat=True))
+        queryset.update(_custom_field_data=JSONSet("_custom_field_data", field.key, field.default))
         if change_context is not None:
             # Since we used update() above, we bypassed ObjectChange automatic creation via signals. Create them now
-            # TODO: any objects which *already* had the default value will be incorrectly included in the below
-            from nautobot.extras.signals import _handle_changed_object
-
-            change_context.defer_object_changes = True
-            try:
-                for i, instance in enumerate(
-                    model.objects.filter(**{f"_custom_field_data__{field.key}": field.default}).iterator()
-                ):
-                    _handle_changed_object(model, instance, created=False)
-                    if i % 1000 == 0:
-                        change_context.flush_deferred_object_changes()
-                        print(f"Flushed object changes, i={i}")
-                change_context.flush_deferred_object_changes()
-                print(f"Flushed object changes, i={i}")
-            finally:
-                change_context.defer_object_changes = False
-                change_context.reset_deferred_object_changes()
+            _generate_bulk_object_changes(change_context, model.objects.filter(pk__in=pk_list))
 
     return True
 

@@ -315,21 +315,13 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
     """
 
     change_context = change_context_state.get()
-    if change_context is None:
-        context = None
-    else:
-        context = change_context.as_dict(instance=instance)
     if action == "post_remove":
         # Existing content types have been removed from the custom field, delete their data
-        if context:
-            context["context_detail"] = "delete custom field data from existing content types"
-        transaction.on_commit(lambda: delete_custom_field_data(instance.key, pk_set, context))
+        transaction.on_commit(lambda: delete_custom_field_data(instance.key, pk_set, change_context))
 
     elif action == "post_add":
         # New content types have been added to the custom field, provision them
-        if context:
-            context["context_detail"] = "provision custom field data for new content types"
-        transaction.on_commit(lambda: provision_field(instance.pk, pk_set, context))
+        transaction.on_commit(lambda: provision_field(instance.pk, pk_set, change_context))
 
 
 m2m_changed.connect(handle_cf_removed_obj_types, sender=CustomField.content_types.through)
