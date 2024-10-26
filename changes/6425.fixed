@@ -1,1 +1,0 @@
-Fixed bug in which ColoredLabelColumn() wasn't being applied to the `role' column on Device/VM interfaces
