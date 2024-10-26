@@ -97,11 +97,9 @@ function initializeSlugField(context){
     if (slug_field.length != 0) {
         var slug_source_arr = slug_field.attr('slug-source').split(" ");
         var slug_length = slug_field.attr('maxlength');
-        if (slug_field.val()) {
-            slug_field.attr('_changed', true);
-        }
+        slug_field.attr('_changed', Boolean(slug_field.val()));
         slug_field.change(function() {
-            $(this).attr('_changed', true);
+            $(this).attr('_changed', Boolean($(this).val()));
         });
         function reslugify() {
             let slug_str = "";
@@ -118,12 +116,49 @@ function initializeSlugField(context){
         for (slug_source_str of slug_source_arr) {
             let slug_source = $('#id_' + slug_source_str);
             slug_source.on('keyup change', function() {
-                if (slug_field && !slug_field.attr('_changed')) {
+                if (slug_field && slug_field.attr('_changed')=="false") {
                     reslugify();
                 }
             });
         }
         this_context.find('button.reslugify').click(reslugify);
+    }
+}
+
+function initializePositionField(context){
+    var position_field = document.getElementById('id_position');
+    if (!position_field) {
+        var position_field = document.getElementById('id_position_pattern');
+    }
+    if (position_field) {
+        var source_arr = position_field.getAttribute('source').split(" ");
+        var length = position_field.getAttribute('maxlength');
+        position_field.setAttribute('_changed', Boolean(position_field.value))
+        position_field.addEventListener('change', function() {
+            position_field.setAttribute('_changed', Boolean(position_field.value))
+        });
+        function repopulate() {
+            let str = "";
+            for (source_str of source_arr) {
+                if (str != "") {
+                    str += " ";
+                }
+                let source_id = 'id_' + source_str;
+                let source = document.getElementById(source_id)
+                str += source.value;
+            }
+            position_field.value = str.slice(0, length ? length : 255);
+        };
+        for (source_str of source_arr) {
+            let source_id = 'id_' + source_str;
+            let source = document.getElementById(source_id);
+            source.addEventListener('keyup', function() {
+                if (position_field && position_field.getAttribute('_changed')=="false") {
+                    repopulate();
+                }
+            });
+        }
+        document.getElementsByClassName('reslugify')[0].addEventListener('click', repopulate);
     }
 }
 
@@ -888,6 +923,7 @@ function initializeInputs(context) {
     initializeStaticChoiceSelection(this_context)
     initializeCheckboxes(this_context)
     initializeSlugField(this_context)
+    initializePositionField(this_context)
     initializeFormActionClick(this_context)
     initializeBulkEditNullification(this_context)
     initializeColorPicker(this_context)

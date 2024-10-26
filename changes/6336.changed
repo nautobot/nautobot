@@ -1,0 +1,1 @@
+Enhanced `position` fields on ModuleBayCreate/UpdateForms to auto-populate their values from `name` fields.
