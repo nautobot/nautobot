@@ -28,6 +28,7 @@ def _generate_bulk_object_changes(context, queryset, task_logger):
     #       trigger jobhooks and webhooks.
     # TODO: this could be made much faster if we ensure the queryset has appropriate select_related/prefetch_related?
     change_context = ChangeContext(**context)
+    i = 0
     with change_logging(change_context):
         with deferred_change_logging_for_bulk_operation():
             for i, instance in enumerate(queryset.iterator(), start=1):
