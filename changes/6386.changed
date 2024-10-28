@@ -1,2 +1,0 @@
-Changed `GitRepositorySync` system Job to run atomically (all-or-nothing), such that any failure in the resync will cause all associated database updates to be reverted.
-Changed behavior of change logging `web_request_context()` to only reload Job code when a relevant JobHook is found to apply to the change in question.
