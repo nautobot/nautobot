@@ -225,7 +225,7 @@ Render a dictionary as formatted JSON.
 +/- 2.2.0
     Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a `<code class="language-json>` HTML tag to flag it for syntax highlighting by highlight.js.
 
-+++ 2.4.0
++++ 2.3.0
     Added option for pretty print the output: `pretty_print=False`, default is False. If True the output will be wrapped in `<pre>` tags.
 
 ```django
