@@ -204,17 +204,17 @@ def web_request_context(
             yield request
     finally:
         jobs_reloaded = False
-        # In the case of bulk operations, we perform the same create/update/delete operation on the same model.
-        # Save some repeated database queries by reusing the same queryset where applicable:
+        # In bulk operations, we are performing the same action (create/update/delete) on the same content-type.
+        # Save some repeated database queries by reusing the same evaluated querysets where applicable:
         jobhook_queryset = None
         webhook_queryset = None
         last_action = None
         last_content_type = None
         # enqueue jobhooks and webhooks, use change_context.change_id in case change_id was not supplied
         for object_change in (
-            ObjectChange.objects.select_related("changed_object_type")
+            ObjectChange.objects.select_related("changed_object_type", "user")
             .filter(request_id=change_context.change_id)
-            .order_by("time")
+            .order_by("time")  # default ordering is -time but we want oldest first not newest first
             .iterator()
         ):
             if object_change.action != last_action or object_change.changed_object_type != last_content_type:
