@@ -30,12 +30,14 @@ import netaddr
 import yaml
 
 from nautobot.core.celery import import_jobs, nautobot_task
+from nautobot.core.events import publish_event
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     JSONField,
 )
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.logging import sanitize
 from nautobot.core.utils.lookup import get_model_from_name
 from nautobot.extras.choices import (
     JobResultStatusChoices,
@@ -1151,16 +1153,32 @@ def run_job(self, job_class_path, *args, **kwargs):
         raise KeyError(f"Job class not found for class path {job_class_path}")
     job = job_class()
     job.request = self.request
+    job_result = JobResult.objects.get(id=self.request.id)
+    payload = {
+        "job_result_id": self.request.id,
+        "job_name": job.name,
+        "user_name": job_result.user.username,
+    }
+    if not job.job_model.has_sensitive_variables:
+        payload["job_kwargs"] = kwargs
     try:
+        publish_event(topic="nautobot.jobs.job.started", payload=payload)
         job.before_start(self.request.id, args, kwargs)
         result = job(*args, **kwargs)
         job.on_success(result, self.request.id, args, kwargs)
         job.after_return(JobResultStatusChoices.STATUS_SUCCESS, result, self.request.id, args, kwargs, None)
+        payload["job_output"] = result
+        publish_event(topic="nautobot.jobs.job.completed", payload=payload)
         return result
     except Exception as exc:
         einfo = ExceptionInfo(sys.exc_info())
         job.on_failure(exc, self.request.id, args, kwargs, einfo)
         job.after_return(JobResultStatusChoices.STATUS_FAILURE, exc, self.request.id, args, kwargs, einfo)
+        payload["einfo"] = {
+            "exc_type": type(exc).__name__,
+            "exc_message": sanitize(str(exc)),
+        }
+        publish_event(topic="nautobot.jobs.job.completed", payload=payload)
         raise
 
 

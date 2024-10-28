@@ -26,9 +26,10 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
+from nautobot.core.events import publish_event
 from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
-from nautobot.core.models.utils import pretty_print_query
+from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
@@ -1674,11 +1675,14 @@ class JobApprovalRequestView(generic.ObjectView):
                 messages.error(request, "You do not have permission to deny this request.")
             else:
                 # Delete the scheduled_job instance
+                publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
                 scheduled_job.delete()
                 if request.user == scheduled_job.user:
                     messages.error(request, f"Approval request for {scheduled_job.name} was revoked")
                 else:
                     messages.error(request, f"Approval of {scheduled_job.name} was denied")
+
+                publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
 
                 return redirect("extras:scheduledjob_approval_queue_list")
 
@@ -1700,6 +1704,9 @@ class JobApprovalRequestView(generic.ObjectView):
                 scheduled_job.approved_by_user = request.user
                 scheduled_job.approved_at = timezone.now()
                 scheduled_job.save()
+
+                publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
+                publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
 
                 messages.success(request, f"{scheduled_job.name} was approved and will now begin execution")
 
