@@ -132,7 +132,7 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                 weight=300,
                 context_field="text_panel_code_content",
                 render_as=TextPanel.RenderOptions.CODE,
-            )
+            ),
         ),
     )
 
@@ -185,11 +185,11 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                         "interface_name": "GigabitEthernet0/0",
                         "ip_address": "10.0.0.1",
                         "subnet_mask": "255.255.255.252",
-                        "mac_address": "00:1A:2B:3C:4D:5E"
+                        "mac_address": "00:1A:2B:3C:4D:5E",
                     },
-                ]
+                ],
             }
-            context["text_panel_code_content"] = "import abc\nabc()\nprint(\"Hello world!\")"
+            context["text_panel_code_content"] = 'import abc\nabc()\nprint("Hello world!")'
 
         return context
 
