@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from nautobot.apps import ui, views
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
+from nautobot.core.ui.object_detail import TextPanel
 from nautobot.dcim.models import Device
 
 from example_app import filters, forms, tables
@@ -111,6 +112,27 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                 context_columns_key="columns_2",
                 context_column_headers_key="column_headers_2",
             ),
+            ui.TextPanel(
+                section=ui.SectionChoices.LEFT_HALF,
+                label="Text panel with JSON",
+                weight=300,
+                context_field="text_panel_content",
+                render_as=TextPanel.RenderOptions.JSON,
+            ),
+            ui.TextPanel(
+                section=ui.SectionChoices.LEFT_HALF,
+                label="Text panel with YAML",
+                weight=300,
+                context_field="text_panel_content",
+                render_as=TextPanel.RenderOptions.YAML,
+            ),
+            ui.TextPanel(
+                section=ui.SectionChoices.RIGHT_HALF,
+                label="Text panel with PRE tag usage",
+                weight=300,
+                context_field="text_panel_code_content",
+                render_as=TextPanel.RenderOptions.CODE,
+            ),
         ),
     )
 
@@ -152,6 +174,23 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
                     "a": 1 + instance.number,
                 },
             ]
+            # Add data for TextPanel's
+            context["text_panel_content"] = {
+                "device_name": "Router1",
+                "ip_address": "192.168.1.1",
+                "subnet_mask": "255.255.255.0",
+                "gateway": "192.168.1.254",
+                "interfaces": [
+                    {
+                        "interface_name": "GigabitEthernet0/0",
+                        "ip_address": "10.0.0.1",
+                        "subnet_mask": "255.255.255.252",
+                        "mac_address": "00:1A:2B:3C:4D:5E",
+                    },
+                ],
+            }
+            context["text_panel_code_content"] = 'import abc\nabc()\nprint("Hello world!")'
+
         return context
 
     @action(detail=False, name="All Names", methods=["get"], url_path="all-names", url_name="all_names")
