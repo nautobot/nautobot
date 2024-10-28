@@ -18,6 +18,7 @@ from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import UploadedFile
@@ -112,6 +113,7 @@ class BaseJob:
         - time_limit (int)
         - has_sensitive_variables (bool)
         - task_queues (list)
+        - is_singleton (bool)
         """
 
     def __init__(self):
@@ -188,6 +190,23 @@ class BaseJob:
                 extra={"object": self.job_model, "grouping": "initialization"},
             )
             raise RunJobTaskFailed(f"Job {self.job_model} is not enabled to be run!")
+
+        if self.job_model.is_singleton:
+            is_running = cache.get(self.singleton_cache_key)
+            if is_running:
+                self.logger.error(
+                    "Job %s is a singleton and already running.",
+                    self.job_model,
+                    extra={"object": self.job_model, "grouping": "initialization"},
+                )
+                raise RunJobTaskFailed(f"Job '{self.job_model}' is a singleton and already running.")
+            cache_parameters = {
+                "key": self.singleton_cache_key,
+                "value": 1,
+            }
+            if self.job_model.time_limit:
+                cache_parameters["timeout"] = self.job_model.time_limit
+            cache.set(**cache_parameters)
 
         soft_time_limit = self.job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
         time_limit = self.job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
@@ -281,6 +300,14 @@ class BaseJob:
 
         if status == JobResultStatusChoices.STATUS_SUCCESS:
             self.logger.info("Job completed", extra={"grouping": "post_run"})
+
+        cache.delete(self.singleton_cache_key)
+
+    @final
+    @classproperty
+    def singleton_cache_key(cls) -> str:  # pylint: disable=no-self-argument
+        """Cache key for singleton jobs."""
+        return f"nautobot.extras.jobs.running.{cls.class_path}"
 
     @final
     @classproperty
@@ -403,6 +430,11 @@ class BaseJob:
 
     @final
     @classproperty
+    def is_singleton(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("is_singleton", False, expected_type=bool)
+
+    @final
+    @classproperty
     def properties_dict(cls) -> dict:  # pylint: disable=no-self-argument
         """
         Return all relevant classproperties as a dict.
@@ -419,6 +451,7 @@ class BaseJob:
             "time_limit": cls.time_limit,
             "has_sensitive_variables": cls.has_sensitive_variables,
             "task_queues": cls.task_queues,
+            "is_singleton": cls.is_singleton,
         }
 
     @final

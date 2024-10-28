@@ -990,6 +990,7 @@ class JobEditForm(NautobotModelForm):
             "job_queues",
             "default_job_queue_override",
             "default_job_queue",
+            "is_singleton",
             "tags",
         ]
 

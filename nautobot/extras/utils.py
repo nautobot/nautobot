@@ -579,6 +579,7 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
                     "installed": True,
                     "enabled": False,
                     "default_job_queue": default_job_queue,
+                    "is_singleton": getattr(job_class.Meta, "is_singleton", False),
                 },
             )
 
