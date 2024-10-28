@@ -75,13 +75,3 @@
                 </div>
             </div>
 {% endblock content_right_page %}
-
-{% block content_full_width_page %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <strong>Managed Devices</strong>
-            </div>
-            {% include 'responsive_table.html' with table=devices_table %}
-        </div>
-        {% include 'inc/paginator.html' with paginator=devices_table.paginator page=devices_table.page %}
-{% endblock content_full_width_page %}

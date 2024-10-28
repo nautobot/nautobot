@@ -9,7 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import IntegrityError, transaction
-from django.db.models import F, Prefetch
+from django.db.models import F, Prefetch, Q
 from django.forms import (
     modelformset_factory,
     ModelMultipleChoiceField,
@@ -4233,22 +4233,28 @@ class ControllerUIViewSet(NautobotUIViewSet):
     table_class = tables.ControllerTable
     template_name = "dcim/controller_create.html"
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
+    @action(detail=True, url_path="managed-devices", url_name="manageddevices")
+    def manageddevices(self, request, *args, **kwargs):
+        instance = self.get_object()
+        access_point_groups = instance.access_point_groups.restrict(request.user, "view").values_list("pk", flat=True)
+        managed_device_groups = instance.controller_managed_device_groups.restrict(request.user, "view").values_list("pk", flat=True)
+        query = Q(access_point_group__in=list(access_point_groups)) | Q(controller_managed_device_group__in=list(managed_device_groups))
+        devices = Device.objects.filter(query).select_related(
+            "access_point_group",
+            "controller_managed_device_group",
+        )
+        managed_devices_table = tables.DeviceTable(data=devices, user=request.user, orderable=False)
+        managed_devices_table.columns.show("controller_managed_device_group")
+        managed_devices_table.columns.show("access_point_group")
 
-        if self.action == "retrieve" and instance:
-            devices = Device.objects.restrict(request.user).filter(controller_managed_device_group__controller=instance)
-            devices_table = tables.DeviceTable(devices)
+        RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(managed_devices_table)
 
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
+        return Response(
+            {
+                "managed_devices_table": managed_devices_table,
+                "active_tab": "managed-devices",
             }
-            RequestConfig(request, paginate).configure(devices_table)
-
-            context["devices_table"] = devices_table
-
-        return context
+        )
 
     @action(detail=True, url_path="wireless-networks", url_name="wirelessnetworks")
     def wirelessnetworks(self, request, *args, **kwargs):
@@ -4269,24 +4275,6 @@ class ControllerUIViewSet(NautobotUIViewSet):
             {
                 "wireless_networks_table": wireless_networks_table,
                 "active_tab": "wireless-networks",
-            }
-        )
-
-    @action(detail=True, url_path="wireless-devices", url_name="wirelessdevices")
-    def wirelessdevices(self, request, *args, **kwargs):
-        instance = self.get_object()
-        access_point_groups = instance.access_point_groups.restrict(request.user, "view").values_list("pk", flat=True)
-        devices = Device.objects.filter(access_point_group__in=list(access_point_groups)).select_related(
-            "access_point_group"
-        )
-        wireless_devices_table = tables.AccessPointGroupDeviceTable(data=devices, user=request.user, orderable=False)
-
-        RequestConfig(request, paginate={"per_page": get_paginate_count(request)}).configure(wireless_devices_table)
-
-        return Response(
-            {
-                "wireless_devices_table": wireless_devices_table,
-                "active_tab": "wireless-devices",
             }
         )
 

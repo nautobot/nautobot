@@ -176,6 +176,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
         template_code="""{% if record.device_redundancy_group %}<span class="badge badge-default">{{ record.device_redundancy_group_priority|default:'None' }}</span>{% else %}—{% endif %}"""
     )
     controller_managed_device_group = tables.Column(linkify=True)
+    access_point_group = tables.Column(linkify=True)
     secrets_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:device_list")
 
