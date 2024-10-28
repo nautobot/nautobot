@@ -16,7 +16,9 @@ logger = getLogger("nautobot.extras.tasks")
 def _generate_bulk_object_changes(context, queryset, task_logger):
     # Circular import
     from nautobot.extras.context_managers import (
-        ChangeContext, change_logging, deferred_change_logging_for_bulk_operation
+        change_logging,
+        ChangeContext,
+        deferred_change_logging_for_bulk_operation,
     )
     from nautobot.extras.signals import _handle_changed_object
 
