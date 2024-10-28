@@ -8,6 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
+from django.db.models.signals import pre_delete
 from django.utils.functional import cached_property
 import django_filters
 
@@ -319,24 +320,18 @@ class DynamicGroup(PrimaryModel):
         if isinstance(value, models.QuerySet):
             if value.model != self.model:
                 raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
-            to_remove = self.members.exclude(pk__in=value.values_list("pk", flat=True))
+            to_remove = self.members.only("id").difference(value.only("id"))
             self._remove_members(to_remove)
-            to_add = value.exclude(pk__in=self.members.values_list("pk", flat=True))
+            to_add = value.only("id").difference(self.members.only("id"))
             self._add_members(to_add)
         else:
             for obj in value:
                 if not isinstance(obj, self.model):
                     raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
-            to_remove = []
-            for member in self.members:
-                if member not in value:
-                    to_remove.append(member)
+            existing_members = self.members
+            to_remove = [obj for obj in existing_members if obj not in value]
             self._remove_members(to_remove)
-            to_add = []
-            members = self.members
-            for candidate in value:
-                if candidate not in members:
-                    to_add.append(candidate)
+            to_add = [obj for obj in value if obj not in existing_members]
             self._add_members(to_add)
 
         return self.members
@@ -345,63 +340,81 @@ class DynamicGroup(PrimaryModel):
         """Add the given list or QuerySet of objects to this staticly defined group."""
         if self.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
             raise ValidationError(f"Group {self} is not staticly defined, adding members directly is not permitted.")
-        return self._add_members(objects_to_add)
-
-    def _add_members(self, objects_to_add):
-        """Internal API for adding the given list or QuerySet of objects to the cached/static members of this group."""
         if isinstance(objects_to_add, models.QuerySet):
             if objects_to_add.model != self.model:
                 raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
+            objects_to_add = objects_to_add.only("id").difference(self.members.only("id"))
         else:
             for obj in objects_to_add:
                 if not isinstance(obj, self.model):
                     raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
+            existing_members = self.members
+            objects_to_add = [obj for obj in objects_to_add if obj not in existing_members]
+        return self._add_members(objects_to_add)
 
+    def _add_members(self, objects_to_add):
+        """
+        Internal API for adding the given list or QuerySet of objects to the cached/static members of this group.
+
+        Assumes that objects_to_add has already been filtered to exclude any existing member objects.
+        """
         if self.group_type == DynamicGroupTypeChoices.TYPE_STATIC:
             for obj in objects_to_add:
                 # We don't use `.bulk_create()` currently because we want change logging for these creates.
                 # Might be a good future performance improvement though.
-                StaticGroupAssociation.all_objects.get_or_create(
+                StaticGroupAssociation.all_objects.create(
                     dynamic_group=self, associated_object_type=self.content_type, associated_object_id=obj.pk
                 )
         else:
             # Cached/hidden static group associations, so we can use bulk-create to bypass change logging.
-            existing_members = self.members
             sgas = [
                 StaticGroupAssociation(
                     dynamic_group=self, associated_object_type=self.content_type, associated_object_id=obj.pk
                 )
                 for obj in objects_to_add
-                if obj not in existing_members
             ]
-            StaticGroupAssociation.all_objects.bulk_create(sgas)
+            StaticGroupAssociation.all_objects.bulk_create(sgas, batch_size=1000)
 
     def remove_members(self, objects_to_remove):
         """Remove the given list or QuerySet of objects from this staticly defined group."""
         if self.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
             raise ValidationError(f"Group {self} is not staticly defined, removing members directly is not permitted.")
+        if isinstance(objects_to_remove, models.QuerySet):
+            if objects_to_remove.model != self.model:
+                raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
+        else:
+            for obj in objects_to_remove:
+                if not isinstance(obj, self.model):
+                    raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
         return self._remove_members(objects_to_remove)
 
     def _remove_members(self, objects_to_remove):
         """Internal API for removing the given list or QuerySet from the cached/static members of this Group."""
-        if isinstance(objects_to_remove, models.QuerySet):
-            if objects_to_remove.model != self.model:
-                raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
-            StaticGroupAssociation.all_objects.filter(
-                dynamic_group=self,
-                associated_object_type=self.content_type,
-                associated_object_id__in=objects_to_remove.values_list("pk", flat=True),
-            ).delete()
-        else:
-            pks_to_remove = set()
-            for obj in objects_to_remove:
-                if not isinstance(obj, self.model):
-                    raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
-                pks_to_remove.add(obj.pk)
+        from nautobot.extras.signals import _handle_deleted_object  # avoid circular import
 
-            StaticGroupAssociation.all_objects.filter(
-                dynamic_group=self, associated_object_type=self.content_type, associated_object_id__in=pks_to_remove
-            ).delete()
+        # For non-static groups, we aren't going to change log the StaticGroupAssociation deletes anyway,
+        # so save some performance on signals -- important especially when we're dealing with thousands of records
+        if self.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+            logger.debug("Temporarily disconnecting the _handle_deleted_object signal for performance")
+            pre_delete.disconnect(_handle_deleted_object)
+        try:
+            if isinstance(objects_to_remove, models.QuerySet):
+                StaticGroupAssociation.all_objects.filter(
+                    dynamic_group=self,
+                    associated_object_type=self.content_type,
+                    associated_object_id__in=objects_to_remove.values_list("id", flat=True),
+                ).delete()
+            else:
+                pks_to_remove = [obj.id for obj in objects_to_remove]
+                StaticGroupAssociation.all_objects.filter(
+                    dynamic_group=self,
+                    associated_object_type=self.content_type,
+                    associated_object_id__in=pks_to_remove,
+                ).delete()
+        finally:
+            if self.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+                logger.debug("Re-connecting the _handle_deleted_object signal")
+                pre_delete.connect(_handle_deleted_object)
 
     @property
     @method_deprecated("Members are now cached in the database via StaticGroupAssociations rather than in Redis.")
@@ -430,6 +443,7 @@ class DynamicGroup(PrimaryModel):
             else:
                 raise RuntimeError(f"Unknown/invalid group_type {self.group_type}")
 
+        logger.debug("Refreshing members cache for %s", self)
         self._set_members(members)
         logger.debug("Refreshed cache for %s, now with %d members", self, self.count)
 
