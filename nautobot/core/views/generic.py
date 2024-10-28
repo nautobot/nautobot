@@ -1280,15 +1280,14 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     def handle_bulk_delete_all(self, request, **kwargs):
         model = self.queryset.model
-        self.template_name = "generic/object_bulk_destroy_all.html"
 
         if self.filterset is not None:
+            queryset = self.filterset(request.GET, model.objects.only("pk")).qs
             # We take this approach because filterset.qs has already applied .distinct(),
             # and performing a .delete directly on a queryset with .distinct applied is not allowed.
-            pk_list = self.filterset(request.GET, model.objects.only("pk")).qs.values_list("pk")
-            queryset = self.queryset.filter(pk__in=pk_list)
+            queryset = self.queryset.filter(pk__in=queryset)
         else:
-            queryset = model.objects.all()
+            queryset = model.objects.all().only("pk")
 
         if "_confirm" in request.POST:
             return self._perform_delete_operation(request, queryset, model)
@@ -1297,6 +1296,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             "obj_type_plural": model._meta.verbose_name_plural,
             "return_url": self.get_return_url(request),
             "total_objs_to_delete": queryset.count(),
+            "delete_all": True,
         }
         context |= self.extra_context()
         return render(request, self.template_name, context)
@@ -1364,6 +1364,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             "obj_type_plural": model._meta.verbose_name_plural,
             "table": table,
             "return_url": self.get_return_url(request),
+            "total_objs_to_delete": len(table.rows),
         }
         context.update(self.extra_context())
         return render(request, self.template_name, context)
