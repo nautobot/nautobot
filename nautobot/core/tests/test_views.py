@@ -14,7 +14,7 @@ from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
-from nautobot.core.models.utils import serialize_object_v2
+from nautobot.core.models.utils import serialize_user_without_config_and_views
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
@@ -426,10 +426,7 @@ class LoginUITestCase(TestCase):
                 },
             )
         self.user.refresh_from_db()
-        serialized_data = serialize_object_v2(self.user)
-        serialized_data.pop("config_data")
-        serialized_data.pop("default_saved_views")
-        payload = {"data": serialized_data}
+        payload = serialize_user_without_config_and_views(self.user)
         self.assertEqual(
             cm.output,
             [f"INFO:nautobot.events.nautobot.users.user.login:{json.dumps(payload, indent=4)}"],
@@ -443,10 +440,7 @@ class LoginUITestCase(TestCase):
                 reverse("logout"),
             )
         self.user.refresh_from_db()
-        serialized_data = serialize_object_v2(self.user)
-        serialized_data.pop("config_data")
-        serialized_data.pop("default_saved_views")
-        payload = {"data": serialized_data}
+        payload = serialize_user_without_config_and_views(self.user)
         self.assertEqual(
             cm.output,
             [f"INFO:nautobot.events.nautobot.users.user.logout:{json.dumps(payload, indent=4)}"],

@@ -9,7 +9,7 @@ from timezone_field import TimeZoneFormField
 from nautobot.core.events import publish_event
 from nautobot.core.forms import BootstrapMixin, DateTimePicker
 from nautobot.core.forms.widgets import StaticSelect2
-from nautobot.core.models.utils import serialize_object_v2
+from nautobot.core.models.utils import serialize_user_without_config_and_views
 from nautobot.core.utils.config import get_settings_or_config
 
 from .models import Token
@@ -80,9 +80,6 @@ class AdminPasswordChangeForm(_AdminPasswordChangeForm):
         # Override `_AdminPasswordChangeForm.save()` to publish admin change user password event
         instance = super().save(commit)
         if commit:
-            serialized_data = serialize_object_v2(instance)
-            serialized_data.pop("config_data")
-            serialized_data.pop("default_saved_views")
-            payload = {"data": serialized_data}
+            payload = serialize_user_without_config_and_views(instance)
             publish_event(topic="nautobot.admin.user.change_password", payload=payload)
         return instance

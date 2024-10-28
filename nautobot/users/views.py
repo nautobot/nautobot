@@ -19,7 +19,7 @@ from django.views.generic import View
 
 from nautobot.core.events import publish_event
 from nautobot.core.forms import ConfirmationForm
-from nautobot.core.models.utils import serialize_object_v2
+from nautobot.core.models.utils import serialize_user_without_config_and_views
 from nautobot.core.views.generic import GenericView
 
 from .forms import AdvancedProfileSettingsForm, LoginForm, PasswordChangeForm, PreferenceProfileSettingsForm, TokenForm
@@ -67,10 +67,7 @@ class LoginView(View):
             user = form.get_user()
             auth_login(request, form.get_user())
             messages.info(request, f"Logged in as {request.user}.")
-            serialized_data = serialize_object_v2(user)
-            serialized_data.pop("config_data")
-            serialized_data.pop("default_saved_views")
-            payload = {"data": serialized_data}
+            payload = serialize_user_without_config_and_views(user)
             publish_event(topic="nautobot.users.user.login", payload=payload)
 
             return self.redirect_to_next(request, logger)
@@ -112,10 +109,7 @@ class LogoutView(View):
     def get(self, request):
         # Log out the user
         if request.user.is_authenticated:
-            serialized_data = serialize_object_v2(request.user)
-            serialized_data.pop("config_data")
-            serialized_data.pop("default_saved_views")
-            payload = {"data": serialized_data}
+            payload = serialize_user_without_config_and_views(request.user)
             publish_event(topic="nautobot.users.user.logout", payload=payload)
         auth_logout(request)
         messages.info(request, "You have logged out.")
@@ -241,10 +235,7 @@ class ChangePasswordView(GenericView):
             form.save()
             update_session_auth_hash(request, form.user)
             messages.success(request, "Your password has been changed successfully.")
-            serialized_data = serialize_object_v2(request.user)
-            serialized_data.pop("config_data")
-            serialized_data.pop("default_saved_views")
-            payload = {"data": serialized_data}
+            payload = serialize_user_without_config_and_views(request.user)
             publish_event(topic="nautobot.users.user.change_password", payload=payload)
             return redirect("user:profile")
 

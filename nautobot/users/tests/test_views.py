@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 from social_django.utils import load_backend, load_strategy
 
-from nautobot.core.models.utils import serialize_object_v2
+from nautobot.core.models.utils import serialize_user_without_config_and_views
 from nautobot.core.testing import TestCase, utils
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import post_data
@@ -66,10 +66,7 @@ class PasswordUITest(TestCase):
                     "new_password2": "bar",
                 },
             )
-        serialized_data = serialize_object_v2(self.user)
-        serialized_data.pop("config_data")
-        serialized_data.pop("default_saved_views")
-        payload = {"data": serialized_data}
+        payload = serialize_user_without_config_and_views(self.user)
         self.assertEqual(
             cm.output,
             [f"INFO:nautobot.events.nautobot.users.user.change_password:{json.dumps(payload, indent=4)}"],
