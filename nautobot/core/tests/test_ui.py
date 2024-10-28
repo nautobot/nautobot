@@ -81,37 +81,32 @@ class BaseTextPanelTest(TestCase):
 
         panel_init_mock.assert_called_once_with(weight=100, body_content_template_path=custom_template_path)
 
-    @patch.object(BaseTextPanel, "get_text")
-    def test_render_body_content(self, get_text_mock):
+    @patch.object(BaseTextPanel, "get_value")
+    def test_render_body_content(self, get_value_mock):
         test_cases = [
             {
                 "render_as": BaseTextPanel.RenderOptions.JSON,
-                "text_content": {"key": "value"},
-                "expected_output": '<code class="language-json">{    &quot;key&quot;: &quot;value&quot;}</code>',
-            },
-            {
-                "render_as": BaseTextPanel.RenderOptions.JSON_PRETTY,
-                "text_content": {"key": "value"},
-                "expected_output": '<pre><code class="language-json">{    &quot;key&quot;: &quot;value&quot;}</code></pre>',
+                "value": {"key": "value"},
+                "expected_output": '<pre><code class="language-json">{    &quot;key&quot;: &quot;value&quot; }</code></pre>',
             },
             {
                 "render_as": BaseTextPanel.RenderOptions.YAML,
-                "text_content": "key: value",
-                "expected_output": '<pre><code class="language-yaml">&#x27;key: value&#x27;</code></pre>',
+                "value": {"key": "value"},
+                "expected_output": '<pre><code class="language-yaml">key: value</code></pre>',
             },
             {
                 "render_as": BaseTextPanel.RenderOptions.MARKDOWN,
-                "text_content": "# Header",
+                "value": "# Header",
                 "expected_output": "<h1>Header</h1>",
             },
             {
                 "render_as": BaseTextPanel.RenderOptions.CODE,
-                "text_content": "print('Hello, world!')",
+                "value": "print('Hello, world!')",
                 "expected_output": "<pre>print(&#x27;Hello, world!&#x27;)</pre>",
             },
             {
                 "render_as": BaseTextPanel.RenderOptions.PLAINTEXT,
-                "text_content": "Simple text",
+                "value": "Simple text",
                 "expected_output": "Simple text",
             },
         ]
@@ -120,32 +115,32 @@ class BaseTextPanelTest(TestCase):
             with self.subTest(render_as=case["render_as"]):
                 panel = BaseTextPanel(weight=100, render_as=case["render_as"])
 
-                get_text_mock.return_value = case["text_content"]
+                get_value_mock.return_value = case["value"]
                 context = {}
 
-                result = panel.render_body_content(context).replace("\n", "")
+                result = panel.render_body_content(context)
 
-                self.assertEqual(result, case["expected_output"])
+                self.assertHTMLEqual(result, case["expected_output"])
 
-    @patch.object(BaseTextPanel, "get_text")
-    def test_render_body_content_render_placeholder(self, get_text_mock):
-        get_text_mock.return_value = ""
+    @patch.object(BaseTextPanel, "get_value")
+    def test_render_body_content_render_placeholder(self, get_value_mock):
+        get_value_mock.return_value = ""
         context = {}
 
         panel = BaseTextPanel(weight=100, render_as=BaseTextPanel.RenderOptions.PLAINTEXT)
 
-        self.assertEqual(panel.render_body_content(context), HTML_NONE)
+        self.assertHTMLEqual(panel.render_body_content(context), HTML_NONE)
 
-    @patch.object(BaseTextPanel, "get_text")
-    def test_render_body_content_not_render_placeholder(self, get_text_mock):
-        get_text_mock.return_value = ""
+    @patch.object(BaseTextPanel, "get_value")
+    def test_render_body_content_not_render_placeholder(self, get_value_mock):
+        get_value_mock.return_value = ""
         context = {}
 
         panel = BaseTextPanel(weight=100, render_as=BaseTextPanel.RenderOptions.PLAINTEXT, render_placeholder=False)
 
-        self.assertEqual(panel.render_body_content(context).replace("\n", ""), "")
+        self.assertHTMLEqual(panel.render_body_content(context), "")
 
-    def test_get_text(self):
+    def test_get_value(self):
         panel = BaseTextPanel(weight=100)
         with self.assertRaises(NotImplementedError):
-            panel.get_text({})
+            panel.get_value({})
