@@ -13,6 +13,8 @@ from nautobot.core.forms import (
     add_blank_choice,
     APISelect,
     APISelectMultiple,
+    AutoPositionField,
+    AutoPositionPatternField,
     BootstrapMixin,
     BulkEditNullBooleanSelect,
     ColorSelect,
@@ -1569,10 +1571,10 @@ class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
         required=False,
         help_text="Alphanumeric ranges are supported. (Must match the number of names being created.)",
     )
-    position_pattern = ExpandableNameField(
-        label="Position",
+    position_pattern = AutoPositionPatternField(
         required=False,
-        help_text="Alphanumeric ranges are supported. (Must match the number of names being created.)",
+        help_text="Alphanumeric ranges are supported. (Must match the number of names being created.)"
+        " Default to the names of the module bays unless manually supplied by the user.",
     )
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
@@ -3561,6 +3563,12 @@ class ModuleBayFilterForm(NautobotFilterForm):
 
 
 class ModuleBayForm(NautobotModelForm):
+    position = AutoPositionField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        help_text="The position of the module bay within the parent device/module. "
+        "Defaults to the name of the module bay unless overridden.",
+        required=False,
+    )
     parent_device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,

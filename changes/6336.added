@@ -1,0 +1,1 @@
+Added logic to ModuleBay model to ensure that if the `position` field is empty, its value will be automatically populated from the `name` of the Module Bay instance.

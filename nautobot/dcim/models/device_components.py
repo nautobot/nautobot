@@ -1280,3 +1280,8 @@ class ModuleBay(PrimaryModel):
 
         if not (self.parent_device or self.parent_module):
             raise ValidationError("Either parent_device or parent_module must be set")
+
+        # Populate the position field with the name of the module bay if it is not supplied by the user.
+
+        if not self.position:
+            self.position = self.name
