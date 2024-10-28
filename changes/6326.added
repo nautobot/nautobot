@@ -1,1 +1,1 @@
-Publish these events: job started, job completed, job failed, schedule job approved and scheduled job denied.
+Added event publishing for events: job started, job completed, job failed, schedule job approved and scheduled job denied.
