@@ -1,1 +1,0 @@
-Removed misleading help text from ModularComponentForm, as the `{module}` auto-substitution in names only applies through component _templates_ at present.
