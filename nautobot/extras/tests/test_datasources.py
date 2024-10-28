@@ -412,7 +412,7 @@ class GitTest(TransactionTestCase):
 
     def test_pull_git_repository_and_refresh_data_with_bad_data(self):
         """
-        The test_pull_git_repository_and_refresh_data job should gracefully handle bad data in the Git repository
+        The test_pull_git_repository_and_refresh_data job should gracefully handle bad data in the Git repository.
         """
         with tempfile.TemporaryDirectory() as tempdir:
             with self.settings(GIT_ROOT=tempdir):
@@ -432,6 +432,18 @@ class GitTest(TransactionTestCase):
                     JobResultStatusChoices.STATUS_FAILURE,
                     job_result.result,
                 )
+
+                # Due to transaction rollback on failure, the database should still/again match the pre-sync state, of
+                # no records owned by the repository.
+                self.assertFalse(ConfigContextSchema.objects.filter(owner_object_id=self.repo.id).exists())
+                self.assertFalse(ConfigContext.objects.filter(owner_object_id=self.repo.id).exists())
+                self.assertFalse(ExportTemplate.objects.filter(owner_object_id=self.repo.id).exists())
+                self.assertFalse(Job.objects.filter(module_name__startswith=f"{self.repo.slug}.").exists())
+                device = Device.objects.get(name=self.device.name)
+                self.assertIsNone(device.local_config_context_data)
+                self.assertIsNone(device.local_config_context_data_owner)
+                self.repo.refresh_from_db()
+                self.assertEqual(self.repo.current_head, "")
 
                 # Check for specific log messages
                 log_entries = JobLogEntry.objects.filter(job_result=job_result)
@@ -591,6 +603,81 @@ class GitTest(TransactionTestCase):
                 self.assertIsNone(device.local_config_context_data_owner)
 
                 self.assert_job_exists(installed=False)
+
+    def test_git_repository_sync_rollback(self):
+        """
+        Once a "known-good" sync state is achieved, resync to a new "bad" head commit should fail and be rolled back.
+        """
+        with tempfile.TemporaryDirectory() as tempdir:
+            with self.settings(GIT_ROOT=tempdir):
+                # Initially have a successful sync to a good commit that provides data
+                self.repo.branch = "valid-files"  # actually a tag
+                self.repo.save()
+                job_model = GitRepositorySync().job_model
+                job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
+                job_result.refresh_from_db()
+                self.assertEqual(
+                    job_result.status,
+                    JobResultStatusChoices.STATUS_SUCCESS,
+                    (job_result.traceback, list(job_result.job_log_entries.values_list("message", flat=True))),
+                )
+
+                self.assert_explicit_config_context_exists("Frobozz 1000 NTP servers")
+                self.assert_implicit_config_context_exists("Location context")
+                self.assert_config_context_schema_record_exists("Config Context Schema 1")
+                self.assert_device_exists(self.device.name)
+                self.assert_export_template_device("template.j2")
+                self.assert_export_template_html_exist("template2.html")
+                self.assert_export_template_vlan_exists("template.j2")
+                self.assert_job_exists(name="MyJob")
+                self.assert_job_exists(name="MyJobButtonReceiver")
+                self.assert_job_exists(name="MyJobHookReceiver")
+
+                # Create JobButton and JobHook
+                JobButton.objects.create(
+                    name="MyJobButton", enabled=True, text="Click me", job=Job.objects.get(name="MyJobButtonReceiver")
+                )
+                JobHook.objects.create(name="MyJobHook", enabled=True, job=Job.objects.get(name="MyJobHookReceiver"))
+
+                self.repo.refresh_from_db()
+                self.assertNotEqual(self.repo.current_head, "")
+                good_current_head = self.repo.current_head
+
+                # Now change to the `main` branch (which includes the current commit, followed by a "bad" commit)
+                self.repo.branch = "main"
+                self.repo.save()
+
+                # Resync, attempting and failing to update to the new commit
+                job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
+                job_result.refresh_from_db()
+                self.assertEqual(
+                    job_result.status,
+                    JobResultStatusChoices.STATUS_FAILURE,
+                    job_result.result,
+                )
+                log_entries = JobLogEntry.objects.filter(job_result=job_result)
+
+                # Assert database changes were rolled back
+                self.repo.refresh_from_db()
+                try:
+                    self.assertEqual(self.repo.current_head, good_current_head)
+                    self.assert_explicit_config_context_exists("Frobozz 1000 NTP servers")
+                    self.assert_implicit_config_context_exists("Location context")
+                    self.assert_config_context_schema_record_exists("Config Context Schema 1")
+                    self.assert_device_exists(self.device.name)
+                    self.assert_export_template_device("template.j2")
+                    self.assert_export_template_html_exist("template2.html")
+                    self.assert_export_template_vlan_exists("template.j2")
+                    self.assert_job_exists(name="MyJob")
+                    self.assert_job_exists(name="MyJobButtonReceiver")
+                    self.assert_job_exists(name="MyJobHookReceiver")
+                    self.assertTrue(JobButton.objects.get(name="MyJobButton").enabled)
+                    self.assertTrue(JobHook.objects.get(name="MyJobHook").enabled)
+                except Exception:
+                    for log in log_entries:
+                        print(log.message)
+                    print(job_result.traceback)
+                    raise
 
     def test_git_dry_run(self):
         with tempfile.TemporaryDirectory() as tempdir:

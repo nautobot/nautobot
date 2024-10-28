@@ -583,6 +583,7 @@ nav:
               - Populating Extensibility Features: "development/apps/api/platform-features/populating-extensibility-features.md"
               - Prometheus Metrics: "development/apps/api/prometheus.md"
               - Secrets Providers: "development/apps/api/platform-features/secrets-providers.md"
+              - Table Extensions: "development/apps/api/platform-features/table-extensions.md"
               - Uniquely Identifying a Nautobot Object: "development/apps/api/platform-features/uniquely-identify-objects.md"
           - UI Extensions:
               - "development/apps/api/ui-extensions/index.md"

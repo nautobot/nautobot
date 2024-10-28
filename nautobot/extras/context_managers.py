@@ -181,7 +181,7 @@ def web_request_context(
         Valid choices are in `nautobot.extras.choices.ObjectChangeEventContextChoices`.
     :param request: Optional web request instance, one will be generated if not supplied
     """
-    from nautobot.extras.jobs import enqueue_job_hooks, get_jobs  # prevent circular import
+    from nautobot.extras.jobs import enqueue_job_hooks  # prevent circular import
 
     valid_contexts = {
         ObjectChangeEventContextChoices.CONTEXT_JOB: JobChangeContext,
@@ -204,15 +204,12 @@ def web_request_context(
         with change_logging(change_context):
             yield request
     finally:
-        jobs_refreshed = False
+        jobs_reloaded = False
         # enqueue jobhooks and webhooks, use change_context.change_id in case change_id was not supplied
-        for oc in ObjectChange.objects.filter(request_id=change_context.change_id).iterator():
+        for oc in ObjectChange.objects.filter(request_id=change_context.change_id).order_by("time").iterator():
             if context != ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
-                # Make sure JobHooks are up to date (once) before calling them
-                if not jobs_refreshed:
-                    get_jobs(reload=True)
-                    jobs_refreshed = True
-                enqueue_job_hooks(oc)
+                # Make sure JobHooks are up to date (only once) before calling them
+                jobs_reloaded |= enqueue_job_hooks(oc, may_reload_jobs=(not jobs_reloaded))
             # TODO: get_snapshots() currently requires a DB query per object change processed.
             # We need to develop a more efficient approach: https://github.com/nautobot/nautobot/issues/6303
             snapshots = oc.get_snapshots()
