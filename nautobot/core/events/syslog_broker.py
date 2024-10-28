@@ -14,4 +14,6 @@ class SyslogEventBroker(EventBroker):
 
     def publish(self, *, topic, payload):
         logger = logging.getLogger(f"nautobot.events.{topic}")
-        logger.log(self.level, "%s", json.dumps(payload, indent=4))
+        # Add an indent of 4 to payload
+        payload = json.dumps(json.loads(payload), indent=4)
+        logger.log(self.level, "%s", payload)
