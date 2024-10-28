@@ -95,7 +95,8 @@ class WebRequestContextTestCase(TestCase):
         mock_enqueue_job_hooks.assert_has_calls(
             [
                 mock.call(oc_list[0], may_reload_jobs=True, jobhook_queryset=None),
-                mock.call(oc_list[1], may_reload_jobs=False, jobhook_queryset=None)],
+                mock.call(oc_list[1], may_reload_jobs=False, jobhook_queryset=None),
+            ],
         )
         mock_enqueue_webhooks.assert_has_calls(
             [mock.call(oc_list[0], webhook_queryset=None), mock.call(oc_list[1], webhook_queryset=None)]
