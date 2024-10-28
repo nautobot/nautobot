@@ -1282,12 +1282,12 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         model = self.queryset.model
 
         if self.filterset is not None:
-            queryset = self.filterset(request.GET, model.objects.only("pk")).qs
+            queryset = self.filterset(request.GET, model.objects.all()).qs
             # We take this approach because filterset.qs has already applied .distinct(),
             # and performing a .delete directly on a queryset with .distinct applied is not allowed.
             queryset = self.queryset.filter(pk__in=queryset)
         else:
-            queryset = model.objects.all().only("pk")
+            queryset = model.objects.all()
 
         if "_confirm" in request.POST:
             return self._perform_delete_operation(request, queryset, model)
