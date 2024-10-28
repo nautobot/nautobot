@@ -1,4 +1,5 @@
 from datetime import timedelta
+import json
 from unittest import mock
 import urllib.parse
 import uuid
@@ -13,10 +14,13 @@ from django.utils import timezone
 from django.utils.html import escape, format_html
 
 from nautobot.circuits.models import Circuit
+from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
+from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import extract_form_failures, extract_page_body, ModelViewTestCase, TestCase, ViewTestCases
+from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import disable_warnings, get_deletable_objects, post_data
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
@@ -2034,6 +2038,16 @@ class ApprovalQueueTestCase(
             self.assertEqual(1, len(ScheduledJob.objects.filter(pk=instance.pk)), msg=str(user))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @load_event_broker_override_settings(
+        EVENT_BROKERS={
+            "SyslogEventBroker": {
+                "CLASS": "nautobot.core.events.SyslogEventBroker",
+                "TOPICS": {
+                    "INCLUDE": ["*"],
+                },
+            }
+        }
+    )
     def test_post_deny_different_user_permitted(self):
         """A user with appropriate permissions can deny a job request."""
         user = User.objects.create_user(username="testuser1")
@@ -2054,10 +2068,19 @@ class ApprovalQueueTestCase(
         data = {"_deny": True}
 
         self.client.force_login(user)
-        response = self.client.post(self._get_url("view", instance), data)
+        with self.assertLogs("nautobot.events") as cm:
+            response = self.client.post(self._get_url("view", instance), data)
         self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
         # Request was deleted
         self.assertEqual(0, len(ScheduledJob.objects.filter(pk=instance.pk)))
+        # Event was published
+        expected_payload = {"data": serialize_object_v2(instance)}
+        self.assertEqual(
+            cm.output,
+            [
+                f"INFO:nautobot.events.nautobot.jobs.approval.denied:{json.dumps(expected_payload, cls=NautobotKombuJSONEncoder, indent=4)}"
+            ],
+        )
 
         # Check object-based permissions are enforced for a different instance
         instance = self._get_queryset().first()
@@ -2115,6 +2138,16 @@ class ApprovalQueueTestCase(
             self.assertIsNone(instance.approved_by_user)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @load_event_broker_override_settings(
+        EVENT_BROKERS={
+            "SyslogEventBroker": {
+                "CLASS": "nautobot.core.events.SyslogEventBroker",
+                "TOPICS": {
+                    "INCLUDE": ["*"],
+                },
+            }
+        }
+    )
     def test_post_approve_different_user_permitted(self):
         """A user with appropriate permissions can approve a job request."""
         user = User.objects.create_user(username="testuser1")
@@ -2135,11 +2168,21 @@ class ApprovalQueueTestCase(
         data = {"_approve": True}
 
         self.client.force_login(user)
-        response = self.client.post(self._get_url("view", instance), data)
+        with self.assertLogs("nautobot.events") as cm:
+            response = self.client.post(self._get_url("view", instance), data)
+
         self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
         # Job was scheduled
         instance.refresh_from_db()
         self.assertEqual(instance.approved_by_user, user)
+        # Event was published
+        expected_payload = {"data": serialize_object_v2(instance)}
+        self.assertEqual(
+            cm.output,
+            [
+                f"INFO:nautobot.events.nautobot.jobs.approval.approved:{json.dumps(expected_payload, cls=NautobotKombuJSONEncoder, indent=4)}"
+            ],
+        )
 
         # Check object-based permissions are enforced for a different instance
         instance = self._get_queryset().last()
