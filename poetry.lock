@@ -2189,7 +2189,6 @@ optional = false
 python-versions = ">=3.6"
 files = [
     {file = "mkdocs-redirects-1.2.1.tar.gz", hash = "sha256:9420066d70e2a6bb357adf86e67023dcdca1857f97f07c7fe450f8f1fb42f861"},
-    {file = "mkdocs_redirects-1.2.1-py3-none-any.whl", hash = "sha256:497089f9e0219e7389304cffefccdfa1cac5ff9509f2cb706f4c9b221726dffb"},
 ]
 
 [package.dependencies]
@@ -4351,4 +4350,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.13"
-content-hash = "41d84aad96ec205dadd44ff7f8c2fceaa1dd6e05f86ee4394f1ff28ce8238340"
+content-hash = "10e0b58c472f1e2c0de717ba0370272ab3668979cbd1319257b96624fd42f3ab"

@@ -110,7 +110,7 @@ Markdown = "~3.6"
 # Escape text to use HTML and XML
 MarkupSafe = "~2.1.5"
 # MySQL database adapter
-mysqlclient = {version = "~2.2.3", optional = true}
+mysqlclient = {version = "~2.2.5", optional = true}
 # NAPALM automation library
 napalm = {version = ">=4.1.0,<6.0.0", optional = true}
 # IP prefix and address handling
@@ -196,7 +196,7 @@ mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see optional-settings.md and required-settings.md
 mkdocs-macros-plugin = "~1.0.5"
 # Material for mkdocs theme
-mkdocs-material = "~9.5.41"
+mkdocs-material = "~9.5.42"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.1"
 # Automatically handle index pages for docs sections
