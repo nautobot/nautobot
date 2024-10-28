@@ -67,9 +67,11 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
             if change_context is not None:
                 pk_list = list(queryset.values_list("pk", flat=True))
             task_logger.info(
-                "Updating selection for custom field `%s` on %s records...",
+                "Updating selection for custom field `%s` from `%s` to `%s` on %s records...",
                 field.key,
-                ct.label_lower,
+                old_value,
+                new_value,
+                ct.model,
                 extra={"object": field},
             )
             count = queryset.update(_custom_field_data=JSONSet("_custom_field_data", field.key, new_value))
