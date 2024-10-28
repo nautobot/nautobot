@@ -19,8 +19,8 @@ from django.views.generic import View
 
 from nautobot.core.events import publish_event
 from nautobot.core.forms import ConfirmationForm
-from nautobot.core.models.utils import serialize_user_without_config_and_views
 from nautobot.core.views.generic import GenericView
+from nautobot.users.utils import serialize_user_without_config_and_views
 
 from .forms import AdvancedProfileSettingsForm, LoginForm, PasswordChangeForm, PreferenceProfileSettingsForm, TokenForm
 from .models import Token

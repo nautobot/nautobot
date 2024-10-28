@@ -14,7 +14,6 @@ from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
-from nautobot.core.models.utils import serialize_user_without_config_and_views
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
@@ -28,6 +27,7 @@ from nautobot.extras.models import FileProxy, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
 from nautobot.users.models import ObjectPermission
+from nautobot.users.utils import serialize_user_without_config_and_views
 
 
 class GetReturnURLMixinTestCase(TestCase):

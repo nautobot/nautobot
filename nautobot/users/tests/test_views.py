@@ -9,10 +9,10 @@ from django.urls import reverse
 from django.utils import timezone
 from social_django.utils import load_backend, load_strategy
 
-from nautobot.core.models.utils import serialize_user_without_config_and_views
 from nautobot.core.testing import TestCase, utils
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import post_data
+from nautobot.users.utils import serialize_user_without_config_and_views
 
 User = get_user_model()
 
