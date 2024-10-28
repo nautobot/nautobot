@@ -1296,6 +1296,36 @@ class ViewTestCases:
                 self.assertNotIn(f'<input type="hidden" name="pk" value="{pk}"', response_body)
             self.assertInHTML('<input type="hidden" name="_all" value="true" />', response_body)
 
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_delete_form_contains_all_filtered(self):
+            # We are testing the intermediary step of bulk_delete all with additional filter.
+            # i.e. "_all" passed in the form and filter using query params.
+            self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")
+
+            pk_iter = iter(self._get_queryset().values_list("pk", flat=True))
+            try:
+                first_pk = next(pk_iter)
+                second_pk = next(pk_iter)
+                third_pk = next(pk_iter)
+            except StopIteration:
+                self.fail(f"Test requires at least three instances of {self.model._meta.model_name} to be defined.")
+
+            # Open bulk delete form with first two objects
+            selected_data = {
+                "pk": third_pk,  # This is ignored when filtering with "_all"
+                "_all": "on",
+            }
+            query_string = urlencode({"id": (first_pk, second_pk)}, doseq=True)
+            response = self.client.post(f"{self._get_url('bulk_delete')}?{query_string}", selected_data)
+            # Expect a 200 status cause we are only rendering the bulk delete table after pressing Delete Selected button.
+            self.assertHttpStatus(response, 200)
+            response_body = utils.extract_page_body(response.content.decode(response.charset))
+            # Check if all pks is not part of the html.
+            self.assertNotIn(f'<input type="hidden" name="pk" value="{first_pk}"', response_body)
+            self.assertNotIn(f'<input type="hidden" name="pk" value="{second_pk}"', response_body)
+            self.assertNotIn(f'<input type="hidden" name="pk" value="{third_pk}"', response_body)
+            self.assertIn("<strong>Warning:</strong> The following operation will delete 2 ", response_body)
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_objects_with_constrained_permission(self):
             pk_list = self.get_deletable_object_pks()
