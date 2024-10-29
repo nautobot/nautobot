@@ -50,16 +50,28 @@ class ManufacturerTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     cloud_account_count = LinkedCountColumn(
-        viewname="cloud:cloudaccount_list", url_params={"provider": "name"}, verbose_name="Cloud Accounts"
+        lookup="cloud_accounts",
+        viewname="cloud:cloudaccount_list",
+        url_params={"provider": "name"},
+        verbose_name="Cloud Accounts",
     )
     device_type_count = LinkedCountColumn(
-        viewname="dcim:devicetype_list", url_params={"manufacturer": "name"}, verbose_name="Device Types"
+        lookup="device_types",
+        viewname="dcim:devicetype_list",
+        url_params={"manufacturer": "name"},
+        verbose_name="Device Types",
     )
     inventory_item_count = LinkedCountColumn(
-        viewname="dcim:inventoryitem_list", url_params={"manufacturer": "name"}, verbose_name="Inventory Items"
+        lookup="inventory_items",
+        viewname="dcim:inventoryitem_list",
+        url_params={"manufacturer": "name"},
+        verbose_name="Inventory Items",
     )
     platform_count = LinkedCountColumn(
-        viewname="dcim:platform_list", url_params={"manufacturer": "name"}, verbose_name="Platforms"
+        lookup="platforms",
+        viewname="dcim:platform_list",
+        url_params={"manufacturer": "name"},
+        verbose_name="Platforms",
     )
     actions = ButtonsColumn(Manufacturer)
 
@@ -86,7 +98,10 @@ class DeviceFamilyTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     device_type_count = LinkedCountColumn(
-        viewname="dcim:devicetype_list", url_params={"device_family": "name"}, verbose_name="Device Types"
+        lookup="device_types",
+        viewname="dcim:devicetype_list",
+        url_params={"device_family": "name"},
+        verbose_name="Device Types",
     )
     actions = ButtonsColumn(DeviceFamily)
     tags = TagColumn(url_name="dcim:devicefamily_list")
@@ -115,6 +130,7 @@ class DeviceTypeTable(BaseTable):
     device_family = tables.Column(linkify=True)
     is_full_depth = BooleanColumn(verbose_name="Full Depth")
     device_count = LinkedCountColumn(
+        lookup="devices",
         viewname="dcim:device_list",
         url_params={"device_type": "pk"},
         verbose_name="Devices",
@@ -156,6 +172,7 @@ class ModuleTypeTable(BaseTable):
     manufacturer = tables.Column(linkify=True)
     model = tables.Column(linkify=True, verbose_name="Module Type")
     module_count = LinkedCountColumn(
+        lookup="modules",
         viewname="dcim:module_list",
         url_params={"module_type": "pk"},
         verbose_name="Modules",

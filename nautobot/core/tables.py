@@ -522,6 +522,8 @@ class LinkedCountColumn(django_tables2.Column):
         related_record = None
         if related_records := getattr(record, f"{self.lookup}_list", None):
             related_record = related_records[0]
+        else:
+            print(getattr(record.circuit_terminations, "circuit_list", None))
         if value > 1 or (value and related_record is None):
             url = reverse(self.viewname, kwargs=self.view_kwargs)
             if self.url_params:

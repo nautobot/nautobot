@@ -50,17 +50,20 @@ class CloudNetworkTable(BaseTable):
     assigned_prefix_count = LinkedCountColumn(
         viewname="ipam:prefix_list",
         url_params={"cloud_networks": "name"},
+        lookup="prefixes",
         verbose_name="Assigned Prefixes",
     )
     circuit_count = LinkedCountColumn(
         viewname="circuits:circuit_list",
         url_params={"cloud_network": "name"},
+        lookup="circuit_terminations__circuit",
         verbose_name="Circuits",
         reverse_lookup="circuit_terminations__cloud_network",
     )
     cloud_service_count = LinkedCountColumn(
         viewname="cloud:cloudservice_list",
         url_params={"cloud_networks": "name"},
+        lookup="cloud_services",
         verbose_name="Cloud Services",
     )
     tags = TagColumn(url_name="cloud:cloudnetwork_list")
@@ -131,6 +134,7 @@ class CloudServiceTable(BaseTable):
     cloud_network_count = LinkedCountColumn(
         viewname="cloud:cloudnetwork_list",
         url_params={"cloud_services": "name"},
+        lookup="cloud_networks",
         verbose_name="Cloud Networks",
     )
     tags = TagColumn(url_name="cloud:cloudservice_list")
