@@ -5,6 +5,7 @@ import hmac
 import logging
 import re
 import sys
+import time
 
 from django.apps import apps
 from django.conf import settings
@@ -20,6 +21,7 @@ from kubernetes.client.api import core_v1_api
 from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
 import redis.exceptions
+import yaml
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -649,26 +651,13 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result):
     # If existing pod does not exist, create a new pod
     if not resp:
         logger.info(f"Pod {pod_name} does not exist in namespace {pod_namespace}. Creating it...")
-        pod_manifest = {
-            "apiVersion": "v1",
-            "kind": "Pod",
-            "metadata": {"name": pod_name},
-            "spec": {
-                "containers": [
-                    {
-                        "image": nautobot_image_name,
-                        "name": nautobot_container_name,
-                    }
-                ]
-            },
-        }
-        # import yaml
-        # with open('./development/pod.yaml', 'r') as f:
-        #     pod_manifest = yaml.safe_load(f)
+        with open("./development/pod.yaml", "r") as f:
+            pod_manifest = yaml.safe_load(f)
         logger.info(f"Creating pod {pod_name} in namespace {pod_namespace}")
         resp = api_instance.create_namespaced_pod(body=pod_manifest, namespace=pod_namespace)
         logger.info(f"Reading pod {pod_name} in namespace {pod_namespace}")
         resp = api_instance.read_namespaced_pod(name=pod_name, namespace=pod_namespace)
+        time.sleep(5)
         logger.info("Done.")
 
     # Calling exec interactively
@@ -685,7 +674,7 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result):
         tty=False,
         _preload_content=False,
     )
-    resp.write_stdin("nautobot-server runjob --local -u admin nautobot.core.jobs.ExportObjectList\n")
+    resp.write_stdin('nautobot-server runjob --local -u admin nautobot.core.jobs.ExportObjectList -d \'{"content_type": 1}\'\n')
     sresult = resp.read_stdout()
     serror = resp.read_stderr()
     logger.info(f"Job Result is: {sresult}")
