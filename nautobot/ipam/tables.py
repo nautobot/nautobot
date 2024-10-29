@@ -11,7 +11,7 @@ from nautobot.core.tables import (
     ToggleColumn,
 )
 from nautobot.core.templatetags.helpers import render_boolean
-from nautobot.dcim.models import Interface
+from nautobot.dcim.models import Interface, Location
 from nautobot.dcim.tables import InterfaceTable
 from nautobot.dcim.tables.devices import DeviceComponentTable
 from nautobot.dcim.utils import cable_status_color_css
@@ -679,6 +679,7 @@ class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
     vid = tables.TemplateColumn(template_code=VLAN_LINK, verbose_name="ID")
     vlan_group = tables.Column(linkify=True)
     location_count = LinkedCountColumn(
+        accessor="locations",
         viewname="dcim:location_list",
         url_params={"vlans": "pk"},
         verbose_name="Locations",

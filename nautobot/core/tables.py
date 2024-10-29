@@ -5,6 +5,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist, FieldError
 from django.db import NotSupportedError
+from django.db.models import Prefetch
 from django.db.models.fields.related import ForeignKey, RelatedField
 from django.db.models.fields.reverse_related import ManyToOneRel
 from django.urls import reverse
@@ -160,6 +161,10 @@ class BaseTable(django_tables2.Table):
                         continue
                     reverse_lookup = column.column.reverse_lookup or next(iter(column.column.url_params.keys()))
                     count_fields.append((column.name, column_model, reverse_lookup))
+                    # Also attempt to prefetch the first matching record
+                    prefetch_fields.append(
+                        Prefetch(column.accessor, column_model.objects.all()[:1], to_attr=f"{column.accessor}_list")
+                    )
                     continue
 
                 column_model = model
@@ -462,11 +467,11 @@ class ColoredLabelColumn(django_tables2.TemplateColumn):
 
 class LinkedCountColumn(django_tables2.Column):
     """
-    Render a count of related objects linked to a filtered URL.
+    Render a count of related objects linked to a filtered URL, or if a single related object is present, the object.
 
-    :param viewname: The view name to use for URL resolution
-    :param view_kwargs: Additional kwargs to pass for URL resolution (optional)
-    :param url_params: A dict of query parameters to append to the URL (e.g. ?foo=bar) (optional)
+    :param viewname: The list view name to use for URL resolution
+    :param view_kwargs: Additional kwargs to pass to `reverse()` for list URL resolution (optional)
+    :param url_params: A dict of query parameters to append to the list URL (e.g. ?foo=bar) (optional)
     :param reverse_lookup: The reverse lookup parameter to use to derive the count. If not specified, the first key
         in `url_params` will be implicitly used as the `reverse_lookup` value.
     """
@@ -475,16 +480,20 @@ class LinkedCountColumn(django_tables2.Column):
         self.viewname = viewname
         self.view_kwargs = view_kwargs or {}
         self.url_params = url_params
-        self.reverse_lookup = reverse_lookup
+        self.reverse_lookup = reverse_lookup or next(iter(url_params.keys()))
         super().__init__(*args, default=default, **kwargs)
 
-    def render(self, record, value):  # pylint: disable=arguments-differ
-        if value:
+    def render(self, bound_column, record, value):  # pylint: disable=arguments-differ
+        count = getattr(record, bound_column.name)
+        if count > 1:
             url = reverse(self.viewname, kwargs=self.view_kwargs)
             if self.url_params:
                 url += "?" + "&".join([f"{k}={getattr(record, v)}" for k, v in self.url_params.items()])
-            return format_html('<a href="{}">{}</a>', url, value)
-        return value
+            return format_html('<a href="{}">({} records)</a>', url, count)
+        values = getattr(record, f"{self.accessor}_list", None)
+        if values:
+            return helpers.hyperlinked_object(values[0])
+        return helpers.placeholder(None)
 
 
 class TagColumn(django_tables2.TemplateColumn):
