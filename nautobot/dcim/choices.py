@@ -1588,6 +1588,4 @@ class VirtualDeviceContextStatusChoices(ChoiceSet):
 class ControllerCapabilitiesChoices(ChoiceSet):
     WIRELESS = "wireless"
 
-    CHOICES = (
-        (WIRELESS, "Wireless"),
-    )
+    CHOICES = ((WIRELESS, "Wireless"),)

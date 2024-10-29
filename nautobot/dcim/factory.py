@@ -722,9 +722,7 @@ class SoftwareVersionFactory(PrimaryModelFactory):
 class ControllerFactory(PrimaryModelFactory):
     class Meta:
         model = Controller
-        exclude = (
-            "has_capabilities",
-        )
+        exclude = ("has_capabilities",)
 
     class Params:
         has_device = NautobotBoolIterator()
@@ -750,9 +748,7 @@ class ControllerFactory(PrimaryModelFactory):
 class ControllerManagedDeviceGroupFactory(PrimaryModelFactory):
     class Meta:
         model = ControllerManagedDeviceGroup
-        exclude = (
-            "has_capabilities",
-        )
+        exclude = ("has_capabilities",)
 
     class Params:
         has_parent = NautobotBoolIterator()

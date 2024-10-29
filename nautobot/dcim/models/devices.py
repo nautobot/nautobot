@@ -14,7 +14,7 @@ import yaml
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, RestrictedQuerySet
-from nautobot.core.models.fields import NaturalOrderingField, JSONArrayField
+from nautobot.core.models.fields import JSONArrayField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.models.utils import array_to_string

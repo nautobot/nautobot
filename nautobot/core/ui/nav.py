@@ -155,7 +155,9 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
     args = []
     kwargs = {}
 
-    def __init__(self, link, name, args=None, kwargs=None, query_params=None, permissions=None, buttons=(), weight=1000):
+    def __init__(
+        self, link, name, args=None, kwargs=None, query_params=None, permissions=None, buttons=(), weight=1000
+    ):
         """
         Ensure item properties.
 

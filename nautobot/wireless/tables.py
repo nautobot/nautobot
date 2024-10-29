@@ -1,4 +1,3 @@
-from django.urls import reverse
 import django_tables2 as tables
 
 from nautobot.core.models.utils import array_to_string
