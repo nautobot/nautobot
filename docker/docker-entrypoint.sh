@@ -96,4 +96,4 @@ fi
 # (i.e. the RUN instruction in the Dockerfile)
 #
 # shellcheck disable=SC2068
-exec $@
+exec "$@"
