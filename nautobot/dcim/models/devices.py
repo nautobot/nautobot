@@ -14,11 +14,13 @@ import yaml
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, RestrictedQuerySet
-from nautobot.core.models.fields import NaturalOrderingField
+from nautobot.core.models.fields import NaturalOrderingField, JSONArrayField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import (
+    ControllerCapabilitiesChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     SoftwareImageFileHashingAlgorithmChoices,
@@ -1374,6 +1376,11 @@ class Controller(PrimaryModel):
         null=True,
     )
     role = RoleField(blank=True, null=True)
+    capabilities = JSONArrayField(
+        base_field=models.CharField(choices=ControllerCapabilitiesChoices),
+        blank=True,
+        null=True,
+    )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -1425,6 +1432,10 @@ class Controller(PrimaryModel):
                     {"location": f'Devices may not associate to locations of type "{self.location.location_type}".'}
                 )
 
+    @property
+    def capabilities_list(self):
+        return array_to_string(self.capabilities)
+
 
 @extras_features(
     "custom_links",
@@ -1456,6 +1467,11 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
         null=False,
         help_text="Controller that manages the devices in this group",
     )
+    capabilities = JSONArrayField(
+        base_field=models.CharField(choices=ControllerCapabilitiesChoices),
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         ordering = ("weight",)
@@ -1479,6 +1495,10 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
             raise ValidationError(
                 {"controller": "Controller device group must have the same controller as the parent group."}
             )
+
+    @property
+    def capabilities_list(self):
+        return array_to_string(self.capabilities)
 
 
 #

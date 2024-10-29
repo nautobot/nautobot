@@ -21,6 +21,7 @@ from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.choices import (
     CableTypeChoices,
     ConsolePortTypeChoices,
+    ControllerCapabilitiesChoices,
     InterfaceTypeChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
@@ -1846,6 +1847,12 @@ class ControllerFilterSet(
         to_field_name="name",
         label="External integration (name or ID)",
     )
+    capabilities = django_filters.MultipleChoiceFilter(
+        choices=ControllerCapabilitiesChoices,
+        null_value=None,
+        lookup_expr="icontains",
+        label="Capabilities",
+    )
     controller_device = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
         to_field_name="name",
@@ -1880,6 +1887,12 @@ class ControllerManagedDeviceGroupFilterSet(NautobotFilterSet):
         filter_predicates={
             "name": "icontains",
         }
+    )
+    capabilities = django_filters.MultipleChoiceFilter(
+        choices=ControllerCapabilitiesChoices,
+        null_value=None,
+        lookup_expr="icontains",
+        label="Capabilities",
     )
     controller = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Controller.objects.all(),

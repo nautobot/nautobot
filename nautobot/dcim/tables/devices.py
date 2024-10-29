@@ -2,6 +2,7 @@ from django.utils.html import format_html
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
+from nautobot.core.models.utils import array_to_string
 from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
@@ -1387,6 +1388,7 @@ class ControllerTable(BaseTable):
     platform = tables.Column(linkify=True)
     role = tables.Column(linkify=True)
     tenant = TenantColumn()
+    capabilities = tables.Column()
     external_integration = tables.Column(linkify=True)
     controller_device = tables.Column(linkify=True)
     controller_device_redundancy_group = tables.Column(linkify=True)
@@ -1405,6 +1407,7 @@ class ControllerTable(BaseTable):
             "platform",
             "role",
             "tenant",
+            "capabilities",
             "external_integration",
             "controller_device",
             "controller_device_redundancy_group",
@@ -1419,8 +1422,13 @@ class ControllerTable(BaseTable):
             "platform",
             "role",
             "tenant",
+            "capabilities",
             "actions",
         )
+
+    def render_capabilities(self, value):
+        """Render capabilities."""
+        return array_to_string(value)
 
 
 class ControllerManagedDeviceGroupTable(BaseTable):
@@ -1430,6 +1438,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
     name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
     weight = tables.Column()
     controller = tables.Column(linkify=True)
+    capabilities= tables.Column()
     tags = TagColumn(url_name="dcim:controllermanageddevicegroup_list")
     actions = ButtonsColumn(ControllerManagedDeviceGroup)
     device_count = LinkedCountColumn(
@@ -1448,6 +1457,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "device_count",
             "controller",
             "weight",
+            "capabilities",
             "tags",
             "actions",
         )
@@ -1457,9 +1467,14 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "device_count",
             "controller",
             "weight",
+            "capabilities",
             "tags",
             "actions",
         )
+
+    def render_capabilities(self, value):
+        """Render capabilities."""
+        return array_to_string(value)
 
 
 class VirtualDeviceContextTable(StatusTableMixin, BaseTable):

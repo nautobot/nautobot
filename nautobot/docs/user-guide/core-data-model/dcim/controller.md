@@ -54,7 +54,7 @@ devices.count()
 
 ## Base Fields
 
-A controller is identified by a unique `name` and can include a `description`.
+A controller is identified by a unique `name` and can include a `description` and `capabilities`.
 
 ## Related Models
 
