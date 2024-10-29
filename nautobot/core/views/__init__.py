@@ -478,3 +478,36 @@ def get_file_with_authorization(request, *args, **kwargs):
     get_object_or_404(queryset, file=request.GET.get("name"))
 
     return get_file(request, *args, **kwargs)
+
+
+class AboutView(AccessMixin, TemplateView):
+    """
+    Nautobot About View which displays general information about Nautobot and contact details
+    for Network to Code.
+    """
+    template_name = "about.html"
+
+    def get(self, request, *args, **kwargs):
+        # Redirect user to login page if not authenticated
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        # Check whether a new release is available. (Only for staff/superusers.)
+        new_release = None
+        if request.user.is_staff or request.user.is_superuser:
+            latest_release, release_url = get_latest_release()
+            if isinstance(latest_release, version.Version):
+                current_version = version.parse(settings.VERSION)
+                if latest_release > current_version:
+                    new_release = {
+                        "version": str(latest_release),
+                        "url": release_url,
+                    }
+
+        context = self.get_context_data()
+        context.update(
+            {
+                "new_release": new_release,
+            }
+        )
+
+        return self.render_to_response(context)
