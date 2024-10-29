@@ -666,7 +666,7 @@ class JSONArrayFormField(django_forms.JSONField):
         if self.has_choices:
             if isinstance(value, list):
                 return value
-            return []
+            return [value]
         elif isinstance(value, list):
             return self.delimiter.join(str(self.base_field.prepare_value(v)) for v in value)
         return value

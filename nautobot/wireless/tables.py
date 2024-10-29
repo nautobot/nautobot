@@ -1,5 +1,7 @@
+from django.urls import reverse
 import django_tables2 as tables
 
+from nautobot.core.models.utils import array_to_string
 from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
@@ -104,7 +106,7 @@ class RadioProfileTable(BaseTable):
         return ", ".join(f"{v}MHz" for v in value)
 
     def render_allowed_channel_list(self, value):
-        return ", ".join(f"{v}" for v in value)
+        return array_to_string(value)
 
     def render_tx_power_min(self, value):
         return f"{value} dBm"
@@ -278,7 +280,7 @@ class AccessPointGroupRadioProfileAssignmentTable(BaseTable):
         return ", ".join(f"{v}MHz" for v in value)
 
     def render_allowed_channel_list(self, value):
-        return ", ".join(f"{v}" for v in value)
+        return array_to_string(value)
 
     def render_tx_power_min(self, value):
         return f"{value} dBm"
