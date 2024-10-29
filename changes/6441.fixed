@@ -1,0 +1,1 @@
+Fixed a regression in 2.3.9 that broke the rendering of the Device create/edit form.
