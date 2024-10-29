@@ -1144,41 +1144,47 @@ def run_job(self, job_class_path, *args, **kwargs):
         raise
 
 
-def enqueue_job_hooks(object_change, may_reload_jobs=True):
+def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None):
     """
     Find job hook(s) assigned to this changed object type + action and enqueue them to be processed.
 
+    Args:
+        object_change (ObjectChange): The change that may trigger JobHooks to execute.
+        may_reload_jobs (bool): Whether to reload JobHook source code from disk to guarantee up-to-date code.
+        jobhook_queryset (QuerySet): Previously retrieved set of JobHooks to potentially enqueue
+
     Returns:
-        jobs_reloaded (bool): whether Jobs were reloaded to make this happen
+        result (tuple[bool, QuerySet]): whether Jobs were reloaded here, and the jobhooks that were considered
     """
     jobs_reloaded = False
 
     # Job hooks cannot trigger other job hooks
     if object_change.change_context == ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
-        return jobs_reloaded
+        return jobs_reloaded, jobhook_queryset
 
     # Determine whether this type of object supports job hooks
     content_type = object_change.changed_object_type
     if content_type not in change_logged_models_queryset():
-        return jobs_reloaded
+        return jobs_reloaded, jobhook_queryset
 
     # Retrieve any applicable job hooks
-    action_flag = {
-        ObjectChangeActionChoices.ACTION_CREATE: "type_create",
-        ObjectChangeActionChoices.ACTION_UPDATE: "type_update",
-        ObjectChangeActionChoices.ACTION_DELETE: "type_delete",
-    }[object_change.action]
-    job_hooks = JobHook.objects.filter(content_types=content_type, enabled=True, **{action_flag: True})
+    if jobhook_queryset is None:
+        action_flag = {
+            ObjectChangeActionChoices.ACTION_CREATE: "type_create",
+            ObjectChangeActionChoices.ACTION_UPDATE: "type_update",
+            ObjectChangeActionChoices.ACTION_DELETE: "type_delete",
+        }[object_change.action]
+        jobhook_queryset = JobHook.objects.filter(content_types=content_type, enabled=True, **{action_flag: True})
 
-    if not job_hooks.exists():
-        return jobs_reloaded
+    if not jobhook_queryset:  # not .exists() as we *want* to populate the queryset cache
+        return jobs_reloaded, jobhook_queryset
 
     # Enqueue the jobs related to the job_hooks
     if may_reload_jobs:
         get_jobs(reload=True)
         jobs_reloaded = True
 
-    for job_hook in job_hooks:
+    for job_hook in jobhook_queryset:
         job_model = job_hook.job
         if not job_model.installed or not job_model.enabled:
             logger.warning(
@@ -1189,4 +1195,4 @@ def enqueue_job_hooks(object_change, may_reload_jobs=True):
         else:
             JobResult.enqueue_job(job_model, object_change.user, object_change=object_change.pk)
 
-    return jobs_reloaded
+    return jobs_reloaded, jobhook_queryset

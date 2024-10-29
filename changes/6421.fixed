@@ -1,0 +1,1 @@
+Fixed long-running-at-scale transaction lock on records while adding/removing a CustomField definition.
