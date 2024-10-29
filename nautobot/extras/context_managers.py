@@ -204,14 +204,34 @@ def web_request_context(
             yield request
     finally:
         jobs_reloaded = False
+        # In bulk operations, we are performing the same action (create/update/delete) on the same content-type.
+        # Save some repeated database queries by reusing the same evaluated querysets where applicable:
+        jobhook_queryset = None
+        webhook_queryset = None
+        last_action = None
+        last_content_type = None
         # enqueue jobhooks and webhooks, use change_context.change_id in case change_id was not supplied
         for object_change in (
-            ObjectChange.objects.filter(request_id=change_context.change_id).order_by("time").iterator()
+            ObjectChange.objects.select_related("changed_object_type", "user")
+            .filter(request_id=change_context.change_id)
+            .order_by("time")  # default ordering is -time but we want oldest first not newest first
+            .iterator()
         ):
+            if object_change.action != last_action or object_change.changed_object_type != last_content_type:
+                jobhook_queryset = None
+                webhook_queryset = None
+
             if context != ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
                 # Make sure JobHooks are up to date (only once) before calling them
-                jobs_reloaded |= enqueue_job_hooks(object_change, may_reload_jobs=(not jobs_reloaded))
-            enqueue_webhooks(object_change)
+                did_reload_jobs, jobhook_queryset = enqueue_job_hooks(
+                    object_change, may_reload_jobs=(not jobs_reloaded), jobhook_queryset=jobhook_queryset
+                )
+                if did_reload_jobs:
+                    jobs_reloaded = True
+
+            webhook_queryset = enqueue_webhooks(object_change, webhook_queryset=webhook_queryset)
+            last_action = object_change.action
+            last_content_type = object_change.changed_object_type
 
 
 @contextmanager

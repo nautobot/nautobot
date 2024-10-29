@@ -3241,7 +3241,7 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
     model_form_class = forms.ModuleBayForm
     serializer_class = serializers.ModuleBaySerializer
     table_class = tables.ModuleBayTable
-    create_template_name = "dcim/device_component_add.html"
+    create_template_name = "dcim/modulebay_create.html"
 
     def get_extra_context(self, request, instance):
         if instance:
