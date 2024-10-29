@@ -6,11 +6,5 @@ services:
       - dev.env
     volumes:
       - pgdata_nautobot:/var/lib/postgresql/data
-    healthcheck:
-      interval: 10s
-      timeout: 5s
-      start_period: 30s
-      retries: 3
-      test: "pg_isready -d $$POSTGRES_DB -U $$POSTGRES_USER"
 volumes:
   pgdata_nautobot:
