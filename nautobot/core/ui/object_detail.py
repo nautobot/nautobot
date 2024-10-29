@@ -1067,6 +1067,7 @@ class BaseTextPanel(Panel):
         JSON = "json"
         YAML = "yaml"
         MARKDOWN = "markdown"
+        CODE = "code"
 
     def __init__(
         self,
@@ -1089,9 +1090,9 @@ class BaseTextPanel(Panel):
         super().__init__(body_content_template_path=body_content_template_path, **kwargs)
 
     def render_body_content(self, context):
-        text_content = self.get_text(context)
+        value = self.get_value(context)
 
-        if not text_content and self.render_placeholder:
+        if not value and self.render_placeholder:
             return HTML_NONE
 
         if self.body_content_template_path:
@@ -1099,12 +1100,12 @@ class BaseTextPanel(Panel):
                 {
                     **context,
                     "render_as": self.render_as.value,
-                    "text_content": text_content,
+                    "value": value,
                 }
             )
-        return text_content
+        return value
 
-    def get_text(self, context):
+    def get_value(self, context):
         raise NotImplementedError
 
 
@@ -1118,7 +1119,7 @@ class ObjectTextPanel(BaseTextPanel):
 
         super().__init__(**kwargs)
 
-    def get_text(self, context):
+    def get_value(self, context):
         obj = get_obj_from_context(context)
         if not obj:
             return ""
@@ -1132,7 +1133,7 @@ class TextPanel(BaseTextPanel):
         self.context_field = context_field
         super().__init__(**kwargs)
 
-    def get_text(self, context):
+    def get_value(self, context):
         return context.get(self.context_field, "")
 
 
