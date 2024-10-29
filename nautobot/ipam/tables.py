@@ -354,10 +354,13 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     children = tables.Column(accessor="descendants_count", orderable=False)
     date_allocated = tables.DateTimeColumn()
     location_count = LinkedCountColumn(
-        viewname="dcim:location_list", url_params={"prefixes": "pk"}, verbose_name="Locations"
+        lookup="locations", viewname="dcim:location_list", url_params={"prefixes": "pk"}, verbose_name="Locations"
     )
     cloud_networks_count = LinkedCountColumn(
-        viewname="cloud:cloudnetwork_list", url_params={"prefixes": "pk"}, verbose_name="Cloud Networks"
+        lookup="cloud_networks",
+        viewname="cloud:cloudnetwork_list",
+        url_params={"prefixes": "pk"},
+        verbose_name="Cloud Networks",
     )
 
     class Meta(BaseTable.Meta):
@@ -679,7 +682,7 @@ class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
     vid = tables.TemplateColumn(template_code=VLAN_LINK, verbose_name="ID")
     vlan_group = tables.Column(linkify=True)
     location_count = LinkedCountColumn(
-        accessor="locations",
+        lookup="locations",
         viewname="dcim:location_list",
         url_params={"vlans": "pk"},
         verbose_name="Locations",
