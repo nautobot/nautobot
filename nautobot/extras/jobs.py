@@ -1154,7 +1154,7 @@ def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None
         jobhook_queryset (QuerySet): Previously retrieved set of JobHooks to potentially enqueue
 
     Returns:
-        result (tuple): whether Jobs were reloaded here, and the jobhooks that were considered
+        result (tuple[bool, QuerySet]): whether Jobs were reloaded here, and the jobhooks that were considered
     """
     jobs_reloaded = False
 
