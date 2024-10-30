@@ -1,0 +1,1 @@
+Fixes an issue where GitLab CI pipelines fail using all versions of official Docker images.
