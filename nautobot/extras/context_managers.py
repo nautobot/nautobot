@@ -225,7 +225,7 @@ def web_request_context(
             if context != ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
                 # Make sure JobHooks are up to date (only once) before calling them
                 did_reload_jobs, jobhook_queryset = enqueue_job_hooks(
-                    object_change, may_reload_jobs=(not jobs_reloaded), jobhook_queryset=jobhook_queryset
+                    oc, may_reload_jobs=(not jobs_reloaded), jobhook_queryset=jobhook_queryset
                 )
                 if did_reload_jobs:
                     jobs_reloaded = True
@@ -247,8 +247,8 @@ def web_request_context(
             }
             publish_event(topic=event_topic, payload=event_payload)
 
-            last_action = object_change.action
-            last_content_type = object_change.changed_object_type
+            last_action = oc.action
+            last_content_type = oc.changed_object_type
 
 
 @contextmanager
