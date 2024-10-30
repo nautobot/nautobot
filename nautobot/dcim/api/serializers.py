@@ -988,7 +988,9 @@ class DeviceTypeToSoftwareImageFileSerializer(ValidatedModelSerializer):
 
 
 class ControllerSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
-    capabilities = serializers.ListField(child=ChoiceField(choices=ControllerCapabilitiesChoices, required=False), allow_empty=True)
+    capabilities = serializers.ListField(
+        child=ChoiceField(choices=ControllerCapabilitiesChoices, required=False), allow_empty=True
+    )
 
     class Meta:
         model = Controller
@@ -996,7 +998,9 @@ class ControllerSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 
 
 class ControllerManagedDeviceGroupSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
-    capabilities = serializers.ListField(child=ChoiceField(choices=ControllerCapabilitiesChoices, required=False), allow_empty=True)
+    capabilities = serializers.ListField(
+        child=ChoiceField(choices=ControllerCapabilitiesChoices, required=False), allow_empty=True
+    )
 
     class Meta:
         model = ControllerManagedDeviceGroup
