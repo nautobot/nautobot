@@ -124,6 +124,32 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
+## v2.3.10 (2024-10-29)
+
+### Added
+
+- [#6421](https://github.com/nautobot/nautobot/issues/6421) - Added cacheable `CustomField.objects.keys_for_model(model)` API.
+- [#6421](https://github.com/nautobot/nautobot/issues/6421) - Added queryset caching in `web_request_context` for more efficient JobHook and Webhook dispatching on bulk requests.
+- [#6421](https://github.com/nautobot/nautobot/issues/6421) - Added logging to JobResults for CustomField provisioning background tasks.
+- [#6421](https://github.com/nautobot/nautobot/issues/6421) - Added more efficient database calls for most cases of bulk-provisioning CustomField data on model objects.
+
+### Changed
+
+- [#6421](https://github.com/nautobot/nautobot/issues/6421) - Increased soft/hard time limits on CustomField provisioning background tasks to 1800 and 2000 seconds respectively.
+
+### Fixed
+
+- [#6421](https://github.com/nautobot/nautobot/issues/6421) - Fixed long-running-at-scale transaction lock on records while adding/removing a CustomField definition.
+- [#6441](https://github.com/nautobot/nautobot/issues/6441) - Fixed a regression in 2.3.9 that broke the rendering of the Device create/edit form.
+
+### Dependencies
+
+- [#6423](https://github.com/nautobot/nautobot/issues/6423) - Updated `mysqlclient` to `~2.2.5`.
+
+### Housekeeping
+
+- [#6423](https://github.com/nautobot/nautobot/issues/6423) - Updated documentation dependency `mkdocs-material` to `~9.5.42`.
+
 ## v2.3.9 (2024-10-28)
 
 ### Added
