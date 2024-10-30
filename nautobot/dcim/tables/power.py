@@ -30,6 +30,7 @@ class PowerPanelTable(BaseTable):
     power_feed_count = LinkedCountColumn(
         viewname="dcim:powerfeed_list",
         url_params={"power_panel": "pk"},
+        lookup="power_feeds",
         verbose_name="Feeds",
     )
     tags = TagColumn(url_name="dcim:powerpanel_list")

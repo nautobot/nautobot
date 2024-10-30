@@ -50,27 +50,27 @@ class ManufacturerTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     cloud_account_count = LinkedCountColumn(
-        lookup="cloud_accounts",
         viewname="cloud:cloudaccount_list",
         url_params={"provider": "name"},
+        lookup="cloud_accounts",
         verbose_name="Cloud Accounts",
     )
     device_type_count = LinkedCountColumn(
-        lookup="device_types",
         viewname="dcim:devicetype_list",
         url_params={"manufacturer": "name"},
+        lookup="device_types",
         verbose_name="Device Types",
     )
     inventory_item_count = LinkedCountColumn(
-        lookup="inventory_items",
         viewname="dcim:inventoryitem_list",
         url_params={"manufacturer": "name"},
+        lookup="inventory_items",
         verbose_name="Inventory Items",
     )
     platform_count = LinkedCountColumn(
-        lookup="platforms",
         viewname="dcim:platform_list",
         url_params={"manufacturer": "name"},
+        lookup="platforms",
         verbose_name="Platforms",
     )
     actions = ButtonsColumn(Manufacturer)
@@ -98,9 +98,9 @@ class DeviceFamilyTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     device_type_count = LinkedCountColumn(
-        lookup="device_types",
         viewname="dcim:devicetype_list",
         url_params={"device_family": "name"},
+        lookup="device_types",
         verbose_name="Device Types",
     )
     actions = ButtonsColumn(DeviceFamily)
@@ -130,9 +130,9 @@ class DeviceTypeTable(BaseTable):
     device_family = tables.Column(linkify=True)
     is_full_depth = BooleanColumn(verbose_name="Full Depth")
     device_count = LinkedCountColumn(
-        lookup="devices",
         viewname="dcim:device_list",
         url_params={"device_type": "pk"},
+        lookup="devices",
         verbose_name="Devices",
     )
     tags = TagColumn(url_name="dcim:devicetype_list")
@@ -172,9 +172,9 @@ class ModuleTypeTable(BaseTable):
     manufacturer = tables.Column(linkify=True)
     model = tables.Column(linkify=True, verbose_name="Module Type")
     module_count = LinkedCountColumn(
-        lookup="modules",
         viewname="dcim:module_list",
         url_params={"module_type": "pk"},
+        lookup="modules",
         verbose_name="Modules",
     )
     tags = TagColumn(url_name="dcim:moduletype_list")

@@ -108,11 +108,13 @@ class PlatformTable(BaseTable):
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
         url_params={"platform": "pk"},
+        lookup="devices",
         verbose_name="Devices",
     )
     virtual_machine_count = LinkedCountColumn(
         viewname="virtualization:virtualmachine_list",
         url_params={"platform": "pk"},
+        lookup="virtual_machines",
         verbose_name="VMs",
     )
     actions = ButtonsColumn(Platform)
@@ -1104,6 +1106,7 @@ class VirtualChassisTable(BaseTable):
     member_count = LinkedCountColumn(
         viewname="dcim:device_list",
         url_params={"virtual_chassis": "pk"},
+        lookup="members",
         verbose_name="Members",
     )
     tags = TagColumn(url_name="dcim:virtualchassis_list")
@@ -1125,11 +1128,13 @@ class DeviceRedundancyGroupTable(BaseTable):
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
         url_params={"device_redundancy_group": "pk"},
+        lookup="devices",
         verbose_name="Devices",
     )
     controller_count = LinkedCountColumn(
         viewname="dcim:controller_list",
         url_params={"controller_device_redundancy_group": "pk"},
+        lookup="controllers",
         verbose_name="Controllers",
     )
     secrets_group = tables.Column(linkify=True)
@@ -1242,6 +1247,7 @@ class SoftwareImageFileTable(StatusTableMixin, BaseTable):
     device_type_count = LinkedCountColumn(
         viewname="dcim:devicetype_list",
         url_params={"software_image_files": "pk"},
+        lookup="device_types",
         verbose_name="Device Types",
     )
     tags = TagColumn(url_name="dcim:softwareimagefile_list")
@@ -1277,19 +1283,25 @@ class SoftwareImageFileTable(StatusTableMixin, BaseTable):
 class SoftwareVersionTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     version = tables.Column(linkify=True)
+    platform = tables.Column(linkify=True)
+    release_date = tables.DateColumn()
+    end_of_support_date = tables.DateColumn()
     software_image_file_count = LinkedCountColumn(
         viewname="dcim:softwareimagefile_list",
         url_params={"software_version": "pk"},
+        lookup="software_image_files",
         verbose_name="Software Image Files",
     )
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
         url_params={"software_version": "pk"},
+        lookup="devices",
         verbose_name="Devices",
     )
     inventory_item_count = LinkedCountColumn(
         viewname="dcim:inventoryitem_list",
         url_params={"software_version": "pk"},
+        lookup="inventory_items",
         verbose_name="Inventory Items",
     )
     tags = TagColumn(url_name="dcim:softwareversion_list")
@@ -1388,6 +1400,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
         url_params={"controller_managed_device_group": "pk"},
+        lookup="devices",
         verbose_name="Devices",
     )
 

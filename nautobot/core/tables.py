@@ -19,7 +19,7 @@ from tree_queries.models import TreeNode
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
-from nautobot.core.utils import lookup
+from nautobot.core.utils.lookup import get_model_for_view_name, get_route_for_model
 from nautobot.extras import choices, models
 
 logger = logging.getLogger(__name__)
@@ -155,7 +155,7 @@ class BaseTable(django_tables2.Table):
                 if not column.visible:
                     continue
                 if isinstance(column.column, LinkedCountColumn):
-                    column_model = lookup.get_model_for_view_name(column.column.viewname)
+                    column_model = get_model_for_view_name(column.column.viewname)
                     if column_model is None:
                         logger.error("Couldn't find model for %s", column.column.viewname)
                         continue
@@ -405,9 +405,9 @@ class ButtonsColumn(django_tables2.TemplateColumn):
             self.template_code = prepend_template + self.template_code
 
         app_label = model._meta.app_label
-        changelog_route = lookup.get_route_for_model(model, "changelog")
-        edit_route = lookup.get_route_for_model(model, "edit")
-        delete_route = lookup.get_route_for_model(model, "delete")
+        changelog_route = get_route_for_model(model, "changelog")
+        edit_route = get_route_for_model(model, "edit")
+        delete_route = get_route_for_model(model, "delete")
 
         template_code = self.template_code.format(
             app_label=app_label,
@@ -478,19 +478,25 @@ class LinkedCountColumn(django_tables2.Column):
         viewname (str): The list view name to use for URL resolution, for example `"dcim:location_list"`
         url_params (dict, optional): Query parameters to apply to filter the list URL (e.g. `{"vlans": "pk"}` will add
             `?vlans=<record.pk>` to the linked list URL)
-        lookup (str, optional): The attribute on the base record that can be used to query the related objects.
         view_kwargs (dict, optional): Additional kwargs to pass to `reverse()` for list URL resolution. Rarely used.
+        lookup (str, optional): The attribute on the base record that can be used to query the related objects.
+            TODO: this currently does *not* support nested lookups via `__`. That may be solvable in the future.
         reverse_lookup (str, optional): The reverse lookup parameter to use to derive the count.
             If not specified, the first key in `url_params` will be implicitly used as the `reverse_lookup` value.
+        **kwargs (dict, optional): As the parent Column class.
 
     Examples:
         ```py
         class VLANTable(..., BaseTable):
             ...
             location_count = LinkedCountColumn(
-                lookup="locations",  # VLAN.locations
+                # Link for N related locations will be reverse("dcim:location_list") + "?vlans=<record.pk>"
                 viewname="dcim:location_list",
                 url_params={"vlans": "pk"},
+                # For the first related location, Prefetch("locations", VLAN.objects.all()[:1], "locations_list")
+                lookup="locations",
+                # No specified `reverse_lookup`, so use url_params.keys()[0], i.e. reverse_lookup="vlans" here to
+                # derive the count, i.e. .annotate(location_count=count_related(Location, "vlans"))
                 verbose_name="Locations",
             )
         ```
@@ -499,9 +505,13 @@ class LinkedCountColumn(django_tables2.Column):
         class CloudNetworkTable(BaseTable):
             ...
             circuit_count = LinkedCountColumn(
+                # Link for N related circuits will be reverse("circuits:circuit_list") + "?cloud_network=<record.name>"
                 viewname="circuits:circuit_list",
                 url_params={"cloud_network": "name"},
-                # need to .annotate(circuit_count=count_related(Circuit, "circuit_terminations__cloud_network"))
+                # We'd like to do the below but this module isn't currently smart enough to build the right Prefetch()
+                # for a nested lookup:
+                # lookup="circuit_terminations__circuit",
+                # For the count, .annotate(circuit_count=count_related(Circuit, "circuit_terminations__cloud_network"))
                 reverse_lookup="circuit_terminations__cloud_network",
                 verbose_name="Circuits",
             )
@@ -509,29 +519,32 @@ class LinkedCountColumn(django_tables2.Column):
     """
 
     def __init__(
-        self, viewname, *args, lookup=None, view_kwargs=None, url_params=None, reverse_lookup=None, default=0, **kwargs
+        self, viewname, *args, view_kwargs=None, url_params=None, lookup=None, reverse_lookup=None, default=0, **kwargs
     ):
         self.viewname = viewname
         self.lookup = lookup
         self.view_kwargs = view_kwargs or {}
         self.url_params = url_params
         self.reverse_lookup = reverse_lookup or next(iter(url_params.keys()))
+        self.model = get_model_for_view_name(self.viewname)
         super().__init__(*args, default=default, **kwargs)
 
     def render(self, record, value):  # pylint: disable=arguments-differ
         related_record = None
-        if related_records := getattr(record, f"{self.lookup}_list", None):
-            related_record = related_records[0]
-        else:
-            print(getattr(record.circuit_terminations, "circuit_list", None))
-        if value > 1 or (value and related_record is None):
-            url = reverse(self.viewname, kwargs=self.view_kwargs)
-            if self.url_params:
-                url += "?" + "&".join([f"{k}={getattr(record, v)}" for k, v in self.url_params.items()])
-            name_plural = related_record._meta.verbose_name_plural if related_record is not None else "record(s)"
-            return format_html('<a href="{}">({} {})</a>', url, value, name_plural)
-        if related_record:
-            return helpers.hyperlinked_object(related_record)
+        if self.lookup:
+            if related_records := getattr(record, f"{self.lookup}_list", None):
+                related_record = related_records[0]
+        url = reverse(self.viewname, kwargs=self.view_kwargs)
+        if self.url_params:
+            url += "?" + "&".join([f"{k}={getattr(record, v)}" for k, v in self.url_params.items()])
+        if value > 1:
+            # return format_html('<a href="{}">({} {})</a>', url, value, self.model._meta.verbose_name_plural)
+            return format_html('<a href="{}">{}</a>', url, value)
+        if value == 1:
+            if related_record is not None:
+                return helpers.hyperlinked_object(related_record)
+            # return format_html('<a href="{}">({} {})</a>', url, value, self.model._meta.verbose_name)
+            return format_html('<a href="{}">{}</a>', url, value)
         return helpers.placeholder(value)
 
 
