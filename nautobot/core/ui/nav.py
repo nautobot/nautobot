@@ -166,6 +166,7 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
             name (str): The name of the item.
             args (list): Arguments that are being passed to the url with reverse() method
             kwargs (dict): Keyword arguments are are being passed to the url with reverse() method
+            query_params (dict): Query parameters to be appended to the URL.
             permissions (list): The permissions required to view this item.
             buttons (list): List of buttons to be rendered in this item.
             weight (int): The weight of this item.
@@ -233,6 +234,7 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
             button_class (str): The button class defines to be used to define the style of the button.
             permissions (list): The permissions required to view this button.
             weight (int): The weight of this button.
+            query_params (dict): Query parameters to be appended to the URL.
         """
         super().__init__(permissions)
         self.link = link

@@ -1,0 +1,2 @@
+Added `context` and `secrets_group` attributes to the Job Queue model.
+Added `KUBERNETES_CONFIG_FILE`, `KUBERNETES_JOB_POD_NAME`, `KUBERNETES_JOB_POD_NAMESPACE`, `KUBERNETES_JOB_IMAGE_NAME` and `KUBERNETES_JOB_CONTAINER_NAME` settings variables to support Kubernetes Job execution.

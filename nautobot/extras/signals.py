@@ -496,6 +496,11 @@ def refresh_job_models(sender, *, apps, **kwargs):
     JobQueue = apps.get_model("extras", "JobQueue")
 
     # To make reverse migrations safe
+    try:
+        JobQueue = apps.get_model("extras", "JobQueue")
+    except LookupError:
+        JobQueue = None
+
     if not hasattr(Job, "job_class_name"):
         logger.info("Skipping refresh_job_models() as it appears Job model has not yet been migrated to latest.")
         return

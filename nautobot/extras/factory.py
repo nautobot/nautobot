@@ -151,6 +151,8 @@ class JobQueueFactory(PrimaryModelFactory):
     class Params:
         has_description = NautobotBoolIterator()
         has_tenant = NautobotBoolIterator()
+        # TODO enable after SecretsGroupFactory
+        # has_secrets_group = NautobotBoolIterator()
 
     name = factory.LazyAttributeSequence(lambda o, n: f"{o.queue_type} Job Queue - {n}")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
