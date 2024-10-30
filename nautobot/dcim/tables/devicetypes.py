@@ -50,28 +50,16 @@ class ManufacturerTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     cloud_account_count = LinkedCountColumn(
-        viewname="cloud:cloudaccount_list",
-        url_params={"provider": "name"},
-        lookup="cloud_accounts",
-        verbose_name="Cloud Accounts",
+        viewname="cloud:cloudaccount_list", url_params={"provider": "name"}, verbose_name="Cloud Accounts"
     )
     device_type_count = LinkedCountColumn(
-        viewname="dcim:devicetype_list",
-        url_params={"manufacturer": "name"},
-        lookup="device_types",
-        verbose_name="Device Types",
+        viewname="dcim:devicetype_list", url_params={"manufacturer": "name"}, verbose_name="Device Types"
     )
     inventory_item_count = LinkedCountColumn(
-        viewname="dcim:inventoryitem_list",
-        url_params={"manufacturer": "name"},
-        lookup="inventory_items",
-        verbose_name="Inventory Items",
+        viewname="dcim:inventoryitem_list", url_params={"manufacturer": "name"}, verbose_name="Inventory Items"
     )
     platform_count = LinkedCountColumn(
-        viewname="dcim:platform_list",
-        url_params={"manufacturer": "name"},
-        lookup="platforms",
-        verbose_name="Platforms",
+        viewname="dcim:platform_list", url_params={"manufacturer": "name"}, verbose_name="Platforms"
     )
     actions = ButtonsColumn(Manufacturer)
 
@@ -98,10 +86,7 @@ class DeviceFamilyTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     device_type_count = LinkedCountColumn(
-        viewname="dcim:devicetype_list",
-        url_params={"device_family": "name"},
-        lookup="device_types",
-        verbose_name="Device Types",
+        viewname="dcim:devicetype_list", url_params={"device_family": "name"}, verbose_name="Device Types"
     )
     actions = ButtonsColumn(DeviceFamily)
     tags = TagColumn(url_name="dcim:devicefamily_list")
@@ -132,7 +117,6 @@ class DeviceTypeTable(BaseTable):
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
         url_params={"device_type": "pk"},
-        lookup="devices",
         verbose_name="Devices",
     )
     tags = TagColumn(url_name="dcim:devicetype_list")
@@ -174,7 +158,6 @@ class ModuleTypeTable(BaseTable):
     module_count = LinkedCountColumn(
         viewname="dcim:module_list",
         url_params={"module_type": "pk"},
-        lookup="modules",
         verbose_name="Modules",
     )
     tags = TagColumn(url_name="dcim:moduletype_list")

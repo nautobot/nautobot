@@ -54,7 +54,6 @@ class ProviderTable(BaseTable):
     circuit_count = LinkedCountColumn(
         viewname="circuits:circuit_list",
         url_params={"provider": "pk"},
-        lookup="circuits",
         verbose_name="Circuits",
     )
     tags = TagColumn(url_name="circuits:provider_list")
@@ -86,7 +85,6 @@ class CircuitTypeTable(BaseTable):
     circuit_count = LinkedCountColumn(
         viewname="circuits:circuit_list",
         url_params={"circuit_type": "pk"},
-        lookup="circuits",
         verbose_name="Circuits",
     )
     actions = ButtonsColumn(CircuitType)

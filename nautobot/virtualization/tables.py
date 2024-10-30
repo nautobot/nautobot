@@ -41,10 +41,7 @@ class ClusterTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     cluster_count = LinkedCountColumn(
-        viewname="virtualization:cluster_list",
-        url_params={"cluster_type": "pk"},
-        lookup="clusters",
-        verbose_name="Clusters",
+        viewname="virtualization:cluster_list", url_params={"cluster_type": "pk"}, verbose_name="Clusters"
     )
     actions = ButtonsColumn(ClusterType)
 
@@ -63,10 +60,7 @@ class ClusterGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     cluster_count = LinkedCountColumn(
-        viewname="virtualization:cluster_list",
-        url_params={"cluster_group": "pk"},
-        lookup="clusters",
-        verbose_name="Clusters",
+        viewname="virtualization:cluster_list", url_params={"cluster_group": "pk"}, verbose_name="Clusters"
     )
     actions = ButtonsColumn(ClusterGroup)
 
@@ -90,13 +84,11 @@ class ClusterTable(BaseTable):
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
         url_params={"cluster": "pk"},
-        lookup="devices",
         verbose_name="Devices",
     )
     vm_count = LinkedCountColumn(
         viewname="virtualization:virtualmachine_list",
         url_params={"cluster": "pk"},
-        lookup="virtual_machines",
         verbose_name="VMs",
     )
     tags = TagColumn(url_name="virtualization:cluster_list")

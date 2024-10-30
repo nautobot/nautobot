@@ -312,7 +312,6 @@ class RIRTable(BaseTable):
     assigned_prefix_count = LinkedCountColumn(
         viewname="ipam:prefix_list",
         url_params={"rir": "name"},
-        lookup="prefixes",
         verbose_name="Assigned Prefixes",
     )
     actions = ButtonsColumn(RIR)
@@ -355,16 +354,10 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     children = tables.Column(accessor="descendants_count", orderable=False)
     date_allocated = tables.DateTimeColumn()
     location_count = LinkedCountColumn(
-        viewname="dcim:location_list",
-        url_params={"prefixes": "pk"},
-        lookup="locations",
-        verbose_name="Locations",
+        viewname="dcim:location_list", url_params={"prefixes": "pk"}, verbose_name="Locations"
     )
     cloud_networks_count = LinkedCountColumn(
-        viewname="cloud:cloudnetwork_list",
-        url_params={"prefixes": "pk"},
-        lookup="cloud_networks",
-        verbose_name="Cloud Networks",
+        viewname="cloud:cloudnetwork_list", url_params={"prefixes": "pk"}, verbose_name="Cloud Networks"
     )
 
     class Meta(BaseTable.Meta):
@@ -459,10 +452,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     interface_count = tables.Column(verbose_name="Interfaces")
     interface_parent_count = tables.Column(verbose_name="Devices")
     vm_interface_count = LinkedCountColumn(
-        viewname="virtualization:vminterface_list",
-        url_params={"ip_addresses": "pk"},
-        lookup="vm_interfaces",
-        verbose_name="VM Interfaces",
+        viewname="virtualization:vminterface_list", url_params={"ip_addresses": "pk"}, verbose_name="VM Interfaces"
     )
     vm_interface_parent_count = tables.Column(verbose_name="Virtual Machines")
 
@@ -670,12 +660,7 @@ class VLANGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
-    vlan_count = LinkedCountColumn(
-        viewname="ipam:vlan_list",
-        url_params={"vlan_group": "name"},
-        lookup="vlans",
-        verbose_name="VLANs",
-    )
+    vlan_count = LinkedCountColumn(viewname="ipam:vlan_list", url_params={"vlan_group": "name"}, verbose_name="VLANs")
     actions = ButtonsColumn(model=VLANGroup, prepend_template=VLANGROUP_ADD_VLAN)
 
     class Meta(BaseTable.Meta):
@@ -696,7 +681,6 @@ class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
     location_count = LinkedCountColumn(
         viewname="dcim:location_list",
         url_params={"vlans": "pk"},
-        lookup="locations",
         verbose_name="Locations",
     )
     tenant = TenantColumn()

@@ -55,7 +55,6 @@ class TenantGroupTable(BaseTable):
     tenant_count = LinkedCountColumn(
         viewname="tenancy:tenant_list",
         url_params={"tenant_group": "name"},
-        lookup="tenants",
         verbose_name="Tenants",
     )
     actions = ButtonsColumn(TenantGroup)

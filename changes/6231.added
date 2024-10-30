@@ -1,1 +1,2 @@
-Added optional `lookup` parameter to `LinkedCountColumn`; if specified, the table can prefetch the first related object for this column, and if it's the only such object, display it directly instead of just displaying `1`.
+Added `nautobot.apps.utils.get_related_field_for_models()` helper function.
+Added optional `lookup` parameter to `LinkedCountColumn`.

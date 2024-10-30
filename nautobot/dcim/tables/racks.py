@@ -34,7 +34,6 @@ class RackGroupTable(BaseTable):
     rack_count = LinkedCountColumn(
         viewname="dcim:rack_list",
         url_params={"rack_group": "pk"},
-        lookup="racks",
         verbose_name="Racks",
     )
     actions = ButtonsColumn(model=RackGroup, prepend_template=RACKGROUP_ELEVATIONS)
@@ -92,7 +91,6 @@ class RackDetailTable(RackTable):
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
         url_params={"rack": "pk"},
-        lookup="devices",
         verbose_name="Devices",
     )
     get_utilization = tables.TemplateColumn(template_code=UTILIZATION_GRAPH, orderable=False, verbose_name="Space")
