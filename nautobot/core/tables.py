@@ -164,6 +164,10 @@ class BaseTable(django_tables2.Table):
                     count_fields.append((column.name, column_model, reverse_lookup))
                     try:
                         lookup = column.column.lookup or get_related_field_for_models(model, column_model).name
+                        # For some reason get_related_field_for_models(Tag, DynamicGroup) gives a M2M with the name
+                        # `dynamicgroup`, which isn't actually a field on Tag. May be a django-taggit issue?
+                        # Workaround for now: make sure the field actually exists on the model under this name:
+                        getattr(model, lookup)
                     except AttributeError:
                         lookup = None
                     if lookup is not None:
