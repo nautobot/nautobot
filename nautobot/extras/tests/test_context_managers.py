@@ -74,8 +74,8 @@ class WebRequestContextTestCase(TestCase):
         self.assertEqual(oc_list[0].changed_object, location)
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
 
-    @mock.patch("nautobot.extras.jobs.enqueue_job_hooks", return_value=True)
-    @mock.patch("nautobot.extras.context_managers.enqueue_webhooks")
+    @mock.patch("nautobot.extras.jobs.enqueue_job_hooks", return_value=(True, None))
+    @mock.patch("nautobot.extras.context_managers.enqueue_webhooks", return_value=None)
     def test_create_then_delete(self, mock_enqueue_webhooks, mock_enqueue_job_hooks):
         """Test that a create followed by a delete is logged as two changes"""
         location_type = LocationType.objects.get(name="Campus")
@@ -93,10 +93,16 @@ class WebRequestContextTestCase(TestCase):
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
         self.assertEqual(oc_list[1].action, ObjectChangeActionChoices.ACTION_DELETE)
         mock_enqueue_job_hooks.assert_has_calls(
-            [mock.call(oc_list[0], may_reload_jobs=True), mock.call(oc_list[1], may_reload_jobs=False)],
+            [
+                mock.call(oc_list[0], may_reload_jobs=True, jobhook_queryset=None),
+                mock.call(oc_list[1], may_reload_jobs=False, jobhook_queryset=None),
+            ],
         )
         mock_enqueue_webhooks.assert_has_calls(
-            [mock.call(oc_list[0], oc_list[0].get_snapshots()), mock.call(oc_list[1], oc_list[1].get_snapshots())]
+            [
+                mock.call(oc_list[0], snapshots=oc_list[0].get_snapshots(), webhook_queryset=None),
+                mock.call(oc_list[1], snapshots=oc_list[1].get_snapshots(), webhook_queryset=None),
+            ]
         )
 
     def test_update_then_delete(self):
