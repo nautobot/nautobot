@@ -79,6 +79,7 @@ class CreateDeviceTestCase(SeleniumTestCase):
         - Device Type
         - LocationType
         - Location
+        - Role
         - Device
 
         """
@@ -120,6 +121,15 @@ class CreateDeviceTestCase(SeleniumTestCase):
         self._fill_select2_field("location_type", "Test Location Type 1")
         self._fill_select2_field("status", "")  # pick first status
         self.browser.fill("name", "Test Location 1")
+        self._click_create_button()
+
+        # Role
+        self._click_nav_bar("Organization", "Roles")
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("extras:role_list"))
+        self._click_add_button()
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("extras:role_add"))
+        self.browser.fill("name", "Test Role 1")
+        self._fill_select2_multiselect_field("content_types", "dcim | device")
         self._click_create_button()
 
         # Device
