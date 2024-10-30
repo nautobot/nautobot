@@ -539,12 +539,12 @@ class LinkedCountColumn(django_tables2.Column):
             url += "?" + "&".join([f"{k}={getattr(record, v)}" for k, v in self.url_params.items()])
         if value > 1:
             # return format_html('<a href="{}">({} {})</a>', url, value, self.model._meta.verbose_name_plural)
-            return format_html('<a href="{}">{}</a>', url, value)
+            return format_html('<a href="{}" class="badge">{}</a>', url, value)
         if value == 1:
             if related_record is not None:
                 return helpers.hyperlinked_object(related_record)
             # return format_html('<a href="{}">({} {})</a>', url, value, self.model._meta.verbose_name)
-            return format_html('<a href="{}">{}</a>', url, value)
+            return format_html('<a href="{}" class="badge">{}</a>', url, value)
         return helpers.placeholder(value)
 
 
