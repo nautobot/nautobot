@@ -3345,6 +3345,7 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
                 "status": statuses[0].pk,
                 "role": roles[0].pk,
                 "location": locations[0].pk,
+                "capabilities": [],
             },
             {
                 "name": "Controller 2",
@@ -3352,6 +3353,7 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
                 "status": statuses[1].pk,
                 "role": roles[1].pk,
                 "location": locations[1].pk,
+                "capabilities": [],
             },
             {
                 "name": "Controller 3",
@@ -3359,6 +3361,7 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
                 "status": statuses[2].pk,
                 "role": roles[2].pk,
                 "location": locations[2].pk,
+                "capabilities": ["wireless"],
             },
         ]
         cls.bulk_update_data = {
@@ -3380,16 +3383,19 @@ class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
                 "name": "ControllerManagedDeviceGroup 1",
                 "controller": controllers[0].pk,
                 "weight": 100,
+                "capabilities": [],
             },
             {
                 "name": "ControllerManagedDeviceGroup 2",
                 "controller": controllers[1].pk,
                 "weight": 150,
+                "capabilities": [],
             },
             {
                 "name": "ControllerManagedDeviceGroup 3",
                 "controller": controllers[2].pk,
                 "weight": 200,
+                "capabilities": ["wireless"],
             },
         ]
         # changing controller is error-prone since a child group must have the same controller as its parent
