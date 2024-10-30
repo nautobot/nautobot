@@ -2036,7 +2036,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
         cls.create_data = [
             {
                 "device": cls.devices[0].pk,
-                "name": "Interface 8",
+                "name": "Test Interface 8",
                 "type": "1000base-t",
                 "status": interface_status.pk,
                 "role": intf_role.pk,
@@ -2047,7 +2047,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             },
             {
                 "device": cls.devices[0].pk,
-                "name": "Interface 9",
+                "name": "Test Interface 9",
                 "type": "1000base-t",
                 "status": interface_status.pk,
                 "role": intf_role.pk,
@@ -2059,7 +2059,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             },
             {
                 "device": cls.devices[0].pk,
-                "name": "Interface 10",
+                "name": "Test Interface 10",
                 "type": "virtual",
                 "status": interface_status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,

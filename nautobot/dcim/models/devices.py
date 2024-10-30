@@ -1433,7 +1433,7 @@ class Controller(PrimaryModel):
                 )
 
     @property
-    def capabilities_list(self):
+    def capabilities_string(self):
         return array_to_string(self.capabilities)
 
 
@@ -1497,7 +1497,7 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
             )
 
     @property
-    def capabilities_list(self):
+    def capabilities_string(self):
         return array_to_string(self.capabilities)
 
 
