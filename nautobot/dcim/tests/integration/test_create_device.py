@@ -74,7 +74,7 @@ class CreateDeviceTestCase(SeleniumTestCase):
         self.click_list_view_add_button()
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:device_add"))
         self.browser.fill("name", "Test Device Integration Test 1")
-        self.fill_select2_field("role", "")  # pick first role
+        self.fill_select2_field("role", "Test Role 1")
         self.fill_select2_field("device_type", "Test Device Type 1")
         self.fill_select2_field("location", "Test Location 1")
         self.fill_select2_field("status", "")  # pick first status
