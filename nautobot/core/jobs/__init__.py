@@ -19,7 +19,12 @@ from nautobot.core.jobs.cleanup import LogsCleanup
 from nautobot.core.jobs.groups import RefreshDynamicGroupCaches
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
-from nautobot.extras.datasources import ensure_git_repository, git_repository_dry_run, refresh_datasource_content
+from nautobot.extras.datasources import (
+    ensure_git_repository,
+    git_repository_dry_run,
+    refresh_datasource_content,
+    refresh_job_code_from_repository,
+)
 from nautobot.extras.jobs import BooleanVar, ChoiceVar, FileVar, Job, ObjectVar, RunJobTaskFailed, StringVar, TextVar
 from nautobot.extras.models import ExportTemplate, GitRepository
 
@@ -49,13 +54,24 @@ class GitRepositorySync(Job):
         self.logger.info(f'Creating/refreshing local copy of Git repository "{repository.name}"...')
 
         try:
-            ensure_git_repository(repository, logger=self.logger)
-            refresh_datasource_content("extras.gitrepository", repository, user, job_result, delete=False)
-            # Given that the above succeeded, tell all workers (including ourself) to call ensure_git_repository()
-            app.control.broadcast("refresh_git_repository", repository_pk=repository.pk, head=repository.current_head)
-        finally:
-            if job_result.duration:
-                self.logger.info("Repository synchronization completed in %s", job_result.duration)
+            with transaction.atomic():
+                ensure_git_repository(repository, logger=self.logger)
+                refresh_datasource_content("extras.gitrepository", repository, user, job_result, delete=False)
+                # Given that the above succeeded, tell all workers (including ourself) to call ensure_git_repository()
+                app.control.broadcast(
+                    "refresh_git_repository", repository_pk=repository.pk, head=repository.current_head
+                )
+                if job_result.duration:
+                    self.logger.info("Repository synchronization completed in %s", job_result.duration)
+        except Exception:
+            job_result.log("Changes to database records have been reverted.")
+            # Re-check-out previous commit if any
+            repository.refresh_from_db()
+            if repository.current_head:
+                job_result.log(f"Attempting to revert local repository clone to commit {repository.current_head}")
+                ensure_git_repository(repository, logger=self.logger, head=repository.current_head)
+                refresh_job_code_from_repository(repository.slug, ignore_import_errors=True)
+            raise
 
 
 class GitRepositoryDryRun(Job):

@@ -13,6 +13,8 @@ from nautobot.core.forms import (
     add_blank_choice,
     APISelect,
     APISelectMultiple,
+    AutoPositionField,
+    AutoPositionPatternField,
     BootstrapMixin,
     BulkEditNullBooleanSelect,
     ColorSelect,
@@ -270,23 +272,7 @@ class ComponentForm(BootstrapMixin, forms.Form):
 
 
 class ModularComponentForm(ComponentForm):
-    name_pattern = ExpandableNameField(
-        label="Name",
-        help_text="""
-            Alphanumeric ranges are supported for bulk creation. Mixed cases and types within a single range
-            are not supported. Examples:
-            <ul>
-                <li><code>[ge,xe]-0/0/[0-9]</code></li>
-                <li><code>e[0-3][a-d,f]</code></li>
-            </ul>
-
-            The variables <code>{module}</code>, <code>{module.parent}</code>, <code>{module.parent.parent}</code>, etc.
-            may be used in the name field and will be replaced by the <code>position</code> of the module bay that the
-            module occupies (skipping over any bays with a blank <code>position</code>). These variables can be used
-            multiple times in the component name and there is no limit to the depth of parent levels.
-            Any variables that cannot be replaced by a suitable position value will remain unchanged.
-                """,
-    )
+    """Base class for forms for components that can be assigned to either a device or a module."""
 
 
 #
@@ -1065,11 +1051,27 @@ class ComponentTemplateCreateForm(ComponentForm):
     description = forms.CharField(required=False)
 
 
-class ModularComponentTemplateCreateForm(ModularComponentForm):
+class ModularComponentTemplateCreateForm(ComponentTemplateCreateForm):
     """
     Base form for the creation of modular device component templates (subclassed from ModularComponentTemplateModel).
     """
 
+    name_pattern = ExpandableNameField(
+        label="Name",
+        help_text="""
+        Alphanumeric ranges are supported for bulk creation. Mixed cases and types within a single range
+        are not supported. Examples:
+        <ul>
+            <li><code>[ge,xe]-0/0/[0-9]</code></li>
+            <li><code>e[0-3][a-d,f]</code></li>
+        </ul>
+
+        The variables <code>{module}</code>, <code>{module.parent}</code>, <code>{module.parent.parent}</code>, etc.
+        may be used in the name field and will be replaced by the <code>position</code> of the module bay that the
+        module occupies (skipping over any bays with a blank <code>position</code>). These variables can be used
+        multiple times in the component name and there is no limit to the depth of parent levels.
+        Any variables that cannot be replaced by a suitable position value will remain unchanged.""",
+    )
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
         required=False,
@@ -1078,7 +1080,6 @@ class ModularComponentTemplateCreateForm(ModularComponentForm):
         queryset=ModuleType.objects.all(),
         required=False,
     )
-    description = forms.CharField(required=False)
 
 
 class ConsolePortTemplateForm(ModularComponentTemplateForm):
@@ -1571,10 +1572,10 @@ class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
         required=False,
         help_text="Alphanumeric ranges are supported. (Must match the number of names being created.)",
     )
-    position_pattern = ExpandableNameField(
-        label="Position",
+    position_pattern = AutoPositionPatternField(
         required=False,
-        help_text="Alphanumeric ranges are supported. (Must match the number of names being created.)",
+        help_text="Alphanumeric ranges are supported. (Must match the number of names being created.)"
+        " Default to the names of the module bays unless manually supplied by the user.",
     )
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
@@ -2543,12 +2544,8 @@ class DeviceBulkAddComponentForm(ComponentForm, CustomFieldModelBulkEditFormMixi
         nullable_fields = []
 
 
-class ModuleBulkAddComponentForm(ModularComponentForm, CustomFieldModelBulkEditFormMixin):
+class ModuleBulkAddComponentForm(DeviceBulkAddComponentForm):
     pk = forms.ModelMultipleChoiceField(queryset=Module.objects.all(), widget=forms.MultipleHiddenInput())
-    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-
-    class Meta:
-        nullable_fields = []
 
 
 #
@@ -3598,6 +3595,12 @@ class ModuleBayFilterForm(NautobotFilterForm):
 
 
 class ModuleBayForm(NautobotModelForm):
+    position = AutoPositionField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        help_text="The position of the module bay within the parent device/module. "
+        "Defaults to the name of the module bay unless overridden.",
+        required=False,
+    )
     parent_device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
