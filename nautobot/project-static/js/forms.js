@@ -125,43 +125,6 @@ function initializeSlugField(context){
     }
 }
 
-function initializePositionField(context){
-    var position_field = document.getElementById('id_position');
-    if (!position_field) {
-        var position_field = document.getElementById('id_position_pattern');
-    }
-    if (position_field) {
-        var source_arr = position_field.getAttribute('source').split(" ");
-        var length = position_field.getAttribute('maxlength');
-        position_field.setAttribute('_changed', Boolean(position_field.value))
-        position_field.addEventListener('change', function() {
-            position_field.setAttribute('_changed', Boolean(position_field.value))
-        });
-        function repopulate() {
-            let str = "";
-            for (source_str of source_arr) {
-                if (str != "") {
-                    str += " ";
-                }
-                let source_id = 'id_' + source_str;
-                let source = document.getElementById(source_id)
-                str += source.value;
-            }
-            position_field.value = str.slice(0, length ? length : 255);
-        };
-        for (source_str of source_arr) {
-            let source_id = 'id_' + source_str;
-            let source = document.getElementById(source_id);
-            source.addEventListener('keyup', function() {
-                if (position_field && position_field.getAttribute('_changed')=="false") {
-                    repopulate();
-                }
-            });
-        }
-        document.getElementsByClassName('reslugify')[0].addEventListener('click', repopulate);
-    }
-}
-
 function initializeFormActionClick(context){
     this_context = $(context);
     // Set formaction and submit using a link
@@ -923,7 +886,6 @@ function initializeInputs(context) {
     initializeStaticChoiceSelection(this_context)
     initializeCheckboxes(this_context)
     initializeSlugField(this_context)
-    initializePositionField(this_context)
     initializeFormActionClick(this_context)
     initializeBulkEditNullification(this_context)
     initializeColorPicker(this_context)
