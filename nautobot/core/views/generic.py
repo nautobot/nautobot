@@ -1305,7 +1305,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, DeleteAll
                 return self._perform_delete_operation(request, queryset, model)
 
             context = self._bulk_delete_all_context(request, queryset)
-            context |= self.extra_context()
+            context.update(self.extra_context())
             return render(request, self.template_name, context)
 
         pk_list = request.POST.getlist("pk")
