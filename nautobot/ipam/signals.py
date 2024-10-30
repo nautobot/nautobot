@@ -34,9 +34,7 @@ def vrf_prefix_associated(sender, instance, action, reverse, model, pk_set, **kw
     """
 
     if action == "pre_add":
-        prefixes = model.objects.filter(pk__in=pk_set).exclude(
-            namespace=instance.namespace
-        )
+        prefixes = model.objects.filter(pk__in=pk_set).exclude(namespace=instance.namespace)
         if prefixes.exists():
             raise ValidationError({"prefixes": "Prefix must match namespace of VRF"})
 
@@ -73,27 +71,21 @@ def ip_address_to_interface_pre_delete(instance, raw=False, **kwargs):
         if interface.device:
             # Check assignments within the device
             other_assignments_exist = (
-                IPAddressToInterface.objects.filter(
-                    interface__device=host, ip_address=instance.ip_address
-                )
+                IPAddressToInterface.objects.filter(interface__device=host, ip_address=instance.ip_address)
                 .exclude(id=instance.id)
                 .exists()
             )
         elif interface.module:
             # Check assignments within the module
             other_assignments_exist = (
-                IPAddressToInterface.objects.filter(
-                    interface__module=interface.module, ip_address=instance.ip_address
-                )
+                IPAddressToInterface.objects.filter(interface__module=interface.module, ip_address=instance.ip_address)
                 .exclude(id=instance.id)
                 .exists()
             )
     else:
         host = instance.vm_interface.virtual_machine
         other_assignments_exist = (
-            IPAddressToInterface.objects.filter(
-                vm_interface__virtual_machine=host, ip_address=instance.ip_address
-            )
+            IPAddressToInterface.objects.filter(vm_interface__virtual_machine=host, ip_address=instance.ip_address)
             .exclude(id=instance.id)
             .exists()
         )
@@ -120,9 +112,7 @@ def ip_address_to_interface_assignment_created(sender, instance, raw=False, **kw
 
 @receiver(m2m_changed, sender=PrefixLocationAssignment)
 @receiver(m2m_changed, sender=VLANLocationAssignment)
-def assert_locations_content_types(
-    sender, instance, action, reverse, model, pk_set, **kwargs
-):
+def assert_locations_content_types(sender, instance, action, reverse, model, pk_set, **kwargs):
     if action != "pre_add":
         return
     if not reverse:
@@ -133,19 +123,13 @@ def assert_locations_content_types(
         invalid_locations = (
             model.objects.without_tree_fields()
             .select_related("location_type")
-            .filter(
-                Q(pk__in=pk_set), ~Q(location_type__content_types__in=[instance_ct])
-            )
+            .filter(Q(pk__in=pk_set), ~Q(location_type__content_types__in=[instance_ct]))
         )
         if invalid_locations.exists():
-            invalid_location_types = {
-                location.location_type.name for location in invalid_locations
-            }
+            invalid_location_types = {location.location_type.name for location in invalid_locations}
             label = "Prefixes" if isinstance(instance, Prefix) else "VLANs"
             raise ValidationError(
-                {
-                    "locations": f"{label} may not associate to Locations of types {list(invalid_location_types)}."
-                }
+                {"locations": f"{label} may not associate to Locations of types {list(invalid_location_types)}."}
             )
     else:
         # Adding a Prefix or a VLAN to a Location
@@ -156,7 +140,5 @@ def assert_locations_content_types(
         label = "Prefixes" if model is Prefix else "VLANs"
         if model_ct not in instance.location_type.content_types.all():
             raise ValidationError(
-                {
-                    key: f"{instance} is a {instance.location_type} and may not have {label} associated to it."
-                }
+                {key: f"{instance} is a {instance.location_type} and may not have {label} associated to it."}
             )
