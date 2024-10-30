@@ -1,4 +1,0 @@
-Added cacheable `CustomField.objects.keys_for_model(model)` API.
-Added queryset caching in `web_request_context` for more efficient JobHook and Webhook dispatching on bulk requests.
-Added logging to JobResults for CustomField provisioning background tasks.
-Added more efficient database calls for most cases of bulk-provisioning CustomField data on model objects.
