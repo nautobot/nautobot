@@ -36,11 +36,10 @@
                 {% csrf_token %}
                 {% if delete_all %}
                     <input type="hidden" name="_all" value="true"  />
-                {% else %}
-                    {% for field in form.hidden_fields %}
-                        {{ field }}
-                    {% endfor %}
                 {% endif %}
+                {% for field in form.hidden_fields %}
+                    {{ field }}
+                {% endfor %}
 
                 <div class="text-center">
                     <button type="submit" name="_confirm" class="btn btn-danger">Delete these {{ total_objs_to_delete }} {{ obj_type_plural }}</button>
