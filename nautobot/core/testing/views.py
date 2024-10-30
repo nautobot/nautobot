@@ -1325,6 +1325,7 @@ class ViewTestCases:
             self.assertNotIn(f'<input type="hidden" name="pk" value="{second_pk}"', response_body)
             self.assertNotIn(f'<input type="hidden" name="pk" value="{third_pk}"', response_body)
             self.assertIn("<strong>Warning:</strong> The following operation will delete 2 ", response_body)
+            self.assertInHTML('<input type="hidden" name="_all" value="true" />', response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_objects_with_constrained_permission(self):
