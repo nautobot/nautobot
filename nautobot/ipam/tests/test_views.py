@@ -9,9 +9,10 @@ from django.utils.timezone import make_aware
 from netaddr import IPNetwork
 
 from nautobot.circuits.models import Circuit, Provider
-from nautobot.core.templatetags.helpers import queryset_to_pks
+from nautobot.core.templatetags.helpers import hyperlinked_object, queryset_to_pks
 from nautobot.core.testing import ModelViewTestCase, post_data, ViewTestCases
 from nautobot.core.testing.utils import extract_page_body
+from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.models import (
@@ -177,6 +178,24 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             "add_vrfs": [vrfs[0].pk],
             "remove_vrfs": [vrfs[1].pk],
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_objects_with_permission(self):
+        """Test rendering of LinkedCountColumn for related fields."""
+        response = super().test_list_objects_with_permission()
+        response_body = extract_page_body(response.content.decode(response.charset))
+
+        locations_list_url = reverse(get_route_for_model(Location, "list"))
+
+        for prefix in self._get_queryset().all():
+            if str(prefix.pk) in response_body:
+                count = prefix.locations.count()
+                if count > 1:
+                    self.assertBodyContains(
+                        response, f'<a href="{locations_list_url}?prefixes={prefix.pk}" class="badge">{count}</a>'
+                    )
+                elif count == 1:
+                    self.assertBodyContains(response, hyperlinked_object(prefix.locations.first()))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_empty_queryset(self):

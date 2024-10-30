@@ -873,6 +873,8 @@ class ViewTestCases:
                 response_body,
             )
 
+            return response
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_with_constrained_permission(self):
             instance1, instance2 = self._get_queryset().all()[:2]
