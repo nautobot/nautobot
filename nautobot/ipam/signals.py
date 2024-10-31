@@ -65,23 +65,12 @@ def ip_address_to_interface_pre_delete(instance, raw=False, **kwargs):
     # that is the primary_v{version} of the host machine.
 
     if getattr(instance, "interface"):
-        interface = instance.interface
-        host = interface.device or interface.module.device
-
-        if interface.device:
-            # Check assignments within the device
-            other_assignments_exist = (
-                IPAddressToInterface.objects.filter(interface__device=host, ip_address=instance.ip_address)
-                .exclude(id=instance.id)
-                .exists()
-            )
-        elif interface.module:
-            # Check assignments within the module
-            other_assignments_exist = (
-                IPAddressToInterface.objects.filter(interface__module=interface.module, ip_address=instance.ip_address)
-                .exclude(id=instance.id)
-                .exists()
-            )
+        host = instance.interface.parent
+        other_assignments_exist = (
+            IPAddressToInterface.objects.filter(interface__in=host.all_interfaces, ip_address=instance.ip_address)
+            .exclude(id=instance.id)
+            .exists()
+        )
     else:
         host = instance.vm_interface.virtual_machine
         other_assignments_exist = (
