@@ -1,0 +1,1 @@
+Fixes two tests which always passed due to errors in their implementation. Ensured they provide value by checking against the correct results.
