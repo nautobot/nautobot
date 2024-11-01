@@ -60,7 +60,7 @@ class EventNotificationTest(TestCase):
             publish_event(topic="nautobot.test.event", payload={"a": 1})
             self.assertIn("nautobot.test.event", event_broker.events)
             self.assertEqual(len(event_broker.events["nautobot.test.event"]), 1)
-            self.assertEqual(event_broker.events["nautobot.test.event"][0], {"a": 1})
+            self.assertEqual(event_broker.events["nautobot.test.event"][0], json.dumps({"a": 1}))
             self.assertNotIn("nautobot.test.event", event_broker_2.events)
 
             # New events can be published to multiple brokers
@@ -69,10 +69,10 @@ class EventNotificationTest(TestCase):
                 publish_event(topic="nautobot.test.event", payload={"a": 2})
                 self.assertIn("nautobot.test.event", event_broker.events)
                 self.assertEqual(len(event_broker.events["nautobot.test.event"]), 2)
-                self.assertEqual(event_broker.events["nautobot.test.event"][1], {"a": 2})
+                self.assertEqual(event_broker.events["nautobot.test.event"][1], json.dumps({"a": 2}))
                 self.assertIn("nautobot.test.event", event_broker_2.events)
                 self.assertEqual(len(event_broker_2.events["nautobot.test.event"]), 1)
-                self.assertEqual(event_broker_2.events["nautobot.test.event"][0], {"a": 2})
+                self.assertEqual(event_broker_2.events["nautobot.test.event"][0], json.dumps({"a": 2}))
             finally:
                 deregister_event_broker(event_broker_2)
 
@@ -80,7 +80,7 @@ class EventNotificationTest(TestCase):
             publish_event(topic="nautobot.test.another_event", payload={"b": 1})
             self.assertIn("nautobot.test.another_event", event_broker.events)
             self.assertEqual(len(event_broker.events["nautobot.test.another_event"]), 1)
-            self.assertEqual(event_broker.events["nautobot.test.another_event"][0], {"b": 1})
+            self.assertEqual(event_broker.events["nautobot.test.another_event"][0], json.dumps({"b": 1}))
             self.assertNotIn("nautobot.test.another_event", event_broker_2.events)
 
         finally:

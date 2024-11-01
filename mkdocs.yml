@@ -321,9 +321,6 @@ plugins:
         "models/wireless/wirelessnetwork.md": "user-guide/core-data-model/wireless/wirelessnetwork.md"
         "models/wireless/accesspointgroupradioprofileassignment.md": "user-guide/core-data-model/wireless/accesspointgroup.md"
         "models/wireless/accesspointgroupwirelessnetworkassignment.md": "user-guide/core-data-model/wireless/accesspointgroup.md"
-        "user-guide/administration/installation/docker.md": "user-guide/administration/installation-extras/docker.md"
-        "user-guide/administration/installation/health-checks.md": "user-guide/administration/installation-extras/health-checks.md"
-        "user-guide/administration/installation/selinux-troubleshooting.md": "user-guide/administration/installation-extras/selinux-troubleshooting.md"
         "user-guide/administration/configuration/optional-settings.md": "user-guide/administration/configuration/settings.md"
         "user-guide/administration/configuration/required-settings.md": "user-guide/administration/configuration/settings.md"
         "user-guide/administration/guides/caching.md": "user-guide/administration/configuration/redis.md"
@@ -598,6 +595,7 @@ nav:
               - Populating Extensibility Features: "development/apps/api/platform-features/populating-extensibility-features.md"
               - Prometheus Metrics: "development/apps/api/prometheus.md"
               - Secrets Providers: "development/apps/api/platform-features/secrets-providers.md"
+              - Table Extensions: "development/apps/api/platform-features/table-extensions.md"
               - Uniquely Identifying a Nautobot Object: "development/apps/api/platform-features/uniquely-identify-objects.md"
           - UI Extensions:
               - "development/apps/api/ui-extensions/index.md"

@@ -1,0 +1,1 @@
+Fixed `body_content_text.html` to properly render different formats like json, yaml or markdown.

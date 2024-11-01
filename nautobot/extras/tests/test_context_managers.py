@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 from nautobot.core.celery import app
-from nautobot.core.testing import TransactionTestCase
+from nautobot.core.testing import get_job_class_and_model, TransactionTestCase
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.models import (
     DeviceType,
@@ -22,7 +22,7 @@ from nautobot.extras.context_managers import (
     deferred_change_logging_for_bulk_operation,
     web_request_context,
 )
-from nautobot.extras.models import Status, Webhook
+from nautobot.extras.models import JobHook, Status, Webhook
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging
 
 # Use the proper swappable User model
@@ -74,8 +74,8 @@ class WebRequestContextTestCase(TestCase):
         self.assertEqual(oc_list[0].changed_object, location)
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
 
-    @mock.patch("nautobot.extras.jobs.enqueue_job_hooks")
-    @mock.patch("nautobot.extras.context_managers.enqueue_webhooks")
+    @mock.patch("nautobot.extras.jobs.enqueue_job_hooks", return_value=(True, None))
+    @mock.patch("nautobot.extras.context_managers.enqueue_webhooks", return_value=None)
     def test_create_then_delete(self, mock_enqueue_webhooks, mock_enqueue_job_hooks):
         """Test that a create followed by a delete is logged as two changes"""
         location_type = LocationType.objects.get(name="Campus")
@@ -88,13 +88,21 @@ class WebRequestContextTestCase(TestCase):
 
         location = Location.objects.filter(pk=location_pk)
         self.assertFalse(location.exists())
-        oc_list = get_changes_for_model(Location).filter(changed_object_id=location_pk)
+        oc_list = get_changes_for_model(Location).filter(changed_object_id=location_pk).order_by("time")
         self.assertEqual(len(oc_list), 2)
-        self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_DELETE)
-        self.assertEqual(oc_list[1].action, ObjectChangeActionChoices.ACTION_CREATE)
-        mock_enqueue_job_hooks.assert_has_calls([mock.call(oc_list[0]), mock.call(oc_list[1])])
+        self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
+        self.assertEqual(oc_list[1].action, ObjectChangeActionChoices.ACTION_DELETE)
+        mock_enqueue_job_hooks.assert_has_calls(
+            [
+                mock.call(oc_list[0], may_reload_jobs=True, jobhook_queryset=None),
+                mock.call(oc_list[1], may_reload_jobs=False, jobhook_queryset=None),
+            ],
+        )
         mock_enqueue_webhooks.assert_has_calls(
-            [mock.call(oc_list[0], oc_list[0].get_snapshots()), mock.call(oc_list[1], oc_list[1].get_snapshots())]
+            [
+                mock.call(oc_list[0], snapshots=oc_list[0].get_snapshots(), webhook_queryset=None),
+                mock.call(oc_list[1], snapshots=oc_list[1].get_snapshots(), webhook_queryset=None),
+            ]
         )
 
     def test_update_then_delete(self):
@@ -309,6 +317,13 @@ class BulkEditDeleteChangeLogging(TestCase):
             for i in range(1, 4)
         ]
         Location.objects.bulk_create(locations)
+        # Create a JobHook that applies to Locations
+        _, job_model = get_job_class_and_model("job_hook_receiver", "TestJobHookReceiverLog")
+        mock_import_jobs.assert_called_once()
+        mock_import_jobs.reset_mock()
+        job_hook = JobHook.objects.create(name="JobHookTest", type_update=True, job=job_model)
+        job_hook.content_types.set([ContentType.objects.get_for_model(Location)])
+
         pk_list = []
         with web_request_context(self.user):
             with deferred_change_logging_for_bulk_operation():
