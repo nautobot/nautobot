@@ -1495,7 +1495,7 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
             )
 
     def get_capabilities_display(self):
-        return ", ".join(f"{v}" for v in self.capabilities)
+        return ", ".join(self.capabilities)
 
 
 #
