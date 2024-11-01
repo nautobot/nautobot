@@ -7,55 +7,11 @@ from nautobot.core.filters import (
     RelatedMembershipBooleanFilter,
     SearchFilter,
 )
-from nautobot.dcim.models import Controller, Device
+from nautobot.dcim.models import Controller, ControllerManagedDeviceGroup, Device
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import SecretsGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.wireless import choices, models
-
-
-class AccessPointGroupFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
-    q = SearchFilter(
-        filter_predicates={
-            "name": "icontains",
-            "description": "icontains",
-            "controller__name": "icontains",
-        }
-    )
-    controller = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="controller",
-        queryset=Controller.objects.all(),
-        to_field_name="name",
-        label="Controller (name or ID)",
-    )
-    devices = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Device.objects.all(),
-        label="Devices (name or ID)",
-    )
-    has_devices = RelatedMembershipBooleanFilter(
-        field_name="devices",
-        label="Has devices",
-    )
-    radio_profiles = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=models.RadioProfile.objects.all(),
-        label="Radio Profiles (name or ID)",
-    )
-    has_radio_profiles = RelatedMembershipBooleanFilter(
-        field_name="radio_profiles",
-        label="Has radio profiles",
-    )
-    wireless_networks = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=models.WirelessNetwork.objects.all(),
-        label="Wireless Networks (name or ID)",
-    )
-    has_wireless_networks = RelatedMembershipBooleanFilter(
-        field_name="wireless_networks",
-        label="Has wireless networks",
-    )
-
-    class Meta:
-        model = models.AccessPointGroup
-        fields = "__all__"
 
 
 class SupportedDataRateFilterSet(BaseFilterSet):
@@ -108,14 +64,14 @@ class RadioProfileFilterSet(NautobotFilterSet):
         choices=choices.RadioProfileFrequencyChoices,
         null_value=None,
     )
-    access_point_groups = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=models.AccessPointGroup.objects.all(),
+    controller_managed_device_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
-        label="Access Point Groups (name or ID)",
+        label="Controller Managed Device Groups (name or ID)",
     )
-    has_access_point_groups = RelatedMembershipBooleanFilter(
-        field_name="access_point_groups",
-        label="Has access point groups",
+    has_controller_managed_device_groups = RelatedMembershipBooleanFilter(
+        field_name="controller_managed_device_groups",
+        label="Has controller managed device groups",
     )
 
     class Meta:
@@ -146,14 +102,14 @@ class WirelessNetworkFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         to_field_name="name",
         label="Secrets group (name or ID)",
     )
-    access_point_groups = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=models.AccessPointGroup.objects.all(),
+    controller_managed_device_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
-        label="Access Point Groups (name or ID)",
+        label="Controller Managed Device Groups (name or ID)",
     )
-    has_access_point_groups = RelatedMembershipBooleanFilter(
-        field_name="access_point_groups",
-        label="Has access point groups",
+    has_controller_managed_device_groups = RelatedMembershipBooleanFilter(
+        field_name="controller_managed_device_groups",
+        label="Has controller managed device groups",
     )
     hidden = django_filters.BooleanFilter()
 
@@ -162,18 +118,18 @@ class WirelessNetworkFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         fields = "__all__"
 
 
-class AccessPointGroupWirelessNetworkAssignmentFilterSet(BaseFilterSet):
+class ControllerManagedDeviceGroupWirelessNetworkAssignmentFilterSet(BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
-            "access_point_group__name": "icontains",
+            "controller_managed_device_group__name": "icontains",
             "wireless_network__name": "icontains",
         }
     )
-    access_point_group = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="access_point_group",
-        queryset=models.AccessPointGroup.objects.all(),
+    controller_managed_device_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="controller_managed_device_group",
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
-        label="Access Point Group (name or ID)",
+        label="Controller Managed Device Group (name or ID)",
     )
     wireless_network = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="wireless_network",
@@ -183,22 +139,22 @@ class AccessPointGroupWirelessNetworkAssignmentFilterSet(BaseFilterSet):
     )
 
     class Meta:
-        model = models.AccessPointGroupWirelessNetworkAssignment
+        model = models.ControllerManagedDeviceGroupWirelessNetworkAssignment
         fields = "__all__"
 
 
-class AccessPointGroupRadioProfileAssignmentFilterSet(BaseFilterSet):
+class ControllerManagedDeviceGroupRadioProfileAssignmentFilterSet(BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
-            "access_point_group__name": "icontains",
+            "controller_managed_device_group__name": "icontains",
             "radio_profile__name": "icontains",
         }
     )
-    access_point_group = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="access_point_group",
-        queryset=models.AccessPointGroup.objects.all(),
+    controller_managed_device_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="controller_managed_device_group",
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
-        label="Access Point Group (name or ID)",
+        label="Controller Managed Device Group (name or ID)",
     )
     radio_profile = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="radio_profile",
@@ -208,5 +164,5 @@ class AccessPointGroupRadioProfileAssignmentFilterSet(BaseFilterSet):
     )
 
     class Meta:
-        model = models.AccessPointGroupRadioProfileAssignment
+        model = models.ControllerManagedDeviceGroupRadioProfileAssignment
         fields = "__all__"

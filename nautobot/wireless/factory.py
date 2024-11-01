@@ -9,8 +9,7 @@ from nautobot.core.factory import (
     random_instance,
     UniqueFaker,
 )
-from nautobot.dcim.factory import DeviceFactory
-from nautobot.dcim.models import Controller, Device
+from nautobot.dcim.factory import DeviceFactory, ControllerManagedDeviceGroupFactory
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.models import Tenant
 from nautobot.wireless import models
@@ -22,39 +21,6 @@ from nautobot.wireless.choices import (
     WirelessNetworkAuthenticationChoices,
     WirelessNetworkModeChoices,
 )
-
-
-class AccessPointGroupFactory(PrimaryModelFactory):
-    class Meta:
-        model = models.AccessPointGroup
-        exclude = ("has_description", "has_tenant", "has_controller")
-
-    name = UniqueFaker("company")
-    has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
-    has_controller = NautobotBoolIterator()
-    controller = factory.Maybe(
-        "has_controller",
-        random_instance(lambda: Controller.objects.filter(controller_device__isnull=True), allow_null=True),
-        None,
-    )
-    has_tenant = NautobotBoolIterator()
-    tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
-
-    @factory.post_generation
-    def devices(self, create, extracted, **kwargs):
-        if create:
-            if extracted:
-                for device in extracted:
-                    device.access_point_group = self
-                    device.save()
-            else:
-                devices = get_random_instances(
-                    Device.objects.filter(access_point_group__isnull=True), minimum=0, maximum=5
-                )
-                for device in devices:
-                    device.access_point_group = self
-                    device.save()
 
 
 class SupportedDataRateFactory(PrimaryModelFactory):
@@ -115,53 +81,53 @@ class WirelessNetworkFactory(PrimaryModelFactory):
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
 
-class AccessPointGroupWirelessNetworkAssignmentFactory(BaseModelFactory):
+class ControllerManagedDeviceGroupWirelessNetworkAssignmentFactory(BaseModelFactory):
     class Meta:
-        model = models.AccessPointGroupWirelessNetworkAssignment
+        model = models.ControllerManagedDeviceGroupWirelessNetworkAssignment
 
-    access_point_group = factory.SubFactory(AccessPointGroupFactory)
+    controller_managed_device_group = factory.SubFactory(ControllerManagedDeviceGroupFactory)
     wireless_network = factory.SubFactory(WirelessNetworkFactory)
     vlan = random_instance(VLAN, allow_null=True)
 
 
-class AccessPointGroupRadioProfileAssignmentFactory(BaseModelFactory):
+class ControllerManagedDeviceGroupRadioProfileAssignmentFactory(BaseModelFactory):
     class Meta:
-        model = models.AccessPointGroupRadioProfileAssignment
+        model = models.ControllerManagedDeviceGroupRadioProfileAssignment
 
-    access_point_group = factory.SubFactory(AccessPointGroupFactory)
+    controller_managed_device_group = factory.SubFactory(ControllerManagedDeviceGroupFactory)
     radio_profile = factory.SubFactory(RadioProfileFactory)
 
 
-class AccessPointGroupWithMembersFactory(AccessPointGroupFactory):
+class ControllerManagedDeviceGroupWithMembersFactory(ControllerManagedDeviceGroupFactory):
     wireless1 = factory.RelatedFactory(
-        AccessPointGroupWirelessNetworkAssignmentFactory, factory_related_name="access_point_group"
+        ControllerManagedDeviceGroupWirelessNetworkAssignmentFactory, factory_related_name="controller_managed_device_group"
     )
     wireless2 = factory.RelatedFactory(
-        AccessPointGroupWirelessNetworkAssignmentFactory, factory_related_name="access_point_group"
+        ControllerManagedDeviceGroupWirelessNetworkAssignmentFactory, factory_related_name="controller_managed_device_group"
     )
     radio1 = factory.RelatedFactory(
-        AccessPointGroupRadioProfileAssignmentFactory, factory_related_name="access_point_group"
+        ControllerManagedDeviceGroupRadioProfileAssignmentFactory, factory_related_name="controller_managed_device_group"
     )
     radio2 = factory.RelatedFactory(
-        AccessPointGroupRadioProfileAssignmentFactory, factory_related_name="access_point_group"
+        ControllerManagedDeviceGroupRadioProfileAssignmentFactory, factory_related_name="controller_managed_device_group"
     )
-    device1 = factory.RelatedFactory(DeviceFactory, factory_related_name="access_point_group")
-    device2 = factory.RelatedFactory(DeviceFactory, factory_related_name="access_point_group")
+    device1 = factory.RelatedFactory(DeviceFactory, factory_related_name="controller_managed_device_group")
+    device2 = factory.RelatedFactory(DeviceFactory, factory_related_name="controller_managed_device_group")
 
 
 class RadioProfilesWithMembersFactory(RadioProfileFactory):
-    access_point_group1 = factory.RelatedFactory(
-        AccessPointGroupRadioProfileAssignmentFactory, factory_related_name="radio_profile"
+    controller_managed_device_group1 = factory.RelatedFactory(
+        ControllerManagedDeviceGroupRadioProfileAssignmentFactory, factory_related_name="radio_profile"
     )
-    access_point_group2 = factory.RelatedFactory(
-        AccessPointGroupRadioProfileAssignmentFactory, factory_related_name="radio_profile"
+    controller_managed_device_group2 = factory.RelatedFactory(
+        ControllerManagedDeviceGroupRadioProfileAssignmentFactory, factory_related_name="radio_profile"
     )
 
 
 class WirelessNetworksWithMembersFactory(WirelessNetworkFactory):
-    access_point_group1 = factory.RelatedFactory(
-        AccessPointGroupWirelessNetworkAssignmentFactory, factory_related_name="wireless_network"
+    controller_managed_device_group1 = factory.RelatedFactory(
+        ControllerManagedDeviceGroupWirelessNetworkAssignmentFactory, factory_related_name="wireless_network"
     )
-    access_point_group2 = factory.RelatedFactory(
-        AccessPointGroupWirelessNetworkAssignmentFactory, factory_related_name="wireless_network"
+    controller_managed_device_group2 = factory.RelatedFactory(
+        ControllerManagedDeviceGroupWirelessNetworkAssignmentFactory, factory_related_name="wireless_network"
     )

@@ -87,7 +87,7 @@ from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.wireless.models import AccessPointGroupWirelessNetworkAssignment
+from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -3197,7 +3197,7 @@ class RelationshipTestCase(
         IPAddress.objects.all().delete()
         Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
-        AccessPointGroupWirelessNetworkAssignment.objects.all().delete()
+        ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.all().delete()
         VLAN.objects.all().delete()
 
         # Parameterized tests (for creating and updating single objects):

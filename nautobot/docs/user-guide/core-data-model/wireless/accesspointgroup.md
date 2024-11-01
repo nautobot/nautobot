@@ -11,7 +11,3 @@ Fields on the Access Point Group include:
 - [Wireless Networks](wirelessnetwork.md)
 - [Radio Profiles](radioprofile.md)
 - [Controller](../dcim/controller.md)
-
-## Controller Managed Access Point Groups
-
-Controllers can manage many Access Point Groups. The wireless devices that are managed by a Controller will show up on the Wireless Devices tab, but not on the Controller Managed Device Group. This is done to allow the flexibility of Access Point Groups to be Standalone or Centrally managed. A Device can still be associated to both a Controller Managed Device Group and an Access Point Group.

@@ -62,7 +62,6 @@ from .template_code import (
 )
 
 __all__ = (
-    "AccessPointGroupDeviceTable",
     "ConsolePortTable",
     "ConsoleServerPortTable",
     "ControllerTable",
@@ -221,42 +220,42 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
         )
 
 
-class AccessPointGroupDeviceTable(DeviceTable):
-    access_point_group = tables.Column(linkify=True)
-    wireless_network_count = LinkedCountColumn(
-        viewname="wireless:wirelessnetwork_list",
-        url_params={"access_point_groups": "access_point_group_id"},
-        verbose_name="Wireless Networks",
-        reverse_lookup="access_point_groups__devices",
-    )
+# class AccessPointGroupDeviceTable(DeviceTable):
+#     access_point_group = tables.Column(linkify=True)
+#     wireless_network_count = LinkedCountColumn(
+#         viewname="wireless:wirelessnetwork_list",
+#         url_params={"access_point_groups": "access_point_group_id"},
+#         verbose_name="Wireless Networks",
+#         reverse_lookup="access_point_groups__devices",
+#     )
 
-    class Meta(DeviceTable.Meta):
-        fields = (
-            "pk",
-            "name",
-            "access_point_group",
-            "status",
-            "tenant",
-            "location",
-            "rack",
-            "role",
-            "device_type",
-            "primary_ip",
-            "wireless_network_count",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "access_point_group",
-            "status",
-            "tenant",
-            "location",
-            "rack",
-            "role",
-            "device_type",
-            "primary_ip",
-            "wireless_network_count",
-        )
+#     class Meta(DeviceTable.Meta):
+#         fields = (
+#             "pk",
+#             "name",
+#             "access_point_group",
+#             "status",
+#             "tenant",
+#             "location",
+#             "rack",
+#             "role",
+#             "device_type",
+#             "primary_ip",
+#             "wireless_network_count",
+#         )
+#         default_columns = (
+#             "pk",
+#             "name",
+#             "access_point_group",
+#             "status",
+#             "tenant",
+#             "location",
+#             "rack",
+#             "role",
+#             "device_type",
+#             "primary_ip",
+#             "wireless_network_count",
+#         )
 
 
 class DeviceImportTable(BaseTable):
@@ -1437,6 +1436,16 @@ class ControllerManagedDeviceGroupTable(BaseTable):
         url_params={"controller_managed_device_group": "pk"},
         verbose_name="Devices",
     )
+    radio_profiles_count = LinkedCountColumn(
+        viewname="wireless:radioprofile_list",
+        url_params={"controller_managed_device_groups": "pk"},
+        verbose_name="Radio Profiles",
+    )
+    wireless_networks_count = LinkedCountColumn(
+        viewname="wireless:wirelessnetwork_list",
+        url_params={"controller_managed_device_groups": "pk"},
+        verbose_name="Wireless Networks",
+    )
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -1446,6 +1455,8 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "pk",
             "name",
             "device_count",
+            "radio_profiles_count",
+            "wireless_networks_count",
             "controller",
             "weight",
             "tags",
@@ -1455,6 +1466,8 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "pk",
             "name",
             "device_count",
+            "radio_profiles_count",
+            "wireless_networks_count",
             "controller",
             "weight",
             "tags",

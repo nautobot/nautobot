@@ -15,22 +15,6 @@ menu_items = (
                 weight=100,
                 items=(
                     NavMenuItem(
-                        link="wireless:accesspointgroup_list",
-                        name="Access Point Groups",
-                        weight=100,
-                        permissions=[
-                            "wireless.view_accesspointgroup",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="wireless:accesspointgroup_add",
-                                permissions=[
-                                    "wireless.add_accesspointgroup",
-                                ],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
                         link="wireless:radioprofile_list",
                         name="Radio Profiles",
                         weight=200,

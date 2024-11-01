@@ -1,5 +1,5 @@
 from nautobot.core.apps import HomePageItem, HomePagePanel
-from nautobot.wireless.models import AccessPointGroup, RadioProfile, SupportedDataRate, WirelessNetwork
+from nautobot.wireless.models import RadioProfile, SupportedDataRate, WirelessNetwork
 
 layout = (
     HomePagePanel(
@@ -7,11 +7,11 @@ layout = (
         weight=500,
         items=(
             HomePageItem(
-                name="Access Point Groups",
-                link="wireless:accesspointgroup_list",
-                model=AccessPointGroup,
-                description="Groups of access points managed by a controller",
-                permissions=["wireless.view_accesspointgroup"],
+                name="Wireless Networks",
+                link="wireless:wirelessnetwork_list",
+                model=WirelessNetwork,
+                description="Wireless networks for access points",
+                permissions=["wireless.view_wirelessnetwork"],
                 weight=100,
             ),
             HomePageItem(
@@ -29,14 +29,6 @@ layout = (
                 description="Supported data rates for wireless networks",
                 permissions=["wireless.view_supporteddatarate"],
                 weight=300,
-            ),
-            HomePageItem(
-                name="Wireless Networks",
-                link="wireless:wirelessnetwork_list",
-                model=WirelessNetwork,
-                description="Wireless networks for access points",
-                permissions=["wireless.view_wirelessnetwork"],
-                weight=400,
             ),
         ),
     ),

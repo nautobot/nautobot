@@ -13,7 +13,6 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.models import Role, Status
-from nautobot.wireless.models import AccessPointGroup
 
 
 class VirtualChassisTest(TestCase):
@@ -106,7 +105,6 @@ class DeviceRedundancyGroupTest(TestCase):
         self.device.validated_save()
 
         # Protected FK constraint prevents deletion of DeviceRedundancyGroup
-        AccessPointGroup.objects.all().delete()
         Controller.objects.all().delete()
         deviceredundancygroup.delete()
 

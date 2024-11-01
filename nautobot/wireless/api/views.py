@@ -4,12 +4,6 @@ from nautobot.wireless import filters, models
 from . import serializers
 
 
-class AccessPointGroupViewSet(NautobotModelViewSet):
-    queryset = models.AccessPointGroup.objects.all()
-    serializer_class = serializers.AccessPointGroupSerializer
-    filterset_class = filters.AccessPointGroupFilterSet
-
-
 class SupportedDataRateViewSet(NautobotModelViewSet):
     queryset = models.SupportedDataRate.objects.all()
     serializer_class = serializers.SupportedDataRateSerializer
@@ -28,13 +22,13 @@ class WirelessNetworkViewSet(NautobotModelViewSet):
     filterset_class = filters.WirelessNetworkFilterSet
 
 
-class AccessPointGroupWirelessNetworkAssignmentViewSet(NautobotModelViewSet):
-    queryset = models.AccessPointGroupWirelessNetworkAssignment.objects.all()
-    serializer_class = serializers.AccessPointGroupWirelessNetworkAssignmentSerializer
-    filterset_class = filters.AccessPointGroupWirelessNetworkAssignmentFilterSet
+class ControllerManagedDeviceGroupWirelessNetworkAssignmentViewSet(NautobotModelViewSet):
+    queryset = models.ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.all()
+    serializer_class = serializers.ControllerManagedDeviceGroupWirelessNetworkAssignmentSerializer
+    filterset_class = filters.ControllerManagedDeviceGroupWirelessNetworkAssignmentFilterSet
 
 
-class AccessPointGroupRadioProfileAssignmentViewSet(NautobotModelViewSet):
-    queryset = models.AccessPointGroupRadioProfileAssignment.objects.all()
-    serializer_class = serializers.AccessPointGroupRadioProfileAssignmentSerializer
-    filterset_class = filters.AccessPointGroupRadioProfileAssignmentFilterSet
+class ControllerManagedDeviceGroupRadioProfileAssignmentViewSet(NautobotModelViewSet):
+    queryset = models.ControllerManagedDeviceGroupRadioProfileAssignment.objects.all()
+    serializer_class = serializers.ControllerManagedDeviceGroupRadioProfileAssignmentSerializer
+    filterset_class = filters.ControllerManagedDeviceGroupRadioProfileAssignmentFilterSet

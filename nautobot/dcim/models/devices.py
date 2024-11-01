@@ -614,14 +614,6 @@ class Device(PrimaryModel, ConfigContextModel):
         null=True,
     )
 
-    access_point_group = models.ForeignKey(
-        to="wireless.AccessPointGroup",
-        on_delete=models.SET_NULL,
-        related_name="devices",
-        blank=True,
-        null=True,
-    )
-
     objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
 
     clone_fields = [
@@ -1444,6 +1436,7 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
         unique=True,
         help_text="Name of the controller device group",
     )
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     weight = models.PositiveIntegerField(
         default=1000,
         help_text="Weight of the controller device group, used to sort the groups within its parent group",
@@ -1455,6 +1448,20 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
         blank=False,
         null=False,
         help_text="Controller that manages the devices in this group",
+    )
+    radio_profiles = models.ManyToManyField(
+        to="wireless.RadioProfile",
+        related_name="controller_managed_device_groups",
+        through="wireless.ControllerManagedDeviceGroupRadioProfileAssignment",
+        through_fields=("controller_managed_device_group", "radio_profile"),
+        blank=True,
+    )
+    wireless_networks = models.ManyToManyField(
+        to="wireless.WirelessNetwork",
+        related_name="controller_managed_device_groups",
+        through="wireless.ControllerManagedDeviceGroupWirelessNetworkAssignment",
+        through_fields=("controller_managed_device_group", "wireless_network"),
+        blank=True,
     )
 
     class Meta:

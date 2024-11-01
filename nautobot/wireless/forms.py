@@ -12,15 +12,14 @@ from nautobot.core.forms import (
     TagFilterField,
 )
 from nautobot.core.forms.fields import JSONArrayFormField
-from nautobot.dcim.models import Controller, Device, Location
+from nautobot.dcim.models import Controller, ControllerManagedDeviceGroup, Device, Location
 from nautobot.extras.forms import NautobotBulkEditForm, NautobotFilterForm, NautobotModelForm, TagsBulkEditFormMixin
 from nautobot.extras.models import SecretsGroup
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.tenancy.forms import TenancyFilterForm
 from nautobot.tenancy.models import Tenant
 from nautobot.wireless.models import (
-    AccessPointGroup,
-    AccessPointGroupWirelessNetworkAssignment,
+    ControllerManagedDeviceGroupWirelessNetworkAssignment,
     RadioProfile,
     SupportedDataRate,
     WirelessNetwork,
@@ -36,7 +35,7 @@ from .choices import (
 )
 
 
-class AccessPointGroupWirelessNetworkAssignmentForm(BootstrapMixin, forms.ModelForm):
+class ControllerManagedDeviceGroupWirelessNetworkAssignmentForm(BootstrapMixin, forms.ModelForm):
     locations = DynamicModelMultipleChoiceField(
         queryset=Location.objects.all(),
         required=False,
@@ -59,8 +58,8 @@ class AccessPointGroupWirelessNetworkAssignmentForm(BootstrapMixin, forms.ModelF
             "vlan_group": "$vlan_group",
         },
     )
-    access_point_group = DynamicModelChoiceField(
-        queryset=AccessPointGroup.objects.all(),
+    controller_managed_device_group = DynamicModelChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         required=False,
     )
     wireless_network = DynamicModelChoiceField(
@@ -69,17 +68,17 @@ class AccessPointGroupWirelessNetworkAssignmentForm(BootstrapMixin, forms.ModelF
     )
 
     class Meta:
-        model = AccessPointGroupWirelessNetworkAssignment
+        model = ControllerManagedDeviceGroupWirelessNetworkAssignment
         fields = [
             "wireless_network",
-            "access_point_group",
+            "controller_managed_device_group",
             "locations",
             "vlan_group",
             "vlan",
         ]
         field_order = [
             "wireless_network",
-            "access_point_group",
+            "controller_managed_device_group",
             "locations",
             "vlan_group",
             "vlan",
@@ -91,112 +90,60 @@ class AccessPointGroupWirelessNetworkAssignmentForm(BootstrapMixin, forms.ModelF
             raise forms.ValidationError("Wireless Network is required.")
         return wireless_network
 
-    def clean_access_point_group(self):
-        access_point_group = self.cleaned_data.get("access_point_group")
-        if not access_point_group:
-            raise forms.ValidationError("Access Point Group is required.")
-        return access_point_group
+    def clean_controller_managed_device_group(self):
+        controller_managed_device_group = self.cleaned_data.get("controller_managed_device_group")
+        if not controller_managed_device_group:
+            raise forms.ValidationError("Controller Managed Device Group is required.")
+        return controller_managed_device_group
 
 
-AccessPointGroupWirelessNetworkFormSet = forms.inlineformset_factory(
-    parent_model=AccessPointGroup,
-    model=AccessPointGroupWirelessNetworkAssignment,
-    form=AccessPointGroupWirelessNetworkAssignmentForm,
-    exclude=["access_point_group"],
+ControllerManagedDeviceGroupWirelessNetworkFormSet = forms.inlineformset_factory(
+    parent_model=ControllerManagedDeviceGroup,
+    model=ControllerManagedDeviceGroupWirelessNetworkAssignment,
+    form=ControllerManagedDeviceGroupWirelessNetworkAssignmentForm,
+    exclude=["controller_managed_device_group"],
     extra=5,
 )
 
 
-WirelessNetworkAccessPointGroupFormSet = forms.inlineformset_factory(
+WirelessNetworkControllerManagedDeviceGroupFormSet = forms.inlineformset_factory(
     parent_model=WirelessNetwork,
-    model=AccessPointGroupWirelessNetworkAssignment,
-    form=AccessPointGroupWirelessNetworkAssignmentForm,
+    model=ControllerManagedDeviceGroupWirelessNetworkAssignment,
+    form=ControllerManagedDeviceGroupWirelessNetworkAssignmentForm,
     exclude=["wireless_network"],
     extra=5,
 )
 
 
-class AccessPointGroupForm(NautobotModelForm):
-    controller = DynamicModelChoiceField(
-        queryset=Controller.objects.all(),
-        help_text="The controller managing this access point group.",
-        required=False,
-    )
-    devices = DynamicModelMultipleChoiceField(
-        queryset=Device.objects.all(),
-        required=False,
-        label="Devices",
-    )
-    radio_profiles = DynamicModelMultipleChoiceField(
-        queryset=RadioProfile.objects.all(),
-        required=False,
-        label="Radio Profiles",
-    )
-    tenant = DynamicModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        label="Tenant",
-    )
+# class BulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+#     controller = DynamicModelChoiceField(
+#         queryset=Controller.objects.all(),
+#         required=False,
+#         label="Controller",
+#     )
+#     tenant = DynamicModelChoiceField(
+#         queryset=Tenant.objects.all(),
+#         required=False,
+#     )
+#     name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+#     add_radio_profiles = DynamicModelMultipleChoiceField(
+#         queryset=RadioProfile.objects.all(),
+#         required=False,
+#         label="Add Radio Profiles",
+#     )
+#     remove_radio_profiles = DynamicModelMultipleChoiceField(
+#         queryset=RadioProfile.objects.all(),
+#         required=False,
+#         label="Remove Radio Profiles",
+#     )
+#     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
-    class Meta:
-        model = AccessPointGroup
-        fields = [
-            "name",
-            "description",
-            "controller",
-            "tenant",
-            "devices",
-            "radio_profiles",
-            "tags",
-        ]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["devices"].initial = self.instance.devices.all()
-
-
-class AccessPointGroupFilterForm(NautobotFilterForm, TenancyFilterForm):
-    model = AccessPointGroup
-    q = forms.CharField(required=False, label="Search")
-    controller_id = DynamicModelMultipleChoiceField(
-        queryset=Controller.objects.all(),
-        to_field_name="id",
-        required=False,
-        label="Controller",
-    )
-    tags = TagFilterField(model)
-
-
-class AccessPointGroupBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
-    pk = forms.ModelMultipleChoiceField(queryset=AccessPointGroup.objects.all(), widget=forms.MultipleHiddenInput)
-    controller = DynamicModelChoiceField(
-        queryset=Controller.objects.all(),
-        required=False,
-        label="Controller",
-    )
-    tenant = DynamicModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-    )
-    name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-    add_radio_profiles = DynamicModelMultipleChoiceField(
-        queryset=RadioProfile.objects.all(),
-        required=False,
-        label="Add Radio Profiles",
-    )
-    remove_radio_profiles = DynamicModelMultipleChoiceField(
-        queryset=RadioProfile.objects.all(),
-        required=False,
-        label="Remove Radio Profiles",
-    )
-    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-
-    class Meta:
-        nullable_fields = [
-            "controller",
-            "tenant",
-            "description",
-        ]
+#     class Meta:
+#         nullable_fields = [
+#             "controller",
+#             "tenant",
+#             "description",
+#         ]
 
 
 class RadioProfileForm(NautobotModelForm):
@@ -205,10 +152,10 @@ class RadioProfileForm(NautobotModelForm):
         help_text="List of allowed channels for this radio profile.",
         required=False,
     )
-    access_point_groups = DynamicModelMultipleChoiceField(
-        queryset=AccessPointGroup.objects.all(),
+    controller_managed_device_group = DynamicModelMultipleChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         required=False,
-        label="Access Point Groups",
+        label="Controller Managed Device Groups",
     )
     supported_data_rates = DynamicModelMultipleChoiceField(
         queryset=SupportedDataRate.objects.all(),
@@ -245,15 +192,15 @@ class RadioProfileBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         required=False,
         label="Remove Supported Data Rates",
     )
-    add_access_point_groups = DynamicModelMultipleChoiceField(
-        queryset=AccessPointGroup.objects.all(),
+    add_controller_managed_device_groups = DynamicModelMultipleChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         required=False,
-        label="Add Access Point Groups",
+        label="Add Controller Managed Device Groups",
     )
-    remove_access_point_groups = DynamicModelMultipleChoiceField(
-        queryset=AccessPointGroup.objects.all(),
+    remove_controller_managed_device_groups = DynamicModelMultipleChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         required=False,
-        label="Remove Access Point Groups",
+        label="Remove Controller Managed Device Groups",
     )
     allowed_channel_list = NumericArrayField(
         base_field=forms.IntegerField(),
@@ -334,15 +281,15 @@ class WirelessNetworkFilterForm(NautobotFilterForm):
 class WirelessNetworkBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=WirelessNetwork.objects.all(), widget=forms.MultipleHiddenInput)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-    add_access_point_groups = DynamicModelMultipleChoiceField(
-        queryset=AccessPointGroup.objects.all(),
+    add_controller_managed_device_groups = DynamicModelMultipleChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         required=False,
-        label="Add Access Point Groups",
+        label="Add Controller Managed Device Groups",
     )
-    remove_access_point_groups = DynamicModelMultipleChoiceField(
-        queryset=AccessPointGroup.objects.all(),
+    remove_controller_managed_device_groups = DynamicModelMultipleChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         required=False,
-        label="Remove Access Point Groups",
+        label="Remove Controller Managed Device Groups",
     )
     ssid = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     mode = forms.ChoiceField(

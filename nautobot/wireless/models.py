@@ -22,60 +22,6 @@ from nautobot.wireless.choices import (
     "graphql",
     "webhooks",
 )
-class AccessPointGroup(PrimaryModel):
-    """
-    An AccessPointGroup is a collection of access points. It is used to apply common configuration to multiple
-    access points at once.
-    """
-
-    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
-    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
-    controller = models.ForeignKey(
-        to="dcim.Controller",
-        on_delete=models.PROTECT,
-        related_name="access_point_groups",
-        blank=True,
-        null=True,
-    )
-    tenant = models.ForeignKey(
-        to="tenancy.Tenant",
-        on_delete=models.PROTECT,
-        related_name="access_point_groups",
-        blank=True,
-        null=True,
-    )
-
-    radio_profiles = models.ManyToManyField(
-        to="wireless.RadioProfile",
-        related_name="access_point_groups",
-        through="wireless.AccessPointGroupRadioProfileAssignment",
-        through_fields=("access_point_group", "radio_profile"),
-        blank=True,
-    )
-
-    wireless_networks = models.ManyToManyField(
-        to="wireless.WirelessNetwork",
-        related_name="access_point_groups",
-        through="wireless.AccessPointGroupWirelessNetworkAssignment",
-        through_fields=("access_point_group", "wireless_network"),
-        blank=True,
-    )
-
-    class Meta:
-        ordering = ["name"]
-        unique_together = ["name", "controller"]
-
-    def __str__(self):
-        return self.name
-
-
-@extras_features(
-    "custom_links",
-    "custom_validators",
-    "export_templates",
-    "graphql",
-    "webhooks",
-)
 class SupportedDataRate(PrimaryModel):
     """
     A SupportedDataRate represents a data rate that can be used by an access point radio.
@@ -191,37 +137,38 @@ class WirelessNetwork(PrimaryModel):
     "export_templates",
     "graphql",
 )
-class AccessPointGroupWirelessNetworkAssignment(BaseModel):
+class ControllerManagedDeviceGroupWirelessNetworkAssignment(BaseModel):
     """
-    An AccessPointGroupWirelessNetworkAssignment represents the assignment of a WirelessNetwork to an AccessPointGroup.
+    A ControllerManagedDeviceGroupWirelessNetworkAssignment represents the assignment of a WirelessNetwork to an ControllerManagedDeviceGroup.
     """
 
-    access_point_group = models.ForeignKey(
-        to="wireless.AccessPointGroup",
+    controller_managed_device_group = models.ForeignKey(
+        to="dcim.ControllerManagedDeviceGroup",
         on_delete=models.CASCADE,
         related_name="wireless_network_assignments",
     )
     wireless_network = models.ForeignKey(
         to="wireless.WirelessNetwork",
         on_delete=models.CASCADE,
-        related_name="access_point_group_assignments",
+        related_name="controller_managed_device_group_assignments",
     )
     vlan = models.ForeignKey(
         to="ipam.VLAN",
         on_delete=models.PROTECT,
-        related_name="access_point_group_wireless_network_assignments",
+        related_name="controller_managed_device_group_wireless_network_assignments",
         blank=True,
         null=True,
     )
     is_metadata_associable_model = False
-    documentation_static_path = "docs/user-guide/core-data-model/wireless/accesspointgroup.html"
+    # TODO Check if this is the correct path
+    documentation_static_path = "docs/user-guide/core-data-model/dcim/controllermanageddevicegroup.html"
 
     class Meta:
-        unique_together = ["access_point_group", "wireless_network"]
-        ordering = ["access_point_group", "wireless_network"]
+        unique_together = ["controller_managed_device_group", "wireless_network"]
+        ordering = ["controller_managed_device_group", "wireless_network"]
 
     def __str__(self):
-        return f"{self.access_point_group}: {self.wireless_network}"
+        return f"{self.controller_managed_device_group}: {self.wireless_network}"
 
 
 @extras_features(
@@ -230,27 +177,28 @@ class AccessPointGroupWirelessNetworkAssignment(BaseModel):
     "export_templates",
     "graphql",
 )
-class AccessPointGroupRadioProfileAssignment(BaseModel):
+class ControllerManagedDeviceGroupRadioProfileAssignment(BaseModel):
     """
-    An AccessPointGroupRadioProfile represents the assignment of a RadioProfile to an AccessPointGroup.
+    A ControllerManagedDeviceGroupRadioProfile represents the assignment of a RadioProfile to an ControllerManagedDeviceGroup.
     """
 
-    access_point_group = models.ForeignKey(
-        to="wireless.AccessPointGroup",
+    controller_managed_device_group = models.ForeignKey(
+        to="dcim.ControllerManagedDeviceGroup",
         on_delete=models.CASCADE,
         related_name="radio_profile_assignments",
     )
     radio_profile = models.ForeignKey(
         to="wireless.RadioProfile",
         on_delete=models.CASCADE,
-        related_name="access_point_group_assignments",
+        related_name="controller_managed_device_group_assignments",
     )
     is_metadata_associable_model = False
-    documentation_static_path = "docs/user-guide/core-data-model/wireless/accesspointgroup.html"
+    # TODO Check if this is the correct path
+    documentation_static_path = "docs/user-guide/core-data-model/dcim/controllermanageddevicegroup.html"
 
     class Meta:
-        unique_together = ["access_point_group", "radio_profile"]
-        ordering = ["access_point_group", "radio_profile"]
+        unique_together = ["controller_managed_device_group", "radio_profile"]
+        ordering = ["controller_managed_device_group", "radio_profile"]
 
     def __str__(self):
-        return f"{self.access_point_group}: {self.radio_profile}"
+        return f"{self.controller_managed_device_group}: {self.radio_profile}"
