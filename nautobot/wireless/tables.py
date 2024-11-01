@@ -105,7 +105,7 @@ class RadioProfileTable(BaseTable):
         return ", ".join(f"{v}MHz" for v in value)
 
     def render_allowed_channel_list(self, value):
-        return array_to_string(value)
+        return ", ".join(f"{v}" for v in value)
 
     def render_tx_power_min(self, value):
         return f"{value} dBm"
@@ -279,7 +279,7 @@ class AccessPointGroupRadioProfileAssignmentTable(BaseTable):
         return ", ".join(f"{v}MHz" for v in value)
 
     def render_allowed_channel_list(self, value):
-        return array_to_string(value)
+        return ", ".join(f"{v}" for v in value)
 
     def render_tx_power_min(self, value):
         return f"{value} dBm"

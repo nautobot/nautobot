@@ -1430,7 +1430,7 @@ class ControllerTable(BaseTable):
 
     def render_capabilities(self, value):
         """Render capabilities."""
-        return array_to_string(value)
+        return ", ".join(f"{v}" for v in value)
 
 
 class ControllerManagedDeviceGroupTable(BaseTable):
@@ -1476,7 +1476,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
 
     def render_capabilities(self, value):
         """Render capabilities."""
-        return array_to_string(value)
+        return ", ".join(f"{v}" for v in value)
 
 
 class VirtualDeviceContextTable(StatusTableMixin, BaseTable):

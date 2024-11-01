@@ -97,7 +97,7 @@ menu_items = (
                         permissions=[
                             "example_app.view_examplemodel"
                         ],
-                        query_params={"number": 100},
+                        query_params={"number": "100"},
                     ),
                 ),
             ),
