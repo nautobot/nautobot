@@ -1293,7 +1293,7 @@ class ViewTestCases:
             self.assertNotIn('<table class="table table-hover table-headings">', response_body)
             # Assert none of the hidden input fields for each of the pks that would be deleted is part of the html body
             for pk in self._get_queryset().values_list("pk", flat=True):
-                self.assertNotIn(f'<input type="hidden" name="pk" value="{pk}"', response_body)
+                self.assertNotIn(str(pk), response_body)
             self.assertInHTML('<input type="hidden" name="_all" value="true" />', response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1321,9 +1321,9 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             response_body = utils.extract_page_body(response.content.decode(response.charset))
             # Check if all pks is not part of the html.
-            self.assertNotIn(f'<input type="hidden" name="pk" value="{first_pk}"', response_body)
-            self.assertNotIn(f'<input type="hidden" name="pk" value="{second_pk}"', response_body)
-            self.assertNotIn(f'<input type="hidden" name="pk" value="{third_pk}"', response_body)
+            self.assertNotIn(str(first_pk), response_body)
+            self.assertNotIn(str(second_pk), response_body)
+            self.assertNotIn(str(third_pk), response_body)
             self.assertIn("<strong>Warning:</strong> The following operation will delete 2 ", response_body)
             self.assertInHTML('<input type="hidden" name="_all" value="true" />', response_body)
 

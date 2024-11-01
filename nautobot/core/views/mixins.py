@@ -918,16 +918,23 @@ class DeleteAllModelMixin:
     """
 
     def _get_bulk_delete_all_queryset(self, request):
+        """
+        Retrieve the queryset of model instances to be bulk-deleted, filtered based on request parameters.
+
+        This method handles the retrieval of a queryset of model instances that match the specified
+        filter criteria in the request parameters, allowing a bulk delete operation to be performed
+        on all matching instances.
+        """
         model = self.queryset.model
 
         # This Mixin is currently been used by both NautobotViewSet ObjectBulkDestroyViewMixin
         # and BulkDeleteView which uses different keys for accessing filterset
-        filterset = getattr(self, "filterset", None)
-        if filterset is None:
-            filterset = getattr(self, "filterset_class", None)
+        filterset_class = getattr(self, "filterset", None)
+        if filterset_class is None:
+            filterset_class = getattr(self, "filterset_class", None)
 
-        if filterset is not None:
-            queryset = filterset(request.GET, model.objects.all()).qs
+        if request.GET and filterset_class is not None:
+            queryset = filterset_class(request.GET, model.objects.all()).qs
             # We take this approach because filterset.qs has already applied .distinct(),
             # and performing a .delete directly on a queryset with .distinct applied is not allowed.
             queryset = self.queryset.filter(pk__in=queryset)
@@ -997,8 +1004,9 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, De
         if delete_all:
             queryset = self._get_bulk_delete_all_queryset(self.request)
             data = self._bulk_delete_all_context(request, queryset)
+        else:
+            self.pk_list = list(request.POST.getlist("pk"))
 
-        self.pk_list = list(request.POST.getlist("pk"))
         form_class = self.get_form_class(**kwargs)
         if "_confirm" in request.POST:
             form = form_class(request.POST, initial=normalize_querydict(request.GET, form_class=form_class))
