@@ -1,0 +1,2 @@
+Added `nautobot.apps.utils.get_related_field_for_models()` helper function.
+Added optional `lookup` parameter to `LinkedCountColumn`.

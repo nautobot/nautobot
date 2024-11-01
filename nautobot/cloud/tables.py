@@ -55,6 +55,7 @@ class CloudNetworkTable(BaseTable):
     circuit_count = LinkedCountColumn(
         viewname="circuits:circuit_list",
         url_params={"cloud_network": "name"},
+        # lookup="circuit_terminations__circuit",  # TODO: not currently supported
         verbose_name="Circuits",
         reverse_lookup="circuit_terminations__cloud_network",
     )
