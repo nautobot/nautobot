@@ -1475,7 +1475,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
 
     def render_capabilities(self, value):
         """Render capabilities."""
-        return ", ".join(f"{v}" for v in value)
+        return ", ".join(value)
 
 
 class VirtualDeviceContextTable(StatusTableMixin, BaseTable):
