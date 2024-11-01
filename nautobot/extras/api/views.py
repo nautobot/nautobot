@@ -700,8 +700,8 @@ class JobViewSetBase(
             # of errors under messages
             return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
 
-        if not get_worker_count(queue=task_queue):
-            raise CeleryWorkerNotRunningException(queue=task_queue)
+        # if not get_worker_count(queue=task_queue):
+        #     raise CeleryWorkerNotRunningException(queue=task_queue)
 
         # Default to a null JobResult.
         job_result = None

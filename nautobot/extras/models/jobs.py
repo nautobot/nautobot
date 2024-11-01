@@ -2,6 +2,7 @@
 
 import contextlib
 from datetime import timedelta
+import json
 import logging
 import signal
 
@@ -820,20 +821,21 @@ class JobResult(BaseModel, CustomFieldModel):
         if schedule is not None and synchronous:
             raise ValueError("Scheduled jobs cannot be run synchronously")
 
+        if task_queue is None:
+            task_queue = job_model.default_job_queue.name
+
+        job_queue = JobQueue.objects.get(name=task_queue)
+        # Kubernetes Job Queue logic
+        if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not synchronous:
+            job_class_path = f"{job_model.module_name}.{job_model.job_class_name}"
+            return run_kubernetes_job_and_return_job_result(job_queue, user, job_class_path, json.dumps(job_kwargs))
+
         job_result = cls.objects.create(
             name=job_model.name,
             job_model=job_model,
             scheduled_job=schedule,
             user=user,
         )
-
-        if task_queue is None:
-            task_queue = job_model.default_job_queue.name
-
-        job_queue = JobQueue.objects.get(name=task_queue)
-        # Kubernetes Job Queue logic
-        if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
-            return run_kubernetes_job_and_return_job_result(job_queue, job_result)
 
         job_celery_kwargs = {
             "nautobot_job_job_model_id": job_model.id,

@@ -189,7 +189,7 @@ ENV NAUTOBOT_INSTALLATION_METRICS_ENABLED=false
 
 COPY --chown=nautobot:nautobot development/nautobot_config.py /opt/nautobot/nautobot_config.py
 
-RUN rm -rf /source/*
+# RUN rm -rf /source/*
 
 # Run Nautobot development server by default
 EXPOSE 8080
