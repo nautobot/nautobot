@@ -7,7 +7,6 @@ from nautobot.ipam.models import IPAddress, IPAddressToInterface, Namespace, Pre
 
 
 class IPAddressToInterfaceSignalTests(TestCase):
-
     def setUp(self):
         # Create required supporting objects
         self.namespace = Namespace.objects.first()
@@ -27,7 +26,11 @@ class IPAddressToInterfaceSignalTests(TestCase):
         self.device_module_bay = ModuleBay.objects.create(parent_device=self.test_device, name="Test Bay")
 
         # Create a module with an interface and add it to the device bay
-        self.module = Module.objects.create(module_type=ModuleType.objects.first(), status=Status.objects.get_for_model(Module).first(), parent_module_bay=self.device_module_bay)
+        self.module = Module.objects.create(
+            module_type=ModuleType.objects.first(),
+            status=Status.objects.get_for_model(Module).first(),
+            parent_module_bay=self.device_module_bay,
+        )
 
         int_status = Status.objects.get_for_model(Interface).first()
 
@@ -95,8 +98,6 @@ class IPAddressToInterfaceSignalTests(TestCase):
         # Verify the device has the module installed
         self.assertEqual(self.test_device.installed_device, self.module)
 
-
-
     def test_primary_ip_retained_when_deleted_from_one_interface(self):
         """Test that primary_ip4 remains set when the same IP is assigned to both device and module interfaces, and deleted from one."""
 
@@ -140,9 +141,6 @@ class IPAddressToInterfaceSignalTests(TestCase):
         self.assertEqual(remaining_assignments.count(), 1)
         self.assertIn(assignment_module, remaining_assignments)
 
-
-
-
     def test_primary_ip_nullified_when_removed_from_all_interfaces(self):
         """Test that primary_ip4 is nullified when the primary IP is removed from all interfaces."""
         # Create two IP addresses and set one as the primary IP
@@ -156,7 +154,7 @@ class IPAddressToInterfaceSignalTests(TestCase):
             interface=self.interface_device,
             ip_address=ip_address1,
         )
-        assignment_module = IPAddressToInterface.objects.create(
+        IPAddressToInterface.objects.create(
             interface=self.interface_module,
             ip_address=ip_address2,
         )
