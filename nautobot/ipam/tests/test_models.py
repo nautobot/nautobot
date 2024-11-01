@@ -202,7 +202,7 @@ class IPAddressToInterfaceTest(TestCase):
         # Create IP and assign it to multiple interfaces
         ip_address = IPAddress.objects.create(address="192.0.2.1/24", namespace=self.namespace, status=self.status)
         assignment_device_int1 = IPAddressToInterface.objects.create(interface=self.test_int1, ip_address=ip_address)
-        assignment_module_int1 = IPAddressToInterface.objects.create(interface=interface_module,ip_address=ip_address)
+        assignment_module_int1 = IPAddressToInterface.objects.create(interface=interface_module, ip_address=ip_address)
 
         # Set the primary IP on the device
         self.test_device.primary_ip4 = assignment_device_int1.ip_address
@@ -260,7 +260,9 @@ class IPAddressToInterfaceTest(TestCase):
         # Create IP and assign it to both the device and the nested module interface
         ip_address = IPAddress.objects.create(address="192.0.2.1/24", namespace=self.namespace, status=self.status)
         assignment_device_int1 = IPAddressToInterface.objects.create(interface=self.test_int1, ip_address=ip_address)
-        assignment_nested_module = IPAddressToInterface.objects.create(interface=nested_interface, ip_address=ip_address)
+        assignment_nested_module = IPAddressToInterface.objects.create(
+            interface=nested_interface, ip_address=ip_address
+        )
 
         # Set the primary IP on the device to the IP on the device interface
         self.test_device.primary_ip4 = assignment_nested_module.ip_address
