@@ -140,6 +140,7 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
             "permissions": self.permissions,
             "args": [],
             "kwargs": {},
+            "query_params": self.query_params,
         }
 
     @property

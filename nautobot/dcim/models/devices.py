@@ -17,7 +17,6 @@ from nautobot.core.models import BaseManager, RestrictedQuerySet
 from nautobot.core.models.fields import JSONArrayField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
-from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import (
     ControllerCapabilitiesChoices,
@@ -1432,9 +1431,8 @@ class Controller(PrimaryModel):
                     {"location": f'Devices may not associate to locations of type "{self.location.location_type}".'}
                 )
 
-    @property
-    def capabilities_string(self):
-        return array_to_string(self.capabilities)
+    def get_capabilities_display(self):
+        return ", ".join(f"{v}" for v in self.capabilities)
 
 
 @extras_features(
@@ -1496,9 +1494,8 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
                 {"controller": "Controller device group must have the same controller as the parent group."}
             )
 
-    @property
-    def capabilities_string(self):
-        return array_to_string(self.capabilities)
+    def get_capabilities_display(self):
+        return ", ".join(f"{v}" for v in self.capabilities)
 
 
 #

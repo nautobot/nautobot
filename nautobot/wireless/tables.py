@@ -1,6 +1,5 @@
 import django_tables2 as tables
 
-from nautobot.core.models.utils import array_to_string
 from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,

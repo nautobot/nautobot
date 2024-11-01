@@ -2,7 +2,6 @@ from django.utils.html import format_html
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
-from nautobot.core.models.utils import array_to_string
 from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
