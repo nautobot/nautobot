@@ -14,22 +14,6 @@ layout = (
                 permissions=["wireless.view_wirelessnetwork"],
                 weight=100,
             ),
-            HomePageItem(
-                name="Radio Profiles",
-                link="wireless:radioprofile_list",
-                model=RadioProfile,
-                description="Profiles for configuring radio settings",
-                permissions=["wireless.view_radioprofile"],
-                weight=200,
-            ),
-            HomePageItem(
-                name="Supported Data Rates",
-                link="wireless:supporteddatarate_list",
-                model=SupportedDataRate,
-                description="Supported data rates for wireless networks",
-                permissions=["wireless.view_supporteddatarate"],
-                weight=300,
-            ),
         ),
     ),
 )
