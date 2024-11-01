@@ -1,0 +1,3 @@
+<li role="presentation"{% if request.GET.tab == tab_id %} class="active"{% endif %}>
+    <a href="{{ url }}?tab={{ tab_id }}">{{ label }}</a>
+</li>

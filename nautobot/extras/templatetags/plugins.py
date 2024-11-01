@@ -13,7 +13,7 @@ register = template_.Library()
 logger = logging.getLogger(__name__)
 
 
-def _get_registered_content(obj, method, template_context, return_html=True):
+def get_registered_content(obj, method, template_context, return_html=True):
     """
     Given an object and a TemplateExtension method name and the template context, return all the
     registered content for the object's model.
@@ -62,9 +62,9 @@ def plugin_buttons(context, obj, view="detail"):
     """
     if view == "list":
         # The object_list.html template passes content_type.model_class as obj
-        # This is a bit of a hack however, _get_registered_content() only really needs the model in its own logic
-        return _get_registered_content(obj, "list_buttons", context)
-    return _get_registered_content(obj, "buttons", context)
+        # This is a bit of a hack however, get_registered_content() only really needs the model in its own logic
+        return get_registered_content(obj, "list_buttons", context)
+    return get_registered_content(obj, "buttons", context)
 
 
 @register.simple_tag(takes_context=True)
@@ -72,7 +72,7 @@ def plugin_left_page(context, obj):
     """
     Render all left page content registered by plugins
     """
-    return _get_registered_content(obj, "left_page", context)
+    return get_registered_content(obj, "left_page", context)
 
 
 @register.simple_tag(takes_context=True)
@@ -80,7 +80,7 @@ def plugin_right_page(context, obj):
     """
     Render all right page content registered by plugins
     """
-    return _get_registered_content(obj, "right_page", context)
+    return get_registered_content(obj, "right_page", context)
 
 
 @register.simple_tag(takes_context=True)
@@ -88,7 +88,7 @@ def plugin_full_width_page(context, obj):
     """
     Render all full width page content registered by plugins
     """
-    return _get_registered_content(obj, "full_width_page", context)
+    return get_registered_content(obj, "full_width_page", context)
 
 
 @register.inclusion_tag("extras/templatetags/plugin_object_detail_tabs.html", takes_context=True)
@@ -96,7 +96,16 @@ def plugin_object_detail_tabs(context, obj):
     """
     Render all custom tabs registered by plugins for the object detail view
     """
-    context["plugin_object_detail_tabs"] = _get_registered_content(obj, "detail_tabs", context, return_html=False)
+    context["plugin_object_detail_tabs"] = get_registered_content(obj, "detail_tabs", context, return_html=False)
+    # Add new-style tabs as well
+    template_extensions = registry["plugin_template_extensions"].get(obj._meta.label_lower, [])
+    for template_extension in reversed(template_extensions):
+        if template_extension.object_detail_tabs:
+            for tab in reversed(template_extension.object_detail_tabs):
+                context["plugin_object_detail_tabs"].insert(
+                    0, {tab.tab_id: {"title": tab.render_label(context), "url": obj.get_absolute_url()}}
+                )
+
     return context
 
 
