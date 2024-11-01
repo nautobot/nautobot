@@ -93,6 +93,8 @@ def invalidate_models_cache(sender, **kwargs):
     with contextlib.suppress(redis.exceptions.ConnectionError):
         # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
         cache.delete_pattern(f"{manager.get_for_model.cache_key_prefix}.*")
+        if hasattr(manager, "keys_for_model"):
+            cache.delete_pattern(f"{manager.keys_for_model.cache_key_prefix}.*")
 
 
 @receiver(post_save, sender=Relationship)
