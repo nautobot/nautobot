@@ -16,7 +16,7 @@ from nautobot.core.utils.data import is_uuid
 
 def array_to_string(array):
     """
-    Generate an efficient, human-friendly string from a set of integers or strings. Intended for use with ArrayField.
+    Generate an efficient, human-friendly string from a set of integers. Intended for use with ArrayField.
     For example:
         [0, 1, 2, 10, 14, 15, 16] => "0-2, 10, 14-16"
         ["foo", "bar", "baz"] => "foo, bar, baz"
