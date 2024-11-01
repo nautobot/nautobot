@@ -1432,7 +1432,7 @@ class Controller(PrimaryModel):
                 )
 
     def get_capabilities_display(self):
-        return ", ".join(f"{v}" for v in self.capabilities)
+        return ", ".join(self.capabilities)
 
 
 @extras_features(
