@@ -167,15 +167,6 @@ class JobQueueFactory(PrimaryModelFactory):
             job.validated_save()
 
 
-class JobQueueFactoryWithTenancy(JobQueueFactory):
-    class Meta:
-        model = JobQueue
-
-    class Params:
-        has_description = NautobotBoolIterator()
-        has_tenant = NautobotBoolIterator(chance_of_getting_true=100)
-
-
 class JobResultFactory(BaseModelFactory):
     """JobResult model factory."""
 
