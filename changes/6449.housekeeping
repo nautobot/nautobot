@@ -1,0 +1,3 @@
+Added an integration test to create a Manufacturer, DeviceType, LocationType, Location, Role and Device to test the create forms and select2 api form fields are working correctly.
+Fixed incorrect assertion in core navbar integration tests.
+Added helper functions to SeleniumTestCase to perform some common UI actions.

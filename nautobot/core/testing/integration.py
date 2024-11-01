@@ -5,6 +5,7 @@ from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.functional import classproperty
+from selenium.webdriver.common.keys import Keys
 from splinter.browser import Browser
 
 from nautobot.core import testing
@@ -74,3 +75,66 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
 
     def logout(self):
         self.browser.visit(f"{self.live_server_url}/logout")
+
+    def click_navbar_entry(self, parent_menu_name, child_menu_name):
+        """
+        Helper function to click on a parent menu and child menu in the navigation bar.
+        """
+
+        parent_menu_xpath = f"//*[@id='navbar']//a[@class='dropdown-toggle' and normalize-space()='{parent_menu_name}']"
+        parent_menu = self.browser.find_by_xpath(parent_menu_xpath, wait_time=5)
+        if not parent_menu["aria-expanded"] == "true":
+            parent_menu.click()
+        child_menu_xpath = f"{parent_menu_xpath}/following-sibling::ul//li[.//a[normalize-space()='{child_menu_name}']]"
+        child_menu = self.browser.find_by_xpath(child_menu_xpath, wait_time=5)
+        child_menu.click()
+
+        # Wait for body element to appear
+        self.assertTrue(self.browser.is_element_present_by_tag("body", wait_time=5), "Page failed to load")
+
+    def click_list_view_add_button(self):
+        """
+        Helper function to click the "Add" button on a list view.
+        """
+        add_button = self.browser.find_by_xpath("//a[@id='add-button']", wait_time=5)
+        add_button.click()
+
+        # Wait for body element to appear
+        self.assertTrue(self.browser.is_element_present_by_tag("body", wait_time=5), "Page failed to load")
+
+    def click_edit_form_create_button(self):
+        """
+        Helper function to click the "Create" button on a form.
+        """
+        add_button = self.browser.find_by_xpath("//button[@name='_create']", wait_time=5)
+        add_button.click()
+
+        # Wait for body element to appear
+        self.assertTrue(self.browser.is_element_present_by_tag("body", wait_time=5), "Page failed to load")
+
+    def fill_select2_field(self, field_name, value):
+        """
+        Helper function to fill a Select2 single selection field.
+        """
+        self.browser.find_by_xpath(f"//select[@id='id_{field_name}']//following-sibling::span").click()
+        search_box = self.browser.find_by_xpath(
+            "//*[@class='select2-search select2-search--dropdown']//input", wait_time=5
+        )
+        for _ in search_box.first.type(value, slowly=True):
+            pass
+
+        # wait for "searching" to disappear
+        self.browser.is_element_not_present_by_css(".loading-results", wait_time=5)
+        search_box.first.type(Keys.ENTER)
+
+    def fill_select2_multiselect_field(self, field_name, value):
+        """
+        Helper function to fill a Select2 multi-selection field.
+        """
+        search_box = self.browser.find_by_xpath(f"//select[@id='id_{field_name}']//following-sibling::span//input")
+        for _ in search_box.first.type(value, slowly=True):
+            pass
+
+        # wait for "searching" to disappear
+        self.browser.is_element_not_present_by_css(".loading-results", wait_time=5)
+        search_box.first.type(Keys.ENTER)
