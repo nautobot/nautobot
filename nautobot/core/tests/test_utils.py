@@ -21,6 +21,7 @@ from nautobot.extras import models as extras_models, utils as extras_utils
 from nautobot.extras.choices import ObjectChangeActionChoices, RelationshipTypeChoices
 from nautobot.extras.models import ObjectChange
 from nautobot.extras.registry import registry
+from nautobot.ipam import models as ipam_models
 
 from example_app.models import ExampleModel
 
@@ -164,7 +165,7 @@ class GetFooForModelTest(TestCase):
 
     def test_get_filterset_for_model(self):
         """
-        Test the util function `get_filterset_for_model` returns the appropriate FilterSet, if model (as dotted string or class) provided.
+        Test that `get_filterset_for_model` returns the right FilterSet for various inputs.
         """
         self.assertEqual(lookup.get_filterset_for_model("dcim.device"), dcim_filters.DeviceFilterSet)
         self.assertEqual(lookup.get_filterset_for_model(dcim_models.Device), dcim_filters.DeviceFilterSet)
@@ -173,7 +174,7 @@ class GetFooForModelTest(TestCase):
 
     def test_get_form_for_model(self):
         """
-        Test the util function `get_form_for_model` returns the appropriate Form, if form type and model (as dotted string or class) provided.
+        Test that `get_form_for_model` returns the right Form for various inputs.
         """
         self.assertEqual(lookup.get_form_for_model("dcim.device", "Filter"), dcim_forms.DeviceFilterForm)
         self.assertEqual(lookup.get_form_for_model(dcim_models.Device, "Filter"), dcim_forms.DeviceFilterForm)
@@ -184,9 +185,28 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(lookup.get_form_for_model("dcim.location"), dcim_forms.LocationForm)
         self.assertEqual(lookup.get_form_for_model(dcim_models.Location), dcim_forms.LocationForm)
 
+    def test_get_related_field_for_models(self):
+        """
+        Test that `get_related_field_for_models` returns the appropriate field for various inputs.
+        """
+        # No direct relation found
+        self.assertIsNone(lookup.get_related_field_for_models(dcim_models.Device, dcim_models.LocationType))
+        # ForeignKey and reverse
+        self.assertEqual(lookup.get_related_field_for_models(dcim_models.Device, dcim_models.Location).name, "location")
+        self.assertEqual(lookup.get_related_field_for_models(dcim_models.Location, dcim_models.Device).name, "devices")
+        # ManyToMany and reverse
+        self.assertEqual(
+            lookup.get_related_field_for_models(ipam_models.Prefix, dcim_models.Location).name, "locations"
+        )
+        self.assertEqual(lookup.get_related_field_for_models(dcim_models.Location, ipam_models.Prefix).name, "prefixes")
+        # Multiple candidate fields
+        with self.assertRaises(AttributeError):
+            # both primary_ip4 and primary_ip6 are candidates
+            lookup.get_related_field_for_models(dcim_models.Device, ipam_models.IPAddress)
+
     def test_get_route_for_model(self):
         """
-        Test the util function `get_route_for_model` returns the appropriate URL route name, if model (as dotted string or class) provided.
+        Test that `get_route_for_model` returns the appropriate URL route name for various inputs.
         """
         # UI
         self.assertEqual(lookup.get_route_for_model("dcim.device", "list"), "dcim:device_list")
@@ -221,7 +241,7 @@ class GetFooForModelTest(TestCase):
 
     def test_get_table_for_model(self):
         """
-        Test the util function `get_table_for_model` returns the appropriate Table, if model (as dotted string or class) provided.
+        Test that `get_table_for_model` returns the appropriate Table for various inputs.
         """
         self.assertEqual(lookup.get_table_for_model("dcim.device"), tables.DeviceTable)
         self.assertEqual(lookup.get_table_for_model(dcim_models.Device), tables.DeviceTable)
@@ -237,7 +257,7 @@ class GetFooForModelTest(TestCase):
 
     def test_get_model_for_view_name(self):
         """
-        Test the util function `get_model_for_view_name` returns the appropriate Model, if the colon separated view name provided.
+        Test that `get_model_for_view_name` returns the appropriate Model, if the colon separated view name provided.
         """
         with self.subTest("Test core view."):
             self.assertEqual(lookup.get_model_for_view_name("dcim:device_list"), dcim_models.Device)
