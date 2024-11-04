@@ -1409,9 +1409,10 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             return_url = None
 
         # Allow execution only if a worker process is running and the job is runnable.
-        # if not get_worker_count(queue=job_queue):
-        #     messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
-        if not job_model.installed or job_class is None:
+        # TODO: refactor this to take into account of Kubernetes queue
+        if not get_worker_count(queue=job_queue):
+            messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
+        elif not job_model.installed or job_class is None:
             messages.error(request, "Unable to run or schedule job: Job is not presently installed.")
         elif not job_model.enabled:
             messages.error(request, "Unable to run or schedule job: Job is not enabled to be run.")
