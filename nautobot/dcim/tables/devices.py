@@ -1,4 +1,4 @@
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
@@ -1429,7 +1429,7 @@ class ControllerTable(BaseTable):
 
     def render_capabilities(self, value):
         """Render capabilities."""
-        return ", ".join(value)
+        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
 class ControllerManagedDeviceGroupTable(BaseTable):
@@ -1475,7 +1475,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
 
     def render_capabilities(self, value):
         """Render capabilities."""
-        return ", ".join(value)
+        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
 class VirtualDeviceContextTable(StatusTableMixin, BaseTable):
