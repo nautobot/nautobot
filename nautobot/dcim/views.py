@@ -4263,6 +4263,7 @@ class ControllerUIViewSet(NautobotUIViewSet):
         wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
             data=wireless_networks, user=request.user, orderable=False
         )
+        wireless_networks_table.columns.hide("controller")
 
         RequestConfig(
             request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
