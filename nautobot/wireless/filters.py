@@ -103,7 +103,6 @@ class RadioProfileFilterSet(NautobotFilterSet):
         field_name="channel_width",
         lookup_expr="contains",
     )
-
     frequency = django_filters.MultipleChoiceFilter(
         choices=choices.RadioProfileFrequencyChoices,
         null_value=None,

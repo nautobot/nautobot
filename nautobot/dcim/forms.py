@@ -24,6 +24,7 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
     form_from_model,
+    JSONArrayFormField,
     MultipleContentTypeField,
     NullableDateField,
     NumericArrayField,
@@ -77,6 +78,7 @@ from .choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
     ConsolePortTypeChoices,
+    ControllerCapabilitiesChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
@@ -5012,6 +5014,7 @@ class ControllerForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "platform",
             "tenant",
             "location",
+            "capabilities",
             "external_integration",
             "controller_device",
             "controller_device_redundancy_group",
@@ -5086,6 +5089,11 @@ class ControllerBulkEditForm(
         queryset=Platform.objects.all(),
         required=False,
     )
+    capabilities = JSONArrayFormField(
+        choices=add_blank_choice(ControllerCapabilitiesChoices),
+        base_field=forms.CharField(),
+        required=False,
+    )
     tenant = DynamicModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False,
@@ -5133,6 +5141,7 @@ class ControllerManagedDeviceGroupForm(NautobotModelForm):
             "name",
             "devices",
             "parent",
+            "capabilities",
             "weight",
             "tags",
         )
@@ -5193,6 +5202,11 @@ class ControllerManagedDeviceGroupBulkEditForm(TagsBulkEditFormMixin, NautobotBu
     controller = DynamicModelChoiceField(queryset=Controller.objects.all(), required=False)
     parent = DynamicModelChoiceField(queryset=ControllerManagedDeviceGroup.objects.all(), required=False)
     weight = forms.IntegerField(required=False)
+    capabilities = JSONArrayFormField(
+        choices=add_blank_choice(ControllerCapabilitiesChoices),
+        base_field=forms.CharField(),
+        required=False,
+    )
 
     class Meta:
         model = ControllerManagedDeviceGroup
@@ -5200,6 +5214,7 @@ class ControllerManagedDeviceGroupBulkEditForm(TagsBulkEditFormMixin, NautobotBu
             "controller",
             "parent",
             "weight",
+            "capabilities",
             "tags",
         )
 

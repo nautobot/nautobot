@@ -27,6 +27,7 @@ from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
     ConsolePortTypeChoices,
+    ControllerCapabilitiesChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
@@ -987,12 +988,20 @@ class DeviceTypeToSoftwareImageFileSerializer(ValidatedModelSerializer):
 
 
 class ControllerSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    capabilities = serializers.ListField(
+        child=ChoiceField(choices=ControllerCapabilitiesChoices, required=False), allow_empty=True
+    )
+
     class Meta:
         model = Controller
         fields = "__all__"
 
 
 class ControllerManagedDeviceGroupSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    capabilities = serializers.ListField(
+        child=ChoiceField(choices=ControllerCapabilitiesChoices, required=False), allow_empty=True
+    )
+
     class Meta:
         model = ControllerManagedDeviceGroup
         fields = "__all__"

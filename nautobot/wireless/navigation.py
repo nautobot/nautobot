@@ -15,17 +15,53 @@ menu_items = (
                 weight=100,
                 items=(
                     NavMenuItem(
-                        link="wireless:accesspointgroup_list",
-                        name="Access Point Groups",
+                        link="wireless:wirelessnetwork_list",
+                        name="Wireless Networks",
                         weight=100,
                         permissions=[
-                            "wireless.view_accesspointgroup",
+                            "wireless.view_wirelessnetwork",
                         ],
                         buttons=(
                             NavMenuAddButton(
-                                link="wireless:accesspointgroup_add",
+                                link="wireless:wirelessnetwork_add",
                                 permissions=[
-                                    "wireless.add_accesspointgroup",
+                                    "wireless.add_wirelessnetwork",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:controller_list",
+                        name="Wireless Controllers",
+                        query_params={"capabilities": "wireless"},
+                        weight=200,
+                        permissions=[
+                            "dcim.view_controller",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:controller_add",
+                                query_params={"capabilities": "wireless"},
+                                permissions=[
+                                    "dcim.add_controller",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:controllermanageddevicegroup_list",
+                        name="Access Point Groups",
+                        query_params={"capabilities": "wireless"},
+                        weight=300,
+                        permissions=[
+                            "dcim.view_controllermanageddevicegroup",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:controllermanageddevicegroup_add",
+                                query_params={"capabilities": "wireless"},
+                                permissions=[
+                                    "dcim.add_controllermanageddevicegroup",
                                 ],
                             ),
                         ),
@@ -33,7 +69,7 @@ menu_items = (
                     NavMenuItem(
                         link="wireless:radioprofile_list",
                         name="Radio Profiles",
-                        weight=200,
+                        weight=500,
                         permissions=[
                             "wireless.view_radioprofile",
                         ],
@@ -49,7 +85,7 @@ menu_items = (
                     NavMenuItem(
                         link="wireless:supporteddatarate_list",
                         name="Supported Data Rates",
-                        weight=300,
+                        weight=600,
                         permissions=[
                             "wireless.view_supporteddatarate",
                         ],
@@ -58,22 +94,6 @@ menu_items = (
                                 link="wireless:supporteddatarate_add",
                                 permissions=[
                                     "wireless.add_supporteddatarate",
-                                ],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
-                        link="wireless:wirelessnetwork_list",
-                        name="Wireless Networks",
-                        weight=400,
-                        permissions=[
-                            "wireless.view_wirelessnetwork",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="wireless:wirelessnetwork_add",
-                                permissions=[
-                                    "wireless.add_wirelessnetwork",
                                 ],
                             ),
                         ),
