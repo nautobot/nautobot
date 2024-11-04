@@ -56,6 +56,12 @@ devices.count()
 
 A controller is identified by a unique `name` and can include a `description` and optionally one or more `capabilities`.
 
+### Capabilities
+
++++ 2.4.0
+
+The capabilities field will be used to track the features that will be displayed on the Controller. As an example, the `wireless` choice will add the Controller to the Wireless Controllers link on the Navbar, and enable the Wireless tab on the Controller object.
+
 ## Related Models
 
 A controller can be deployed to either an individual [Device](./device.md) or to a group of devices defined as a [Device Redundancy Group](./deviceredundancygroup.md) via `controller_device` or `controller_device_redundancy_group` fields. These fields are mutually exclusive.

@@ -1379,6 +1379,7 @@ class Controller(PrimaryModel):
         base_field=models.CharField(choices=ControllerCapabilitiesChoices),
         blank=True,
         null=True,
+        help_text="List of capabilities supported by the controller, these capabilities are used to enhance views in Nautobot.",
     )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
@@ -1469,6 +1470,7 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
         base_field=models.CharField(choices=ControllerCapabilitiesChoices),
         blank=True,
         null=True,
+        help_text="List of capabilities supported by the controller device group, these capabilities are used to enhance views in Nautobot.",
     )
 
     class Meta:
