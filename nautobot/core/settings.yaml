@@ -1058,22 +1058,10 @@ properties:
       +/- 2.0.0
           This directory no longer requires an `__init__.py` file.
     environment_variable: "NAUTOBOT_JOBS_ROOT"
-  KUBECONFIG:
+  KUBERNETES_JOB_POD_HOST:
     default: ""
-    description: "File path to the configuration file used to spin up a Kubernetes pod."
-    environment_variable: "NAUTOBOT_KUBECONFIG"
-    type: "string"
-    version_added: "2.4.0"
-  KUBERNETES_JOB_CONTAINER_NAME:
-    default: ""
-    description: "The nautobot container name running on the Kubernetes pod."
-    environment_variable: "NAUTOBOT_KUBERNETES_JOB_CONTAINER_NAME"
-    type: "string"
-    version_added: "2.4.0"
-  KUBERNETES_JOB_IMAGE_NAME:
-    default: ""
-    description: "The name of the docker image used to build the nautobot container running on the Kubernetes pod."
-    environment_variable: "NAUTOBOT_KUBERNETES_JOB_IMAGE_NAME"
+    description: "HTTP address of the Kubernetes cluster."
+    environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE"
     type: "string"
     version_added: "2.4.0"
   KUBERNETES_JOB_POD_NAME:

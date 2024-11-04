@@ -765,7 +765,7 @@ class JobResult(BaseModel, CustomFieldModel):
                 )
 
     @classmethod
-    def execute_job(cls, job_model, user, *job_args, celery_kwargs=None, profile=False, **job_kwargs):
+    def execute_job(cls, job_model, user, *job_args, celery_kwargs=None, profile=False, job_result=None, **job_kwargs):
         """
         Create a JobResult instance and run a job in the current process, blocking until the job finishes.
 
@@ -784,7 +784,14 @@ class JobResult(BaseModel, CustomFieldModel):
             JobResult instance
         """
         return cls.enqueue_job(
-            job_model, user, *job_args, celery_kwargs=celery_kwargs, profile=profile, synchronous=True, **job_kwargs
+            job_model,
+            user,
+            *job_args,
+            celery_kwargs=celery_kwargs,
+            profile=profile,
+            job_result=job_result,
+            synchronous=True,
+            **job_kwargs,
         )
 
     @classmethod
@@ -797,6 +804,7 @@ class JobResult(BaseModel, CustomFieldModel):
         profile=False,
         schedule=None,
         task_queue=None,
+        job_result=None,
         synchronous=False,
         **job_kwargs,
     ):
@@ -821,21 +829,21 @@ class JobResult(BaseModel, CustomFieldModel):
         if schedule is not None and synchronous:
             raise ValueError("Scheduled jobs cannot be run synchronously")
 
+        if job_result is None:
+            job_result = cls.objects.create(
+                name=job_model.name,
+                job_model=job_model,
+                scheduled_job=schedule,
+                user=user,
+            )
+
         if task_queue is None:
             task_queue = job_model.default_job_queue.name
 
         job_queue = JobQueue.objects.get(name=task_queue)
         # Kubernetes Job Queue logic
         if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not synchronous:
-            job_class_path = f"{job_model.module_name}.{job_model.job_class_name}"
-            return run_kubernetes_job_and_return_job_result(job_queue, user, job_class_path, json.dumps(job_kwargs))
-
-        job_result = cls.objects.create(
-            name=job_model.name,
-            job_model=job_model,
-            scheduled_job=schedule,
-            user=user,
-        )
+            return run_kubernetes_job_and_return_job_result(job_queue, job_result, json.dumps(job_kwargs))
 
         job_celery_kwargs = {
             "nautobot_job_job_model_id": job_model.id,

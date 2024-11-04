@@ -24,7 +24,7 @@ spec:
         - args:
             - sh
             - -c
-            - redis-server --appendonly yes --requirepass decinablesprewad
+            - redis-server --appendonly yes --requirepass ${NAUTOBOT_REDIS_PASSWORD}
           env:
             - name: MYSQL_DATABASE
               valueFrom:

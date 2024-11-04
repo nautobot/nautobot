@@ -33,6 +33,12 @@ class Command(BaseCommand):
             action="store_true",
             help="Run the job on the local system and not on a worker.",
         )
+        parser.add_argument(
+            "-r",
+            "--job_result_id",
+            required=False,
+            help="Pass in an existing job result id from the database to continue executing the job on a local system",
+        )
         parser.add_argument("-d", "--data", type=str, help="JSON string that populates the `data` variable of the job.")
 
     def handle(self, *args, **options):
@@ -43,6 +49,28 @@ class Command(BaseCommand):
             user = User.objects.get(username=options["username"])
         except User.DoesNotExist as exc:
             raise CommandError("No such user") from exc
+
+        job_result = None
+        if options["job_result_id"]:
+            job_result_id = options["job_result_id"]
+            try:
+                job_result = JobResult.objects.get(pk=job_result_id)
+            except JobResult.DoesNotExist:
+                raise CommandError(f"Job result with pk {job_result_id} not found.")
+            if user.username != job_result.user.username:
+                raise CommandError(
+                    f"There is a mismatch between the user specified in the command {user} and the user associated with the job result {job_result.user}"
+                )
+
+            job_model = job_result.job_model
+            job_class_path = f"{job_model.module_name}.{job_model.job_class_name}"
+            if job_class_path != options["job"]:
+                job = options["job"]
+                raise CommandError(
+                    f"There is a mismatch between the job specified in the command {job} and the job associated with the job result {job_class_path}"
+                )
+            if not options["local"]:
+                raise CommandError("You must add `--local` to your command while specifying a job result id")
 
         data = {}
         try:
@@ -75,7 +103,12 @@ class Command(BaseCommand):
         self.stdout.write(f"[{timezone.now():%H:%M:%S}] Running {options['job']}...")
 
         if options["local"]:
-            job_result = JobResult.execute_job(job_model, user, profile=options["profile"], **data)
+            if job_result:
+                job_result = JobResult.execute_job(
+                    job_model, user, profile=options["profile"], job_result=job_result, **data
+                )
+            else:
+                job_result = JobResult.execute_job(job_model, user, profile=options["profile"], **data)
         else:
             job_result = JobResult.enqueue_job(job_model, user, profile=options["profile"], **data)
 

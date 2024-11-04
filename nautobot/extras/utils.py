@@ -5,7 +5,6 @@ import hmac
 import logging
 import re
 import sys
-import time
 
 from django.apps import apps
 from django.conf import settings
@@ -614,17 +613,16 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
     return (job_model, created)
 
 
-def run_kubernetes_job_and_return_job_result(job_queue, user, job_class_path, job_kwargs):
+def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
     """
     Pass the job to a kubernetes pod and execute it there.
     """
-    # kube_config_context = job_queue.context
-
-    pod_name = "nautobot-job"
+    pod_name = settings.KUBERNETES_JOB_POD_NAME
     pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
+
     configuration = kubernetes.client.Configuration()
     # configure API Key authorization: BearerToken
-    configuration.host = "https://kubernetes.default.svc"
+    configuration.host = settings.KUBERNETES_JOB_POD_HOST
     configuration.ssl_ca_cert = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
     with open("/var/run/secrets/kubernetes.io/serviceaccount/token", "r") as token_file:
         token = token_file.read().strip()
@@ -632,27 +630,34 @@ def run_kubernetes_job_and_return_job_result(job_queue, user, job_class_path, jo
     configuration.api_key["authorization"] = token
     with kubernetes.client.ApiClient(configuration) as api_client:
         api_instance = kubernetes.client.BatchV1Api(api_client)
-    logger.info(f"Pod {pod_name} does not exist in namespace {pod_namespace}. Creating it...")
 
     with open("./development/nautobot-job-job.yaml", "r") as f:
         pod_manifest = yaml.safe_load(f)
 
+    user = job_result.user.username
+    job_model = job_result.job_model
+    job_class_path = f"{job_model.module_name}.{job_model.job_class_name}"
     pod_manifest["metadata"]["name"] = "nautobot-job"
     pod_manifest["spec"]["template"]["spec"]["containers"][0]["command"] = [
         "nautobot-server",
         "runjob",
         "--local",
         "-u",
-        f"{user}", # TODO replace these arguments with actual
+        f"{user}",  # TODO replace these arguments with actual
         f"{job_class_path}",
         "-d",
-        f'{job_kwargs}',
+        f"{job_kwargs}",
+        "-r",
+        f"{job_result.pk}",
     ]
     logger.info(f"Creating job pod {pod_name} in namespace {pod_namespace}")
     api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
     logger.info(f"Reading job pod {pod_name} in namespace {pod_namespace}")
     api_instance.read_namespaced_job(name=pod_name, namespace=pod_namespace)
     logger.info("Done.")
+    job_result.refresh_from_db()
+    return job_result
+
 
 def remove_prefix_from_cf_key(field_name):
     """
