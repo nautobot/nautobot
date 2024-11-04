@@ -414,7 +414,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         else:
             # render the form with the error message.
             data = {}
-            if self.action in ["bulk_update", "bulk_destroy"]:
+            if not request.POST.get("_all") and self.action in ["bulk_update", "bulk_destroy"]:
                 pk_list = self.pk_list
                 table_class = self.get_table_class()
                 table = table_class(queryset.filter(pk__in=pk_list), orderable=False)
@@ -578,6 +578,9 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         if not form_class:
             if self.action == "bulk_destroy":
                 queryset = self.get_queryset()
+                bulk_delete_all = bool(self.request.POST.get("_all"))
+                if bulk_delete_all:
+                    return ConfirmationForm
 
                 class BulkDestroyForm(ConfirmationForm):
                     pk = ModelMultipleChoiceField(queryset=queryset, widget=MultipleHiddenInput)
@@ -909,7 +912,48 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             return self.form_invalid(form)
 
 
-class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
+class DeleteAllModelMixin:
+    """
+    UI mixin to bulk destroy all model instances.
+    """
+
+    def _get_bulk_delete_all_queryset(self, request):
+        """
+        Retrieve the queryset of model instances to be bulk-deleted, filtered based on request parameters.
+
+        This method handles the retrieval of a queryset of model instances that match the specified
+        filter criteria in the request parameters, allowing a bulk delete operation to be performed
+        on all matching instances.
+        """
+        model = self.queryset.model
+
+        # This Mixin is currently been used by both NautobotViewSet ObjectBulkDestroyViewMixin
+        # and BulkDeleteView which uses different keys for accessing filterset
+        filterset_class = getattr(self, "filterset", None)
+        if filterset_class is None:
+            filterset_class = getattr(self, "filterset_class", None)
+
+        if request.GET and filterset_class is not None:
+            queryset = filterset_class(request.GET, model.objects.all()).qs
+            # We take this approach because filterset.qs has already applied .distinct(),
+            # and performing a .delete directly on a queryset with .distinct applied is not allowed.
+            queryset = self.queryset.filter(pk__in=queryset)
+        else:
+            queryset = model.objects.all()
+        return queryset
+
+    def _bulk_delete_all_context(self, request, queryset):
+        model = queryset.model
+        return {
+            "obj_type_plural": model._meta.verbose_name_plural,
+            "return_url": self.get_return_url(request),
+            "total_objs_to_delete": queryset.count(),
+            "delete_all": True,
+            "table": None,
+        }
+
+
+class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, DeleteAllModelMixin):
     """
     UI mixin to bulk destroy model instances.
     """
@@ -923,7 +967,10 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         queryset = self.get_queryset()
         model = queryset.model
         # Delete objects
-        queryset = queryset.filter(pk__in=pk_list)
+        if self.request.POST.get("_all"):
+            queryset = self._get_bulk_delete_all_queryset(self.request)
+        else:
+            queryset = queryset.filter(pk__in=pk_list)
 
         try:
             with transaction.atomic():
@@ -951,35 +998,33 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         request.POST "_confirm": Function to validate the table form/BulkDestroyConfirmationForm and to perform the action of bulk destroy. Render the form with errors if exceptions are raised.
         """
         queryset = self.get_queryset()
-        model = queryset.model
+        delete_all = bool(request.POST.get("_all"))
+        data = {}
         # Are we deleting *all* objects in the queryset or just a selected subset?
-        if request.POST.get("_all"):
-            if self.filterset_class is not None:
-                self.pk_list = list(
-                    self.filterset_class(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True)
-                )
-            else:
-                self.pk_list = list(model.objects.all().values_list("pk", flat=True))
+        if delete_all:
+            queryset = self._get_bulk_delete_all_queryset(self.request)
+            data = self._bulk_delete_all_context(request, queryset)
         else:
             self.pk_list = list(request.POST.getlist("pk"))
+
         form_class = self.get_form_class(**kwargs)
-        data = {}
         if "_confirm" in request.POST:
             form = form_class(request.POST, initial=normalize_querydict(request.GET, form_class=form_class))
             if form.is_valid():
                 return self.form_valid(form)
             else:
                 return self.form_invalid(form)
-        table_class = self.get_table_class()
-        table = table_class(queryset.filter(pk__in=self.pk_list), orderable=False)
-        if not table.rows:
-            messages.warning(
-                request,
-                f"No {queryset.model._meta.verbose_name_plural} were selected for deletion.",
-            )
-            return redirect(self.get_return_url(request))
+        if not delete_all:
+            table_class = self.get_table_class()
+            table = table_class(queryset.filter(pk__in=self.pk_list), orderable=False)
+            if not table.rows:
+                messages.warning(
+                    request,
+                    f"No {queryset.model._meta.verbose_name_plural} were selected for deletion.",
+                )
+                return redirect(self.get_return_url(request))
 
-        data.update({"table": table})
+            data.update({"table": table})
         return Response(data)
 
 

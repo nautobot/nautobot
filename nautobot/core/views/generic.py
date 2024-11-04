@@ -46,7 +46,7 @@ from nautobot.core.utils.requests import (
     get_filterable_params_from_filter_params,
     normalize_querydict,
 )
-from nautobot.core.views.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.core.views.mixins import DeleteAllModelMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
     check_filter_for_display,
@@ -1255,7 +1255,7 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         return ""
 
 
-class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
+class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, DeleteAllModelMixin, View):
     """
     Delete objects in bulk.
 
@@ -1278,18 +1278,37 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def get(self, request):
         return redirect(self.get_return_url(request))
 
-    def post(self, request, **kwargs):
+    def _perform_delete_operation(self, request, queryset, model):
         logger = logging.getLogger(__name__ + ".BulkDeleteView")
+        self.perform_pre_delete(request, queryset)
+        try:
+            _, deleted_info = bulk_delete_with_bulk_change_logging(queryset)
+            deleted_count = deleted_info[model._meta.label]
+        except ProtectedError as e:
+            logger.info("Caught ProtectedError while attempting to delete objects")
+            handle_protectederror(queryset, request, e)
+            return redirect(self.get_return_url(request))
+        msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
+        logger.info(msg)
+        messages.success(request, msg)
+        return redirect(self.get_return_url(request))
+
+    def post(self, request, **kwargs):
+        logger = logging.getLogger(f"{__name__}.BulkDeleteView")
         model = self.queryset.model
 
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
-            if self.filterset is not None:
-                pk_list = list(self.filterset(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True))
-            else:
-                pk_list = list(model.objects.all().values_list("pk", flat=True))
-        else:
-            pk_list = request.POST.getlist("pk")
+            queryset = self._get_bulk_delete_all_queryset(request)
+
+            if "_confirm" in request.POST:
+                return self._perform_delete_operation(request, queryset, model)
+
+            context = self._bulk_delete_all_context(request, queryset)
+            context.update(self.extra_context())
+            return render(request, self.template_name, context)
+
+        pk_list = request.POST.getlist("pk")
 
         form_cls = self.get_form()
 
@@ -1300,20 +1319,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                 # Delete objects
                 queryset = self.queryset.filter(pk__in=pk_list)
-
-                self.perform_pre_delete(request, queryset)
-                try:
-                    _, deleted_info = bulk_delete_with_bulk_change_logging(queryset)
-                    deleted_count = deleted_info[model._meta.label]
-                except ProtectedError as e:
-                    logger.info("Caught ProtectedError while attempting to delete objects")
-                    handle_protectederror(queryset, request, e)
-                    return redirect(self.get_return_url(request))
-                msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
-                logger.info(msg)
-                messages.success(request, msg)
-                return redirect(self.get_return_url(request))
-
+                return self._perform_delete_operation(request, queryset, model)
             else:
                 logger.debug("Form validation failed")
 
@@ -1342,6 +1348,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             "obj_type_plural": model._meta.verbose_name_plural,
             "table": table,
             "return_url": self.get_return_url(request),
+            "total_objs_to_delete": len(table.rows),
         }
         context.update(self.extra_context())
         return render(request, self.template_name, context)
