@@ -11,7 +11,7 @@
 
 ## Introduction
 
-The Nautobot UI Framework provides a declarative way to create rich detail views without writing Jinja2 templates. Instead of crafting HTML templates manually, you define your UI structure using Python classes and configurations.
+The Nautobot UI Framework provides a declarative way to create rich object-detail views without writing custom Django HTML templates. Instead of crafting HTML templates manually, you define your UI structure using Python objects.
 
 //TODO: (include image) <img src="/api/placeholder/800/400" alt="UI Framework Example" />
 *Example of a detail view created with the UI Framework*
