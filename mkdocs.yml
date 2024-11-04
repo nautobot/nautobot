@@ -635,6 +635,7 @@ nav:
                   - DCIM: "development/apps/migration/model-updates/dcim.md"
                   - Extras: "development/apps/migration/model-updates/extras.md"
                   - IPAM: "development/apps/migration/model-updates/ipam.md"
+              - UI Component Framework: "development/apps/migration/ui-component-framework.md"
           - Advanced:
               - Porting NetBox Plugins to Nautobot: "development/apps/porting-from-netbox.md"
       - Core Developer Guide:
@@ -659,6 +660,7 @@ nav:
           - Style Guide: "development/core/style-guide.md"
           - Testing: "development/core/testing.md"
           - User Preferences: "development/core/user-preferences.md"
+          - UI Component Framework: "development/core/ui-component-framework.md"
           - Release Checklist: "development/core/release-checklist.md"
   - Release Notes:
       - "release-notes/index.md"
