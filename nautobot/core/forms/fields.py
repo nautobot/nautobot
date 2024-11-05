@@ -444,6 +444,38 @@ class SlugField(django_forms.SlugField):
         self.widget.attrs["slug-source"] = slug_source
 
 
+class AutoPositionField(django_forms.CharField):
+    def __init__(self, source="name", *args, **kwargs):
+        """
+        Instantiate a AutoPositionField.
+
+        Args:
+            source (str, tuple): Name of the field (or a list of field names) that will be used to suggest a position.
+        """
+        kwargs.setdefault("label", "Position")
+        kwargs.setdefault("widget", forms.SlugWidget)
+        super().__init__(*args, **kwargs)
+        if isinstance(source, (tuple, list)):
+            source = " ".join(source)
+        self.widget.attrs["source"] = source
+
+
+class AutoPositionPatternField(ExpandableNameField):
+    def __init__(self, source="name_pattern", *args, **kwargs):
+        """
+        Instantiate a AutoPositionPatternField.
+
+        Args:
+            source (str, tuple): Name pattern of the field (or a list of field names) that will be used to suggest a position pattern.
+        """
+        kwargs.setdefault("label", "Position")
+        kwargs.setdefault("widget", forms.SlugWidget)
+        super().__init__(*args, **kwargs)
+        if isinstance(source, (tuple, list)):
+            source = " ".join(source)
+        self.widget.attrs["source"] = source
+
+
 class DynamicModelChoiceMixin:
     """
     :param display_field: The name of the attribute of an API response object to display in the selection list
@@ -666,7 +698,7 @@ class JSONArrayFormField(django_forms.JSONField):
         if self.has_choices:
             if isinstance(value, list):
                 return value
-            return []
+            return [value]
         elif isinstance(value, list):
             return self.delimiter.join(str(self.base_field.prepare_value(v)) for v in value)
         return value

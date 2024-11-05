@@ -124,6 +124,63 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
+## v2.3.10 (2024-10-29)
+
+### Added
+
+- [#6421](https://github.com/nautobot/nautobot/issues/6421) - Added cacheable `CustomField.objects.keys_for_model(model)` API.
+- [#6421](https://github.com/nautobot/nautobot/issues/6421) - Added queryset caching in `web_request_context` for more efficient JobHook and Webhook dispatching on bulk requests.
+- [#6421](https://github.com/nautobot/nautobot/issues/6421) - Added logging to JobResults for CustomField provisioning background tasks.
+- [#6421](https://github.com/nautobot/nautobot/issues/6421) - Added more efficient database calls for most cases of bulk-provisioning CustomField data on model objects.
+
+### Changed
+
+- [#6421](https://github.com/nautobot/nautobot/issues/6421) - Increased soft/hard time limits on CustomField provisioning background tasks to 1800 and 2000 seconds respectively.
+
+### Fixed
+
+- [#6421](https://github.com/nautobot/nautobot/issues/6421) - Fixed long-running-at-scale transaction lock on records while adding/removing a CustomField definition.
+- [#6441](https://github.com/nautobot/nautobot/issues/6441) - Fixed a regression in 2.3.9 that broke the rendering of the Device create/edit form.
+
+### Dependencies
+
+- [#6423](https://github.com/nautobot/nautobot/issues/6423) - Updated `mysqlclient` to `~2.2.5`.
+
+### Housekeeping
+
+- [#6423](https://github.com/nautobot/nautobot/issues/6423) - Updated documentation dependency `mkdocs-material` to `~9.5.42`.
+
+## v2.3.9 (2024-10-28)
+
+### Added
+
+- [#4899](https://github.com/nautobot/nautobot/issues/4899) - Added TableExtension class to allow app developers to add columns to core tables.
+- [#6336](https://github.com/nautobot/nautobot/issues/6336) - Added logic to ModuleBay model to ensure that if the `position` field is empty, its value will be automatically populated from the `name` of the Module Bay instance.
+- [#6372](https://github.com/nautobot/nautobot/issues/6372) - Added environment variable support for setting `CSRF_TRUSTED_ORIGINS`.
+
+### Changed
+
+- [#6336](https://github.com/nautobot/nautobot/issues/6336) - Enhanced `position` fields on ModuleBayCreate/UpdateForms to auto-populate their values from `name` fields.
+- [#6386](https://github.com/nautobot/nautobot/issues/6386) - Changed `GitRepositorySync` system Job to run atomically (all-or-nothing), such that any failure in the resync will cause all associated database updates to be reverted.
+- [#6386](https://github.com/nautobot/nautobot/issues/6386) - Changed behavior of change logging `web_request_context()` to only reload Job code when a relevant JobHook is found to apply to the change in question.
+
+### Fixed
+
+- [#6297](https://github.com/nautobot/nautobot/issues/6297) - Fixed overly broad scope of the TreeModel `invalidate_max_depth_cache` signal so that it now correctly only fires for TreeModel instances rather than all models.
+- [#6297](https://github.com/nautobot/nautobot/issues/6297) - Improved performance of DynamicGroup membership updates/recalculations when dealing with large numbers of member objects.
+- [#6386](https://github.com/nautobot/nautobot/issues/6386) - Fixed reversed chronological ordering of JobHooks and Webhooks sent from a single `web_request_context` session.
+- [#6400](https://github.com/nautobot/nautobot/issues/6400) - Removed misleading help text from ModularComponentForm, as the `{module}` auto-substitution in names only applies through component _templates_ at present.
+- [#6415](https://github.com/nautobot/nautobot/issues/6415) - Added missing column `software_version` to the Device Table in Device List View.
+- [#6425](https://github.com/nautobot/nautobot/issues/6425) - Fixed bug in which ColoredLabelColumn() wasn't being applied to the `role' column on Device/VM interfaces.
+
+### Dependencies
+
+- [#6362](https://github.com/nautobot/nautobot/issues/6362) - Updated `psycopg2-binary` dependency to `~2.9.10`.
+
+### Housekeeping
+
+- [#6362](https://github.com/nautobot/nautobot/issues/6362) - Updated documentation dependency `mkdocs-material` to `~9.5.41`.
+
 ## v2.3.8 (2024-10-18)
 
 ### Fixed

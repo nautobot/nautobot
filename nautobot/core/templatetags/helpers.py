@@ -203,6 +203,29 @@ def render_json(value, syntax_highlight=True, pretty_print=False):
 
     Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a
     `<code class="language-json>` HTML tag to flag it for syntax highlighting by highlight.js.
+
+    Args:
+        value (any): Input value, can be any variable.
+        syntax_highlight (bool): Whether to highlight the JSON syntax or not.
+        pretty_print (bool): Wraps rendered and highlighted JSON in <pre> tag for better code display.
+
+    Returns:
+        (str): HTML
+            '<code class="language-json">{"json_key": "json_value"}</code>' if only syntax_highlight is True
+            - or -
+            '<pre><code class="language-json">{"json_key": "json_value"}</code></pre>' if both syntax_highlight and pretty_print are True
+            - or -
+            '{"json_key": "json_value"}' if only pretty_print is True (both syntax_highlight and pretty_print must be True for pretty print)
+
+    Examples:
+        >>> render_json({"key": "value"})
+        '<code class="language-json">{"key": "value"}</code>'
+        >>> render_json({"key": "value"}, syntax_highlight=False)
+        '{"key": "value"}'
+        >>> render_json({"key": "value"}, pretty_print=True)
+        '<pre><code class="language-json">{"key": "value"}</code></pre>'
+        >>> render_json({"key": "value"}, syntax_highlight=False, pretty_print=True)
+        '{"key": "value"}'
     """
     rendered_json = json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
     if syntax_highlight:

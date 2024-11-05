@@ -1578,3 +1578,14 @@ class VirtualDeviceContextStatusChoices(ChoiceSet):
         (STATUS_ACTIVE, "Active"),
         (STATUS_PLANNED, "Planned"),
     )
+
+
+#
+# Controllers
+#
+
+
+class ControllerCapabilitiesChoices(ChoiceSet):
+    WIRELESS = "wireless"
+
+    CHOICES = ((WIRELESS, "Wireless"),)

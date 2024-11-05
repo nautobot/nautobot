@@ -93,6 +93,8 @@ def invalidate_models_cache(sender, **kwargs):
     with contextlib.suppress(redis.exceptions.ConnectionError):
         # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
         cache.delete_pattern(f"{manager.get_for_model.cache_key_prefix}.*")
+        if hasattr(manager, "keys_for_model"):
+            cache.delete_pattern(f"{manager.keys_for_model.cache_key_prefix}.*")
 
 
 @receiver(post_save, sender=Relationship)
@@ -496,6 +498,11 @@ def refresh_job_models(sender, *, apps, **kwargs):
     JobQueue = apps.get_model("extras", "JobQueue")
 
     # To make reverse migrations safe
+    try:
+        JobQueue = apps.get_model("extras", "JobQueue")
+    except LookupError:
+        JobQueue = None
+
     if not hasattr(Job, "job_class_name"):
         logger.info("Skipping refresh_job_models() as it appears Job model has not yet been migrated to latest.")
         return

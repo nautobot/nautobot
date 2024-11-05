@@ -30,12 +30,14 @@ import netaddr
 import yaml
 
 from nautobot.core.celery import import_jobs, nautobot_task
+from nautobot.core.events import publish_event
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     JSONField,
 )
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.logging import sanitize
 from nautobot.core.utils.lookup import get_model_from_name
 from nautobot.extras.choices import (
     JobResultStatusChoices,
@@ -1151,44 +1153,76 @@ def run_job(self, job_class_path, *args, **kwargs):
         raise KeyError(f"Job class not found for class path {job_class_path}")
     job = job_class()
     job.request = self.request
+    job_result = JobResult.objects.get(id=self.request.id)
+    payload = {
+        "job_result_id": self.request.id,
+        "job_name": job.name,
+        "user_name": job_result.user.username,
+    }
+    if not job.job_model.has_sensitive_variables:
+        payload["job_kwargs"] = kwargs
     try:
+        publish_event(topic="nautobot.jobs.job.started", payload=payload)
         job.before_start(self.request.id, args, kwargs)
         result = job(*args, **kwargs)
         job.on_success(result, self.request.id, args, kwargs)
         job.after_return(JobResultStatusChoices.STATUS_SUCCESS, result, self.request.id, args, kwargs, None)
+        payload["job_output"] = result
+        publish_event(topic="nautobot.jobs.job.completed", payload=payload)
         return result
     except Exception as exc:
         einfo = ExceptionInfo(sys.exc_info())
         job.on_failure(exc, self.request.id, args, kwargs, einfo)
         job.after_return(JobResultStatusChoices.STATUS_FAILURE, exc, self.request.id, args, kwargs, einfo)
+        payload["einfo"] = {
+            "exc_type": type(exc).__name__,
+            "exc_message": sanitize(str(exc)),
+        }
+        publish_event(topic="nautobot.jobs.job.completed", payload=payload)
         raise
 
 
-def enqueue_job_hooks(object_change):
+def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None):
     """
-    Find job hook(s) assigned to this changed object type + action and enqueue them
-    to be processed
+    Find job hook(s) assigned to this changed object type + action and enqueue them to be processed.
+
+    Args:
+        object_change (ObjectChange): The change that may trigger JobHooks to execute.
+        may_reload_jobs (bool): Whether to reload JobHook source code from disk to guarantee up-to-date code.
+        jobhook_queryset (QuerySet): Previously retrieved set of JobHooks to potentially enqueue
+
+    Returns:
+        result (tuple[bool, QuerySet]): whether Jobs were reloaded here, and the jobhooks that were considered
     """
+    jobs_reloaded = False
 
     # Job hooks cannot trigger other job hooks
     if object_change.change_context == ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
-        return
+        return jobs_reloaded, jobhook_queryset
 
     # Determine whether this type of object supports job hooks
     content_type = object_change.changed_object_type
     if content_type not in change_logged_models_queryset():
-        return
+        return jobs_reloaded, jobhook_queryset
 
     # Retrieve any applicable job hooks
-    action_flag = {
-        ObjectChangeActionChoices.ACTION_CREATE: "type_create",
-        ObjectChangeActionChoices.ACTION_UPDATE: "type_update",
-        ObjectChangeActionChoices.ACTION_DELETE: "type_delete",
-    }[object_change.action]
-    job_hooks = JobHook.objects.filter(content_types=content_type, enabled=True, **{action_flag: True})
+    if jobhook_queryset is None:
+        action_flag = {
+            ObjectChangeActionChoices.ACTION_CREATE: "type_create",
+            ObjectChangeActionChoices.ACTION_UPDATE: "type_update",
+            ObjectChangeActionChoices.ACTION_DELETE: "type_delete",
+        }[object_change.action]
+        jobhook_queryset = JobHook.objects.filter(content_types=content_type, enabled=True, **{action_flag: True})
+
+    if not jobhook_queryset:  # not .exists() as we *want* to populate the queryset cache
+        return jobs_reloaded, jobhook_queryset
 
     # Enqueue the jobs related to the job_hooks
-    for job_hook in job_hooks:
+    if may_reload_jobs:
+        get_jobs(reload=True)
+        jobs_reloaded = True
+
+    for job_hook in jobhook_queryset:
         job_model = job_hook.job
         if not job_model.installed or not job_model.enabled:
             logger.warning(
@@ -1198,3 +1232,5 @@ def enqueue_job_hooks(object_change):
             logger.error("JobHook %s is enabled, but the underlying Job implementation is missing", job_hook)
         else:
             JobResult.enqueue_job(job_model, object_change.user, object_change=object_change.pk)
+
+    return jobs_reloaded, jobhook_queryset

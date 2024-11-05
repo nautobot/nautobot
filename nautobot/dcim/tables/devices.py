@@ -1,4 +1,4 @@
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
@@ -175,6 +175,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
         template_code="""{% if record.device_redundancy_group %}<span class="badge badge-default">{{ record.device_redundancy_group_priority|default:'None' }}</span>{% else %}—{% endif %}"""
     )
     controller_managed_device_group = tables.Column(linkify=True)
+    software_version = tables.Column(linkify=True, verbose_name="Software Version")
     secrets_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:device_list")
 
@@ -203,6 +204,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "vc_priority",
             "device_redundancy_group",
             "device_redundancy_group_priority",
+            "software_version",
             "controller_managed_device_group",
             "secrets_group",
             "tags",
@@ -656,7 +658,7 @@ class DeviceModulePowerOutletTable(PowerOutletTable):
         row_attrs = {"class": cable_status_color_css}
 
 
-class BaseInterfaceTable(BaseTable):
+class BaseInterfaceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     enabled = BooleanColumn()
     ip_addresses = tables.TemplateColumn(
         template_code=INTERFACE_IPADDRESSES,
@@ -672,7 +674,7 @@ class BaseInterfaceTable(BaseTable):
     vrf = tables.Column(linkify=True, verbose_name="VRF")
 
 
-class InterfaceTable(StatusTableMixin, ModularDeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
+class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
     mgmt_only = BooleanColumn()
     tags = TagColumn(url_name="dcim:interface_list")
     virtual_device_context_count = LinkedCountColumn(
@@ -1386,6 +1388,7 @@ class ControllerTable(BaseTable):
     platform = tables.Column(linkify=True)
     role = tables.Column(linkify=True)
     tenant = TenantColumn()
+    capabilities = tables.Column()
     external_integration = tables.Column(linkify=True)
     controller_device = tables.Column(linkify=True)
     controller_device_redundancy_group = tables.Column(linkify=True)
@@ -1404,6 +1407,7 @@ class ControllerTable(BaseTable):
             "platform",
             "role",
             "tenant",
+            "capabilities",
             "external_integration",
             "controller_device",
             "controller_device_redundancy_group",
@@ -1418,8 +1422,13 @@ class ControllerTable(BaseTable):
             "platform",
             "role",
             "tenant",
+            "capabilities",
             "actions",
         )
+
+    def render_capabilities(self, value):
+        """Render capabilities."""
+        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
 class ControllerManagedDeviceGroupTable(BaseTable):
@@ -1429,6 +1438,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
     name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
     weight = tables.Column()
     controller = tables.Column(linkify=True)
+    capabilities = tables.Column()
     tags = TagColumn(url_name="dcim:controllermanageddevicegroup_list")
     actions = ButtonsColumn(ControllerManagedDeviceGroup)
     device_count = LinkedCountColumn(
@@ -1459,6 +1469,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "wireless_networks_count",
             "controller",
             "weight",
+            "capabilities",
             "tags",
             "actions",
         )
@@ -1470,9 +1481,14 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "wireless_networks_count",
             "controller",
             "weight",
+            "capabilities",
             "tags",
             "actions",
         )
+
+    def render_capabilities(self, value):
+        """Render capabilities."""
+        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
 class VirtualDeviceContextTable(StatusTableMixin, BaseTable):

@@ -14,11 +14,12 @@ import yaml
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, RestrictedQuerySet
-from nautobot.core.models.fields import NaturalOrderingField
+from nautobot.core.models.fields import JSONArrayField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import (
+    ControllerCapabilitiesChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     SoftwareImageFileHashingAlgorithmChoices,
@@ -1366,6 +1367,12 @@ class Controller(PrimaryModel):
         null=True,
     )
     role = RoleField(blank=True, null=True)
+    capabilities = JSONArrayField(
+        base_field=models.CharField(choices=ControllerCapabilitiesChoices),
+        blank=True,
+        null=True,
+        help_text="List of capabilities supported by the controller, these capabilities are used to enhance views in Nautobot.",
+    )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -1417,6 +1424,9 @@ class Controller(PrimaryModel):
                     {"location": f'Devices may not associate to locations of type "{self.location.location_type}".'}
                 )
 
+    def get_capabilities_display(self):
+        return ", ".join(self.capabilities)
+
 
 @extras_features(
     "custom_links",
@@ -1463,6 +1473,12 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
         through_fields=("controller_managed_device_group", "wireless_network"),
         blank=True,
     )
+    capabilities = JSONArrayField(
+        base_field=models.CharField(choices=ControllerCapabilitiesChoices),
+        blank=True,
+        null=True,
+        help_text="List of capabilities supported by the controller device group, these capabilities are used to enhance views in Nautobot.",
+    )
 
     class Meta:
         ordering = ("weight",)
@@ -1486,6 +1502,9 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
             raise ValidationError(
                 {"controller": "Controller device group must have the same controller as the parent group."}
             )
+
+    def get_capabilities_display(self):
+        return ", ".join(self.capabilities)
 
 
 #
