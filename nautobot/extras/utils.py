@@ -17,7 +17,6 @@ from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
 import kubernetes.client
 import redis.exceptions
-import yaml
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -418,6 +417,14 @@ def get_worker_count(request=None, queue=None):
             except JobQueue.DoesNotExist:
                 return 0
         else:
+            try:
+                # check if the string passed in is a valid name
+                queue = JobQueue.objects.get(name=queue)
+                if queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
+                    return 1
+                queue = queue.name
+            except JobQueue.DoesNotExist:
+                return 0
             return celery_queues.get(queue, 0)
     elif isinstance(queue, JobQueue):
         if queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
@@ -626,7 +633,7 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
     """
     pod_name = settings.KUBERNETES_JOB_POD_NAME
     pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
-    pod_manifest_file = settings.KUBERNETES_JOB_POD_MANIFEST
+    pod_manifest = settings.KUBERNETES_JOB_POD_MANIFEST
 
     configuration = kubernetes.client.Configuration()
     configuration.host = settings.KUBERNETES_JOB_POD_HOST
@@ -639,10 +646,7 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
     with kubernetes.client.ApiClient(configuration) as api_client:
         api_instance = kubernetes.client.BatchV1Api(api_client)
 
-    with open(pod_manifest_file, "r") as f:
-        pod_manifest = yaml.safe_load(f)
-
-    pod_manifest["metadata"]["name"] = "nautobot-job-" + job_result.pk
+    pod_manifest["metadata"]["name"] = "nautobot-job-" + str(job_result.pk)
     pod_manifest["spec"]["template"]["spec"]["containers"][0]["command"] = [
         "nautobot-server",
         "runjob_with_job_result",
@@ -653,7 +657,7 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
     logger.info("Creating job pod %s in namespace %s", pod_name, pod_namespace)
     api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
     logger.info("Reading job pod %s in namespace %s", pod_name, pod_namespace)
-    api_instance.read_namespaced_job(name=pod_name, namespace=pod_namespace)
+    api_instance.read_namespaced_job(name="nautobot-job-" + str(job_result.pk), namespace=pod_namespace)
     logger.info("Done.")
     job_result.refresh_from_db()
     return job_result
