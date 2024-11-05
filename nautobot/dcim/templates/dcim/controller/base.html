@@ -2,8 +2,7 @@
 {% load helpers %}
 
 {% block extra_nav_tabs %}
-    {# TODO: replace with the capabilities wireless lookup. #}
-    {% if object.controller_managed_device_groups %}
+    {% if 'wireless' in object.capabilities %}
         <li role="presentation" {% if active_tab == 'wireless-networks' %} class="active"{% endif %}>
             <a href="{% url 'dcim:controller_wirelessnetworks' pk=object.pk %}">Wireless Networks</a>
         </li>

@@ -4241,7 +4241,8 @@ class ControllerUIViewSet(NautobotUIViewSet):
             devices = Device.objects.restrict(request.user).filter(controller_managed_device_group__controller=instance)
             devices_table = tables.DeviceTable(devices)
             devices_table.columns.show("controller_managed_device_group")
-            devices_table.sequence = ("name", "controller_managed_device_group", "...")
+            devices_table.columns.show("capabilities")
+            devices_table.sequence = ("name", "controller_managed_device_group", "capabilities", "...")
 
             paginate = {
                 "paginator_class": EnhancedPaginator,

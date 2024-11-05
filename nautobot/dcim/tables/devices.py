@@ -177,6 +177,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     controller_managed_device_group = tables.Column(linkify=True)
     software_version = tables.Column(linkify=True, verbose_name="Software Version")
     secrets_group = tables.Column(linkify=True)
+    capabilities = tables.Column(orderable=False, accessor="controller_managed_device_group.capabilities")
     tags = TagColumn(url_name="dcim:device_list")
 
     class Meta(BaseTable.Meta):
@@ -207,6 +208,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "software_version",
             "controller_managed_device_group",
             "secrets_group",
+            "capabilities",
             "tags",
         )
         default_columns = (
@@ -221,43 +223,10 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "primary_ip",
         )
 
+    def render_capabilities(self, value):
+        """Render capabilities."""
+        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
-# class AccessPointGroupDeviceTable(DeviceTable):
-#     access_point_group = tables.Column(linkify=True)
-#     wireless_network_count = LinkedCountColumn(
-#         viewname="wireless:wirelessnetwork_list",
-#         url_params={"access_point_groups": "access_point_group_id"},
-#         verbose_name="Wireless Networks",
-#         reverse_lookup="access_point_groups__devices",
-#     )
-
-#     class Meta(DeviceTable.Meta):
-#         fields = (
-#             "pk",
-#             "name",
-#             "access_point_group",
-#             "status",
-#             "tenant",
-#             "location",
-#             "rack",
-#             "role",
-#             "device_type",
-#             "primary_ip",
-#             "wireless_network_count",
-#         )
-#         default_columns = (
-#             "pk",
-#             "name",
-#             "access_point_group",
-#             "status",
-#             "tenant",
-#             "location",
-#             "rack",
-#             "role",
-#             "device_type",
-#             "primary_ip",
-#             "wireless_network_count",
-#         )
 
 
 class DeviceImportTable(BaseTable):
