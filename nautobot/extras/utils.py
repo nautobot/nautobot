@@ -635,19 +635,12 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
     with open(pod_manifest_file, "r") as f:
         pod_manifest = yaml.safe_load(f)
 
-    user = job_result.user.username
-    job_class_path = job_result.job_model.class_path
     pod_manifest["metadata"]["name"] = "nautobot-job-" + job_result.pk
     pod_manifest["spec"]["template"]["spec"]["containers"][0]["command"] = [
         "nautobot-server",
-        "runjob",
-        "--local",
-        "-u",
-        f"{user}",  # TODO replace these arguments with actual
-        f"{job_class_path}",
+        "runjob_with_job_result",
         "-d",
         f"{job_kwargs}",
-        "-r",
         f"{job_result.pk}",
     ]
     logger.info("Creating job pod %s in namespace %s", pod_name, pod_namespace)
