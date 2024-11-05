@@ -1,10 +1,12 @@
 {% load helpers %}
-{%  if render_as == 'json' %}
-    {{ text_content | render_json }}
+{% if render_as == 'json' %}
+    <pre>{{ value | render_json }}</pre>
 {% elif render_as == 'yaml' %}
-    {{ text_content | render_yaml }}
+    <pre>{{ value | render_yaml }}</pre>
 {% elif render_as == 'markdown' %}
-    {{ text_content | render_markdown }}
+    {{ value | render_markdown }}
+{% elif render_as == 'code' %}
+    <pre>{{ value }}</pre>
 {% else %}
-    {{ text_content }}
+    {{ value }}
 {% endif %}

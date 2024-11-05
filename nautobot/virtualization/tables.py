@@ -185,7 +185,7 @@ class VirtualMachineDetailTable(VirtualMachineTable):
 #
 
 
-class VMInterfaceTable(StatusTableMixin, BaseInterfaceTable):
+class VMInterfaceTable(BaseInterfaceTable):
     pk = ToggleColumn()
     virtual_machine = tables.LinkColumn()
     name = tables.Column(linkify=True)
