@@ -1098,7 +1098,7 @@ SILKY_INTERCEPT_FUNC = silk_request_logging_intercept_logic
 #
 
 # Filepath of the kubernetes pod manifest used to create a job pod in the kubernetes cluster
-KUBERNETES_JOB_POD_MANIFEST = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_MANIFEST", "")
+KUBERNETES_JOB_POD_MANIFEST = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_MANIFEST", {})
 
 # Name of the kubernetes pod created in the kubernetes cluster
 KUBERNETES_JOB_POD_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAME", "")
