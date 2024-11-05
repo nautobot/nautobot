@@ -1,3 +1,5 @@
+from django import forms
+
 from nautobot.core.forms import BootstrapMixin
 
 from .mixins import (
@@ -62,3 +64,9 @@ class NautobotBulkEditForm(
     RelationshipModelBulkEditFormMixin,
 ):
     """Base class for bulk-edit forms for models that support relationships, custom fields and notes."""
+
+    def __init__(self, *args, edit_all=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        if edit_all:
+            self.fields["pk"].required = False
+            self.fields["_all"] = forms.BooleanField(widget=forms.HiddenInput(), required=True, initial=True)

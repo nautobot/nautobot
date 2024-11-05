@@ -1082,7 +1082,7 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):  # 3.0 TODO: remove, unus
             return self.form_invalid(form)
 
 
-class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
+class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, DeleteAllModelMixin):
     """
     UI mixin to bulk update model instances.
     """
@@ -1107,7 +1107,13 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
         nullified_fields = request.POST.getlist("_nullify")
         with deferred_change_logging_for_bulk_operation():
             updated_objects = []
-            for obj in queryset.filter(pk__in=form.cleaned_data["pk"]):
+            edit_all = self.request.POST.get("_all")
+
+            if edit_all:
+                queryset = self._get_bulk_delete_all_queryset(self.request)
+            else:
+                queryset = queryset.filter(pk__in=form.cleaned_data["pk"])
+            for obj in queryset:
                 self.obj = obj
                 # Update standard fields. If a field is listed in _nullify, delete its value.
                 for name in standard_fields:
@@ -1178,38 +1184,42 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
         request.POST "_edit": Function to render the user selection of objects in a table form/BulkUpdateForm via Response that is passed to NautobotHTMLRenderer.
         request.POST "_apply": Function to validate the table form/BulkUpdateForm and to perform the action of bulk update. Render the form with errors if exceptions are raised.
         """
-        queryset = self.get_queryset()
-        model = queryset.model
+        edit_all = request.POST.get("_all")
 
-        # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
-        if request.POST.get("_all"):
-            if self.filterset_class is not None:
-                self.pk_list = list(
-                    self.filterset_class(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True)
-                )
-            else:
-                self.pk_list = list(model.objects.all().values_list("pk", flat=True))
+        if edit_all:
+            self.pk_list = None
+            queryset = self._get_bulk_delete_all_queryset(request)
         else:
             self.pk_list = list(request.POST.getlist("pk"))
+            queryset = self.get_queryset().filter(pk__in=self.pk_list)
+
         data = {}
         form_class = self.get_form_class()
         if "_apply" in request.POST:
             self.kwargs = kwargs
-            form = form_class(queryset.model, request.POST)
+            form = form_class(queryset.model, request.POST, edit_all=edit_all)
             restrict_form_fields(form, request.user)
             if form.is_valid():
                 return self.form_valid(form)
             else:
                 return self.form_invalid(form)
-        table_class = self.get_table_class()
-        table = table_class(queryset.filter(pk__in=self.pk_list), orderable=False)
-        if not table.rows:
-            messages.warning(
-                request,
-                f"No {queryset.model._meta.verbose_name_plural} were selected to update.",
-            )
-            return redirect(self.get_return_url(request))
-        data.update({"table": table})
+        table = None
+        if not edit_all:
+            table_class = self.get_table_class()
+            table = table_class(queryset.filter(pk__in=self.pk_list), orderable=False)
+            if not table.rows:
+                messages.warning(
+                    request,
+                    f"No {queryset.model._meta.verbose_name_plural} were selected to update.",
+                )
+                return redirect(self.get_return_url(request))
+        data.update(
+            {
+                "table": table,
+                "objs_count": queryset.count(),
+                "edit_all": edit_all,
+            }
+        )
         return Response(data)
 
 
