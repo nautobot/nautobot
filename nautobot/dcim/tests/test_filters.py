@@ -1766,9 +1766,13 @@ class DeviceTestCase(
 
         cls.controller_managed_device_groups = list(ControllerManagedDeviceGroup.objects.all()[:2])
         cls.controller_managed_device_groups[0].radio_profiles.set(RadioProfile.objects.all()[:2])
-        cls.controller_managed_device_groups[0].wireless_networks.set(WirelessNetwork.objects.filter(controller_managed_device_groups__isnull=True)[:2])
+        cls.controller_managed_device_groups[0].wireless_networks.set(
+            WirelessNetwork.objects.filter(controller_managed_device_groups__isnull=True)[:2]
+        )
         cls.controller_managed_device_groups[1].radio_profiles.set(RadioProfile.objects.all()[2:4])
-        cls.controller_managed_device_groups[1].wireless_networks.set(WirelessNetwork.objects.filter(controller_managed_device_groups__isnull=True)[2:4])
+        cls.controller_managed_device_groups[1].wireless_networks.set(
+            WirelessNetwork.objects.filter(controller_managed_device_groups__isnull=True)[2:4]
+        )
         cls.device_redundancy_groups = list(DeviceRedundancyGroup.objects.all()[:2])
         Device.objects.filter(pk=devices[0].pk).update(
             controller_managed_device_group=cls.controller_managed_device_groups[0],

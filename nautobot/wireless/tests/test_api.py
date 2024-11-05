@@ -185,19 +185,25 @@ class ControllerManagedDeviceGroupRadioProfileAssignmentTest(APIViewTestCases.AP
         cls.create_data = [
             {
                 "controller_managed_device_group": controller_managed_device_groups[0].pk,
-                "radio_profile": models.RadioProfile.objects.exclude(controller_managed_device_groups=controller_managed_device_groups[0])
+                "radio_profile": models.RadioProfile.objects.exclude(
+                    controller_managed_device_groups=controller_managed_device_groups[0]
+                )
                 .first()
                 .pk,
             },
             {
                 "controller_managed_device_group": controller_managed_device_groups[1].pk,
-                "radio_profile": models.RadioProfile.objects.exclude(controller_managed_device_groups=controller_managed_device_groups[1])
+                "radio_profile": models.RadioProfile.objects.exclude(
+                    controller_managed_device_groups=controller_managed_device_groups[1]
+                )
                 .first()
                 .pk,
             },
             {
                 "controller_managed_device_group": controller_managed_device_groups[2].pk,
-                "radio_profile": models.RadioProfile.objects.exclude(controller_managed_device_groups=controller_managed_device_groups[2])
+                "radio_profile": models.RadioProfile.objects.exclude(
+                    controller_managed_device_groups=controller_managed_device_groups[2]
+                )
                 .first()
                 .pk,
             },
@@ -214,21 +220,27 @@ class ControllerManagedDeviceGroupWirelessNetworkAssignmentTest(APIViewTestCases
         cls.create_data = [
             {
                 "controller_managed_device_group": controller_managed_device_groups[0].pk,
-                "wireless_network": models.WirelessNetwork.objects.exclude(controller_managed_device_groups=controller_managed_device_groups[0])
+                "wireless_network": models.WirelessNetwork.objects.exclude(
+                    controller_managed_device_groups=controller_managed_device_groups[0]
+                )
                 .first()
                 .pk,
                 "vlan": vlans[0].pk,
             },
             {
                 "controller_managed_device_group": controller_managed_device_groups[1].pk,
-                "wireless_network": models.WirelessNetwork.objects.exclude(controller_managed_device_groups=controller_managed_device_groups[1])
+                "wireless_network": models.WirelessNetwork.objects.exclude(
+                    controller_managed_device_groups=controller_managed_device_groups[1]
+                )
                 .first()
                 .pk,
                 "vlan": vlans[1].pk,
             },
             {
                 "controller_managed_device_group": controller_managed_device_groups[2].pk,
-                "wireless_network": models.WirelessNetwork.objects.exclude(controller_managed_device_groups=controller_managed_device_groups[2])
+                "wireless_network": models.WirelessNetwork.objects.exclude(
+                    controller_managed_device_groups=controller_managed_device_groups[2]
+                )
                 .first()
                 .pk,
             },

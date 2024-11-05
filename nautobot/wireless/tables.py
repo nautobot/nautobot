@@ -176,7 +176,9 @@ class ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(BaseTable):
         )
 
 
-class ControllerControllerManagedDeviceGroupWirelessNetworkAssignmentTable(ControllerManagedDeviceGroupWirelessNetworkAssignmentTable):
+class ControllerControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
+    ControllerManagedDeviceGroupWirelessNetworkAssignmentTable
+):
     class Meta(ControllerManagedDeviceGroupWirelessNetworkAssignmentTable.Meta):
         default_columns = (
             "wireless_network",

@@ -7,7 +7,7 @@ from nautobot.core.filters import (
     RelatedMembershipBooleanFilter,
     SearchFilter,
 )
-from nautobot.dcim.models import Controller, ControllerManagedDeviceGroup, Device
+from nautobot.dcim.models import ControllerManagedDeviceGroup
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import SecretsGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin

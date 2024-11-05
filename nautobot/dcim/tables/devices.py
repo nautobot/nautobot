@@ -228,7 +228,6 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
         return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
-
 class DeviceImportTable(BaseTable):
     name = tables.TemplateColumn(template_code=DEVICE_LINK)
     status = ColoredLabelColumn()

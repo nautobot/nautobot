@@ -1,5 +1,5 @@
 from nautobot.core.apps import HomePageItem, HomePagePanel
-from nautobot.wireless.models import RadioProfile, SupportedDataRate, WirelessNetwork
+from nautobot.wireless.models import WirelessNetwork
 
 layout = (
     HomePagePanel(

@@ -9,7 +9,7 @@ from nautobot.core.factory import (
     random_instance,
     UniqueFaker,
 )
-from nautobot.dcim.factory import DeviceFactory, ControllerManagedDeviceGroupFactory
+from nautobot.dcim.factory import ControllerManagedDeviceGroupFactory, DeviceFactory
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.models import Tenant
 from nautobot.wireless import models
@@ -101,16 +101,20 @@ class ControllerManagedDeviceGroupRadioProfileAssignmentFactory(BaseModelFactory
 class ControllerManagedDeviceGroupWithMembersFactory(ControllerManagedDeviceGroupFactory):
     capabilities = ["wireless"]
     wireless1 = factory.RelatedFactory(
-        ControllerManagedDeviceGroupWirelessNetworkAssignmentFactory, factory_related_name="controller_managed_device_group"
+        ControllerManagedDeviceGroupWirelessNetworkAssignmentFactory,
+        factory_related_name="controller_managed_device_group",
     )
     wireless2 = factory.RelatedFactory(
-        ControllerManagedDeviceGroupWirelessNetworkAssignmentFactory, factory_related_name="controller_managed_device_group"
+        ControllerManagedDeviceGroupWirelessNetworkAssignmentFactory,
+        factory_related_name="controller_managed_device_group",
     )
     radio1 = factory.RelatedFactory(
-        ControllerManagedDeviceGroupRadioProfileAssignmentFactory, factory_related_name="controller_managed_device_group"
+        ControllerManagedDeviceGroupRadioProfileAssignmentFactory,
+        factory_related_name="controller_managed_device_group",
     )
     radio2 = factory.RelatedFactory(
-        ControllerManagedDeviceGroupRadioProfileAssignmentFactory, factory_related_name="controller_managed_device_group"
+        ControllerManagedDeviceGroupRadioProfileAssignmentFactory,
+        factory_related_name="controller_managed_device_group",
     )
     device1 = factory.RelatedFactory(DeviceFactory, factory_related_name="controller_managed_device_group")
     device2 = factory.RelatedFactory(DeviceFactory, factory_related_name="controller_managed_device_group")

@@ -33,39 +33,39 @@ from nautobot.wireless.tables import (
     WirelessNetworkTable,
 )
 
-    # def get_extra_context(self, request, instance=None):
-    #     context = super().get_extra_context(request, instance)
-    #     if self.action == "retrieve":
-    #         # Devices
-    #         devices = instance.devices.restrict(request.user, "view")
-    #         context["device_count"] = devices.count()
+# def get_extra_context(self, request, instance=None):
+#     context = super().get_extra_context(request, instance)
+#     if self.action == "retrieve":
+#         # Devices
+#         devices = instance.devices.restrict(request.user, "view")
+#         context["device_count"] = devices.count()
 
-    #         # Wireless Networks
-    #         wireless_networks = instance.wireless_network_assignments.restrict(request.user, "view")
-    #         wireless_networks_table = AccessPointGroupWirelessNetworkAssignmentTable(wireless_networks)
-    #         wireless_networks_table.columns.hide("access_point_group")
-    #         wireless_networks_table.columns.hide("controller")
-    #         RequestConfig(
-    #             request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-    #         ).configure(wireless_networks_table)
-    #         context["wireless_networks_table"] = wireless_networks_table
+#         # Wireless Networks
+#         wireless_networks = instance.wireless_network_assignments.restrict(request.user, "view")
+#         wireless_networks_table = AccessPointGroupWirelessNetworkAssignmentTable(wireless_networks)
+#         wireless_networks_table.columns.hide("access_point_group")
+#         wireless_networks_table.columns.hide("controller")
+#         RequestConfig(
+#             request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+#         ).configure(wireless_networks_table)
+#         context["wireless_networks_table"] = wireless_networks_table
 
-    #         # Radio Profiles
-    #         radio_profiles = instance.radio_profiles.restrict(request.user, "view")
-    #         radio_profiles_table = RadioProfileTable(radio_profiles)
-    #         RequestConfig(
-    #             request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-    #         ).configure(radio_profiles_table)
-    #         context["radio_profiles_table"] = radio_profiles_table
+#         # Radio Profiles
+#         radio_profiles = instance.radio_profiles.restrict(request.user, "view")
+#         radio_profiles_table = RadioProfileTable(radio_profiles)
+#         RequestConfig(
+#             request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+#         ).configure(radio_profiles_table)
+#         context["radio_profiles_table"] = radio_profiles_table
 
-    #     return context
+#     return context
 
 
-    # def extra_post_save_action(self, obj, form):
-    #     if form.cleaned_data.get("add_radio_profiles", None):
-    #         obj.radio_profiles.add(*form.cleaned_data["add_radio_profiles"])
-    #     if form.cleaned_data.get("remove_radio_profiles", None):
-    #         obj.radio_profiles.remove(*form.cleaned_data["remove_radio_profiles"])
+# def extra_post_save_action(self, obj, form):
+#     if form.cleaned_data.get("add_radio_profiles", None):
+#         obj.radio_profiles.add(*form.cleaned_data["add_radio_profiles"])
+#     if form.cleaned_data.get("remove_radio_profiles", None):
+#         obj.radio_profiles.remove(*form.cleaned_data["remove_radio_profiles"])
 
 
 class RadioProfileUIViewSet(NautobotUIViewSet):
@@ -124,8 +124,12 @@ class WirelessNetworkUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
             # Controller Managed Device Groups
-            controller_managed_device_groups = instance.controller_managed_device_group_assignments.restrict(request.user, "view")
-            controller_managed_device_groups_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(controller_managed_device_groups)
+            controller_managed_device_groups = instance.controller_managed_device_group_assignments.restrict(
+                request.user, "view"
+            )
+            controller_managed_device_groups_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
+                controller_managed_device_groups
+            )
             controller_managed_device_groups_table.columns.hide("wireless_network")
             controller_managed_device_groups_table.columns.hide("ssid")
             controller_managed_device_groups_table.columns.hide("mode")

@@ -62,7 +62,10 @@ from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
-from nautobot.wireless.models import ControllerManagedDeviceGroupRadioProfileAssignment, ControllerManagedDeviceGroupWirelessNetworkAssignment
+from nautobot.wireless.models import (
+    ControllerManagedDeviceGroupRadioProfileAssignment,
+    ControllerManagedDeviceGroupWirelessNetworkAssignment,
+)
 from nautobot.wireless.tables import (
     ControllerManagedDeviceGroupRadioProfileAssignmentTable,
     ControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
@@ -4257,7 +4260,9 @@ class ControllerUIViewSet(NautobotUIViewSet):
     @action(detail=True, url_path="wireless-networks", url_name="wirelessnetworks")
     def wirelessnetworks(self, request, *args, **kwargs):
         instance = self.get_object()
-        controller_managed_device_groups = instance.controller_managed_device_groups.restrict(request.user, "view").values_list("pk", flat=True)
+        controller_managed_device_groups = instance.controller_managed_device_groups.restrict(
+            request.user, "view"
+        ).values_list("pk", flat=True)
         wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
             controller_managed_device_group__in=list(controller_managed_device_groups)
         ).select_related("wireless_network")
@@ -4322,7 +4327,6 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
             ).configure(radio_profiles_table)
             context["radio_profiles_table"] = radio_profiles_table
             context["radio_profiles_count"] = radio_profiles.count()
-
 
         if self.action in ["create", "update"]:
             context["wireless_networks"] = ControllerManagedDeviceGroupWirelessNetworkFormSet(
