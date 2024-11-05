@@ -85,7 +85,7 @@ class ControllerManagedDeviceGroupWirelessNetworkAssignmentFactory(BaseModelFact
     class Meta:
         model = models.ControllerManagedDeviceGroupWirelessNetworkAssignment
 
-    controller_managed_device_group = factory.SubFactory(ControllerManagedDeviceGroupFactory)
+    controller_managed_device_group = factory.SubFactory(ControllerManagedDeviceGroupFactory, capabilities=["wireless"])
     wireless_network = factory.SubFactory(WirelessNetworkFactory)
     vlan = random_instance(VLAN, allow_null=True)
 
@@ -94,11 +94,12 @@ class ControllerManagedDeviceGroupRadioProfileAssignmentFactory(BaseModelFactory
     class Meta:
         model = models.ControllerManagedDeviceGroupRadioProfileAssignment
 
-    controller_managed_device_group = factory.SubFactory(ControllerManagedDeviceGroupFactory)
+    controller_managed_device_group = factory.SubFactory(ControllerManagedDeviceGroupFactory, capabilities=["wireless"])
     radio_profile = factory.SubFactory(RadioProfileFactory)
 
 
 class ControllerManagedDeviceGroupWithMembersFactory(ControllerManagedDeviceGroupFactory):
+    capabilities = ["wireless"]
     wireless1 = factory.RelatedFactory(
         ControllerManagedDeviceGroupWirelessNetworkAssignmentFactory, factory_related_name="controller_managed_device_group"
     )
