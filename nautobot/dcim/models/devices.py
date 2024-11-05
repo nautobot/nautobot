@@ -9,7 +9,7 @@ from django.db import models
 from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
 from django.utils.functional import cached_property, classproperty
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 import yaml
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -1425,7 +1425,9 @@ class Controller(PrimaryModel):
                 )
 
     def get_capabilities_display(self):
-        return ", ".join(self.capabilities)
+        if not self.capabilities:
+            return format_html('<span class="text-muted">&mdash;</span>')
+        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in self.capabilities))
 
 
 @extras_features(
@@ -1504,7 +1506,10 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
             )
 
     def get_capabilities_display(self):
-        return ", ".join(self.capabilities)
+        if not self.capabilities:
+            return format_html('<span class="text-muted">&mdash;</span>')
+        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in self.capabilities))
+
 
 
 #

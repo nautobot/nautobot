@@ -225,6 +225,8 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
     def render_capabilities(self, value):
         """Render capabilities."""
+        if not value:
+            return format_html("&mdash;")
         return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
@@ -1396,6 +1398,8 @@ class ControllerTable(BaseTable):
 
     def render_capabilities(self, value):
         """Render capabilities."""
+        if not value:
+            return format_html("&mdash;")
         return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
@@ -1456,6 +1460,8 @@ class ControllerManagedDeviceGroupTable(BaseTable):
 
     def render_capabilities(self, value):
         """Render capabilities."""
+        if not value:
+            return format_html("&mdash;")
         return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
