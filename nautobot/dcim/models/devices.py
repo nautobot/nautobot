@@ -1511,7 +1511,6 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
         return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in self.capabilities))
 
 
-
 #
 # Modules
 #
