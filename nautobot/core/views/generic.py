@@ -46,7 +46,7 @@ from nautobot.core.utils.requests import (
     get_filterable_params_from_filter_params,
     normalize_querydict,
 )
-from nautobot.core.views.mixins import DeleteAllModelMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.core.views.mixins import EditAndDeleteAllModelMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
     check_filter_for_display,
@@ -979,7 +979,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  #
         )
 
 
-class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, DeleteAllModelMixin, View):
+class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDeleteAllModelMixin, View):
     """
     Edit objects in bulk.
 
@@ -1018,7 +1018,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, DeleteAllMo
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
         if edit_all:
             pk_list = []
-            queryset = self._get_bulk_delete_all_queryset(request)
+            queryset = self._get_bulk_edit_delete_all_queryset(request)
         else:
             pk_list = request.POST.getlist("pk")
             queryset = self.queryset.filter(pk__in=pk_list)
@@ -1260,7 +1260,7 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         return ""
 
 
-class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, DeleteAllModelMixin, View):
+class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDeleteAllModelMixin, View):
     """
     Delete objects in bulk.
 
@@ -1304,7 +1304,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, DeleteAll
 
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
-            queryset = self._get_bulk_delete_all_queryset(request)
+            queryset = self._get_bulk_edit_delete_all_queryset(request)
 
             if "_confirm" in request.POST:
                 return self._perform_delete_operation(request, queryset, model)
