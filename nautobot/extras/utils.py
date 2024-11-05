@@ -400,6 +400,8 @@ def get_celery_queues():
 def get_worker_count(request=None, queue=None):
     """
     Return a count of the active Celery workers in a specified queue (Could be a JobQueue instance, instance pk or instance name).
+    However if the queue is of type `Kubernetes`, always return 1
+    because the number of workers is irrelevant in this case and we should not let that block the job from running.
     Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
     """
     from nautobot.extras.models import JobQueue
@@ -409,12 +411,17 @@ def get_worker_count(request=None, queue=None):
         if is_uuid(queue):
             try:
                 # check if the string passed in is a valid UUID
-                queue = JobQueue.objects.get(pk=queue).name
+                queue = JobQueue.objects.get(pk=queue)
+                if queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
+                    return 1
+                queue = queue.name
             except JobQueue.DoesNotExist:
                 return 0
         else:
             return celery_queues.get(queue, 0)
     elif isinstance(queue, JobQueue):
+        if queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
+            return 1
         queue = queue.name
     else:
         queue = settings.CELERY_TASK_DEFAULT_QUEUE

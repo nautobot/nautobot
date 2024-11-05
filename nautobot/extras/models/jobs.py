@@ -838,6 +838,15 @@ class JobResult(BaseModel, CustomFieldModel):
                 scheduled_job=schedule,
                 user=user,
             )
+        else:
+            if job_result.user != user:
+                raise ValueError(
+                    f"There is a mismatch between the user specified {user} and the user associated with the job result {job_result.user}"
+                )
+            if job_result.job_model != job_model:
+                raise ValueError(
+                    f"There is a mismatch between the job specified {job_model} and the job associated with the job result {job_result.job_model}"
+                )
 
         if task_queue is None:
             task_queue = job_model.default_job_queue.name

@@ -39,6 +39,7 @@ class Command(BaseCommand):
 
         data = validate_job_and_job_data(self, job_user, job_class_path, options.get("data"))
 
+        # execute_job here implies "--local"
         job_result = JobResult.execute_job(
             job_model, job_user, profile=options["profile"], job_result=job_result, **data
         )
