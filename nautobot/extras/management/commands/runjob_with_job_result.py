@@ -1,4 +1,3 @@
-
 from django.core.management.base import BaseCommand, CommandError
 
 from nautobot.extras.choices import JobResultStatusChoices
@@ -40,6 +39,8 @@ class Command(BaseCommand):
 
         data = validate_job_and_job_data(self, job_user, job_class_path, options.get("data"))
 
-        job_result = JobResult.execute_job(job_model, job_user, profile=options["profile"], job_result=job_result, **data)
+        job_result = JobResult.execute_job(
+            job_model, job_user, profile=options["profile"], job_result=job_result, **data
+        )
         # Report on success/failure
         report_job_status(self, job_result)
