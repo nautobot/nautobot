@@ -94,6 +94,7 @@ class NautobotAppConfig(NautobotConfig):
     metrics = "metrics.metrics"
     menu_items = "navigation.menu_items"
     secrets_providers = "secrets.secrets_providers"
+    table_extensions = "table_extensions.table_extensions"
     template_extensions = "template_content.template_extensions"
     override_views = "views.override_views"
 
@@ -211,6 +212,9 @@ class NautobotAppConfig(NautobotConfig):
                 )
             register_override_views(override_views, self.name)
 
+        # Register tables extensions (if any).
+        self._register_table_extensions()
+
     @classmethod
     def validate(cls, user_config, nautobot_version):
         """Validate the user_config for baseline correctness."""
@@ -261,6 +265,13 @@ class NautobotAppConfig(NautobotConfig):
             # this is to support legacy apps that supply default_settings and constance_config
             if setting not in user_config and setting not in cls.constance_config:
                 user_config[setting] = value
+
+    def _register_table_extensions(self):
+        """Register tables extensions (if any)."""
+        table_extensions = import_object(f"{self.__module__}.{self.table_extensions}")
+        if table_extensions is not None:
+            register_table_extensions(table_extensions, self.name)
+            self.features["table_extensions"] = get_table_extension_features(table_extensions)
 
 
 @class_deprecated_in_favor_of(NautobotAppConfig)
@@ -489,6 +500,160 @@ def register_filter_extensions(filter_extensions, plugin_name):
                 logger.error(
                     f"There was a conflict with filter form field `{new_filterform_field_name}`, the custom filter form field was ignored."
                 )
+
+
+#
+# Table Extensions
+#
+
+
+class TableExtension:
+    """Template class for extending Tables.
+
+    An app can override the default columns for a table by either:
+    - Extending the original default columns to include custom columns.
+        - add_to_default_columns = ("my_app_name_new_column",)
+    - Removing native columns from the default columns.
+        - remove_from_default_columns = ("tenant",)
+    """
+
+    model = None
+    table_columns = {}
+    add_to_default_columns = ()
+    remove_from_default_columns = ()
+
+    @classmethod
+    def alter_queryset(cls, queryset):
+        """Alter the View class QuerySet.
+
+        This is a good place to add `prefetch_related` to the view queryset.
+        example:
+            return queryset.prefetch_related("my_model_set")
+        """
+        return queryset
+
+    @classmethod
+    def _get_table_columns_registrations(cls):
+        """Return a list of register labels fro each column."""
+        if not cls.table_columns:
+            return []
+        return [f"{cls.model} -> {column_name}" for column_name in cls.table_columns]
+
+    @classmethod
+    def _get_add_to_default_columns_registrations(cls):
+        """Return a list of register labels for each column added to defaults."""
+        if not cls.add_to_default_columns:
+            return []
+        return [f"{cls.model} -> {cls.add_to_default_columns}"]
+
+    @classmethod
+    def _get_remove_from_default_columns_registrations(cls):
+        """Return a list of register labels for each column removed from defaults."""
+        if not cls.remove_from_default_columns:
+            return []
+        return [f"{cls.model} -> {cls.remove_from_default_columns}"]
+
+
+def get_table_extension_features(table_extensions):
+    """Return a dictionary of TableExtension features for the App detail view."""
+    return {
+        "columns": [
+            label
+            for table_extension in table_extensions
+            for label in table_extension._get_table_columns_registrations()
+        ],
+        "add_to_default_columns": [
+            label
+            for table_extension in table_extensions
+            for label in table_extension._get_add_to_default_columns_registrations()
+        ],
+        "remove_from_default_columns": [
+            label
+            for table_extension in table_extensions
+            for label in table_extension._get_remove_from_default_columns_registrations()
+        ],
+    }
+
+
+def register_table_extensions(table_extensions, app_name):
+    """Register a list of TableExtension classes."""
+    for table_extension in table_extensions:
+        _validate_is_subclass_of_table_extension(table_extension)
+        _add_columns_into_model_table(table_extension, app_name)
+        _modify_default_table_columns(table_extension, app_name)
+        _alter_table_view_queryset(table_extension, app_name)
+
+
+def _add_columns_into_model_table(table_extension, app_name):
+    """Inject each new column into the Model Table."""
+    from nautobot.core.utils.lookup import get_table_for_model
+
+    if not isinstance(table_extension.table_columns, dict):
+        error = f"{app_name} TableExtension: 'table_columns' attribute must be of type 'dict'."
+        logger.error(error)
+        return
+
+    table = get_table_for_model(table_extension.model)
+    for name, column in table_extension.table_columns.items():
+        _validate_table_column_name_is_prefixed_with_app_name(name, app_name)
+        _add_column_to_table_base_columns(table, name, column, app_name)
+
+
+def _add_column_to_table_base_columns(table, column_name, column, app_name):
+    """Attach a column to an existing table."""
+    import django_tables2
+
+    if not isinstance(column, django_tables2.Column):
+        raise TypeError(f"Custom column `{column_name}` is not an instance of django_tables2.Column.")
+
+    if column_name in table.base_columns:
+        logger.error(
+            f"{app_name}: There was a name conflict with existing table column `{column_name}`, the custom column was ignored."
+        )
+    else:
+        table.base_columns[column_name] = column
+
+
+def _alter_table_view_queryset(table_extension, app_name):
+    """Replace the model view queryset with an optimized queryset from the app."""
+    from nautobot.core.utils.lookup import get_view_for_model
+
+    # TODO: Investigate if there is a more targeted way to patch only the list view queryset
+    # when targeting a subclass of `NautobotUIViewSet`.
+    view = get_view_for_model(table_extension.model, view_type="List")
+    view.queryset = table_extension.alter_queryset(view.queryset)
+
+
+def _modify_default_table_columns(table_extension, app_name):
+    """Add or remove columns from the table default columns."""
+    from nautobot.core.utils.lookup import get_table_for_model
+
+    table = get_table_for_model(table_extension.model)
+    message = (
+        f"{app_name}: Cannot {{action}} column `{{column_name}}` {{preposition}} the default columns for `{table}`."
+    )
+
+    for column_name in table_extension.add_to_default_columns:
+        if column_name in table.base_columns:
+            table.Meta.default_columns = (*table.Meta.default_columns, column_name)
+        else:
+            logger.debug(message.format(action="add", column_name=column_name, preposition="to"))
+
+    for column_name in table_extension.remove_from_default_columns:
+        if column_name in table.Meta.default_columns:
+            table.Meta.default_columns = tuple(name for name in table.Meta.default_columns if name != column_name)
+        else:
+            logger.debug(message.format(action="remove", column_name=column_name, preposition="from"))
+
+
+def _validate_is_subclass_of_table_extension(table_extension):
+    if not issubclass(table_extension, TableExtension):
+        raise TypeError(f"{table_extension} is not a subclass of nautobot.apps.filters.TableExtension!")
+
+
+def _validate_table_column_name_is_prefixed_with_app_name(name, app_name):
+    if not name.startswith(f"{app_name}_"):
+        raise ValueError(f"Attempted to create a custom table column `{name}` that did not start with `{app_name}`")
 
 
 #

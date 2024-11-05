@@ -7,6 +7,8 @@ from nautobot.core.forms.constants import (
     NUMERIC_EXPANSION_PATTERN,
 )
 from nautobot.core.forms.fields import (
+    AutoPositionField,
+    AutoPositionPatternField,
     CommentField,
     CSVChoiceField,
     CSVContentTypeField,
@@ -80,6 +82,8 @@ __all__ = (
     "ALPHANUMERIC_EXPANSION_PATTERN",
     "APISelect",
     "APISelectMultiple",
+    "AutoPositionField",
+    "AutoPositionPatternField",
     "BOOLEAN_CHOICES",
     "BOOLEAN_WITH_BLANK_CHOICES",
     "BootstrapMixin",

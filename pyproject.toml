@@ -66,7 +66,7 @@ django-prometheus = "~2.3.1"
 # Redis cache for Django used for distributed locking
 django-redis = "~5.4.0"
 # Django silk for request profiling
-django-silk = "~5.1.0"
+django-silk = "~5.3.0"
 # External Storage support (i.e. S3)
 # Pinned temporarily to 1.14.3 due to https://github.com/revsys/django-health-check/issues/434
 django-storages = {version = "1.14.3", optional = true}
@@ -106,7 +106,7 @@ kombu = "~5.4.2"
 # Rendering of markdown files to HTML
 Markdown = "~3.6"
 # MySQL database adapter
-mysqlclient = {version = "~2.2.3", optional = true}
+mysqlclient = {version = "~2.2.5", optional = true}
 # NAPALM automation library
 napalm = {version = ">=4.1.0,<6.0.0", optional = true}
 # IP prefix and address handling
@@ -194,7 +194,7 @@ mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see optional-settings.md and required-settings.md
 mkdocs-macros-plugin = "~1.0.5"
 # Material for mkdocs theme
-mkdocs-material = "~9.5.41"
+mkdocs-material = "~9.5.42"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.1"
 # Automatically handle index pages for docs sections
