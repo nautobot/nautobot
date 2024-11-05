@@ -619,25 +619,25 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
     """
     pod_name = settings.KUBERNETES_JOB_POD_NAME
     pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
+    pod_manifest_file = settings.KUBERNETES_JOB_POD_MANIFEST
 
     configuration = kubernetes.client.Configuration()
-    # configure API Key authorization: BearerToken
     configuration.host = settings.KUBERNETES_JOB_POD_HOST
     configuration.ssl_ca_cert = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
     with open("/var/run/secrets/kubernetes.io/serviceaccount/token", "r") as token_file:
         token = token_file.read().strip()
+    # configure API Key authorization: BearerToken
     configuration.api_key_prefix["authorization"] = "Bearer"
     configuration.api_key["authorization"] = token
     with kubernetes.client.ApiClient(configuration) as api_client:
         api_instance = kubernetes.client.BatchV1Api(api_client)
 
-    with open("./development/nautobot-job-job.yaml", "r") as f:
+    with open(pod_manifest_file, "r") as f:
         pod_manifest = yaml.safe_load(f)
 
     user = job_result.user.username
-    job_model = job_result.job_model
-    job_class_path = f"{job_model.module_name}.{job_model.job_class_name}"
-    pod_manifest["metadata"]["name"] = "nautobot-job"
+    job_class_path = job_result.job_model.class_path
+    pod_manifest["metadata"]["name"] = "nautobot-job-" + job_result.pk
     pod_manifest["spec"]["template"]["spec"]["containers"][0]["command"] = [
         "nautobot-server",
         "runjob",
@@ -650,9 +650,9 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
         "-r",
         f"{job_result.pk}",
     ]
-    logger.info(f"Creating job pod {pod_name} in namespace {pod_namespace}")
+    logger.info("Creating job pod %s in namespace %s", pod_name, pod_namespace)
     api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
-    logger.info(f"Reading job pod {pod_name} in namespace {pod_namespace}")
+    logger.info("Reading job pod %s in namespace %s", pod_name, pod_namespace)
     api_instance.read_namespaced_job(name=pod_name, namespace=pod_namespace)
     logger.info("Done.")
     job_result.refresh_from_db()

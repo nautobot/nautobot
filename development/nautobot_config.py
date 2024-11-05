@@ -91,6 +91,9 @@ METRICS_DISABLED_APPS = []
 
 CELERY_WORKER_PROMETHEUS_PORTS = [8080]
 
+# Path to the kubernetes pod manifest yaml file used to create a job pod in the kubernetes cluster.
+KUBERNETES_JOB_POD_MANIFEST = "./development/kubernetes/nautobot-job-job.yaml"
+
 # Name of the kubernetes pod created in the kubernetes cluster
 KUBERNETES_JOB_POD_NAME = "nautobot-job"
 

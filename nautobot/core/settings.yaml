@@ -1061,7 +1061,13 @@ properties:
   KUBERNETES_JOB_POD_HOST:
     default: ""
     description: "HTTP address of the Kubernetes cluster."
-    environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE"
+    environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_HOST"
+    type: "string"
+    version_added: "2.4.0"
+  KUBERNETES_JOB_POD_MANIFEST:
+    default: ""
+    description: "Path to the kubernetes pod manifest yaml file used to create a job pod in the kubernetes cluster."
+    environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_MANIFEST"
     type: "string"
     version_added: "2.4.0"
   KUBERNETES_JOB_POD_NAME:
