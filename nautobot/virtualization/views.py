@@ -6,6 +6,8 @@ from django.urls import reverse
 from django.utils.functional import cached_property
 from django_tables2 import RequestConfig
 
+from nautobot.core.ui import object_detail
+from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
@@ -32,21 +34,22 @@ class ClusterTypeListView(generic.ObjectListView):
 
 class ClusterTypeView(generic.ObjectView):
     queryset = ClusterType.objects.all()
-
-    def get_extra_context(self, request, instance):
-        # Clusters
-        clusters = Cluster.objects.restrict(request.user, "view").filter(cluster_type=instance)
-
-        cluster_table = tables.ClusterTable(clusters)
-        cluster_table.columns.hide("cluster_type")
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(cluster_table)
-
-        return {"cluster_table": cluster_table, **super().get_extra_context(request, instance)}
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.ClusterTable,
+                table_filter="cluster_type",
+                exclude_columns=["cluster_type"],
+            ),
+        ),
+    )
 
 
 class ClusterTypeEditView(generic.ObjectEditView):
