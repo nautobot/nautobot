@@ -20,7 +20,6 @@ The Nautobot UI Framework revolutionizes how you create object detail views in y
 ### Why Use the UI Framework?
 - ✨ **Reduced Development Time**: Eliminate boilerplate HTML/CSS
 - 🎯 **Consistency**: Automatic adherence to Nautobot's design patterns
-- 📱 **Responsive by Default**: Built-in mobile-friendly layouts
 - 🔄 **Reusable Components**: Compose views from pre-built panels
 - 🛠 **Extensible**: Easy to customize and extend
 
@@ -28,15 +27,15 @@ The Nautobot UI Framework revolutionizes how you create object detail views in y
 
 ### Basic Setup
 
-1. Create a view that inherits from `NautobotViewSetMixin` or `ObjectView`, in this example `ObjectView`:
+1. Create a view that inherits from `NautobotUIViewSet`:
 
 ```python
-from nautobot.core.views.generic import ObjectView
+from nautobot.apps import views
 
-class ExampleUIViewSet(ObjectView):
+class ExampleUIViewSet(views.NautobotUIViewSet):
     queryset = Example.objects.all()
     ...
-    
+
     object_detail_content = ObjectDetailContent(
         panels=[
             ObjectFieldsPanel(
@@ -88,7 +87,7 @@ The Panel component serves as a base class for creating individual display panel
 
 ```python
 Panel(
-    label="Panel Header", 
+    label="Panel Header",
     section=SectionChoices.FULL_WIDTH,
     weight=100,
 )
@@ -96,7 +95,7 @@ Panel(
 
 ```python
 Panel(
-    label="Optional Params Included", 
+    label="Optional Params Included",
     section=SectionChoices.RIGHT_HALF,
     weight=200,
     body_content_template_path="path/to/template/body_content_template.html"
@@ -269,11 +268,11 @@ StatsPanel(
     related_models=[           # Models to show statistics for
         Device,               # Direct model reference
                              # Will count all devices related to this object
-        
+
         (Circuit, "circuit_terminations__location__in"),
                              # Tuple of (Model, query_string)
                              # For complex relationships
-        
+
         (VirtualMachine, "cluster__location__in")
                              # Another complex relationship example
     ],
@@ -379,7 +378,7 @@ Note: This panel inherits all parameters from `Panel` base classes.
 | `body_wrapper_template_path` | No | `"components/panel/body_wrapper_table.html"` | Template for table wrapper |
 | `body_content_template_path` | No | `"components/panel/body_content_data_table.html"` | Template for table content |
 
-Note: 
+Note:
     `columns`/`context_columns_key` and `column_headers`/`context_column_headers_key` are mutually exclusive pairs.
 
 
@@ -387,9 +386,9 @@ Note:
 
 ```python
 DataTablePanel(
-    context_data_key="data", 
-    weight=100, 
-    columns=[1, 2, 3], 
+    context_data_key="data",
+    weight=100,
+    columns=[1, 2, 3],
     column_headers=["One", "Two", "Three"]
 )
 ```
@@ -477,7 +476,7 @@ ObjectsTablePanel(
 ```python
 class LocationUIViewSet(NautobotViewSetMixin):
     queryset = Location.objects.all()
-    
+
     object_detail_content = ObjectDetailContent(
         panels=(
             ObjectFieldsPanel(

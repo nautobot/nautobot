@@ -12,14 +12,15 @@ For complete UI Framework documentation, see: [Nautobot UI Framework Documentati
 ### Benefits
 - Reduced template maintenance
 - Consistent UI patterns across apps
-- Built-in responsive layouts
 - Standardized component behavior
 
 ### Before and After Example
 
 Before (Template-based):
-```python
-# views.py
+```python title="views.py"
+from device_app.models import Device
+from nautobot.core.views import generic
+
 class DeviceDetailView(generic.ObjectView):
     queryset = Device.objects.all()
     template_name = 'myapp/device_detail.html'
@@ -29,7 +30,8 @@ class DeviceDetailView(generic.ObjectView):
         context['related_devices'] = self.object.related_devices.all()
         context['custom_fields'] = self.object.get_custom_fields()
         return context
-
+```
+```html title="template.html"
 # template.html
 {% extends 'base.html' %}
 {% block content %}
@@ -48,17 +50,18 @@ class DeviceDetailView(generic.ObjectView):
 
 After (UI Framework):
 ```python
-from nautobot.core.views import ObjectView
-from nautobot.core.views.content import ObjectDetailContent
-from nautobot.core.views.panels import (
+from device_app.models import Device, RelatedDeviceTable
+from nautobot.apps import views
+from nautobot.apps.ui import (
+    ObjectDetailContent,
     ObjectFieldsPanel,
     ObjectsTablePanel,
-    TextPanel,
+    SectionChoices,
 )
 
-class DeviceDetailView(ObjectView):
+class DeviceDetailView(views.NautobotUIViewSet):
     queryset = Device.objects.all()
-    
+
     object_detail_content = ObjectDetailContent(
         panels=[
             ObjectFieldsPanel(
@@ -150,13 +153,13 @@ object_detail_content = ObjectDetailContent(
             section=SectionChoices.LEFT_HALF,
             weight=100,
         ),
-        
+
         # Right column
         StatsPanel(
             section=SectionChoices.RIGHT_HALF,
             weight=100,
         ),
-        
+
         # Full width at bottom
         ObjectsTablePanel(
             section=SectionChoices.FULL_WIDTH,
@@ -171,22 +174,84 @@ object_detail_content = ObjectDetailContent(
 For custom content that doesn't fit existing panels:
 
 1. Consider using `TextPanel` with custom formatting
+
+```python title="views.py"
+from nautobot.apps import views
+from nautobot.apps.ui import TextPanel
+
+class DeviceDetailView(views.NautobotUIViewSet):
+    panels = [
+        TextPanel(weight=100, context_field="custom_content"),
+    ]
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        context["custom_content"] = "My Custom Content"
+        return context
+```
+
 2. Use `KeyValueTablePanel` with transformed data
+
+```python title="views.py"
+from nautobot.apps import views
+from nautobot.apps.ui import KeyValueTablePanel
+from nautobot.core.templatetags.helpers import (
+    divide,
+    placeholder,
+    slugify,
+    split,
+)
+
+class DeviceDetailView(views.NautobotUIViewSet):
+    panels = [
+        KeyValueTablePanel(weight=100, value_transforms={
+            "name": [slugify, placeholder],
+            "list_of_names": split,
+            "number_value": lambda v: divide(v, 3),
+        }),
+    ]
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        context["data"] = {
+            "name": "Some Example Name",
+            "list_of_names": "Name1 Name2 Name3",
+            "number_value": 1000,
+        }
+        return context
+```
+
+More built-in filters can be found in [`Nautobot Built-In Filters`](../../../user-guide/platform-functionality/template-filters.md#nautobot-built-in-filters)
+
+
 3. Create a custom Panel class if needed:
 
-```python
-from nautobot.core.views.panels import Panel
+```python title="custom_panel.py"
+from django.template.loader import get_template
+from nautobot.apps.ui import Panel
 
 class CustomPanel(Panel):
-    def get_content(self, context):
-        # Custom rendering logic
-        return self.render_template(
-            template_path="custom_template.html",
-            extra_context={
-                "data": self.transform_data(context)
-            }
-        )
+
+    # You can override default body panel
+    def __init__(self, *, body_content_template_path="custom_template_path.html", **kwargs):
+        super().__init__(body_content_template_path=body_content_template_path, **kwargs)
+
+    # Adding some extra context specially for this panel / or this custom template
+    def get_extra_context(self, context):
+        # This context will be passed to the label, header, body and footer render methods
+        return {"custom_data": "I love Nautobot!"}
 ```
+```python title="views.py"
+from nautobot.apps import views
+from device_app.custom_panel import CustomPanel
+
+class DeviceDetailView(views.NautobotUIViewSet):
+    panels = [
+        CustomPanel(weight=100),
+    ]
+```
+
+If need more custom behaviour, you can override other `Panel` rendering methods. For more details please refer to the [`Panel` Code Reference.](#todo: link goes here)
 
 ## Best Practices for Migration
 
@@ -198,7 +263,6 @@ class CustomPanel(Panel):
 2. **Panel Organization**
    - Use consistent weight ranges (100-900)
    - Group related panels together
-   - Consider mobile viewport display
 
 3. **Performance Considerations**
    - Use select_related/prefetch_related in ObjectsTablePanel
