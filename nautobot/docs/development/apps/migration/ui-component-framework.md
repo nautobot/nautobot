@@ -33,7 +33,7 @@ class DeviceDetailView(generic.ObjectView):
 ```
 ```html title="template.html"
 # template.html
-{% extends 'base.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% block content %}
 <div class="row">
     <div class="col-md-6">
@@ -261,11 +261,11 @@ If need more custom behaviour, you can override other `Panel` rendering methods.
    - Keep backup of template-based views
 
 2. **Panel Organization**
-   - Use consistent weight ranges (100-900)
+   - Use weights relative to the `Panel.`WEIGHT_*_PANEL` constants for consistency.
    - Group related panels together
 
 3. **Performance Considerations**
-   - Use select_related/prefetch_related in ObjectsTablePanel
+   - Use select_related/prefetch_related in ObjectsTablePanel (though note that BaseTable may handle some simple optimizations automatically)
    - Optimize StatsPanel queries
    - Cache complex transformations
 
