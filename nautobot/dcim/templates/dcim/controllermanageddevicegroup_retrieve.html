@@ -2,7 +2,6 @@
 {% load helpers %}
 
 {% block extra_nav_tabs %}
-    {# TODO Currently going off of wireless_networks and radio_profiles count, but may switch to capabilities once implemented. #}
     {% if wireless_networks_count %}
         <li role="presentation"{% if request.GET.tab == 'wireless_networks' %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}#wireless_networks" onclick="switch_tab(this.href, reload=false)" aria-controls="wireless_networks" role="tab" data-toggle="tab">
@@ -20,7 +19,6 @@
 {% endblock extra_nav_tabs %}
 
 {% block extra_tab_content %}
-    {# TODO Currently going off of wireless_networks and radio_profiles count, but may switch to capabilities once implemented. #}
     {% if wireless_networks_count %}
         <div id="wireless_networks" role="tabpanel" class="tab-pane {% if not active_tab and not request.GET.tab or request.GET.tab == "wireless_networks" %}active{% else %}fade{% endif %}">
             <div class="panel panel-default">
