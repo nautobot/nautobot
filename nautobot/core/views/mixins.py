@@ -1206,7 +1206,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Edit
         table = None
         if not edit_all:
             table_class = self.get_table_class()
-            table = table_class(queryset.filter(pk__in=self.pk_list), orderable=False)
+            table = table_class(queryset, orderable=False)
             if not table.rows:
                 messages.warning(
                     request,
