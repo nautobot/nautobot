@@ -1415,16 +1415,22 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                 # check if the string passed in is a valid UUID
                 queue = JobQueue.objects.get(pk=job_queue)
             except JobQueue.DoesNotExist:
-                pass
+                queue, _ = JobQueue.objects.get_or_create(
+                    name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+                )
         else:
             try:
                 # check if the string passed in is a valid name
                 queue = JobQueue.objects.get(name=job_queue)
             except JobQueue.DoesNotExist:
-                pass
+                queue, _ = JobQueue.objects.get_or_create(
+                    name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+                )
 
         # Allow execution only if a worker process is running on a celery queue and the job is runnable.
-        if queue and queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=job_queue):
+        if queue is None:
+            queue = JobQueue.objects.get(name=settings.CELERY_TASK_DEFAULT_QUEUE)
+        if queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=job_queue):
             messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
         elif not job_model.installed or job_class is None:
             messages.error(request, "Unable to run or schedule job: Job is not presently installed.")

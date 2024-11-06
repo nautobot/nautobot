@@ -707,15 +707,20 @@ class JobViewSetBase(
                 # check if the string passed in is a valid UUID
                 queue = JobQueue.objects.get(pk=task_queue)
             except JobQueue.DoesNotExist:
-                pass
+                queue, _ = JobQueue.objects.get_or_create(
+                    name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+                )
+
         else:
             try:
                 # check if the string passed in is a valid name
                 queue = JobQueue.objects.get(name=task_queue)
             except JobQueue.DoesNotExist:
-                pass
+                queue, _ = JobQueue.objects.get_or_create(
+                    name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+                )
 
-        if queue and queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=task_queue):
+        if queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=task_queue):
             raise CeleryWorkerNotRunningException(queue=task_queue)
 
         # Default to a null JobResult.
