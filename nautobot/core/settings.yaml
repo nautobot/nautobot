@@ -1060,7 +1060,7 @@ properties:
     environment_variable: "NAUTOBOT_JOBS_ROOT"
   KUBERNETES_JOB_POD_HOST:
     default: ""
-    description: "HTTP address of the Kubernetes cluster."
+    description: "HTTP address of the Kubernetes cluster. e.g. https://kubernetes.default.svc"
     environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_HOST"
     type: "string"
     version_added: "2.4.0"
@@ -1089,7 +1089,7 @@ properties:
     version_added: "2.4.0"
   KUBERNETES_JOB_POD_TOKEN:
     default: ""
-    description: "# File path to the Bearer token used for authentication to create the job and job pod."
+    description: "File path to the Bearer token used for authentication to create the job and job pod."
     environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_TOKENE"
     type: "string"
     version_added: "2.4.0"

@@ -34,7 +34,6 @@ from nautobot.core.tables import ButtonsColumn
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
     get_route_for_model,
@@ -71,7 +70,7 @@ from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.signals import change_context_state
 from nautobot.extras.tasks import delete_custom_field_data
-from nautobot.extras.utils import get_base_template, get_worker_count
+from nautobot.extras.utils import get_base_template, get_job_queue, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -1409,27 +1408,8 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         else:
             return_url = None
 
-        queue = None
-        if is_uuid(job_queue):
-            try:
-                # check if the string passed in is a valid UUID
-                queue = JobQueue.objects.get(pk=job_queue)
-            except JobQueue.DoesNotExist:
-                queue, _ = JobQueue.objects.get_or_create(
-                    name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
-                )
-        else:
-            try:
-                # check if the string passed in is a valid name
-                queue = JobQueue.objects.get(name=job_queue)
-            except JobQueue.DoesNotExist:
-                queue, _ = JobQueue.objects.get_or_create(
-                    name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
-                )
-
+        queue = get_job_queue(job_queue)
         # Allow execution only if a worker process is running on a celery queue and the job is runnable.
-        if queue is None:
-            queue = JobQueue.objects.get(name=settings.CELERY_TASK_DEFAULT_QUEUE)
         if queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=job_queue):
             messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
         elif not job_model.installed or job_class is None:

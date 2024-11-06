@@ -853,6 +853,10 @@ class JobResult(BaseModel, CustomFieldModel):
 
         job_queue = JobQueue.objects.get(name=task_queue)
         # Kubernetes Job Queue logic
+        # As we execute Kubernetes jobs, we want to execute `run_kubernetes_job_and_return_job_result`
+        # the first time the kubernetes job is enqueued to spin up the kubernetes pod.
+        # And from the kubernetes pod, we specify "--local"/synchronous=True
+        # so that `run_kubernetes_job_and_return_job_result` is not executed again and the job will be run locally.
         if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not synchronous:
             return run_kubernetes_job_and_return_job_result(job_queue, job_result, json.dumps(job_kwargs))
 

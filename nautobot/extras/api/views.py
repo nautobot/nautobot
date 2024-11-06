@@ -31,7 +31,6 @@ from nautobot.core.exceptions import CeleryWorkerNotRunningException
 from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import serialize_object_v2
-from nautobot.core.utils.data import is_uuid
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType, JobQueueTypeChoices
 from nautobot.extras.filters import RoleFilterSet
@@ -82,7 +81,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.secrets.exceptions import SecretError
-from nautobot.extras.utils import get_worker_count
+from nautobot.extras.utils import get_job_queue, get_worker_count
 
 from . import serializers
 
@@ -701,25 +700,7 @@ class JobViewSetBase(
             # of errors under messages
             return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
 
-        queue = None
-        if is_uuid(task_queue):
-            try:
-                # check if the string passed in is a valid UUID
-                queue = JobQueue.objects.get(pk=task_queue)
-            except JobQueue.DoesNotExist:
-                queue, _ = JobQueue.objects.get_or_create(
-                    name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
-                )
-
-        else:
-            try:
-                # check if the string passed in is a valid name
-                queue = JobQueue.objects.get(name=task_queue)
-            except JobQueue.DoesNotExist:
-                queue, _ = JobQueue.objects.get_or_create(
-                    name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
-                )
-
+        queue = get_job_queue(task_queue)
         if queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=task_queue):
             raise CeleryWorkerNotRunningException(queue=task_queue)
 

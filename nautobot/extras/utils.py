@@ -400,8 +400,6 @@ def get_celery_queues():
 def get_worker_count(request=None, queue=None):
     """
     Return a count of the active Celery workers in a specified queue (Could be a JobQueue instance, instance pk or instance name).
-    However if the queue is of type `Kubernetes`, always return 1
-    because the number of workers is irrelevant in this case and we should not let that block the job from running.
     Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
     """
     from nautobot.extras.models import JobQueue
@@ -411,17 +409,10 @@ def get_worker_count(request=None, queue=None):
         if is_uuid(queue):
             try:
                 # check if the string passed in is a valid UUID
-                queue = JobQueue.objects.get(pk=queue)
-                queue = queue.name
+                queue = JobQueue.objects.get(pk=queue).name
             except JobQueue.DoesNotExist:
                 return 0
         else:
-            try:
-                # check if the string passed in is a valid name
-                queue = JobQueue.objects.get(name=queue)
-                queue = queue.name
-            except JobQueue.DoesNotExist:
-                return 0
             return celery_queues.get(queue, 0)
     elif isinstance(queue, JobQueue):
         queue = queue.name
@@ -444,6 +435,33 @@ def get_job_queue_worker_count(request=None, job_queue=None):
     else:
         queue = job_queue.name
     return celery_queues.get(queue, 0)
+
+
+def get_job_queue(job_queue):
+    """
+    Search for a JobQueue instance based on the str job_queue.
+    If no existing Job Queue not found, return the default JobQueue with name CELERY_TASK_DEFAULT_QUEUE.
+    """
+    from nautobot.extras.models import JobQueue
+
+    queue = None
+    if is_uuid(job_queue):
+        try:
+            # check if the string passed in is a valid UUID
+            queue = JobQueue.objects.get(pk=job_queue)
+        except JobQueue.DoesNotExist:
+            queue, _ = JobQueue.objects.get_or_create(
+                name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+            )
+    else:
+        try:
+            # check if the string passed in is a valid name
+            queue = JobQueue.objects.get(name=job_queue)
+        except JobQueue.DoesNotExist:
+            queue, _ = JobQueue.objects.get_or_create(
+                name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+            )
+    return queue
 
 
 def task_queues_as_choices(task_queues):
@@ -655,8 +673,6 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
     api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
     logger.info("Reading job pod %s in namespace %s", pod_name, pod_namespace)
     api_instance.read_namespaced_job(name="nautobot-job-" + str(job_result.pk), namespace=pod_namespace)
-    logger.info("Done.")
-    job_result.refresh_from_db()
     return job_result
 
 
