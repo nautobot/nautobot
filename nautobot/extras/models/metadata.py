@@ -203,7 +203,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
     documentation_static_path = "docs/user-guide/platform-functionality/objectmetadata.html"
 
     class Meta:
-        ordering = ["metadata_type", "assigned_object_id"]
+        ordering = ["metadata_type"]
         verbose_name_plural = "object metadata"
 
         indexes = [
