@@ -34,6 +34,7 @@ from nautobot.core.tables import ButtonsColumn
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
     get_route_for_model,
@@ -1408,9 +1409,22 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         else:
             return_url = None
 
-        # Allow execution only if a worker process is running and the job is runnable.
-        # TODO: refactor this to take into account of Kubernetes queue
-        if not get_worker_count(queue=job_queue):
+        queue = None
+        if is_uuid(job_queue):
+            try:
+                # check if the string passed in is a valid UUID
+                queue = JobQueue.objects.get(pk=job_queue)
+            except JobQueue.DoesNotExist:
+                pass
+        else:
+            try:
+                # check if the string passed in is a valid name
+                queue = JobQueue.objects.get(name=job_queue)
+            except JobQueue.DoesNotExist:
+                pass
+
+        # Allow execution only if a worker process is running on a celery queue and the job is runnable.
+        if queue and queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=job_queue):
             messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
         elif not job_model.installed or job_class is None:
             messages.error(request, "Unable to run or schedule job: Job is not presently installed.")

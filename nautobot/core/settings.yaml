@@ -1067,7 +1067,6 @@ properties:
   KUBERNETES_JOB_POD_MANIFEST:
     default: {}
     description: "A dictionary that contains the pod manifest used to create a job pod in the kubernetes cluster."
-    environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_MANIFEST"
     type: "object"
     version_added: "2.4.0"
   KUBERNETES_JOB_POD_NAME:
@@ -1080,6 +1079,18 @@ properties:
     default: ""
     description: "Name of the namespace that the Kubernetes pod is created in."
     environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE"
+    type: "string"
+    version_added: "2.4.0"
+  KUBERNETES_JOB_POD_SSL_CA_CERT:
+    default: ""
+    description: "File path to the SSL CA CERT used for authentication to create the job and job pod."
+    environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_SSL_CA_CERT"
+    type: "string"
+    version_added: "2.4.0"
+  KUBERNETES_JOB_POD_TOKEN:
+    default: ""
+    description: "# File path to the Bearer token used for authentication to create the job and job pod."
+    environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_TOKENE"
     type: "string"
     version_added: "2.4.0"
   LOCATION_NAME_AS_NATURAL_KEY:

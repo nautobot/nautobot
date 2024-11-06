@@ -1097,8 +1097,11 @@ SILKY_INTERCEPT_FUNC = silk_request_logging_intercept_logic
 # Kubernetes settings variables
 #
 
-# Filepath of the kubernetes pod manifest used to create a job pod in the kubernetes cluster
-KUBERNETES_JOB_POD_MANIFEST = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_MANIFEST", {})
+# Host of the kubernetes pod created in the kubernetes cluster
+KUBERNETES_JOB_POD_HOST = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_HOST", "")
+
+# A dictionary that stores the kubernetes pod manifest used to create a job pod in the kubernetes cluster
+KUBERNETES_JOB_POD_MANIFEST = {}
 
 # Name of the kubernetes pod created in the kubernetes cluster
 KUBERNETES_JOB_POD_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAME", "")
@@ -1106,5 +1109,8 @@ KUBERNETES_JOB_POD_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAME", "")
 # Namespace of the kubernetes pod created in the kubernetes cluster
 KUBERNETES_JOB_POD_NAMESPACE = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE", "")
 
-# Host of the kubernetes pod created in the kubernetes cluster
-KUBERNETES_JOB_POD_HOST = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_HOST", "")
+# File path to the SSL CA CERT used for authentication to create the job and job pod
+KUBERNETES_JOB_POD_SSL_CA_CERT = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_SSL_CA_CERT", "")
+
+# File path to the Bearer token used for authentication to create the job and job pod
+KUBERNETES_JOB_POD_TOKEN = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_TOKEN", "")

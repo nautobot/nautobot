@@ -18,7 +18,6 @@ class Command(BaseCommand):
             action="store_true",
             help="Run cProfile on the job execution and write the result to the disk under /tmp.",
         )
-        parser.add_argument("-d", "--data", type=str, help="JSON string that populates the `data` variable of the job.")
 
     def handle(self, *args, **options):
         job_result = None
@@ -37,7 +36,7 @@ class Command(BaseCommand):
         job_model = job_result.job_model
         job_class_path = job_model.class_path
 
-        data = validate_job_and_job_data(self, job_user, job_class_path, options.get("data"))
+        data = validate_job_and_job_data(self, job_user, job_class_path, job_result.task_kwargs)
 
         # execute_job here implies "--local"
         job_result = JobResult.execute_job(

@@ -1,5 +1,6 @@
 import collections
 import contextlib
+import copy
 import hashlib
 import hmac
 import logging
@@ -411,8 +412,6 @@ def get_worker_count(request=None, queue=None):
             try:
                 # check if the string passed in is a valid UUID
                 queue = JobQueue.objects.get(pk=queue)
-                if queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
-                    return 1
                 queue = queue.name
             except JobQueue.DoesNotExist:
                 return 0
@@ -420,15 +419,11 @@ def get_worker_count(request=None, queue=None):
             try:
                 # check if the string passed in is a valid name
                 queue = JobQueue.objects.get(name=queue)
-                if queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
-                    return 1
                 queue = queue.name
             except JobQueue.DoesNotExist:
                 return 0
             return celery_queues.get(queue, 0)
     elif isinstance(queue, JobQueue):
-        if queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
-            return 1
         queue = queue.name
     else:
         queue = settings.CELERY_TASK_DEFAULT_QUEUE
@@ -633,12 +628,14 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
     """
     pod_name = settings.KUBERNETES_JOB_POD_NAME
     pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
-    pod_manifest = settings.KUBERNETES_JOB_POD_MANIFEST
+    pod_manifest = copy.deepcopy(settings.KUBERNETES_JOB_POD_MANIFEST)
+    pod_ssl_ca_cert = settings.KUBERNETES_JOB_POD_SSL_CA_CERT
+    pod_token = settings.KUBERNETES_JOB_POD_TOKEN
 
     configuration = kubernetes.client.Configuration()
     configuration.host = settings.KUBERNETES_JOB_POD_HOST
-    configuration.ssl_ca_cert = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-    with open("/var/run/secrets/kubernetes.io/serviceaccount/token", "r") as token_file:
+    configuration.ssl_ca_cert = pod_ssl_ca_cert
+    with open(pod_token, "r") as token_file:
         token = token_file.read().strip()
     # configure API Key authorization: BearerToken
     configuration.api_key_prefix["authorization"] = "Bearer"
@@ -646,12 +643,12 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
     with kubernetes.client.ApiClient(configuration) as api_client:
         api_instance = kubernetes.client.BatchV1Api(api_client)
 
+    job_result.task_kwargs = job_kwargs
+    job_result.save()
     pod_manifest["metadata"]["name"] = "nautobot-job-" + str(job_result.pk)
     pod_manifest["spec"]["template"]["spec"]["containers"][0]["command"] = [
         "nautobot-server",
         "runjob_with_job_result",
-        "-d",
-        f"{job_kwargs}",
         f"{job_result.pk}",
     ]
     logger.info("Creating job pod %s in namespace %s", pod_name, pod_namespace)
