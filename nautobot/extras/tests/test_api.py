@@ -2863,6 +2863,8 @@ class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        # Delete existing metadata objects to avoid conflicts with generate_test_data randomness.
+        ObjectMetadata.objects.all().delete()
         mdts = [
             MetadataType.objects.create(name="Location Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT),
             MetadataType.objects.create(name="Device Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT),
