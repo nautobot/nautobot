@@ -982,7 +982,9 @@ class VirtualDeviceContextFactory(PrimaryModelFactory):
         ),
         None,
     )
-    identifier = factory.Sequence(lambda n: n + 100)
+    identifier = factory.Sequence(
+        lambda n: n + 101
+    )  # Start at 101 to avoid conflicts VirtualDeviceContexts API test cases.
     name = factory.Sequence(lambda n: f"VirtualDeviceContext {n}")
     device = random_instance(Device, allow_null=False)
     has_tenant = NautobotBoolIterator()

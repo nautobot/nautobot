@@ -1,46 +1,9 @@
 from nautobot.core.testing import APIViewTestCases
-from nautobot.dcim.models import Controller
+from nautobot.dcim.models import ControllerManagedDeviceGroup
 from nautobot.extras.models import SecretsGroup
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.models import Tenant
 from nautobot.wireless import choices, models
-
-
-class AccessPointGroupTest(APIViewTestCases.APIViewTestCase):
-    model = models.AccessPointGroup
-
-    @classmethod
-    def setUpTestData(cls):
-        tenants = Tenant.objects.all()
-        controllers = Controller.objects.all()
-        models.AccessPointGroup.objects.create(
-            name="Access Point Group 1", controller=controllers[0], tenant=tenants[0]
-        )
-        models.AccessPointGroup.objects.create(
-            name="Access Point Group 2", controller=controllers[1], tenant=tenants[1]
-        )
-        models.AccessPointGroup.objects.create(
-            name="Access Point Group 3", controller=controllers[2], tenant=tenants[2]
-        )
-        cls.create_data = [
-            {
-                "name": "Access Point Group 4",
-                "controller": controllers[3].pk,
-                "tenant": tenants[3].pk,
-                "description": "This is access point group 4",
-            },
-            {
-                "name": "Access Point Group 5",
-                "controller": controllers[4].pk,
-            },
-            {
-                "name": "Access Point Group 6",
-            },
-        ]
-        cls.bulk_update_data = {
-            "controller": controllers[6].pk,
-            "tenant": tenants[6].pk,
-        }
 
 
 class SupportedDataRateTest(APIViewTestCases.APIViewTestCase):
@@ -213,59 +176,71 @@ class WirelessNetworkTest(APIViewTestCases.APIViewTestCase):
         }
 
 
-class AccessPointGroupRadioProfileAssignmentTest(APIViewTestCases.APIViewTestCase):
-    model = models.AccessPointGroupRadioProfileAssignment
+class ControllerManagedDeviceGroupRadioProfileAssignmentTest(APIViewTestCases.APIViewTestCase):
+    model = models.ControllerManagedDeviceGroupRadioProfileAssignment
 
     @classmethod
     def setUpTestData(cls):
-        access_point_groups = models.AccessPointGroup.objects.all()[:3]
+        controller_managed_device_groups = ControllerManagedDeviceGroup.objects.all()[:3]
         cls.create_data = [
             {
-                "access_point_group": access_point_groups[0].pk,
-                "radio_profile": models.RadioProfile.objects.exclude(access_point_groups=access_point_groups[0])
+                "controller_managed_device_group": controller_managed_device_groups[0].pk,
+                "radio_profile": models.RadioProfile.objects.exclude(
+                    controller_managed_device_groups=controller_managed_device_groups[0]
+                )
                 .first()
                 .pk,
             },
             {
-                "access_point_group": access_point_groups[1].pk,
-                "radio_profile": models.RadioProfile.objects.exclude(access_point_groups=access_point_groups[1])
+                "controller_managed_device_group": controller_managed_device_groups[1].pk,
+                "radio_profile": models.RadioProfile.objects.exclude(
+                    controller_managed_device_groups=controller_managed_device_groups[1]
+                )
                 .first()
                 .pk,
             },
             {
-                "access_point_group": access_point_groups[2].pk,
-                "radio_profile": models.RadioProfile.objects.exclude(access_point_groups=access_point_groups[2])
+                "controller_managed_device_group": controller_managed_device_groups[2].pk,
+                "radio_profile": models.RadioProfile.objects.exclude(
+                    controller_managed_device_groups=controller_managed_device_groups[2]
+                )
                 .first()
                 .pk,
             },
         ]
 
 
-class AccessPointGroupWirelessNetworkAssignmentTest(APIViewTestCases.APIViewTestCase):
-    model = models.AccessPointGroupWirelessNetworkAssignment
+class ControllerManagedDeviceGroupWirelessNetworkAssignmentTest(APIViewTestCases.APIViewTestCase):
+    model = models.ControllerManagedDeviceGroupWirelessNetworkAssignment
 
     @classmethod
     def setUpTestData(cls):
         vlans = VLAN.objects.all()
-        access_point_groups = models.AccessPointGroup.objects.all()[:3]
+        controller_managed_device_groups = ControllerManagedDeviceGroup.objects.all()[:3]
         cls.create_data = [
             {
-                "access_point_group": access_point_groups[0].pk,
-                "wireless_network": models.WirelessNetwork.objects.exclude(access_point_groups=access_point_groups[0])
+                "controller_managed_device_group": controller_managed_device_groups[0].pk,
+                "wireless_network": models.WirelessNetwork.objects.exclude(
+                    controller_managed_device_groups=controller_managed_device_groups[0]
+                )
                 .first()
                 .pk,
                 "vlan": vlans[0].pk,
             },
             {
-                "access_point_group": access_point_groups[1].pk,
-                "wireless_network": models.WirelessNetwork.objects.exclude(access_point_groups=access_point_groups[1])
+                "controller_managed_device_group": controller_managed_device_groups[1].pk,
+                "wireless_network": models.WirelessNetwork.objects.exclude(
+                    controller_managed_device_groups=controller_managed_device_groups[1]
+                )
                 .first()
                 .pk,
                 "vlan": vlans[1].pk,
             },
             {
-                "access_point_group": access_point_groups[2].pk,
-                "wireless_network": models.WirelessNetwork.objects.exclude(access_point_groups=access_point_groups[2])
+                "controller_managed_device_group": controller_managed_device_groups[2].pk,
+                "wireless_network": models.WirelessNetwork.objects.exclude(
+                    controller_managed_device_groups=controller_managed_device_groups[2]
+                )
                 .first()
                 .pk,
             },

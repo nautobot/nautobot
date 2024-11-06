@@ -7,18 +7,18 @@
         <div class="col-md-6">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    <strong>Access Point Group</strong>
+                    <strong>Controller Managed Device Group</strong>
                 </div>
                 <table class="table table-hover panel-body attr-table">
                     <tr>
                         <td>Name</td>
                         <td>
-                            {{ object.access_point_group|hyperlinked_object }}
+                            {{ object.controller_managed_device_group|hyperlinked_object }}
                         </td>
                     </tr>
                     <tr>
                         <td>Controller</td>
-                        <td>{{ object.access_point_group.controller|hyperlinked_object }}</td>
+                        <td>{{ object.controller_managed_device_group.controller|hyperlinked_object }}</td>
                     </tr>
                 </table>
             </div>

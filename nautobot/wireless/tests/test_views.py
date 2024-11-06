@@ -8,41 +8,11 @@ from tree_queries.models import TreeNode
 
 from nautobot.core.testing import utils, ViewTestCases
 from nautobot.core.utils import lookup
-from nautobot.dcim.models import Controller
 from nautobot.extras import choices as extras_choices
 from nautobot.extras.models import SecretsGroup, Tag
-from nautobot.tenancy.models import Tenant
 from nautobot.users import models as users_models
 from nautobot.wireless import choices
-from nautobot.wireless.models import AccessPointGroup, RadioProfile, SupportedDataRate, WirelessNetwork
-
-
-class AccessPointGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
-    model = AccessPointGroup
-
-    @classmethod
-    def setUpTestData(cls):
-        AccessPointGroup.objects.create(name="Deletable Access Point Group 1")
-        AccessPointGroup.objects.create(name="Deletable Access Point Group 2")
-        AccessPointGroup.objects.create(name="Deletable Access Point Group 3")
-        cls.form_data = {
-            "name": "New Access Point Group",
-            "description": "A new access point group",
-            "controller": Controller.objects.first().pk,
-            "tenant": Tenant.objects.first().pk,
-            "tags": [t.pk for t in Tag.objects.get_for_model(AccessPointGroup)],
-            # Management form fields required for the dynamic Wireless Network formset
-            "wireless_network_assignments-TOTAL_FORMS": "0",
-            "wireless_network_assignments-INITIAL_FORMS": "1",
-            "wireless_network_assignments-MIN_NUM_FORMS": "0",
-            "wireless_network_assignments-MAX_NUM_FORMS": "1000",
-        }
-
-        cls.bulk_edit_data = {
-            "controller": Controller.objects.first().pk,
-            "tenant": Tenant.objects.first().pk,
-            "description": "New description",
-        }
+from nautobot.wireless.models import RadioProfile, SupportedDataRate, WirelessNetwork
 
 
 class WirelessNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -87,11 +57,11 @@ class WirelessNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "authentication": choices.WirelessNetworkAuthenticationChoices.WPA3_ENTERPRISE_192_BIT,
             "ssid": "SOME SSID",
             "tags": [t.pk for t in Tag.objects.get_for_model(WirelessNetwork)],
-            # Management form fields required for the dynamic Access Point Group formset
-            "access_point_group_assignments-TOTAL_FORMS": "0",
-            "access_point_group_assignments-INITIAL_FORMS": "1",
-            "access_point_group_assignments-MIN_NUM_FORMS": "0",
-            "access_point_group_assignments-MAX_NUM_FORMS": "1000",
+            # Management form fields required for the dynamic Controller Managed Device Group formset
+            "controller_managed_device_group_assignments-TOTAL_FORMS": "0",
+            "controller_managed_device_group_assignments-INITIAL_FORMS": "1",
+            "controller_managed_device_group_assignments-MIN_NUM_FORMS": "0",
+            "controller_managed_device_group_assignments-MAX_NUM_FORMS": "1000",
         }
 
         cls.bulk_edit_data = {

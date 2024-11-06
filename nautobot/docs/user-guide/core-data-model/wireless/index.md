@@ -3,7 +3,7 @@
 The goal of the Wireless Models is to enable Day-2 Wireless Workflows and Automation focusing on Campus networks. The following use-cases are covered:
 
  1. Inventory of SSID's through the use of [Wireless Networks](wirelessnetwork.md)
- 2. Grouping Access Points through the use of [Access Point Groups](accesspointgroup.md)
+ 2. Grouping Access Points through the use of [Controller Managed Device Group](../dcim/controllermanageddevicegroup.md)
  3. Represent common radio frequency and other wireless physical settings through [Radio Profiles](radioprofile.md)
 
 Currently not implemented is support for Wireless or Microwave backhaul, WISP, 5G or LTE.
@@ -17,10 +17,11 @@ This schema illustrates the connections between related models.
 title: Wireless Entity Relationship Diagram
 ---
 erDiagram
-    AccessPointGroup {
+    ControllerManagedDeviceGroup {
         string name UK
         Device devices FK
         Controller controller FK
+        ControllerManagedDeviceGroup parent FK
         RadioProfile radio_profiles FK
         WirelessNetwork wireless_networks FK
     }
@@ -35,7 +36,7 @@ erDiagram
         SecretsGroup secrets_group FK
         boolean hidden
         Prefix prefixes FK
-        AccessPointGroup access_point_groups
+        ControllerManagedDeviceGroup controller_managed_device_groups
     }
 
     SupportedDataRate {
@@ -59,7 +60,7 @@ erDiagram
 
     Device {
         string name UK
-        AccessPointGroup access_point_group FK
+        ControllerManagedDeviceGroup controller_managed_device_group FK
         Interface interfaces FK
     }
 
@@ -70,8 +71,8 @@ erDiagram
         VLAN untagged_vlan FK
     }
 
-    AccessPointGroupWirelessNetworkAssignment {
-        AccessPointGroup access_point_group_assignment FK
+    ControllerManagedDeviceGroupWirelessNetworkAssignment {
+        ControllerManagedDeviceGroup controller_managed_device_group_assignment FK
         WirelessNetwork wireless_network_assignment FK
         VLAN vlan FK
     }
@@ -80,11 +81,11 @@ erDiagram
         int vid
         string name
         Interface interfaces
-        AccessPointGroupWirelessNetworkAssignment access_point_group_wireless_network_assignments FK
+        ControllerManagedDeviceGroupWirelessNetworkAssignment controller_managed_device_group_wireless_network_assignments FK
     }
     Controller {
         string name UK
-        AccessPointGroup access_point_groups FK
+        ControllerManagedDeviceGroup controller_managed_device_groups FK
     }
     SecretsGroup {
         string name UK
@@ -93,13 +94,13 @@ erDiagram
     }
     
 
-    AccessPointGroup ||--o{ Controller : has
-    AccessPointGroup }o--o{ RadioProfile : "through AccessPointGroupRadioProfileAssignment"
-    AccessPointGroup }o--|| Device : "has"
-    AccessPointGroup }o--o{ AccessPointGroupWirelessNetworkAssignment : has
-    WirelessNetwork }o--o{ AccessPointGroupWirelessNetworkAssignment : has
+    ControllerManagedDeviceGroup ||--o{ Controller : has
+    ControllerManagedDeviceGroup }o--o{ RadioProfile : "through ControllerManagedDeviceGroupRadioProfileAssignment"
+    ControllerManagedDeviceGroup }o--|| Device : "has"
+    ControllerManagedDeviceGroup }o--o{ ControllerManagedDeviceGroupWirelessNetworkAssignment : has
+    WirelessNetwork }o--o{ ControllerManagedDeviceGroupWirelessNetworkAssignment : has
     WirelessNetwork }o--o{ SecretsGroup : has
-    AccessPointGroupWirelessNetworkAssignment ||--o{ VLAN : has
+    ControllerManagedDeviceGroupWirelessNetworkAssignment ||--o{ VLAN : has
 
     RadioProfile }o--o{ SupportedDataRate : has
 

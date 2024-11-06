@@ -2,24 +2,6 @@ from nautobot.core.testing import FilterTestCases
 from nautobot.wireless import filters, models
 
 
-class AccessPointGroupTestCase(FilterTestCases.FilterTestCase):
-    queryset = models.AccessPointGroup.objects.all()
-    filterset = filters.AccessPointGroupFilterSet
-    generic_filter_tests = [
-        ("controller",),
-        ("description",),
-        ("name",),
-        ("tenant", "tenant__id"),
-        ("tenant", "tenant__name"),
-        ("devices", "devices__id"),
-        ("devices", "devices__name"),
-        ("radio_profiles", "radio_profiles__id"),
-        ("radio_profiles", "radio_profiles__name"),
-        ("wireless_networks", "wireless_networks__id"),
-        ("wireless_networks", "wireless_networks__name"),
-    ]
-
-
 class SupportedDataRateTestCase(FilterTestCases.FilterTestCase):
     queryset = models.SupportedDataRate.objects.all()
     filterset = filters.SupportedDataRateFilterSet
@@ -50,23 +32,23 @@ class WirelessNetworkTestCase(FilterTestCases.FilterTestCase):
     ]
 
 
-class AccessPointGroupWirelessNetworkAssignmentTestCase(FilterTestCases.FilterTestCase):
-    queryset = models.AccessPointGroupWirelessNetworkAssignment.objects.all()
-    filterset = filters.AccessPointGroupWirelessNetworkAssignmentFilterSet
+class ControllerManagedDeviceGroupWirelessNetworkAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = models.ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.all()
+    filterset = filters.ControllerManagedDeviceGroupWirelessNetworkAssignmentFilterSet
     generic_filter_tests = [
-        ("access_point_group", "access_point_group__id"),
-        ("access_point_group", "access_point_group__name"),
+        ("controller_managed_device_group", "controller_managed_device_group__id"),
+        ("controller_managed_device_group", "controller_managed_device_group__name"),
         ("wireless_network", "wireless_network__id"),
         ("wireless_network", "wireless_network__name"),
     ]
 
 
-class AccessPointGroupRadioProfileAssignmentTestCase(FilterTestCases.FilterTestCase):
-    queryset = models.AccessPointGroupRadioProfileAssignment.objects.all()
-    filterset = filters.AccessPointGroupRadioProfileAssignmentFilterSet
+class ControllerManagedDeviceGroupRadioProfileAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = models.ControllerManagedDeviceGroupRadioProfileAssignment.objects.all()
+    filterset = filters.ControllerManagedDeviceGroupRadioProfileAssignmentFilterSet
     generic_filter_tests = [
-        ("access_point_group", "access_point_group__id"),
-        ("access_point_group", "access_point_group__name"),
+        ("controller_managed_device_group", "controller_managed_device_group__id"),
+        ("controller_managed_device_group", "controller_managed_device_group__name"),
         ("radio_profile", "radio_profile__id"),
         ("radio_profile", "radio_profile__name"),
     ]

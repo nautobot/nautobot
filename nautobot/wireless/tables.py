@@ -8,58 +8,9 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
+from nautobot.dcim.models import ControllerManagedDeviceGroup
 
-from .models import AccessPointGroup, RadioProfile, SupportedDataRate, WirelessNetwork
-
-
-class AccessPointGroupTable(BaseTable):
-    pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-    controller = tables.Column(linkify=True)
-    tenant = tables.Column(linkify=True)
-    devices_count = LinkedCountColumn(
-        viewname="dcim:device_list",
-        url_params={"access_point_group": "pk"},
-        verbose_name="Devices",
-    )
-    radio_profiles_count = LinkedCountColumn(
-        viewname="wireless:radioprofile_list",
-        url_params={"access_point_groups": "pk"},
-        verbose_name="Radio Profiles",
-    )
-    wireless_networks_count = LinkedCountColumn(
-        viewname="wireless:wirelessnetwork_list",
-        url_params={"access_point_groups": "pk"},
-        verbose_name="Wireless Networks",
-    )
-    tags = TagColumn(url_name="wireless:accesspointgroup_list")
-    actions = ButtonsColumn(AccessPointGroup)
-
-    class Meta(BaseTable.Meta):
-        model = AccessPointGroup
-        fields = (
-            "pk",
-            "name",
-            "description",
-            "controller",
-            "tenant",
-            "devices_count",
-            "radio_profiles_count",
-            "wireless_networks_count",
-            "tags",
-            "actions",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "description",
-            "controller",
-            "tenant",
-            "devices_count",
-            "radio_profiles_count",
-            "wireless_networks_count",
-            "actions",
-        )
+from .models import RadioProfile, SupportedDataRate, WirelessNetwork
 
 
 class RadioProfileTable(BaseTable):
@@ -180,8 +131,8 @@ class WirelessNetworkTable(BaseTable):
         )
 
 
-class AccessPointGroupWirelessNetworkAssignmentTable(BaseTable):
-    access_point_group = tables.Column(linkify=True)
+class ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(BaseTable):
+    controller_managed_device_group = tables.Column(linkify=True)
     wireless_network = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True)
     ssid = tables.Column(accessor="wireless_network.ssid")
@@ -190,19 +141,19 @@ class AccessPointGroupWirelessNetworkAssignmentTable(BaseTable):
     enabled = BooleanColumn(accessor="wireless_network.enabled")
     hidden = BooleanColumn(accessor="wireless_network.hidden")
     secrets_group = tables.Column(accessor="wireless_network.secrets_group", linkify=True)
-    controller = tables.Column(accessor="access_point_group.controller", linkify=True)
+    controller = tables.Column(accessor="controller_managed_device_group.controller", linkify=True)
     prefix_count = LinkedCountColumn(
         viewname="ipam:prefix_list",
         url_params={"vlan_id": "vlan_id"},
         verbose_name="Prefixes",
-        reverse_lookup="vlan__access_point_group_wireless_network_assignments",
+        reverse_lookup="vlan__controller_managed_device_group_wireless_network_assignments",
     )
 
     class Meta(BaseTable.Meta):
-        model = AccessPointGroup
+        model = ControllerManagedDeviceGroup
         fields = (
             "wireless_network",
-            "access_point_group",
+            "controller_managed_device_group",
             "ssid",
             "mode",
             "authentication",
@@ -215,7 +166,7 @@ class AccessPointGroupWirelessNetworkAssignmentTable(BaseTable):
         )
         default_columns = (
             "wireless_network",
-            "access_point_group",
+            "controller_managed_device_group",
             "vlan",
             "ssid",
             "prefix_count",
@@ -225,11 +176,13 @@ class AccessPointGroupWirelessNetworkAssignmentTable(BaseTable):
         )
 
 
-class ControllerAccessPointGroupWirelessNetworkAssignmentTable(AccessPointGroupWirelessNetworkAssignmentTable):
-    class Meta(AccessPointGroupWirelessNetworkAssignmentTable.Meta):
+class ControllerControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
+    ControllerManagedDeviceGroupWirelessNetworkAssignmentTable
+):
+    class Meta(ControllerManagedDeviceGroupWirelessNetworkAssignmentTable.Meta):
         default_columns = (
             "wireless_network",
-            "access_point_group",
+            "controller_managed_device_group",
             "vlan",
             "ssid",
             "prefix_count",
@@ -238,8 +191,8 @@ class ControllerAccessPointGroupWirelessNetworkAssignmentTable(AccessPointGroupW
         )
 
 
-class AccessPointGroupRadioProfileAssignmentTable(BaseTable):
-    access_point_group = tables.Column(linkify=True)
+class ControllerManagedDeviceGroupRadioProfileAssignmentTable(BaseTable):
+    controller_managed_device_group = tables.Column(linkify=True)
     radio_profile = tables.Column(linkify=True)
     frequency = tables.Column(accessor="radio_profile.frequency")
     channel_width = tables.Column(accessor="radio_profile.channel_width")
@@ -250,10 +203,10 @@ class AccessPointGroupRadioProfileAssignmentTable(BaseTable):
     regulatory_domain = tables.Column(accessor="radio_profile.regulatory_domain")
 
     class Meta(BaseTable.Meta):
-        model = AccessPointGroup
+        model = ControllerManagedDeviceGroup
         fields = (
             "radio_profile",
-            "access_point_group",
+            "controller_managed_device_group",
             "frequency",
             "channel_width",
             "allowed_channel_list",
@@ -264,7 +217,7 @@ class AccessPointGroupRadioProfileAssignmentTable(BaseTable):
         )
         default_columns = (
             "radio_profile",
-            "access_point_group",
+            "controller_managed_device_group",
             "frequency",
             "channel_width",
             "allowed_channel_list",

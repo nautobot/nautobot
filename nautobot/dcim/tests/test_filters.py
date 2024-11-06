@@ -121,7 +121,7 @@ from nautobot.extras.models import ExternalIntegration, Role, SecretsGroup, Stat
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
-from nautobot.wireless.models import AccessPointGroup
+from nautobot.wireless.models import RadioProfile, WirelessNetwork
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -598,7 +598,6 @@ def common_test_data(cls):
     )
 
     device_statuses = Status.objects.get_for_model(Device)
-    access_point_groups = AccessPointGroup.objects.filter(wireless_networks__isnull=False)[:3]
     cls.devices = (
         Device.objects.create(
             name="Device 1",
@@ -616,7 +615,6 @@ def common_test_data(cls):
             position=1,
             secrets_group=secrets_groups[0],
             software_version=cls.software_versions[0],
-            access_point_group=access_point_groups[0],
         ),
         Device.objects.create(
             name="Device 2",
@@ -635,7 +633,6 @@ def common_test_data(cls):
             secrets_group=secrets_groups[1],
             local_config_context_data={"foo": 123},
             software_version=cls.software_versions[1],
-            access_point_group=access_point_groups[1],
         ),
         Device.objects.create(
             name="Device 3",
@@ -653,7 +650,6 @@ def common_test_data(cls):
             position=3,
             secrets_group=secrets_groups[2],
             software_version=cls.software_versions[2],
-            access_point_group=access_point_groups[2],
         ),
     )
     cls.devices[0].tags.set(Tag.objects.get_for_model(Device))
@@ -1677,8 +1673,6 @@ class DeviceTestCase(
     filterset = DeviceFilterSet
     tenancy_related_name = "devices"
     generic_filter_tests = [
-        ("access_point_group", "access_point_group__id"),
-        ("access_point_group", "access_point_group__name"),
         ("asset_tag",),
         ("cluster", "cluster__id"),
         ("cluster", "cluster__name"),
@@ -1711,6 +1705,8 @@ class DeviceTestCase(
         ("rack", "rack__name"),
         ("rack_group", "rack__rack_group__id"),
         ("rack_group", "rack__rack_group__name"),
+        ("radio_profiles", "controller_managed_device_group__radio_profiles__id"),
+        ("radio_profiles", "controller_managed_device_group__radio_profiles__name"),
         ("rear_ports", "rear_ports__id"),
         ("role", "role__id"),
         ("role", "role__name"),
@@ -1726,8 +1722,8 @@ class DeviceTestCase(
         ("vc_priority",),
         ("virtual_chassis", "virtual_chassis__id"),
         ("virtual_chassis", "virtual_chassis__name"),
-        ("wireless_networks", "access_point_group__wireless_networks__id"),
-        ("wireless_networks", "access_point_group__wireless_networks__name"),
+        ("wireless_networks", "controller_managed_device_group__wireless_networks__id"),
+        ("wireless_networks", "controller_managed_device_group__wireless_networks__name"),
     ]
 
     @classmethod
@@ -1769,6 +1765,14 @@ class DeviceTestCase(
         Service.objects.create(device=devices[1], name="dns", protocol="udp", ports=[53])
 
         cls.controller_managed_device_groups = list(ControllerManagedDeviceGroup.objects.all()[:2])
+        cls.controller_managed_device_groups[0].radio_profiles.set(RadioProfile.objects.all()[:2])
+        cls.controller_managed_device_groups[0].wireless_networks.set(
+            WirelessNetwork.objects.filter(controller_managed_device_groups__isnull=True)[:2]
+        )
+        cls.controller_managed_device_groups[1].radio_profiles.set(RadioProfile.objects.all()[2:4])
+        cls.controller_managed_device_groups[1].wireless_networks.set(
+            WirelessNetwork.objects.filter(controller_managed_device_groups__isnull=True)[2:4]
+        )
         cls.device_redundancy_groups = list(DeviceRedundancyGroup.objects.all()[:2])
         Device.objects.filter(pk=devices[0].pk).update(
             controller_managed_device_group=cls.controller_managed_device_groups[0],
@@ -3895,8 +3899,6 @@ class ControllerFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = Controller.objects.all()
     filterset = ControllerFilterSet
     generic_filter_tests = (
-        ("access_point_groups", "access_point_groups__id"),
-        ("access_point_groups", "access_point_groups__name"),
         ("name",),
         ("description",),
         ("platform", "platform__id"),
@@ -3907,8 +3909,8 @@ class ControllerFilterSetTestCase(FilterTestCases.FilterTestCase):
         ("controller_device", "controller_device__name"),
         ("controller_device_redundancy_group", "controller_device_redundancy_group__id"),
         ("controller_device_redundancy_group", "controller_device_redundancy_group__name"),
-        ("wireless_networks", "access_point_groups__wireless_networks__id"),
-        ("wireless_networks", "access_point_groups__wireless_networks__name"),
+        ("wireless_networks", "controller_managed_device_groups__wireless_networks__id"),
+        ("wireless_networks", "controller_managed_device_groups__wireless_networks__name"),
     )
 
     @classmethod

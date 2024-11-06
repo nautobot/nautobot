@@ -6,7 +6,6 @@ from nautobot.dcim.models import ConsolePort, Interface, PowerPort
 
 from .cables import CableTable
 from .devices import (
-    AccessPointGroupDeviceTable,
     ConsolePortTable,
     ConsoleServerPortTable,
     ControllerManagedDeviceGroupTable,
@@ -67,7 +66,6 @@ from .racks import (
 )
 
 __all__ = (
-    "AccessPointGroupDeviceTable",
     "CableTable",
     "ConsoleConnectionTable",
     "ConsolePortTable",

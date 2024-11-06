@@ -62,7 +62,6 @@ from .template_code import (
 )
 
 __all__ = (
-    "AccessPointGroupDeviceTable",
     "ConsolePortTable",
     "ConsoleServerPortTable",
     "ControllerTable",
@@ -178,6 +177,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     controller_managed_device_group = tables.Column(linkify=True)
     software_version = tables.Column(linkify=True, verbose_name="Software Version")
     secrets_group = tables.Column(linkify=True)
+    capabilities = tables.Column(orderable=False, accessor="controller_managed_device_group.capabilities")
     tags = TagColumn(url_name="dcim:device_list")
 
     class Meta(BaseTable.Meta):
@@ -208,6 +208,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "software_version",
             "controller_managed_device_group",
             "secrets_group",
+            "capabilities",
             "tags",
         )
         default_columns = (
@@ -222,43 +223,11 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "primary_ip",
         )
 
-
-class AccessPointGroupDeviceTable(DeviceTable):
-    access_point_group = tables.Column(linkify=True)
-    wireless_network_count = LinkedCountColumn(
-        viewname="wireless:wirelessnetwork_list",
-        url_params={"access_point_groups": "access_point_group_id"},
-        verbose_name="Wireless Networks",
-        reverse_lookup="access_point_groups__devices",
-    )
-
-    class Meta(DeviceTable.Meta):
-        fields = (
-            "pk",
-            "name",
-            "access_point_group",
-            "status",
-            "tenant",
-            "location",
-            "rack",
-            "role",
-            "device_type",
-            "primary_ip",
-            "wireless_network_count",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "access_point_group",
-            "status",
-            "tenant",
-            "location",
-            "rack",
-            "role",
-            "device_type",
-            "primary_ip",
-            "wireless_network_count",
-        )
+    def render_capabilities(self, value):
+        """Render capabilities."""
+        if not value:
+            return format_html("&mdash;")
+        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
 class DeviceImportTable(BaseTable):
@@ -1429,6 +1398,8 @@ class ControllerTable(BaseTable):
 
     def render_capabilities(self, value):
         """Render capabilities."""
+        if not value:
+            return format_html("&mdash;")
         return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
@@ -1447,6 +1418,16 @@ class ControllerManagedDeviceGroupTable(BaseTable):
         url_params={"controller_managed_device_group": "pk"},
         verbose_name="Devices",
     )
+    radio_profiles_count = LinkedCountColumn(
+        viewname="wireless:radioprofile_list",
+        url_params={"controller_managed_device_groups": "pk"},
+        verbose_name="Radio Profiles",
+    )
+    wireless_networks_count = LinkedCountColumn(
+        viewname="wireless:wirelessnetwork_list",
+        url_params={"controller_managed_device_groups": "pk"},
+        verbose_name="Wireless Networks",
+    )
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -1456,6 +1437,8 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "pk",
             "name",
             "device_count",
+            "radio_profiles_count",
+            "wireless_networks_count",
             "controller",
             "weight",
             "capabilities",
@@ -1466,6 +1449,8 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "pk",
             "name",
             "device_count",
+            "radio_profiles_count",
+            "wireless_networks_count",
             "controller",
             "weight",
             "capabilities",
@@ -1475,6 +1460,8 @@ class ControllerManagedDeviceGroupTable(BaseTable):
 
     def render_capabilities(self, value):
         """Render capabilities."""
+        if not value:
+            return format_html("&mdash;")
         return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
