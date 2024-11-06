@@ -160,7 +160,6 @@ class ControllerManagedDeviceGroupWirelessNetworkAssignment(BaseModel):
         null=True,
     )
     is_metadata_associable_model = False
-    # TODO Check if this is the correct path
     documentation_static_path = "docs/user-guide/core-data-model/dcim/controllermanageddevicegroup.html"
 
     class Meta:
@@ -193,7 +192,6 @@ class ControllerManagedDeviceGroupRadioProfileAssignment(BaseModel):
         related_name="controller_managed_device_group_assignments",
     )
     is_metadata_associable_model = False
-    # TODO Check if this is the correct path
     documentation_static_path = "docs/user-guide/core-data-model/dcim/controllermanageddevicegroup.html"
 
     class Meta:

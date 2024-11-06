@@ -113,37 +113,6 @@ WirelessNetworkControllerManagedDeviceGroupFormSet = forms.inlineformset_factory
 )
 
 
-# class BulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
-#     controller = DynamicModelChoiceField(
-#         queryset=Controller.objects.all(),
-#         required=False,
-#         label="Controller",
-#     )
-#     tenant = DynamicModelChoiceField(
-#         queryset=Tenant.objects.all(),
-#         required=False,
-#     )
-#     name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-#     add_radio_profiles = DynamicModelMultipleChoiceField(
-#         queryset=RadioProfile.objects.all(),
-#         required=False,
-#         label="Add Radio Profiles",
-#     )
-#     remove_radio_profiles = DynamicModelMultipleChoiceField(
-#         queryset=RadioProfile.objects.all(),
-#         required=False,
-#         label="Remove Radio Profiles",
-#     )
-#     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-
-#     class Meta:
-#         nullable_fields = [
-#             "controller",
-#             "tenant",
-#             "description",
-#         ]
-
-
 class RadioProfileForm(NautobotModelForm):
     allowed_channel_list = NumericArrayField(
         base_field=forms.IntegerField(),
