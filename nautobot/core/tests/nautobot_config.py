@@ -257,9 +257,3 @@ KUBERNETES_JOB_POD_NAMESPACE = "default"
 
 # Host of the kubernetes pod created in the kubernetes cluster
 KUBERNETES_JOB_POD_HOST = "https://kubernetes.default.svc"
-
-# File path to the SSL CA CERT used for authentication to create the job and job pod
-KUBERNETES_JOB_POD_SSL_CA_CERT = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-
-# File path to the Bearer token used for authentication to create the job and job pod
-KUBERNETES_JOB_POD_TOKEN = "/var/run/secrets/kubernetes.io/serviceaccount/token"  # noqa: S105

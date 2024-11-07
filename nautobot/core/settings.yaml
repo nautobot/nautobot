@@ -1082,13 +1082,13 @@ properties:
     type: "string"
     version_added: "2.4.0"
   KUBERNETES_JOB_POD_SSL_CA_CERT:
-    default: ""
+    default: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
     description: "File path to the SSL CA CERT used for authentication to create the job and job pod."
     environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_SSL_CA_CERT"
     type: "string"
     version_added: "2.4.0"
   KUBERNETES_JOB_POD_TOKEN:
-    default: ""
+    default: "/var/run/secrets/kubernetes.io/serviceaccount/token"
     description: "File path to the Bearer token used for authentication to create the job and job pod."
     environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_TOKEN"
     type: "string"
