@@ -104,7 +104,16 @@ Map your existing components to UI Framework panels:
 | Statistics | `StatsPanel` |
 | Markdown/text content | `TextPanel` or `ObjectTextPanel` |
 
-### 3. Convert Views
+### 3. Select right panels weights/sections and tab layout.
+
+The panel weight determines the order of panels within a section and depends on the chosen layout.
+Panels in the same section (left/right/full-width) will be arranged based on their weight,
+with lower-weight panels appearing first,
+but the [layout choice](../../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.SectionChoices)
++(TWO_OVER_ONE or ONE_OVER_TWO)
+decides what sections will be at the top.
+
+### 4. Convert Views
 
 1. Update your view class:
 ```python
@@ -141,7 +150,7 @@ StatsPanel(
 )
 ```
 
-### 4. Layout Organization
+### 5. Layout Organization
 
 Organize your panels using sections and weights:
 
@@ -169,7 +178,7 @@ object_detail_content = ObjectDetailContent(
 )
 ```
 
-### 5. Custom Content
+### 6. Custom Content
 
 For custom content that doesn't fit existing panels:
 
@@ -301,8 +310,7 @@ ObjectTextPanel(
 
 - [ ] Identify all template-based views to migrate
 - [ ] Map current features to UI Framework panels
-- [ ] Update view classes and remove templates
-- [ ] Test responsive layout behavior
+- [ ] Update view classes
 - [ ] Verify all functionality works as before
 - [ ] Remove deprecated template files
 - [ ] Update documentation and tests

@@ -66,26 +66,16 @@ Panels are the building blocks of your UI. They contain specific types of conten
 
 ## Panel Types
 
-### Base Panel Properties
+### 0. Base Panel
 The Panel component serves as a base class for creating individual display panels within a Layout system.
 
-#### Configuration Parameters
-
-| Parameter | Required | Default | Description |
-|-----------|----------|---------|-------------|
-| `label` | No | `""` | The display label for the panel. If empty, no label will be shown. |
-| `section` | No | `SectionChoices.FULL_WIDTH` | Determines which layout section the panel belongs to. |
-| `weight` | Yes | - | Integer determining component's rendering order relative to peers |
-| `body_id` | No | `None` | HTML element ID to attach to the panel's body wrapper. |
-| `body_content_template_path` | No | `None` | Template path for rendering content within the panel body. |
-| `header_extra_content_template_path` | No | `None` | Template path for additional header content besides the label. |
-| `footer_content_template_path` | No | `None` | Template path for footer content. |
-| `template_path` | No | `"components/panel/panel.html"` | Template path for the overall panel structure. |
-| `body_wrapper_template_path` | No | `"components/panel/body_wrapper_generic.html"` | Template path for the panel body wrapper. |
+[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.Panel)
 
 #### Examples
 
 ```python
+from nautobot.apps.ui import Panel, SectionChoices
+
 Panel(
     label="Panel Header",
     section=SectionChoices.FULL_WIDTH,
@@ -94,34 +84,24 @@ Panel(
 ```
 
 ```python
+from nautobot.apps.ui import Panel, SectionChoices
+
 Panel(
     label="Optional Params Included",
     section=SectionChoices.RIGHT_HALF,
     weight=200,
-    body_content_template_path="path/to/template/body_content_template.html"
-    header_extra_content_template_path="path/to/template/header_extra_content_template.html"
-    footer_content_template_path="path/to/template/footer_content_template.html"
-    template_path="path/to/template/template.html"
-    body_wrapper_template_path="path/to/template/body_wrapper_template.html"
+    body_content_template_path="path/to/template/body_content_template.html",
+    header_extra_content_template_path="path/to/template/header_extra_content_template.html",
+    footer_content_template_path="path/to/template/footer_content_template.html",
+    template_path="path/to/template/template.html",
+    body_wrapper_template_path="path/to/template/body_wrapper_template.html",
 )
 ```
 
 ### 1. ObjectFieldsPanel
 `ObjectFieldsPanel` is designed to automatically render object attributes in a table format. It's particularly useful for displaying model instances or any object with defined attributes. This panel inherits from `KeyValueTablePanel`.
 
-#### Configuration Parameters
-
-Note: This panel inherits all parameters from both `Panel` and `KeyValueTablePanel` base classes.
-
-| Parameter | Required | Default | Description |
-|-----------|----------|---------|-------------|
-| `fields` | No | `"__all__"` | List of fields to display or `"__all__"` for automatic field discovery |
-| `exclude_fields` | No | `()` | List of fields to exclude when using `"__all__"` |
-| `context_object_key` | No | `"object"` | Key in the render context containing the target object |
-| `ignore_nonexistent_fields` | No | `False` | Whether to ignore fields listed in `fields` that don't exist on the object |
-| `value_transforms` | No | `{}` | Dictionary mapping keys to lists of transform functions for custom rendering. |
-| `label` | No | `None` | Panel label (defaults to object's `verbose_name` if not provided) |
-| `hide_if_unset` | No | `()` | List of keys to hide completely when their values are falsey. |
+[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.ObjectFieldsPanel)
 
 NOTE:
     When `fields="__all__"`, the panel automatically excludes: ManyToMany fields, Reverse relations, Hidden fields and Special fields (`id`, `created`, `last_updated`, `comments`, `tags`). `comments` and `tags` are automatically added as standalone panels.
@@ -129,6 +109,8 @@ NOTE:
 #### Examples
 
 ```python
+from nautobot.apps.ui import ObjectFieldsPanel, SectionChoices
+
 ObjectFieldsPanel(
     label="Object Fields Panel",
     section=SectionChoices.LEFT_HALF,
@@ -137,6 +119,8 @@ ObjectFieldsPanel(
 ```
 
 ```python
+from nautobot.apps.ui import ObjectFieldsPanel, SectionChoices
+
 ObjectFieldsPanel(
     label="Object Fields Panel",
     fields=["name", "status", "type", "notes"],
@@ -157,17 +141,7 @@ ObjectFieldsPanel(
 ### 2. KeyValueTablePanel
 `KeyValueTablePanel` is a Panel component that displays data in a two-column table format, commonly used in object detail views. It extends the base `Panel` class and provides additional functionality for data display and transformation.
 
-#### Configuration Parameters
-
-Note: This panel inherits all parameters from `Panel` base classes.
-
-| Parameter | Required | Default | Description |
-|-----------|----------|---------|-------------|
-| `data` | Yes | None | Dictionary of key-value pairs to display. Can be `None` if using dynamic data via `get_data()`. |
-| `hide_if_unset` | No | `()` | List of keys to hide completely when their values are falsey. |
-| `value_transforms` | No | `{}` | Dictionary mapping keys to lists of transform functions for custom rendering. |
-| `body_wrapper_template_path` | No | `"components/panel/body_wrapper_key_value_table.html"` | Template for the table wrapper. |
-
+[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.KeyValueTablePanel)
 
 #### Examples
 
@@ -207,14 +181,7 @@ KeyValueTablePanel(
 ### 3. GroupedKeyValueTablePanel
 `GroupedKeyValueTablePanel` is a specialized version of `KeyValueTablePanel` that organizes data into collapsible accordion groups. It's particularly useful for displaying hierarchical key-value data or grouped custom fields.
 
-#### Configuration Parameters
-
-Note: This panel inherits all parameters from both `Panel` and `KeyValueTablePanel` base classes.
-
-| Parameter | Required | Default | Description |
-|-----------|----------|---------|-------------|
-| `body_id` | Yes | None | HTML element ID to attach to the panel's body wrapper. |
-
+[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.GroupedKeyValueTablePanel)
 
 #### Examples
 
@@ -249,16 +216,7 @@ GroupedKeyValueTablePanel(
 
 `StatsPanel` is a Panel component that displays statistical information with clickable links to filtered views of related models. It's particularly useful for dashboards and summary views that provide quick access to filtered data sets.
 
-#### Configuration Parameters
-
-Note: This panel inherits all parameters from `Panel` base classes.
-
-| Parameter | Required | Default | Description |
-|-----------|----------|---------|-------------|
-| `filter_name` | Yes | - | Query parameter name for filtering (e.g., 'tenant', 'location') |
-| `related_models` | No | `None` | List of models or (model, query_string) tuples to show stats for |
-| `body_content_template_path` | No | `"components/panel/stats_panel_body.html"` | Template for panel content |
-
+[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.StatsPanel)
 
 #### Examples
 
@@ -289,28 +247,13 @@ StatsPanel(
 
 `BaseTextPanel` is a specialized Panel component designed to display single values in various text formats including plaintext, JSON, YAML, Markdown, and code snippets.
 
-#### Configuration Parameters
-
-| Parameter | Required | Default | Description |
-|-----------|----------|---------|-------------|
-| `render_as` | No | `RenderOptions.MARKDOWN` | The format to use for rendering content |
-| `render_placeholder` | No | `True` | Whether to show placeholder text for empty values |
-| `body_content_template_path` | No | `"components/panel/body_content_text.html"` | Template path for rendering the content |
-
+[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.BaseTextPanel)
 
 ### 5. ObjectTextPanel
 
 `ObjectTextPanel` renders content from a specific field of an object in the context. It simplifies the display of object attributes in various text formats (Markdown, JSON, YAML, etc.).
 
-#### Configuration Parameters
-
-Note: This panel inherits all parameters from both `Panel` and `BaseTextPanel` base classes.
-
-| Parameter | Required | Default | Description |
-|-----------|----------|---------|-------------|
-| `object_field` | No | `None` | The name of the field to render from the context object |
-| All BaseTextPanel parameters | No | - | Inherits all parameters from BaseTextPanel |
-
+[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.ObjectTextPanel)
 
 #### Examples
 
@@ -332,15 +275,7 @@ ObjectTextPanel(
 
 `TextPanel` renders content from a specified context field. It provides a simple way to display text content in various formats (Markdown, JSON, YAML, plaintext, or code) from the rendering context.
 
-#### Configuration Parameters
-
-Note: This panel inherits all parameters from both `Panel` and `BaseTextPanel` base classes.
-
-| Parameter | Required | Default | Description |
-|-----------|----------|---------|-------------|
-| `context_field` | No | `"text"` | The name of the field in the context to render |
-| All BaseTextPanel parameters | No | - | Inherits all parameters from BaseTextPanel |
-
+[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.TextPanel)
 
 #### Examples
 
@@ -364,23 +299,10 @@ TextPanel(
 
 `DataTablePanel` is a Panel component that renders tabular data directly from a list of dictionaries, providing a lightweight alternative to django_tables2 Table classes.
 
-#### Configuration Parameters
-
-Note: This panel inherits all parameters from `Panel` base classes.
-
-| Parameter | Required | Default | Description |
-|-----------|----------|---------|-------------|
-| `context_data_key` | Yes | - | Key in the render context containing the table data |
-| `columns` | No | `None` | List of dictionary keys defining column order |
-| `context_columns_key` | No | `None` | Context key containing column definitions |
-| `column_headers` | No | `None` | List of column header labels |
-| `context_column_headers_key` | No | `None` | Context key containing header labels |
-| `body_wrapper_template_path` | No | `"components/panel/body_wrapper_table.html"` | Template for table wrapper |
-| `body_content_template_path` | No | `"components/panel/body_content_data_table.html"` | Template for table content |
+[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.DataTablePanel)
 
 Note:
     `columns`/`context_columns_key` and `column_headers`/`context_column_headers_key` are mutually exclusive pairs.
-
 
 #### Examples
 
@@ -402,7 +324,7 @@ The `ObjectsTablePanel` is a powerful component for rendering tables of Django m
 
 #### Configuration Parameters
 
-Note: This panel inherits all parameters from `Panel` base classes.
+[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.ObjectsTablePanel)
 
 ##### Core Configuration
 | Parameter | Required | Default | Description |
@@ -466,8 +388,6 @@ ObjectsTablePanel(
 )
 ```
 
-
-
 //TODO: (include image) <img src="/api/placeholder/600/200" alt="ObjectFieldsPanel Example" />
 *ObjectFieldsPanel with field descriptions*
 
@@ -519,28 +439,9 @@ class LocationUIViewSet(NautobotViewSetMixin):
 
 ## Layouts and Sections
 
-### Render Options
+### [Render Options](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.BaseTextPanel.RenderOptions)
 
-The panel supports multiple rendering formats through the `RenderOptions` enum:
-
-| Option | Description |
-|--------|-------------|
-| `PLAINTEXT` | Renders content as plain text without formatting |
-| `JSON` | Formats and syntax-highlights content as JSON |
-| `YAML` | Formats and syntax-highlights content as YAML |
-| `MARKDOWN` | Renders content as Markdown with HTML output |
-| `CODE` | Displays content as syntax-highlighted code |
-
-### Section Options
-
-The panel supports multiple rendering formats through the `RenderOptions` enum:
-
-| Option | Description |
-|--------|-------------|
-| `LEFT_HALF` | Left side of the view |
-| `RIGHT_HALF` | Right side of the view |
-| `FULL_WIDTH` | Spans entire width |
-
+### [Section Options](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.SectionChoices)
 
 ## Best Practices
 

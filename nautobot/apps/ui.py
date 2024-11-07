@@ -19,6 +19,7 @@ from nautobot.core.ui.nav import (
     NavMenuTab,
 )
 from nautobot.core.ui.object_detail import (
+    BaseTextPanel,
     Component,
     DataTablePanel,
     GroupedKeyValueTablePanel,
@@ -38,6 +39,7 @@ from nautobot.extras.plugins import Banner, TemplateExtension
 __all__ = (
     "Banner",
     "BannerClassChoices",
+    "BaseTextPanel",
     "ButtonColorChoices",
     "Component",
     "DataTablePanel",
