@@ -1,3 +1,5 @@
+from django.urls import path
+
 from nautobot.core.api.routers import OrderedDefaultRouter
 
 from . import views
@@ -116,4 +118,10 @@ router.register("webhooks", views.WebhooksViewSet)
 
 
 app_name = "extras-api"
-urlpatterns = router.urls
+
+urlpatterns = [
+    # Tools
+    path("render-jinja-template", views.RenderJinjaView.as_view(), name="render_jinja_template"),
+]
+
+urlpatterns += router.urls
