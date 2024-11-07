@@ -32,7 +32,7 @@ from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import serialize_object_v2
 from nautobot.extras import filters
-from nautobot.extras.choices import JobExecutionType
+from nautobot.extras.choices import JobExecutionType, JobQueueTypeChoices
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
@@ -81,7 +81,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.secrets.exceptions import SecretError
-from nautobot.extras.utils import get_worker_count
+from nautobot.extras.utils import get_job_queue, get_worker_count
 
 from . import serializers
 
@@ -700,7 +700,10 @@ class JobViewSetBase(
             # of errors under messages
             return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
 
-        if not get_worker_count(queue=task_queue):
+        queue = get_job_queue(task_queue)
+        if queue is None:
+            queue = job_model.default_job_queue
+        if queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=task_queue):
             raise CeleryWorkerNotRunningException(queue=task_queue)
 
         # Default to a null JobResult.

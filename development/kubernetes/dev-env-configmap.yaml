@@ -1,0 +1,39 @@
+apiVersion: v1
+data:
+  MYSQL_DATABASE: nautobot
+  MYSQL_PASSWORD: decinablesprewad
+  MYSQL_ROOT_PASSWORD: decinablesprewad
+  MYSQL_USER: nautobot
+  NAUTOBOT_ALLOWED_HOSTS: .localhost 127.0.0.1 [::1]
+  NAUTOBOT_CHANGELOG_RETENTION: "0"
+  NAUTOBOT_CONFIG: /opt/nautobot/nautobot_config.py
+  NAUTOBOT_CREATE_SUPERUSER: "true"
+  NAUTOBOT_DB_HOST: db
+  NAUTOBOT_DB_NAME: nautobot
+  NAUTOBOT_DB_PASSWORD: decinablesprewad
+  NAUTOBOT_DB_TIMEOUT: "0"
+  NAUTOBOT_DB_USER: nautobot
+  NAUTOBOT_INSTALLATION_METRICS_ENABLED: "false"
+  NAUTOBOT_LOG_DEPRECATION_WARNINGS: "true"
+  NAUTOBOT_NAPALM_TIMEOUT: "5"
+  NAUTOBOT_REDIS_HOST: redis
+  NAUTOBOT_REDIS_PASSWORD: decinablesprewad
+  NAUTOBOT_REDIS_PORT: "6379"
+  NAUTOBOT_SECRET_KEY: "012345678901234567890123456789012345678901234567890123456789"
+  NAUTOBOT_SELENIUM_HOST: nautobot
+  NAUTOBOT_SELENIUM_URL: http://selenium:4444/wd/hub
+  NAUTOBOT_SUPERUSER_API_TOKEN: 0123456789abcdef0123456789abcdef01234567
+  NAUTOBOT_SUPERUSER_EMAIL: admin@example.com
+  NAUTOBOT_SUPERUSER_NAME: admin
+  NAUTOBOT_SUPERUSER_PASSWORD: admin
+  PGPASSWORD: decinablesprewad
+  POSTGRES_DB: nautobot
+  POSTGRES_PASSWORD: decinablesprewad
+  POSTGRES_USER: nautobot
+  REDIS_PASSWORD: decinablesprewad
+  REDISCLI_AUTH: decinablesprewad
+kind: ConfigMap
+metadata:
+  labels:
+    io.kompose.service: db-dev-env
+  name: dev-env

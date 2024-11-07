@@ -1058,23 +1058,16 @@ properties:
       +/- 2.0.0
           This directory no longer requires an `__init__.py` file.
     environment_variable: "NAUTOBOT_JOBS_ROOT"
-  KUBECONFIG:
+  KUBERNETES_DEFAULT_SERVICE_ADDRESS:
     default: ""
-    description: "File path to the configuration file used to spin up a Kubernetes pod."
-    environment_variable: "NAUTOBOT_KUBECONFIG"
+    description: "HTTP address of the Kubernetes cluster. e.g. https://kubernetes.default.svc"
+    environment_variable: "NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS"
     type: "string"
     version_added: "2.4.0"
-  KUBERNETES_JOB_CONTAINER_NAME:
-    default: ""
-    description: "The nautobot container name running on the Kubernetes pod."
-    environment_variable: "NAUTOBOT_KUBERNETES_JOB_CONTAINER_NAME"
-    type: "string"
-    version_added: "2.4.0"
-  KUBERNETES_JOB_IMAGE_NAME:
-    default: ""
-    description: "The name of the docker image used to build the nautobot container running on the Kubernetes pod."
-    environment_variable: "NAUTOBOT_KUBERNETES_JOB_IMAGE_NAME"
-    type: "string"
+  KUBERNETES_JOB_MANIFEST:
+    default: {}
+    description: "A dictionary that contains the pod manifest used to create a job pod in the kubernetes cluster."
+    type: "object"
     version_added: "2.4.0"
   KUBERNETES_JOB_POD_NAME:
     default: ""
@@ -1086,6 +1079,18 @@ properties:
     default: ""
     description: "Name of the namespace that the Kubernetes pod is created in."
     environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE"
+    type: "string"
+    version_added: "2.4.0"
+  KUBERNETES_SSL_CA_CERT_PATH:
+    default: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    description: "File path to the SSL CA CERT used for authentication to create the job and job pod."
+    environment_variable: "NAUTOBOT_KUBERNETES_SSL_CA_CERT_PATH"
+    type: "string"
+    version_added: "2.4.0"
+  KUBERNETES_TOKEN_PATH:
+    default: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+    description: "File path to the Bearer token used for authentication to create the job and job pod."
+    environment_variable: "NAUTOBOT_KUBERNETES_TOKEN_PATH"
     type: "string"
     version_added: "2.4.0"
   LOCATION_NAME_AS_NATURAL_KEY:

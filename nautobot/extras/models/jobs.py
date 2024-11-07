@@ -2,6 +2,7 @@
 
 import contextlib
 from datetime import timedelta
+import json
 import logging
 import signal
 
@@ -764,7 +765,7 @@ class JobResult(BaseModel, CustomFieldModel):
                 )
 
     @classmethod
-    def execute_job(cls, job_model, user, *job_args, celery_kwargs=None, profile=False, **job_kwargs):
+    def execute_job(cls, job_model, user, *job_args, celery_kwargs=None, profile=False, job_result=None, **job_kwargs):
         """
         Create a JobResult instance and run a job in the current process, blocking until the job finishes.
 
@@ -776,6 +777,7 @@ class JobResult(BaseModel, CustomFieldModel):
             user (User): User object to link to the JobResult instance
             celery_kwargs (dict, optional): Dictionary of kwargs to pass as **kwargs to Celery when job is run
             profile (bool, optional): Whether to run cProfile on the job execution
+            job_result (JobResult, optional): Existing JobResult with status PENDING, used in kubernetes job execution
             *job_args: positional args passed to the job task
             **job_kwargs: keyword args passed to the job task
 
@@ -783,7 +785,14 @@ class JobResult(BaseModel, CustomFieldModel):
             JobResult instance
         """
         return cls.enqueue_job(
-            job_model, user, *job_args, celery_kwargs=celery_kwargs, profile=profile, synchronous=True, **job_kwargs
+            job_model,
+            user,
+            *job_args,
+            celery_kwargs=celery_kwargs,
+            profile=profile,
+            job_result=job_result,
+            synchronous=True,
+            **job_kwargs,
         )
 
     @classmethod
@@ -796,10 +805,11 @@ class JobResult(BaseModel, CustomFieldModel):
         profile=False,
         schedule=None,
         task_queue=None,
+        job_result=None,
         synchronous=False,
         **job_kwargs,
     ):
-        """Create a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
+        """Create/Modify a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
 
         Args:
             job_model (Job): The Job to be enqueued for execution.
@@ -808,6 +818,7 @@ class JobResult(BaseModel, CustomFieldModel):
             profile (bool, optional): If True, dump cProfile stats on the job execution.
             schedule (ScheduledJob, optional): ScheduledJob instance to link to the JobResult. Cannot be used with synchronous=True.
             task_queue (str, optional): The celery queue to send the job to. If not set, use the default celery queue.
+            job_result (JobResult, optional): Existing JobResult with status PENDING, to be modified and to be used in kubernetes job execution.
             synchronous (bool, optional): If True, run the job in the current process, blocking until the job completes.
             *job_args: positional args passed to the job task (UNUSED)
             **job_kwargs: keyword args passed to the job task
@@ -820,20 +831,34 @@ class JobResult(BaseModel, CustomFieldModel):
         if schedule is not None and synchronous:
             raise ValueError("Scheduled jobs cannot be run synchronously")
 
-        job_result = cls.objects.create(
-            name=job_model.name,
-            job_model=job_model,
-            scheduled_job=schedule,
-            user=user,
-        )
+        if job_result is None:
+            job_result = cls.objects.create(
+                name=job_model.name,
+                job_model=job_model,
+                scheduled_job=schedule,
+                user=user,
+            )
+        else:
+            if job_result.user != user:
+                raise ValueError(
+                    f"There is a mismatch between the user specified {user} and the user associated with the job result {job_result.user}"
+                )
+            if job_result.job_model != job_model:
+                raise ValueError(
+                    f"There is a mismatch between the job specified {job_model} and the job associated with the job result {job_result.job_model}"
+                )
 
         if task_queue is None:
             task_queue = job_model.default_job_queue.name
 
         job_queue = JobQueue.objects.get(name=task_queue)
         # Kubernetes Job Queue logic
-        if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
-            return run_kubernetes_job_and_return_job_result(job_queue, job_result)
+        # As we execute Kubernetes jobs, we want to execute `run_kubernetes_job_and_return_job_result`
+        # the first time the kubernetes job is enqueued to spin up the kubernetes pod.
+        # And from the kubernetes pod, we specify "--local"/synchronous=True
+        # so that `run_kubernetes_job_and_return_job_result` is not executed again and the job will be run locally.
+        if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not synchronous:
+            return run_kubernetes_job_and_return_job_result(job_queue, job_result, json.dumps(job_kwargs))
 
         job_celery_kwargs = {
             "nautobot_job_job_model_id": job_model.id,
