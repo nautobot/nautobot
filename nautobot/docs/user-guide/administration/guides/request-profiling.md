@@ -10,8 +10,10 @@ Request profiling may be enabled by individual users in their profile within the
 
 Once a user enables request profiling, all subsequent HTTP requests made by that specific user to the system will be logged by django-silk. This setting will persist until the user either logs out or disables the setting in their profile.
 
-#### User Setting Notes:
+### User Setting Notes
+
 - This option will only be usable once the global configuration option `ALLOW_REQUEST_PROFILING` has been enabled (described below).
+
 - *Warning!* This will impact the performance of Nautobot greatly! This should be disabled when not in use.
 
 ## Silk UI
