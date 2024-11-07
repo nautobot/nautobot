@@ -1409,6 +1409,8 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             return_url = None
 
         queue = get_job_queue(job_queue)
+        if queue is None:
+            queue = job_model.default_job_queue
         # Allow execution only if a worker process is running on a celery queue and the job is runnable.
         if queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=job_queue):
             messages.error(request, "Unable to run or schedule job: Celery worker process not running.")

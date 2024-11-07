@@ -440,7 +440,7 @@ def get_job_queue_worker_count(request=None, job_queue=None):
 def get_job_queue(job_queue):
     """
     Search for a JobQueue instance based on the str job_queue.
-    If no existing Job Queue not found, return the default JobQueue with name CELERY_TASK_DEFAULT_QUEUE.
+    If no existing Job Queue not found, return None
     """
     from nautobot.extras.models import JobQueue
 
@@ -450,17 +450,13 @@ def get_job_queue(job_queue):
             # check if the string passed in is a valid UUID
             queue = JobQueue.objects.get(pk=job_queue)
         except JobQueue.DoesNotExist:
-            queue, _ = JobQueue.objects.get_or_create(
-                name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
-            )
+            queue = None
     else:
         try:
             # check if the string passed in is a valid name
             queue = JobQueue.objects.get(name=job_queue)
         except JobQueue.DoesNotExist:
-            queue, _ = JobQueue.objects.get_or_create(
-                name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
-            )
+            queue = None
     return queue
 
 
