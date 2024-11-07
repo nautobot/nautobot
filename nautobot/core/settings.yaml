@@ -1090,7 +1090,7 @@ properties:
   KUBERNETES_JOB_POD_TOKEN:
     default: ""
     description: "File path to the Bearer token used for authentication to create the job and job pod."
-    environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_TOKENE"
+    environment_variable: "NAUTOBOT_KUBERNETES_JOB_POD_TOKEN"
     type: "string"
     version_added: "2.4.0"
   LOCATION_NAME_AS_NATURAL_KEY:
