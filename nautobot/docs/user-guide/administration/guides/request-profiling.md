@@ -8,7 +8,7 @@ Request profiling may be enabled by individual users in their profile within the
 
 ![user advanced settings](../../../media/user-guide/administration/guides/request-profiling/advanced-settings.png)
 
-Once a user enables request profiling, all subsequent HTTP requests made by that specific user to the system will be logged by django-silk. This setting will persist until the user either logs out or disables the setting in their profile. 
+Once a user enables request profiling, all subsequent HTTP requests made by that specific user to the system will be logged by django-silk. This setting will persist until the user either logs out or disables the setting in their profile.
 
 #### User Setting Notes:
 - This option will only be usable once the global configuration option `ALLOW_REQUEST_PROFILING` has been enabled (described below).
