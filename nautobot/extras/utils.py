@@ -642,12 +642,12 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
     """
     pod_name = settings.KUBERNETES_JOB_POD_NAME
     pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
-    pod_manifest = copy.deepcopy(settings.KUBERNETES_JOB_POD_MANIFEST)
-    pod_ssl_ca_cert = settings.KUBERNETES_JOB_POD_SSL_CA_CERT
-    pod_token = settings.KUBERNETES_JOB_POD_TOKEN
+    pod_manifest = copy.deepcopy(settings.KUBERNETES_JOB_MANIFEST)
+    pod_ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
+    pod_token = settings.KUBERNETES_TOKEN_PATH
 
     configuration = kubernetes.client.Configuration()
-    configuration.host = settings.KUBERNETES_JOB_POD_HOST
+    configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
     configuration.ssl_ca_cert = pod_ssl_ca_cert
     with open(pod_token, "r") as token_file:
         token = token_file.read().strip()

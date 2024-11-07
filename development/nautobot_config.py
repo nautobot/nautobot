@@ -92,7 +92,7 @@ METRICS_DISABLED_APPS = []
 CELERY_WORKER_PROMETHEUS_PORTS = [8080]
 
 # Path to the kubernetes pod manifest yaml file used to create a job pod in the kubernetes cluster.
-KUBERNETES_JOB_POD_MANIFEST = {
+KUBERNETES_JOB_MANIFEST = {
     "apiVersion": "batch/v1",
     "kind": "Job",
     "metadata": {"name": "nautobot-job"},
@@ -287,4 +287,4 @@ KUBERNETES_JOB_POD_NAME = "nautobot-job"
 KUBERNETES_JOB_POD_NAMESPACE = "default"
 
 # Host of the kubernetes pod created in the kubernetes cluster
-KUBERNETES_JOB_POD_HOST = "https://kubernetes.default.svc"
+KUBERNETES_DEFAULT_SERVICE_ADDRESS = "https://kubernetes.default.svc"
