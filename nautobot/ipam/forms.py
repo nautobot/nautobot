@@ -752,6 +752,7 @@ class VLANForm(NautobotModelForm, TenancyForm):
     )
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
+        query_params={"location": "$locations"},
         required=False,
     )
 
