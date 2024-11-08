@@ -457,6 +457,14 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         required=False,
         label="IP Addresses",
     )
+    vrf = DynamicModelChoiceField(
+        queryset=VRF.objects.all(),
+        label="VRF",
+        required=False,
+        query_params={
+            "virtual_machine": "$virtual_machine",
+        },
+    )
 
     class Meta:
         model = VMInterface
@@ -555,6 +563,14 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm, RoleNotRequired
         queryset=Status.objects.all(),
         query_params={
             "content_types": VMInterface._meta.label_lower,
+        },
+    )
+    vrf = DynamicModelChoiceField(
+        queryset=VRF.objects.all(),
+        label="VRF",
+        required=False,
+        query_params={
+            "virtual_machine": "$virtual_machine",
         },
     )
 
