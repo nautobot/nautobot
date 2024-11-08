@@ -1,0 +1,1 @@
+`JSONArrayField` now allows `choices` to be provided in the `base_field` declaration.

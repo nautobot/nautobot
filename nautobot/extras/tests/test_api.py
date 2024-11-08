@@ -21,6 +21,7 @@ from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
     Controller,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceType,
     Location,
@@ -2862,6 +2863,8 @@ class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        # Delete existing metadata objects to avoid conflicts with generate_test_data randomness.
+        ObjectMetadata.objects.all().delete()
         mdts = [
             MetadataType.objects.create(name="Location Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT),
             MetadataType.objects.create(name="Device Metadata Type", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT),
@@ -3316,6 +3319,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         IPAddress.objects.all().delete()
         Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
+        ControllerManagedDeviceGroup.objects.all().delete()
         VLAN.objects.all().delete()
 
         # Parameterized tests (for creating and updating single objects):

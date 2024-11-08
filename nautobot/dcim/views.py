@@ -6,7 +6,7 @@ import uuid
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import IntegrityError, transaction
 from django.db.models import F, Prefetch
@@ -61,6 +61,16 @@ from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, 
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
 from nautobot.virtualization.models import VirtualMachine
+from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
+from nautobot.wireless.models import (
+    ControllerManagedDeviceGroupRadioProfileAssignment,
+    ControllerManagedDeviceGroupWirelessNetworkAssignment,
+)
+from nautobot.wireless.tables import (
+    ControllerManagedDeviceGroupRadioProfileAssignmentTable,
+    ControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
+    RadioProfileTable,
+)
 
 from . import filters, forms, tables
 from .api import serializers
@@ -2133,6 +2143,42 @@ class DeviceBulkDeleteView(generic.BulkDeleteView):
     table = tables.DeviceTable
 
 
+class DeviceWirelessView(generic.ObjectView):
+    queryset = Device.objects.all()
+    template_name = "dcim/device/wireless.html"
+
+    def get_extra_context(self, request, instance):
+        controller_managed_device_group = instance.controller_managed_device_group
+        wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
+            controller_managed_device_group=controller_managed_device_group
+        ).select_related("wireless_network", "controller_managed_device_group", "vlan")
+        wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
+            data=wireless_networks, user=request.user, orderable=False
+        )
+        wireless_networks_table.columns.hide("controller_managed_device_group")
+        wireless_networks_table.columns.hide("controller")
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(wireless_networks_table)
+
+        radio_profiles = ControllerManagedDeviceGroupRadioProfileAssignment.objects.filter(
+            controller_managed_device_group=controller_managed_device_group
+        ).select_related("radio_profile", "controller_managed_device_group")
+        radio_profiles_table = ControllerManagedDeviceGroupRadioProfileAssignmentTable(
+            data=radio_profiles, user=request.user, orderable=False
+        )
+        radio_profiles_table.columns.hide("controller_managed_device_group")
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(radio_profiles_table)
+
+        return {
+            "wireless_networks_table": wireless_networks_table,
+            "radio_profiles_table": radio_profiles_table,
+            "active_tab": "wireless",
+        }
+
+
 #
 # Modules
 #
@@ -4197,6 +4243,9 @@ class ControllerUIViewSet(NautobotUIViewSet):
         if self.action == "retrieve" and instance:
             devices = Device.objects.restrict(request.user).filter(controller_managed_device_group__controller=instance)
             devices_table = tables.DeviceTable(devices)
+            devices_table.columns.show("controller_managed_device_group")
+            devices_table.columns.show("capabilities")
+            devices_table.sequence = ("name", "controller_managed_device_group", "capabilities", "...")
 
             paginate = {
                 "paginator_class": EnhancedPaginator,
@@ -4207,6 +4256,31 @@ class ControllerUIViewSet(NautobotUIViewSet):
             context["devices_table"] = devices_table
 
         return context
+
+    @action(detail=True, url_path="wireless-networks", url_name="wirelessnetworks")
+    def wirelessnetworks(self, request, *args, **kwargs):
+        instance = self.get_object()
+        controller_managed_device_groups = instance.controller_managed_device_groups.restrict(
+            request.user, "view"
+        ).values_list("pk", flat=True)
+        wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
+            controller_managed_device_group__in=list(controller_managed_device_groups)
+        ).select_related("wireless_network")
+        wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
+            data=wireless_networks, user=request.user, orderable=False
+        )
+        wireless_networks_table.columns.hide("controller")
+
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(wireless_networks_table)
+
+        return Response(
+            {
+                "wireless_networks_table": wireless_networks_table,
+                "active_tab": "wireless-networks",
+            }
+        )
 
 
 class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
@@ -4234,7 +4308,51 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
 
             context["devices_table"] = devices_table
 
+            # Wireless Networks
+            wireless_networks = instance.wireless_network_assignments.restrict(request.user, "view")
+            wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(wireless_networks)
+            wireless_networks_table.columns.hide("controller_managed_device_group")
+            wireless_networks_table.columns.hide("controller")
+            RequestConfig(
+                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            ).configure(wireless_networks_table)
+            context["wireless_networks_table"] = wireless_networks_table
+            context["wireless_networks_count"] = wireless_networks.count()
+
+            # Radio Profiles
+            radio_profiles = instance.radio_profiles.restrict(request.user, "view")
+            radio_profiles_table = RadioProfileTable(radio_profiles)
+            RequestConfig(
+                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            ).configure(radio_profiles_table)
+            context["radio_profiles_table"] = radio_profiles_table
+            context["radio_profiles_count"] = radio_profiles.count()
+
+        if self.action in ["create", "update"]:
+            context["wireless_networks"] = ControllerManagedDeviceGroupWirelessNetworkFormSet(
+                instance=instance,
+                data=request.POST if request.method == "POST" else None,
+            )
+
         return context
+
+    def form_save(self, form, **kwargs):
+        obj = super().form_save(form, **kwargs)
+
+        ctx = self.get_extra_context(self.request, obj)
+        wireless_networks = ctx.get("wireless_networks")
+        if wireless_networks.is_valid():
+            wireless_networks.save()
+        else:
+            raise ValidationError(wireless_networks.errors)
+
+        return obj
+
+    def extra_post_save_action(self, obj, form):
+        if form.cleaned_data.get("add_radio_profiles", None):
+            obj.radio_profiles.add(*form.cleaned_data["add_radio_profiles"])
+        if form.cleaned_data.get("remove_radio_profiles", None):
+            obj.radio_profiles.remove(*form.cleaned_data["remove_radio_profiles"])
 
 
 #
