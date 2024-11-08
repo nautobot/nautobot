@@ -415,7 +415,6 @@ ObjectsTablePanel(
 
 ```python title="views.py"
 from nautobot.apps.ui import (
-    StatsPanel,
     SectionChoices,
     ObjectFieldsPanel,
     ObjectDetailContent,
@@ -431,7 +430,7 @@ class LocationUIViewSet(views.NautobotUIViewSet):
         panels=[
             ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
-                fields="__all__,
+                fields="__all__",
                 weight=100,
             ),
             StatsPanel(
