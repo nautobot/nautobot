@@ -1,6 +1,7 @@
 # Migration Steps
 
 ## 1. Identify View Components
+
 First, analyze your existing view to identify its components:
 
 - Object fields display
@@ -25,7 +26,8 @@ Map your existing components to UI Framework panels:
 
 ## 3. Convert Views
 
-### 1. Update your view class:
+### 1. Update your view class
+
 ```python
 # Before
 from nautobot.core.views import generic
@@ -44,7 +46,7 @@ class MyDetailView(views.ObjectDetailViewMixin):
     )
 ```
 
-### 2. Move context data into panels:
+### 2. Move context data into panels
 
 In new approach most of the logic that currently sits in the `get_context_data` can be removed
 and appropriate panel will handle data generation automatically.
@@ -52,6 +54,7 @@ and appropriate panel will handle data generation automatically.
 #### Example
 
 **Before:**
+
 ```python title="views.py"
 from nautobot.core.views import generic
 from my_app.models import Tenant, Circuit, Cluster, Device
@@ -70,6 +73,7 @@ class TenantView(generic.ObjectView):
 ```
 
 **After:**
+
 ```python title="views.py"
 from nautobot.apps import views
 from my_app.models import Tenant, Circuit, Cluster, Device
@@ -133,8 +137,8 @@ object_detail_content = ObjectDetailContent(
 ## Migration Checklist
 
 - [&nbsp;&nbsp;] Identify all template-based views to migrate
-- [  ] Map current features to UI Framework panels
-- [  ] Update view classes
-- [  ] Verify all functionality works as before
-- [  ] Remove deprecated template files
-- [  ] Update documentation and tests
+- [&nbsp;&nbsp;] Map current features to UI Framework panels
+- [&nbsp;&nbsp;] Update view classes
+- [&nbsp;&nbsp;] Verify all functionality works as before
+- [&nbsp;&nbsp;] Remove deprecated template files
+- [&nbsp;&nbsp;] Update documentation and tests

@@ -15,6 +15,7 @@
    - Cache complex transformations
 
 4. **Common Patterns**
+
 ```python
 # Statistics and related objects
 StatsPanel(

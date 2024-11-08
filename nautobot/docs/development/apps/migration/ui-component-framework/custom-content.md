@@ -54,7 +54,7 @@ class DeviceUIViewSet(views.NautobotUIViewSet):
 
 More built-in filters can be found in [`Nautobot Built-In Filters`](../../../../../user-guide/platform-functionality/template-filters.md#nautobot-built-in-filters)
 
-## 3. Create a custom Panel class if needed:
+## 3. Create a custom Panel class if needed
 
 ```python title="custom_panel.py"
 from django.template.loader import get_template
@@ -71,6 +71,7 @@ class CustomPanel(Panel):
         # This context will be passed to the label, header, body and footer render methods
         return {"custom_data": "I love Nautobot!"}
 ```
+
 ```python title="views.py"
 from nautobot.apps import views
 from nautobot.apps.ui import ObjectDetailContent

@@ -1,6 +1,7 @@
 # Nautobot UI Framework
 
 ## Table of Contents
+
 - [Introduction](#introduction)
 - [Getting Started](#getting-started)
 - [Core Concepts](#core-concepts)
@@ -14,10 +15,8 @@
 
 The Nautobot UI Framework revolutionizes how you create object detail views in your applications. Instead of writing HTML templates, you declaratively define your UI structure using Python objects, resulting in consistent, maintainable, and responsive interfaces.
 
-//TODO: (include image) <img src="/api/placeholder/800/400" alt="UI Framework Example" />
-*Example of a detail view created with the UI Framework*
-
 ### Why Use the UI Framework?
+
 - ✨ **Reduced Development Time**: Eliminate boilerplate HTML/CSS
 - 🎯 **Consistency**: Automatic adherence to Nautobot's design patterns
 - 🔄 **Reusable Components**: Compose views from pre-built panels
@@ -48,31 +47,41 @@ class ExampleUIViewSet(views.NautobotUIViewSet):
     )
 ```
 
-//TODO: (include image) <img src="/api/placeholder/600/300" alt="Basic Panel Layout" />
-*Basic panel layout with ObjectFieldsPanel*
+<!-- markdownlint-disable no-inline-html -->
+<div class="grid cards" style="width: 300px;" markdown>
+- ![UI Framework Example](../../media/development/core/ui-component-framework/ui-framework-example.png){ .on-glb }
+</div>
+<!-- markdownlint-enable no-inline-html -->
 
 ## Core Concepts
 
 ### ViewSet Configuration
+
 The UI Framework is built around the concept of configurable ViewSets. Each ViewSet defines:
+
 - Query handling
 - Panel layouts
 - Content organization
 
 ### Panels
+
 Panels are the building blocks of your UI. They contain specific types of content and can be positioned within sections.
 
-//TODO: (include image) <img src="/api/placeholder/700/350" alt="Panel Structure" />
-*Panel structure showing different sections and layouts*
+<!-- markdownlint-disable no-inline-html -->
+<div class="grid cards" style="width: 300px;" markdown>
+- ![Basic Panel Layout](../../media/development/core/ui-component-framework/basic-panel-layout.png){ .on-glb }
+</div>
+<!-- markdownlint-enable no-inline-html -->
 
 ## Panel Types
 
 ### 0. Base Panel
+
 The Panel component serves as a base class for creating individual display panels within a Layout system.
 
 [Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.Panel)
 
-#### Examples
+#### Panel Examples
 
 ```python
 from nautobot.apps.ui import Panel, SectionChoices
@@ -100,6 +109,7 @@ Panel(
 ```
 
 ### 1. ObjectFieldsPanel
+
 `ObjectFieldsPanel` is designed to automatically render object attributes in a table format. It's particularly useful for displaying model instances or any object with defined attributes. This panel inherits from `KeyValueTablePanel`.
 
 [Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.ObjectFieldsPanel)
@@ -107,7 +117,7 @@ Panel(
 NOTE:
     When `fields="__all__"`, the panel automatically excludes: ManyToMany fields, Reverse relations, Hidden fields and Special fields (`id`, `created`, `last_updated`, `comments`, `tags`). `comments` and `tags` are automatically added as standalone panels.
 
-#### Examples
+#### ObjectFieldsPanel Examples
 
 ```python
 from nautobot.apps.ui import ObjectFieldsPanel, SectionChoices
@@ -136,15 +146,19 @@ ObjectFieldsPanel(
 )
 ```
 
-//TODO: (include image) <img src="/api/placeholder/600/200" alt="ObjectFieldsPanel Example" />
-*ObjectFieldsPanel with field descriptions*
+<!-- markdownlint-disable no-inline-html -->
+<div class="grid cards" style="width: 300px;" markdown>
+- ![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/object-fields-panel-example.png){ .on-glb }
+</div>
+<!-- markdownlint-enable no-inline-html -->
 
 ### 2. KeyValueTablePanel
+
 `KeyValueTablePanel` is a Panel component that displays data in a two-column table format, commonly used in object detail views. It extends the base `Panel` class and provides additional functionality for data display and transformation.
 
 [Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.KeyValueTablePanel)
 
-#### Examples
+#### KeyValueTablePanel Examples
 
 ```python
 from nautobot.apps.ui import KeyValueTablePanel
@@ -180,16 +194,13 @@ KeyValueTablePanel(
 )
 ```
 
-//TODO: (include image) <img src="/api/placeholder/600/200" alt="ObjectFieldsPanel Example" />
-*ObjectFieldsPanel with field descriptions*
-
-
 ### 3. GroupedKeyValueTablePanel
+
 `GroupedKeyValueTablePanel` is a specialized version of `KeyValueTablePanel` that organizes data into collapsible accordion groups. It's particularly useful for displaying hierarchical key-value data or grouped custom fields.
 
 [Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.GroupedKeyValueTablePanel)
 
-#### Examples
+#### GroupedKeyValueTablePanel Examples
 
 ```python
 from nautobot.apps.ui import GroupedKeyValueTablePanel, SectionChoices
@@ -216,9 +227,11 @@ GroupedKeyValueTablePanel(
 )
 ```
 
-//TODO: (include image) <img src="/api/placeholder/600/200" alt="ObjectFieldsPanel Example" />
-*ObjectFieldsPanel with field descriptions*
-
+<!-- markdownlint-disable no-inline-html -->
+<div class="grid cards" style="width: 300px;" markdown>
+- ![GroupedKeyValueTablePanel Example](../../media/development/core/ui-component-framework/grouped-key-value-table-panel-example.png){ .on-glb }
+</div>
+<!-- markdownlint-enable no-inline-html -->
 
 ### 4. StatsPanel
 
@@ -226,7 +239,7 @@ GroupedKeyValueTablePanel(
 
 [Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.StatsPanel)
 
-#### Examples
+#### StatsPanel Examples
 
 ```python
 from nautobot.apps.ui import StatsPanel, SectionChoices
@@ -250,8 +263,11 @@ StatsPanel(
 )
 ```
 
-//TODO: (include image) <img src="/api/placeholder/600/200" alt="ObjectFieldsPanel Example" />
-*ObjectFieldsPanel with field descriptions*
+<!-- markdownlint-disable no-inline-html -->
+<div class="grid cards" style="width: 300px;" markdown>
+- ![StatsPanel Example](../../media/development/core/ui-component-framework/stats-panel-example.png){ .on-glb }
+</div>
+<!-- markdownlint-enable no-inline-html -->
 
 ### Text Panels Family
 
@@ -259,13 +275,19 @@ StatsPanel(
 
 [Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.BaseTextPanel)
 
+<!-- markdownlint-disable no-inline-html -->
+<div class="grid cards" style="width: 300px;" markdown>
+- ![Text Panels Family](../../media/development/core/ui-component-framework/text-panels-family.png){ .on-glb }
+</div>
+<!-- markdownlint-enable no-inline-html -->
+
 ### 5. ObjectTextPanel
 
 `ObjectTextPanel` renders content from a specific field of an object in the context. It simplifies the display of object attributes in various text formats (Markdown, JSON, YAML, etc.).
 
 [Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.ObjectTextPanel)
 
-#### Examples
+#### ObjectTextPanel Examples
 
 ```python
 from nautobot.apps.ui import ObjectTextPanel, SectionChoices
@@ -280,16 +302,13 @@ ObjectTextPanel(
 )
 ```
 
-//TODO: (include image) <img src="/api/placeholder/600/200" alt="ObjectFieldsPanel Example" />
-*ObjectFieldsPanel with field descriptions*
-
 ### 6. TextPanel
 
 `TextPanel` renders content from a specified context field. It provides a simple way to display text content in various formats (Markdown, JSON, YAML, plaintext, or code) from the rendering context.
 
 [Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.TextPanel)
 
-#### Examples
+#### TextPanel Examples
 
 ```python
 from nautobot.apps.ui import TextPanel, SectionChoices
@@ -304,9 +323,6 @@ TextPanel(
 )
 ```
 
-//TODO: (include image) <img src="/api/placeholder/600/200" alt="ObjectFieldsPanel Example" />
-*ObjectFieldsPanel with field descriptions*
-
 ### Table Panels Family
 
 ### 7. DataTablePanel
@@ -318,7 +334,13 @@ TextPanel(
 Note:
     `columns`/`context_columns_key` and `column_headers`/`context_column_headers_key` are mutually exclusive pairs.
 
-#### Examples
+<!-- markdownlint-disable no-inline-html -->
+<div class="grid cards" style="width: 300px;" markdown>
+- ![Table Panels Family](../../media/development/core/ui-component-framework/table-panels-family.png){ .on-glb }
+</div>
+<!-- markdownlint-enable no-inline-html -->
+
+#### DataTablePanel Examples
 
 ```python
 from nautobot.apps.ui import DataTablePanel
@@ -331,9 +353,6 @@ DataTablePanel(
 )
 ```
 
-//TODO: (include image) <img src="/api/placeholder/600/200" alt="ObjectFieldsPanel Example" />
-*ObjectFieldsPanel with field descriptions*
-
 ### 8. ObjectsTablePanel
 
 The `ObjectsTablePanel` is a powerful component for rendering tables of Django model objects, particularly suited for displaying related objects within a detail view. It integrates with django_tables2 and provides extensive customization options.
@@ -343,6 +362,7 @@ The `ObjectsTablePanel` is a powerful component for rendering tables of Django m
 [Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.ObjectsTablePanel)
 
 ##### Core Configuration
+
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
 | `context_table_key` | No | `None` | Key for pre-configured table in render context |
@@ -352,6 +372,7 @@ The `ObjectsTablePanel` is a powerful component for rendering tables of Django m
 | `table_title` | No | Model's plural name | Title displayed in panel heading |
 
 ##### Query Optimization
+
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
 | `select_related_fields` | No | `None` | Fields to include in select_related() |
@@ -360,6 +381,7 @@ The `ObjectsTablePanel` is a powerful component for rendering tables of Django m
 | `max_display_count` | No | User preference | Maximum items to display |
 
 ##### Column Configuration
+
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
 | `include_columns` | No | `None` | List of columns to display |
@@ -367,6 +389,7 @@ The `ObjectsTablePanel` is a powerful component for rendering tables of Django m
 | `hide_hierarchy_ui` | No | `False` | Disable tree model indentation |
 
 ##### Actions Configuration
+
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
 | `add_button_route` | No | `"default"` | Route for "add" button URL |
@@ -374,8 +397,7 @@ The `ObjectsTablePanel` is a powerful component for rendering tables of Django m
 | `enable_bulk_actions` | No | `False` | Enable bulk action checkboxes |
 | `related_field_name` | No | `table_filter` value | Field linking to base model |
 
-
-#### Examples
+#### ObjectsTablePanel Examples
 
 ```python
 from nautobot.apps.ui import ObjectsTablePanel, SectionChoices
@@ -407,9 +429,6 @@ ObjectsTablePanel(
     select_related_fields=["manufacturers", "locations"],
 )
 ```
-
-//TODO: (include image) <img src="/api/placeholder/600/200" alt="ObjectFieldsPanel Example" />
-*ObjectFieldsPanel with field descriptions*
 
 ## Complete Example
 
@@ -463,9 +482,6 @@ class LocationUIViewSet(views.NautobotUIViewSet):
     )
 ```
 
-//TODO: (include image) <img src="/api/placeholder/800/600" alt="Complete Example" />
-*Complete example showing all panel types in action*
-
 ## Layouts and Sections
 
 ### [Render Options](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.BaseTextPanel.RenderOptions)
@@ -475,20 +491,24 @@ class LocationUIViewSet(views.NautobotUIViewSet):
 ## Best Practices
 
 ### 1. Panel Organization
+
 - Use consistent weights across your application
 - Group related information in adjacent panels
 - Consider mobile viewports when choosing sections
 
 ### 2. Performance
+
 - Be specific with field selections
 - Use appropriate indexes for StatsPanel queries
 
 ### 3. User Experience
+
 - Provide clear, descriptive labels
 - Use consistent patterns across views
 - Implement proper error handling
 
 ### 4. Maintenance
+
 - Document custom transformations
 - Keep related model lists updated
 - Use meaningful body_id values

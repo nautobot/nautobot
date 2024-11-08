@@ -1,4 +1,5 @@
 # Migrating to UI Component Framework
+
 A guide for app developers transitioning to the UI Component Framework.
 
 ## Introduction
@@ -10,6 +11,7 @@ For complete UI Framework documentation, see: [Nautobot UI Framework Documentati
 ## Why Migrate?
 
 ### Benefits
+
 - Reduced template maintenance
 - Consistent UI patterns across apps
 - Standardized component behavior
@@ -17,6 +19,7 @@ For complete UI Framework documentation, see: [Nautobot UI Framework Documentati
 ### Before and After Example
 
 Before (Template-based):
+
 ```python title="views.py"
 from device_app.models import Device
 from nautobot.core.views import generic
@@ -31,6 +34,7 @@ class DeviceDetailView(generic.ObjectView):
         context['custom_fields'] = self.object.get_custom_fields()
         return context
 ```
+
 ```html title="template.html"
 # template.html
 {% extends 'generic/object_retrieve.html' %}
@@ -49,6 +53,7 @@ class DeviceDetailView(generic.ObjectView):
 ```
 
 After (UI Framework):
+
 ```python
 from device_app.models import Device, RelatedDeviceTable
 from nautobot.apps import views
