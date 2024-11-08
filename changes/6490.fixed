@@ -1,0 +1,1 @@
+Added missing `vrf_count` column to Prefix table in PrefixListView.
