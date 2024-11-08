@@ -104,8 +104,8 @@ By using panels weights and sections you can determine how your app will display
 The panel weight determines the order of panels within a section and depends on the chosen layout.
 Panels in the same section (left/right/full-width) will be arranged based on their weight,
 with lower-weight panels appearing first,
-but the [layout choice](../../../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.SectionChoices)
-(TWO_OVER_ONE or ONE_OVER_TWO)
+but the [layout choice](../../../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.SectionChoices)
+(`TWO_OVER_ONE` or `ONE_OVER_TWO`)
 decides what sections will be at the top.
 
 **Organize your panels using sections and weights:**

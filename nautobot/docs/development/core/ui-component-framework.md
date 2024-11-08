@@ -79,7 +79,7 @@ Panels are the building blocks of your UI. They contain specific types of conten
 
 The Panel component serves as a base class for creating individual display panels within a Layout system.
 
-[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.Panel)
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.Panel)
 
 #### Panel Examples
 
@@ -112,7 +112,7 @@ Panel(
 
 `ObjectFieldsPanel` is designed to automatically render object attributes in a table format. It's particularly useful for displaying model instances or any object with defined attributes. This panel inherits from `KeyValueTablePanel`.
 
-[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.ObjectFieldsPanel)
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.ObjectFieldsPanel)
 
 NOTE:
     When `fields="__all__"`, the panel automatically excludes: ManyToMany fields, Reverse relations, Hidden fields and Special fields (`id`, `created`, `last_updated`, `comments`, `tags`). `comments` and `tags` are automatically added as standalone panels.
@@ -156,7 +156,7 @@ ObjectFieldsPanel(
 
 `KeyValueTablePanel` is a Panel component that displays data in a two-column table format, commonly used in object detail views. It extends the base `Panel` class and provides additional functionality for data display and transformation.
 
-[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.KeyValueTablePanel)
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.KeyValueTablePanel)
 
 #### KeyValueTablePanel Examples
 
@@ -198,7 +198,7 @@ KeyValueTablePanel(
 
 `GroupedKeyValueTablePanel` is a specialized version of `KeyValueTablePanel` that organizes data into collapsible accordion groups. It's particularly useful for displaying hierarchical key-value data or grouped custom fields.
 
-[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.GroupedKeyValueTablePanel)
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.GroupedKeyValueTablePanel)
 
 #### GroupedKeyValueTablePanel Examples
 
@@ -237,7 +237,7 @@ GroupedKeyValueTablePanel(
 
 `StatsPanel` is a Panel component that displays statistical information with clickable links to filtered views of related models. It's particularly useful for dashboards and summary views that provide quick access to filtered data sets.
 
-[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.StatsPanel)
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.StatsPanel)
 
 #### StatsPanel Examples
 
@@ -273,7 +273,7 @@ StatsPanel(
 
 `BaseTextPanel` is a specialized Panel component designed to display single values in various text formats including plaintext, JSON, YAML, Markdown, and code snippets.
 
-[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.BaseTextPanel)
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.BaseTextPanel)
 
 <!-- markdownlint-disable no-inline-html -->
 <div class="grid cards" style="width: 300px;" markdown>
@@ -285,7 +285,7 @@ StatsPanel(
 
 `ObjectTextPanel` renders content from a specific field of an object in the context. It simplifies the display of object attributes in various text formats (Markdown, JSON, YAML, etc.).
 
-[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.ObjectTextPanel)
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.ObjectTextPanel)
 
 #### ObjectTextPanel Examples
 
@@ -306,7 +306,7 @@ ObjectTextPanel(
 
 `TextPanel` renders content from a specified context field. It provides a simple way to display text content in various formats (Markdown, JSON, YAML, plaintext, or code) from the rendering context.
 
-[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.TextPanel)
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.TextPanel)
 
 #### TextPanel Examples
 
@@ -325,11 +325,13 @@ TextPanel(
 
 ### Table Panels Family
 
+---
+
 ### 7. DataTablePanel
 
 `DataTablePanel` is a Panel component that renders tabular data directly from a list of dictionaries, providing a lightweight alternative to django_tables2 Table classes.
 
-[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.DataTablePanel)
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.DataTablePanel)
 
 Note:
     `columns`/`context_columns_key` and `column_headers`/`context_column_headers_key` are mutually exclusive pairs.
@@ -359,7 +361,7 @@ The `ObjectsTablePanel` is a powerful component for rendering tables of Django m
 
 #### Configuration Parameters
 
-[Code reference](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.ObjectsTablePanel)
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.ObjectsTablePanel)
 
 ##### Core Configuration
 
@@ -484,9 +486,9 @@ class LocationUIViewSet(views.NautobotUIViewSet):
 
 ## Layouts and Sections
 
-### [Render Options](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.BaseTextPanel.RenderOptions)
+### [Render Options](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.BaseTextPanel.RenderOptions)
 
-### [Section Options](../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.SectionChoices)
+### [Section Options](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.SectionChoices)
 
 ## Best Practices
 

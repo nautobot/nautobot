@@ -87,4 +87,4 @@ class DeviceUIViewSet(views.NautobotUIViewSet):
 
 !!! Note
     If more custom behaviour is needed, you can override other `Panel` rendering methods.
-    For more details please refer to the [`Panel` Code Reference.](../../../../../code-reference/nautobot/apps/ui/#nautobot.apps.ui.Panel)
+    For more details please refer to the [`Panel` Code Reference.](../../../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.Panel)
