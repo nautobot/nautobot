@@ -52,7 +52,7 @@ class DeviceUIViewSet(views.NautobotUIViewSet):
         return context
 ```
 
-More built-in filters can be found in [`Nautobot Built-In Filters`](../../../../../user-guide/platform-functionality/template-filters.md#nautobot-built-in-filters)
+More built-in filters can be found in [`Nautobot Built-In Filters`](../../../../user-guide/platform-functionality/template-filters.md#nautobot-built-in-filters)
 
 ## 3. Create a custom Panel class if needed
 
