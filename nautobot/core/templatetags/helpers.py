@@ -647,6 +647,8 @@ def dbm(value):
     return f"{value} dBm" if value else placeholder(value)
 
 
+@library.filter()
+@register.filter()
 def hyperlinked_field(value, hyperlink=None):
     """Render a value as a hyperlink."""
     if not value:

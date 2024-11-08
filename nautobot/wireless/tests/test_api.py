@@ -149,7 +149,7 @@ class WirelessNetworkTest(APIViewTestCases.APIViewTestCase):
                 "name": "Wireless Network 4",
                 "description": "This is wireless network 4",
                 "ssid": "ssid4",
-                "mode": "Central (tunnelMode(controller managed))",
+                "mode": "Central",
                 "enabled": True,
                 "authentication": "WPA2 Personal",
                 "secrets_group": SecretsGroup.objects.first().pk,

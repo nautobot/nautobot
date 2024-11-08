@@ -48,7 +48,7 @@ class SupportedDataRateStandardChoices(ChoiceSet):
 
 
 class WirelessNetworkModeChoices(ChoiceSet):
-    CENTRAL = "Central (tunnelMode(controller managed))"
+    CENTRAL = "Central"
     FABRIC = "Fabric"
     STANDALONE = "Standalone (Autonomous)"
     LOCAL = "Local (Flex)"
@@ -56,7 +56,7 @@ class WirelessNetworkModeChoices(ChoiceSet):
     BRIDGE = "Bridge"
 
     CHOICES = (
-        (CENTRAL, "Central (tunnelMode(controller managed))"),
+        (CENTRAL, "Central"),
         (FABRIC, "Fabric"),
         (STANDALONE, "Standalone (Autonomous)"),
         (LOCAL, "Local (Flex)"),
