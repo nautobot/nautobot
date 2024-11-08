@@ -7,7 +7,7 @@ from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, Location, LocationType, Platform, SoftwareVersion
 from nautobot.extras.models import ConfigContextSchema, CustomField, Role, Status, Tag
 from nautobot.ipam.factory import VLANGroupFactory
-from nautobot.ipam.models import VLAN
+from nautobot.ipam.models import VLAN, VRF
 from nautobot.virtualization.factory import ClusterGroupFactory, ClusterTypeFactory
 from nautobot.virtualization.models import (
     Cluster,
@@ -260,7 +260,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, role=devicerole, status=vm_status),
             VirtualMachine.objects.create(name="Virtual Machine 2", cluster=cluster, role=devicerole, status=vm_status),
         )
-
+        vrf = VRF.objects.filter(virtual_machines=virtualmachines[0]).first()
         statuses = Status.objects.get_for_model(VMInterface)
         status = statuses.first()
         role = Role.objects.get_for_model(VMInterface).first()
@@ -306,6 +306,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "custom_field_1": "Custom Field Data",
             "tags": [t.pk for t in Tag.objects.get_for_model(VMInterface)],
+            "vrf": vrf,
         }
 
         cls.bulk_create_data = {

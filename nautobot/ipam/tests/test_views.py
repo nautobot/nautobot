@@ -1062,7 +1062,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
         cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))
 
-        vlangroups = (
+        cls.vlangroups = (
             VLANGroup.objects.create(name="VLAN Group 1", location=cls.locations.first()),
             VLANGroup.objects.create(name="VLAN Group 2", location=cls.locations.last()),
         )
@@ -1072,7 +1072,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         status = Status.objects.get_for_model(VLAN).first()
 
         cls.form_data = {
-            "vlan_group": vlangroups[1].pk,
+            "vlan_group": cls.vlangroups[1].pk,
             "vid": 999,
             "name": "VLAN999 with an unwieldy long name since we increased the limit to more than 64 characters",
             "tenant": None,
@@ -1084,12 +1084,28 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.bulk_edit_data = {
-            "vlan_group": vlangroups[0].pk,
+            "vlan_group": cls.vlangroups[0].pk,
             "tenant": Tenant.objects.first().pk,
             "status": status.pk,
             "role": roles[0].pk,
             "description": "New description",
         }
+
+    def test_vlan_group_not_belong_to_vlan_locations(self):
+        """Test that a VLAN cannot be assigned to a VLAN Group that is not in the same location as the VLAN."""
+        vlan_group = self.vlangroups[0]
+        self.form_data["vlan_group"] = vlan_group.pk
+        self.form_data["locations"] = [self.locations.last().pk]
+        self.add_permissions("ipam.add_vlan")
+        self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(self.form_data),
+        }
+        response = self.client.post(**request)
+        self.assertBodyContains(
+            response, "vlan_group: Select a valid choice. That choice is not one of the available choices."
+        )
 
 
 class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
