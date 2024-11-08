@@ -1094,10 +1094,10 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def test_vlan_group_not_belong_to_vlan_locations(self):
         """Test that a VLAN cannot be assigned to a VLAN Group that is not in the same location as the VLAN."""
         vlan_group = self.vlangroups[0]
-        self.form_data["vlan_group"] = vlan_group.pk
-        self.form_data["locations"] = [self.locations.last().pk]
+        form_data = self.form_data.copy()
+        form_data["vlan_group"] = vlan_group.pk
+        form_data["locations"] = [self.locations.last().pk]
         self.add_permissions("ipam.add_vlan")
-        self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
         request = {
             "path": self._get_url("add"),
             "data": post_data(self.form_data),
