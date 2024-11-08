@@ -59,7 +59,7 @@ from nautobot.apps.ui import (
     SectionChoices,
 )
 
-class DeviceDetailView(views.NautobotUIViewSet):
+class DeviceUIViewSet(views.NautobotUIViewSet):
     queryset = Device.objects.all()
 
     object_detail_content = ObjectDetailContent(
