@@ -3,6 +3,8 @@
 from abc import ABC, abstractmethod
 import logging
 
+from django.utils.http import urlencode
+
 from nautobot.core.choices import ButtonActionColorChoices, ButtonActionIconChoices
 
 from .base import PermissionsMixin
@@ -138,6 +140,7 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
             "permissions": self.permissions,
             "args": [],
             "kwargs": {},
+            "query_params": self.query_params,
         }
 
     @property
@@ -153,7 +156,9 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
     args = []
     kwargs = {}
 
-    def __init__(self, link, name, args=None, kwargs=None, permissions=None, buttons=(), weight=1000):
+    def __init__(
+        self, link, name, args=None, kwargs=None, query_params=None, permissions=None, buttons=(), weight=1000
+    ):
         """
         Ensure item properties.
 
@@ -162,6 +167,7 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
             name (str): The name of the item.
             args (list): Arguments that are being passed to the url with reverse() method
             kwargs (dict): Keyword arguments are are being passed to the url with reverse() method
+            query_params (dict): Query parameters to be appended to the URL.
             permissions (list): The permissions required to view this item.
             buttons (list): List of buttons to be rendered in this item.
             weight (int): The weight of this item.
@@ -172,6 +178,7 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
         self.weight = weight
         self.args = args
         self.kwargs = kwargs
+        self.query_params = query_params
 
         if not isinstance(buttons, (list, tuple)):
             raise TypeError("Buttons must be passed as a tuple or list.")
@@ -195,6 +202,7 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
             "weight": self.weight,
             "buttons": {},
             "permissions": self.permissions,
+            "querystring": self.querystring,
         }
 
     @property
@@ -215,6 +223,7 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
         button_class=ButtonActionColorChoices.DEFAULT,
         permissions=None,
         weight=1000,
+        query_params=None,
     ):
         """
         Ensure button properties.
@@ -226,6 +235,7 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
             button_class (str): The button class defines to be used to define the style of the button.
             permissions (list): The permissions required to view this button.
             weight (int): The weight of this button.
+            query_params (dict): Query parameters to be appended to the URL.
         """
         super().__init__(permissions)
         self.link = link
@@ -233,6 +243,8 @@ class NavMenuButton(NavMenuBase, PermissionsMixin):
         self.icon_class = icon_class
         self.weight = weight
         self.button_class = button_class
+        self.query_params = query_params
+        self.querystring = f"?{urlencode(query_params)}" if query_params else ""
 
 
 class NavMenuAddButton(NavMenuButton):

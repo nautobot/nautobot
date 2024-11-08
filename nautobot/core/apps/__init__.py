@@ -8,6 +8,7 @@ from django.db.models import BigIntegerField, BinaryField, JSONField
 from django.db.models.signals import post_migrate
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
+from django.utils.http import urlencode
 from django.utils.module_loading import import_string
 from graphene.types import generic, String
 
@@ -165,6 +166,8 @@ def register_menu_items(tab_list):
                     # Instead of passing the reverse url strings, we pass in the url itself initialized with args and kwargs.
                     try:
                         item.link = reverse(item.link, args=item.args, kwargs=item.kwargs)
+                        if item.query_params:
+                            item.link += f"?{urlencode(item.query_params)}"
                     except NoReverseMatch as e:
                         # Catch the invalid link here and render the link name as an error message in the template
                         logger.debug("%s", e)

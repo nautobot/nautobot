@@ -4723,6 +4723,11 @@ class ControllerManagedDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCa
             "controller": controllers[0].pk,
             "weight": 100,
             "devices": [item.pk for item in Device.objects.all()[:2]],
+            # Management form fields required for the dynamic Wireless Network formset
+            "wireless_network_assignments-TOTAL_FORMS": "0",
+            "wireless_network_assignments-INITIAL_FORMS": "1",
+            "wireless_network_assignments-MIN_NUM_FORMS": "0",
+            "wireless_network_assignments-MAX_NUM_FORMS": "1000",
         }
 
         cls.bulk_edit_data = {

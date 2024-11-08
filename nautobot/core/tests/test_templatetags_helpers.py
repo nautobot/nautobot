@@ -322,3 +322,14 @@ class NautobotTemplatetagsHelperTest(TestCase):
             helpers.hyperlinked_object_target_new_tab(location, "foo"),
             f'<a href="/dcim/locations/{location.pk}/" title="An important location" target="_blank" rel="noreferrer">{location!s}</a>',
         )
+
+    def test_dbm(self):
+        self.assertEqual(
+            helpers.dbm(12),
+            "12 dBm",
+        )
+        self.assertEqual(
+            helpers.dbm(-85),
+            "-85 dBm",
+        )
+        self.assertEqual(helpers.dbm(None), helpers.placeholder(None))

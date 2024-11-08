@@ -104,6 +104,7 @@ class DeviceRedundancyGroupTest(TestCase):
         self.device.device_redundancy_group_priority = 1
         self.device.validated_save()
 
+        # Protected FK constraint prevents deletion of DeviceRedundancyGroup
         Controller.objects.all().delete()
         deviceredundancygroup.delete()
 
