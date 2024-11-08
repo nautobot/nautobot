@@ -9,16 +9,17 @@ from django.db import models
 from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
 from django.utils.functional import cached_property, classproperty
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 import yaml
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, RestrictedQuerySet
-from nautobot.core.models.fields import NaturalOrderingField
+from nautobot.core.models.fields import JSONArrayField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import (
+    ControllerCapabilitiesChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     SoftwareImageFileHashingAlgorithmChoices,
@@ -1366,6 +1367,12 @@ class Controller(PrimaryModel):
         null=True,
     )
     role = RoleField(blank=True, null=True)
+    capabilities = JSONArrayField(
+        base_field=models.CharField(choices=ControllerCapabilitiesChoices),
+        blank=True,
+        null=True,
+        help_text="List of capabilities supported by the controller, these capabilities are used to enhance views in Nautobot.",
+    )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -1417,6 +1424,11 @@ class Controller(PrimaryModel):
                     {"location": f'Devices may not associate to locations of type "{self.location.location_type}".'}
                 )
 
+    def get_capabilities_display(self):
+        if not self.capabilities:
+            return format_html('<span class="text-muted">&mdash;</span>')
+        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in self.capabilities))
+
 
 @extras_features(
     "custom_links",
@@ -1436,6 +1448,7 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
         unique=True,
         help_text="Name of the controller device group",
     )
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     weight = models.PositiveIntegerField(
         default=1000,
         help_text="Weight of the controller device group, used to sort the groups within its parent group",
@@ -1447,6 +1460,26 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
         blank=False,
         null=False,
         help_text="Controller that manages the devices in this group",
+    )
+    radio_profiles = models.ManyToManyField(
+        to="wireless.RadioProfile",
+        related_name="controller_managed_device_groups",
+        through="wireless.ControllerManagedDeviceGroupRadioProfileAssignment",
+        through_fields=("controller_managed_device_group", "radio_profile"),
+        blank=True,
+    )
+    wireless_networks = models.ManyToManyField(
+        to="wireless.WirelessNetwork",
+        related_name="controller_managed_device_groups",
+        through="wireless.ControllerManagedDeviceGroupWirelessNetworkAssignment",
+        through_fields=("controller_managed_device_group", "wireless_network"),
+        blank=True,
+    )
+    capabilities = JSONArrayField(
+        base_field=models.CharField(choices=ControllerCapabilitiesChoices),
+        blank=True,
+        null=True,
+        help_text="List of capabilities supported by the controller device group, these capabilities are used to enhance views in Nautobot.",
     )
 
     class Meta:
@@ -1471,6 +1504,11 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
             raise ValidationError(
                 {"controller": "Controller device group must have the same controller as the parent group."}
             )
+
+    def get_capabilities_display(self):
+        if not self.capabilities:
+            return format_html('<span class="text-muted">&mdash;</span>')
+        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in self.capabilities))
 
 
 #

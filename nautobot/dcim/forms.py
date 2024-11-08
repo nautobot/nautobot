@@ -24,6 +24,7 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
     form_from_model,
+    JSONArrayFormField,
     MultipleContentTypeField,
     NullableDateField,
     NumericArrayField,
@@ -71,11 +72,13 @@ from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VLANLoca
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
+from nautobot.wireless.models import RadioProfile
 
 from .choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
     ConsolePortTypeChoices,
+    ControllerCapabilitiesChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
@@ -5006,6 +5009,7 @@ class ControllerForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "platform",
             "tenant",
             "location",
+            "capabilities",
             "external_integration",
             "controller_device",
             "controller_device_redundancy_group",
@@ -5080,6 +5084,11 @@ class ControllerBulkEditForm(
         queryset=Platform.objects.all(),
         required=False,
     )
+    capabilities = JSONArrayFormField(
+        choices=add_blank_choice(ControllerCapabilitiesChoices),
+        base_field=forms.CharField(),
+        required=False,
+    )
     tenant = DynamicModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False,
@@ -5119,6 +5128,11 @@ class ControllerManagedDeviceGroupForm(NautobotModelForm):
     controller = DynamicModelChoiceField(queryset=Controller.objects.all(), required=True)
     devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
     parent = DynamicModelChoiceField(queryset=ControllerManagedDeviceGroup.objects.all(), required=False)
+    radio_profiles = DynamicModelMultipleChoiceField(
+        queryset=RadioProfile.objects.all(),
+        required=False,
+        label="Radio Profiles",
+    )
 
     class Meta:
         model = ControllerManagedDeviceGroup
@@ -5127,7 +5141,9 @@ class ControllerManagedDeviceGroupForm(NautobotModelForm):
             "name",
             "devices",
             "parent",
+            "capabilities",
             "weight",
+            "radio_profiles",
             "tags",
         )
 
@@ -5187,6 +5203,21 @@ class ControllerManagedDeviceGroupBulkEditForm(TagsBulkEditFormMixin, NautobotBu
     controller = DynamicModelChoiceField(queryset=Controller.objects.all(), required=False)
     parent = DynamicModelChoiceField(queryset=ControllerManagedDeviceGroup.objects.all(), required=False)
     weight = forms.IntegerField(required=False)
+    add_radio_profiles = DynamicModelMultipleChoiceField(
+        queryset=RadioProfile.objects.all(),
+        required=False,
+        label="Add Radio Profiles",
+    )
+    remove_radio_profiles = DynamicModelMultipleChoiceField(
+        queryset=RadioProfile.objects.all(),
+        required=False,
+        label="Remove Radio Profiles",
+    )
+    capabilities = JSONArrayFormField(
+        choices=add_blank_choice(ControllerCapabilitiesChoices),
+        base_field=forms.CharField(),
+        required=False,
+    )
 
     class Meta:
         model = ControllerManagedDeviceGroup
@@ -5194,6 +5225,7 @@ class ControllerManagedDeviceGroupBulkEditForm(TagsBulkEditFormMixin, NautobotBu
             "controller",
             "parent",
             "weight",
+            "capabilities",
             "tags",
         )
 

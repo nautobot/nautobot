@@ -1,0 +1,2 @@
+Added support for `query_params` to NavMenuItem and NavMenuButton.
+Added `capabilities` field to Controller and ControllerManagedDeviceGroup.

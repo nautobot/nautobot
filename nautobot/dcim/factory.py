@@ -19,6 +19,7 @@ from nautobot.core.factory import (
 )
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
+    ControllerCapabilitiesChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
@@ -721,6 +722,7 @@ class SoftwareVersionFactory(PrimaryModelFactory):
 class ControllerFactory(PrimaryModelFactory):
     class Meta:
         model = Controller
+        exclude = ("has_capabilities",)
 
     class Params:
         has_device = NautobotBoolIterator()
@@ -729,6 +731,12 @@ class ControllerFactory(PrimaryModelFactory):
     description = factory.Faker("sentence")
     status = random_instance(lambda: Status.objects.get_for_model(Controller), allow_null=False)
     role = random_instance(lambda: Role.objects.get_for_model(Controller))
+    has_capabilities = NautobotBoolIterator()
+    capabilities = factory.Maybe(
+        "has_capabilities",
+        factory.Faker("random_elements", elements=ControllerCapabilitiesChoices.values(), unique=True),
+        [],
+    )
     platform = random_instance(Platform)
     location = random_instance(lambda: Location.objects.get_for_model(Controller), allow_null=False)
     tenant = random_instance(Tenant)
@@ -740,6 +748,7 @@ class ControllerFactory(PrimaryModelFactory):
 class ControllerManagedDeviceGroupFactory(PrimaryModelFactory):
     class Meta:
         model = ControllerManagedDeviceGroup
+        exclude = ("has_capabilities",)
 
     class Params:
         has_parent = NautobotBoolIterator()
@@ -748,6 +757,12 @@ class ControllerManagedDeviceGroupFactory(PrimaryModelFactory):
     parent = factory.Maybe("has_parent", random_instance(ControllerManagedDeviceGroup), None)
     controller = factory.LazyAttribute(
         lambda o: o.parent.controller if o.parent else factory.random.randgen.choice(Controller.objects.all())
+    )
+    has_capabilities = NautobotBoolIterator()
+    capabilities = factory.Maybe(
+        "has_capabilities",
+        factory.Faker("random_elements", elements=ControllerCapabilitiesChoices.values(), unique=True),
+        [],
     )
     weight = factory.Faker("pyint", min_value=1, max_value=1000)
 
@@ -967,7 +982,9 @@ class VirtualDeviceContextFactory(PrimaryModelFactory):
         ),
         None,
     )
-    identifier = factory.Sequence(lambda n: n + 100)
+    identifier = factory.Sequence(
+        lambda n: n + 101
+    )  # Start at 101 to avoid conflicts VirtualDeviceContexts API test cases.
     name = factory.Sequence(lambda n: f"VirtualDeviceContext {n}")
     device = random_instance(Device, allow_null=False)
     has_tenant = NautobotBoolIterator()

@@ -134,6 +134,12 @@
                 </li>
             {% endif %}
         {% endwith %}
+        {% if 'wireless' in object.controller_managed_device_group.capabilities %}
+            <li role="presentation" {% if active_tab == 'wireless' %} class="active"{% endif %}>
+                {% comment %} Not placing a badge as we are using the controller_managed_device_groups count to see if there are any attached controller_managed_device_groups, but the count for wireless networks will be larger {% endcomment %}
+                <a href="{% url 'dcim:device_wireless' pk=object.pk %}">Wireless</a>
+            </li>
+        {% endif %}
         {% if perms.dcim.napalm_read_device %}
             {% if not object.platform %}
                 {% include 'dcim/inc/device_napalm_tabs.html' with disabled_message='No platform assigned to this device' %}
