@@ -203,7 +203,7 @@ class DeviceDetailView(views.NautobotUIViewSet):
 
 ```python title="views.py"
 from nautobot.apps import views
-from nautobot.apps.ui import KeyValueTablePanel
+from nautobot.apps.ui import KeyValueTablePanel, ObjectDetailContent
 from nautobot.core.templatetags.helpers import (
     divide,
     placeholder,
@@ -211,14 +211,16 @@ from nautobot.core.templatetags.helpers import (
     split,
 )
 
-class DeviceDetailView(views.NautobotUIViewSet):
-    panels = [
-        KeyValueTablePanel(weight=100, value_transforms={
-            "name": [slugify, placeholder],
-            "list_of_names": split,
-            "number_value": lambda v: divide(v, 3),
-        }),
-    ]
+class DeviceUIViewSet(views.NautobotUIViewSet):
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            KeyValueTablePanel(weight=100, value_transforms={
+                "name": [slugify, placeholder],
+                "list_of_names": split,
+                "number_value": lambda v: divide(v, 3),
+            }),
+        ]
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -252,12 +254,15 @@ class CustomPanel(Panel):
 ```
 ```python title="views.py"
 from nautobot.apps import views
+from nautobot.apps.ui import ObjectDetailContent
 from device_app.custom_panel import CustomPanel
 
-class DeviceDetailView(views.NautobotUIViewSet):
-    panels = [
-        CustomPanel(weight=100),
-    ]
+class DeviceUIViewSet(views.NautobotUIViewSet):
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            CustomPanel(weight=100),
+        ]
+    )
 ```
 
 If need more custom behaviour, you can override other `Panel` rendering methods. For more details please refer to the [`Panel` Code Reference.](#todo: link goes here)

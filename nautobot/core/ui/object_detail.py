@@ -1072,6 +1072,7 @@ class BaseTextPanel(Panel):
             MARKDOWN (str): Markdown format (value: "markdown").
             CODE (str): Code format. Just wraps content within <pre> tags (value: "code").
         """
+
         PLAINTEXT = "plaintext"
         JSON = "json"
         YAML = "yaml"

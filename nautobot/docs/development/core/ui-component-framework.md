@@ -31,6 +31,7 @@ The Nautobot UI Framework revolutionizes how you create object detail views in y
 
 ```python
 from nautobot.apps import views
+from nautobot.apps.ui import ObjectDetailContent, SectionChoices, ObjectFieldsPanel
 
 class ExampleUIViewSet(views.NautobotUIViewSet):
     queryset = Example.objects.all()
@@ -146,6 +147,8 @@ ObjectFieldsPanel(
 #### Examples
 
 ```python
+from nautobot.apps.ui import KeyValueTablePanel
+
 KeyValueTablePanel(
     data={
         "speed": "1000000",
@@ -155,7 +158,10 @@ KeyValueTablePanel(
 ```
 
 ```python
+from nautobot.apps.ui import KeyValueTablePanel
+
 KeyValueTablePanel(
+    weight=100,
     data={
         "speed": "1000000",
         "notes": "**Important**",
@@ -186,8 +192,10 @@ KeyValueTablePanel(
 #### Examples
 
 ```python
+from nautobot.apps.ui import GroupedKeyValueTablePanel, SectionChoices
+
 GroupedKeyValueTablePanel(
-    body_id="network-details"
+    body_id="network-details",
     label="Grouped Information",
     weight=300,
     section=SectionChoices.FULL_WIDTH,
@@ -221,6 +229,8 @@ GroupedKeyValueTablePanel(
 #### Examples
 
 ```python
+from nautobot.apps.ui import StatsPanel, SectionChoices
+
 StatsPanel(
     filter_name="location",
     related_models=[           # Models to show statistics for
@@ -258,9 +268,11 @@ StatsPanel(
 #### Examples
 
 ```python
+from nautobot.apps.ui import ObjectTextPanel, SectionChoices
+
 ObjectTextPanel(
     object_field="description",
-    render_as=BaseTextPanel.RenderOptions.MARKDOWN,
+    render_as=ObjectTextPanel.RenderOptions.MARKDOWN,
     render_placeholder=True,
     label="Description",
     section=SectionChoices.FULL_WIDTH,
@@ -280,9 +292,11 @@ ObjectTextPanel(
 #### Examples
 
 ```python
+from nautobot.apps.ui import TextPanel, SectionChoices
+
 TextPanel(
     context_field="text",
-    render_as=BaseTextPanel.RenderOptions.CODE,
+    render_as=TextPanel.RenderOptions.CODE,
     render_placeholder=True,
     label="Custom Content",
     section=SectionChoices.FULL_WIDTH,
@@ -307,6 +321,8 @@ Note:
 #### Examples
 
 ```python
+from nautobot.apps.ui import DataTablePanel
+
 DataTablePanel(
     context_data_key="data",
     weight=100,
@@ -362,6 +378,8 @@ The `ObjectsTablePanel` is a powerful component for rendering tables of Django m
 #### Examples
 
 ```python
+from nautobot.apps.ui import ObjectsTablePanel, SectionChoices
+
 ObjectsTablePanel(
     section=SectionChoices.RIGHT_HALF,
     weight=100,
@@ -373,6 +391,8 @@ ObjectsTablePanel(
 ```
 
 ```python
+from nautobot.apps.ui import ObjectsTablePanel, SectionChoices
+
 ObjectsTablePanel(
     section=SectionChoices.FULL_WIDTH,
     weight=200,
@@ -393,12 +413,22 @@ ObjectsTablePanel(
 
 ## Complete Example
 
-```python
-class LocationUIViewSet(NautobotViewSetMixin):
+```python title="views.py"
+from nautobot.apps.ui import (
+    StatsPanel,
+    SectionChoices,
+    ObjectFieldsPanel,
+    ObjectDetailContent,
+    StatsPanel,
+)
+from nautobot.apps import views
+from your_app.models import Location, Device, Circuit
+
+class LocationUIViewSet(views.NautobotUIViewSet):
     queryset = Location.objects.all()
 
     object_detail_content = ObjectDetailContent(
-        panels=(
+        panels=[
             ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__,
@@ -429,8 +459,8 @@ class LocationUIViewSet(NautobotViewSetMixin):
                 render_as=BaseTextPanel.RenderOptions.MARKDOWN,
                 section=SectionChoices.FULL_WIDTH,
                 weight=400,
-            )
-        )
+            ),
+        ]
     )
 ```
 
