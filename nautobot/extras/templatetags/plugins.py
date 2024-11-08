@@ -4,6 +4,7 @@ from django import template as template_
 from django.conf import settings
 from django.utils.safestring import mark_safe
 
+from nautobot.core.ui.choices import SectionChoices
 from nautobot.extras.plugins import Banner, TemplateExtension
 from nautobot.extras.registry import registry
 
@@ -17,6 +18,9 @@ def get_registered_content(obj, method, template_context, return_html=True):
     """
     Given an object and a TemplateExtension method name and the template context, return all the
     registered content for the object's model.
+
+    Returns:
+        if return_html is True, a rendered HTML string; else, a list of dicts
     """
     context = {
         "object": obj,
@@ -55,6 +59,19 @@ def get_registered_content(obj, method, template_context, return_html=True):
     return mark_safe(html)  # noqa: S308  # suspicious-mark-safe-usage -- we have to trust plugins to provide safe HTML
 
 
+def get_registered_ui_content(obj, attr):
+    model_name = obj._meta.label_lower
+    template_extensions = registry["plugin_template_extensions"].get(model_name, [])
+    objects = []
+    for template_extension in template_extensions:
+        content = getattr(template_extension, attr)
+        if not content:
+            continue
+        objects.extend(content)
+
+    return sorted(objects, key=lambda item: item.weight)
+
+
 @register.simple_tag(takes_context=True)
 def plugin_buttons(context, obj, view="detail"):
     """
@@ -72,7 +89,13 @@ def plugin_left_page(context, obj):
     """
     Render all left page content registered by plugins
     """
-    return get_registered_content(obj, "left_page", context)
+    if context.get("object_detail_content") is not None:
+        panels = [
+            panel
+            for panel in get_registered_ui_content(obj, "object_detail_panels")
+            if panel.section==SectionChoices.LEFT_HALF
+        ]
+    html = get_registered_content(obj, "left_page", context)
 
 
 @register.simple_tag(takes_context=True)

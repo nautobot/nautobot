@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from enum import Enum
 import logging
 
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.db.models import JSONField, URLField
@@ -15,7 +16,9 @@ from django.template.loader import get_template, render_to_string
 from django.templatetags.l10n import localize
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
+from django_tables2 import RequestConfig
 
+from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags.helpers import (
     badge,
     bettertitle,
@@ -38,8 +41,8 @@ from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.registry import registry
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
+from nautobot.tenancy.models import Tenant
 
 logger = logging.getLogger(__name__)
 
@@ -90,18 +93,16 @@ class ObjectDetailContent:
         ]
         if extra_tabs is not None:
             tabs.extend(extra_tabs)
-        self._tabs = tabs
+        self.tabs = tabs
 
-    def tabs(self, context):
+    @property
+    def tabs(self):
         """The tabs defined for this detail view, ordered by their `weight`."""
-        tabs = list(self._tabs)
-        for template_extension in registry["plugin_template_extensions"].get(
-            get_obj_from_context(context)._meta.label_lower,
-            [],
-        ):
-            if template_extension.object_detail_tabs:
-                tabs.extend(template_extension.object_detail_tabs)
-        return sorted(tabs, key=lambda tab: tab.weight)
+        return sorted(self._tabs, key=lambda tab: tab.weight)
+
+    @tabs.setter
+    def tabs(self, value):
+        self._tabs = value
 
 
 class Component:
@@ -211,7 +212,7 @@ class Tab(Component):
     WEIGHT_NOTES_TAB = 600  # reserved, not yet using this framework
     WEIGHT_CHANGELOG_TAB = 700  # reserved, not yet using this framework
 
-    def panels_for_section(self, section, context):
+    def panels_for_section(self, section):
         """
         Get the subset of this tab's panels that apply to the given layout section, ordered by their `weight`.
 
@@ -221,14 +222,7 @@ class Tab(Component):
         Returns:
             (list[Panel]): Sorted list of Panel instances.
         """
-        panels = list(self.panels)
-        for template_extension in registry["plugin_template_extensions"].get(
-            get_obj_from_context(context)._meta.label_lower,
-            [],
-        ):
-            if template_extension.object_detail_panels:
-                panels.extend(template_extension.object_detail_panels.get(self.tab_id, []))
-        return sorted((panel for panel in panels if panel.section == section), key=lambda panel: panel.weight)
+        return sorted((panel for panel in self.panels if panel.section == section), key=lambda panel: panel.weight)
 
     def render_label_wrapper(self, context):
         """
@@ -265,35 +259,14 @@ class Tab(Component):
             tab_id=self.tab_id,
             label=self.render_label(context),
             include_plugin_content=self.tab_id == "main",
-            left_half_panels=self.panels_for_section(SectionChoices.LEFT_HALF, context),
-            right_half_panels=self.panels_for_section(SectionChoices.RIGHT_HALF, context),
-            full_width_panels=self.panels_for_section(SectionChoices.FULL_WIDTH, context),
+            left_half_panels=self.panels_for_section(SectionChoices.LEFT_HALF),
+            right_half_panels=self.panels_for_section(SectionChoices.RIGHT_HALF),
+            full_width_panels=self.panels_for_section(SectionChoices.FULL_WIDTH),
         )
 
         tab_content = get_template(self.LAYOUT_TEMPLATE_PATHS[self.layout]).render(context)
 
         return get_template(self.content_wrapper_template_path).render({**context, "tab_content": tab_content})
-
-
-class TemplateExtensionTab(Tab):
-    """Class used when deriving legacy tab data from an App's `TemplateExtension.detail_tabs()` return value."""
-
-    def __init__(
-        self,
-        *,
-        url,
-        label_wrapper_template_path="components/tab/label_wrapper_distinct_view.html",
-        **kwargs,
-    ):
-        self.url = url
-        super().__init__(label_wrapper_template_path=label_wrapper_template_path, **kwargs)
-
-    def render_label_wrapper(self, context):
-        context = self.local_context(context, url=self.url)
-        return super().render_label_wrapper(context)
-
-    def render(self, context):
-        return ""
 
 
 class Panel(Component):
@@ -436,7 +409,7 @@ class DataTablePanel(Panel):
         **kwargs,
     ):
         """
-        Instantiate a DataTablePanel.
+        Instantiate a DataDictTablePanel.
 
         Args:
             context_data_key (str): The key in the render context that stores the data used to populate the table.
@@ -637,8 +610,6 @@ class ObjectsTablePanel(Panel):
         for listing and adding objects. It also handles field inclusion/exclusion and
         displays the appropriate table title if provided.
         """
-        from django_tables2 import RequestConfig
-
         request = context["request"]
         if self.context_table_key:
             body_content_table = context.get(self.context_table_key)
@@ -811,8 +782,6 @@ class KeyValueTablePanel(Panel):
           the filtered list view of that model.
         - Etc.
         """
-        from nautobot.tenancy.models import Tenant
-
         display = value
         if key in self.value_transforms:
             for transform in self.value_transforms[key]:
@@ -951,8 +920,6 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         return super().render_label(context)
 
     def render_value(self, key, value, context):
-        from django.contrib.contenttypes.models import ContentType
-
         try:
             field_instance = get_obj_from_context(context)._meta.get_field(key)
         except FieldDoesNotExist:
@@ -979,10 +946,6 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         Returns:
             (dict): Key-value pairs corresponding to the object's fields, or `{}` if no object is present.
         """
-        from django.contrib.contenttypes.models import ContentType
-
-        from nautobot.core.models.tree_queries import TreeModel
-
         fields = self.fields
         instance = context.get(self.context_object_key, None)
 
@@ -1209,8 +1172,6 @@ class StatsPanel(Panel):
             ...
         }
         """
-        from nautobot.core.models.tree_queries import TreeModel
-
         instance = get_obj_from_context(context)
         request = context["request"]
         if isinstance(instance, TreeModel):
