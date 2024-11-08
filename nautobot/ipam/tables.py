@@ -346,9 +346,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     prefix = tables.TemplateColumn(
         template_code=PREFIX_COPY_LINK, attrs={"td": {"class": "text-nowrap"}}, order_by=("network", "prefix_length")
     )
-    vrf_count = LinkedCountColumn(
-        viewname="ipam:vrf_list", url_params={"prefixes": "pk"}, verbose_name="VRFs"
-    )
+    vrf_count = LinkedCountColumn(viewname="ipam:vrf_list", url_params={"prefixes": "pk"}, verbose_name="VRFs")
     tenant = TenantColumn()
     namespace = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
