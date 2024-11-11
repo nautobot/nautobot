@@ -143,6 +143,9 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6453](https://github.com/nautobot/nautobot/issues/6453) - Fixed issue where interfaces cannot be removed/deleted from an Interface for Modules.
 - [#6472](https://github.com/nautobot/nautobot/issues/6472) - Fixed incorrect placement of buttons in create and edit views.
 - [#6472](https://github.com/nautobot/nautobot/issues/6472) - Fixed the panel width in multiple create and edit views.
+- [#6490](https://github.com/nautobot/nautobot/issues/6490) - Added missing `vrf_count` column to Prefix table in PrefixListView.
+- [#6491](https://github.com/nautobot/nautobot/issues/6491) - Added missing `vrf` field to `VMInterfaceForm` and `VMInterfaceCreateForm`.
+- [#6492](https://github.com/nautobot/nautobot/issues/6492) - Fixed `vlan_group` field is not filtered by `locations` field input on VLANForm.
 
 ### Documentation
 
@@ -154,6 +157,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6449](https://github.com/nautobot/nautobot/issues/6449) - Fixed incorrect assertion in core navbar integration tests.
 - [#6449](https://github.com/nautobot/nautobot/issues/6449) - Added helper functions to SeleniumTestCase to perform some common UI actions.
 - [#6455](https://github.com/nautobot/nautobot/issues/6455) - Fixes two tests which always passed due to errors in their implementation. Ensured they provide value by checking against the correct results.
+- [#6497](https://github.com/nautobot/nautobot/issues/6497) - Added support for `--no-reusedb` option to `invoke integration-test` task.
 
 ## v2.3.10 (2024-10-29)
 
