@@ -1041,6 +1041,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDele
                 try:
                     with deferred_change_logging_for_bulk_operation():
                         updated_objects = []
+                        queryset = queryset if edit_all else self.queryset.filter(pk__in=form.cleaned_data["pk"])
                         for obj in queryset:
                             obj = self.alter_obj(obj, request, [], kwargs)
 
