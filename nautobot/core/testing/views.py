@@ -1144,7 +1144,7 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_edit_form_contains_all_filtered(self):
-            # We are testing the intermediary step of all bulk_edit with additional filter.
+            # We are testing the intermediary step of bulk editing all filtered objects.
             # i.e. "_all" passed in the form and filter using query params.
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 

@@ -927,7 +927,7 @@ class EditAndDeleteAllModelMixin:
         """
         model = self.queryset.model
 
-        # This Mixin is currently been used by both NautobotViewSet ObjectBulkDestroyViewMixin, ObjectBulkUpdateViewMixin
+        # This Mixin is currently been used by both NautobotUIViewSet ObjectBulkDestroyViewMixin, ObjectBulkUpdateViewMixin
         # BulkEditView, and BulkDeleteView which uses different keys for accessing filterset
         filterset_class = getattr(self, "filterset", None)
         if filterset_class is None:
