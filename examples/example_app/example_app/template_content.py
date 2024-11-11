@@ -2,6 +2,7 @@ from django.urls import reverse
 
 from nautobot.apps.ui import (
     BaseTextPanel,
+    DistinctViewTab,
     ObjectFieldsPanel,
     ObjectTextPanel,
     Panel,
@@ -32,10 +33,16 @@ class CircuitContent(TemplateExtension):
         Tab(
             weight=100,
             tab_id="example_app_inline_tab",
-            label="Example App Detail Tab",
+            label="Example App Inline Tab",
             panels=[
                 ObjectFieldsPanel(weight=100, fields="__all__"),
             ],
+        ),
+        DistinctViewTab(
+            weight=200,
+            tab_id="example_app_distinct_view_tab",
+            label="Example App Distinct View Tab",
+            url_name="plugins:example_app:circuit_detail_tab",
         ),
     )
 

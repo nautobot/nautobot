@@ -163,7 +163,13 @@ class Component:
             (dict): The augmented rendering context.
         """
         if isinstance(context, Context):
-            context = context.flatten()
+            flat = {}
+            for d in context.dicts:
+                if isinstance(d, dict):
+                    flat.update(d)
+                else:
+                    flat.update(d.flatten())
+            context = flat
         return {**context, **kwargs}
 
 
@@ -237,6 +243,7 @@ class Tab(Component):
             context,
             tab_id=self.tab_id,
             label=self.render_label(context),
+            **self.get_extra_context(context),
         )
 
         return get_template(self.label_wrapper_template_path).render(context)
@@ -262,11 +269,34 @@ class Tab(Component):
             left_half_panels=self.panels_for_section(SectionChoices.LEFT_HALF),
             right_half_panels=self.panels_for_section(SectionChoices.RIGHT_HALF),
             full_width_panels=self.panels_for_section(SectionChoices.FULL_WIDTH),
+            **self.get_extra_context(context),
         )
 
         tab_content = get_template(self.LAYOUT_TEMPLATE_PATHS[self.layout]).render(context)
 
         return get_template(self.content_wrapper_template_path).render({**context, "tab_content": tab_content})
+
+
+class DistinctViewTab(Tab):
+    """
+    A Tab that doesn't render inline on the same page, but instead links to a distinct view of its own when clicked.
+    """
+
+    def __init__(
+        self,
+        *,
+        url_name,
+        label_wrapper_template_path="components/tab/label_wrapper_distinct_view.html",
+        **kwargs,
+    ):
+        self.url_name = url_name
+        super().__init__(label_wrapper_template_path=label_wrapper_template_path, **kwargs)
+
+    def get_extra_context(self, context):
+        return {"url": reverse(self.url_name, kwargs={"pk": get_obj_from_context(context).pk})}
+
+    def render(self, context):
+        return ""
 
 
 class Panel(Component):

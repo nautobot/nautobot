@@ -135,13 +135,8 @@ def plugin_object_detail_tabs(context, obj):
     """
     Render all custom tabs registered by plugins for the object detail view
     """
-    context["plugin_object_detail_tabs"] = []
-    for tab in get_registered_ui_content(obj, "object_detail_tabs"):
-        if tab.should_render(context):
-            context["plugin_object_detail_tabs"].append(
-                {tab.tab_id: {"title": tab.render_label(context), "url": obj.get_absolute_url()}}
-            )
-    context["plugin_object_detail_tabs"] += _get_registered_content(obj, "detail_tabs", context, return_html=False)
+    context["ui_component_tabs"] = get_registered_ui_content(obj, "object_detail_tabs")
+    context["plugin_object_detail_tabs"] = _get_registered_content(obj, "detail_tabs", context, return_html=False)
     return context
 
 
