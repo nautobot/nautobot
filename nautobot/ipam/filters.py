@@ -90,8 +90,7 @@ class VRFFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFil
         to_field_name="name",
         label="Device (ID or name)",
     )
-    virtual_machine = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="virtual_machines",
+    virtual_machines = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
         label="Virtual Machine (ID or name)",

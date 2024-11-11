@@ -1100,7 +1100,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.add_permissions("ipam.add_vlan")
         request = {
             "path": self._get_url("add"),
-            "data": post_data(self.form_data),
+            "data": post_data(form_data),
         }
         response = self.client.post(**request)
         self.assertBodyContains(
