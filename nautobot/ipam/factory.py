@@ -239,7 +239,8 @@ class VLANFactory(PrimaryModelFactory):
                     )
                 )
                 if self.vlan_group and self.vlan_group.location:
-                    self.locations.add(self.vlan_group.location)
+                    # add the parent of the vlan group location to the vlan locations
+                    self.locations.add(self.vlan_group.location.ancestors(include_self=True)[0])
 
 
 class VLANGetOrCreateFactory(VLANFactory):
