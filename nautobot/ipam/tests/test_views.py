@@ -1062,7 +1062,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
         cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))
 
-        vlangroups = (
+        cls.vlangroups = (
             VLANGroup.objects.create(name="VLAN Group 1", location=cls.locations.first()),
             VLANGroup.objects.create(name="VLAN Group 2", location=cls.locations.last()),
         )
@@ -1072,24 +1072,39 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         status = Status.objects.get_for_model(VLAN).first()
 
         cls.form_data = {
-            "vlan_group": vlangroups[1].pk,
+            "vlan_group": cls.vlangroups[0].pk,
             "vid": 999,
             "name": "VLAN999 with an unwieldy long name since we increased the limit to more than 64 characters",
             "tenant": None,
             "status": status.pk,
             "role": roles[1].pk,
-            "locations": list(cls.locations.values_list("pk", flat=True)[:2]),
+            "locations": list(cls.locations.values_list("pk", flat=True)[:1]),
             "description": "A new VLAN",
             "tags": [t.pk for t in Tag.objects.get_for_model(VLAN)],
         }
 
         cls.bulk_edit_data = {
-            "vlan_group": vlangroups[0].pk,
+            "vlan_group": cls.vlangroups[0].pk,
             "tenant": Tenant.objects.first().pk,
             "status": status.pk,
             "role": roles[0].pk,
             "description": "New description",
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_vlan_group_not_belong_to_vlan_locations(self):
+        """Test that a VLAN cannot be assigned to a VLAN Group that is not in the same location as the VLAN."""
+        vlan_group = self.vlangroups[0]
+        form_data = self.form_data.copy()
+        form_data["vlan_group"] = vlan_group.pk
+        form_data["locations"] = [self.locations.last().pk]
+        self.add_permissions("ipam.add_vlan")
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(form_data),
+        }
+        response = self.client.post(**request)
+        self.assertBodyContains(response, f"vlan_group: VLAN Group {vlan_group} is not in locations")
 
 
 class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
