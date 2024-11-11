@@ -1,0 +1,81 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Radio Profile</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Name</td>
+                <td>
+                    {{ object.name }}
+                </td>
+            </tr>
+            <tr>
+                <td>Description</td>
+                <td>{{ object.description|placeholder }}</td>
+            </tr>
+            <tr>
+                <td>Frequency</td>
+                <td>{{ object.frequency }}</td>
+            </tr>
+            <tr>
+                <td>Channel Width</td>
+                <td>
+                    {% if object.channel_width %}
+                        {% for width in object.channel_width %}
+                            <span class="label label-default">{{ width }}MHz</span>
+                        {% endfor %}
+                    {% else %}
+                        {{ None|placeholder }}
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Allowed Channel List</td>
+                <td>
+                    {% if object.allowed_channel_list %}
+                        {% for channel in object.allowed_channel_list %}
+                            <span class="label label-default">{{ channel }}</span>
+                        {% endfor %}
+                    {% else %}
+                        {{ None|placeholder }}
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Transmit Power Minimum</td>
+                <td>
+                    {{ object.tx_power_min|dbm}}
+                </td>
+            </tr>
+            <tr>
+                <td>Transmit Power Maximum</td>
+                <td>
+                    {{ object.tx_power_max|dbm}}
+                </td>
+            </tr>
+            <tr>
+                <td>Recieve Power Minimum</td>
+                <td>
+                    {{ object.rx_power_min|dbm}}
+                </td>
+            </tr>
+            <tr>
+                <td>Regulatory Domain</td>
+                <td>{{ object.get_regulatory_domain_display }}</td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_left_page %}
+
+{% block content_full_width_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Supported Data Rates</strong>
+        </div>
+        {% include 'inc/table.html' with table=supported_data_rates_table %}
+    </div>
+{% endblock content_full_width_page %}

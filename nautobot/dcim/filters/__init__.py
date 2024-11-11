@@ -21,6 +21,7 @@ from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.choices import (
     CableTypeChoices,
     ConsolePortTypeChoices,
+    ControllerCapabilitiesChoices,
     InterfaceTypeChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
@@ -103,6 +104,7 @@ from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
+from nautobot.wireless.models import RadioProfile, WirelessNetwork
 
 __all__ = (
     "CableFilterSet",
@@ -904,6 +906,26 @@ class DeviceFilterSet(
         queryset=SoftwareVersion.objects.all(),
         to_field_name="version",
         label="Software version (version or ID)",
+    )
+    radio_profiles = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="controller_managed_device_group__radio_profiles",
+        queryset=RadioProfile.objects.all(),
+        to_field_name="name",
+        label="Radio Profiles (name or ID)",
+    )
+    has_radio_profiles = RelatedMembershipBooleanFilter(
+        field_name="controller_managed_device_group__radio_profiles",
+        label="Has radio profiles",
+    )
+    wireless_networks = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="controller_managed_device_group__wireless_networks",
+        queryset=WirelessNetwork.objects.all(),
+        to_field_name="name",
+        label="Wireless Networks (name or ID)",
+    )
+    has_wireless_networks = RelatedMembershipBooleanFilter(
+        field_name="controller_managed_device_group__wireless_networks",
+        label="Has wireless networks",
     )
 
     class Meta:
@@ -1834,6 +1856,12 @@ class ControllerFilterSet(
         to_field_name="name",
         label="External integration (name or ID)",
     )
+    capabilities = django_filters.MultipleChoiceFilter(
+        choices=ControllerCapabilitiesChoices,
+        null_value=None,
+        lookup_expr="icontains",
+        label="Capabilities",
+    )
     controller_device = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
         to_field_name="name",
@@ -1843,6 +1871,12 @@ class ControllerFilterSet(
         queryset=DeviceRedundancyGroup.objects.all(),
         to_field_name="name",
         label="Controller device redundancy group (name or ID)",
+    )
+    wireless_networks = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="controller_managed_device_groups__wireless_networks",
+        queryset=WirelessNetwork.objects.all(),
+        to_field_name="name",
+        label="Wireless Networks (name or ID)",
     )
 
     class Meta:
@@ -1857,6 +1891,12 @@ class ControllerManagedDeviceGroupFilterSet(NautobotFilterSet):
         filter_predicates={
             "name": "icontains",
         }
+    )
+    capabilities = django_filters.MultipleChoiceFilter(
+        choices=ControllerCapabilitiesChoices,
+        null_value=None,
+        lookup_expr="icontains",
+        label="Capabilities",
     )
     controller = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Controller.objects.all(),
@@ -1873,6 +1913,22 @@ class ControllerManagedDeviceGroupFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Controlled device groups and descendants thereof (name or ID)",
         method="_subtree",
+    )
+    radio_profiles = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=RadioProfile.objects.all(),
+        label="Radio Profiles (name or ID)",
+    )
+    has_radio_profiles = RelatedMembershipBooleanFilter(
+        field_name="radio_profiles",
+        label="Has radio profiles",
+    )
+    wireless_networks = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=WirelessNetwork.objects.all(),
+        label="Wireless Networks (name or ID)",
+    )
+    has_wireless_networks = RelatedMembershipBooleanFilter(
+        field_name="wireless_networks",
+        label="Has wireless networks",
     )
 
     class Meta:

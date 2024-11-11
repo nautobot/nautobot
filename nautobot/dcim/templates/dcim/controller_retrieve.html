@@ -1,4 +1,4 @@
-{% extends 'generic/object_retrieve.html' %}
+{% extends 'dcim/controller/base.html' %}
 {% load helpers %}
 
 {% block content_left_page %}
@@ -21,6 +21,10 @@
                         <tr>
                             <td>Role</td>
                             <td>{{ object.role|hyperlinked_object }}</td>
+                        </tr>
+                        <tr>
+                            <td>Capabilities</td>
+                            <td>{{ object.get_capabilities_display }}</td>
                         </tr>
                         <tr>
                             <td>Location</td>

@@ -692,6 +692,11 @@ urlpatterns = [
         name="device_add_image",
         kwargs={"model": Device},
     ),
+    path(
+        "devices/<uuid:pk>/wireless/",
+        views.DeviceWirelessView.as_view(),
+        name="device_wireless",
+    ),
     # Console ports
     path("console-ports/", views.ConsolePortListView.as_view(), name="consoleport_list"),
     path(
