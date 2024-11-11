@@ -783,7 +783,7 @@ class VLANForm(NautobotModelForm, TenancyForm):
         vlan_group = self.cleaned_data["vlan_group"]
         locations = self.cleaned_data["locations"]
         # Validate Vlan Group Location is one of the ancestors of the VLAN locations specified.
-        if vlan_group and vlan_group.location:
+        if vlan_group and vlan_group.location and locations:
             vlan_group_location = vlan_group.location
             is_vlan_group_valid = False
             for location in locations:
