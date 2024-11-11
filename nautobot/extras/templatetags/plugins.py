@@ -2,7 +2,7 @@ import logging
 
 from django import template as template_
 from django.conf import settings
-from django.utils.html import format_html, format_html_join
+from django.utils.html import format_html_join
 from django.utils.safestring import mark_safe
 
 from nautobot.core.ui.choices import SectionChoices
@@ -93,7 +93,7 @@ def plugin_left_page(context, obj):
     panels = [
         panel
         for panel in get_registered_ui_content(obj, "object_detail_panels")
-        if panel.section==SectionChoices.LEFT_HALF
+        if panel.section == SectionChoices.LEFT_HALF
     ]
     html = format_html_join("\n", "{}", ([panel.render(context)] for panel in panels))
     html += _get_registered_content(obj, "left_page", context)
@@ -108,7 +108,7 @@ def plugin_right_page(context, obj):
     panels = [
         panel
         for panel in get_registered_ui_content(obj, "object_detail_panels")
-        if panel.section==SectionChoices.RIGHT_HALF
+        if panel.section == SectionChoices.RIGHT_HALF
     ]
     html = format_html_join("\n", "{}", ([panel.render(context)] for panel in panels))
     html += _get_registered_content(obj, "right_page", context)
@@ -123,7 +123,7 @@ def plugin_full_width_page(context, obj):
     panels = [
         panel
         for panel in get_registered_ui_content(obj, "object_detail_panels")
-        if panel.section==SectionChoices.FULL_WIDTH
+        if panel.section == SectionChoices.FULL_WIDTH
     ]
     html = format_html_join("\n", "{}", ([panel.render(context)] for panel in panels))
     html += _get_registered_content(obj, "full_width_page", context)

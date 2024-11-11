@@ -5,7 +5,6 @@ from nautobot.apps.ui import (
     DistinctViewTab,
     ObjectFieldsPanel,
     ObjectTextPanel,
-    Panel,
     SectionChoices,
     Tab,
     TemplateExtension,
