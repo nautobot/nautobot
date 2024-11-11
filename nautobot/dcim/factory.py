@@ -446,6 +446,7 @@ class LocationTypeFactory(OrganizationalModelFactory):
                     ContentType.objects.get_for_model(Rack),
                     ContentType.objects.get_for_model(RackGroup),
                     ContentType.objects.get_for_model(VLANGroup),
+                    ContentType.objects.get_for_model(VLAN),
                 ]
             )
         elif self.name in ["Room"]:
