@@ -785,13 +785,13 @@ class VLANForm(NautobotModelForm, TenancyForm):
         # Validate Vlan Group Location is one of the ancestors of the VLAN locations specified.
         if vlan_group and vlan_group.location:
             vlan_group_location = vlan_group.location
-            isVlanGroupValid = False
+            is_vlan_group_valid = False
             for location in locations:
                 if vlan_group_location in location.ancestors(include_self=True):
-                    isVlanGroupValid = True
+                    is_vlan_group_valid = True
                     break
 
-            if not isVlanGroupValid:
+            if not is_vlan_group_valid:
                 locations = list(locations.values_list("name", flat=True))
                 raise ValidationError(
                     {"vlan_group": [f"VLAN Group {vlan_group} is not in locations {locations} or their ancestors."]}
