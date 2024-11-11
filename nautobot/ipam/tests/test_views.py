@@ -1072,13 +1072,13 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         status = Status.objects.get_for_model(VLAN).first()
 
         cls.form_data = {
-            "vlan_group": cls.vlangroups[1].pk,
+            "vlan_group": cls.vlangroups[0].pk,
             "vid": 999,
             "name": "VLAN999 with an unwieldy long name since we increased the limit to more than 64 characters",
             "tenant": None,
             "status": status.pk,
             "role": roles[1].pk,
-            "locations": list(cls.locations.values_list("pk", flat=True)[:2]),
+            "locations": list(cls.locations.values_list("pk", flat=True)[:1]),
             "description": "A new VLAN",
             "tags": [t.pk for t in Tag.objects.get_for_model(VLAN)],
         }
@@ -1091,6 +1091,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "New description",
         }
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_vlan_group_not_belong_to_vlan_locations(self):
         """Test that a VLAN cannot be assigned to a VLAN Group that is not in the same location as the VLAN."""
         vlan_group = self.vlangroups[0]
@@ -1103,9 +1104,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(form_data),
         }
         response = self.client.post(**request)
-        self.assertBodyContains(
-            response, "vlan_group: Select a valid choice. That choice is not one of the available choices."
-        )
+        self.assertBodyContains(response, f"vlan_group: VLAN Group {vlan_group} is not in locations")
 
 
 class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
