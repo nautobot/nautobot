@@ -1363,6 +1363,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                             pass
                     initial["_job_queue"] = jq
                     initial["_profile"] = job_result.celery_kwargs.get("nautobot_job_profile", False)
+                    initial["_force_singleton_lock"] = job_result.celery_kwargs.get("force_singleton_lock", False)
                     initial.update(explicit_initial)
                 except JobResult.DoesNotExist:
                     messages.warning(

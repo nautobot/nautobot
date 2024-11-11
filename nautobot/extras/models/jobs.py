@@ -237,6 +237,10 @@ class Job(PrimaryModel):
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
+    is_singleton_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
     objects = BaseManager.from_queryset(JobQuerySet)()
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
@@ -809,6 +813,7 @@ class JobResult(BaseModel, CustomFieldModel):
         task_queue=None,
         job_result=None,
         synchronous=False,
+        force_singleton_lock=False,
         **job_kwargs,
     ):
         """Create/Modify a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
@@ -822,6 +827,9 @@ class JobResult(BaseModel, CustomFieldModel):
             task_queue (str, optional): The celery queue to send the job to. If not set, use the default celery queue.
             job_result (JobResult, optional): Existing JobResult with status PENDING, to be modified and to be used in kubernetes job execution.
             synchronous (bool, optional): If True, run the job in the current process, blocking until the job completes.
+            force_singleton_lock (bool, optional): If True, invalidate the singleton lock before running the job.
+              This allows singleton jobs to run twice, or makes it possible to remove the lock when the first instance
+              of the job failed to remove it for any reason.
             *job_args: positional args passed to the job task (UNUSED)
             **job_kwargs: keyword args passed to the job task
 
@@ -866,6 +874,7 @@ class JobResult(BaseModel, CustomFieldModel):
             "nautobot_job_job_model_id": job_model.id,
             "nautobot_job_profile": profile,
             "nautobot_job_user_id": user.id,
+            "nautobot_job_force_singleton_lock": force_singleton_lock,
             "queue": task_queue,
         }
 
