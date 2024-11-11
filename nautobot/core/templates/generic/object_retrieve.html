@@ -71,7 +71,7 @@
     <ul id="tabs" class="nav nav-tabs">
     {% block nav_tabs %}
       {% if object_detail_content %}
-        {% render_tabs_labels object_detail_content %}
+        {% render_tabs_labels object_detail_content.tabs %}
       {% else %}
         <li role="presentation"{% if active_tab == "main" or request.GET.tab == "main" %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}#main" onclick="switch_tab(this.href)" aria-controls="main" role="tab" data-toggle="tab">
@@ -136,7 +136,7 @@
 {% block content %}
     <div class="tab-content">
       {% if object_detail_content %}
-        {% render_tabs_content object_detail_content %}
+        {% render_components object_detail_content.tabs %}
       {% else %}
         <div id="main" role="tabpanel" class="tab-pane {% if active_tab == "main" or request.GET.tab == "main" %}active{% else %}fade{% endif %}">
             <div class="row">
@@ -276,6 +276,7 @@
             </div>
         {% endif %}
       {% endif %}
+        {% plugin_object_detail_tab_content object %}
         {% block extra_tab_content %}{% endblock extra_tab_content %}
     </div>
 {% endblock content %}

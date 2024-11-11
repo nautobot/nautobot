@@ -299,8 +299,8 @@ class TemplateExtension:
     """The model (as a string in the form `<app_label>.<model>`) that this TemplateExtension subclass applies to."""
     object_detail_tabs: Optional[list["nautobot.core.ui.object_detail.Tab"]] = None
     """List of Tab instances to add to the specified model's detail view."""
-    object_detail_panels: Optional[dict] = None
-    """Dict of Panel instances (grouped by tab id, e.g `{"main": [panel_1, panel_2]}` to add to the detail view."""
+    object_detail_panels: Optional[list["nautobot.core.ui.object_detail.Panel"]] = None
+    """List of Panel instances to add to the specified model's detail view."""
 
     def __init__(self, context):
         """

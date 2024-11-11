@@ -1,6 +1,7 @@
 from django.urls import reverse
 
 from nautobot.apps.ui import (
+    BaseTextPanel,
     ObjectFieldsPanel,
     ObjectTextPanel,
     Panel,
@@ -13,38 +14,28 @@ from nautobot.apps.ui import (
 class CircuitContent(TemplateExtension):
     model = "circuits.circuit"
 
-    # Nautobot 2.4 and later preferred way of extending a detail view (in this case, Circuit view).
-    # This does require that the base view already defines an `object_detail_content` attribute;
-    # some views may not yet have been converted over to this newer pattern at this time.
-    object_detail_panels = {
-        "main": [
-            # Adding panels to the "main" tab of the detail view
-            ObjectTextPanel(
-                # Located between the Comments and Custom Fields panels (if present)
-                weight=(Panel.WEIGHT_COMMENTS_PANEL + Panel.WEIGHT_CUSTOM_FIELDS_PANEL) / 2,
-                label="Example App Text Panel",
-                section=SectionChoices.LEFT_HALF,
-                render_as=ObjectTextPanel.RenderOptions.CODE,
-                object_field="description",
-            ),
-        ],
-        "advanced": [
-            # Adding panels to the "advanced" tab of the detail view
-            ObjectFieldsPanel(
-                weight=0,  # before any of the built-in panels, though there are none in this section by default
-                label="Example App Fields Panel",
-                section=SectionChoices.RIGHT_HALF,
-                fields=["provider", "status"],
-            ),
-        ],
-    }
+    #
+    # Nautobot 2.4 and later preferred way of extending a detail view (in this case, Circuit view)
+    # is to define a TemplateExtension with `object_detail_panels` and/or `object_detail_tabs` as in the example below.
+    #
+    object_detail_panels = (
+        ObjectTextPanel(
+            weight=100,
+            label="Example App Text Panel",
+            section=SectionChoices.LEFT_HALF,
+            render_as=ObjectTextPanel.RenderOptions.CODE,
+            object_field="description",
+        ),
+    )
 
     object_detail_tabs = (
         Tab(
-            weight=(Tab.WEIGHT_ADVANCED_TAB + Tab.WEIGHT_CONTACTS_TAB) / 2,
+            weight=100,
             tab_id="example_app_inline_tab",
             label="Example App Detail Tab",
-            panels=(ObjectFieldsPanel(weight=100, fields="__all__"),),
+            panels=[
+                ObjectFieldsPanel(weight=100, fields="__all__"),
+            ],
         ),
     )
 
@@ -98,30 +89,45 @@ class DeviceContent(TemplateExtension):
             },
         ]
 
-    def full_width_page(self):
-        return """
-            <div class="card card-default">
-                <div class="card-header">
-                    <strong>App Injected Full Width Page</strong>
-                </div>
-                <div class="card-body">
-                    I am a teapot short and stout.
-                </div>
-            </div>
-        """
+
+class HardCodedTextPanel(BaseTextPanel):
+    """
+    A text panel that just displays hard-coded text.
+
+    Not generally *useful* (hence why it's not included in Nautobot core) but handy for purpose of illustration.
+    """
+
+    def __init__(self, *, value, **kwargs):
+        self.value = value
+        super().__init__(**kwargs)
+
+    def get_value(self, context):
+        return self.value
 
 
 class LocationContent(TemplateExtension):
     model = "dcim.location"
 
-    def left_page(self):
-        return "APP INJECTED LOCATION CONTENT - LEFT PAGE"
-
-    def right_page(self):
-        return "APP INJECTED LOCATION CONTENT - RIGHT PAGE"
-
-    def full_width_page(self):
-        return "APP INJECTED LOCATION CONTENT - FULL WIDTH PAGE"
+    object_detail_panels = (
+        HardCodedTextPanel(
+            weight=100,
+            section=SectionChoices.LEFT_HALF,
+            label="App Injected Content - Left",
+            value="Hello, world!",
+        ),
+        HardCodedTextPanel(
+            weight=100,
+            section=SectionChoices.RIGHT_HALF,
+            label="App Injected Content - Right",
+            value="Hi, everybody!",
+        ),
+        HardCodedTextPanel(
+            weight=100,
+            section=SectionChoices.FULL_WIDTH,
+            label="App Injected Content - Full Width",
+            value="Greetings, everyone!",
+        ),
+    )
 
     def buttons(self):
         return "APP INJECTED LOCATION CONTENT - BUTTONS"
@@ -131,12 +137,22 @@ class LocationContent(TemplateExtension):
 
 
 class ExampleModelContent(TemplateExtension):
+    """
+    You can also use an app to extend other apps's views, or even (in this case) its *own* views.
+
+    Why you'd want to do this to your own views I don't know but it is possible.
+    """
+
     model = "example_app.examplemodel"
     template_name = "example_app/panel.html"
 
+    #
+    # Old (deprecated) way to do things follows
+    # See examples above for preferred (Nautobot 2.4+) approach using `object_detail_panels` attribute
+    #
+
     def left_page(self):
-        # You can use the render() method and pass it a template file and
-        # context to populate it.
+        # You can use the render() method and pass it a template file and context to populate it.
         return self.render(
             self.template_name,
             extra_context={
