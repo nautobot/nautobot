@@ -36,7 +36,7 @@
             </div>
         </div>
         {% endif %}
-        <div class="{% if edit_all %} col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 {% else %} col-md-4 {% endif %}">
+        <div class="{% if table %} col-md-4 {% else %} col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 {% endif %}">
             <div class="panel panel-default">
                 <div class="panel-heading"><strong>{% block form_title %}Attributes{% endblock %}</strong></div>
                 <div class="panel-body">

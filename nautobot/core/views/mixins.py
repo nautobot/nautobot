@@ -1217,7 +1217,6 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Edit
             {
                 "table": table,
                 "objs_count": queryset.count(),
-                "edit_all": edit_all,
             }
         )
         return Response(data)

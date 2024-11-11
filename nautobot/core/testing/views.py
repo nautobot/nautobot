@@ -1113,7 +1113,7 @@ class ViewTestCases:
             self.validate_object_data_after_bulk_edit(pk_list)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-        def test_bulk_edit_form_contains_all_objects(self):
+        def test_bulk_edit_form_contains_all_pks(self):
             # We are testing the intermediary step of all bulk_edit.
             # i.e. "_all" passed in the form.
             pk_list = self._get_queryset().values_list("pk", flat=True)

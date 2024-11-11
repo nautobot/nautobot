@@ -1150,7 +1150,6 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDele
             "obj_type_plural": model._meta.verbose_name_plural,
             "return_url": self.get_return_url(request),
             "objs_count": queryset.count(),
-            "edit_all": edit_all,
         }
         context.update(self.extra_context())
         return render(request, self.template_name, context)
