@@ -868,7 +868,10 @@ class RenderJinjaViewTest(testing.TestCase):
             **self.header,
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertSequenceEqual(list(response.data.keys()), ["rendered_template", "rendered_template_lines"])
+        self.assertSequenceEqual(
+            list(response.data.keys()),
+            ["rendered_template", "rendered_template_lines", "template_code", "context"],
+        )
         self.assertEqual(response.data["rendered_template"], "bar")
         self.assertEqual(response.data["rendered_template_lines"], ["bar"])
 

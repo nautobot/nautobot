@@ -910,5 +910,7 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
             {
                 "rendered_template": rendered_template,
                 "rendered_template_lines": rendered_template.split("\n"),
+                "template_code": template_code,
+                "context": context,
             }
         )
