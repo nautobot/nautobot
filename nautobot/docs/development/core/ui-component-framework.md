@@ -15,6 +15,12 @@
 
 The Nautobot UI Framework revolutionizes how you create object detail views in your applications. Instead of writing HTML templates, you declaratively define your UI structure using Python objects, resulting in consistent, maintainable, and responsive interfaces.
 
+<!-- markdownlint-disable no-inline-html -->
+<div class="grid cards" style="width: 300px;" markdown>
+- ![UI Framework Example](../../media/development/core/ui-component-framework/ui-framework-example.png){ .on-glb }
+</div>
+<!-- markdownlint-enable no-inline-html -->
+
 ### Why Use the UI Framework?
 
 - ✨ **Reduced Development Time**: Eliminate boilerplate HTML/CSS
@@ -47,12 +53,6 @@ class ExampleUIViewSet(views.NautobotUIViewSet):
     )
 ```
 
-<!-- markdownlint-disable no-inline-html -->
-<div class="grid cards" style="width: 300px;" markdown>
-- ![UI Framework Example](../../media/development/core/ui-component-framework/ui-framework-example.png){ .on-glb }
-</div>
-<!-- markdownlint-enable no-inline-html -->
-
 ## Core Concepts
 
 ### ViewSet Configuration
@@ -75,7 +75,7 @@ Panels are the building blocks of your UI. They contain specific types of conten
 
 ## Panel Types
 
-### 0. Base Panel
+### Base Panel
 
 The Panel component serves as a base class for creating individual display panels within a Layout system.
 
@@ -108,7 +108,7 @@ Panel(
 )
 ```
 
-### 1. ObjectFieldsPanel
+### ObjectFieldsPanel
 
 `ObjectFieldsPanel` is designed to automatically render object attributes in a table format. It's particularly useful for displaying model instances or any object with defined attributes. This panel inherits from `KeyValueTablePanel`.
 
@@ -152,7 +152,7 @@ ObjectFieldsPanel(
 </div>
 <!-- markdownlint-enable no-inline-html -->
 
-### 2. KeyValueTablePanel
+### KeyValueTablePanel
 
 `KeyValueTablePanel` is a Panel component that displays data in a two-column table format, commonly used in object detail views. It extends the base `Panel` class and provides additional functionality for data display and transformation.
 
@@ -194,7 +194,7 @@ KeyValueTablePanel(
 )
 ```
 
-### 3. GroupedKeyValueTablePanel
+### GroupedKeyValueTablePanel
 
 `GroupedKeyValueTablePanel` is a specialized version of `KeyValueTablePanel` that organizes data into collapsible accordion groups. It's particularly useful for displaying hierarchical key-value data or grouped custom fields.
 
@@ -233,7 +233,7 @@ GroupedKeyValueTablePanel(
 </div>
 <!-- markdownlint-enable no-inline-html -->
 
-### 4. StatsPanel
+### StatsPanel
 
 `StatsPanel` is a Panel component that displays statistical information with clickable links to filtered views of related models. It's particularly useful for dashboards and summary views that provide quick access to filtered data sets.
 
@@ -269,7 +269,7 @@ StatsPanel(
 </div>
 <!-- markdownlint-enable no-inline-html -->
 
-### Text Panels Family
+### BaseTextPanel
 
 `BaseTextPanel` is a specialized Panel component designed to display single values in various text formats including plaintext, JSON, YAML, Markdown, and code snippets.
 
@@ -281,7 +281,7 @@ StatsPanel(
 </div>
 <!-- markdownlint-enable no-inline-html -->
 
-### 5. ObjectTextPanel
+### ObjectTextPanel
 
 `ObjectTextPanel` renders content from a specific field of an object in the context. It simplifies the display of object attributes in various text formats (Markdown, JSON, YAML, etc.).
 
@@ -302,7 +302,7 @@ ObjectTextPanel(
 )
 ```
 
-### 6. TextPanel
+### TextPanel
 
 `TextPanel` renders content from a specified context field. It provides a simple way to display text content in various formats (Markdown, JSON, YAML, plaintext, or code) from the rendering context.
 
@@ -323,11 +323,7 @@ TextPanel(
 )
 ```
 
-### Table Panels Family
-
----
-
-### 7. DataTablePanel
+### DataTablePanel
 
 `DataTablePanel` is a Panel component that renders tabular data directly from a list of dictionaries, providing a lightweight alternative to django_tables2 Table classes.
 
@@ -355,7 +351,7 @@ DataTablePanel(
 )
 ```
 
-### 8. ObjectsTablePanel
+### ObjectsTablePanel
 
 The `ObjectsTablePanel` is a powerful component for rendering tables of Django model objects, particularly suited for displaying related objects within a detail view. It integrates with django_tables2 and provides extensive customization options.
 

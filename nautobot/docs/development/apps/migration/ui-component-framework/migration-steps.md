@@ -15,14 +15,14 @@ First, analyze your existing view to identify its components:
 
 Map your existing components to UI Framework panels:
 
-| Current Feature              | UI Framework Panel                                                                              |
-|------------------------------|-------------------------------------------------------------------------------------------------|
+| Current Feature              | UI Framework Panel                                                                                 |
+|------------------------------|----------------------------------------------------------------------------------------------------|
 | Basic field display          | [`ObjectFieldsPanel`](../../../core/ui-component-framework.md#1-objectfieldspanel)                 |
 | Related object tables        | [`ObjectsTablePanel`](../../../core/ui-component-framework.md#8-objectstablepanel)                 |
 | Key-value data               | [`KeyValueTablePanel`](../../../core/ui-component-framework.md#1-objectfieldspanel)                |
 | Grouped fields               | [`GroupedKeyValueTablePanel`](../../../core/ui-component-framework.md#3-groupedkeyvaluetablepanel) |
 | Statistics of related models | [`StatsPanel`](../../../core/ui-component-framework.md#4-statspanel)                               |
-| Markdown/JSON/text content   | [`TextPanel` or `ObjectTextPanel`](../../../core/ui-component-framework.md#text-panels-family)     |
+| Markdown/JSON/text content   | [`TextPanel` or `ObjectTextPanel`](../../../core/ui-component-framework.md#basetextpanel)          |
 
 ## 3. Convert Views
 
