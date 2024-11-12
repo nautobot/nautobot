@@ -8,14 +8,14 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import override_settings, tag
+from django.test import override_settings
 from django.urls import reverse
 from django.utils.timezone import make_aware, now
 from rest_framework import status
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
-from nautobot.core.testing import APITestCase, APIViewTestCases, TestCase
+from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.core.testing.utils import disable_warnings, get_deletable_objects
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -94,7 +94,7 @@ from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMix
 from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
-from nautobot.users.models import ObjectPermission, Token
+from nautobot.users.models import ObjectPermission
 
 User = get_user_model()
 
@@ -4539,65 +4539,3 @@ class RoleTest(APIViewTestCases.APIViewTestCase):
             "content_types": ["ipam.ipaddress", "ipam.vlan"],
         },
     ]
-
-
-@tag("api")
-class RenderJinjaViewTest(TestCase):
-    """Test case for the RenderJinjaView API view."""
-
-    def setUp(self):
-        """
-        Create a token for API calls.
-        """
-        super().setUp()
-        self.client.logout()
-        self.token = Token.objects.create(user=self.user)
-        self.header = {"HTTP_AUTHORIZATION": f"Token {self.token.key}"}
-
-    def test_render_jinja_template(self):
-        """
-        Test rendering a valid Jinja template.
-        """
-        response = self.client.post(
-            reverse("extras-api:render_jinja_template"),
-            {
-                "template_code": r"{{ foo }}",
-                "context": {"foo": "bar"},
-            },
-            format="json",
-            **self.header,
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertSequenceEqual(list(response.data.keys()), ["rendered_template", "rendered_template_lines"])
-        self.assertEqual(response.data["rendered_template"], "bar")
-        self.assertEqual(response.data["rendered_template_lines"], ["bar"])
-
-    def test_render_jinja_template_failures(self):
-        """
-        Test rendering invalid Jinja templates.
-        """
-        test_data = [
-            {
-                "template_code": r"{% hello world %}",
-                "error_msg": "Encountered unknown tag 'hello'.",
-            },
-            {
-                "template_code": r"{{ hello world %}",
-                "error_msg": "expected token 'end of print statement', got 'world'",
-            },
-        ]
-
-        for data in test_data:
-            with self.subTest(data):
-                response = self.client.post(
-                    reverse("extras-api:render_jinja_template"),
-                    {
-                        "template_code": data["template_code"],
-                        "context": {"foo": "bar"},
-                    },
-                    format="json",
-                    **self.header,
-                )
-                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-                self.assertSequenceEqual(list(response.data.keys()), ["detail"])
-                self.assertEqual(response.data["detail"], f"Failed to render Jinja template: {data['error_msg']}")
