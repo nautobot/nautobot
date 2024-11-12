@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1
 ARG PYTHON_VER
+# Small hack to make the devcontainer work until https://github.com/devcontainers/cli/issues/275 is fixed.
+ARG ARCH=${TARGETARCH:-amd64}
 
 ################################ Overview
 # This builds the following hierarchy of images:
@@ -246,7 +248,7 @@ ENV PATH="${PATH}:/usr/local/lib/nodejs/node-v17.9.0-linux-arm64/bin"
 ################################ Stage: dependencies-dev (intermediate build target)
 
 # hadolint ignore=DL3006
-FROM dependencies-dev-platform-$TARGETARCH as dependencies-dev
+FROM dependencies-dev-platform-${ARCH} as dependencies-dev
 
 RUN npm install --global markdownlint-cli@0.31.1
 
