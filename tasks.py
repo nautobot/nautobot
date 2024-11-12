@@ -477,7 +477,7 @@ def makemigrations(context, name=""):
 
 
 @task
-def showmigrations(context, name=""):
+def showmigrations(context):
     """Perform showmigrations operation in Django."""
     command = "nautobot-server showmigrations"
 
