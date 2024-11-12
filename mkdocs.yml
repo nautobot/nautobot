@@ -537,6 +537,7 @@ nav:
           - Notes: "user-guide/platform-functionality/note.md"
           - Object Metadata: "user-guide/platform-functionality/objectmetadata.md"
           - Relationships: "user-guide/platform-functionality/relationship.md"
+          - Rendering Jinja Templates: "user-guide/platform-functionality/rendering-jinja-templates.md"
           - REST API:
               - "user-guide/platform-functionality/rest-api/overview.md"
               - Filtering: "user-guide/platform-functionality/rest-api/filtering.md"
