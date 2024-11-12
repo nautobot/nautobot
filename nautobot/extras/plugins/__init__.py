@@ -3,7 +3,6 @@ from functools import partial
 from importlib import import_module
 import inspect
 from logging import getLogger
-from typing import Optional
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
