@@ -1395,6 +1395,7 @@ class RequiredRelationshipTestMixin:
         # Protected FK to SoftwareVersion prevents deletion
         Controller.objects.all().delete()
         Device.objects.all().update(software_version=None)
+        Device.objects.all().delete()
 
         # Create required relationships:
         device_ct = ContentType.objects.get_for_model(Device)

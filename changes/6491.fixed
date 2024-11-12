@@ -1,0 +1,1 @@
+Added missing `vrf` field to `VMInterfaceForm` and `VMInterfaceCreateForm`.

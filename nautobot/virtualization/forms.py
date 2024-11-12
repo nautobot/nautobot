@@ -457,6 +457,14 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         required=False,
         label="IP Addresses",
     )
+    vrf = DynamicModelChoiceField(
+        queryset=VRF.objects.all(),
+        label="VRF",
+        required=False,
+        query_params={
+            "virtual_machine": "$virtual_machine",
+        },
+    )
 
     class Meta:
         model = VMInterface
@@ -476,6 +484,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "untagged_vlan",
             "tagged_vlans",
             "status",
+            "vrf",
         ]
         widgets = {"mode": StaticSelect2()}
         labels = {
@@ -557,6 +566,14 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm, RoleNotRequired
             "content_types": VMInterface._meta.label_lower,
         },
     )
+    vrf = DynamicModelChoiceField(
+        queryset=VRF.objects.all(),
+        label="VRF",
+        required=False,
+        query_params={
+            "virtual_machine": "$virtual_machine",
+        },
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -589,6 +606,13 @@ class VMInterfaceBulkEditForm(
     )
     parent_interface = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(), required=False, display_field="display_name"
+    )
+    vrf = DynamicModelChoiceField(
+        queryset=VRF.objects.all(),
+        required=False,
+        query_params={
+            "virtual_machine": "$virtual_machine",
+        },
     )
     bridge = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(),
