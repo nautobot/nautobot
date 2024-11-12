@@ -77,7 +77,7 @@ Panels are the building blocks of your UI. They contain specific types of conten
 
 ### Base Panel
 
-The Panel component serves as a base class for creating individual display panels within a Layout system.
+The Panel component serves as a base class for creating individual display panels within a Layout system. You'll rarely use it directly, but it's important to understand as the base class for the more feature-filled subclasses described below.
 
 [Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.Panel)
 
@@ -115,7 +115,12 @@ Panel(
 [Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.ObjectFieldsPanel)
 
 NOTE:
-    When `fields="__all__"`, the panel automatically excludes: ManyToMany fields, Reverse relations, Hidden fields and Special fields (`id`, `created`, `last_updated`, `comments`, `tags`). `comments` and `tags` are automatically added as standalone panels.
+    When `fields="__all__"`, the panel automatically excludes:
+    
+    - ManyToMany fields and reverse relations (these should be displayed via `ObjectsTablePanel` if desired)
+    - hidden fields (name starting with `_` or explicitly declared as `hidden=True`)
+    - `id`, `created`, `last_updated` (these are automatically displayed elsewhere in the standard view template)
+    - `comments`, `tags` (these are automatically added as standalone panels)
 
 #### ObjectFieldsPanel Examples
 
@@ -125,7 +130,7 @@ from nautobot.apps.ui import ObjectFieldsPanel, SectionChoices
 ObjectFieldsPanel(
     label="Object Fields Panel",
     section=SectionChoices.LEFT_HALF,
-    context_object_key="obj",
+    weight=100,
 )
 ```
 
@@ -155,6 +160,9 @@ ObjectFieldsPanel(
 ### KeyValueTablePanel
 
 `KeyValueTablePanel` is a Panel component that displays data in a two-column table format, commonly used in object detail views. It extends the base `Panel` class and provides additional functionality for data display and transformation.
+
+!!! tip
+    For displaying the attributes of a specific data model instance, you'll more commonly want to use the `ObjectFieldsPanel` subclass rather than using a `KeyValueTablePanel` directly.
 
 [Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.KeyValueTablePanel)
 
@@ -196,7 +204,7 @@ KeyValueTablePanel(
 
 ### GroupedKeyValueTablePanel
 
-`GroupedKeyValueTablePanel` is a specialized version of `KeyValueTablePanel` that organizes data into collapsible accordion groups. It's particularly useful for displaying hierarchical key-value data or grouped custom fields.
+`GroupedKeyValueTablePanel` is a specialized version of `KeyValueTablePanel` that organizes data into collapsible accordion groups. This is used in the standard template for displaying grouped custom/computed fields when present.
 
 [Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.GroupedKeyValueTablePanel)
 
@@ -246,16 +254,14 @@ from nautobot.apps.ui import StatsPanel, SectionChoices
 
 StatsPanel(
     filter_name="location",
-    related_models=[           # Models to show statistics for
-        Device,               # Direct model reference
-                             # Will count all devices related to this object
-
+    related_models=[  # Models to show statistics for
+        Device,  # Direct model reference
+                 # Will count all devices related to this object by their `location` key
         (Circuit, "circuit_terminations__location__in"),
-                             # Tuple of (Model, query_string)
-                             # For complex relationships
-
+                 # Tuple of (Model, query_string)
+                 # For complex relationships
         (VirtualMachine, "cluster__location__in")
-                             # Another complex relationship example
+                 # Another complex relationship example
     ],
     label="Statistics",
     section=SectionChoices.RIGHT_HALF,
@@ -346,7 +352,7 @@ from nautobot.apps.ui import DataTablePanel
 DataTablePanel(
     context_data_key="data",
     weight=100,
-    columns=[1, 2, 3],
+    columns=["one", "two", "three"],
     column_headers=["One", "Two", "Three"]
 )
 ```
