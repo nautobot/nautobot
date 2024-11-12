@@ -140,7 +140,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 ### Fixed
 
 - [#6414](https://github.com/nautobot/nautobot/issues/6414) - Fixed layout bug in browsable REST API.
-- [#6442](https://github.com/nautobot/nautobot/issues/6442) - Fixes an issue where GitLab CI pipelines fail using all versions of official Docker images.
+- [#6442](https://github.com/nautobot/nautobot/issues/6442) - Fixed an issue where GitLab CI pipelines fail using all versions of official Docker images.
 - [#6453](https://github.com/nautobot/nautobot/issues/6453) - Fixed issue where interfaces cannot be removed/deleted from an Interface for Modules.
 - [#6472](https://github.com/nautobot/nautobot/issues/6472) - Fixed incorrect placement of buttons in create and edit views.
 - [#6472](https://github.com/nautobot/nautobot/issues/6472) - Fixed the panel width in multiple create and edit views.
@@ -157,7 +157,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6449](https://github.com/nautobot/nautobot/issues/6449) - Added an integration test to create a Manufacturer, DeviceType, LocationType, Location, Role and Device to test the create forms and select2 api form fields are working correctly.
 - [#6449](https://github.com/nautobot/nautobot/issues/6449) - Fixed incorrect assertion in core navbar integration tests.
 - [#6449](https://github.com/nautobot/nautobot/issues/6449) - Added helper functions to SeleniumTestCase to perform some common UI actions.
-- [#6455](https://github.com/nautobot/nautobot/issues/6455) - Fixes two tests which always passed due to errors in their implementation. Ensured they provide value by checking against the correct results.
+- [#6455](https://github.com/nautobot/nautobot/issues/6455) - Fixed two tests which always passed due to errors in their implementation. Ensured they provide value by checking against the correct results.
 - [#6497](https://github.com/nautobot/nautobot/issues/6497) - Added support for `--no-reusedb` option to `invoke integration-test` task.
 
 ## v2.3.10 (2024-10-29)
