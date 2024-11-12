@@ -54,7 +54,7 @@ class DeviceDetailView(generic.ObjectView):
 
 After (UI Framework):
 
-```python
+```python title="views.py"
 from device_app.models import Device, RelatedDeviceTable
 from nautobot.apps import views
 from nautobot.apps.ui import (
