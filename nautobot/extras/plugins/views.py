@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import os
 
 from django.apps import apps
 from django.conf import settings
@@ -11,6 +12,7 @@ from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
+import yaml
 
 from nautobot.core.api.views import AuthenticatedAPIRootView, NautobotAPIVersionMixin
 from nautobot.core.forms import TableConfigForm
@@ -198,3 +200,24 @@ class AppsAPIRootView(AuthenticatedAPIRootView):
                 )
             )
         )
+
+
+class MarketplaceView(GenericView):
+    """
+    View for listing all available Apps.
+    """
+
+    def get(self, request):
+        file_path = os.path.dirname(os.path.abspath(__file__)) + "/marketplace_manifest.yml"
+        with open(file_path, "r") as yamlfile:
+            marketplace_data = yaml.safe_load(yamlfile)
+
+        installed_apps = [app for app in apps.get_app_configs() if app.name in settings.PLUGINS]
+
+        visible_marketplace_apps = [
+            app
+            for app in marketplace_data["apps"]
+            if all(installed_app.name != app["package_name"] for installed_app in installed_apps)
+        ]
+
+        return render(request, "extras/marketplace.html", {"apps": visible_marketplace_apps})

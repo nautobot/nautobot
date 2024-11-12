@@ -951,6 +951,17 @@ code.hljs {
     flex-direction: column;
     padding: 20px;
 }
+.tile.clickable {
+    cursor: pointer;
+    outline: none;
+    transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.tile.clickable:active,
+.tile.clickable:focus-visible,
+.tile.clickable:hover {
+    border-color: #007dff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
 .tile.disabled {
     background: #f4f4f4;
     color: #7d7f7c;
@@ -971,12 +982,19 @@ code.hljs {
     font-weight: 400;
     margin: 0;
 }
+.tile-header img {
+    float: left;
+    margin-right: 20px;
+}
 .tile-description {
     flex: 1;
 }
 .tile-footer {
     border-top: 1px solid #d8d8d8;
+    column-gap: 10px;
     display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
     padding-top: 10px;
 }
 
