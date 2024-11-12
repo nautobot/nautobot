@@ -25,7 +25,7 @@ class LayoutChoices(ChoiceSet):
 
 
 class SectionChoices(ChoiceSet):
-    """Sections of a Layout to assign panels to. Placement of panels is determined by [`LayoutChoices`](#nautobot.apps.ui.LayoutChoices) set on `Tab.layout`
+    """Sections of a Layout to assign panels to. Placement of panels is determined by [`LayoutChoices`](./ui.md#nautobot.apps.ui.LayoutChoices) set on `Tab.layout`
 
     Attributes:
         LEFT_HALF (str): Left side, half-width (value: left-half)
