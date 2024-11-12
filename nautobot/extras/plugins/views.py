@@ -214,6 +214,7 @@ class MarketplaceView(GenericView):
 
         installed_apps = [app for app in apps.get_app_configs() if app.name in settings.PLUGINS]
 
+        # Filter out already installed apps from apps marketplace listing.
         visible_marketplace_apps = [
             app
             for app in marketplace_data["apps"]
