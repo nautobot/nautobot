@@ -1090,10 +1090,11 @@ class BaseTextPanel(Panel):
         """
 
         Args:
-            render_as(RenderOptions): One of BaseTextPanel.RenderOptions to define rendering function.
-            render_placeholder(bool): Whether to render placeholder text if given value is "falsy".
-            body_content_template_path(str): The path of the template to use for the body content. Can be overridden for custom use cases.
-            kwargs: Additional keyword arguments passed to Panel.__init__.
+            render_as (RenderOptions): One of BaseTextPanel.RenderOptions to define rendering function.
+            render_placeholder (bool): Whether to render placeholder text if given value is "falsy".
+            body_content_template_path (str): The path of the template to use for the body content.
+                Can be overridden for custom use cases.
+            kwargs (dict): Additional keyword arguments passed to Panel.__init__.
         """
         self.render_as = render_as
         self.render_placeholder = render_placeholder

@@ -18,7 +18,6 @@ from nautobot.core.apps import (
     register_menu_items,
 )
 from nautobot.core.signals import nautobot_database_ready
-from nautobot.core.ui.object_detail import Panel, Tab
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
@@ -298,9 +297,9 @@ class TemplateExtension:
 
     model: str = None
     """The model (as a string in the form `<app_label>.<model>`) that this TemplateExtension subclass applies to."""
-    object_detail_tabs: Optional[list[Tab]] = None
+    object_detail_tabs = None
     """List of Tab instances to add to the specified model's detail view."""
-    object_detail_panels: Optional[list[Panel]] = None
+    object_detail_panels = None
     """List of Panel instances to add to the specified model's detail view."""
 
     def __init__(self, context):

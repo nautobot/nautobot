@@ -5,8 +5,8 @@ def flatten_context(context) -> dict:
     """
     If the given context is already a dict, return it unmodified; if it is a Context, flatten it to a dict.
 
-    This is working around a bug (not sure if in Django or in our code) wher if the Context layers of `dicts` contain
-    a RequestContext, calling `Context.flatten()` directly throws an exception.
+    This is working around a bug (not sure if in Django or in our code) where, if the Context layers of `dicts` contain
+    a RequestContext, calling `Context.flatten()` throws an exception.
     """
     if isinstance(context, dict):
         return context

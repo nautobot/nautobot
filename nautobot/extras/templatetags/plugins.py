@@ -17,11 +17,11 @@ logger = logging.getLogger(__name__)
 
 def _get_registered_content(obj, method, template_context, return_html=True):
     """
-    Given an object and a TemplateExtension method name and the template context, return all the
-    registered content for the object's model.
+    Given an object, TemplateExtension method name, and template context, return all relevant extensions' content.
 
     Returns:
-        if return_html is True, a rendered HTML string; else, a list of dicts
+        html (str): if return_html is True, a combined, rendered HTML string
+        objects (list): else, a list of dicts indexed by app name and an incrementing counter
     """
     context = {
         "object": obj,
@@ -60,15 +60,19 @@ def _get_registered_content(obj, method, template_context, return_html=True):
     return mark_safe(html)  # noqa: S308  # suspicious-mark-safe-usage -- we have to trust plugins to provide safe HTML
 
 
-def get_registered_ui_content(obj, attr):
+def _get_registered_ui_content(obj, attr) -> list:
+    """Given an object and TemplateExtension attribute name, return all relevant extensions' content.
+
+    Returns:
+        objects (list): List of Tabs, Panels, etc. depending on the given attribute, sorted by weight.
+    """
     model_name = obj._meta.label_lower
     template_extensions = registry["plugin_template_extensions"].get(model_name, [])
     objects = []
     for template_extension in template_extensions:
         content = getattr(template_extension, attr)
-        if not content:
-            continue
-        objects.extend(content)
+        if content is not None:
+            objects.extend(content)
 
     return sorted(objects, key=lambda item: item.weight)
 
@@ -92,7 +96,7 @@ def plugin_left_page(context, obj):
     """
     panels = [
         panel
-        for panel in get_registered_ui_content(obj, "object_detail_panels")
+        for panel in _get_registered_ui_content(obj, "object_detail_panels")
         if panel.section == SectionChoices.LEFT_HALF
     ]
     html = format_html_join("\n", "{}", ([panel.render(context)] for panel in panels))
@@ -107,7 +111,7 @@ def plugin_right_page(context, obj):
     """
     panels = [
         panel
-        for panel in get_registered_ui_content(obj, "object_detail_panels")
+        for panel in _get_registered_ui_content(obj, "object_detail_panels")
         if panel.section == SectionChoices.RIGHT_HALF
     ]
     html = format_html_join("\n", "{}", ([panel.render(context)] for panel in panels))
@@ -122,7 +126,7 @@ def plugin_full_width_page(context, obj):
     """
     panels = [
         panel
-        for panel in get_registered_ui_content(obj, "object_detail_panels")
+        for panel in _get_registered_ui_content(obj, "object_detail_panels")
         if panel.section == SectionChoices.FULL_WIDTH
     ]
     html = format_html_join("\n", "{}", ([panel.render(context)] for panel in panels))
@@ -135,7 +139,7 @@ def plugin_object_detail_tabs(context, obj):
     """
     Render all custom tabs registered by plugins for the object detail view
     """
-    context["ui_component_tabs"] = get_registered_ui_content(obj, "object_detail_tabs")
+    context["ui_component_tabs"] = _get_registered_ui_content(obj, "object_detail_tabs")
     context["plugin_object_detail_tabs"] = _get_registered_content(obj, "detail_tabs", context, return_html=False)
     return context
 
@@ -146,7 +150,7 @@ def plugin_object_detail_tab_content(context, obj):
     Render the contents of UI Component Framework Tabs for the object detail view.
     """
     return format_html_join(
-        "\n", "{}", ([tab.render(context)] for tab in get_registered_ui_content(obj, "object_detail_tabs"))
+        "\n", "{}", ([tab.render(context)] for tab in _get_registered_ui_content(obj, "object_detail_tabs"))
     )
 
 

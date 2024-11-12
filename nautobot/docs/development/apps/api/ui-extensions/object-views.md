@@ -19,9 +19,13 @@ Apps can inject custom content into certain areas of the detail and list views o
 +/- 2.4.0
     Support for the `object_detail_tabs` and `object_detail_panels` attributes was added. The `left_page()`, `right_page()`, `full_width_page()`, and `detail_tabs()` methods were deprecated.
 
-Additionally, a `render()` method is available for convenience. This method accepts the name of a template to render, and any additional context data you want to pass. Its use is optional, however.
+Declared subclasses should be gathered into a list or tuple for integration with Nautobot. By default, Nautobot looks for an iterable named `template_extensions` within a `template_content.py` file. (This can be overridden by setting `template_extensions` to a custom value on the app's `NautobotAppConfig`.)
 
-When a TemplateExtension is instantiated, context data is assigned to `self.context`. Available data include:
+### Additional Methods and the Render Context
+
+In support of the method APIs described above, a `render()` method is available for convenience. This method accepts the name of a template to render, and any additional context data you want to pass. Its use is optional, however.
+
+When a TemplateExtension is instantiated, context data is assigned to `self.context` for the method APIs to access as needed. Available data include:
 
 * `object` - The object being viewed (note that this will be the model class when accessed in the context of `list_buttons()`)
 * `request` - The current request
@@ -29,8 +33,6 @@ When a TemplateExtension is instantiated, context data is assigned to `self.cont
 * `config` - App-specific configuration parameters
 
 For example, accessing `{{ request.user }}` within a template will return the current user.
-
-Declared subclasses should be gathered into a list or tuple for integration with Nautobot. By default, Nautobot looks for an iterable named `template_extensions` within a `template_content.py` file. (This can be overridden by setting `template_extensions` to a custom value on the app's `NautobotAppConfig`.)
 
 ## Adding Detail Panels
 
@@ -42,7 +44,7 @@ The `TemplateExtension.object_detail_panels` should be a list or tuple of Panel 
 
 For example:
 
-```python
+```python title="example_app/template_content.py"
 from nautobot.apps.ui import ObjectTextPanel, SectionChoices, TemplateExtension
 
 
@@ -79,7 +81,7 @@ The `TemplateExtension.object_detail_tabs` should be a list or tuple of Tab obje
 
 For example:
 
-```python
+```python title="example_app/template_content.py"
 from nautobot.apps.ui import DistinctViewTab, Tab, TemplateExtension
 
 
@@ -121,7 +123,7 @@ The `TemplateExtension.detail_tabs()` method should return a list of dicts, each
 
 For example:
 
-```python
+```python title="example_app/template_content.py"
 class DeviceExtraTabs(TemplateExtension):
     """Template extension to add extra tabs to the Device detail view."""
     model = "dcim.device"
@@ -142,8 +144,7 @@ template_extensions = [DeviceExtraTabs]
 
 In either of the above cases, you would need to define a new view for the `device_detail_tab_1` tab to display, following a pattern similar to the below.
 
-```html
-<!-- example_app/tab_device_detail_1.html -->
+```html title="example_app/tab_device_detail_1.html"
 {% extends 'dcim/device.html' %}
 
 {% block content %}
@@ -154,8 +155,7 @@ In either of the above cases, you would need to define a new view for the `devic
 
 Here's a basic example of a tab's view
 
-```python
-# views.py
+```python title="example_app/views.py"
 from nautobot.apps.views import ObjectView
 from nautobot.dcim.models import Device
 
@@ -174,8 +174,7 @@ class DeviceDetailAppTabOne(ObjectView):
 
 You must also add the view to the `url_patterns` like so (make sure to read the note after this code snippet):
 
-```python
-# urls.py
+```python title="example_app/urls.py"
 from django.urls import path
 
 from example_app import views
