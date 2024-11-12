@@ -75,6 +75,7 @@ erDiagram
         Platform platform FK
         ExternalIntegration external_integration FK
         Location location FK
+        string capabilities
     }
 
     ControllerManagedDeviceGroup {
@@ -83,6 +84,7 @@ erDiagram
 
         string name UK
         int weight
+        string capabilities
     }
 
     ControllerManagedDeviceGroup ||--o{ ControllerManagedDeviceGroup : "contains children"

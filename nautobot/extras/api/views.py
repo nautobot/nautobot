@@ -26,11 +26,13 @@ from nautobot.core.api.views import (
     NautobotAPIVersionMixin,
     ReadOnlyModelViewSet,
 )
+from nautobot.core.events import publish_event
 from nautobot.core.exceptions import CeleryWorkerNotRunningException
 from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
+from nautobot.core.models.utils import serialize_object_v2
 from nautobot.extras import filters
-from nautobot.extras.choices import JobExecutionType
+from nautobot.extras.choices import JobExecutionType, JobQueueTypeChoices
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
@@ -54,6 +56,8 @@ from nautobot.extras.models import (
     JobButton,
     JobHook,
     JobLogEntry,
+    JobQueue,
+    JobQueueAssignment,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -77,7 +81,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.secrets.exceptions import SecretError
-from nautobot.extras.utils import get_worker_count
+from nautobot.extras.utils import get_job_queue, get_worker_count
 
 from . import serializers
 
@@ -599,9 +603,8 @@ class JobViewSetBase(
             )
 
         valid_queues = job_model.task_queues if job_model.task_queues else [settings.CELERY_TASK_DEFAULT_QUEUE]
-        # Get a default queue from either the job model's specified task queue or
-        # the system default to fall back on if request doesn't provide one
-        default_valid_queue = valid_queues[0]
+        # default queue should be specified on the default_job_queue.
+        default_valid_queue = job_model.default_job_queue.name
 
         # We need to call request.data for both cases as this is what pulls and caches the request data
         data = request.data
@@ -622,7 +625,23 @@ class JobViewSetBase(
             input_serializer = serializers.JobMultiPartInputSerializer(data=data, context={"request": request})
             input_serializer.is_valid(raise_exception=True)
 
-            task_queue = input_serializer.validated_data.get("_task_queue", default_valid_queue)
+            # TODO remove _task_queue related code in 3.0
+            # _task_queue and _job_queue are both valid arguments in v2.4
+            task_queue = input_serializer.validated_data.get(
+                "_task_queue", None
+            ) or input_serializer.validated_data.get("_job_queue", None)
+            if not task_queue:
+                task_queue = default_valid_queue
+
+            # Log a warning if _task_queue and _job_queue fields are both specified out
+            if input_serializer.validated_data.get("_task_queue", None) and input_serializer.validated_data.get(
+                "_job_queue", None
+            ):
+                raise ValidationError(
+                    {
+                        "_task_queue": "_task_queue and _job_queue are both specified. Please specifiy only one or another."
+                    }
+                )
 
             # JobMultiPartInputSerializer only has keys for executing job (task_queue, etc),
             # everything else is a candidate for the job form's data.
@@ -650,7 +669,21 @@ class JobViewSetBase(
             input_serializer.is_valid(raise_exception=True)
 
             data = input_serializer.validated_data.get("data", {})
-            task_queue = input_serializer.validated_data.get("task_queue", default_valid_queue)
+            # TODO remove _task_queue related code in 3.0
+            # _task_queue and _job_queue are both valid arguments in v2.4
+            task_queue = input_serializer.validated_data.get("task_queue", None) or input_serializer.validated_data.get(
+                "job_queue", None
+            )
+            if not task_queue:
+                task_queue = default_valid_queue
+
+            # Log a warning if _task_queue and _job_queue fields are both specified out
+            if input_serializer.validated_data.get("task_queue", None) and input_serializer.validated_data.get(
+                "job_queue", None
+            ):
+                raise ValidationError(
+                    {"task_queue": "task_queue and job_queue are both specified. Please specifiy only one or another."}
+                )
             schedule_data = input_serializer.validated_data.get("schedule", None)
 
         if task_queue not in valid_queues:
@@ -667,7 +700,10 @@ class JobViewSetBase(
             # of errors under messages
             return Response({"errors": e.message_dict if hasattr(e, "error_dict") else e.messages}, status=400)
 
-        if not get_worker_count(queue=task_queue):
+        queue = get_job_queue(task_queue)
+        if queue is None:
+            queue = job_model.default_job_queue
+        if queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=task_queue):
             raise CeleryWorkerNotRunningException(queue=task_queue)
 
         # Default to a null JobResult.
@@ -698,7 +734,7 @@ class JobViewSetBase(
                 interval=schedule_data.get("interval"),
                 crontab=schedule_data.get("crontab", ""),
                 approval_required=approval_required,
-                task_queue=input_serializer.validated_data.get("task_queue", None),
+                task_queue=task_queue,
                 **job_class.serialize_data(cleaned_data),
             )
         else:
@@ -780,6 +816,31 @@ class JobHooksViewSet(NautobotModelViewSet):
     queryset = JobHook.objects.all()
     serializer_class = serializers.JobHookSerializer
     filterset_class = filters.JobHookFilterSet
+
+
+#
+# Job Queues
+#
+
+
+class JobQueueViewSet(NautobotModelViewSet):
+    """
+    Manage job queues through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = JobQueue.objects.all()
+    serializer_class = serializers.JobQueueSerializer
+    filterset_class = filters.JobQueueFilterSet
+
+
+class JobQueueAssignmentViewSet(NautobotModelViewSet):
+    """
+    Manage job queue assignments through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = JobQueueAssignment.objects.select_related("job", "job_queue")
+    serializer_class = serializers.JobQueueAssignmentSerializer
+    filterset_class = filters.JobQueueAssignmentFilterSet
 
 
 #
@@ -910,6 +971,8 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
         scheduled_job.approved_by_user = request.user
         scheduled_job.approved_at = timezone.now()
         scheduled_job.save()
+        publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
+        publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
         serializer = serializers.ScheduledJobSerializer(scheduled_job, context={"request": request})
 
         return Response(serializer.data)
@@ -934,6 +997,8 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
         if not Job.objects.check_perms(request.user, instance=scheduled_job.job_model, action="approve"):
             raise PermissionDenied("You do not have permission to deny this request.")
 
+        publish_event_payload = {"data": serialize_object_v2(scheduled_job)}
+        publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
         scheduled_job.delete()
 
         return Response(None)

@@ -45,5 +45,5 @@ class TenantFactory(PrimaryModelFactory):
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
-    has_tenant_group = NautobotBoolIterator()
+    has_tenant_group = NautobotBoolIterator(chance_of_getting_true=90)
     tenant_group = factory.Maybe("has_tenant_group", random_instance(TenantGroup), None)

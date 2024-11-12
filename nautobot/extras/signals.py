@@ -31,6 +31,8 @@ from nautobot.extras.models import (
     DynamicGroup,
     DynamicGroupMembership,
     GitRepository,
+    Job as JobModel,
+    JobQueue as JobQueueModel,
     JobResult,
     MetadataType,
     ObjectChange,
@@ -457,6 +459,35 @@ def job_result_delete_associated_files(instance, **kwargs):
             file_proxy.file.delete()
 
 
+@receiver(m2m_changed, sender=JobModel.job_queues.through)
+def add_default_job_queue_to_job_queues(instance, action, model, pk_set, **kwargs):
+    if action == "pre_remove":
+        if isinstance(instance, JobModel):  # job_model.job_queues.remove()
+            # Don't allow removing the default job queue
+            pk_set.discard(instance.default_job_queue.pk)
+        elif isinstance(instance, JobQueueModel):  # job_queue.jobs.remove()
+            # Don't allow removing jobs that this queue is default for
+            for job_model in instance.default_for_jobs.all():
+                pk_set.discard(job_model.pk)
+    elif action == "post_clear":
+        if isinstance(instance, JobModel):  # job_model.job_queues.clear()
+            # Re-add the default job queue
+            instance.job_queues.add(instance.default_job_queue)
+        elif isinstance(instance, JobQueueModel):  # job_queue.jobs.clear()
+            # Re-add the jobs this queue is default for
+            for job_model in instance.default_for_jobs.all():
+                job_model.job_queues.add(instance.pk)
+
+
+@receiver(post_save, sender=JobModel)
+def add_default_job_queue_to_job_queues_after_save(instance, raw=False, **kwargs):
+    if raw:
+        return
+    # Add specified default_job_queue to job.job_queues if it is not included.
+    default_job_queue = instance.default_job_queue
+    instance.job_queues.add(default_job_queue)
+
+
 def refresh_job_models(sender, *, apps, **kwargs):
     """
     Callback for the nautobot_database_ready signal; updates Jobs in the database based on Job source file availability.
@@ -466,6 +497,11 @@ def refresh_job_models(sender, *, apps, **kwargs):
     Job = apps.get_model("extras", "Job")
 
     # To make reverse migrations safe
+    try:
+        JobQueue = apps.get_model("extras", "JobQueue")
+    except LookupError:
+        JobQueue = None
+
     if not hasattr(Job, "job_class_name"):
         logger.info("Skipping refresh_job_models() as it appears Job model has not yet been migrated to latest.")
         return
@@ -475,7 +511,9 @@ def refresh_job_models(sender, *, apps, **kwargs):
     job_models = []
 
     for job_class in get_jobs().values():
-        job_model, _ = refresh_job_model_from_job_class(Job, job_class)
+        job_model, _ = refresh_job_model_from_job_class(
+            job_model_class=Job, job_class=job_class, job_queue_class=JobQueue
+        )
         if job_model is not None:
             job_models.append(job_model)
 

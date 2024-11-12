@@ -85,5 +85,10 @@ router.register("connected-device", views.ConnectedDeviceViewSet, basename="conn
 router.register("controllers", views.ControllerViewSet)
 router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupViewSet)
 
+# Virtual Device Contexts
+router.register("virtual-device-contexts", views.VirtualDeviceContextViewSet)
+router.register("interface-vdc-assignments", views.InterfaceVDCAssignmentViewSet)
+
+
 app_name = "dcim-api"
 urlpatterns = router.urls

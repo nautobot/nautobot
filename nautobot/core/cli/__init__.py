@@ -13,6 +13,7 @@ from django.core.management import CommandError, CommandParser, execute_from_com
 from django.core.management.utils import get_random_secret_key
 from jinja2 import BaseLoader, Environment
 
+from nautobot.core.events import load_event_brokers
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.extras.plugins.utils import load_plugins
 
@@ -44,6 +45,7 @@ def _preprocess_settings(settings, config_path):
     - Set up 'job_logs' database mirror
     - Handle our custom `STORAGE_BACKEND` setting.
     - Load plugins based on settings.PLUGINS (potentially affecting INSTALLED_APPS, MIDDLEWARE, and CONSTANCE_CONFIG)
+    - Load event brokers based on settings.EVENT_BROKERS
     """
     settings.SETTINGS_PATH = config_path
 
@@ -123,6 +125,12 @@ def _preprocess_settings(settings, config_path):
     # Process the plugins and manipulate the specified config settings that are
     # passed in.
     load_plugins(settings)
+
+    #
+    # Event Broker
+    #
+
+    load_event_brokers(settings.EVENT_BROKERS)
 
 
 def load_settings(config_path):

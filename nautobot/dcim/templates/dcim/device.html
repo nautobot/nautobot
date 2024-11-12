@@ -335,6 +335,9 @@
                             {% plugin_right_page object %}
                         </div>
                     </div>
+                    {% block content_full_width_page %}
+                        {% include 'panel_table.html' with table=vdcs_table heading="Virtual Device Contexts" %}
+                    {% endblock content_full_width_page %}
                     <div class="row">
                         <div class="col-md-12">
                             {% plugin_full_width_page object %}

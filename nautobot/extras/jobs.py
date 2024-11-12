@@ -30,25 +30,32 @@ import netaddr
 import yaml
 
 from nautobot.core.celery import import_jobs, nautobot_task
+from nautobot.core.events import publish_event
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     JSONField,
 )
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.logging import sanitize
 from nautobot.core.utils.lookup import get_model_from_name
-from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from nautobot.extras.choices import (
+    JobResultStatusChoices,
+    ObjectChangeActionChoices,
+    ObjectChangeEventContextChoices,
+)
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.forms import JobForm
 from nautobot.extras.models import (
     FileProxy,
     Job as JobModel,
     JobHook,
+    JobQueue,
     JobResult,
     ObjectChange,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.utils import change_logged_models_queryset, task_queues_as_choices
+from nautobot.extras.utils import change_logged_models_queryset
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -473,18 +480,28 @@ class BaseJob:
         """
 
         form = cls.as_form_class()(data, files, initial=initial)
+        form.fields["_profile"] = forms.BooleanField(
+            required=False,
+            initial=False,
+            label="Profile job execution",
+            help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
+        )
 
-        try:
-            job_model = JobModel.objects.get_for_class_path(cls.class_path)
-            dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else cls.dryrun_default
-            task_queues = job_model.task_queues if job_model.task_queues_override else cls.task_queues
-        except JobModel.DoesNotExist:
-            logger.error("No Job instance found in the database corresponding to %s", cls.class_path)
-            dryrun_default = cls.dryrun_default
-            task_queues = cls.task_queues
+        job_model = JobModel.objects.get_for_class_path(cls.class_path)
+        dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else cls.dryrun_default
+        job_queue_queryset = JobQueue.objects.filter(jobs=job_model)
+        job_queue_params = {"jobs": [job_model.pk]}
 
-        # Update task queue choices
-        form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
+        # Initialize job_queue choices
+        form.fields["_job_queue"] = DynamicModelChoiceField(
+            queryset=job_queue_queryset,
+            query_params=job_queue_params,
+            required=False,
+            help_text="The job queue to route this job to",
+            label="Job queue",
+        )
+        # Populate the job queue field on the JobRun Form
+        form.fields["_job_queue"].initial = job_model.default_job_queue.pk
 
         if cls.supports_dryrun and (not initial or "dryrun" not in initial):
             # Set initial "dryrun" checkbox state based on the Meta parameter
@@ -500,6 +517,11 @@ class BaseJob:
             # Set `disabled=True` on all fields
             for _, field in form.fields.items():
                 field.disabled = True
+
+        # Ensure non-Job-specific fields are still last after applying field_order
+        for field in ["_job_queue", "_profile"]:
+            value = form.fields.pop(field)
+            form.fields[field] = value
 
         return form
 
@@ -719,7 +741,7 @@ class BaseJob:
         """
         if isinstance(content, str):
             content = content.encode("utf-8")
-        max_size = get_settings_or_config("JOB_CREATE_FILE_MAX_SIZE")
+        max_size = get_settings_or_config("JOB_CREATE_FILE_MAX_SIZE", fallback=10 << 20)
         actual_size = len(content)
         if actual_size > max_size:
             raise ValueError(f"Provided {actual_size} bytes of content, but JOB_CREATE_FILE_MAX_SIZE is {max_size}")
@@ -1131,16 +1153,32 @@ def run_job(self, job_class_path, *args, **kwargs):
         raise KeyError(f"Job class not found for class path {job_class_path}")
     job = job_class()
     job.request = self.request
+    job_result = JobResult.objects.get(id=self.request.id)
+    payload = {
+        "job_result_id": self.request.id,
+        "job_name": job.name,
+        "user_name": job_result.user.username,
+    }
+    if not job.job_model.has_sensitive_variables:
+        payload["job_kwargs"] = kwargs
     try:
+        publish_event(topic="nautobot.jobs.job.started", payload=payload)
         job.before_start(self.request.id, args, kwargs)
         result = job(*args, **kwargs)
         job.on_success(result, self.request.id, args, kwargs)
         job.after_return(JobResultStatusChoices.STATUS_SUCCESS, result, self.request.id, args, kwargs, None)
+        payload["job_output"] = result
+        publish_event(topic="nautobot.jobs.job.completed", payload=payload)
         return result
     except Exception as exc:
         einfo = ExceptionInfo(sys.exc_info())
         job.on_failure(exc, self.request.id, args, kwargs, einfo)
         job.after_return(JobResultStatusChoices.STATUS_FAILURE, exc, self.request.id, args, kwargs, einfo)
+        payload["einfo"] = {
+            "exc_type": type(exc).__name__,
+            "exc_message": sanitize(str(exc)),
+        }
+        publish_event(topic="nautobot.jobs.job.completed", payload=payload)
         raise
 
 

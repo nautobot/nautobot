@@ -15,7 +15,6 @@ class TenantGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
     class Meta:
         model = TenantGroup
         fields = "__all__"
-        list_display_fields = ["name", "tenant_count", "description", "actions"]
 
 
 class TenantSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
@@ -32,4 +31,3 @@ class TenantSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = Tenant
         fields = "__all__"
-        list_display_fields = ["name", "tenant_group", "description"]

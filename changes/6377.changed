@@ -1,0 +1,1 @@
+Converted VRF and RouteTarget UI views to use `NautobotUIViewSet` and `object_detail_content`.

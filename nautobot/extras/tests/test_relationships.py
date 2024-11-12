@@ -18,6 +18,7 @@ from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.forms import DeviceForm
 from nautobot.dcim.models import (
     Controller,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
@@ -1393,9 +1394,11 @@ class RequiredRelationshipTestMixin:
         # Protected FK to SoftwareImageFile prevents deletion
         DeviceTypeToSoftwareImageFile.objects.all().delete()
         # Protected FK to SoftwareVersion prevents deletion
-        Controller.objects.all().delete()
         Device.objects.all().update(software_version=None)
         Device.objects.all().delete()
+
+        ControllerManagedDeviceGroup.objects.all().delete()
+        Controller.objects.all().delete()
 
         # Create required relationships:
         device_ct = ContentType.objects.get_for_model(Device)

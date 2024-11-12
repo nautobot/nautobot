@@ -111,6 +111,7 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
 
         Ref: https://github.com/celery/django-celery-beat/issues/558#issuecomment-1162730008
         """
+        # TODO expand this instead of calling super()
         resp = super().apply_async(entry, producer=producer, advance=advance, **kwargs)
         if entry.total_run_count != entry.model.total_run_count:
             entry.total_run_count = entry.model.total_run_count

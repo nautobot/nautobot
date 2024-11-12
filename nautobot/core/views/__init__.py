@@ -56,7 +56,6 @@ logger = logging.getLogger(__name__)
 
 class HomeView(AccessMixin, TemplateView):
     template_name = "home.html"
-    use_new_ui = True
 
     def render_additional_content(self, request, context, details):
         # Collect all custom data using callback functions.

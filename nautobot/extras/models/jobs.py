@@ -2,8 +2,11 @@
 
 import contextlib
 from datetime import timedelta
+import json
 import logging
+import signal
 
+from billiard.exceptions import SoftTimeLimitExceeded
 from celery.exceptions import NotRegistered
 from celery.utils.log import get_logger, LoggingProxy
 from django.conf import settings
@@ -26,12 +29,12 @@ from nautobot.core.celery import (
 )
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
-from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import (
     ButtonClassChoices,
     JobExecutionType,
+    JobQueueTypeChoices,
     JobResultStatusChoices,
     LogLevelChoices,
 )
@@ -49,6 +52,8 @@ from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     extras_features,
+    get_job_queue_worker_count,
+    run_kubernetes_job_and_return_job_result,
 )
 
 from .customfields import CustomFieldModel
@@ -164,16 +169,25 @@ class Job(PrimaryModel):
         help_text="Maximum runtime in seconds before the job will be forcibly terminated."
         "<br>Set to 0 to use Nautobot system default",
     )
-    task_queues = JSONArrayField(
-        base_field=models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True),
-        default=list,
-        blank=True,
-        help_text="Comma separated list of task queues that this job can run on. A blank list will use the default queue",
-    )
     supports_dryrun = models.BooleanField(
         default=False,
         editable=False,
         help_text="If supported, allows the job to bypass approval when running with dryrun argument set to true",
+    )
+    job_queues = models.ManyToManyField(
+        to="extras.JobQueue",
+        related_name="jobs",
+        verbose_name="Job Queues",
+        help_text="The job queues that this job can be run on",
+        through="extras.JobQueueAssignment",
+    )
+    default_job_queue = models.ForeignKey(
+        to="extras.JobQueue",
+        related_name="default_for_jobs",
+        on_delete=models.PROTECT,
+        verbose_name="Default Job Queue",
+        null=False,
+        blank=False,
     )
 
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
@@ -213,11 +227,14 @@ class Job(PrimaryModel):
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
-    task_queues_override = models.BooleanField(
+    job_queues_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
-
+    default_job_queue_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
     objects = BaseManager.from_queryset(JobQuerySet)()
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
@@ -302,6 +319,38 @@ class Job(PrimaryModel):
         except TypeError as err:  # keep 2.0-2.2.2 exception behavior
             raise NotRegistered from err
 
+    @property
+    def task_queues(self):
+        """Deprecated backward-compatibility property for the list of queue names for this Job."""
+        return self.job_queues.values_list("name", flat=True)
+
+    @task_queues.setter
+    def task_queues(self, value):
+        job_queues = []
+        # value is going to be a comma separated list of queue names
+        if isinstance(value, str):
+            value = value.split(",")
+        for queue in value:
+            try:
+                job_queues.append(JobQueue.objects.get(name=queue))
+            except JobQueue.DoesNotExist:
+                raise ValidationError(f"Job Queue {queue} does not exist in the database.")
+        self.job_queues.set(job_queues)
+
+    @property
+    def task_queues_override(self):
+        return self.job_queues_override
+
+    @task_queues_override.setter
+    def task_queues_override(self, value):
+        if isinstance(value, bool):
+            raise ValidationError(
+                {
+                    "task_queues_override": f"{value} is invalid for field task_queues_override, use a boolean value instead"
+                }
+            )
+        self.job_queues_override = value
+
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
         from nautobot.extras.jobs import get_job
@@ -311,6 +360,9 @@ class Job(PrimaryModel):
             for field_name in JOB_OVERRIDABLE_FIELDS:
                 if not getattr(self, f"{field_name}_override", False):
                     setattr(self, field_name, getattr(job_class, field_name))
+
+            if not self.job_queues_override:
+                self.task_queues = job_class.task_queues or [settings.CELERY_TASK_DEFAULT_QUEUE]
 
         # Protect against invalid input when auto-creating Job records
         if len(self.module_name) > JOB_MAX_NAME_LENGTH:
@@ -479,6 +531,103 @@ class JobLogEntry(BaseModel):
 
 
 #
+# Job Queues
+#
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class JobQueue(PrimaryModel):
+    """
+    A Job Queue represents a structure that is used to manage, organize and schedule jobs for Nautobot workers.
+    """
+
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    queue_type = models.CharField(
+        max_length=50,
+        choices=JobQueueTypeChoices,
+    )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="job_queues",
+        blank=True,
+        null=True,
+    )
+    context = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        help_text="Kubernetes configuration context",
+        blank=True,
+    )
+    secrets_group = models.ForeignKey(
+        to="extras.SecretsGroup",
+        on_delete=models.SET_NULL,
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Secrets group that contains authentication credentials to execute jobs in the Kubernetes pod.",
+    )
+
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/jobqueue.html"
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.queue_type}: {self.name}"
+
+    @property
+    def display(self):
+        worker_count = get_job_queue_worker_count(job_queue=self)
+        workers = "worker" if worker_count == 1 else "workers"
+        return f"{self.queue_type}: {self.name} ({worker_count} {workers})"
+
+    def clean(self):
+        super().clean()
+
+        if self.queue_type == JobQueueTypeChoices.TYPE_CELERY and self.secrets_group:
+            raise ValidationError(
+                {
+                    "secrets_group": f"Secrets groups are not allowed on job queues of type {JobQueueTypeChoices.TYPE_CELERY}"
+                }
+            )
+
+        if self.queue_type == JobQueueTypeChoices.TYPE_CELERY and self.context:
+            raise ValidationError(
+                {"context": f"Context is not allowed on job queues of type {JobQueueTypeChoices.TYPE_CELERY}"}
+            )
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+)
+class JobQueueAssignment(BaseModel):
+    """
+    Through table model that represents the m2m relationship between jobs and job queues.
+    """
+
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name="job_queue_assignments")
+    job_queue = models.ForeignKey(JobQueue, on_delete=models.CASCADE, related_name="job_assignments")
+    is_metadata_associable_model = False
+
+    class Meta:
+        unique_together = ["job", "job_queue"]
+        ordering = ["job", "job_queue"]
+
+    def __str__(self):
+        return f"{self.job}: {self.job_queue}"
+
+
+#
 # Job results
 #
 
@@ -616,7 +765,7 @@ class JobResult(BaseModel, CustomFieldModel):
                 )
 
     @classmethod
-    def execute_job(cls, job_model, user, *job_args, celery_kwargs=None, profile=False, **job_kwargs):
+    def execute_job(cls, job_model, user, *job_args, celery_kwargs=None, profile=False, job_result=None, **job_kwargs):
         """
         Create a JobResult instance and run a job in the current process, blocking until the job finishes.
 
@@ -628,6 +777,7 @@ class JobResult(BaseModel, CustomFieldModel):
             user (User): User object to link to the JobResult instance
             celery_kwargs (dict, optional): Dictionary of kwargs to pass as **kwargs to Celery when job is run
             profile (bool, optional): Whether to run cProfile on the job execution
+            job_result (JobResult, optional): Existing JobResult with status PENDING, used in kubernetes job execution
             *job_args: positional args passed to the job task
             **job_kwargs: keyword args passed to the job task
 
@@ -635,7 +785,14 @@ class JobResult(BaseModel, CustomFieldModel):
             JobResult instance
         """
         return cls.enqueue_job(
-            job_model, user, *job_args, celery_kwargs=celery_kwargs, profile=profile, synchronous=True, **job_kwargs
+            job_model,
+            user,
+            *job_args,
+            celery_kwargs=celery_kwargs,
+            profile=profile,
+            job_result=job_result,
+            synchronous=True,
+            **job_kwargs,
         )
 
     @classmethod
@@ -648,10 +805,11 @@ class JobResult(BaseModel, CustomFieldModel):
         profile=False,
         schedule=None,
         task_queue=None,
+        job_result=None,
         synchronous=False,
         **job_kwargs,
     ):
-        """Create a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
+        """Create/Modify a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
 
         Args:
             job_model (Job): The Job to be enqueued for execution.
@@ -660,6 +818,7 @@ class JobResult(BaseModel, CustomFieldModel):
             profile (bool, optional): If True, dump cProfile stats on the job execution.
             schedule (ScheduledJob, optional): ScheduledJob instance to link to the JobResult. Cannot be used with synchronous=True.
             task_queue (str, optional): The celery queue to send the job to. If not set, use the default celery queue.
+            job_result (JobResult, optional): Existing JobResult with status PENDING, to be modified and to be used in kubernetes job execution.
             synchronous (bool, optional): If True, run the job in the current process, blocking until the job completes.
             *job_args: positional args passed to the job task (UNUSED)
             **job_kwargs: keyword args passed to the job task
@@ -672,15 +831,34 @@ class JobResult(BaseModel, CustomFieldModel):
         if schedule is not None and synchronous:
             raise ValueError("Scheduled jobs cannot be run synchronously")
 
-        job_result = cls.objects.create(
-            name=job_model.name,
-            job_model=job_model,
-            scheduled_job=schedule,
-            user=user,
-        )
+        if job_result is None:
+            job_result = cls.objects.create(
+                name=job_model.name,
+                job_model=job_model,
+                scheduled_job=schedule,
+                user=user,
+            )
+        else:
+            if job_result.user != user:
+                raise ValueError(
+                    f"There is a mismatch between the user specified {user} and the user associated with the job result {job_result.user}"
+                )
+            if job_result.job_model != job_model:
+                raise ValueError(
+                    f"There is a mismatch between the job specified {job_model} and the job associated with the job result {job_result.job_model}"
+                )
 
         if task_queue is None:
-            task_queue = settings.CELERY_TASK_DEFAULT_QUEUE
+            task_queue = job_model.default_job_queue.name
+
+        job_queue = JobQueue.objects.get(name=task_queue)
+        # Kubernetes Job Queue logic
+        # As we execute Kubernetes jobs, we want to execute `run_kubernetes_job_and_return_job_result`
+        # the first time the kubernetes job is enqueued to spin up the kubernetes pod.
+        # And from the kubernetes pod, we specify "--local"/synchronous=True
+        # so that `run_kubernetes_job_and_return_job_result` is not executed again and the job will be run locally.
+        if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not synchronous:
+            return run_kubernetes_job_and_return_job_result(job_queue, job_result, json.dumps(job_kwargs))
 
         job_celery_kwargs = {
             "nautobot_job_job_model_id": job_model.id,
@@ -712,12 +890,24 @@ class JobResult(BaseModel, CustomFieldModel):
             redirect_logger = get_logger("celery.redirected")
             proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
             with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
-                eager_result = run_job.apply(
-                    args=[job_model.class_path, *job_args],
-                    kwargs=job_kwargs,
-                    task_id=str(job_result.id),
-                    **job_celery_kwargs,
-                )
+
+                def alarm_handler(*args, **kwargs):
+                    raise SoftTimeLimitExceeded()
+
+                # Set alarm_handler to be called on a SIGALRM, and schedule a SIGALRM based on the soft time limit
+                signal.signal(signal.SIGALRM, alarm_handler)
+                signal.alarm(int(job_model.soft_time_limit) or settings.CELERY_TASK_SOFT_TIME_LIMIT)
+
+                try:
+                    eager_result = run_job.apply(
+                        args=[job_model.class_path, *job_args],
+                        kwargs=job_kwargs,
+                        task_id=str(job_result.id),
+                        **job_celery_kwargs,
+                    )
+                finally:
+                    # Cancel the scheduled SIGALRM if it hasn't fired already
+                    signal.alarm(0)
 
             # copy fields from eager result to job result
             job_result.refresh_from_db()
@@ -728,9 +918,15 @@ class JobResult(BaseModel, CustomFieldModel):
                     "exc_message": sanitize(str(eager_result.result)),
                 }
             else:
-                job_result.result = sanitize(eager_result.result)
+                if eager_result.result is not None:
+                    job_result.result = sanitize(eager_result.result)
+                else:
+                    job_result.result = None
             job_result.status = eager_result.status
-            job_result.traceback = sanitize(eager_result.traceback)
+            if eager_result.traceback is not None:
+                job_result.traceback = sanitize(eager_result.traceback)
+            else:
+                job_result.traceback = None
             job_result.date_done = timezone.now()
             job_result.save()
         else:
@@ -927,13 +1123,13 @@ class ScheduledJob(BaseModel):
     args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
     kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
     celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
-    queue = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
+    job_queue = models.ForeignKey(
+        to="extras.JobQueue",
+        on_delete=models.SET_NULL,
+        related_name="scheduled_jobs",
+        null=True,
         blank=True,
-        default="",
-        verbose_name="Queue Override",
-        help_text="Queue defined in CELERY_TASK_QUEUES. Leave empty for default queuing.",
-        db_index=True,
+        verbose_name="Job Queue Override",
     )
     one_off = models.BooleanField(
         default=False,
@@ -1064,6 +1260,19 @@ class ScheduledJob(BaseModel):
             return clocked(clocked_time=self.start_time)
 
         return self.to_cron()
+
+    @property
+    def queue(self):
+        """Deprecated backward-compatibility property for the queue name this job is scheduled for."""
+        return self.job_queue.name if self.job_queue else ""
+
+    @queue.setter
+    def queue(self, value):
+        if value:
+            try:
+                self.job_queue = JobQueue.objects.get(name=value)
+            except JobQueue.DoesNotExist:
+                raise ValidationError(f"Job Queue {value} does not exist in the database.")
 
     @staticmethod
     def earliest_possible_time():

@@ -1,0 +1,2 @@
+Added missing `role` field in Virtual Device Context detail view and edit view.
+Fixed Virtual Device Context edit view layout.

@@ -1,8 +1,11 @@
 from unittest import mock
+import uuid
 
 from django.core.cache import cache
 
 from nautobot.core.testing import TestCase
+from nautobot.extras.choices import JobQueueTypeChoices
+from nautobot.extras.models import JobQueue
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import get_celery_queues, get_worker_count, populate_model_features_registry
 
@@ -45,14 +48,32 @@ class UtilsTestCase(TestCase):
     @mock.patch("nautobot.extras.utils.get_celery_queues")
     def test_get_worker_count(self, mock_get_celery_queues):
         mock_get_celery_queues.return_value = {"default": 12, "priority": 2, "bulk": 4, "nobody": 0}
+        JobQueue.objects.get_or_create(name="default", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY})
+        priority_job_queue, _ = JobQueue.objects.get_or_create(
+            name="priority", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+        )
+        bulk_job_queue, _ = JobQueue.objects.get_or_create(
+            name="bulk", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+        )
+        empty_job_queue, _ = JobQueue.objects.get_or_create(
+            name="nobody", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+        )
         with self.subTest("Nonexistent queue"):
             self.assertEqual(get_worker_count(queue="invalid"), 0)
         with self.subTest("Default queue"):
             self.assertEqual(get_worker_count(), 12)
+        with self.subTest("Priority queue"):
+            self.assertEqual(get_worker_count(queue=priority_job_queue.name), 2)
         with self.subTest("Bulk queue"):
-            self.assertEqual(get_worker_count(queue="bulk"), 4)
+            self.assertEqual(get_worker_count(queue=bulk_job_queue.name), 4)
         with self.subTest("Empty queue"):
-            self.assertEqual(get_worker_count(queue="nobody"), 0)
+            self.assertEqual(get_worker_count(queue=empty_job_queue.name), 0)
+        with self.subTest("Passing a job queue instance"):
+            self.assertEqual(get_worker_count(queue=bulk_job_queue), 4)
+        with self.subTest("Passing a job queue pk"):
+            self.assertEqual(get_worker_count(queue=str(bulk_job_queue.pk)), 4)
+        with self.subTest("Passing a random uuid"):
+            self.assertEqual(get_worker_count(queue=str(uuid.uuid4())), 0)
 
     def test_populate_model_features_registry(self):
         original_custom_fields_registry = registry["model_features"]["custom_fields"].copy()

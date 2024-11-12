@@ -1,0 +1,3 @@
+Added `ObjectDetailContent`, `Tab`, and `Panel` UI component Python classes.
+Added support for defining an `object_detail_content` attribute on object detail view classes to use the new UI framework.
+Converted `Circuit` detail view to use the new UI framework.

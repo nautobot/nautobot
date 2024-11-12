@@ -16,7 +16,6 @@ from .models import (
     Interface,
     InventoryItem,
     Location,
-    LocationType,
     Manufacturer,
     Platform,
     PowerFeed,
@@ -33,40 +32,22 @@ from .models import (
 app_name = "dcim"
 
 router = NautobotUIViewSetRouter()
-router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
+router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
+router.register("controllers", views.ControllerUIViewSet)
 router.register("device-families", views.DeviceFamilyUIViewSet)
+router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
-router.register("software-image-files", views.SoftwareImageFileUIViewSet)
-router.register("software-versions", views.SoftwareVersionUIViewSet)
-router.register("controllers", views.ControllerUIViewSet)
-router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
-router.register("modules", views.ModuleUIViewSet)
+router.register("location-types", views.LocationTypeUIViewSet)
 router.register("module-bays", views.ModuleBayUIViewSet)
 router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
+router.register("modules", views.ModuleUIViewSet)
 router.register("module-types", views.ModuleTypeUIViewSet)
+router.register("software-image-files", views.SoftwareImageFileUIViewSet)
+router.register("software-versions", views.SoftwareVersionUIViewSet)
+router.register("virtual-device-contexts", views.VirtualDeviceContextUIViewSet)
 
 urlpatterns = [
-    # Location types
-    path("location-types/", views.LocationTypeListView.as_view(), name="locationtype_list"),
-    path("location-types/add/", views.LocationTypeEditView.as_view(), name="locationtype_add"),
-    path("location-types/import/", views.LocationTypeBulkImportView.as_view(), name="locationtype_import"),  # 3.0 TODO
-    path("location-types/delete/", views.LocationTypeBulkDeleteView.as_view(), name="locationtype_bulk_delete"),
-    path("location-types/<uuid:pk>/", views.LocationTypeView.as_view(), name="locationtype"),
-    path("location-types/<uuid:pk>/edit/", views.LocationTypeEditView.as_view(), name="locationtype_edit"),
-    path("location-types/<uuid:pk>/delete/", views.LocationTypeDeleteView.as_view(), name="locationtype_delete"),
-    path(
-        "location-types/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="locationtype_changelog",
-        kwargs={"model": LocationType},
-    ),
-    path(
-        "location-types/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="locationtype_notes",
-        kwargs={"model": LocationType},
-    ),
     # Locations
     path("locations/", views.LocationListView.as_view(), name="location_list"),
     path("locations/add/", views.LocationEditView.as_view(), name="location_add"),
@@ -710,6 +691,11 @@ urlpatterns = [
         ImageAttachmentEditView.as_view(),
         name="device_add_image",
         kwargs={"model": Device},
+    ),
+    path(
+        "devices/<uuid:pk>/wireless/",
+        views.DeviceWirelessView.as_view(),
+        name="device_wireless",
     ),
     # Console ports
     path("console-ports/", views.ConsolePortListView.as_view(), name="consoleport_list"),

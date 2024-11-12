@@ -16,7 +16,6 @@ from rest_framework.test import APITransactionTestCase as _APITransactionTestCas
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.models import fields as core_fields
 from nautobot.core.models.tree_queries import TreeModel
-from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import mixins, utils, views
 from nautobot.core.utils import lookup
 from nautobot.core.utils.data import is_uuid
@@ -169,6 +168,10 @@ class APIViewTestCases:
             if issubclass(self.model, extras_models.ChangeLoggedModel):
                 self.assertIn("created", response.data)
                 self.assertIn("last_updated", response.data)
+            if hasattr(self.model, "notes") and isinstance(instance1.notes, QuerySet):
+                self.assertIn("notes_url", response.data)
+                self.assertIn(f"{url}notes/", str(response.data["notes_url"]))
+                self.assertIn(instance1.get_notes_url(api=True), str(response.data["notes_url"]))
             # Fields that should be absent by default (opt-in fields):
             self.assertNotIn("computed_fields", response.data)
             self.assertNotIn("relationships", response.data)
@@ -217,58 +220,6 @@ class APIViewTestCases:
             url = self._get_detail_url(self._get_queryset().first())
             response = self.client.options(url, **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
-
-            with self.subTest("Assert Detail View Config is generated well"):
-                # Namings Help
-                # 1. detail_view_config: This is the detail view config set in the serializer.Meta.detail_view_config
-                # 2. detail_view_schema: This is the retrieve schema generated from an OPTIONS request.
-                # 3. advanced_view_schema: This is the advanced tab schema generated from an OPTIONS request.
-                serializer = get_serializer_for_model(self._get_queryset().model)
-                advanced_view_schema = response.data["view_options"]["retrieve"]["tabs"]["Advanced"]
-
-                # Get default advanced tab fields
-                self.assertEqual(len(advanced_view_schema), 1)
-                self.assertIn("Object Details", advanced_view_schema[0])
-                advanced_tab_fields = advanced_view_schema[0].get("Object Details")["fields"]
-
-                if detail_view_config := getattr(serializer.Meta, "detail_view_config", None):
-                    detail_view_schema = response.data["view_options"]["retrieve"]["tabs"][
-                        bettertitle(self._get_queryset().model._meta.verbose_name)
-                    ]
-                    self.assertHttpStatus(response, status.HTTP_200_OK)
-
-                    # According to convention, fields in the advanced tab fields should not exist in
-                    # the `detail_view_schema`. Assert this is True.
-                    with self.subTest("Assert advanced tab fields should not exist in the detail_view_schema."):
-                        if detail_view_config.get("include_others"):
-                            # Handle "Other Fields" section specially as "Other Field" is dynamically added
-                            # by Nautobot and is not part of the serializer-defined detail_view_config
-                            other_fields = detail_view_schema[0]["Other Fields"]["fields"]
-                            for field in advanced_tab_fields:
-                                self.assertNotIn(field, other_fields)
-
-                        for col_idx, col in enumerate(detail_view_schema):
-                            for group_title, group in col.items():
-                                if group_title == "Other Fields":
-                                    continue
-                                group_fields = group["fields"]
-                                # Config on the serializer
-                                if (
-                                    col_idx < len(detail_view_config["layout"])
-                                    and group_title in detail_view_config["layout"][col_idx]
-                                ):
-                                    fields = detail_view_config["layout"][col_idx][group_title]["fields"]
-                                else:
-                                    fields = []
-
-                                # Fields that are in the detail_view_schema must not be in the advanced tab as well
-                                for field in group_fields:
-                                    self.assertNotIn(field, advanced_tab_fields)
-
-                                # Fields that are explicit in the detail_view_config must remain as such in the schema
-                                for field in fields:
-                                    if field not in advanced_tab_fields:
-                                        self.assertIn(field, group_fields)
 
     class ListObjectsViewTestCase(APITestCase):
         choices_fields = None
@@ -637,10 +588,7 @@ class APIViewTestCases:
             POST a single object with permission.
             """
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
 
             initial_count = self._get_queryset().count()
             for i, create_data in enumerate(self.create_data):
@@ -683,10 +631,10 @@ class APIViewTestCases:
                 self.fail("Couldn't find a single deletable object!")
 
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add", "view"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(
+                f"{self.model._meta.app_label}.add_{self.model._meta.model_name}",
+                f"{self.model._meta.app_label}.view_{self.model._meta.model_name}",
+            )
 
             response = self.client.get(self._get_detail_url(instance) + "?format=csv", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -735,10 +683,7 @@ class APIViewTestCases:
             POST a set of objects in a single request.
             """
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
 
             initial_count = self._get_queryset().count()
             response = self.client.post(self._get_list_url(), self.create_data, format="json", **self.header)
@@ -869,10 +814,10 @@ class APIViewTestCases:
             """GET and then PUT an object and verify that it's accepted and unchanged."""
             self.maxDiff = None
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["view", "change"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(
+                f"{self.model._meta.app_label}.view_{self.model._meta.model_name}",
+                f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
+            )
 
             instance = self._get_queryset().first()
             url = self._get_detail_url(instance)
@@ -903,10 +848,7 @@ class APIViewTestCases:
                 self.skipTest("Bulk update data not set")
 
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["change"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
             id_list = list(self._get_queryset().values_list("id", flat=True)[:3])
             self.assertEqual(len(id_list), 3, "Insufficient number of objects to test bulk update")
@@ -950,24 +892,11 @@ class APIViewTestCases:
             self.assertIn("actions", data)
 
             # Grab any field that has choices defined (fields with enums)
-            if any(
-                [
-                    "POST" in data["actions"],
-                    "PUT" in data["actions"],
-                ]
-            ):
-                schema = data["schema"]
-                props = schema["properties"]
-                fields = props.keys()
-                field_choices = set()
-                for field_name in fields:
-                    obj = props[field_name]
-                    if "enum" in obj and "enumNames" in obj:
-                        enum = obj["enum"]
-                        # Zipping to assert that the enum and the mapping have the same number of items.
-                        model_field_choices = dict(zip(obj["enumNames"], enum))
-                        self.assertEqual(len(enum), len(model_field_choices))
-                        field_choices.add(field_name)
+            field_choices = {}
+            if "POST" in data["actions"]:
+                field_choices = {k for k, v in data["actions"]["POST"].items() if "choices" in v}
+            elif "PUT" in data["actions"]:
+                field_choices = {k for k, v in data["actions"]["PUT"].items() if "choices" in v}
             else:
                 self.fail(f"Neither PUT nor POST are available actions in: {data['actions']}")
 
@@ -1022,10 +951,7 @@ class APIViewTestCases:
             url = self._get_detail_url(instance)
 
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["delete"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")
 
             response = self.client.delete(url, **self.header)
             self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
@@ -1042,10 +968,7 @@ class APIViewTestCases:
             """
             id_list = self.get_deletable_object_pks()
             # Add object-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["delete"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")
 
             data = [{"id": id} for id in id_list]
 
@@ -1056,30 +979,6 @@ class APIViewTestCases:
 
     class NotesURLViewTestCase(APITestCase):
         """Validate Notes URL on objects that have the Note model Mixin."""
-
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-        def test_notes_url_on_object(self):
-            if not hasattr(self.model, "notes"):
-                self.skipTest("Model doesn't appear to support Notes")
-            instance = self._get_queryset().first()
-            if not isinstance(instance.notes, QuerySet):
-                self.skipTest("Model has a notes field but it doesn't appear to be Notes")
-
-            # Add object-level permission
-            obj_perm = users_models.ObjectPermission(
-                name="Test permission",
-                constraints={"pk": instance.pk},
-                actions=["view"],
-            )
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
-            url = self._get_detail_url(instance)
-            response = self.client.get(url, **self.header)
-            self.assertHttpStatus(response, status.HTTP_200_OK)
-            self.assertIn("notes_url", response.data)
-            self.assertIn(f"{url}notes/", str(response.data["notes_url"]))
-            self.assertIn(instance.get_notes_url(api=True), str(response.data["notes_url"]))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_notes_url_functionality(self):

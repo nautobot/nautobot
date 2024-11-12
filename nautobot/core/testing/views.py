@@ -170,10 +170,7 @@ class ViewTestCases:
             instance = self._get_queryset().first()
 
             # Add model-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["view"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
 
             # Try GET with model-level permission
             response = self.client.get(instance.get_absolute_url())
@@ -322,10 +319,7 @@ class ViewTestCases:
             initial_count = self._get_queryset().count()
 
             # Assign unconstrained permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
 
             # Try GET with model-level permission
             self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
@@ -432,32 +426,6 @@ class ViewTestCases:
             if isinstance(model_class, PrimaryModel):
                 self.assertIsNotNone(fields.get("tags"))
 
-        def test_slug_autocreation(self):
-            """Test that slug is autocreated through ORM."""
-            # This really should go on a models test page, but we don't have test structures for models.
-            if getattr(self.model, "slug_source", None) is not None:
-                obj = self.model.objects.get(**{self.slug_source: self.slug_test_object})
-                expected_slug = self.slugify_function(getattr(obj, self.slug_source))
-                self.assertEqual(obj.slug, expected_slug)
-
-        def test_slug_not_modified(self):
-            """Ensure save method does not modify slug that is passed in."""
-            # This really should go on a models test page, but we don't have test structures for models.
-            if getattr(self.model, "slug_source", None) is not None:
-                new_slug_source_value = "kwyjibo"
-
-                obj = self.model.objects.get(**{self.slug_source: self.slug_test_object})
-                expected_slug = self.slugify_function(getattr(obj, self.slug_source))
-                # Update slug source field str
-                filter_ = self.slug_source + "__exact"
-                self.model.objects.filter(**{filter_: self.slug_test_object}).update(
-                    **{self.slug_source: new_slug_source_value}
-                )
-
-                obj.refresh_from_db()
-                self.assertEqual(getattr(obj, self.slug_source), new_slug_source_value)
-                self.assertEqual(obj.slug, expected_slug)
-
     class EditObjectViewTestCase(ModelViewTestCase):
         """
         Edit a single existing instance.
@@ -490,10 +458,7 @@ class ViewTestCases:
             instance = self._get_queryset().first()
 
             # Assign model-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["change"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
             # Try GET with model-level permission
             self.assertHttpStatus(self.client.get(self._get_url("edit", instance)), 200)
@@ -614,10 +579,7 @@ class ViewTestCases:
                     instance_note_pk_list.append(note.pk)
 
             # Assign model-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["delete"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(assigned_object_type)
+            self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")
 
             # Try GET with model-level permission
             self.assertHttpStatus(self.client.get(self._get_url("delete", instance)), 200)
@@ -653,10 +615,7 @@ class ViewTestCases:
             instance = self.get_deletable_object()
 
             # Assign model-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["delete"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")
 
             # Try GET with model-level permission
             self.assertHttpStatus(self.client.get(self._get_url("delete", instance)), 200)
@@ -851,10 +810,7 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_with_permission(self):
             # Add model-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["view"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
 
             # Try GET with model-level permission
             response = self.client.get(self._get_url("list"))
@@ -867,11 +823,17 @@ class ViewTestCases:
             # Check if breadcrumb is rendered correctly
             self.assertBodyContains(response, f'<a href="{list_url}">{title}</a>', html=True)
 
-            # Check if import button is absent due to user permissions
-            self.assertNotIn(
-                reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"}),
-                response_body,
-            )
+            with self.subTest("Assert import-objects URL is absent due to user permissions"):
+                self.assertNotIn(
+                    reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"}),
+                    response_body,
+                )
+
+            if "example_app" in settings.PLUGINS:
+                with self.subTest("Assert example-app banner is present"):
+                    self.assertIn(
+                        f"<div>You are viewing a table of {self.model._meta.verbose_name_plural}</div>", response_body
+                    )
 
             return response
 
@@ -978,13 +940,7 @@ class ViewTestCases:
             }
 
             # Assign non-constrained permission
-            obj_perm = users_models.ObjectPermission(
-                name="Test permission",
-                actions=["add"],
-            )
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
 
             # Bulk create objects
             response = self.client.post(**request)
@@ -1038,34 +994,6 @@ class ViewTestCases:
                     pass
             self.assertEqual(matching_count, self.bulk_create_count)
 
-    class BulkImportObjectsViewTestCase(ModelViewTestCase):  # 3.0 TODO: remove this test mixin, no longer relevant.
-        """
-        Vestigial test case, to be removed in 3.0.
-
-        This is vestigial since the introduction of the ImportObjects system Job to handle bulk-import of all
-        content-types via REST API serializers. The parsing of CSV data by the serializer is exercised by
-        APIViewTestCases.CreateObjectViewTestCase.test_recreate_object_csv(), and the basic operation of the Job is
-        exercised by nautobot.core.tests.test_jobs.
-        """
-
-        csv_data = ()
-
-        def _get_csv_data(self):
-            return "\n".join(self.csv_data)
-
-        # Just in case Apps are extending any of these tests and calling super() in them.
-        def test_bulk_import_objects_without_permission(self):
-            pass
-
-        def test_bulk_import_objects_with_permission(self):
-            pass
-
-        def test_bulk_import_objects_with_permission_csv_file(self):
-            pass
-
-        def test_bulk_import_objects_with_constrained_permission(self):
-            pass
-
     class BulkEditObjectsViewTestCase(ModelViewTestCase):
         """
         Edit multiple instances.
@@ -1103,10 +1031,7 @@ class ViewTestCases:
             data.update(utils.post_data(self.bulk_edit_data))
 
             # Assign model-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["change"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
             # Try POST with model-level permission
             self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 302)
@@ -1121,10 +1046,7 @@ class ViewTestCases:
                 "_all": "on",
             }
             # Assign model-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["change"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
             # Try POST with model-level permission
             response = self.client.post(self._get_url("bulk_edit"), selected_data)
@@ -1268,10 +1190,7 @@ class ViewTestCases:
             }
 
             # Assign unconstrained permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["delete"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")
 
             # Try POST with model-level permission
             self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 302)
@@ -1287,10 +1206,7 @@ class ViewTestCases:
             }
 
             # Assign unconstrained permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["delete"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")
 
             # Try POST with the selected data first. Emulating selecting all -> pressing Delete Selected button.
             response = self.client.post(self._get_url("bulk_delete"), selected_data)
@@ -1404,10 +1320,7 @@ class ViewTestCases:
             data.update(self.rename_data)
 
             # Assign model-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["change"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
             # Try POST with model-level permission
             self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data), 302)
@@ -1521,10 +1434,7 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_add_component(self):
             """Test bulk-adding this component to devices/virtual-machines."""
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
 
             initial_count = self._get_queryset().count()
 
@@ -1568,10 +1478,7 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename(self):
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["change"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
             objects = self.selected_objects
             pk_list = [obj.pk for obj in objects]
