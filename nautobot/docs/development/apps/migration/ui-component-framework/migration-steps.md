@@ -84,15 +84,15 @@ class TenantView(views.ObjectDetailViewMixin):
     object_detail_content = ObjectDetailContent(
         panels=(
             StatsPanel(
+                weight=100,
                 label="Stats",
+                section=SectionChoices.RIGHT_HALF,
                 filter_name="tenant",
                 related_models=[
                     Circuit,
                     Cluster,
                     Device,
                 ],
-                section=SectionChoices.RIGHT_HALF,
-                weight=100,
             ),
         )
     )
@@ -115,20 +115,20 @@ object_detail_content = ObjectDetailContent(
     panels=[
         # Left column
         ObjectFieldsPanel(
-            section=SectionChoices.LEFT_HALF,
             weight=100,
+            section=SectionChoices.LEFT_HALF,
         ),
 
         # Right column
         StatsPanel(
-            section=SectionChoices.RIGHT_HALF,
             weight=100,
+            section=SectionChoices.RIGHT_HALF,
         ),
 
         # Full width at bottom
         ObjectsTablePanel(
-            section=SectionChoices.FULL_WIDTH,
             weight=200,
+            section=SectionChoices.FULL_WIDTH,
         ),
     ]
 )

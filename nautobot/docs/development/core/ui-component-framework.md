@@ -45,8 +45,8 @@ class ExampleUIViewSet(views.NautobotUIViewSet):
     object_detail_content = ObjectDetailContent(
         panels=[
             ObjectFieldsPanel(
-                section=SectionChoices.LEFT_HALF,
-                weight=100,
+               weight=100,
+               section=SectionChoices.LEFT_HALF,
                 fields="__all__"
             )
         ]
@@ -87,9 +87,9 @@ The Panel component serves as a base class for creating individual display panel
 from nautobot.apps.ui import Panel, SectionChoices
 
 Panel(
-    label="Panel Header",
-    section=SectionChoices.FULL_WIDTH,
-    weight=100,
+   weight=100,
+   section=SectionChoices.FULL_WIDTH,
+   label="Panel Header",
 )
 ```
 
@@ -97,9 +97,9 @@ Panel(
 from nautobot.apps.ui import Panel, SectionChoices
 
 Panel(
-    label="Optional Params Included",
-    section=SectionChoices.RIGHT_HALF,
     weight=200,
+    section=SectionChoices.RIGHT_HALF,
+    label="Optional Params Included",
     body_content_template_path="path/to/template/body_content_template.html",
     header_extra_content_template_path="path/to/template/header_extra_content_template.html",
     footer_content_template_path="path/to/template/footer_content_template.html",
@@ -123,9 +123,10 @@ NOTE:
 from nautobot.apps.ui import ObjectFieldsPanel, SectionChoices
 
 ObjectFieldsPanel(
-    label="Object Fields Panel",
-    section=SectionChoices.LEFT_HALF,
-    context_object_key="obj",
+   weight=100,
+   section=SectionChoices.LEFT_HALF,
+   label="Object Fields Panel",
+   context_object_key="obj",
 )
 ```
 
@@ -133,13 +134,13 @@ ObjectFieldsPanel(
 from nautobot.apps.ui import ObjectFieldsPanel, SectionChoices
 
 ObjectFieldsPanel(
-    label="Object Fields Panel",
-    fields=["name", "status", "type", "notes"],
-    section=SectionChoices.LEFT_HALF,
-    context_object_key="obj",
-    ignore_nonexistent_fields=True,
-    weight=200,
-    value_transforms={
+   weight=200,
+   section=SectionChoices.LEFT_HALF,
+   label="Object Fields Panel",
+   fields=["name", "status", "type", "notes"],
+   context_object_key="obj",
+   ignore_nonexistent_fields=True,
+   value_transforms={
         "status": [status_to_badge],
         "type": [type_to_link]
     },
@@ -164,6 +165,7 @@ ObjectFieldsPanel(
 from nautobot.apps.ui import KeyValueTablePanel
 
 KeyValueTablePanel(
+    weight=100,
     data={
         "speed": "1000000",
         "notes": "**Important**"
@@ -206,10 +208,10 @@ KeyValueTablePanel(
 from nautobot.apps.ui import GroupedKeyValueTablePanel, SectionChoices
 
 GroupedKeyValueTablePanel(
-    body_id="network-details",
-    label="Grouped Information",
     weight=300,
     section=SectionChoices.FULL_WIDTH,
+    label="Grouped Information",
+    body_id="network-details",
     # Data Structure
     data={
         "Network": {            # Group name (shown as accordion header)
@@ -245,6 +247,9 @@ GroupedKeyValueTablePanel(
 from nautobot.apps.ui import StatsPanel, SectionChoices
 
 StatsPanel(
+    weight=700,
+    section=SectionChoices.RIGHT_HALF,
+    label="Statistics",
     filter_name="location",
     related_models=[           # Models to show statistics for
         Device,               # Direct model reference
@@ -257,9 +262,6 @@ StatsPanel(
         (VirtualMachine, "cluster__location__in")
                              # Another complex relationship example
     ],
-    label="Statistics",
-    section=SectionChoices.RIGHT_HALF,
-    weight=700,
 )
 ```
 
@@ -293,12 +295,12 @@ StatsPanel(
 from nautobot.apps.ui import ObjectTextPanel, SectionChoices
 
 ObjectTextPanel(
-    object_field="description",
-    render_as=ObjectTextPanel.RenderOptions.MARKDOWN,
-    render_placeholder=True,
-    label="Description",
-    section=SectionChoices.FULL_WIDTH,
-    weight=500
+   weight=500,
+   section=SectionChoices.FULL_WIDTH,
+   label="Description",
+   object_field="description",
+   render_as=ObjectTextPanel.RenderOptions.MARKDOWN,
+   render_placeholder=True,
 )
 ```
 
@@ -314,12 +316,12 @@ ObjectTextPanel(
 from nautobot.apps.ui import TextPanel, SectionChoices
 
 TextPanel(
-    context_field="text",
-    render_as=TextPanel.RenderOptions.CODE,
-    render_placeholder=True,
-    label="Custom Content",
-    section=SectionChoices.FULL_WIDTH,
-    weight=600
+   weight=600,
+   section=SectionChoices.FULL_WIDTH,
+   label="Custom Content",
+   context_field="text",
+   render_as=TextPanel.RenderOptions.CODE,
+   render_placeholder=True,
 )
 ```
 
@@ -344,10 +346,10 @@ Note:
 from nautobot.apps.ui import DataTablePanel
 
 DataTablePanel(
-    context_data_key="data",
-    weight=100,
-    columns=[1, 2, 3],
-    column_headers=["One", "Two", "Three"]
+   weight=100,
+   context_data_key="data",
+   columns=[1, 2, 3],
+   column_headers=["One", "Two", "Three"]
 )
 ```
 
@@ -401,8 +403,8 @@ The `ObjectsTablePanel` is a powerful component for rendering tables of Django m
 from nautobot.apps.ui import ObjectsTablePanel, SectionChoices
 
 ObjectsTablePanel(
-    section=SectionChoices.RIGHT_HALF,
     weight=100,
+    section=SectionChoices.RIGHT_HALF,
     table_class=ExampleTable,
     table_filter="example_name",
     table_title="Example Table",
@@ -414,8 +416,8 @@ ObjectsTablePanel(
 from nautobot.apps.ui import ObjectsTablePanel, SectionChoices
 
 ObjectsTablePanel(
-    section=SectionChoices.FULL_WIDTH,
     weight=200,
+    section=SectionChoices.FULL_WIDTH,
     context_table_key="example_table_instance",
     table_title="Example Table",
     hide_hierarchy_ui=True,
@@ -446,20 +448,22 @@ class LocationUIViewSet(views.NautobotUIViewSet):
     object_detail_content = ObjectDetailContent(
         panels=[
             ObjectFieldsPanel(
-                section=SectionChoices.LEFT_HALF,
-                fields="__all__",
-                weight=100,
+               weight=100,
+               section=SectionChoices.LEFT_HALF,
+               fields="__all__",
             ),
             StatsPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
                 filter_name="location",
                 related_models=[
                     Device,
                     (Circuit, "circuit_terminations__location__in")
                 ],
-                section=SectionChoices.RIGHT_HALF,
-                weight=100,
             ),
             GroupedKeyValueTablePanel(
+                weight=300,
+                section=SectionChoices.FULL_WIDTH,
                 body_id="custom-fields",
                 data={
                     "Network": {
@@ -467,14 +471,12 @@ class LocationUIViewSet(views.NautobotUIViewSet):
                         "IP Range": "192.168.1.0/24"
                     }
                 },
-                section=SectionChoices.FULL_WIDTH,
-                weight=300,
             ),
             ObjectTextPanel(
+                weight=400,
+                section=SectionChoices.FULL_WIDTH,
                 object_field="description",
                 render_as=BaseTextPanel.RenderOptions.MARKDOWN,
-                section=SectionChoices.FULL_WIDTH,
-                weight=400,
             ),
         ]
     )

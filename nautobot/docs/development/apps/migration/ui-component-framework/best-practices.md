@@ -21,10 +21,10 @@ Statistics and related objects
 ```python
 
 StatsPanel(
+    weight=100,
+    section=SectionChoices.RIGHT_HALF,
     filter_name="device_type",
     related_models=[Device],
-    section=SectionChoices.RIGHT_HALF,
-    weight=100,
 )
 ```
 
@@ -37,17 +37,17 @@ calculated by `count_related(Device, "device_type")` filtered by given `filter_n
 
 # Custom fields grouping
 GroupedKeyValueTablePanel(
+    weight=200,
+    section=SectionChoices.FULL_WIDTH,
     body_id="custom-fields",
     data=self.get_custom_field_groups(),
-    section=SectionChoices.FULL_WIDTH,
-    weight=200,
 )
 
 # Description with markdown
 ObjectTextPanel(
+    weight=300,
+    section=SectionChoices.FULL_WIDTH,
     object_field="description",
     render_as=BaseTextPanel.RenderOptions.MARKDOWN,
-    section=SectionChoices.FULL_WIDTH,
-    weight=300,
 )
 ```

@@ -70,15 +70,15 @@ class DeviceUIViewSet(views.NautobotUIViewSet):
     object_detail_content = ObjectDetailContent(
         panels=[
             ObjectFieldsPanel(
-                fields="__all__",
-                section=SectionChoices.LEFT_HALF,
                 weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
             ),
             ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
                 table_class=RelatedDeviceTable,
                 table_attribute="related_devices",
-                section=SectionChoices.RIGHT_HALF,
-                weight=100,
             ),
         ]
     )
