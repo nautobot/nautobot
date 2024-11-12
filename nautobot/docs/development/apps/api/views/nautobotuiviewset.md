@@ -37,6 +37,10 @@ structures with Python objects instead of HTML templates.
 This method simplifies the process of creating consistent and maintainable user interfaces.
 The framework provides many pre-built panel types.
 
+| [Migration tutorial](../../migration/ui-component-framework/index.md)
+
+| [UI Component Framework documentation](../../../../development/core/ui-component-framework.md)
+
 ## Setting ViewSet Attributes
 
 **One caveat of using the NautobotUIViewSet is that the `queryset`, `serializer_class` and `table_class` attribute of the `YourAppModelUIViewSet` has to be set before most of the `NautobotUIViewSet` functionalities will become available.**

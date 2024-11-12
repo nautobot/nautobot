@@ -4,9 +4,9 @@ A guide for app developers transitioning to the UI Component Framework.
 
 ## Introduction
 
-This guide helps you migrate your existing Nautobot app views to use the new UI Framework. The framework provides a declarative approach to building object detail views, reducing boilerplate code while ensuring consistency across the platform.
+This guide helps you migrate your existing Nautobot app views to use the new UI Component Framework. The framework provides a declarative approach to building object detail views, reducing boilerplate code while ensuring consistency across the platform.
 
-For complete UI Framework documentation, see: [Nautobot UI Framework Documentation](../../../core/ui-component-framework.md)
+For complete UI Component Framework documentation, see: [Nautobot UI Framework Documentation](../../../core/ui-component-framework.md)
 
 ## Why Migrate?
 

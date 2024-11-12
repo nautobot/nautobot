@@ -496,18 +496,18 @@ class LocationUIViewSet(views.NautobotUIViewSet):
 
 - Use consistent weights across your application
 - Group related information in adjacent panels
-- Consider mobile viewports when choosing sections
+- Consider various screen sizes when choosing sections, especially for ObjectsTablePanel
 
 ### 2. Performance
 
-- Be specific with field selections
-- Use appropriate indexes for StatsPanel queries
+- Be specific with field selections - select only needed fields for better performance
+- Ensure usage of `select_related` or `prefetch_related`
 
 ### 3. User Experience
 
 - Provide clear, descriptive labels
 - Use consistent patterns across views
-- Implement proper error handling
+- Implement proper error handling for custom business logic if writing custom panels
 
 ### 4. Maintenance
 
@@ -520,21 +520,21 @@ class LocationUIViewSet(views.NautobotUIViewSet):
 ### Common Issues and Solutions
 
 1. **Panels Not Appearing**
-   - Verify section choices
-   - Check panel weights
-   - Confirm data availability
+    - Verify section choices
+    - Check panel weights
+    - Confirm data availability
 
 2. **Performance Issues**
-   - Review query complexity in StatsPanel
-   - Optimize field selections
-   - Check database indexes
+    - Review query complexity in StatsPanel
+    - Optimize field selections
+    - Check database indexes
 
 3. **Layout Problems**
-   - Validate section assignments
-   - Review weight ordering
-   - Check responsive behavior
+    - Validate section assignments
+    - Review weight ordering
+    - Check responsive behavior
 
 4. **Value Rendering**
-   - Verify transform functions
-   - Check data types
-   - Confirm template paths
+    - Verify transform functions
+    - Check data types
+    - Confirm template paths
