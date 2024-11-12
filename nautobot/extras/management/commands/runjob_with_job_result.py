@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from nautobot.extras.choices import JobResultStatusChoices
-from nautobot.extras.management import report_job_status, validate_job_and_job_data
+from nautobot.extras.management.utils import report_job_status, validate_job_and_job_data
 from nautobot.extras.models import JobResult
 
 
