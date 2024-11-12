@@ -1149,7 +1149,6 @@ class TextPanel(BaseTextPanel):
         kwargs (dict): Additional keyword arguments passed to `BaseTextPanel.__init__`.
     """
 
-
     def __init__(self, *, context_field="text", **kwargs):
         self.context_field = context_field
         super().__init__(**kwargs)
