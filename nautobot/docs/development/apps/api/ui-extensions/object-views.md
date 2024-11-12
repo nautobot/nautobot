@@ -76,8 +76,8 @@ The `left_page()`, `right_page()`, and `full_width_page()` methods each simply r
 
 The `TemplateExtension.object_detail_tabs` should be a list or tuple of Tab objects (as provided by the `nautobot.apps.ui` module). Two base classes are available:
 
-- `Tab` - add a tab and its contents to the main object detail page, rendered inline with the rest of that page. Best used for quick-rendering content.
-- `DistinctViewTab` - add a tab to the main object detail page that links to a distinct view of its own when clicked. Best used for more involved content.
+* `Tab` - add a tab and its contents to the main object detail page, rendered inline with the rest of that page. Best used for quick-rendering content.
+* `DistinctViewTab` - add a tab to the main object detail page that links to a distinct view of its own when clicked. Best used for more involved content.
 
 For example:
 
