@@ -187,7 +187,7 @@ class Tab(Component):
             tab_id (str): HTML ID for the tab content element, used to link the tab label and its content together.
             label (str): User-facing label to display for this tab.
             panels (tuple): Set of `Panel` components to potentially display within this tab.
-            layout (str): One of the [`LayoutChoices`](../ui/#nautobot.apps.ui.LayoutChoices) values, describing the layout of panels within this tab.
+            layout (str): One of the [LayoutChoices](./#nautobot.apps.ui.LayoutChoices) values, describing the layout of panels within this tab.
             label_wrapper_template_path (str): Template path to use for rendering the tab label to HTML.
             content_wrapper_template_path (str): Template path to use for rendering the tab contents to HTML.
         """
@@ -296,7 +296,7 @@ class Panel(Component):
 
         Args:
             label (str): Label to display for this panel. Optional; if an empty string, the panel will have no label.
-            section (str): One of the [`SectionChoices`](#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
+            section (str): One of the [SectionChoices](#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
             body_id (str): HTML element `id` to attach to the rendered body wrapper of the panel.
             body_content_template_path (str): Template path to render the content contained *within* the panel body.
             header_extra_content_template_path (str): Template path to render extra content into the panel header,
