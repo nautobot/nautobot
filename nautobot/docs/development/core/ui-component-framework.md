@@ -16,8 +16,10 @@
 The Nautobot UI Framework revolutionizes how you create object detail views in your applications. Instead of writing HTML templates, you declaratively define your UI structure using Python objects, resulting in consistent, maintainable, and responsive interfaces.
 
 <!-- markdownlint-disable no-inline-html -->
-<div class="grid cards" style="width: 300px;" markdown>
+<div class="grid cards example-images" markdown>
+
 - ![UI Framework Example](../../media/development/core/ui-component-framework/ui-framework-example.png){ .on-glb }
+
 </div>
 <!-- markdownlint-enable no-inline-html -->
 
@@ -68,8 +70,10 @@ The UI Framework is built around the concept of configurable ViewSets. Each View
 Panels are the building blocks of your UI. They contain specific types of content and can be positioned within sections.
 
 <!-- markdownlint-disable no-inline-html -->
-<div class="grid cards" style="width: 300px;" markdown>
+<div class="grid cards example-images" markdown>
+
 - ![Basic Panel Layout](../../media/development/core/ui-component-framework/basic-panel-layout.png){ .on-glb }
+
 </div>
 <!-- markdownlint-enable no-inline-html -->
 
@@ -153,8 +157,10 @@ ObjectFieldsPanel(
 ```
 
 <!-- markdownlint-disable no-inline-html -->
-<div class="grid cards" style="width: 300px;" markdown>
+<div class="grid cards example-images" markdown>
+
 - ![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/object-fields-panel-example.png){ .on-glb }
+
 </div>
 <!-- markdownlint-enable no-inline-html -->
 
@@ -238,8 +244,12 @@ GroupedKeyValueTablePanel(
 ```
 
 <!-- markdownlint-disable no-inline-html -->
-<div class="grid cards" style="width: 300px;" markdown>
-- ![GroupedKeyValueTablePanel Example](../../media/development/core/ui-component-framework/grouped-key-value-table-panel-example.png){ .on-glb }
+<div class="grid cards example-images" markdown>
+
+- ![GroupedKeyValueTablePanel Example 1](../../media/development/core/ui-component-framework/grouped-key-value-table-panel-example-1.png){ .on-glb }
+
+- ![GroupedKeyValueTablePanel Example 2](../../media/development/core/ui-component-framework/grouped-key-value-table-panel-example-2.png){ .on-glb }
+
 </div>
 <!-- markdownlint-enable no-inline-html -->
 
@@ -272,8 +282,10 @@ StatsPanel(
 ```
 
 <!-- markdownlint-disable no-inline-html -->
-<div class="grid cards" style="width: 300px;" markdown>
+<div class="grid cards example-images" markdown>
+
 - ![StatsPanel Example](../../media/development/core/ui-component-framework/stats-panel-example.png){ .on-glb }
+
 </div>
 <!-- markdownlint-enable no-inline-html -->
 
@@ -341,8 +353,10 @@ Note:
     `columns`/`context_columns_key` and `column_headers`/`context_column_headers_key` are mutually exclusive pairs.
 
 <!-- markdownlint-disable no-inline-html -->
-<div class="grid cards" style="width: 300px;" markdown>
+<div class="grid cards example-images" markdown>
+
 - ![Table Panels Family](../../media/development/core/ui-component-framework/table-panels-family.png){ .on-glb }
+
 </div>
 <!-- markdownlint-enable no-inline-html -->
 

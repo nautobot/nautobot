@@ -187,7 +187,7 @@ class Tab(Component):
             tab_id (str): HTML ID for the tab content element, used to link the tab label and its content together.
             label (str): User-facing label to display for this tab.
             panels (tuple): Set of `Panel` components to potentially display within this tab.
-            layout (str): One of the [`LayoutChoices`](./#nautobot.apps.ui.LayoutChoices) values, describing the layout of panels within this tab.
+            layout (str): One of the [`LayoutChoices`](#nautobot.apps.ui.LayoutChoices) values, describing the layout of panels within this tab.
             label_wrapper_template_path (str): Template path to use for rendering the tab label to HTML.
             content_wrapper_template_path (str): Template path to use for rendering the tab contents to HTML.
         """
@@ -1091,10 +1091,10 @@ class BaseTextPanel(Panel):
         Instantiate BaseTextPanel.
 
         Args:
-            render_as(RenderOptions): One of BaseTextPanel.RenderOptions to define rendering function.
-            render_placeholder(bool): Whether to render placeholder text if given value is "falsy".
-            body_content_template_path(str): The path of the template to use for the body content. Can be overridden for custom use cases.
-            kwargs: Additional keyword arguments passed to Panel.__init__.
+            render_as (RenderOptions): One of BaseTextPanel.RenderOptions to define rendering function.
+            render_placeholder (bool): Whether to render placeholder text if given value is "falsy".
+            body_content_template_path (str): The path of the template to use for the body content. Can be overridden for custom use cases.
+            kwargs (dict): Additional keyword arguments passed to `Panel.__init__`.
         """
         self.render_as = render_as
         self.render_placeholder = render_placeholder
@@ -1123,6 +1123,10 @@ class BaseTextPanel(Panel):
 class ObjectTextPanel(BaseTextPanel):
     """
     Panel that renders text, Markdown, JSON or YAML from the given field on the given object in the context.
+
+    Args:
+        object_field (str): The name of the object field to be rendered. None by default.
+        kwargs (dict): Additional keyword arguments passed to `BaseTextPanel.__init__`.
     """
 
     def __init__(self, *, object_field=None, **kwargs):
@@ -1138,7 +1142,13 @@ class ObjectTextPanel(BaseTextPanel):
 
 
 class TextPanel(BaseTextPanel):
-    """Panel that renders text, Markdown, JSON or YAML from the given value in the context."""
+    """Panel that renders text, Markdown, JSON or YAML from the given value in the context.
+
+    Args:
+        context_field (str): source field from context with value for `TextPanel`.
+        kwargs (dict): Additional keyword arguments passed to `BaseTextPanel.__init__`.
+    """
+
 
     def __init__(self, *, context_field="text", **kwargs):
         self.context_field = context_field
