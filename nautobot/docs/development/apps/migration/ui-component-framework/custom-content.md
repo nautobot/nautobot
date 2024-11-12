@@ -63,7 +63,7 @@ from nautobot.apps.ui import Panel
 class CustomPanel(Panel):
 
     # You can override default body panel
-    def __init__(self, *, body_content_template_path="custom_template_path.html", **kwargs):
+    def __init__(self, *, body_content_template_path="my_app/custom_panel/body_content.html", **kwargs):
         super().__init__(body_content_template_path=body_content_template_path, **kwargs)
 
     # Adding some extra context specially for this panel / or this custom template
