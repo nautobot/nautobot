@@ -1,1 +1,0 @@
-Fixed `vlan_group` field is not filtered by `locations` field input on VLANForm.

@@ -1,1 +1,0 @@
-Changed most related-object-count table columns (e.g. the "Locations" column in a Prefix table) to, if only a single related record is present (e.g. a single Location is associated with a given Prefix), display that related record directly instead of just displaying `1`.
