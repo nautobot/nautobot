@@ -18,6 +18,7 @@ class CircuitContent(TemplateExtension):
     # Nautobot 2.4 and later preferred way of extending a detail view (in this case, Circuit view)
     # is to define a TemplateExtension with `object_detail_panels` and/or `object_detail_tabs` as in the example below.
     #
+
     object_detail_panels = (
         ObjectTextPanel(
             weight=100,
@@ -45,6 +46,11 @@ class CircuitContent(TemplateExtension):
         ),
     )
 
+    #
+    # Old (deprecated) way to do things follows
+    # See examples above for preferred (Nautobot 2.4+) approach using `object_detail_tabs` attribute
+    #
+
     def detail_tabs(self):
         """
         You may define extra tabs to render on a model's detail page by utilizing this method.
@@ -70,6 +76,25 @@ class CircuitContent(TemplateExtension):
 class DeviceContent(TemplateExtension):
     model = "dcim.device"
 
+    #
+    # Nautobot 2.4 and later preferred way of extending a detail view (in this case, Circuit view)
+    # is to define a TemplateExtension with `object_detail_panels` and/or `object_detail_tabs` as in the example below.
+    #
+
+    object_detail_tabs = [
+        DistinctViewTab(
+            weight=100,
+            tab_id="example_app_device_detail_tab_1",
+            label="Example App Tab 1",
+            url_name="plugins:example_app:device_detail_tab_1",
+        ),
+    ]
+
+    #
+    # Old (deprecated) way to do things follows
+    # See examples above for preferred (Nautobot 2.4+) approach using `object_detail_tabs` attribute
+    #
+
     def detail_tabs(self):
         """
         You may define extra tabs to render on a model's detail page by utilizing this method.
@@ -85,10 +110,6 @@ class DeviceContent(TemplateExtension):
         This example demonstrates defining two tabs. The tabs will be ordered by their position in list.
         """
         return [
-            {
-                "title": "Example App Tab 1",
-                "url": reverse("plugins:example_app:device_detail_tab_1", kwargs={"pk": self.context["object"].pk}),
-            },
             {
                 "title": "Example App Tab 2",
                 "url": reverse("plugins:example_app:device_detail_tab_2", kwargs={"pk": self.context["object"].pk}),
