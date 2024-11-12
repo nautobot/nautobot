@@ -2,7 +2,7 @@
 
 For custom content that doesn't fit existing panels:
 
-## 1. Consider using `TextPanel` with custom formatting
+## Consider using `TextPanel` with custom formatting
 
 ```python title="views.py"
 from nautobot.apps import views
@@ -19,7 +19,7 @@ class DeviceDetailView(views.NautobotUIViewSet):
         return context
 ```
 
-## 2. Use `KeyValueTablePanel` with transformed data
+## Use `KeyValueTablePanel` with transformed data
 
 ```python title="views.py"
 from nautobot.apps import views
@@ -54,7 +54,7 @@ class DeviceUIViewSet(views.NautobotUIViewSet):
 
 More built-in filters can be found in [`Nautobot Built-In Filters`](../../../../user-guide/platform-functionality/template-filters.md#nautobot-built-in-filters)
 
-## 3. Create a custom Panel class if needed
+## Create a custom Panel class if needed
 
 ```python title="custom_panel.py"
 from django.template.loader import get_template
