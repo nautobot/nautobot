@@ -912,14 +912,14 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             return self.form_invalid(form)
 
 
-class DeleteAllModelMixin:
+class EditAndDeleteAllModelMixin:
     """
-    UI mixin to bulk destroy all model instances.
+    UI mixin to bulk destroy all and bulk edit all model instances.
     """
 
-    def _get_bulk_delete_all_queryset(self, request):
+    def _get_bulk_edit_delete_all_queryset(self, request):
         """
-        Retrieve the queryset of model instances to be bulk-deleted, filtered based on request parameters.
+        Retrieve the queryset of model instances to be bulk-deleted or bulk-deleted, filtered based on request parameters.
 
         This method handles the retrieval of a queryset of model instances that match the specified
         filter criteria in the request parameters, allowing a bulk delete operation to be performed
@@ -927,8 +927,8 @@ class DeleteAllModelMixin:
         """
         model = self.queryset.model
 
-        # This Mixin is currently been used by both NautobotViewSet ObjectBulkDestroyViewMixin
-        # and BulkDeleteView which uses different keys for accessing filterset
+        # This Mixin is currently been used by both NautobotUIViewSet ObjectBulkDestroyViewMixin, ObjectBulkUpdateViewMixin
+        # BulkEditView, and BulkDeleteView which uses different keys for accessing filterset
         filterset_class = getattr(self, "filterset", None)
         if filterset_class is None:
             filterset_class = getattr(self, "filterset_class", None)
@@ -953,7 +953,7 @@ class DeleteAllModelMixin:
         }
 
 
-class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, DeleteAllModelMixin):
+class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, EditAndDeleteAllModelMixin):
     """
     UI mixin to bulk destroy model instances.
     """
@@ -968,7 +968,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, De
         model = queryset.model
         # Delete objects
         if self.request.POST.get("_all"):
-            queryset = self._get_bulk_delete_all_queryset(self.request)
+            queryset = self._get_bulk_edit_delete_all_queryset(self.request)
         else:
             queryset = queryset.filter(pk__in=pk_list)
 
@@ -1002,7 +1002,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, De
         data = {}
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if delete_all:
-            queryset = self._get_bulk_delete_all_queryset(self.request)
+            queryset = self._get_bulk_edit_delete_all_queryset(self.request)
             data = self._bulk_delete_all_context(request, queryset)
         else:
             self.pk_list = list(request.POST.getlist("pk"))
@@ -1082,7 +1082,7 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):  # 3.0 TODO: remove, unus
             return self.form_invalid(form)
 
 
-class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
+class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, EditAndDeleteAllModelMixin):
     """
     UI mixin to bulk update model instances.
     """
@@ -1107,7 +1107,13 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
         nullified_fields = request.POST.getlist("_nullify")
         with deferred_change_logging_for_bulk_operation():
             updated_objects = []
-            for obj in queryset.filter(pk__in=form.cleaned_data["pk"]):
+            edit_all = self.request.POST.get("_all")
+
+            if edit_all:
+                queryset = self._get_bulk_edit_delete_all_queryset(self.request)
+            else:
+                queryset = queryset.filter(pk__in=form.cleaned_data["pk"])
+            for obj in queryset:
                 self.obj = obj
                 # Update standard fields. If a field is listed in _nullify, delete its value.
                 for name in standard_fields:
@@ -1178,38 +1184,41 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
         request.POST "_edit": Function to render the user selection of objects in a table form/BulkUpdateForm via Response that is passed to NautobotHTMLRenderer.
         request.POST "_apply": Function to validate the table form/BulkUpdateForm and to perform the action of bulk update. Render the form with errors if exceptions are raised.
         """
-        queryset = self.get_queryset()
-        model = queryset.model
+        edit_all = request.POST.get("_all")
 
-        # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
-        if request.POST.get("_all"):
-            if self.filterset_class is not None:
-                self.pk_list = list(
-                    self.filterset_class(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True)
-                )
-            else:
-                self.pk_list = list(model.objects.all().values_list("pk", flat=True))
+        if edit_all:
+            self.pk_list = None
+            queryset = self._get_bulk_edit_delete_all_queryset(request)
         else:
             self.pk_list = list(request.POST.getlist("pk"))
+            queryset = self.get_queryset().filter(pk__in=self.pk_list)
+
         data = {}
         form_class = self.get_form_class()
         if "_apply" in request.POST:
             self.kwargs = kwargs
-            form = form_class(queryset.model, request.POST)
+            form = form_class(queryset.model, request.POST, edit_all=edit_all)
             restrict_form_fields(form, request.user)
             if form.is_valid():
                 return self.form_valid(form)
             else:
                 return self.form_invalid(form)
-        table_class = self.get_table_class()
-        table = table_class(queryset.filter(pk__in=self.pk_list), orderable=False)
-        if not table.rows:
-            messages.warning(
-                request,
-                f"No {queryset.model._meta.verbose_name_plural} were selected to update.",
-            )
-            return redirect(self.get_return_url(request))
-        data.update({"table": table})
+        table = None
+        if not edit_all:
+            table_class = self.get_table_class()
+            table = table_class(queryset, orderable=False)
+            if not table.rows:
+                messages.warning(
+                    request,
+                    f"No {queryset.model._meta.verbose_name_plural} were selected to update.",
+                )
+                return redirect(self.get_return_url(request))
+        data.update(
+            {
+                "table": table,
+                "objs_count": queryset.count(),
+            }
+        )
         return Response(data)
 
 
