@@ -323,10 +323,14 @@ class NavAppsUITestCase(TestCase):
         super().setUp()
 
         self.apps_marketplace_url = reverse("apps:apps_marketplace")
-        self.apps_marketplace_item_weight = 100   # TODO: not easy to introspect from the nav menu struct, so hard-code it here for now
+        self.apps_marketplace_item_weight = (
+            100  # TODO: not easy to introspect from the nav menu struct, so hard-code it here for now
+        )
 
         self.apps_list_url = reverse("apps:apps_list")
-        self.apps_list_item_weight = 200  # TODO: not easy to introspect from the nav menu struct, so hard-code it here for now
+        self.apps_list_item_weight = (
+            200  # TODO: not easy to introspect from the nav menu struct, so hard-code it here for now
+        )
 
     def test_apps_marketplace_visible(self):
         """The "Apps Marketplace" menu item should be available to an authenticated user regardless of permissions."""
