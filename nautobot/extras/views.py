@@ -2341,8 +2341,6 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
 
 
 class ObjectMetadataUIViewSet(
-    ObjectChangeLogViewMixin,
-    ObjectDetailViewMixin,
     ObjectListViewMixin,
 ):
     filterset_class = filters.ObjectMetadataFilterSet

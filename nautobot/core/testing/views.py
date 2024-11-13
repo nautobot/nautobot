@@ -1,3 +1,4 @@
+import contextlib
 import re
 from typing import Optional, Sequence
 from unittest import skipIf
@@ -751,11 +752,16 @@ class ViewTestCases:
             response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}")
             self.assertHttpStatus(response, 200)
             content = utils.extract_page_body(response.content.decode(response.charset))
+            # There should be only one row in the table
+            self.assertIn('<tr class="even', content)
+            self.assertNotIn('<tr class="odd', content)
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertNotRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
-            if instance1.get_absolute_url() in content:
-                self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
+            with contextlib.suppress(AttributeError):
+                # Some models, such as ObjectMetadata, don't have a detail URL
+                if instance1.get_absolute_url() in content:
+                    self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=True)
         def test_list_objects_unknown_filter_strict_filtering(self):
@@ -792,11 +798,16 @@ class ViewTestCases:
             content = utils.extract_page_body(response.content.decode(response.charset))
             self.assertNotIn("Unknown filter field", content, msg=content)
             self.assertIn("None", content, msg=content)
+            # There should be at least two rows in the table
+            self.assertIn('<tr class="even', content)
+            self.assertIn('<tr class="odd', content)
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
-            if instance1.get_absolute_url() in content:
-                self.assertIn(instance2.get_absolute_url(), content, msg=content)
+            with contextlib.suppress(AttributeError):
+                # Some models, such as ObjectMetadata, don't have a detail URL
+                if instance1.get_absolute_url() in content:
+                    self.assertIn(instance2.get_absolute_url(), content, msg=content)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
