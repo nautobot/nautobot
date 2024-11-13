@@ -1,14 +1,20 @@
 from collections.abc import Mapping
 from datetime import datetime, timedelta
+import json
 import logging
 from pathlib import Path
+import sys
 
 from celery import current_app
+from celery.beat import _evaluate_entry_args, _evaluate_entry_kwargs, reraise, SchedulingError
+from celery.result import AsyncResult
 from django.conf import settings
 from django_celery_beat.schedulers import DatabaseScheduler, ModelEntry
 from kombu.utils.json import loads
 
-from nautobot.extras.models import ScheduledJob, ScheduledJobs
+from nautobot.extras.choices import JobQueueTypeChoices
+from nautobot.extras.models import JobResult, ScheduledJob, ScheduledJobs
+from nautobot.extras.utils import run_kubernetes_job_and_return_job_result
 
 logger = logging.getLogger(__name__)
 
@@ -111,8 +117,40 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
 
         Ref: https://github.com/celery/django-celery-beat/issues/558#issuecomment-1162730008
         """
-        # TODO expand this instead of calling super()
-        resp = super().apply_async(entry, producer=producer, advance=advance, **kwargs)
+        resp = None
+        entry = self.reserve(entry) if advance else entry
+        task = self.app.tasks.get(entry.task)
+
+        try:
+            entry_args = _evaluate_entry_args(entry.args)
+            entry_kwargs = _evaluate_entry_kwargs(entry.kwargs)
+            if task:
+                scheduled_job = entry.model
+                job_queue = scheduled_job.job_queue
+                if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
+                    job_result = JobResult.objects.create(
+                        name=scheduled_job.job_model.name,
+                        job_model=scheduled_job.job_model,
+                        scheduled_job=scheduled_job,
+                        user=scheduled_job.user,
+                    )
+                    run_kubernetes_job_and_return_job_result(job_queue, job_result, json.dumps(entry_kwargs))
+                    resp = AsyncResult(job_result.id)
+                else:
+                    resp = task.apply_async(entry_args, entry_kwargs, producer=producer, **entry.options)
+            else:
+                resp = self.send_task(entry.task, entry_args, entry_kwargs, producer=producer, **entry.options)
+        except Exception as exc:  # pylint: disable=broad-except
+            reraise(
+                SchedulingError,
+                SchedulingError("Couldn't apply scheduled task {0.name}: {exc}".format(entry, exc=exc)),
+                sys.exc_info()[2],
+            )
+        finally:
+            self._tasks_since_sync += 1
+            if self.should_sync():
+                self._do_sync()
+
         if entry.total_run_count != entry.model.total_run_count:
             entry.total_run_count = entry.model.total_run_count
             entry.model.save()
