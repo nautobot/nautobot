@@ -7,7 +7,6 @@ import logging
 import re
 import sys
 
-from celery.result import AsyncResult
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
