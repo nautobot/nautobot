@@ -1,1 +1,0 @@
-Added support for `--no-reusedb` option to `invoke integration-test` task.
