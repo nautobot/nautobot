@@ -148,3 +148,7 @@ img.copyright-logo {
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
 }
+
+.example-images li {
+    max-width: 400px;
+}
