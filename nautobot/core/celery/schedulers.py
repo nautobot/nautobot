@@ -127,6 +127,7 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
             if task:
                 scheduled_job = entry.model
                 job_queue = scheduled_job.job_queue
+                # Distinguish between Celery and Kubernetes job queues
                 if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
                     job_result = JobResult.objects.create(
                         name=scheduled_job.job_model.name,
@@ -134,7 +135,8 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
                         scheduled_job=scheduled_job,
                         user=scheduled_job.user,
                     )
-                    run_kubernetes_job_and_return_job_result(job_queue, job_result, json.dumps(entry_kwargs))
+                    job_result = run_kubernetes_job_and_return_job_result(job_queue, job_result, json.dumps(entry_kwargs))
+                    # Return an AsyncResult object to mimic the behavior of Celery tasks after the job is finished by Kubernetes Job Pod.
                     resp = AsyncResult(job_result.id)
                 else:
                     resp = task.apply_async(entry_args, entry_kwargs, producer=producer, **entry.options)

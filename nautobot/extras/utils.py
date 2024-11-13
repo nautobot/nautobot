@@ -639,7 +639,6 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
 def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
     """
     Pass the job to a kubernetes pod and execute it there.
-    Return a JobResult instance if the job is not scheduled, otherwise return an AsyncResult instance.
     """
     pod_name = settings.KUBERNETES_JOB_POD_NAME
     pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
