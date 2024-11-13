@@ -187,7 +187,7 @@ class Tab(Component):
             tab_id (str): HTML ID for the tab content element, used to link the tab label and its content together.
             label (str): User-facing label to display for this tab.
             panels (tuple): Set of `Panel` components to potentially display within this tab.
-            layout (str): One of the `LayoutChoices` values, describing the layout of panels within this tab.
+            layout (str): One of the [LayoutChoices](./ui.md#nautobot.apps.ui.LayoutChoices) values, describing the layout of panels within this tab.
             label_wrapper_template_path (str): Template path to use for rendering the tab label to HTML.
             content_wrapper_template_path (str): Template path to use for rendering the tab contents to HTML.
         """
@@ -296,7 +296,7 @@ class Panel(Component):
 
         Args:
             label (str): Label to display for this panel. Optional; if an empty string, the panel will have no label.
-            section (str): One of the `SectionChoices` values, indicating the layout section this Panel belongs to.
+            section (str): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
             body_id (str): HTML element `id` to attach to the rendered body wrapper of the panel.
             body_content_template_path (str): Template path to render the content contained *within* the panel body.
             header_extra_content_template_path (str): Template path to render extra content into the panel header,
@@ -1063,6 +1063,16 @@ class BaseTextPanel(Panel):
     """A panel that renders a single value as text, Markdown, JSON, or YAML."""
 
     class RenderOptions(Enum):
+        """Options available for text panels for different type of rendering a given input.
+
+        Attributes:
+            PLAINTEXT (str): Plain text format (value: "plaintext").
+            JSON (str): Dict will be dumped into JSON and pretty-formatted (value: "json").
+            YAML (str): Dict will be displayed as pretty-formatted yaml (value: "yaml")
+            MARKDOWN (str): Markdown format (value: "markdown").
+            CODE (str): Code format. Just wraps content within <pre> tags (value: "code").
+        """
+
         PLAINTEXT = "plaintext"
         JSON = "json"
         YAML = "yaml"
@@ -1078,12 +1088,13 @@ class BaseTextPanel(Panel):
         **kwargs,
     ):
         """
+        Instantiate BaseTextPanel.
 
         Args:
-            render_as(RenderOptions): One of BaseTextPanel.RenderOptions to define rendering function.
-            render_placeholder(bool): Whether to render placeholder text if given value is "falsy".
-            body_content_template_path(str): The path of the template to use for the body content. Can be overridden for custom use cases.
-            kwargs: Additional keyword arguments passed to Panel.__init__.
+            render_as (RenderOptions): One of BaseTextPanel.RenderOptions to define rendering function.
+            render_placeholder (bool): Whether to render placeholder text if given value is "falsy".
+            body_content_template_path (str): The path of the template to use for the body content. Can be overridden for custom use cases.
+            kwargs (dict): Additional keyword arguments passed to `Panel.__init__`.
         """
         self.render_as = render_as
         self.render_placeholder = render_placeholder
@@ -1112,6 +1123,10 @@ class BaseTextPanel(Panel):
 class ObjectTextPanel(BaseTextPanel):
     """
     Panel that renders text, Markdown, JSON or YAML from the given field on the given object in the context.
+
+    Args:
+        object_field (str): The name of the object field to be rendered. None by default.
+        kwargs (dict): Additional keyword arguments passed to `BaseTextPanel.__init__`.
     """
 
     def __init__(self, *, object_field=None, **kwargs):
@@ -1127,7 +1142,12 @@ class ObjectTextPanel(BaseTextPanel):
 
 
 class TextPanel(BaseTextPanel):
-    """Panel that renders text, Markdown, JSON or YAML from the given value in the context."""
+    """Panel that renders text, Markdown, JSON or YAML from the given value in the context.
+
+    Args:
+        context_field (str): source field from context with value for `TextPanel`.
+        kwargs (dict): Additional keyword arguments passed to `BaseTextPanel.__init__`.
+    """
 
     def __init__(self, *, context_field="text", **kwargs):
         self.context_field = context_field
