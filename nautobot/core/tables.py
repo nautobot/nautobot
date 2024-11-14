@@ -5,10 +5,12 @@ from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist, FieldError
 from django.db import NotSupportedError
+from django.db.models import Prefetch
 from django.db.models.fields.related import ForeignKey, RelatedField
 from django.db.models.fields.reverse_related import ManyToOneRel
 from django.urls import reverse
 from django.utils.html import escape, format_html, format_html_join
+from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
 import django_tables2
@@ -18,7 +20,7 @@ from tree_queries.models import TreeNode
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
-from nautobot.core.utils import lookup
+from nautobot.core.utils.lookup import get_model_for_view_name, get_related_field_for_models, get_route_for_model
 from nautobot.extras import choices, models
 
 logger = logging.getLogger(__name__)
@@ -154,12 +156,25 @@ class BaseTable(django_tables2.Table):
                 if not column.visible:
                     continue
                 if isinstance(column.column, LinkedCountColumn):
-                    column_model = lookup.get_model_for_view_name(column.column.viewname)
+                    column_model = get_model_for_view_name(column.column.viewname)
                     if column_model is None:
                         logger.error("Couldn't find model for %s", column.column.viewname)
                         continue
                     reverse_lookup = column.column.reverse_lookup or next(iter(column.column.url_params.keys()))
                     count_fields.append((column.name, column_model, reverse_lookup))
+                    try:
+                        lookup = column.column.lookup or get_related_field_for_models(model, column_model).name
+                        # For some reason get_related_field_for_models(Tag, DynamicGroup) gives a M2M with the name
+                        # `dynamicgroup`, which isn't actually a field on Tag. May be a django-taggit issue?
+                        # Workaround for now: make sure the field actually exists on the model under this name:
+                        getattr(model, lookup)
+                    except AttributeError:
+                        lookup = None
+                    if lookup is not None:
+                        # Also attempt to prefetch the first matching record for display - see LinkedCountColumn
+                        prefetch_fields.append(
+                            Prefetch(lookup, column_model.objects.all()[:1], to_attr=f"{lookup}_list")
+                        )
                     continue
 
                 column_model = model
@@ -233,7 +248,7 @@ class BaseTable(django_tables2.Table):
                     # Belt and suspenders - we should have avoided any error cases above, but be safe anyway:
                     try:
                         queryset = queryset.prefetch_related(*prefetch_fields)
-                    except (TypeError, ValueError, NotSupportedError) as exc:
+                    except (AttributeError, TypeError, ValueError, NotSupportedError) as exc:
                         logger.warning(
                             "Unexpected error when trying to .prefetch_related() on %s QuerySet: %s",
                             model.__name__,
@@ -395,9 +410,9 @@ class ButtonsColumn(django_tables2.TemplateColumn):
             self.template_code = prepend_template + self.template_code
 
         app_label = model._meta.app_label
-        changelog_route = lookup.get_route_for_model(model, "changelog")
-        edit_route = lookup.get_route_for_model(model, "edit")
-        delete_route = lookup.get_route_for_model(model, "delete")
+        changelog_route = get_route_for_model(model, "changelog")
+        edit_route = get_route_for_model(model, "edit")
+        delete_route = get_route_for_model(model, "delete")
 
         template_code = self.template_code.format(
             app_label=app_label,
@@ -462,29 +477,80 @@ class ColoredLabelColumn(django_tables2.TemplateColumn):
 
 class LinkedCountColumn(django_tables2.Column):
     """
-    Render a count of related objects linked to a filtered URL.
+    Render a count of related objects linked to a filtered URL, or if a single related object is present, the object.
 
-    :param viewname: The view name to use for URL resolution
-    :param view_kwargs: Additional kwargs to pass for URL resolution (optional)
-    :param url_params: A dict of query parameters to append to the URL (e.g. ?foo=bar) (optional)
-    :param reverse_lookup: The reverse lookup parameter to use to derive the count. If not specified, the first key
-        in `url_params` will be implicitly used as the `reverse_lookup` value.
+    Args:
+        viewname (str): The list view name to use for URL resolution, for example `"dcim:location_list"`
+        url_params (dict, optional): Query parameters to apply to filter the list URL (e.g. `{"vlans": "pk"}` will add
+            `?vlans=<record.pk>` to the linked list URL)
+        view_kwargs (dict, optional): Additional kwargs to pass to `reverse()` for list URL resolution. Rarely used.
+        lookup (str, optional): The field name on the base record that can be used to query the related objects.
+            If not specified, `nautobot.core.utils.lookup.get_related_field_for_models()` will be called at render time
+            to attempt to intelligently find the appropriate field.
+            TODO: this currently does *not* support nested lookups via `__`. That may be solvable in the future.
+        reverse_lookup (str, optional): The reverse lookup parameter to use to derive the count.
+            If not specified, the first key in `url_params` will be implicitly used as the `reverse_lookup` value.
+        **kwargs (dict, optional): As the parent Column class.
+
+    Examples:
+        ```py
+        class VLANTable(..., BaseTable):
+            ...
+            location_count = LinkedCountColumn(
+                # Link for N related locations will be reverse("dcim:location_list") + "?vlans=<record.pk>"
+                viewname="dcim:location_list",
+                url_params={"vlans": "pk"},
+                verbose_name="Locations",
+            )
+        ```
+
+        ```py
+        class CloudNetworkTable(BaseTable):
+            ...
+            circuit_count = LinkedCountColumn(
+                # Link for N related circuits will be reverse("circuits:circuit_list") + "?cloud_network=<record.name>"
+                viewname="circuits:circuit_list",
+                url_params={"cloud_network": "name"},
+                # We'd like to do the below but this module isn't currently smart enough to build the right Prefetch()
+                # for a nested lookup:
+                # lookup="circuit_terminations__circuit",
+                # For the count, .annotate(circuit_count=count_related(Circuit, "circuit_terminations__cloud_network"))
+                reverse_lookup="circuit_terminations__cloud_network",
+                verbose_name="Circuits",
+            )
+        ```
     """
 
-    def __init__(self, viewname, *args, view_kwargs=None, url_params=None, reverse_lookup=None, default=0, **kwargs):
+    def __init__(
+        self, viewname, *args, view_kwargs=None, url_params=None, lookup=None, reverse_lookup=None, default=0, **kwargs
+    ):
         self.viewname = viewname
+        self.lookup = lookup
         self.view_kwargs = view_kwargs or {}
         self.url_params = url_params
-        self.reverse_lookup = reverse_lookup
+        self.reverse_lookup = reverse_lookup or next(iter(url_params.keys()))
+        self.model = get_model_for_view_name(self.viewname)
         super().__init__(*args, default=default, **kwargs)
 
-    def render(self, record, value):  # pylint: disable=arguments-differ
-        if value:
-            url = reverse(self.viewname, kwargs=self.view_kwargs)
-            if self.url_params:
-                url += "?" + "&".join([f"{k}={getattr(record, v)}" for k, v in self.url_params.items()])
-            return format_html('<a href="{}">{}</a>', url, value)
-        return value
+    def render(self, bound_column, record, value):  # pylint: disable=arguments-differ
+        related_record = None
+        try:
+            lookup = self.lookup or get_related_field_for_models(bound_column._table._meta.model, self.model).name
+        except AttributeError:
+            lookup = None
+        if lookup:
+            if related_records := getattr(record, f"{lookup}_list", None):
+                related_record = related_records[0]
+        url = reverse(self.viewname, kwargs=self.view_kwargs)
+        if self.url_params:
+            url += "?" + urlencode({k: getattr(record, v) for k, v in self.url_params.items()})
+        if value > 1:
+            return format_html('<a href="{}" class="badge">{}</a>', url, value)
+        if related_record is not None:
+            return helpers.hyperlinked_object(related_record)
+        if value == 1:
+            return format_html('<a href="{}" class="badge">{}</a>', url, value)
+        return helpers.placeholder(value)
 
 
 class TagColumn(django_tables2.TemplateColumn):

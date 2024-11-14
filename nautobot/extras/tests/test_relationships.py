@@ -1398,6 +1398,7 @@ class RequiredRelationshipTestMixin:
 
         ControllerManagedDeviceGroup.objects.all().delete()
         Controller.objects.all().delete()
+        Device.objects.all().delete()
 
         # Create required relationships:
         device_ct = ContentType.objects.get_for_model(Device)

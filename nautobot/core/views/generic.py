@@ -47,7 +47,7 @@ from nautobot.core.utils.requests import (
     get_filterable_params_from_filter_params,
     normalize_querydict,
 )
-from nautobot.core.views.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.core.views.mixins import EditAndDeleteAllModelMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
     check_filter_for_display,
@@ -982,7 +982,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  #
         )
 
 
-class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
+class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDeleteAllModelMixin, View):
     """
     Edit objects in bulk.
 
@@ -1016,18 +1016,18 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def post(self, request, **kwargs):
         logger = logging.getLogger(__name__ + ".BulkEditView")
         model = self.queryset.model
+        edit_all = request.POST.get("_all")
 
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
-        if request.POST.get("_all"):
-            if self.filterset is not None:
-                pk_list = list(self.filterset(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True))
-            else:
-                pk_list = list(model.objects.all().values_list("pk", flat=True))
+        if edit_all:
+            pk_list = []
+            queryset = self._get_bulk_edit_delete_all_queryset(request)
         else:
             pk_list = request.POST.getlist("pk")
+            queryset = self.queryset.filter(pk__in=pk_list)
 
         if "_apply" in request.POST:
-            form = self.form(model, request.POST)
+            form = self.form(model, request.POST, edit_all=edit_all)
             restrict_form_fields(form, request.user)
 
             if form.is_valid():
@@ -1044,7 +1044,8 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 try:
                     with deferred_change_logging_for_bulk_operation():
                         updated_objects = []
-                        for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
+                        queryset = queryset if edit_all else queryset.filter(pk__in=form.cleaned_data["pk"])
+                        for obj in queryset:
                             obj = self.alter_obj(obj, request, [], kwargs)
 
                             # Update standard fields. If a field is listed in _nullify, delete its value.
@@ -1133,23 +1134,26 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             elif "device_type" in request.GET:
                 initial_data["device_type"] = request.GET.get("device_type")
 
-            form = self.form(model, initial=initial_data)
+            form = self.form(model, initial=initial_data, edit_all=edit_all)
             restrict_form_fields(form, request.user)
 
         # Retrieve objects being edited
-        table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
-        if not table.rows:
-            messages.warning(request, f"No {model._meta.verbose_name_plural} were selected.")
-            return redirect(self.get_return_url(request))
-        # Hide actions column if present
-        if "actions" in table.columns:
-            table.columns.hide("actions")
+        table = None
+        if not edit_all:
+            table = self.table(queryset, orderable=False)
+            if not table.rows:
+                messages.warning(request, f"No {model._meta.verbose_name_plural} were selected.")
+                return redirect(self.get_return_url(request))
+            # Hide actions column if present
+            if "actions" in table.columns:
+                table.columns.hide("actions")
 
         context = {
             "form": form,
             "table": table,
             "obj_type_plural": model._meta.verbose_name_plural,
             "return_url": self.get_return_url(request),
+            "objs_count": queryset.count(),
         }
         context.update(self.extra_context())
         return render(request, self.template_name, context)
@@ -1258,7 +1262,7 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         return ""
 
 
-class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
+class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDeleteAllModelMixin, View):
     """
     Delete objects in bulk.
 
@@ -1281,18 +1285,37 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def get(self, request):
         return redirect(self.get_return_url(request))
 
-    def post(self, request, **kwargs):
+    def _perform_delete_operation(self, request, queryset, model):
         logger = logging.getLogger(__name__ + ".BulkDeleteView")
+        self.perform_pre_delete(request, queryset)
+        try:
+            _, deleted_info = bulk_delete_with_bulk_change_logging(queryset)
+            deleted_count = deleted_info[model._meta.label]
+        except ProtectedError as e:
+            logger.info("Caught ProtectedError while attempting to delete objects")
+            handle_protectederror(queryset, request, e)
+            return redirect(self.get_return_url(request))
+        msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
+        logger.info(msg)
+        messages.success(request, msg)
+        return redirect(self.get_return_url(request))
+
+    def post(self, request, **kwargs):
+        logger = logging.getLogger(f"{__name__}.BulkDeleteView")
         model = self.queryset.model
 
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
-            if self.filterset is not None:
-                pk_list = list(self.filterset(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True))
-            else:
-                pk_list = list(model.objects.all().values_list("pk", flat=True))
-        else:
-            pk_list = request.POST.getlist("pk")
+            queryset = self._get_bulk_edit_delete_all_queryset(request)
+
+            if "_confirm" in request.POST:
+                return self._perform_delete_operation(request, queryset, model)
+
+            context = self._bulk_delete_all_context(request, queryset)
+            context.update(self.extra_context())
+            return render(request, self.template_name, context)
+
+        pk_list = request.POST.getlist("pk")
 
         form_cls = self.get_form()
 
@@ -1303,20 +1326,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                 # Delete objects
                 queryset = self.queryset.filter(pk__in=pk_list)
-
-                self.perform_pre_delete(request, queryset)
-                try:
-                    _, deleted_info = bulk_delete_with_bulk_change_logging(queryset)
-                    deleted_count = deleted_info[model._meta.label]
-                except ProtectedError as e:
-                    logger.info("Caught ProtectedError while attempting to delete objects")
-                    handle_protectederror(queryset, request, e)
-                    return redirect(self.get_return_url(request))
-                msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
-                logger.info(msg)
-                messages.success(request, msg)
-                return redirect(self.get_return_url(request))
-
+                return self._perform_delete_operation(request, queryset, model)
             else:
                 logger.debug("Form validation failed")
 
@@ -1345,6 +1355,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             "obj_type_plural": model._meta.verbose_name_plural,
             "table": table,
             "return_url": self.get_return_url(request),
+            "total_objs_to_delete": len(table.rows),
         }
         context.update(self.extra_context())
         return render(request, self.template_name, context)

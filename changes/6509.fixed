@@ -1,0 +1,2 @@
+Disallowed association of `ObjectMetadata` as metadata to other `ObjectMetadata` records.
+Removed unused object-detail view for `ObjectMetadata` records.
