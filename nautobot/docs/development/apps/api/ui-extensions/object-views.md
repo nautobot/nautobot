@@ -13,10 +13,10 @@ Apps can inject custom content into certain areas of the detail and list views o
 * `list_buttons()` - Add buttons to the object list page. This works in the same way as `buttons()` for the object detail page.
 * `detail_tabs()` - Add extra tabs to the end of the list of tabs within the object detail page tabs navigation (deprecated since Nautobot 2.4.0; `object_detail_tabs` is preferred)
 
-+++ 2.1.8
++++ 2.1.8 "`list_buttons()` support"
     Support for the `list_buttons()` method was added.
 
-+/- 2.4.0
++/- 2.4.0 "`object_detail_tabs` and `object_detail_panels` support, deprecation of some patterns"
     Support for the `object_detail_tabs` and `object_detail_panels` attributes was added. The `left_page()`, `right_page()`, `full_width_page()`, and `detail_tabs()` methods were deprecated.
 
 Declared subclasses should be gathered into a list or tuple for integration with Nautobot. By default, Nautobot looks for an iterable named `template_extensions` within a `template_content.py` file. (This can be overridden by setting `template_extensions` to a custom value on the app's `NautobotAppConfig`.)
@@ -40,7 +40,7 @@ For example, accessing `{{ request.user }}` within a template will return the cu
 
 +++ 2.4.0
 
-The `TemplateExtension.object_detail_panels` should be a list or tuple of Panel objects (as provided by the `nautobot.apps.ui` module). A variety of base classes are available; refer to the relevant section of documentation for details.
+The `TemplateExtension.object_detail_panels` should be a list or tuple of Panel objects (as provided by the `nautobot.apps.ui` module). A variety of base classes are available; refer to the [relevant section of documentation](../../../../code-reference/nautobot/apps/ui.md) for full details. You may also find the [UI Component Framework documentation](../../../core/ui-component-framework.md) a useful reference as most of the concepts described therein apply to template extensions as well.
 
 For example:
 
