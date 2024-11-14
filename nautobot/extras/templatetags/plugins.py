@@ -63,6 +63,10 @@ def _get_registered_content(obj, method, template_context, return_html=True):
 def _get_registered_ui_content(obj, attr) -> list:
     """Given an object and TemplateExtension attribute name, return all relevant extensions' content.
 
+    Example:
+        >>> _get_registered_ui_content(device, "object_detail_tabs")
+        [<nautobot.core.ui.object_detail.DistinctViewTab object at 0x7f0369419ac0>]
+
     Returns:
         objects (list): List of Tabs, Panels, etc. depending on the given attribute, sorted by weight.
     """

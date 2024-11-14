@@ -355,7 +355,7 @@ class TemplateExtension:
         (Deprecated) Provide content that will be rendered within the full width of the detail page view.
 
         In Nautobot v2.4.0 and later, Apps can (should) instead register `Panel` instances in `object_detail_panels`,
-        instead of registering a `TemplateExtension` with a `.right_page()` method.
+        instead of registering a `TemplateExtension` with a `.full_width_page()` method.
 
         Content should be returned as an HTML string.
         Note that content does not need to be marked as safe because this is automatically handled.
