@@ -765,7 +765,8 @@ class KeyValueTablePanel(Panel):
     def __init__(
         self,
         *,
-        data,
+        data=None,
+        context_data_key=None,
         hide_if_unset=(),
         value_transforms=None,
         body_wrapper_template_path="components/panel/body_wrapper_key_value_table.html",
@@ -776,7 +777,8 @@ class KeyValueTablePanel(Panel):
 
         Args:
             data (dict): The dictionary of key/value data to display in this panel.
-                May be `None` if it will be derived dynamically by `get_data()` instead.
+                May be `None` if it will be derived dynamically by `get_data()` or from `context_data_key` instead.
+            context_data_key (str): The render context key that will contain the data, if `data` wasn't provided.
             hide_if_unset (list): Keys that should be omitted from the display entirely if they have a falsey value,
                 instead of displaying the usual em-dash placeholder text.
             value_transforms (dict): Dictionary of `{key: [list of transform functions]}`, used to specify custom
@@ -786,7 +788,10 @@ class KeyValueTablePanel(Panel):
                 - `[render_markdown, placeholder]` - render the given text as Markdown, or render a placeholder if blank
                 - `[humanize_speed, placeholder]` - convert the given kbps value to Mbps or Gbps for display
         """
+        if data and context_data_key:
+            raise ValueError("The data and context_data_key parameters are mutually exclusive")
         self.data = data
+        self.context_data_key = context_data_key or "data"
         self.hide_if_unset = hide_if_unset
         self.value_transforms = value_transforms or {}
         super().__init__(body_wrapper_template_path=body_wrapper_template_path, **kwargs)
@@ -803,7 +808,7 @@ class KeyValueTablePanel(Panel):
         Returns:
             (dict): Key/value dictionary to be rendered in this panel.
         """
-        return self.data or context["data"]
+        return self.data or context[self.context_data_key]
 
     def render_key(self, key, value, context: Context):
         """
@@ -957,17 +962,6 @@ class KeyValueTablePanel(Panel):
                 result += format_html("<tr><td>{key}</td><td>{value}</td></tr>", key=key_display, value=value_tag)
 
         return result
-
-
-class ObjectAttributeKeyValueTablePanel(KeyValueTablePanel):
-    """A panel that renders a table of key-value data from a single attribute of an object."""
-
-    def __init__(self, *, attribute, data=None, **kwargs):
-        self.attribute = attribute
-        super().__init__(data=data, **kwargs)
-
-    def get_data(self, context: Context):
-        return getattr(get_obj_from_context(context), self.attribute)
 
 
 class ObjectFieldsPanel(KeyValueTablePanel):

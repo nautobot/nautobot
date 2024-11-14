@@ -2619,8 +2619,8 @@ class SecretUIViewSet(
             object_detail.ObjectFieldsPanel(
                 weight=100, section=SectionChoices.LEFT_HALF, fields="__all__", exclude_fields=["parameters"]
             ),
-            object_detail.ObjectAttributeKeyValueTablePanel(
-                weight=200, section=SectionChoices.LEFT_HALF, label="Parameters", attribute="parameters"
+            object_detail.KeyValueTablePanel(
+                weight=200, section=SectionChoices.LEFT_HALF, label="Parameters", context_data_key="parameters"
             ),
             object_detail.ObjectsTablePanel(
                 weight=100,
@@ -2641,6 +2641,12 @@ class SecretUIViewSet(
             ),
         ],
     )
+
+    def get_extra_context(self, request, instance):
+        ctx = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            ctx["parameters"] = instance.parameters
+        return ctx
 
 
 class SecretProviderParametersFormView(generic.GenericView):
