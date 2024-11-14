@@ -18,6 +18,7 @@ from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
 from django_tables2 import RequestConfig
 
+from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags.helpers import (
     badge,
@@ -70,7 +71,7 @@ class ObjectDetailContent:
     A legacy `ObjectView` can similarly define its own `object_detail_content` attribute as well.
     """
 
-    def __init__(self, *, panels=(), layout=LayoutChoices.DEFAULT, extra_tabs=None):
+    def __init__(self, *, panels=(), layout=LayoutChoices.DEFAULT, extra_buttons=None, extra_tabs=None):
         """
         Create an ObjectDetailContent with a "main" tab and all standard "extras" tabs (advanced, contacts, etc.).
 
@@ -78,6 +79,8 @@ class ObjectDetailContent:
             panels (list): List of `Panel` instances to include in this layout by default. Standard `extras` Panels
                 (custom fields, relationships, etc.) do not need to be specified as they will be automatically included.
             layout (str): One of the `LayoutChoices` values, indicating the layout of the "main" tab for this view.
+            extra_buttons (list): Optional list of `Button` instances. Standard detail-view "actions" dropdown
+                (clone, edit, delete) does not need to be specified as it will be automatically included.
             extra_tabs (list): Optional list of `Tab` instances. Standard `extras` Tabs (advanced, contacts,
                 dynamic-groups, metadata, etc.) do not need to be specified as they will be automatically included.
         """
@@ -94,7 +97,17 @@ class ObjectDetailContent:
         ]
         if extra_tabs is not None:
             tabs.extend(extra_tabs)
+        self.extra_buttons = extra_buttons or []
         self.tabs = tabs
+
+    @property
+    def extra_buttons(self):
+        """The extra buttons defined for this detail view, ordered by their `weight`."""
+        return sorted(self._extra_buttons, key=lambda button: button.weight)
+
+    @extra_buttons.setter
+    def extra_buttons(self, value):
+        self._extra_buttons = value
 
     @property
     def tabs(self):
@@ -151,6 +164,65 @@ class Component:
             (dict): Additional context data.
         """
         return {}
+
+
+class Button(Component):
+    """Base class for UI framework definition of a single button within an Object Detail (Object Retrieve) page."""
+
+    def __init__(
+        self,
+        *,
+        label,
+        color=ButtonColorChoices.DEFAULT,
+        link_name=None,
+        icon=None,
+        template_path="components/button/default.html",
+        javascript_template_path=None,
+        attributes=None,
+        **kwargs,
+    ):
+        """
+        Initialize a Button component.
+
+        Args:
+            label (str): The text of this button, not including any icon.
+            color (ButtonColorChoices): The color (class) of this button.
+            link_name (str, optional): View name to link to, for example "dcim:locationtype_retrieve".
+                This link will be reversed and will automatically include the current object's PK as a parameter to the
+                `reverse()` call when the button is rendered.
+            icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
+            template_path (str): Template to render for this button.
+            javascript_template_path (str, optional): JavaScript template to render and include with this button.
+                Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
+            attributes (dict, optional) Additional HTML attributes and their values to attach to the button.
+        """
+        self.label = label
+        self.color = color
+        self.link_name = link_name
+        self.icon = icon
+        self.template_path = template_path
+        self.javascript_template_path = javascript_template_path
+        self.attributes = attributes
+        super().__init__(**kwargs)
+
+    def render(self, context: Context):
+        if not self.should_render(context):
+            return ""
+
+        button = render_component_template(
+            self.template_path,
+            context,
+            link=reverse(self.link_name, kwargs={"pk": get_obj_from_context(context).pk}) if self.link_name else None,
+            label=self.label,
+            color=self.color,
+            icon=self.icon,
+            attributes=self.attributes
+        )
+        if self.javascript_template_path:
+            button += format_html(
+                "<script>{}</script>", render_component_template(self.javascript_template_path, context)
+            )
+        return button
 
 
 class Tab(Component):
@@ -638,6 +710,7 @@ class ObjectsTablePanel(Panel):
                 )
             if self.order_by_fields:
                 body_content_table_queryset = body_content_table_queryset.order_by(*self.order_by_fields)
+            body_content_table_queryset = body_content_table_queryset.distinct()
             body_content_table = body_content_table_class(
                 body_content_table_queryset, hide_hierarchy_ui=self.hide_hierarchy_ui
             )
@@ -884,6 +957,17 @@ class KeyValueTablePanel(Panel):
                 result += format_html("<tr><td>{key}</td><td>{value}</td></tr>", key=key_display, value=value_tag)
 
         return result
+
+
+class ObjectAttributeKeyValueTablePanel(KeyValueTablePanel):
+    """A panel that renders a table of key-value data from a single attribute of an object."""
+
+    def __init__(self, *, attribute, data=None, **kwargs):
+        self.attribute = attribute
+        super().__init__(data=data, **kwargs)
+
+    def get_data(self, context: Context):
+        return getattr(get_obj_from_context(context), self.attribute)
 
 
 class ObjectFieldsPanel(KeyValueTablePanel):

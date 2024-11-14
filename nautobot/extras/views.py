@@ -2602,26 +2602,32 @@ class SecretListView(generic.ObjectListView):
 class SecretView(generic.ObjectView):
     queryset = Secret.objects.all()
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                weight=100, section=SectionChoices.LEFT_HALF, fields="__all__", exclude_fields=["parameters"]
+            ),
+            object_detail.ObjectAttributeKeyValueTablePanel(
+                weight=200, section=SectionChoices.LEFT_HALF, label="Parameters", attribute="parameters"
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_title="Groups containing this secret",
+                table_class=tables.SecretsGroupTable,
+                table_attribute="secrets_groups",
+                footer_content_template_path=None,
+            ),
+        ],
+        extra_buttons=[
+            object_detail.Button(weight=100, label="Check Secret", icon="mdi-test-tube", javascript_template_path="extras/secret_check.js", attributes={"onClick": "checkSecret()"}),
+        ],
+    )
+
     def get_extra_context(self, request, instance):
-        # Determine user's preferred output format
-        if request.GET.get("format") in ["json", "yaml"]:
-            format_ = request.GET.get("format")
-            if request.user.is_authenticated:
-                request.user.set_config("extras.configcontext.format", format_, commit=True)
-        elif request.user.is_authenticated:
-            format_ = request.user.get_config("extras.configcontext.format", "json")
-        else:
-            format_ = "json"
-
         provider = registry["secrets_providers"].get(instance.provider)
-
-        groups = instance.secrets_groups.distinct()
-        groups_table = tables.SecretsGroupTable(groups, orderable=False)
-
         return {
-            "format": format_,
             "provider_name": provider.name if provider else instance.provider,
-            "groups_table": groups_table,
             **super().get_extra_context(request, instance),
         }
 
