@@ -1,0 +1,2 @@
+Fixed `vrf` field options not loading in VMInterfaceBulkEditForm, VMInterfaceForm, and VMInterfaceCreateForm.
+Added missing `VRF` entry in VMInterface detail view.

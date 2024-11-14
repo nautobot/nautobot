@@ -9,7 +9,7 @@ import netaddr
 
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim import choices as dcim_choices
-from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType
+from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Module, ModuleBay, ModuleType
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
@@ -170,6 +170,118 @@ class IPAddressToInterfaceTest(TestCase):
         with self.assertRaises(ValidationError) as cm:
             IPAddressToInterface.objects.create(vm_interface=None, interface=None, ip_address=ip_addr)
         self.assertIn("Must associate to either an Interface or a VMInterface.", str(cm.exception))
+
+    def test_primary_ip_retained_when_deleted_from_device_or_module_interface(self):
+        """Test primary_ip4 remains set when the same IP is assigned to multiple interfaces and deleted from one."""
+
+        # Create a module bay on the existing device
+        device_module_bay = ModuleBay.objects.create(parent_device=self.test_device, name="Test Bay")
+
+        # Create a module with an interface and add it to the module bay on the device
+        module = Module.objects.create(
+            module_type=ModuleType.objects.first(),
+            status=Status.objects.get_for_model(Module).first(),
+            parent_module_bay=device_module_bay,
+        )
+
+        # Set status for the module interface
+        int_status = Status.objects.get_for_model(Interface).first()
+
+        # Create an interface on the module
+        interface_module = Interface.objects.create(
+            name="eth0_module",
+            module=module,
+            type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
+            status=int_status,
+        )
+
+        # Link the module to the device
+        self.test_device.installed_device = interface_module
+        self.test_device.save()
+
+        # Create IP and assign it to multiple interfaces
+        ip_address = IPAddress.objects.create(address="192.0.2.1/24", namespace=self.namespace, status=self.status)
+        assignment_device_int1 = IPAddressToInterface.objects.create(interface=self.test_int1, ip_address=ip_address)
+        assignment_module_int1 = IPAddressToInterface.objects.create(interface=interface_module, ip_address=ip_address)
+
+        # Set the primary IP on the device
+        self.test_device.primary_ip4 = assignment_device_int1.ip_address
+        self.test_device.save()
+
+        # Verify that the primary IP is set
+        self.assertEqual(self.test_device.primary_ip4, ip_address)
+
+        # Delete the IP assignment from one interface
+        assignment_device_int1.delete()
+
+        # Refresh and check that the primary IP is still assigned
+        self.test_device.refresh_from_db()
+        self.assertEqual(self.test_device.primary_ip4, ip_address)
+
+        # Verify remaining IP assignments on the IP object
+        remaining_assignments = ip_address.interface_assignments.all()
+        self.assertEqual(remaining_assignments.count(), 1)
+        self.assertIn(assignment_module_int1, remaining_assignments)
+
+    def test_primary_ip_retained_when_deleted_from_device_interface_with_nested_module(self):
+        """Test primary_ip4 remains set when the same IP is assigned to a device and nested module interfaces, and deleted from the device interface."""
+
+        # Create a module bay on the existing device
+        device_module_bay = ModuleBay.objects.create(parent_device=self.test_device, name="Primary Module Bay")
+
+        # Create a primary module with an interface and add it to the module bay on the device
+        primary_module = Module.objects.create(
+            module_type=ModuleType.objects.first(),
+            status=Status.objects.get_for_model(Module).first(),
+            parent_module_bay=device_module_bay,
+        )
+
+        # Create a secondary module bay within the primary module for nested module creation
+        nested_module_bay = ModuleBay.objects.create(parent_module=primary_module, name="Nested Module Bay")
+
+        # Create a nested module within the primary module's module bay
+        nested_module = Module.objects.create(
+            module_type=ModuleType.objects.first(),
+            status=Status.objects.get_for_model(Module).first(),
+            parent_module_bay=nested_module_bay,
+        )
+
+        # Set status for the nested module interface
+        int_status = Status.objects.get_for_model(Interface).first()
+
+        # Create an interface on the nested module and assign an IP
+        nested_interface = Interface.objects.create(
+            name="eth0_nested",
+            module=nested_module,
+            type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
+            status=int_status,
+        )
+
+        # Create IP and assign it to both the device and the nested module interface
+        ip_address = IPAddress.objects.create(address="192.0.2.1/24", namespace=self.namespace, status=self.status)
+        assignment_device_int1 = IPAddressToInterface.objects.create(interface=self.test_int1, ip_address=ip_address)
+        assignment_nested_module = IPAddressToInterface.objects.create(
+            interface=nested_interface, ip_address=ip_address
+        )
+
+        # Set the primary IP on the device to the IP on the device interface
+        self.test_device.primary_ip4 = assignment_nested_module.ip_address
+        self.test_device.save()
+
+        # Verify that the primary IP is correctly set
+        self.assertEqual(self.test_device.primary_ip4, ip_address)
+
+        # Delete the IP assignment from the device interface
+        assignment_device_int1.delete()
+
+        # Refresh and check that the primary IP is still assigned to the device
+        self.test_device.refresh_from_db()
+        self.assertEqual(self.test_device.primary_ip4, ip_address)
+
+        # Confirm that the IP is still associated with the nested module interface
+        remaining_assignments = ip_address.interface_assignments.all()
+        self.assertEqual(remaining_assignments.count(), 1)
+        self.assertIn(assignment_nested_module, remaining_assignments)
 
 
 class TestVarbinaryIPField(TestCase):

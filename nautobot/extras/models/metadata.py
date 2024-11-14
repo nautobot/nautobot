@@ -201,6 +201,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
     objects = ObjectMetadataManager()
     natural_key_field_names = ["pk"]
     documentation_static_path = "docs/user-guide/platform-functionality/objectmetadata.html"
+    is_metadata_associable_model = False
 
     class Meta:
         ordering = ["metadata_type"]

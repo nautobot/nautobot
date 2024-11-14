@@ -1016,6 +1016,7 @@ class MetadataTypeTable(BaseTable):
 
 class ObjectMetadataTable(BaseTable):
     pk = ToggleColumn()
+    # NOTE: there is no identity column in this table; this is intentional as we have no detail view for ObjectMetadata
     metadata_type = tables.Column(linkify=True)
     assigned_object = tables.TemplateColumn(
         template_code=ASSIGNED_OBJECT, verbose_name="Assigned object", orderable=False

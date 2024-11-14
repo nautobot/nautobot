@@ -2341,8 +2341,6 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
 
 
 class ObjectMetadataUIViewSet(
-    ObjectChangeLogViewMixin,
-    ObjectDetailViewMixin,
     ObjectListViewMixin,
 ):
     filterset_class = filters.ObjectMetadataFilterSet
@@ -2965,6 +2963,7 @@ class StatusBulkDeleteView(generic.BulkDeleteView):
 
     queryset = Status.objects.all()
     table = tables.StatusTable
+    filterset = filters.StatusFilterSet
 
 
 class StatusDeleteView(generic.ObjectDeleteView):
