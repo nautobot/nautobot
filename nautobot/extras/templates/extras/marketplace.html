@@ -38,6 +38,10 @@
 {% endblock %}
 
 {% block content %}
+    <div class="pull-right noprint">
+        <a class="btn btn-default" href="{% url 'apps:apps_list' %}">See Installed Apps</a>
+    </div>
+
     <h1>{% block title %}Apps Marketplace{% endblock %}</h1>
 
     <div class="row">
