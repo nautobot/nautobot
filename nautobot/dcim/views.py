@@ -65,6 +65,7 @@ from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkF
 from nautobot.wireless.models import (
     ControllerManagedDeviceGroupRadioProfileAssignment,
     ControllerManagedDeviceGroupWirelessNetworkAssignment,
+    WirelessNetwork,
 )
 from nautobot.wireless.tables import (
     ControllerManagedDeviceGroupRadioProfileAssignmentTable,
@@ -4281,6 +4282,16 @@ class ControllerUIViewSet(NautobotUIViewSet):
                 "active_tab": "wireless-networks",
             }
         )
+
+    def get_action(self):
+        return "view" if self.action == "wirelessnetworks" else super().get_action()
+
+    def get_required_permission(self):
+        # TODO: standardize a pattern for permissions enforcement on custom actions
+        if self.action == "wirelessnetworks":
+            return [*self.get_permissions_for_model(WirelessNetwork, ["view"]), "dcim.view_controller"]
+
+        return super().get_required_permission()
 
 
 class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
