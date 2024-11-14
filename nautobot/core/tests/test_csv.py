@@ -269,11 +269,13 @@ class CSVParsingRelatedTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         # uploading the CSV always returns a 200 code with a page with an error message on it
         # ensure we don't have that error message
-        self.assertNotIn("FORM-ERROR", response.content.decode(response.charset))
-        self.assertEqual(Device.objects.count(), 4)
+        # nautobot/nautobot#1543 - assert entry did not get updated
+        self.assertIn("FORM-ERROR", response.content.decode(response.charset))
+        # since the same IDs are used the existing records were updated instead of created new
+        self.assertEqual(Device.objects.count(), 2)
 
-        # Assert TestDevice3 got created with the right fields
-        device3 = Device.objects.get(
+        # nautobot/nautobot#1543 - assert entry did not get updated
+        device3 = Device.objects.filter(
             name="TestDevice3",
             location=self.device.location,
             device_type=self.device.device_type,
@@ -281,10 +283,10 @@ class CSVParsingRelatedTestCase(TestCase):
             status=self.device.status,
             tenant=None,
         )
-        self.assertEqual(device3.tags.count(), self.device.tags.count())
+        self.assertFalse(device3.exists())
 
-        # Assert device without name got created with the right fields
-        device4 = Device.objects.get(
+        # nautobot/nautobot#1543 - assert entry did not get updated
+        device4 = Device.objects.filter(
             name=None,
             location=self.device2.location,
             device_type=self.device2.device_type,
@@ -292,4 +294,4 @@ class CSVParsingRelatedTestCase(TestCase):
             status=self.device2.status,
             tenant=self.device2.tenant,
         )
-        self.assertEqual(device4.tags.count(), 0)
+        self.assertFalse(device4.exists())
