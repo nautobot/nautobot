@@ -5,7 +5,7 @@
     <form action="" method="post" enctype="multipart/form-data" class="form form-horizontal">
         {% csrf_token %}
         <div class="row">
-            <div class="col-md-6 col-md-offset-3">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
                 <h3>{% block title %}Add New Member to Virtual Chassis {{ virtual_chassis }}{% endblock %}</h3>
                 {% if membership_form.non_field_errors %}
                     <div class="panel panel-danger">
@@ -25,7 +25,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-6 col-md-offset-3 text-right">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 text-right">
                 <button type="submit" name="_save" class="btn btn-primary">Save</button>
                 <button type="submit" name="_addanother" class="btn btn-primary">Add Another</button>
                 <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
