@@ -204,6 +204,18 @@ Render a muted placeholder (`<span class="text-muted">&mdash;</span>`) if value 
 {{ html | placeholder }}
 ```
 
+### pre_tag
+
+Render a value within `<pre></pre>` tags to enable formatting.
+
+```django title="template.html"
+{{ some_html | pre_tag }}
+```
+
+```django title="script.py"
+pre_tag(some_html)
+```
+
 ### render_boolean
 
 Render HTML from a computed boolean value.
