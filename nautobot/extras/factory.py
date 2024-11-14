@@ -161,10 +161,12 @@ class JobQueueFactory(PrimaryModelFactory):
 
     @factory.post_generation
     def jobs(self, create, extracted, **kwargs):
-        for job in get_random_instances(Job):
-            self.jobs.add(job)
-            job.job_queues_override = True
-            job.validated_save()
+        jobs = get_random_instances(Job)
+        self.jobs.set(jobs)
+        for job in jobs:
+            if not job.job_queues_override:
+                job.job_queues_override = True
+                job.validated_save()
 
 
 class JobResultFactory(BaseModelFactory):
