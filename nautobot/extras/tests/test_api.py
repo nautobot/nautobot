@@ -4189,7 +4189,7 @@ class TagTest(APIViewTestCases.APIViewTestCase):
         data = {**self.create_data[0], "content_types": [Manufacturer._meta.label_lower]}
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
 
-        tag = Tag.objects.filter(name=data["name"])  # pylint: disable=redefined-outer-name
+        tag = Tag.objects.filter(name=data["name"])
         self.assertHttpStatus(response, 400)
         self.assertFalse(tag.exists())
         self.assertIn(f"Invalid content type: {Manufacturer._meta.label_lower}", response.data["content_types"])
@@ -4228,7 +4228,7 @@ class TagTest(APIViewTestCases.APIViewTestCase):
         """Test updating a tag without changing its content-types."""
         self.add_permissions("extras.change_tag")
 
-        tag = Tag.objects.exclude(content_types=ContentType.objects.get_for_model(Location)).first()  # pylint: disable=redefined-outer-name
+        tag = Tag.objects.exclude(content_types=ContentType.objects.get_for_model(Location)).first()
         tag_content_types = list(tag.content_types.all())
         url = self._get_detail_url(tag)
         data = {"color": ColorChoices.COLOR_LIME}

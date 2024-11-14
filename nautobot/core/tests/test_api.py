@@ -9,7 +9,7 @@ from constance.test import override_config
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.test import override_settings, RequestFactory, tag, TestCase
+from django.test import override_settings, RequestFactory, TestCase
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.exceptions import ParseError
@@ -23,6 +23,7 @@ from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model, get_view_name
 from nautobot.core.api.versioning import NautobotAPIVersioning
 from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
+from nautobot.core.templatetags.helpers import humanize_speed
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.api import serializers as dcim_serializers
@@ -30,7 +31,6 @@ from nautobot.extras import choices, models as extras_models
 from nautobot.ipam import models as ipam_models
 from nautobot.ipam.api import serializers as ipam_serializers, views as ipam_api_views
 from nautobot.tenancy import models as tenancy_models
-from nautobot.users.models import Token
 
 User = get_user_model()
 
@@ -841,28 +841,44 @@ class NautobotGetViewNameTest(TestCase):
             self.assertEqual(view_name, get_view_name(viewset(**view_kwarg)))
 
 
-@tag("api")
-class RenderJinjaViewTest(testing.TestCase):
+class RenderJinjaViewTest(testing.APITestCase):
     """Test case for the RenderJinjaView API view."""
-
-    def setUp(self):
-        """
-        Create a token for API calls.
-        """
-        super().setUp()
-        self.client.logout()
-        self.token = Token.objects.create(user=self.user)
-        self.header = {"HTTP_AUTHORIZATION": f"Token {self.token.key}"}
 
     def test_render_jinja_template(self):
         """
         Test rendering a valid Jinja template.
         """
+        interfaces = ["Ethernet1/1", "Ethernet1/2", "Ethernet1/3"]
+
+        template_code = "\n".join(
+            [
+                r"{% for int in interfaces -%}",
+                r"interface {{ int }}",
+                r"  speed {{ 1000000000|humanize_speed }}",
+                r"  duplex full",
+                r"{% endfor %}",
+            ]
+        )
+
+        expected_response = "\n".join(
+            [
+                "\n".join(
+                    [
+                        f"interface {int}",
+                        f"  speed {humanize_speed(1000000000)}",
+                        r"  duplex full",
+                    ]
+                )
+                for int in interfaces
+            ]
+            + [""]  # Add an extra newline at the end because jinja whitespace control is "fun"
+        )
+
         response = self.client.post(
             reverse("core-api:render_jinja_template"),
             {
-                "template_code": r"{{ foo }}",
-                "context": {"foo": "bar"},
+                "template_code": template_code,
+                "context": {"interfaces": interfaces},
             },
             format="json",
             **self.header,
@@ -872,8 +888,8 @@ class RenderJinjaViewTest(testing.TestCase):
             list(response.data.keys()),
             ["rendered_template", "rendered_template_lines", "template_code", "context"],
         )
-        self.assertEqual(response.data["rendered_template"], "bar")
-        self.assertEqual(response.data["rendered_template_lines"], ["bar"])
+        self.assertEqual(response.data["rendered_template"], expected_response)
+        self.assertEqual(response.data["rendered_template_lines"], expected_response.split("\n"))
 
     def test_render_jinja_template_failures(self):
         """
