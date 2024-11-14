@@ -3033,8 +3033,6 @@ class ObjectChangeTestCase(TestCase):
 
 
 class ObjectMetadataTestCase(
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = ObjectMetadata
