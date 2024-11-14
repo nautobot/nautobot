@@ -113,7 +113,7 @@ class BulkEditForm(forms.Form):
     a more powerful subclass and should be used instead of directly inheriting from this class.
     """
 
-    def __init__(self, model, *args, **kwargs):
+    def __init__(self, model, *args, edit_all=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.model = model
         self.nullable_fields = []
@@ -121,6 +121,10 @@ class BulkEditForm(forms.Form):
         # Copy any nullable fields defined in Meta
         if hasattr(self.Meta, "nullable_fields"):
             self.nullable_fields = self.Meta.nullable_fields
+
+        if edit_all:
+            self.fields["pk"].required = False
+            self.fields["_all"] = forms.BooleanField(widget=forms.HiddenInput(), required=True, initial=True)
 
 
 class BulkRenameForm(forms.Form):
