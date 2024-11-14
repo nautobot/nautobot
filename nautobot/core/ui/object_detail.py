@@ -216,7 +216,7 @@ class Button(Component):
             label=self.label,
             color=self.color,
             icon=self.icon,
-            attributes=self.attributes
+            attributes=self.attributes,
         )
         if self.javascript_template_path:
             button += format_html(

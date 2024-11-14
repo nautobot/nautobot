@@ -2632,7 +2632,13 @@ class SecretUIViewSet(
             ),
         ],
         extra_buttons=[
-            object_detail.Button(weight=100, label="Check Secret", icon="mdi-test-tube", javascript_template_path="extras/secret_check.js", attributes={"onClick": "checkSecret()"}),
+            object_detail.Button(
+                weight=100,
+                label="Check Secret",
+                icon="mdi-test-tube",
+                javascript_template_path="extras/secret_check.js",
+                attributes={"onClick": "checkSecret()"},
+            ),
         ],
     )
 
