@@ -67,8 +67,8 @@ menu_items = (
         weight=150,
         groups=(
             NavMenuGroup(
-                name="Example Group 1",
                 weight=100,
+                name="Example Group 1",
                 items=(
                     NavMenuItem(
                         link="plugins:example_app:examplemodel_list",
