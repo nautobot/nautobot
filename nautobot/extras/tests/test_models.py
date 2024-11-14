@@ -2140,8 +2140,8 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
 
     @mock.patch("nautobot.extras.utils.run_kubernetes_job_and_return_job_result")
     def test_nautobot_database_scheduler_apply_async_method(self, mock_run_kubernetes_job_and_return_job_result):
-
         from nautobot.core.celery.schedulers import NautobotDatabaseScheduler, NautobotScheduleEntry
+
         jq = JobQueue.objects.create(name="kubernetes", queue_type=JobQueueTypeChoices.TYPE_KUBERNETES)
         sj = ScheduledJob.objects.create(
             name="Export Object List Hourly",
