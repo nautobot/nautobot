@@ -1234,6 +1234,7 @@ class ObjectChangeLogViewMixin(NautobotViewSetMixin):
         model = self.get_queryset().model
         data = {
             "base_template": get_base_template(self.base_template, model),
+            "object_detail_content": getattr(lookup.get_view_for_model(model), "object_detail_content", None),
             "active_tab": "changelog",
         }
         return Response(data)
@@ -1251,6 +1252,7 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
         model = self.get_queryset().model
         data = {
             "base_template": get_base_template(self.base_template, model),
+            "object_detail_content": getattr(lookup.get_view_for_model(model), "object_detail_content", None),
             "active_tab": "notes",
         }
         return Response(data)

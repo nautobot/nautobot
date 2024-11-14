@@ -39,12 +39,14 @@ from nautobot.core.utils.lookup import (
     get_route_for_model,
     get_table_class_string_from_view_name,
     get_table_for_model,
+    get_view_for_model,
 )
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
+    ObjectBulkCreateViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
     ObjectChangeLogViewMixin,
@@ -52,6 +54,7 @@ from nautobot.core.views.mixins import (
     ObjectDetailViewMixin,
     ObjectEditViewMixin,
     ObjectListViewMixin,
+    ObjectNotesViewMixin,
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
@@ -2292,6 +2295,7 @@ class ObjectChangeLogView(generic.GenericView):
             "extras/object_changelog.html",
             {
                 "object": obj,
+                "object_detail_content": getattr(get_view_for_model(obj), "object_detail_content", None),
                 "verbose_name": obj._meta.verbose_name,
                 "verbose_name_plural": obj._meta.verbose_name_plural,
                 "table": objectchanges_table,
@@ -2422,6 +2426,7 @@ class ObjectNotesView(generic.GenericView):
             "extras/object_notes.html",
             {
                 "object": obj,
+                "object_detail_content": getattr(get_view_for_model(obj), "object_detail_content", None),
                 "verbose_name": obj._meta.verbose_name,
                 "verbose_name_plural": obj._meta.verbose_name_plural,
                 "table": notes_table,
@@ -2592,15 +2597,22 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
 #
 
 
-class SecretListView(generic.ObjectListView):
+class SecretUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkCreateViewMixin,  # 3.0 TODO: remove, unused
+    ObjectBulkDestroyViewMixin,
+    # no ObjectBulkUpdateViewMixin here yet
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
+):
     queryset = Secret.objects.all()
-    filterset = filters.SecretFilterSet
-    filterset_form = forms.SecretFilterForm
-    table = tables.SecretTable
-
-
-class SecretView(generic.ObjectView):
-    queryset = Secret.objects.all()
+    form_class = forms.SecretForm
+    filterset_class = filters.SecretFilterSet
+    filterset_form_class = forms.SecretFilterForm
+    table_class = tables.SecretTable
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
@@ -2624,13 +2636,6 @@ class SecretView(generic.ObjectView):
         ],
     )
 
-    def get_extra_context(self, request, instance):
-        provider = registry["secrets_providers"].get(instance.provider)
-        return {
-            "provider_name": provider.name if provider else instance.provider,
-            **super().get_extra_context(request, instance),
-        }
-
 
 class SecretProviderParametersFormView(generic.GenericView):
     """
@@ -2646,27 +2651,6 @@ class SecretProviderParametersFormView(generic.GenericView):
             "extras/inc/secret_provider_parameters_form.html",
             {"form": provider.ParametersForm(initial=request.GET)},
         )
-
-
-class SecretEditView(generic.ObjectEditView):
-    queryset = Secret.objects.all()
-    model_form = forms.SecretForm
-    template_name = "extras/secret_edit.html"
-
-
-class SecretDeleteView(generic.ObjectDeleteView):
-    queryset = Secret.objects.all()
-
-
-class SecretBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Secret.objects.all()
-    table = tables.SecretTable
-
-
-class SecretBulkDeleteView(generic.BulkDeleteView):
-    queryset = Secret.objects.all()
-    filterset = filters.SecretFilterSet
-    table = tables.SecretTable
 
 
 class SecretsGroupListView(generic.ObjectListView):

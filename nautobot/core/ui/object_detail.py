@@ -8,7 +8,7 @@ import logging
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
-from django.db.models import JSONField, URLField
+from django.db.models import CharField, JSONField, URLField
 from django.db.models.fields.related import ManyToManyField
 from django.template import Context
 from django.template.defaultfilters import truncatechars
@@ -978,7 +978,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         *,
         fields="__all__",
         exclude_fields=(),
-        context_object_key="object",
+        context_object_key=None,
         ignore_nonexistent_fields=False,
         label=None,
         **kwargs,
@@ -1006,12 +1006,13 @@ class ObjectFieldsPanel(KeyValueTablePanel):
     def render_label(self, context: Context):
         """Default to rendering the provided object's `verbose_name` if no more specific `label` was defined."""
         if self.label is None:
-            return bettertitle(get_obj_from_context(context)._meta.verbose_name)
+            return bettertitle(get_obj_from_context(context, self.context_object_key)._meta.verbose_name)
         return super().render_label(context)
 
     def render_value(self, key, value, context: Context):
+        obj = get_obj_from_context(context, self.context_object_key)
         try:
-            field_instance = get_obj_from_context(context)._meta.get_field(key)
+            field_instance = obj._meta.get_field(key)
         except FieldDoesNotExist:
             field_instance = None
 
@@ -1027,6 +1028,11 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         if isinstance(field_instance, ManyToManyField) and field_instance.related_model == ContentType:
             return render_content_types(value)
 
+        if isinstance(field_instance, CharField) and hasattr(obj, f"get_{key}_display"):
+            # For example, Secret.provider -> Secret.get_provider_display()
+            # Note that we *don't* want to do this for models with a StatusField and its `get_status_display()`
+            return super().render_value(key, getattr(obj, f"get_{key}_display")(), context)
+
         return super().render_value(key, value, context)
 
     def get_data(self, context: Context):
@@ -1037,7 +1043,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             (dict): Key-value pairs corresponding to the object's fields, or `{}` if no object is present.
         """
         fields = self.fields
-        instance = context.get(self.context_object_key, None)
+        instance = get_obj_from_context(context, self.context_object_key)
 
         if instance is None:
             return {}
@@ -1084,7 +1090,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
     def render_key(self, key, value, context: Context):
         """Render the `verbose_name` of the model field whose name corresponds to the given key, if applicable."""
-        instance = context.get(self.context_object_key, None)
+        instance = get_obj_from_context(context, self.context_object_key)
 
         if instance is not None:
             try:
@@ -1618,7 +1624,7 @@ class _ObjectDataProvenancePanel(ObjectFieldsPanel):
         data["created_by"] = context["created_by"]
         data["last_updated_by"] = context["last_updated_by"]
         with contextlib.suppress(AttributeError):
-            data["api_url"] = context[self.context_object_key].get_absolute_url(api=True)
+            data["api_url"] = get_obj_from_context(context, self.context_object_key).get_absolute_url(api=True)
         return data
 
     def render_key(self, key, value, context: Context):

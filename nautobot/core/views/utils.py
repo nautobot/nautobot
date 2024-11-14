@@ -98,8 +98,10 @@ def csv_format(data):
     return ",".join(csv)
 
 
-def get_obj_from_context(context):
+def get_obj_from_context(context, key=None):
     """From the given context, return the object that is in the context"""
+    if key is not None:
+        return context.get(key)
     return context.get("obj") or context.get("object")
 
 
