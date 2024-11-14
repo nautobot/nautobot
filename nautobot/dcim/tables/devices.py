@@ -1295,6 +1295,9 @@ class SoftwareImageFileTable(StatusTableMixin, BaseTable):
 class SoftwareVersionTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     version = tables.Column(linkify=True)
+    platform = tables.Column(linkify=True)
+    release_date = tables.DateColumn()
+    end_of_support_date = tables.DateColumn()
     software_image_file_count = LinkedCountColumn(
         viewname="dcim:softwareimagefile_list",
         url_params={"software_version": "pk"},

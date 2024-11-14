@@ -124,6 +124,42 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
+## v2.3.11 (2024-11-12)
+
+### Added
+
+- [#6231](https://github.com/nautobot/nautobot/issues/6231) - Added `nautobot.apps.utils.get_related_field_for_models()` helper function.
+- [#6231](https://github.com/nautobot/nautobot/issues/6231) - Added optional `lookup` parameter to `LinkedCountColumn`.
+
+### Changed
+
+- [#5321](https://github.com/nautobot/nautobot/issues/5321) - For bulk delete all objects view, only show the confirmation dialog without the table that shows the objects that would be deleted.
+- [#6231](https://github.com/nautobot/nautobot/issues/6231) - Changed most related-object-count table columns (e.g. the "Locations" column in a Prefix table) to, if only a single related record is present (e.g. a single Location is associated with a given Prefix), display that related record directly instead of just displaying `1`.
+- [#6465](https://github.com/nautobot/nautobot/issues/6465) - For bulk edit all objects view, skip rendering the table of related objects in the confirmation page.
+
+### Fixed
+
+- [#6414](https://github.com/nautobot/nautobot/issues/6414) - Fixed layout bug in browsable REST API.
+- [#6442](https://github.com/nautobot/nautobot/issues/6442) - Fixed an issue where GitLab CI pipelines fail using all versions of official Docker images.
+- [#6453](https://github.com/nautobot/nautobot/issues/6453) - Fixed issue where interfaces cannot be removed/deleted from an Interface for Modules.
+- [#6472](https://github.com/nautobot/nautobot/issues/6472) - Fixed incorrect placement of buttons in create and edit views.
+- [#6472](https://github.com/nautobot/nautobot/issues/6472) - Fixed the panel width in multiple create and edit views.
+- [#6490](https://github.com/nautobot/nautobot/issues/6490) - Added missing `vrf_count` column to Prefix table in PrefixListView.
+- [#6491](https://github.com/nautobot/nautobot/issues/6491) - Added missing `vrf` field to `VMInterfaceForm` and `VMInterfaceCreateForm`.
+- [#6492](https://github.com/nautobot/nautobot/issues/6492) - Fixed `vlan_group` field is not filtered by `locations` field input on VLANForm.
+
+### Documentation
+
+- [#6485](https://github.com/nautobot/nautobot/issues/6485) - Added additional clarification for enabling request profiling via user profile.
+
+### Housekeeping
+
+- [#6449](https://github.com/nautobot/nautobot/issues/6449) - Added an integration test to create a Manufacturer, DeviceType, LocationType, Location, Role and Device to test the create forms and select2 api form fields are working correctly.
+- [#6449](https://github.com/nautobot/nautobot/issues/6449) - Fixed incorrect assertion in core navbar integration tests.
+- [#6449](https://github.com/nautobot/nautobot/issues/6449) - Added helper functions to SeleniumTestCase to perform some common UI actions.
+- [#6455](https://github.com/nautobot/nautobot/issues/6455) - Fixed two tests which always passed due to errors in their implementation. Ensured they provide value by checking against the correct results.
+- [#6497](https://github.com/nautobot/nautobot/issues/6497) - Added support for `--no-reusedb` option to `invoke integration-test` task.
+
 ## v2.3.10 (2024-10-29)
 
 ### Added

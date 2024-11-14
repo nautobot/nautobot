@@ -250,19 +250,22 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                         "return_url": return_url,
                     }
                     form = form_class(initial=initial)
-                table = self.construct_table(view, pk_list=pk_list)
+                delete_all = request.POST.get("_all")
+                if not delete_all:
+                    table = self.construct_table(view, pk_list=pk_list)
             elif view.action == "bulk_create":  # 3.0 TODO: remove, replaced by ImportObjects system Job
                 form = view.get_form()
                 if request.data:
                     table = data.get("table")
             elif view.action == "bulk_update":
+                edit_all = request.POST.get("_all")
                 pk_list = getattr(view, "pk_list", [])
-                if pk_list:
+                if pk_list or edit_all:
                     initial_data = {"pk": pk_list}
-                    form = form_class(model, initial=initial_data)
-
+                    form = form_class(model, initial=initial_data, edit_all=edit_all)
                     restrict_form_fields(form, request.user)
-                table = self.construct_table(view, pk_list=pk_list)
+                if not edit_all:
+                    table = self.construct_table(view, pk_list=pk_list)
             elif view.action == "notes":
                 initial_data = {
                     "assigned_object_type": content_type,

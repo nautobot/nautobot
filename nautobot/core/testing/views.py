@@ -1,3 +1,4 @@
+import contextlib
 import re
 from typing import Optional, Sequence
 from unittest import skipIf
@@ -751,11 +752,16 @@ class ViewTestCases:
             response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}")
             self.assertHttpStatus(response, 200)
             content = utils.extract_page_body(response.content.decode(response.charset))
+            # There should be only one row in the table
+            self.assertIn('<tr class="even', content)
+            self.assertNotIn('<tr class="odd', content)
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertNotRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
-            if instance1.get_absolute_url() in content:
-                self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
+            with contextlib.suppress(AttributeError):
+                # Some models, such as ObjectMetadata, don't have a detail URL
+                if instance1.get_absolute_url() in content:
+                    self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=True)
         def test_list_objects_unknown_filter_strict_filtering(self):
@@ -792,11 +798,16 @@ class ViewTestCases:
             content = utils.extract_page_body(response.content.decode(response.charset))
             self.assertNotIn("Unknown filter field", content, msg=content)
             self.assertIn("None", content, msg=content)
+            # There should be at least two rows in the table
+            self.assertIn('<tr class="even', content)
+            self.assertIn('<tr class="odd', content)
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
-            if instance1.get_absolute_url() in content:
-                self.assertIn(instance2.get_absolute_url(), content, msg=content)
+            with contextlib.suppress(AttributeError):
+                # Some models, such as ObjectMetadata, don't have a detail URL
+                if instance1.get_absolute_url() in content:
+                    self.assertIn(instance2.get_absolute_url(), content, msg=content)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
@@ -834,6 +845,8 @@ class ViewTestCases:
                     self.assertIn(
                         f"<div>You are viewing a table of {self.model._meta.verbose_name_plural}</div>", response_body
                     )
+
+            return response
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_with_constrained_permission(self):
@@ -1037,13 +1050,10 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_edit_form_contains_all_pks(self):
-            # We are testing the intermediary step of bulk_edit with pagination applied.
+            # We are testing the intermediary step of all bulk_edit.
             # i.e. "_all" passed in the form.
             pk_list = self._get_queryset().values_list("pk", flat=True)
-            # We only pass in one pk to test the functionality of "_all"
-            # which should grab all instance pks regardless of "pk"
             selected_data = {
-                "pk": pk_list[:1],
                 "_all": "on",
             }
             # Assign model-level permission
@@ -1055,13 +1065,19 @@ class ViewTestCases:
             # after pressing Edit Selected button.
             self.assertHttpStatus(response, 200)
             response_body = utils.extract_page_body(response.content.decode(response.charset))
+            # Assert the table which shows all the selected objects is not part of the html body in edit all case
+            self.assertNotIn('<table class="table table-hover table-headings">', response_body)
             # Check if all the pks are passed into the BulkEditForm/BulkUpdateForm
             for pk in pk_list:
-                self.assertIn(f'<input type="hidden" name="pk" value="{pk}"', response_body)
+                self.assertNotIn(str(pk), response_body)
+            self.assertInHTML(
+                '<input type="hidden" name="_all" value="True" class="form-control" required="required" placeholder="None" id="id__all">',
+                response_body,
+            )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_edit_form_contains_all_filtered(self):
-            # We are testing the intermediary step of bulk_edit with pagination applied and additional filter.
+            # We are testing the intermediary step of bulk editing all filtered objects.
             # i.e. "_all" passed in the form and filter using query params.
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
@@ -1077,7 +1093,6 @@ class ViewTestCases:
 
             # Open bulk update form with first two objects
             selected_data = {
-                "pk": third_pk,  # This is ignored when filtering with "_all"
                 "_all": "on",
                 **post_data,
             }
@@ -1086,12 +1101,15 @@ class ViewTestCases:
             # Expect a 200 status cause we are only rendering the bulk edit table after pressing Edit Selected button.
             self.assertHttpStatus(response, 200)
             response_body = utils.extract_page_body(response.content.decode(response.charset))
-            # Check if the first and second pk is passed into the form.
-            self.assertIn(f'<input type="hidden" name="pk" value="{first_pk}"', response_body)
-            self.assertIn(f'<input type="hidden" name="pk" value="{second_pk}"', response_body)
+            # Check if all pks is not part of the html.
+            self.assertNotIn(str(first_pk), response_body)
+            self.assertNotIn(str(second_pk), response_body)
+            self.assertNotIn(str(third_pk), response_body)
             self.assertIn("Editing 2 ", response_body)
-            # Check if the third pk is not passed into the form.
-            self.assertNotIn(f'<input type="hidden" name="pk" value="{third_pk}"', response_body)
+            self.assertInHTML(
+                '<input type="hidden" name="_all" value="True" class="form-control" required="required" placeholder="None" id="id__all">',
+                response_body,
+            )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_edit_objects_with_constrained_permission(self):
@@ -1190,14 +1208,10 @@ class ViewTestCases:
             self.assertEqual(self._get_queryset().count(), initial_count - len(pk_list))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-        def test_bulk_delete_form_contains_all_pks(self):
-            # We are testing the intermediary step of bulk_delete with pagination applied.
+        def test_bulk_delete_form_contains_all_objects(self):
+            # We are testing the intermediary step of bulk_delete all objects.
             # i.e. "_all" passed in the form.
-            pk_list = self._get_queryset().values_list("pk", flat=True)
-            # We only pass in one pk to test the functionality of "_all"
-            # which should grab all instance pks regardless of "pks".
             selected_data = {
-                "pk": pk_list[:1],
                 "confirm": True,
                 "_all": "on",
             }
@@ -1209,13 +1223,16 @@ class ViewTestCases:
             response = self.client.post(self._get_url("bulk_delete"), selected_data)
             self.assertHttpStatus(response, 200)
             response_body = utils.extract_page_body(response.content.decode(response.charset))
-            # Check if all the pks are passed into the BulkDeleteForm/BulkDestroyForm
-            for pk in pk_list:
-                self.assertIn(f'<input type="hidden" name="pk" value="{pk}"', response_body)
+            # Assert the table which shows all the selected objects is not part of the html body in delete all case
+            self.assertNotIn('<table class="table table-hover table-headings">', response_body)
+            # Assert none of the hidden input fields for each of the pks that would be deleted is part of the html body
+            for pk in self._get_queryset().values_list("pk", flat=True):
+                self.assertNotIn(str(pk), response_body)
+            self.assertInHTML('<input type="hidden" name="_all" value="true" />', response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_delete_form_contains_all_filtered(self):
-            # We are testing the intermediary step of bulk_delete with pagination applied and additional filter.
+            # We are testing the intermediary step of bulk_delete all with additional filter.
             # i.e. "_all" passed in the form and filter using query params.
             self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")
 
@@ -1237,12 +1254,12 @@ class ViewTestCases:
             # Expect a 200 status cause we are only rendering the bulk delete table after pressing Delete Selected button.
             self.assertHttpStatus(response, 200)
             response_body = utils.extract_page_body(response.content.decode(response.charset))
-            # Check if the first and second pk is passed into the form.
-            self.assertIn(f'<input type="hidden" name="pk" value="{first_pk}"', response_body)
-            self.assertIn(f'<input type="hidden" name="pk" value="{second_pk}"', response_body)
+            # Check if all pks is not part of the html.
+            self.assertNotIn(str(first_pk), response_body)
+            self.assertNotIn(str(second_pk), response_body)
+            self.assertNotIn(str(third_pk), response_body)
             self.assertIn("<strong>Warning:</strong> The following operation will delete 2 ", response_body)
-            # Check if the third pk is not passed into the form.
-            self.assertNotIn(f'<input type="hidden" name="pk" value="{third_pk}"', response_body)
+            self.assertInHTML('<input type="hidden" name="_all" value="true" />', response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_objects_with_constrained_permission(self):
