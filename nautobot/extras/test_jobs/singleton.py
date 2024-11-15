@@ -6,7 +6,7 @@ from nautobot.extras.jobs import Job
 
 class TestSingletonJob(Job):
     class Meta:
-        name = "Example job, only one can run at any given time."
+        name = "Example Singleton Job"
         is_singleton = True
 
     def run(self):
