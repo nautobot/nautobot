@@ -140,7 +140,10 @@ class Job(PrimaryModel):
         default=True, help_text="Whether this job contains sensitive variables"
     )
 
-    is_singleton = models.BooleanField(default=False, help_text="Whether this job should fail to run if another instance of this job is already running")
+    is_singleton = models.BooleanField(
+        default=False,
+        help_text="Whether this job should fail to run if another instance of this job is already running",
+    )
 
     # Additional properties, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
