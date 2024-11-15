@@ -644,12 +644,16 @@ def hadolint(context):
 
 
 @task
-def markdownlint(context):
+def markdownlint(context, fix=False):
     """Lint Markdown files."""
     if is_truthy(context.nautobot.local) and not context.run("command -v markdownlint", warn=True):
         command = "npm exec -- markdownlint "
     else:
         command = "markdownlint "
+
+    if fix:
+        command += "--fix "
+
     command += (
         "--ignore nautobot/project-static "
         "--config .markdownlint.yml --rules scripts/use-relative-md-links.js "
@@ -796,6 +800,7 @@ def unittest_coverage(context):
     help={
         "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
+        "reusedb": "Reuse previously saved test database for faster re-testing in combination with `--keepdb`.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
         "buffer": "Discard output from passing tests.",
@@ -813,6 +818,7 @@ def integration_test(
     context,
     cache_test_fixtures=True,
     keepdb=True,
+    reusedb=True,
     label="nautobot",
     failfast=False,
     buffer=True,
@@ -833,6 +839,7 @@ def integration_test(
         context,
         cache_test_fixtures=cache_test_fixtures,
         keepdb=keepdb,
+        reusedb=reusedb,
         label=label,
         failfast=failfast,
         buffer=buffer,

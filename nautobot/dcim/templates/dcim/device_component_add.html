@@ -7,7 +7,7 @@
 <form action="" method="post" class="form form-horizontal">
     {% csrf_token %}
     <div class="row">
-        <div class="col-md-6 col-md-offset-3">
+        <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
             {% if form.non_field_errors %}
                 <div class="panel panel-danger">
                     <div class="panel-heading"><strong>Errors</strong></div>
@@ -25,13 +25,13 @@
                 </div>
             </div>
             {% include 'inc/extras_features_edit_form_fields.html' with form=model_form %}
-            <div class="form-group">
-                <div class="col-md-9 col-md-offset-3 text-right">
-                    <button type="submit" name="_create" class="btn btn-primary">Create</button>
-                    <button type="submit" name="_addanother" class="btn btn-primary">Create and Add More</button>
-                    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
-                </div>
-            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 text-right">
+            <button type="submit" name="_create" class="btn btn-primary">Create</button>
+            <button type="submit" name="_addanother" class="btn btn-primary">Create and Add More</button>
+            <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
         </div>
     </div>
 </form>

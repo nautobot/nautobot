@@ -9,9 +9,10 @@ from django.utils.timezone import make_aware
 from netaddr import IPNetwork
 
 from nautobot.circuits.models import Circuit, Provider
-from nautobot.core.templatetags.helpers import queryset_to_pks
+from nautobot.core.templatetags.helpers import hyperlinked_object, queryset_to_pks
 from nautobot.core.testing import ModelViewTestCase, post_data, ViewTestCases
 from nautobot.core.testing.utils import extract_page_body
+from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.models import (
@@ -177,6 +178,24 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             "add_vrfs": [vrfs[0].pk],
             "remove_vrfs": [vrfs[1].pk],
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_objects_with_permission(self):
+        """Test rendering of LinkedCountColumn for related fields."""
+        response = super().test_list_objects_with_permission()
+        response_body = extract_page_body(response.content.decode(response.charset))
+
+        locations_list_url = reverse(get_route_for_model(Location, "list"))
+
+        for prefix in self._get_queryset().all():
+            if str(prefix.pk) in response_body:
+                count = prefix.locations.count()
+                if count > 1:
+                    self.assertBodyContains(
+                        response, f'<a href="{locations_list_url}?prefixes={prefix.pk}" class="badge">{count}</a>'
+                    )
+                elif count == 1:
+                    self.assertBodyContains(response, hyperlinked_object(prefix.locations.first()))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_empty_queryset(self):
@@ -1043,7 +1062,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
         cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))
 
-        vlangroups = (
+        cls.vlangroups = (
             VLANGroup.objects.create(name="VLAN Group 1", location=cls.locations.first()),
             VLANGroup.objects.create(name="VLAN Group 2", location=cls.locations.last()),
         )
@@ -1053,24 +1072,39 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         status = Status.objects.get_for_model(VLAN).first()
 
         cls.form_data = {
-            "vlan_group": vlangroups[1].pk,
+            "vlan_group": cls.vlangroups[0].pk,
             "vid": 999,
             "name": "VLAN999 with an unwieldy long name since we increased the limit to more than 64 characters",
             "tenant": None,
             "status": status.pk,
             "role": roles[1].pk,
-            "locations": list(cls.locations.values_list("pk", flat=True)[:2]),
+            "locations": list(cls.locations.values_list("pk", flat=True)[:1]),
             "description": "A new VLAN",
             "tags": [t.pk for t in Tag.objects.get_for_model(VLAN)],
         }
 
         cls.bulk_edit_data = {
-            "vlan_group": vlangroups[0].pk,
+            "vlan_group": cls.vlangroups[0].pk,
             "tenant": Tenant.objects.first().pk,
             "status": status.pk,
             "role": roles[0].pk,
             "description": "New description",
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_vlan_group_not_belong_to_vlan_locations(self):
+        """Test that a VLAN cannot be assigned to a VLAN Group that is not in the same location as the VLAN."""
+        vlan_group = self.vlangroups[0]
+        form_data = self.form_data.copy()
+        form_data["vlan_group"] = vlan_group.pk
+        form_data["locations"] = [self.locations.last().pk]
+        self.add_permissions("ipam.add_vlan")
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(form_data),
+        }
+        response = self.client.post(**request)
+        self.assertBodyContains(response, f"vlan_group: VLAN Group {vlan_group} is not in locations")
 
 
 class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):

@@ -1296,7 +1296,8 @@ class IPAddressToInterface(BaseModel):
 
     def __str__(self):
         if self.interface:
-            return f"{self.ip_address!s} {self.interface.device.name} {self.interface.name}"
+            parent_name = self.interface.parent.name if self.interface.parent else "No Parent"
+            return f"{self.ip_address!s} {parent_name} {self.interface.name}"
         else:
             return f"{self.ip_address!s} {self.vm_interface.virtual_machine.name} {self.vm_interface.name}"
 
