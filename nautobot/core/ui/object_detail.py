@@ -6,7 +6,7 @@ from enum import Enum
 import logging
 
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db import models
 from django.db.models import CharField, JSONField, URLField
 from django.db.models.fields.related import ManyToManyField
@@ -177,6 +177,7 @@ class Button(Component):
         link_name=None,
         icon=None,
         template_path="components/button/default.html",
+        required_permissions=None,
         javascript_template_path=None,
         attributes=None,
         **kwargs,
@@ -192,6 +193,7 @@ class Button(Component):
                 `reverse()` call when the button is rendered.
             icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
             template_path (str): Template to render for this button.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
             javascript_template_path (str, optional): JavaScript template to render and include with this button.
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional) Additional HTML attributes and their values to attach to the button.
@@ -201,28 +203,46 @@ class Button(Component):
         self.link_name = link_name
         self.icon = icon
         self.template_path = template_path
+        self.required_permissions = required_permissions or []
         self.javascript_template_path = javascript_template_path
         self.attributes = attributes
         super().__init__(**kwargs)
+
+    def should_render(self, context: Context):
+        return context["request"].user.has_perms(self.required_permissions)
+
+    def get_extra_context(self, context: Context):
+        obj = get_obj_from_context(context)
+        return {
+            "link": reverse(self.link_name, kwargs={"pk": obj.pk}) if self.link_name else None,
+            "label": self.label,
+            "color": self.color,
+            "icon": self.icon,
+            "attributes": self.attributes,
+        }
 
     def render(self, context: Context):
         if not self.should_render(context):
             return ""
 
-        button = render_component_template(
-            self.template_path,
-            context,
-            link=reverse(self.link_name, kwargs={"pk": get_obj_from_context(context).pk}) if self.link_name else None,
-            label=self.label,
-            color=self.color,
-            icon=self.icon,
-            attributes=self.attributes,
-        )
+        button = render_component_template(self.template_path, context, **self.get_extra_context(context))
         if self.javascript_template_path:
             button += format_html(
                 "<script>{}</script>", render_component_template(self.javascript_template_path, context)
             )
         return button
+
+
+class DropdownButton(Button):
+    def __init__(self, children, template_path="components/button/dropdown.html", **kwargs):
+        self.children = children
+        super().__init__(template_path=template_path, **kwargs)
+
+    def get_extra_context(self, context: Context):
+        return {
+            **super().get_extra_context(context),
+            "children": [child.get_extra_context(context) for child in self.children if child.should_render(context)],
+        }
 
 
 class Tab(Component):
@@ -1073,6 +1093,8 @@ class ObjectFieldsPanel(KeyValueTablePanel):
                 continue
             try:
                 field_value = getattr(instance, field_name)
+            except ObjectDoesNotExist:
+                field_value = None
             except AttributeError:
                 if self.ignore_nonexistent_fields:
                     continue

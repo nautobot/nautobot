@@ -2,6 +2,6 @@
     class="btn btn-{{ color }}"
     {% for key, value in attributes.items %}{{ key }}="{{ value }}" {% endfor %}
 >
-    {% if icon %}<span class="mdi {{ icon }}"></span>{% endif %}
+    {% if icon %}<span class="mdi {{ icon }}" aria-hidden="true"></span>{% endif %}
     {{ label }}
 {% if link %}</a>{% else %}</button>{% endif %}

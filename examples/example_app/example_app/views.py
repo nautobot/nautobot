@@ -8,6 +8,7 @@ from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
 from nautobot.core.ui.object_detail import TextPanel
 from nautobot.dcim.models import Device
+from nautobot.dcim.views import DeviceView
 
 from example_app import filters, forms, tables
 from example_app.api import serializers
@@ -38,6 +39,7 @@ class DeviceDetailAppTabOneView(views.ObjectView):
 
     queryset = Device.objects.all()
     template_name = "example_app/tab_device_detail_1.html"
+    object_detail_content = DeviceView.object_detail_content
 
 
 class DeviceDetailAppTabTwoView(views.ObjectView):
@@ -47,6 +49,7 @@ class DeviceDetailAppTabTwoView(views.ObjectView):
 
     queryset = Device.objects.all()
     template_name = "example_app/tab_device_detail_2.html"
+    object_detail_content = DeviceView.object_detail_content
 
 
 class ExampleAppHomeView(views.GenericView):

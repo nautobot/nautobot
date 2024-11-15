@@ -1,0 +1,20 @@
+<div class="btn-group">
+    <button type="button" class="btn btn-{{ color }} dropdown-toggle" data-toggle="dropdown"
+        aria-haspopup="true" aria-expanded="false"
+        {% for key, value in attributes.items %}{{ key }}="{{ value }}" {% endfor %}
+    >
+        {% if icon %}<span class="mdi {{ icon }}" aria-hidden="true"></span>{% endif %}
+        {{ label }}
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+        {% for child in children %}
+            <li><a href="{{ child.link }}" class="text-{{ child.color }}"
+                {% for key, value in child.attributes.items %}{{ key }}="{{ value }}" {% endfor %}
+            >
+                {% if child.icon %}<span class="mdi {{ child.icon }}" aria-hidden="true"></span>{% endif %}
+                {{ child.label }}
+            </a></li>
+        {% endfor %}
+    </ul>
+</div>
