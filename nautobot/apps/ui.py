@@ -22,6 +22,7 @@ from nautobot.core.ui.object_detail import (
     BaseTextPanel,
     Component,
     DataTablePanel,
+    DistinctViewTab,
     GroupedKeyValueTablePanel,
     KeyValueTablePanel,
     ObjectDetailContent,
@@ -33,6 +34,7 @@ from nautobot.core.ui.object_detail import (
     Tab,
     TextPanel,
 )
+from nautobot.core.ui.utils import render_component_template
 from nautobot.extras.choices import BannerClassChoices
 from nautobot.extras.plugins import Banner, TemplateExtension
 
@@ -43,6 +45,7 @@ __all__ = (
     "ButtonColorChoices",
     "Component",
     "DataTablePanel",
+    "DistinctViewTab",
     "GroupedKeyValueTablePanel",
     "HomePageBase",
     "HomePageGroup",
@@ -63,6 +66,7 @@ __all__ = (
     "ObjectTextPanel",
     "Panel",
     "PermissionsMixin",
+    "render_component_template",
     "SectionChoices",
     "StatsPanel",
     "Tab",

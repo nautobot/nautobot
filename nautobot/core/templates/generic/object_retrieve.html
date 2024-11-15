@@ -39,7 +39,7 @@
                 </div>
             </form>
         </div>
-        {% endif%}
+        {% endif %}
         {% endwith %}
     </div>
 
@@ -276,6 +276,7 @@
             </div>
         {% endif %}
       {% endif %}
+        {% plugin_object_detail_tab_content object %}
         {% block extra_tab_content %}{% endblock extra_tab_content %}
     </div>
 {% endblock content %}
