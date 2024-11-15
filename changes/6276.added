@@ -1,0 +1,3 @@
+Added support for Apps to define `object_detail_panels` and `object_detail_tabs` in their `TemplateExtension` classes.
+Added `nautobot.apps.ui.DistinctViewTab` class for defining detail-view tabs that exist as a distinct view.
+Added `nautobot.apps.ui.render_component_template` helper function.

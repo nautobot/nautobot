@@ -2,7 +2,6 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import get_template
 from django.utils.html import format_html
 from django_tables2 import RequestConfig
 
@@ -14,6 +13,7 @@ from nautobot.core.ui.object_detail import (
     ObjectFieldsPanel,
     ObjectsTablePanel,
 )
+from nautobot.core.ui.utils import render_component_template
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
@@ -207,7 +207,7 @@ class CircuitUIViewSet(NautobotUIViewSet):
             if key == "cable":
                 if not context["termination"].location:
                     return ""
-                return get_template("circuits/inc/circuit_termination_cable_fragment.html").render(context)
+                return render_component_template("circuits/inc/circuit_termination_cable_fragment.html", context)
             return super().render_value(key, value, context)
 
         def queryset_list_url_filter(self, key, value, context):
