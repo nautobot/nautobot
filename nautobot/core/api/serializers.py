@@ -872,3 +872,17 @@ class NautobotModelSerializer(
 
     Can also be used for models derived from BaseModel, so long as they support custom fields, notes, and relationships.
     """
+
+
+#
+# Tools
+#
+
+
+class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract-method
+    """Serializer for RenderJinjaView."""
+
+    template_code = serializers.CharField(required=True)
+    context = serializers.DictField(default=dict)
+    rendered_template = serializers.CharField(read_only=True)
+    rendered_template_lines = serializers.ListField(read_only=True, child=serializers.CharField())
