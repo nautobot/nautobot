@@ -1094,7 +1094,7 @@ class JobBulkEditForm(NautobotBulkEditForm):
     is_singleton = forms.NullBooleanField(
         required=False,
         widget=BulkEditNullBooleanSelect,
-        help_text="Whether this job should be able to run only once",
+        help_text="Whether this job should fail to run if another instance of this job is already running",
     )
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
     # Text field overrides
@@ -1141,7 +1141,7 @@ class JobBulkEditForm(NautobotBulkEditForm):
     )
     is_singleton_override = forms.BooleanField(
         required=False,
-        help_text="If checked, the values of has sensitive variables will be reverted to the default values defined in each Job's source code",
+        help_text="If checked, the values of is singleton will be reverted to the default values defined in each Job's source code",
     )
 
     class Meta:
