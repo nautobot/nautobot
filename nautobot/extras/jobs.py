@@ -192,7 +192,7 @@ class BaseJob:
             raise RunJobTaskFailed(f"Job {self.job_model} is not enabled to be run!")
 
         if self.job_model.is_singleton:
-            if kwargs.get("_force_singleton_lock"):
+            if kwargs.get("_ignore_singleton_lock"):
                 cache.delete(self.singleton_cache_key)
             is_running = cache.get(self.singleton_cache_key)
             if is_running:
@@ -524,11 +524,11 @@ class BaseJob:
         # It is not clear to me why pylint thinks that this is a constant, the comparison and form rendering
         # works correctly.
         if cls.is_singleton:  # pylint: disable=using-constant-test
-            form.fields["_force_singleton"] = forms.BooleanField(
+            form.fields["_ignore_singleton"] = forms.BooleanField(
                 required=False,
                 initial=False,
-                label="Force singleton lock",
-                help_text="Force a singleton job to run even when its lock is currently placed",
+                label="Ignore singleton lock",
+                help_text="Allow this singleton job to run even when another instance is alraedy running",
             )
 
         job_model = JobModel.objects.get_for_class_path(cls.class_path)
@@ -563,7 +563,7 @@ class BaseJob:
                 field.disabled = True
 
         # Ensure non-Job-specific fields are still last after applying field_order
-        for field in ["_job_queue", "_profile", "_force_singleton"]:
+        for field in ["_job_queue", "_profile", "_ignore_singleton"]:
             if field not in form.fields:
                 continue
             value = form.fields.pop(field)

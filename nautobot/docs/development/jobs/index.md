@@ -125,7 +125,7 @@ There are many attributes and methods of the Job class that serve as reserved na
 !!! example
     One classic pitfall here is the the reserved `name` metadata attribute - if you attempt to redefine `name` as a user input variable, your Job will not work.
 
-As of Nautobot 2.2.3, the current list of reserved names (not including low-level Python built-ins such as `__dict__` or `__str__` includes:
+As of Nautobot 2.4.0, the current list of reserved names (not including low-level Python built-ins such as `__dict__` or `__str__` includes:
 
 | Reserved Name             | Purpose                                                 |
 | ------------------------- | ------------------------------------------------------- |

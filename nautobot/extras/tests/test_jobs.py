@@ -612,8 +612,7 @@ class JobTransactionTest(TransactionTestCase):
 
         job_class, _ = get_job_class_and_model(module, name, "local")
         self.assertTrue(job_class.is_singleton)
-        create_job_result_and_run_job(module, name)
-        self.assertEqual(cache.get(job_class.singleton_cache_key), 1)
+        cache.set(job_class.singleton_cache_key, 1)
         failed_job_result = create_job_result_and_run_job(module, name)
 
         self.assertEqual(
