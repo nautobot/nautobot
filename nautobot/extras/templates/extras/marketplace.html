@@ -16,6 +16,15 @@
         display: block;
     }
 
+    .tile-header h2 {
+        margin-bottom: 5px;
+        margin-top: 0;
+    }
+
+    .tile-description {
+        margin-top: 10px;
+    }
+
     .app-details {
         column-gap: 20px;
         display: flex;
@@ -57,11 +66,11 @@
                                 width="64"
                             />
 
+                            <h2>{{ app.name }}</h2>
+
                             {% for use_case in app.use_cases %}
                                 <label class="label label-default">{{ use_case }}</label>
                             {% endfor %}
-
-                            <h2>{{ app.name }}</h2>
                         </header>
 
                         <p class="tile-description">{{ app.headline }}</p>
