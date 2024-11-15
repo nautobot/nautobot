@@ -1,0 +1,1 @@
+Added `pre_tag` helper/filter method to wrap content within a <pre> tags.
