@@ -203,6 +203,7 @@ class BaseJob:
             cache_parameters = {
                 "key": self.singleton_cache_key,
                 "value": 1,
+                "timeout": settings.CELERY_TASK_TIME_LIMIT,
             }
             if self.job_model.time_limit:
                 cache_parameters["timeout"] = self.job_model.time_limit
