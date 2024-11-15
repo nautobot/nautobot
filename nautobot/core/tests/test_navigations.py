@@ -30,7 +30,6 @@ class NavMenuTestCase(TestCase):
                             view_model = view_queryset.model
 
                             if item_details["name"] not in {
-                                "Access Point Groups",
                                 "Elevations",
                                 "Example Models filtered",
                                 "Interface Connections",
@@ -44,7 +43,7 @@ class NavMenuTestCase(TestCase):
                                     expected_name = "Interfaces"
                                 elif expected_name == "Object Changes":
                                     expected_name = "Change Log"
-                                elif expected_name == "Controller Managed Device Groups":
+                                elif expected_name == "Device Groups":
                                     expected_name = "Managed Device Groups"
                                 self.assertEqual(item_details["name"], expected_name)
                             if item_url == get_route_for_model(view_model, "list"):
