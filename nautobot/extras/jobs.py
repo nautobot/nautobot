@@ -191,9 +191,7 @@ class BaseJob:
             )
             raise RunJobTaskFailed(f"Job {self.job_model} is not enabled to be run!")
 
-        if self.job_model.is_singleton:
-            if kwargs.get("_ignore_singleton_lock"):
-                cache.delete(self.singleton_cache_key)
+        if self.job_model.is_singleton and not kwargs.get("_ignore_singleton_lock", False):
             is_running = cache.get(self.singleton_cache_key)
             if is_running:
                 self.logger.error(
