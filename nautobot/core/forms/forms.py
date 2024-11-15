@@ -124,7 +124,7 @@ class BulkEditForm(forms.Form):
 
         if edit_all:
             self.fields["pk"].required = False
-            self.fields["_all"] = forms.BooleanField(widget=forms.HiddenInput(), required=True, initial=True)
+            self.fields["_all"] = forms.BooleanField(widget=forms.HiddenInput(), required=False, initial=True)
 
 
 class BulkRenameForm(forms.Form):

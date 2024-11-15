@@ -4,8 +4,14 @@ from io import BytesIO
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import (
+    FieldDoesNotExist,
+    ObjectDoesNotExist,
+    PermissionDenied,
+    ValidationError,
+)
 from django.db import transaction
+from django.db.models import ManyToManyField
 from django.http import QueryDict
 from rest_framework import exceptions as drf_exceptions
 
@@ -15,18 +21,31 @@ from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
+from nautobot.core.forms.utils import restrict_form_fields
 from nautobot.core.jobs.cleanup import LogsCleanup
 from nautobot.core.jobs.groups import RefreshDynamicGroupCaches
-from nautobot.core.utils.lookup import get_filterset_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
+from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.datasources import (
     ensure_git_repository,
     git_repository_dry_run,
     refresh_datasource_content,
     refresh_job_code_from_repository,
 )
-from nautobot.extras.jobs import BooleanVar, ChoiceVar, FileVar, Job, ObjectVar, RunJobTaskFailed, StringVar, TextVar
+from nautobot.extras.jobs import (
+    BooleanVar,
+    ChoiceVar,
+    FileVar,
+    Job,
+    JSONVar,
+    ObjectVar,
+    RunJobTaskFailed,
+    StringVar,
+    TextVar,
+)
 from nautobot.extras.models import ExportTemplate, GitRepository
+from nautobot.extras.utils import remove_prefix_from_cf_key
 
 name = "System Jobs"
 
@@ -347,5 +366,169 @@ class ImportObjects(Job):
             raise RunJobTaskFailed("CSV import not fully successful, see logs")
 
 
-jobs = [ExportObjectList, GitRepositorySync, GitRepositoryDryRun, ImportObjects, LogsCleanup, RefreshDynamicGroupCaches]
+class BulkEditObjects(Job):
+    """System Job to bulk Edit objects."""
+
+    content_type = ObjectVar(
+        model=ContentType,
+        description="Type of objects to import",
+        query_params={"has_serializer": True},
+        # query_params={"has_serializer": True, "has_bulk_edit_form": True, "has_filter_form": True},
+    )
+    post_data = JSONVar(description="Data to update with i.e request.POST")
+    edit_all = BooleanVar(description="Bulk Edit all object / all filtered objects", required=False)
+    filter_query_params = JSONVar(label="Filter Query Params", required=False)
+
+    class Meta:
+        name = "Bulk Edit Objects"
+        description = "Bulk edit objects."
+        has_sensitive_variables = False
+        soft_time_limit = 1800
+        time_limit = 2000
+
+    def _update_objects(self, model, form, filter_query_params, edit_all, nullified_fields):
+        try:
+            with deferred_change_logging_for_bulk_operation():
+                updated_objects = []
+                filterset_cls = get_filterset_for_model(model)
+                if edit_all:
+                    if filterset_cls:
+                        queryset = filterset_cls(filter_query_params).qs.restrict(self.user, "change")
+                    else:
+                        queryset = model.objects.restrict(self.user, "change")
+                else:
+                    queryset = model.objects.restrict(self.user, "change").filter(pk__in=form.cleaned_data["pk"])
+
+                form_custom_fields = getattr(form, "custom_fields", [])
+                form_relationships = getattr(form, "relationships", [])
+                standard_fields = [
+                    field
+                    for field in form.fields
+                    if field not in form_custom_fields + form_relationships + ["pk"] + ["object_note"]
+                ]
+
+                for obj in queryset:
+                    self.logger.debug(f"Performing update on {obj} (PK: {obj.pk})")
+                    # TODO (timizuo): Figure this out
+                    # obj = self.alter_obj(obj, request, [], kwargs) # Unable to archive this now
+
+                    # Update standard fields. If a field is listed in _nullify, delete its value.
+                    for name in standard_fields:
+                        try:
+                            model_field = model._meta.get_field(name)
+                        except FieldDoesNotExist:
+                            # This form field is used to modify a field rather than set its value directly
+                            model_field = None
+
+                        # Handle nullification
+                        if name in form.nullable_fields and name in nullified_fields:
+                            if isinstance(model_field, ManyToManyField):
+                                getattr(obj, name).set([])
+                            else:
+                                setattr(obj, name, None if model_field is not None and model_field.null else "")
+
+                        # ManyToManyFields
+                        elif isinstance(model_field, ManyToManyField):
+                            if form.cleaned_data[name]:
+                                getattr(obj, name).set(form.cleaned_data[name])
+                        # Normal fields
+                        elif form.cleaned_data[name] not in (None, ""):
+                            setattr(obj, name, form.cleaned_data[name])
+
+                    # Update custom fields
+                    for field_name in form_custom_fields:
+                        if field_name in form.nullable_fields and field_name in nullified_fields:
+                            obj.cf[remove_prefix_from_cf_key(field_name)] = None
+                        elif form.cleaned_data.get(field_name) not in (None, "", []):
+                            obj.cf[remove_prefix_from_cf_key(field_name)] = form.cleaned_data[field_name]
+
+                    obj.full_clean()
+                    obj.save()
+                    updated_objects.append(obj)
+                    self.logger.debug(f"Saved {obj} (PK: {obj.pk})")
+
+                    # Add/remove tags
+                    if form.cleaned_data.get("add_tags", None):
+                        obj.tags.add(*form.cleaned_data["add_tags"])
+                    if form.cleaned_data.get("remove_tags", None):
+                        obj.tags.remove(*form.cleaned_data["remove_tags"])
+
+                    if hasattr(form, "save_relationships") and callable(form.save_relationships):
+                        # Add/remove relationship associations
+                        form.save_relationships(instance=obj, nullified_fields=nullified_fields)
+
+                    if hasattr(form, "save_note") and callable(form.save_note):
+                        form.save_note(instance=obj, user=self.user)
+
+                    # TODO (timizuo): Figure this out
+                    # self.extra_post_save_action(obj, form)
+
+                # Enforce object-level permissions
+                if queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(updated_objects):
+                    raise ObjectDoesNotExist
+                return updated_objects
+        except ValidationError as e:
+            raise ValidationError(f"{obj} failed validation: {e}")
+
+    def _process_valid_form(self, model, form, filter_query_params, edit_all, nullified_fields):
+        try:
+            if updated_objects := self._update_objects(model, form, filter_query_params, edit_all, nullified_fields):
+                msg = f"Updated {len(updated_objects)} {model._meta.verbose_name_plural}"
+                self.logger.info(msg)
+            return
+        except ValidationError as e:
+            self.logger.error(e.message)
+        except ObjectDoesNotExist:
+            msg = "Object update failed due to object-level permissions violation"
+            self.logger.error(msg)
+        raise RunJobTaskFailed("Bulk Edit not fully successful, see logs")
+
+    def run(self, *, content_type, post_data, edit_all=False, filter_query_params=None):
+        if not self.user.has_perm(f"{content_type.app_label}.change_{content_type.model}"):
+            self.logger.error('User "%s" does not have permission to update %s objects', self.user, content_type.model)
+            raise PermissionDenied("User does not have change permissions on the requested content-type")
+
+        model = content_type.model_class()
+        if model is None:
+            self.logger.error(
+                'Could not find the "%s.%s" data model. Perhaps an app is uninstalled?',
+                content_type.app_label,
+                content_type.model,
+            )
+            raise RunJobTaskFailed("Model not found")
+        try:
+            form_cls = get_form_for_model(model, form_prefix="BulkEdit")
+        except Exception:
+            # Cant determine the exceptions to handle because any exception could be raised,
+            # e.g InterfaceForm would raise a ObjectDoesNotExist Error since no device was provided
+            # While other forms might raise other errors, also if model_form is None a TypeError would be raised.
+            self.logger.debug(
+                'Could not find the "%s.%s" data bulk edit form. Unable to process CSV for this model.',
+                content_type.app_label,
+                content_type.model,
+            )
+            raise
+        form = form_cls(model, post_data, edit_all=edit_all)
+        restrict_form_fields(form, self.user)
+
+        if form.is_valid():
+            self.logger.debug("Form validation was successful")
+            nullified_fields = post_data.get("_nullify")
+            self._process_valid_form(model, form, filter_query_params, edit_all, nullified_fields)
+            return
+        else:
+            self.logger.error(f"Form validation unsuccessful: {form.errors.as_json()}")
+
+        raise RunJobTaskFailed("Updating Jobs Failed")
+
+
+jobs = [
+    ExportObjectList,
+    GitRepositorySync,
+    GitRepositoryDryRun,
+    ImportObjects,
+    LogsCleanup,
+    RefreshDynamicGroupCaches,
+    BulkEditObjects,
+]
 register_jobs(*jobs)

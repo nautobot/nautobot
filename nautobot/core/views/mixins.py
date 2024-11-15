@@ -5,13 +5,12 @@ from django.contrib.auth.mixins import AccessMixin
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
-    FieldDoesNotExist,
     ImproperlyConfigured,
     ObjectDoesNotExist,
     ValidationError,
 )
 from django.db import transaction
-from django.db.models import ManyToManyField, ProtectedError, Q
+from django.db.models import ProtectedError, Q
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -37,7 +36,9 @@ from nautobot.core.forms import (
     CSVFileField,
     restrict_form_fields,
 )
+from nautobot.core.jobs import BulkEditObjects
 from nautobot.core.utils import lookup, permissions
+from nautobot.core.utils.form import serialize_query_dict_for_filterset, serialize_query_dict_for_form
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params, normalize_querydict
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utils import (
@@ -46,11 +47,10 @@ from nautobot.core.views.utils import (
     import_csv_helper,
     prepare_cloned_fields,
 )
-from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.forms import NoteForm
-from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
+from nautobot.extras.models import ExportTemplate, Job, JobResult, SavedView, UserSavedViewAssociation
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
-from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template, remove_prefix_from_cf_key
+from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -912,9 +912,9 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             return self.form_invalid(form)
 
 
-class EditAndDeleteAllModelMixin:
+class EditAndDeleteModelMixin:
     """
-    UI mixin to bulk destroy all and bulk edit all model instances.
+    UI mixin to bulk destroy and bulk edit all model instances.
     """
 
     def _get_bulk_edit_delete_all_queryset(self, request):
@@ -952,8 +952,35 @@ class EditAndDeleteAllModelMixin:
             "table": None,
         }
 
+    def send_bulk_edit_objects_to_job(self, request, form, model):
+        """Prepare and enqueue a bulk edit job."""
+        job_model = Job.objects.get_for_class_path(BulkEditObjects.class_path)
+        post_data = serialize_query_dict_for_form(request.POST, form)
+        if filterset_class := lookup.get_filterset_for_model(model):
+            filter_query_params = serialize_query_dict_for_filterset(request.GET, filterset_class())
+        else:
+            filter_query_params = None
+        job_form = BulkEditObjects.as_form(
+            data={
+                "post_data": post_data,
+                "content_type": ContentType.objects.get_for_model(model),
+                # This feature is not yet available on the next branch
+                "edit_all": request.POST.get("_all") is not None,
+                "filter_query_params": filter_query_params,
+            }
+        )
+        # NOTE: I cant think of a case where job form would not be valid
+        if job_form.is_valid():
+            job_kwargs = BulkEditObjects.prepare_job_kwargs(job_form.cleaned_data)
+            job_result = JobResult.enqueue_job(
+                job_model,
+                request.user,
+                **BulkEditObjects.serialize_data(job_kwargs),
+            )
+            return redirect("extras:jobresult", pk=job_result.pk)
 
-class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, EditAndDeleteAllModelMixin):
+
+class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, EditAndDeleteModelMixin):
     """
     UI mixin to bulk destroy model instances.
     """
@@ -1082,93 +1109,13 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):  # 3.0 TODO: remove, unus
             return self.form_invalid(form)
 
 
-class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, EditAndDeleteAllModelMixin):
+class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, EditAndDeleteModelMixin):
     """
     UI mixin to bulk update model instances.
     """
 
     filterset_class = None
     bulk_update_form_class = None
-
-    def _process_bulk_update_form(self, form):
-        request = self.request
-        queryset = self.get_queryset()
-        model = queryset.model
-        form_custom_fields = getattr(form, "custom_fields", [])
-        form_relationships = getattr(form, "relationships", [])
-        # Standard fields are those that are intrinsic to self.model in the form
-        # Relationships, custom fields, object_note are extrinsic fields
-        # PK is used to identify an existing instance, not to modify the object
-        standard_fields = [
-            field
-            for field in form.fields
-            if field not in form_custom_fields + form_relationships + ["pk"] + ["object_note"]
-        ]
-        nullified_fields = request.POST.getlist("_nullify")
-        with deferred_change_logging_for_bulk_operation():
-            updated_objects = []
-            edit_all = self.request.POST.get("_all")
-
-            if edit_all:
-                queryset = self._get_bulk_edit_delete_all_queryset(self.request)
-            else:
-                queryset = queryset.filter(pk__in=form.cleaned_data["pk"])
-            for obj in queryset:
-                self.obj = obj
-                # Update standard fields. If a field is listed in _nullify, delete its value.
-                for name in standard_fields:
-                    try:
-                        model_field = model._meta.get_field(name)
-                    except FieldDoesNotExist:
-                        # This form field is used to modify a field rather than set its value directly
-                        model_field = None
-                    # Handle nullification
-                    if name in form.nullable_fields and name in nullified_fields:
-                        if isinstance(model_field, ManyToManyField):
-                            getattr(obj, name).set([])
-                        else:
-                            setattr(obj, name, None if model_field is not None and model_field.null else "")
-                    # ManyToManyFields
-                    elif isinstance(model_field, ManyToManyField):
-                        if form.cleaned_data[name]:
-                            getattr(obj, name).set(form.cleaned_data[name])
-                    # Normal fields
-                    elif form.cleaned_data[name] not in (None, ""):
-                        setattr(obj, name, form.cleaned_data[name])
-                # Update custom fields
-                for field_name in form_custom_fields:
-                    if field_name in form.nullable_fields and field_name in nullified_fields:
-                        obj.cf[remove_prefix_from_cf_key(field_name)] = None
-                    elif form.cleaned_data.get(field_name) not in (None, "", []):
-                        obj.cf[remove_prefix_from_cf_key(field_name)] = form.cleaned_data[field_name]
-
-                obj.validated_save()
-                updated_objects.append(obj)
-                self.logger.debug(f"Saved {obj} (PK: {obj.pk})")
-
-                # Add/remove tags
-                if form.cleaned_data.get("add_tags", None):
-                    obj.tags.add(*form.cleaned_data["add_tags"])
-                if form.cleaned_data.get("remove_tags", None):
-                    obj.tags.remove(*form.cleaned_data["remove_tags"])
-
-                if hasattr(form, "save_relationships") and callable(form.save_relationships):
-                    # Add/remove relationship associations
-                    form.save_relationships(instance=obj, nullified_fields=nullified_fields)
-
-                if hasattr(form, "save_note") and callable(form.save_note):
-                    form.save_note(instance=obj, user=request.user)
-
-                self.extra_post_save_action(obj, form)
-
-            # Enforce object-level permissions
-            if queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(updated_objects):
-                raise ObjectDoesNotExist
-        if updated_objects:
-            msg = f"Updated {len(updated_objects)} {model._meta.verbose_name_plural}"
-            self.logger.info(msg)
-            messages.success(self.request, msg)
-        self.success_url = self.get_return_url(request)
 
     def bulk_update(self, request, *args, **kwargs):
         """
@@ -1200,7 +1147,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Edit
             form = form_class(queryset.model, request.POST, edit_all=edit_all)
             restrict_form_fields(form, request.user)
             if form.is_valid():
-                return self.form_valid(form)
+                return self.send_bulk_edit_objects_to_job(self.request, form, queryset.model)
             else:
                 return self.form_invalid(form)
         table = None
