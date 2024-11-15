@@ -507,6 +507,7 @@ class MetadataView(View):
 6. Click on the *Add a Redirect URI* link on the page and configure it as follows:
 
     * *Redirect URIs*: should be the Base URI plus `/complete/azuread-oauth2/` such as `https://nautobot.example.com/complete/azuread-oauth2/`
+    * *Redirect URIs with Tenant*: should be the Base URI plus `/complete/azuread-tenant-oauth2/` such as `https://nautobot.example.com/complete/azuread-tenant-oauth2/`
 
 7. Once the Redirect URI is set, the last thing you'll need is to generate a *client secret*. To do so, click on *Certificates & secrets* and then the *New client secret* option. At this point you'll need to specify the expiration for the secret. Microsoft recommends less than 12 months with a maximum of 24 months as an option. Ensure you make a note of the secret that's generated for the next step.
 
