@@ -4258,7 +4258,7 @@ class ControllerUIViewSet(NautobotUIViewSet):
 
         return context
 
-    @action(detail=True, url_path="wireless-networks", url_name="wirelessnetworks")
+    @action(detail=True, url_path="wireless-networks", url_name="wirelessnetworks", methods=["get"])
     def wirelessnetworks(self, request, *args, **kwargs):
         instance = self.get_object()
         controller_managed_device_groups = instance.controller_managed_device_groups.restrict(
@@ -4284,14 +4284,8 @@ class ControllerUIViewSet(NautobotUIViewSet):
         )
 
     def get_action(self):
+        "Treat Wireless Networks as the same detail view for permission purposes."
         return "view" if self.action == "wirelessnetworks" else super().get_action()
-
-    def get_required_permission(self):
-        # TODO: standardize a pattern for permissions enforcement on custom actions
-        if self.action == "wirelessnetworks":
-            return [*self.get_permissions_for_model(WirelessNetwork, ["view"]), "dcim.view_controller"]
-
-        return super().get_required_permission()
 
 
 class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
