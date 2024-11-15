@@ -528,7 +528,7 @@ class BaseJob:
                 required=False,
                 initial=False,
                 label="Ignore singleton lock",
-                help_text="Allow this singleton job to run even when another instance is alraedy running",
+                help_text="Allow this singleton job to run even when another instance is already running",
             )
 
         job_model = JobModel.objects.get_for_class_path(cls.class_path)
