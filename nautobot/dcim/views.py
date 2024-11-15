@@ -65,7 +65,6 @@ from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkF
 from nautobot.wireless.models import (
     ControllerManagedDeviceGroupRadioProfileAssignment,
     ControllerManagedDeviceGroupWirelessNetworkAssignment,
-    WirelessNetwork,
 )
 from nautobot.wireless.tables import (
     ControllerManagedDeviceGroupRadioProfileAssignmentTable,
