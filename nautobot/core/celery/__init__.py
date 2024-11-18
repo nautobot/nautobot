@@ -137,13 +137,13 @@ def add_nautobot_log_handler(logger_instance, log_format=None):
 
 
 @signals.after_setup_logger.connect
-def setup_nautobot_global_logging(logger, **kwargs):
+def setup_nautobot_global_logging(logger, **kwargs):  # pylint: disable=redefined-outer-name
     """Add SUCCESS log to celery global logger."""
     logger.success = add_success_logger()
 
 
 @signals.after_setup_task_logger.connect
-def setup_nautobot_task_logging(logger, **kwargs):
+def setup_nautobot_task_logging(logger, **kwargs):  # pylint: disable=redefined-outer-name
     """Add SUCCESS log to celery task logger."""
     logger.success = add_success_logger()
 
