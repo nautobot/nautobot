@@ -369,7 +369,7 @@ class TemplateExtension:
         (Deprecated) Provide content that will be added to the existing list of buttons on the detail page view.
 
         In Nautobot v2.4.0 and later, Apps can (should) instead register `Button` instances in `object_detail_buttons`,
-        instead of instead of implementing a `.buttons()` method.
+        instead of implementing a `.buttons()` method.
 
         Content should be returned as an HTML string.
         Note that content does not need to be marked as safe because this is automatically handled.

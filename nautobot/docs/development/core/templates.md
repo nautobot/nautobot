@@ -25,7 +25,7 @@ The most customizable template is `generic/object_detail.html`, as object detail
           without losing the predefined buttons. Custom buttons will appear
           between any App-defined buttons and the clone/edit/delete actions.
           Note that since v2.4.0 you can also define `extra_buttons` in your
-          view's [`object_detail_content`](ui-component-framework.md)
+          view's [`object_detail_content`](ui-component-framework.md#objectdetailcontent-definition)
           rather than overriding and extending the template.
     * `masthead`: is the block that contains the title. Overloading it enables
       to change anything about the title block.
