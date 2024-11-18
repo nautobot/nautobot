@@ -35,12 +35,12 @@ The most customizable template is `generic/object_detail.html`, as object detail
     * `nav_tabs`: are the navigation tabs. If overloaded, custom tabs can be
       rendered instead of the default.
         * `extra_nav_tabs`: this block allows to add new tabs without having to
-          override the default ones. Note that since v2.4.0 you can also define
-          `extra_tabs` in your view's [`object_detail_content`](ui-component-framework.md)
+          override the default ones. Note that since v2.4.0 you can also define `extra_tabs`
+          in your view's [`object_detail_content`](ui-component-framework.md#objectdetailcontent-definition)
           rather than overriding and extending the template.
 * `content`: is the entire content of the page below the `header`. Note that since v2.4.0,
-  if your view defines [`object_detail_content`](ui-component-framework.md), that content will
-  be rendered in place of the below blocks.
+  if your view defines [`object_detail_content`](ui-component-framework.md#objectdetailcontent-definition),
+  that content will be rendered in place of the below blocks.
     * `content_left_page`: is a half-width column on the left. Multiple panels
       can be rendered in a single block.
     * `content_right_page`: is a half-width column on the right.

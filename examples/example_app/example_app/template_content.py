@@ -180,7 +180,7 @@ class ExampleModelContent(TemplateExtension):
             weight=100,
             label="Example App Button",
             color=ButtonColorChoices.BLUE,
-            icon="mdi-plus-thick",
+            icon="mdi-information",
             attributes={"onClick": 'alert("I am from the example app template_extension.")'},
         ),
     )
