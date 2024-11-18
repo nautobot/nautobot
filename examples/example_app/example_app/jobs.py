@@ -17,6 +17,7 @@ from nautobot.apps.jobs import (
 )
 from nautobot.dcim.models import Device, Location
 from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.jobs import get_task_logger
 
 name = "Example App jobs"
 
@@ -44,6 +45,10 @@ class ExampleDryRunJob(Job):
         except Exception:
             self.logger.error("%s failed. Database changes rolled back.", self.__name__)
             raise
+        self.logger.success("We can use the success log level to indicate success.")
+        # Ensure get_task_logger can also use success.
+        logger = get_task_logger(__name__)
+        logger.success("We can also use the success log level in get_task_logger.")
 
 
 class ExampleJob(Job):
