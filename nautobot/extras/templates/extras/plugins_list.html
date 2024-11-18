@@ -24,7 +24,11 @@
         </div>
 
         {% if request.user.is_authenticated and table_config_form %}
-            {% table_config_button table table_name="ObjectTable" %}
+            {% if display == "tiles" %}
+                {% table_config_button table table_name="ObjectTable" disabled=True %}
+            {% else %}
+                {% table_config_button table table_name="ObjectTable" %}
+            {% endif %}
         {% endif %}
 
         <a class="btn btn-primary" href="{% url 'apps:apps_marketplace' %}">Visit Apps Marketplace</a>
