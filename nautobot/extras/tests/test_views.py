@@ -1,4 +1,5 @@
 from datetime import timedelta
+from http import HTTPStatus
 import json
 from unittest import mock
 import urllib.parse
@@ -2845,6 +2846,59 @@ class JobTestCase(
         self.add_permissions("extras.view_objectchange", "extras.view_job")
         response = self.client.get(instance.get_changelog_url())
         self.assertBodyContains(response, f"{instance.name} - Change Log")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_job_bulk_edit_default_queue_stays_default_after_one_field_update(self):
+        self.add_permissions("extras.change_job")
+        job_class_to_test = "TestPass"
+        job_description = "default job queue test"
+        job_to_test = self.model.objects.get(job_class_name=job_class_to_test)
+        queryset = self.model.objects.filter(installed=True, hidden=False, job_class_name=job_class_to_test)
+        default_job_queue = job_to_test.default_job_queue
+        pk_list = list(queryset.values_list("pk", flat=True))
+
+        data = {
+            "description": job_description,
+            "pk": pk_list,
+            "_apply": True,
+        }
+
+        self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), HTTPStatus.FOUND)
+        instance = self.model.objects.get(job_class_name=job_class_to_test)
+        self.assertEqual(instance.description, job_description)
+        self.assertEqual(instance.default_job_queue, default_job_queue)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_job_bulk_edit_preserve_job_queues_after_one_field_update(self):
+        self.add_permissions("extras.change_job")
+        job_class_to_test = "TestPass"
+        job_description = "job queues test"
+        job_to_test = self.model.objects.get(job_class_name=job_class_to_test)
+
+        # Simulate 3 job queues set
+        job_queues = JobQueue.objects.all()[:3]
+        job_to_test.job_queues.set(job_queues)
+        job_to_test.job_queues.add(job_to_test.default_job_queue)
+        job_to_test.job_queues_override = True
+        job_to_test.save()
+
+        expected_job_queues = list(job_to_test.job_queues.values_list("pk", flat=True))
+
+        queryset = self.model.objects.filter(installed=True, hidden=False, job_class_name=job_class_to_test)
+        pk_list = list(queryset.values_list("pk", flat=True))
+
+        data = {
+            "description": job_description,
+            "pk": pk_list,
+            "_apply": True,
+        }
+
+        self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), HTTPStatus.FOUND)
+
+        instance = self.model.objects.get(job_class_name=job_class_to_test)
+        self.assertEqual(instance.description, job_description)
+        self.assertEqual(instance.job_queues.count(), 4)  # 3 custom one + 1 default
+        self.assertQuerySetEqual(instance.job_queues.all(), JobQueue.objects.filter(pk__in=expected_job_queues))
 
 
 class JobButtonTestCase(
