@@ -34,7 +34,6 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import (
     JobExecutionType,
-    JobQueueTypeChoices,
     JobResultStatusChoices,
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
@@ -1257,23 +1256,6 @@ class JobQueueTest(ModelTestCases.BaseModelTestCase):
     """
 
     model = JobQueue
-
-    def test_context_and_secrets_group_not_allowed_on_job_queue_type_celery(self):
-        celery_job_queue = JobQueue.objects.filter(queue_type=JobQueueTypeChoices.TYPE_CELERY).first()
-        secrets_group = SecretsGroup.objects.create(name="Secrets Group 1")
-        celery_job_queue.secrets_group = secrets_group
-        with self.assertRaises(ValidationError) as cm:
-            celery_job_queue.validated_save()
-        self.assertIn(
-            f"Secrets groups are not allowed on job queues of type {JobQueueTypeChoices.TYPE_CELERY}", str(cm.exception)
-        )
-        celery_job_queue.secrets_group = None
-        celery_job_queue.context = "simple_token"
-        with self.assertRaises(ValidationError) as cm:
-            celery_job_queue.validated_save()
-        self.assertIn(
-            f"Context is not allowed on job queues of type {JobQueueTypeChoices.TYPE_CELERY}", str(cm.exception)
-        )
 
 
 class MetadataChoiceTest(ModelTestCases.BaseModelTestCase):

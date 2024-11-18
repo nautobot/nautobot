@@ -46,20 +46,6 @@ class Migration(migrations.Migration):
                         to="tenancy.tenant",
                     ),
                 ),
-                (
-                    "secrets_group",
-                    models.ForeignKey(
-                        blank=True,
-                        null=True,
-                        default=None,
-                        on_delete=django.db.models.deletion.SET_NULL,
-                        to="extras.secretsgroup",
-                    ),
-                ),
-                (
-                    "context",
-                    models.CharField(blank=True, max_length=255),
-                ),
             ],
             options={
                 "ordering": ["name"],
