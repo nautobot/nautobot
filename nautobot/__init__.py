@@ -22,9 +22,6 @@ def add_success_logger():
             self._log(SUCCESS, message, args, **kws)
 
     logging.Logger.success = success
-
-    logger = logging.getLogger(__name__)
-    logger.success("Custom log level 'SUCCESS' added.")
     return success
 
 
