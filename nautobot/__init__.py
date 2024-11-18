@@ -11,6 +11,24 @@ __version__ = metadata.version(__name__)
 # Sentinel to make sure we only initialize once.
 __initialized = False
 
+
+def add_success_logger():
+    """Add a custom log level for success messages."""
+    SUCCESS = 25
+    logging.addLevelName(SUCCESS, "SUCCESS")
+
+    def success(self, message, *args, **kws):
+        if self.isEnabledFor(SUCCESS):
+            self._log(SUCCESS, message, args, **kws)
+
+    logging.Logger.success = success
+
+    logger = logging.getLogger(__name__)
+    logger.success("Custom log level 'SUCCESS' added.")
+    return success
+
+
+add_success_logger()
 logger = logging.getLogger(__name__)
 
 
