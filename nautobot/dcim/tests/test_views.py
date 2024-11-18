@@ -3126,6 +3126,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "status": status_active.pk,
             "role": role.pk,
             "vrf": vrfs[0].pk,
+            "virtual_device_contexts": [v.pk for v in vdcs],
         }
 
         cls.bulk_add_data = {
