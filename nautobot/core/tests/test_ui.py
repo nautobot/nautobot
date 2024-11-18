@@ -2,6 +2,8 @@
 
 from unittest.mock import patch
 
+from django.template import Context
+
 from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.testing import TestCase
 from nautobot.core.ui.object_detail import BaseTextPanel, DataTablePanel, Panel
@@ -28,7 +30,7 @@ class DataTablePanelTest(TestCase):
         DataTablePanel(context_data_key="data", weight=100, context_columns_key="c", context_column_headers_key="ch")
 
     def test_get_columns(self):
-        context = {"data": [{1: 1, 2: 2, 3: 3}, {1: 10, 2: 20, 3: 30}], "columns": [1, 3]}
+        context = Context({"data": [{1: 1, 2: 2, 3: 3}, {1: 10, 2: 20, 3: 30}], "columns": [1, 3]})
 
         self.assertEqual(DataTablePanel(context_data_key="data", weight=100).get_columns(context), [1, 2, 3])
         self.assertEqual(
@@ -40,11 +42,13 @@ class DataTablePanelTest(TestCase):
         )
 
     def test_get_column_headers(self):
-        context = {
-            "data": [{1: 1, 2: 2, 3: 3}, {1: 10, 2: 20, 3: 30}],
-            "columns": [1, 3],
-            "column_headers": ["One", "Three"],
-        }
+        context = Context(
+            {
+                "data": [{1: 1, 2: 2, 3: 3}, {1: 10, 2: 20, 3: 30}],
+                "columns": [1, 3],
+                "column_headers": ["One", "Three"],
+            }
+        )
 
         self.assertEqual(DataTablePanel(context_data_key="data", weight=100).get_column_headers(context), [])
         self.assertEqual(
@@ -116,7 +120,7 @@ class BaseTextPanelTest(TestCase):
                 panel = BaseTextPanel(weight=100, render_as=case["render_as"])
 
                 get_value_mock.return_value = case["value"]
-                context = {}
+                context = Context()
 
                 result = panel.render_body_content(context)
 
@@ -125,7 +129,7 @@ class BaseTextPanelTest(TestCase):
     @patch.object(BaseTextPanel, "get_value")
     def test_render_body_content_render_placeholder(self, get_value_mock):
         get_value_mock.return_value = ""
-        context = {}
+        context = Context()
 
         panel = BaseTextPanel(weight=100, render_as=BaseTextPanel.RenderOptions.PLAINTEXT)
 
@@ -134,7 +138,7 @@ class BaseTextPanelTest(TestCase):
     @patch.object(BaseTextPanel, "get_value")
     def test_render_body_content_not_render_placeholder(self, get_value_mock):
         get_value_mock.return_value = ""
-        context = {}
+        context = Context()
 
         panel = BaseTextPanel(weight=100, render_as=BaseTextPanel.RenderOptions.PLAINTEXT, render_placeholder=False)
 

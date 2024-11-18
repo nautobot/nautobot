@@ -121,6 +121,26 @@ def placeholder(value):
 
 @library.filter()
 @register.filter()
+def pre_tag(value):
+    """Render a value within `<pre></pre>` tags to enable formatting.
+
+    Args:
+        value (any): Input value, can be any variable.
+
+    Returns:
+        (str): Value wrapped in `<pre></pre>` tags.
+
+    Example:
+        >>> pre_tag("")
+        '<pre></pre>'
+        >>> pre_tag("hello")
+        '<pre>hello</pre>'
+    """
+    return format_html("<pre>{}</pre>", value)
+
+
+@library.filter()
+@register.filter()
 def add_html_id(element_str, id_str):
     """Add an HTML `id="..."` attribute to the given HTML element string.
 

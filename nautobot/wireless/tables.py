@@ -46,6 +46,7 @@ class RadioProfileTable(BaseTable):
             "name",
             "frequency",
             "channel_width",
+            "regulatory_domain",
             "allowed_channel_list",
             "supported_data_rates_count",
             "actions",
@@ -132,15 +133,15 @@ class WirelessNetworkTable(BaseTable):
 
 
 class ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(BaseTable):
-    controller_managed_device_group = tables.Column(linkify=True)
-    wireless_network = tables.Column(linkify=True)
+    controller_managed_device_group = tables.Column(linkify=True, verbose_name="Device Group")
+    wireless_network = tables.Column(linkify=True, verbose_name="Wireless Network")
     vlan = tables.Column(linkify=True)
     ssid = tables.Column(accessor="wireless_network.ssid")
     mode = tables.Column(accessor="wireless_network.mode")
     authentication = tables.Column(accessor="wireless_network.authentication")
     enabled = BooleanColumn(accessor="wireless_network.enabled")
     hidden = BooleanColumn(accessor="wireless_network.hidden")
-    secrets_group = tables.Column(accessor="wireless_network.secrets_group", linkify=True)
+    secrets_group = tables.Column(accessor="wireless_network.secrets_group", linkify=True, verbose_name="Secrets Group")
     controller = tables.Column(accessor="controller_managed_device_group.controller", linkify=True)
     prefix_count = LinkedCountColumn(
         viewname="ipam:prefix_list",
@@ -192,15 +193,15 @@ class ControllerControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
 
 
 class ControllerManagedDeviceGroupRadioProfileAssignmentTable(BaseTable):
-    controller_managed_device_group = tables.Column(linkify=True)
-    radio_profile = tables.Column(linkify=True)
+    controller_managed_device_group = tables.Column(linkify=True, verbose_name="Device Group")
+    radio_profile = tables.Column(linkify=True, verbose_name="Radio Profile")
     frequency = tables.Column(accessor="radio_profile.frequency")
-    channel_width = tables.Column(accessor="radio_profile.channel_width")
-    allowed_channel_list = tables.Column(accessor="radio_profile.allowed_channel_list")
+    channel_width = tables.Column(accessor="radio_profile.channel_width", verbose_name="Channel Width")
+    allowed_channel_list = tables.Column(accessor="radio_profile.allowed_channel_list", verbose_name="Allowed Channels")
     tx_power_min = tables.Column(accessor="radio_profile.tx_power_min")
     tx_power_max = tables.Column(accessor="radio_profile.tx_power_max")
     rx_power_min = tables.Column(accessor="radio_profile.rx_power_min")
-    regulatory_domain = tables.Column(accessor="radio_profile.regulatory_domain")
+    regulatory_domain = tables.Column(accessor="radio_profile.regulatory_domain", verbose_name="Regulatory Domain")
 
     class Meta(BaseTable.Meta):
         model = ControllerManagedDeviceGroup

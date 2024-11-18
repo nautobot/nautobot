@@ -50,7 +50,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:controllermanageddevicegroup_list",
-                        name="Access Point Groups",
+                        name="Device Groups",
                         query_params={"capabilities": "wireless"},
                         weight=300,
                         permissions=[

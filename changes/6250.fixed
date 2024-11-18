@@ -1,0 +1,1 @@
+Improved speed of `JobQueueFactory` when a large number of Jobs are installed.
