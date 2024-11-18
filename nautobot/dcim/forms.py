@@ -3083,7 +3083,7 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
         required=False,
         query_params={"available_on_device": "$device"},
     )
-    virtual_device_contexts = DynamicModelChoiceField(
+    virtual_device_contexts = DynamicModelMultipleChoiceField(
         queryset=VirtualDeviceContext.objects.all(),
         label="Virtual Device Contexts",
         required=False,
