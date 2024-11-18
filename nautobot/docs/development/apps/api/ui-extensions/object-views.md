@@ -10,7 +10,7 @@ Apps can inject custom content into certain areas of the detail and list views o
 * `left_page()` - Inject content on the left side of the object detail page (deprecated since Nautobot 2.4.0; `object_detail_panels` is preferred)
 * `right_page()` - Inject content on the right side of the object detail page (deprecated since Nautobot 2.4.0; `object_detail_panels` is preferred)
 * `full_width_page()` - Inject content across the entire bottom of the object detail page (deprecated since Nautobot 2.4.0; `object_detail_panels` is preferred)
-* `buttons()` - Add buttons to the top of the object detail page (deprecrated since Nautobot 2.4.0; `object_detail_buttons` is preferred)
+* `buttons()` - Add buttons to the top of the object detail page (deprecated since Nautobot 2.4.0; `object_detail_buttons` is preferred)
 * `list_buttons()` - Add buttons to the object list page. This works in the same way as `buttons()` for the object detail page.
 * `detail_tabs()` - Add extra tabs to the end of the list of tabs within the object detail page tabs navigation (deprecated since Nautobot 2.4.0; `object_detail_tabs` is preferred)
 
