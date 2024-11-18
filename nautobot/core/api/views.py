@@ -24,7 +24,8 @@ from graphql.execution.middleware import MiddlewareManager
 from graphql.type.schema import GraphQLSchema
 import redis.exceptions
 from rest_framework import routers, status
-from rest_framework.exceptions import ParseError, PermissionDenied
+from rest_framework.exceptions import APIException, ParseError, PermissionDenied
+from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -37,7 +38,7 @@ from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
-from nautobot.core.utils.data import is_uuid
+from nautobot.core.utils.data import is_uuid, render_jinja2
 from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
@@ -879,3 +880,37 @@ class SettingsJSONSchemaView(NautobotAPIVersionMixin, APIView):
         with open(file_path, "r") as yamlfile:
             schema_data = yaml.safe_load(yamlfile)
         return Response(schema_data)
+
+
+class RenderJinjaError(APIException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_detail = "Failed to render Jinja template."
+    default_code = "render_jinja_error"
+
+
+class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
+    """
+    View to render a Jinja template.
+    """
+
+    name = "Render Jinja2 Template"
+    permission_classes = [IsAuthenticated]
+    serializer_class = serializers.RenderJinjaSerializer
+
+    def post(self, request, *args, **kwargs):
+        data = serializers.RenderJinjaSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        template_code = data.validated_data["template_code"]
+        context = data.validated_data["context"]
+        try:
+            rendered_template = render_jinja2(template_code, context)
+        except Exception as exc:
+            raise RenderJinjaError(f"Failed to render Jinja template: {exc}") from exc
+        return Response(
+            {
+                "rendered_template": rendered_template,
+                "rendered_template_lines": rendered_template.split("\n"),
+                "template_code": template_code,
+                "context": context,
+            }
+        )

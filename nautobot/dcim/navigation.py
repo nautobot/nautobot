@@ -371,11 +371,19 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:controllermanageddevicegroup_list",
-                        name="Managed Device Groups",
+                        name="Device Groups",
                         weight=200,
                         permissions=[
                             "dcim.view_controllermanageddevicegroup",
                         ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:controllermanageddevicegroup_add",
+                                permissions=[
+                                    "dcim.add_controllermanageddevicegroup",
+                                ],
+                            ),
+                        ),
                     ),
                 ),
             ),

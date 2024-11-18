@@ -12,7 +12,7 @@ from django.db.models import JSONField, URLField
 from django.db.models.fields.related import ManyToManyField
 from django.template import Context
 from django.template.defaultfilters import truncatechars
-from django.template.loader import get_template, render_to_string
+from django.template.loader import render_to_string
 from django.templatetags.l10n import localize
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
@@ -36,6 +36,7 @@ from nautobot.core.templatetags.helpers import (
     validated_viewname,
 )
 from nautobot.core.ui.choices import LayoutChoices, SectionChoices
+from nautobot.core.ui.utils import render_component_template
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
@@ -130,7 +131,7 @@ class Component:
         """
         return True
 
-    def render(self, context):
+    def render(self, context: Context):
         """
         Render this component to HTML.
 
@@ -142,7 +143,7 @@ class Component:
         """
         return ""
 
-    def get_extra_context(self, context):
+    def get_extra_context(self, context: Context):
         """
         Provide additional data to include in the rendering context, based on the configuration of this component.
 
@@ -150,21 +151,6 @@ class Component:
             (dict): Additional context data.
         """
         return {}
-
-    def local_context(self, context, **kwargs):
-        """
-        Augment the given rendering context with additional data as provided.
-
-        Args:
-            context (Context, dict): The existing rendering context.
-            **kwargs (dict): Additional dictionary data to add to the context.
-
-        Returns:
-            (dict): The augmented rendering context.
-        """
-        if isinstance(context, Context):
-            context = context.flatten()
-        return {**context, **kwargs}
 
 
 class Tab(Component):
@@ -224,7 +210,7 @@ class Tab(Component):
         """
         return sorted((panel for panel in self.panels if panel.section == section), key=lambda panel: panel.weight)
 
-    def render_label_wrapper(self, context):
+    def render_label_wrapper(self, context: Context):
         """
         Render the tab's label (as opposed to its contents) and wrapping HTML elements.
 
@@ -233,15 +219,15 @@ class Tab(Component):
         if not self.should_render(context):
             return ""
 
-        context = self.local_context(
+        return render_component_template(
+            self.label_wrapper_template_path,
             context,
             tab_id=self.tab_id,
             label=self.render_label(context),
+            **self.get_extra_context(context),
         )
 
-        return get_template(self.label_wrapper_template_path).render(context)
-
-    def render_label(self, context):
+    def render_label(self, context: Context):
         """
         Render the tab's label text in a form suitable for display to the user.
 
@@ -249,24 +235,46 @@ class Tab(Component):
         """
         return self.label
 
-    def render(self, context):
+    def render(self, context: Context):
         """Render the tab's contents (layout and panels) to HTML."""
         if not self.should_render(context):
             return ""
 
-        context = self.local_context(
-            context,
-            tab_id=self.tab_id,
-            label=self.render_label(context),
-            include_plugin_content=self.tab_id == "main",
-            left_half_panels=self.panels_for_section(SectionChoices.LEFT_HALF),
-            right_half_panels=self.panels_for_section(SectionChoices.RIGHT_HALF),
-            full_width_panels=self.panels_for_section(SectionChoices.FULL_WIDTH),
-        )
+        with context.update(
+            {
+                "tab_id": self.tab_id,
+                "label": self.render_label(context),
+                "include_plugin_content": self.tab_id == "main",
+                "left_half_panels": self.panels_for_section(SectionChoices.LEFT_HALF),
+                "right_half_panels": self.panels_for_section(SectionChoices.RIGHT_HALF),
+                "full_width_panels": self.panels_for_section(SectionChoices.FULL_WIDTH),
+                **self.get_extra_context(context),
+            }
+        ):
+            tab_content = render_component_template(self.LAYOUT_TEMPLATE_PATHS[self.layout], context)
+            return render_component_template(self.content_wrapper_template_path, context, tab_content=tab_content)
 
-        tab_content = get_template(self.LAYOUT_TEMPLATE_PATHS[self.layout]).render(context)
 
-        return get_template(self.content_wrapper_template_path).render({**context, "tab_content": tab_content})
+class DistinctViewTab(Tab):
+    """
+    A Tab that doesn't render inline on the same page, but instead links to a distinct view of its own when clicked.
+    """
+
+    def __init__(
+        self,
+        *,
+        url_name,
+        label_wrapper_template_path="components/tab/label_wrapper_distinct_view.html",
+        **kwargs,
+    ):
+        self.url_name = url_name
+        super().__init__(label_wrapper_template_path=label_wrapper_template_path, **kwargs)
+
+    def get_extra_context(self, context: Context):
+        return {"url": reverse(self.url_name, kwargs={"pk": get_obj_from_context(context).pk})}
+
+    def render(self, context: Context):
+        return ""
 
 
 class Panel(Component):
@@ -316,7 +324,7 @@ class Panel(Component):
         self.body_wrapper_template_path = body_wrapper_template_path
         super().__init__(**kwargs)
 
-    def render(self, context):
+    def render(self, context: Context):
         """
         Render the panel as a whole.
 
@@ -328,32 +336,31 @@ class Panel(Component):
         """
         if not self.should_render(context):
             return ""
-        context = self.local_context(context, **self.get_extra_context(context))
-        return get_template(self.template_path).render(
-            {
-                **context,
-                "label": self.render_label(context),
-                "header_extra_content": self.render_header_extra_content(context),
-                "body": self.render_body(context),
-                "footer_content": self.render_footer_content(context),
-            }
-        )
+        with context.update(self.get_extra_context(context)):
+            return render_component_template(
+                self.template_path,
+                context,
+                label=self.render_label(context),
+                header_extra_content=self.render_header_extra_content(context),
+                body=self.render_body(context),
+                footer_content=self.render_footer_content(context),
+            )
 
-    def render_label(self, context):
+    def render_label(self, context: Context):
         """Render the label of this panel, if any."""
         return self.label
 
-    def render_header_extra_content(self, context):
+    def render_header_extra_content(self, context: Context):
         """
         Render any additional (non-label) content to include in this panel's header.
 
         Default implementation renders the template from `self.header_extra_content_template_path` if any.
         """
         if self.header_extra_content_template_path:
-            return get_template(self.header_extra_content_template_path).render(context)
+            return render_component_template(self.header_extra_content_template_path, context)
         return ""
 
-    def render_body(self, context):
+    def render_body(self, context: Context):
         """
         Render the panel body *including its HTML wrapper element(s)*.
 
@@ -362,32 +369,31 @@ class Panel(Component):
 
         Normally you won't want to override this method in a subclass, instead overriding `render_body_content()`.
         """
-        return get_template(self.body_wrapper_template_path).render(
-            {
-                **context,
-                "body_id": self.body_id,
-                "body_content": self.render_body_content(context),
-            }
+        return render_component_template(
+            self.body_wrapper_template_path,
+            context,
+            body_id=self.body_id,
+            body_content=self.render_body_content(context),
         )
 
-    def render_body_content(self, context):
+    def render_body_content(self, context: Context):
         """
         Render the content to include in this panel's body.
 
         Default implementation renders the template from `self.body_content_template_path` if any.
         """
         if self.body_content_template_path:
-            return get_template(self.body_content_template_path).render(context)
+            return render_component_template(self.body_content_template_path, context)
         return ""
 
-    def render_footer_content(self, context):
+    def render_footer_content(self, context: Context):
         """
         Render any non-default content to include in this panel's footer.
 
         Default implementation renders the template from `self.footer_content_template_path` if any.
         """
         if self.footer_content_template_path:
-            return get_template(self.footer_content_template_path).render(context)
+            return render_component_template(self.footer_content_template_path, context)
         return ""
 
 
@@ -440,21 +446,21 @@ class DataTablePanel(Panel):
             **kwargs,
         )
 
-    def get_columns(self, context):
+    def get_columns(self, context: Context):
         if self.columns:
             return self.columns
         if self.context_columns_key:
             return context.get(self.context_columns_key)
         return list(context.get(self.context_data_key)[0].keys())
 
-    def get_column_headers(self, context):
+    def get_column_headers(self, context: Context):
         if self.column_headers:
             return self.column_headers
         if self.context_column_headers_key:
             return context.get(self.context_column_headers_key)
         return []
 
-    def get_extra_context(self, context):
+    def get_extra_context(self, context: Context):
         return {
             "data": context.get(self.context_data_key),
             "columns": self.get_columns(context),
@@ -573,7 +579,7 @@ class ObjectsTablePanel(Panel):
             **kwargs,
         )
 
-    def _get_table_add_url(self, context):
+    def _get_table_add_url(self, context: Context):
         """Generate the URL for the "Add" button in the table panel.
 
         This method determines the URL for adding a new object to the table. It checks if the user has
@@ -603,7 +609,7 @@ class ObjectsTablePanel(Panel):
 
         return body_content_table_add_url
 
-    def get_extra_context(self, context):
+    def get_extra_context(self, context: Context):
         """Add additional context for rendering the table panel.
 
         This method processes the table data, configures pagination, and generates URLs
@@ -712,10 +718,10 @@ class KeyValueTablePanel(Panel):
         self.value_transforms = value_transforms or {}
         super().__init__(body_wrapper_template_path=body_wrapper_template_path, **kwargs)
 
-    def should_render(self, context):
+    def should_render(self, context: Context):
         return bool(self.get_data(context))
 
-    def get_data(self, context):
+    def get_data(self, context: Context):
         """
         Get the data for this panel, by default from `self.data` or the key `"data"` in the provided context.
 
@@ -726,7 +732,7 @@ class KeyValueTablePanel(Panel):
         """
         return self.data or context["data"]
 
-    def render_key(self, key, value, context):
+    def render_key(self, key, value, context: Context):
         """
         Render the provided key in human-readable form.
 
@@ -734,7 +740,7 @@ class KeyValueTablePanel(Panel):
         """
         return bettertitle(key.replace("_", " "))
 
-    def queryset_list_url_filter(self, key, value, context):
+    def queryset_list_url_filter(self, key, value, context: Context):
         """
         Get a filter parameter to use when hyperlinking queryset data to an object list URL to provide filtering.
 
@@ -844,7 +850,7 @@ class KeyValueTablePanel(Panel):
         # TODO: apply additional smart formatting such as JSON/Markdown rendering, etc.
         return display
 
-    def render_body_content(self, context):
+    def render_body_content(self, context: Context):
         """Render key-value pairs as table rows, using `render_key()` and `render_value()` methods as applicable."""
         data = self.get_data(context)
 
@@ -913,13 +919,13 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         self.ignore_nonexistent_fields = ignore_nonexistent_fields
         super().__init__(data=None, label=label, **kwargs)
 
-    def render_label(self, context):
+    def render_label(self, context: Context):
         """Default to rendering the provided object's `verbose_name` if no more specific `label` was defined."""
         if self.label is None:
             return bettertitle(get_obj_from_context(context)._meta.verbose_name)
         return super().render_label(context)
 
-    def render_value(self, key, value, context):
+    def render_value(self, key, value, context: Context):
         try:
             field_instance = get_obj_from_context(context)._meta.get_field(key)
         except FieldDoesNotExist:
@@ -939,7 +945,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
         return super().render_value(key, value, context)
 
-    def get_data(self, context):
+    def get_data(self, context: Context):
         """
         Load data from the object provided in the render context based on the given set of `fields`.
 
@@ -992,7 +998,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
         return data
 
-    def render_key(self, key, value, context):
+    def render_key(self, key, value, context: Context):
         """Render the `verbose_name` of the model field whose name corresponds to the given key, if applicable."""
         instance = context.get(self.context_object_key, None)
 
@@ -1019,7 +1025,7 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
     def __init__(self, *, body_id, **kwargs):
         super().__init__(body_id=body_id, **kwargs)
 
-    def render_header_extra_content(self, context):
+    def render_header_extra_content(self, context: Context):
         """Add a "Collapse All" button to the header."""
         return format_html(
             '<button type="button" class="btn-xs btn-primary pull-right accordion-toggle-all" data-target="#{body_id}">'
@@ -1027,7 +1033,7 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
             body_id=self.body_id,
         )
 
-    def render_body_content(self, context):
+    def render_body_content(self, context: Context):
         """Render groups of key-value pairs to HTML."""
         data = self.get_data(context)
 
@@ -1039,8 +1045,12 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
         for grouping, entry in data.items():
             counter += 1
             if grouping:
-                result += get_template("components/panel/grouping_toggle.html").render(
-                    {**context, "grouping": grouping, "body_id": self.body_id, "counter": counter}
+                result += render_component_template(
+                    "components/panel/grouping_toggle.html",
+                    context,
+                    grouping=grouping,
+                    body_id=self.body_id,
+                    counter=counter,
                 )
             for key, value in entry.items():
                 key_display = self.render_key(key, value, context)
@@ -1093,30 +1103,27 @@ class BaseTextPanel(Panel):
         Args:
             render_as (RenderOptions): One of BaseTextPanel.RenderOptions to define rendering function.
             render_placeholder (bool): Whether to render placeholder text if given value is "falsy".
-            body_content_template_path (str): The path of the template to use for the body content. Can be overridden for custom use cases.
+            body_content_template_path (str): The path of the template to use for the body content.
+                Can be overridden for custom use cases.
             kwargs (dict): Additional keyword arguments passed to `Panel.__init__`.
         """
         self.render_as = render_as
         self.render_placeholder = render_placeholder
         super().__init__(body_content_template_path=body_content_template_path, **kwargs)
 
-    def render_body_content(self, context):
+    def render_body_content(self, context: Context):
         value = self.get_value(context)
 
         if not value and self.render_placeholder:
             return HTML_NONE
 
         if self.body_content_template_path:
-            return get_template(self.body_content_template_path).render(
-                {
-                    **context,
-                    "render_as": self.render_as.value,
-                    "value": value,
-                }
+            return render_component_template(
+                self.body_content_template_path, context, render_as=self.render_as.value, value=value
             )
         return value
 
-    def get_value(self, context):
+    def get_value(self, context: Context):
         raise NotImplementedError
 
 
@@ -1134,7 +1141,7 @@ class ObjectTextPanel(BaseTextPanel):
 
         super().__init__(**kwargs)
 
-    def get_value(self, context):
+    def get_value(self, context: Context):
         obj = get_obj_from_context(context)
         if not obj:
             return ""
@@ -1153,7 +1160,7 @@ class TextPanel(BaseTextPanel):
         self.context_field = context_field
         super().__init__(**kwargs)
 
-    def get_value(self, context):
+    def get_value(self, context: Context):
         return context.get(self.context_field, "")
 
 
@@ -1178,11 +1185,11 @@ class StatsPanel(Panel):
         self.related_models = related_models
         super().__init__(body_content_template_path=body_content_template_path, **kwargs)
 
-    def should_render(self, context):
+    def should_render(self, context: Context):
         """Always should render this panel as the permission is reinforced in python with .restrict(request.user, "view")"""
         return True
 
-    def render_body_content(self, context):
+    def render_body_content(self, context: Context):
         """
         Transform self.related_models to a dictionary with key, value pairs as follows:
         {
@@ -1225,12 +1232,8 @@ class StatsPanel(Panel):
                         f"{self.filter_name} is not a valid filter field for {related_object_model_class_meta.verbose_name}"
                     )
 
-            return get_template(self.body_content_template_path).render(
-                {
-                    **context,
-                    "stats": stats,
-                    "filter_name": self.filter_name,
-                }
+            return render_component_template(
+                self.body_content_template_path, context, stats=stats, filter_name=self.filter_name
             )
         return ""
 
@@ -1262,7 +1265,7 @@ class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
             **kwargs,
         )
 
-    def should_render(self, context):
+    def should_render(self, context: Context):
         """Render only if any custom fields are present."""
         obj = get_obj_from_context(context)
         if not hasattr(obj, "get_custom_field_groupings"):
@@ -1270,18 +1273,18 @@ class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
         self.custom_field_data = obj.get_custom_field_groupings(advanced_ui=self.advanced_ui)
         return bool(self.custom_field_data)
 
-    def get_data(self, context):
+    def get_data(self, context: Context):
         """Remap the response from `get_custom_field_groupings()` to a nested dict as expected by the parent class."""
         data = {}
         for grouping, entries in self.custom_field_data.items():
             data[grouping] = {entry[0]: entry[1] for entry in entries}
         return data
 
-    def render_key(self, key, value, context):
+    def render_key(self, key, value, context: Context):
         """Render the custom field's description as well as its label."""
         return format_html('<span title="{}">{}</span>', key.description, key)
 
-    def render_value(self, key, value, context):
+    def render_value(self, key, value, context: Context):
         """Render a given custom field value appropriately depending on what type of custom field it is."""
         cf = key
         if cf.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
@@ -1338,7 +1341,7 @@ class _ObjectComputedFieldsPanel(GroupedKeyValueTablePanel):
             **kwargs,
         )
 
-    def should_render(self, context):
+    def should_render(self, context: Context):
         """Render only if any relevant computed fields are defined."""
         obj = get_obj_from_context(context)
         if not hasattr(obj, "get_computed_fields_grouping"):
@@ -1346,14 +1349,14 @@ class _ObjectComputedFieldsPanel(GroupedKeyValueTablePanel):
         self.computed_fields_data = obj.get_computed_fields_grouping(advanced_ui=self.advanced_ui)
         return bool(self.computed_fields_data)
 
-    def get_data(self, context):
+    def get_data(self, context: Context):
         """Remap `get_computed_fields_grouping()` to the nested dict format expected by the base class."""
         data = {}
         for grouping, entries in self.computed_fields_data.items():
             data[grouping] = {entry[0]: entry[1] for entry in entries}
         return data
 
-    def render_key(self, key, value, context):
+    def render_key(self, key, value, context: Context):
         """Render the computed field's description as well as its label."""
         return format_html('<span title="{}">{}</span>', key.description, key)
 
@@ -1378,7 +1381,7 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
         self.advanced_ui = advanced_ui
         super().__init__(data=None, weight=weight, label=label, section=section, **kwargs)
 
-    def should_render(self, context):
+    def should_render(self, context: Context):
         """Render only if any relevant relationships are defined."""
         obj = get_obj_from_context(context)
         if not hasattr(obj, "get_relationships_with_related_objects"):
@@ -1392,7 +1395,7 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
             or self.relationships_data["peer"]
         )
 
-    def get_data(self, context):
+    def get_data(self, context: Context):
         """Remap `get_relationships_with_related_objects()` to the flat dict format expected by the base class."""
         data = {}
         for side, relationships in self.relationships_data.items():
@@ -1402,7 +1405,7 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
 
         return data
 
-    def render_key(self, key, value, context):
+    def render_key(self, key, value, context: Context):
         """Render the relationship's label and key as well as the related-objects label."""
         relationship, side = key
         return format_html(
@@ -1412,7 +1415,7 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
             bettertitle(relationship.get_label(side)),
         )
 
-    def queryset_list_url_filter(self, key, value, context):
+    def queryset_list_url_filter(self, key, value, context: Context):
         """Filter the list URL based on the given relationship key and side."""
         relationship, side = key
         obj = get_obj_from_context(context)
@@ -1440,10 +1443,10 @@ class _ObjectTagsPanel(Panel):
             **kwargs,
         )
 
-    def should_render(self, context):
+    def should_render(self, context: Context):
         return hasattr(get_obj_from_context(context), "tags")
 
-    def get_extra_context(self, context):
+    def get_extra_context(self, context: Context):
         obj = get_obj_from_context(context)
         return {
             "tags": obj.tags.all(),
@@ -1471,7 +1474,7 @@ class _ObjectCommentPanel(ObjectTextPanel):
             **kwargs,
         )
 
-    def should_render(self, context):
+    def should_render(self, context: Context):
         return hasattr(get_obj_from_context(context), "comments")
 
 
@@ -1497,7 +1500,7 @@ class _ObjectDetailMainTab(Tab):
 
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
 
-    def render_label(self, context):
+    def render_label(self, context: Context):
         """Use the `verbose_name` of the given instance's Model as the tab label by default."""
         return bettertitle(get_obj_from_context(context)._meta.verbose_name)
 
@@ -1524,7 +1527,7 @@ class _ObjectDataProvenancePanel(ObjectFieldsPanel):
             **kwargs,
         )
 
-    def get_data(self, context):
+    def get_data(self, context: Context):
         data = super().get_data(context)
         # 3.0 TODO: instead of passing these around as context variables, just call
         # `get_created_and_last_updated_usernames_for_model(context[self.context_object_key])` right here?
@@ -1534,12 +1537,12 @@ class _ObjectDataProvenancePanel(ObjectFieldsPanel):
             data["api_url"] = context[self.context_object_key].get_absolute_url(api=True)
         return data
 
-    def render_key(self, key, value, context):
+    def render_key(self, key, value, context: Context):
         if key == "api_url":
             return "View in API Browser"
         return super().render_key(key, value, context)
 
-    def render_value(self, key, value, context):
+    def render_value(self, key, value, context: Context):
         if key == "api_url":
             return format_html('<a href="{}" target="_blank"><span class="mdi mdi-open-in-new"></span></a>', value)
         return super().render_value(key, value, context)
@@ -1603,10 +1606,10 @@ class _ObjectDetailContactsTab(Tab):
             )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
 
-    def should_render(self, context):
+    def should_render(self, context: Context):
         return getattr(get_obj_from_context(context), "is_contact_associable_model", False)
 
-    def render_label(self, context):
+    def render_label(self, context: Context):
         return format_html(
             "{} {}",
             self.label,
@@ -1642,7 +1645,7 @@ class _ObjectDetailGroupsTab(Tab):
             )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
 
-    def should_render(self, context):
+    def should_render(self, context: Context):
         obj = get_obj_from_context(context)
         return (
             getattr(obj, "is_dynamic_group_associable_model", False)
@@ -1650,7 +1653,7 @@ class _ObjectDetailGroupsTab(Tab):
             and obj.dynamic_groups.exists()
         )
 
-    def render_label(self, context):
+    def render_label(self, context: Context):
         return format_html(
             "{} {}",
             self.label,
@@ -1688,7 +1691,7 @@ class _ObjectDetailMetadataTab(Tab):
             )
         super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
 
-    def should_render(self, context):
+    def should_render(self, context: Context):
         obj = get_obj_from_context(context)
         return (
             getattr(obj, "is_metadata_associable_model", False)
@@ -1696,7 +1699,7 @@ class _ObjectDetailMetadataTab(Tab):
             and obj.associated_object_metadata.exists()
         )
 
-    def render_label(self, context):
+    def render_label(self, context: Context):
         return format_html(
             "{} {}",
             self.label,
