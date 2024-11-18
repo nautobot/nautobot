@@ -23,6 +23,7 @@ from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model, get_view_name
 from nautobot.core.api.versioning import NautobotAPIVersioning
 from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
+from nautobot.core.templatetags.helpers import humanize_speed
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.api import serializers as dcim_serializers
@@ -838,3 +839,84 @@ class NautobotGetViewNameTest(TestCase):
         }
         for view_name, view_kwarg in view_kwargs.items():
             self.assertEqual(view_name, get_view_name(viewset(**view_kwarg)))
+
+
+class RenderJinjaViewTest(testing.APITestCase):
+    """Test case for the RenderJinjaView API view."""
+
+    def test_render_jinja_template(self):
+        """
+        Test rendering a valid Jinja template.
+        """
+        interfaces = ["Ethernet1/1", "Ethernet1/2", "Ethernet1/3"]
+
+        template_code = "\n".join(
+            [
+                r"{% for int in interfaces -%}",
+                r"interface {{ int }}",
+                r"  speed {{ 1000000000|humanize_speed }}",
+                r"  duplex full",
+                r"{% endfor %}",
+            ]
+        )
+
+        expected_response = "\n".join(
+            [
+                "\n".join(
+                    [
+                        f"interface {int}",
+                        f"  speed {humanize_speed(1000000000)}",
+                        r"  duplex full",
+                    ]
+                )
+                for int in interfaces
+            ]
+            + [""]  # Add an extra newline at the end because jinja whitespace control is "fun"
+        )
+
+        response = self.client.post(
+            reverse("core-api:render_jinja_template"),
+            {
+                "template_code": template_code,
+                "context": {"interfaces": interfaces},
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertSequenceEqual(
+            list(response.data.keys()),
+            ["rendered_template", "rendered_template_lines", "template_code", "context"],
+        )
+        self.assertEqual(response.data["rendered_template"], expected_response)
+        self.assertEqual(response.data["rendered_template_lines"], expected_response.split("\n"))
+
+    def test_render_jinja_template_failures(self):
+        """
+        Test rendering invalid Jinja templates.
+        """
+        test_data = [
+            {
+                "template_code": r"{% hello world %}",
+                "error_msg": "Encountered unknown tag 'hello'.",
+            },
+            {
+                "template_code": r"{{ hello world %}",
+                "error_msg": "expected token 'end of print statement', got 'world'",
+            },
+        ]
+
+        for data in test_data:
+            with self.subTest(data):
+                response = self.client.post(
+                    reverse("core-api:render_jinja_template"),
+                    {
+                        "template_code": data["template_code"],
+                        "context": {"foo": "bar"},
+                    },
+                    format="json",
+                    **self.header,
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertSequenceEqual(list(response.data.keys()), ["detail"])
+                self.assertEqual(response.data["detail"], f"Failed to render Jinja template: {data['error_msg']}")
