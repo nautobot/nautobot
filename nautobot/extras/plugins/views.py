@@ -21,6 +21,14 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.plugins.tables import InstalledAppsTable
 
 
+def load_marketplace_data():
+    file_path = os.path.dirname(os.path.abspath(__file__)) + "/marketplace_manifest.yml"
+    with open(file_path, "r") as yamlfile:
+        marketplace_data = yaml.safe_load(yamlfile)
+
+    return marketplace_data
+
+
 class InstalledAppsView(GenericView):
     """
     View for listing all installed Apps.
@@ -71,13 +79,30 @@ class InstalledAppsView(GenericView):
         }
         RequestConfig(request, paginate).configure(table)
 
+        marketplace_data = load_marketplace_data()
+        app_icons = {app["package_name"]: app.get("icon") for app in marketplace_data["apps"]}
+
+        # Determine user's preferred display
+        if self.request.GET.get("display") in ["list", "tiles"]:
+            display = self.request.GET.get("display")
+            if self.request.user.is_authenticated:
+                self.request.user.set_config("extras.apps_list.display", display, commit=True)
+        elif self.request.user.is_authenticated:
+            display = self.request.user.get_config("extras.apps_list.display", "list")
+        else:
+            display = "list"
+
         return render(
             request,
             "extras/plugins_list.html",
             {
                 "table": table,
                 "table_config_form": TableConfigForm(table=table),
+                # Using `None` as `table_template` falls back to default `responsive_table.html`.
+                "table_template": "extras/plugins_tiles.html" if display == "tiles" else None,
                 "filter_form": None,
+                "app_icons": app_icons,
+                "display": display,
             },
         )
 
@@ -208,9 +233,7 @@ class MarketplaceView(GenericView):
     """
 
     def get(self, request):
-        file_path = os.path.dirname(os.path.abspath(__file__)) + "/marketplace_manifest.yml"
-        with open(file_path, "r") as yamlfile:
-            marketplace_data = yaml.safe_load(yamlfile)
+        marketplace_data = load_marketplace_data()
 
         installed_apps = [app for app in apps.get_app_configs() if app.name in settings.PLUGINS]
 

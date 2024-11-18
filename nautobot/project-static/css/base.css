@@ -934,7 +934,7 @@ code.hljs {
 .tiles {
     display: grid;
     grid-gap: 20px;
-    grid-template-columns: repeat(auto-fit, minmax(445px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(445px, 1fr));
 }
 @media (max-width: 1007px) {
     .tiles {
@@ -961,6 +961,13 @@ code.hljs {
 .tile.clickable:hover {
     border-color: #007dff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+a.tile.clickable,
+a.tile.clickable:hover,
+a.tile.clickable:focus,
+a.tile.clickable:visited {
+    color: inherit;
+    text-decoration: none;
 }
 .tile.disabled {
     background: #f4f4f4;
