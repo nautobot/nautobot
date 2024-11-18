@@ -85,8 +85,6 @@ A `Tab` is one of the major building blocks of your UI. The user can toggle betw
 
 `Button`s are the third major building block for the UI. Defining `extra_buttons` on your `ObjectDetailContent` instance allows you to add buttons that appear at the top of the page, alongside the standard "actions" dropdown and any custom buttons added by Apps. These buttons may operate as simple hyperlinks, or may use JavaScript to provide more advanced functionality.
 
-[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.Button)
-
 ## Panel Types
 
 ### Base Panel
@@ -459,6 +457,78 @@ ObjectsTablePanel(
     select_related_fields=["manufacturers", "locations"],
 )
 ```
+
+## Button Types
+
+### Button
+
+The Button component defines a single button in an object detail view.
+
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.Button)
+
+#### Button Examples
+
+```python
+class SecretUIViewSet(...):
+    ...
+    object_detail_content = ObjectDetailContent(
+        panels=[...],
+        extra_buttons=[
+            Button(
+                weight=100,
+                label="Check Secret",
+                icon="mdi-test-tube",
+                javascript_template_path="extras/secret_check.js",
+                attributes={"onClick": "checkSecret()"},
+            ),
+        ],
+    )
+```
+
+![Button Example](../../media/development/core/ui-component-framework/button-example.png)
+
+### DropdownButton
+
+`DropdownButton` is a subclass of `Button` that may itself contain other `Buttons` as its `children`, which it will render as a dropdown menu. For an example of usage, refer to the `Add Components` dropdown on the Device detail view.
+
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.DropdownButton)
+
+#### DropdownButton Examples
+
+```python
+class DeviceView(generic.ObjectView):
+    ...
+    object_detail_content = ObjectDetailContent(
+        extra_buttons=[
+            object_detail.DropdownButton(
+                weight=100,
+                color=ButtonColorChoices.BLUE,
+                label="Add Components",
+                icon="mdi-plus-thick",
+                required_permissions=["dcim.change_device"],
+                children=(
+                    object_detail.Button(
+                        weight=100,
+                        link_name="dcim:device_consoleports_add",
+                        label="Console Ports",
+                        icon="mdi-console",
+                        required_permissions=["dcim.add_consoleport"],
+                    ),
+                    object_detail.Button(
+                        weight=200,
+                        link_name="dcim:device_consoleserverports_add",
+                        label="Console Server Ports",
+                        icon="mdi-console-network-outline",
+                        required_permissions=["dcim.add_consoleserverport"],
+                    ),
+                    ...
+                ),
+            ),
+        ],
+    )
+```
+
+![DropdownButton Example](../../media/development/core/ui-component-framework/dropdown-button-example.png)
 
 ## Complete Example
 

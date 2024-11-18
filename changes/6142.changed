@@ -1,1 +1,2 @@
-Converted `Secret` UI view to use NautobotUIViewSet and UI Framework.
+Converted `Secret` detail view to use NautobotUIViewSet and UI Framework.
+Converted `Device` detail view to use UI Framework to define the "Add Components" dropdown.

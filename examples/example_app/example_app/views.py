@@ -39,7 +39,7 @@ class DeviceDetailAppTabOneView(views.ObjectView):
 
     queryset = Device.objects.all()
     template_name = "example_app/tab_device_detail_1.html"
-    object_detail_content = DeviceView.object_detail_content
+    object_detail_content = ui.ObjectDetailContent(extra_buttons=DeviceView.object_detail_content.extra_buttons)
 
 
 class DeviceDetailAppTabTwoView(views.ObjectView):
@@ -49,7 +49,7 @@ class DeviceDetailAppTabTwoView(views.ObjectView):
 
     queryset = Device.objects.all()
     template_name = "example_app/tab_device_detail_2.html"
-    object_detail_content = DeviceView.object_detail_content
+    object_detail_content = ui.ObjectDetailContent(extra_buttons=DeviceView.object_detail_content.extra_buttons)
 
 
 class ExampleAppHomeView(views.GenericView):

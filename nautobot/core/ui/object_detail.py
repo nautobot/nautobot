@@ -194,9 +194,10 @@ class Button(Component):
             icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
             template_path (str): Template to render for this button.
             required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The button will only be rendered if the user has these permissions.
             javascript_template_path (str, optional): JavaScript template to render and include with this button.
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
-            attributes (dict, optional) Additional HTML attributes and their values to attach to the button.
+            attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
         """
         self.label = label
         self.color = color
@@ -209,9 +210,11 @@ class Button(Component):
         super().__init__(**kwargs)
 
     def should_render(self, context: Context):
+        """Render if and only if the requesting user has appropriate permissions (if any)."""
         return context["request"].user.has_perms(self.required_permissions)
 
     def get_extra_context(self, context: Context):
+        """Add the relevant attributes of this Button to the context."""
         obj = get_obj_from_context(context)
         return {
             "link": reverse(self.link_name, kwargs={"pk": obj.pk}) if self.link_name else None,
@@ -222,6 +225,7 @@ class Button(Component):
         }
 
     def render(self, context: Context):
+        """Render this button to HTML, possibly including any associated JavaScript."""
         if not self.should_render(context):
             return ""
 
@@ -234,11 +238,20 @@ class Button(Component):
 
 
 class DropdownButton(Button):
-    def __init__(self, children, template_path="components/button/dropdown.html", **kwargs):
+    """A Button that has one or more other buttons as `children`, which it renders into a dropdown menu."""
+
+    def __init__(self, children: list[Button], template_path="components/button/dropdown.html", **kwargs):
+        """Initialize a DropdownButton component.
+
+        Args:
+            children (list[Button]): Elements of the dropdown menu associated to this DropdownButton.
+            template_path (str): Dropdown-specific template file.
+        """
         self.children = children
         super().__init__(template_path=template_path, **kwargs)
 
     def get_extra_context(self, context: Context):
+        """Add the children of this DropdownButton to the other Button context."""
         return {
             **super().get_extra_context(context),
             "children": [child.get_extra_context(context) for child in self.children if child.should_render(context)],
