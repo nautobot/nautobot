@@ -41,7 +41,6 @@ from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
     JobExecutionType,
-    JobQueueTypeChoices,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
 )
@@ -569,25 +568,6 @@ class JobQueueSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = JobQueue
         fields = "__all__"
-
-    def validate(self, data):
-        secrets_group = data.get("secrets_group", self.instance.secrets_group if self.instance else None)
-        context = data.get("context", self.instance.context if self.instance else None)
-        queue_type = data.get("queue_type", self.instance.queue_type if self.instance else None)
-
-        errors = {}
-        if secrets_group and queue_type == JobQueueTypeChoices.TYPE_CELERY:
-            error_message = f"Secrets groups are not allowed on job queues of type {JobQueueTypeChoices.TYPE_CELERY}"
-            errors["secrets_group"] = [error_message]
-
-        if context and queue_type == JobQueueTypeChoices.TYPE_CELERY:
-            error_message = f"Context is not allowed on job queues of type {JobQueueTypeChoices.TYPE_CELERY}"
-            errors["context"] = [error_message]
-
-        if errors:
-            raise serializers.ValidationError(errors)
-
-        return super().validate(data)
 
 
 class JobQueueAssignmentSerializer(ValidatedModelSerializer):
