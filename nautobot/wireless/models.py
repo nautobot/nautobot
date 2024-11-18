@@ -68,7 +68,12 @@ class RadioProfile(PrimaryModel):
         blank=True,
         null=True,
     )
-    allowed_channel_list = JSONArrayField(base_field=models.IntegerField(), blank=True, null=True)
+    allowed_channel_list = JSONArrayField(
+        base_field=models.IntegerField(),
+        blank=True,
+        null=True,
+        help_text="Comma-separated list of allowed channel numbers for this radio profile.",
+    )
     supported_data_rates = models.ManyToManyField(
         to="wireless.SupportedDataRate",
         related_name="radio_profiles",
