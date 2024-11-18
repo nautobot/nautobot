@@ -6,6 +6,7 @@
 - [Getting Started](#getting-started)
 - [Core Concepts](#core-concepts)
 - [Panel Types](#panel-types)
+- [Button Types](#button-types)
 - [Complete Example](#complete-example)
 - [Layouts and Sections](#layouts-and-sections)
 - [Best Practices](#best-practices)
