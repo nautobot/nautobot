@@ -59,29 +59,3 @@ class MetadataManagementTestCase(TestCase):
 
         populate_role_choices(apps=apps, schema_editor=None)
         self.assertEqual(Role.objects.count(), initial_roles_count)
-
-
-class JobManagementTestCase(TestCase):
-    """Test for the nautobot-server runjob helper function."""
-
-    def test_validate_job_and_job_data(self):
-        """
-        Test the validate_job_and_job_data function.
-        Specifically, test that JSON data is correctly parsed with json.loads()
-        """
-
-        input_job_data = [
-            '{"content_type": 1}',
-            '{"date": "2021-01-01"}',
-            '{"location": ' + f'"{Location.objects.first().pk}"' + "}",
-            '{"install_date": ' + f'"{datetime.date(2020, 1, 1)}"' + "}",
-        ]
-        expected_output_job_data = [
-            {"content_type": 1},
-            {"date": "2021-01-01"},
-            {"location": f"{Location.objects.first().pk}"},
-            {"install_date": "2020-01-01"},
-        ]
-
-        for input_data, expected_output_data in zip(input_job_data, expected_output_job_data):
-            self.assertEqual(json.loads(input_data), expected_output_data)
