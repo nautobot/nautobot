@@ -1,12 +1,9 @@
 """Test cases for extras management code."""
 
-import datetime
-import json
 
 from django.apps import apps
 
 from nautobot.core.testing import TestCase
-from nautobot.dcim.models import Location
 from nautobot.extras.management import populate_role_choices, populate_status_choices
 from nautobot.extras.models import Role, Status
 
