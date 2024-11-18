@@ -175,14 +175,6 @@ VLAN_PREFIXES = """
 {% endfor %}
 """
 
-VLAN_ROLE_LINK = """
-{% if record.role %}
-    <a href="{% url 'ipam:vlan_list' %}?role={{ record.role.name }}">{{ record.role }}</a>
-{% else %}
-    &mdash;
-{% endif %}
-"""
-
 VLANGROUP_ADD_VLAN = """
 {% with next_vid=record.get_next_available_vid %}
     {% if next_vid and perms.ipam.add_vlan %}
@@ -766,7 +758,7 @@ class VLANVirtualMachinesTable(VLANMembersTable):
         fields = ("virtual_machine", "name", "tagged", "actions")
 
 
-class InterfaceVLANTable(StatusTableMixin, BaseTable):
+class InterfaceVLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
     """
     List VLANs assigned to a specific Interface.
     """
@@ -775,7 +767,6 @@ class InterfaceVLANTable(StatusTableMixin, BaseTable):
     tagged = BooleanColumn()
     vlan_group = tables.Column(accessor=Accessor("vlan_group__name"), verbose_name="Group")
     tenant = TenantColumn()
-    role = tables.TemplateColumn(template_code=VLAN_ROLE_LINK)
     location_count = LinkedCountColumn(
         viewname="dcim:location_list",
         url_params={"vlans": "pk"},
