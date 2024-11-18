@@ -1,6 +1,5 @@
 """Test cases for extras management code."""
 
-
 from django.apps import apps
 
 from nautobot.core.testing import TestCase
