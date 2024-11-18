@@ -2138,6 +2138,33 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
                 is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
                 self.assertTrue(is_due)
 
+    # TODO uncomment when we have a way to setup the NautobotDatabaseScheduler correctly
+    # @mock.patch("nautobot.extras.utils.run_kubernetes_job_and_return_job_result")
+    # def test_nautobot_database_scheduler_apply_async_method(self, mock_run_kubernetes_job_and_return_job_result):
+    #     jq = JobQueue.objects.create(name="kubernetes", queue_type=JobQueueTypeChoices.TYPE_KUBERNETES)
+    #     sj = ScheduledJob.objects.create(
+    #         name="Export Object List Hourly",
+    #         task="nautobot.core.jobs.ExportObjectList",
+    #         job_model=JobModel.objects.get(name="Export Object List"),
+    #         interval=JobExecutionType.TYPE_HOURLY,
+    #         user=User.objects.first(),
+    #         approval_required=False,
+    #         start_time=datetime.now(ZoneInfo("America/New_York")),
+    #         time_zone=ZoneInfo("America/New_York"),
+    #         job_queue=jq,
+    #         kwargs='{"content_type": 1}',
+    #     )
+    #     jr = JobResult.objects.create(
+    #         name=sj.job_model.name,
+    #         job_model=sj.job_model,
+    #         scheduled_job=sj,
+    #         user=sj.user,
+    #     )
+    #     mock_run_kubernetes_job_and_return_job_result.return_value = jr
+    #     entry = NautobotScheduleEntry(model=sj)
+    #     scheduler = NautobotDatabaseScheduler(app=entry.app)
+    #     scheduler.apply_async(entry=entry, producer=None, advance=False)
+
 
 class SecretTest(ModelTestCases.BaseModelTestCase):
     """
