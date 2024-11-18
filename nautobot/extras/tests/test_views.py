@@ -2878,11 +2878,11 @@ class JobTestCase(
         # Simulate 3 job queues set
         job_queues = JobQueue.objects.all()[:3]
         job_to_test.job_queues.set(job_queues)
+        job_to_test.job_queues.add(job_to_test.default_job_queue)
         job_to_test.job_queues_override = True
         job_to_test.save()
 
-        default_job_queue = job_to_test.default_job_queue
-        expected_job_queues = [*job_queues.values_list("pk", flat=True), default_job_queue.pk]
+        expected_job_queues = list(job_to_test.job_queues.values_list("pk", flat=True))
 
         queryset = self.model.objects.filter(installed=True, hidden=False, job_class_name=job_class_to_test)
         pk_list = list(queryset.values_list("pk", flat=True))
