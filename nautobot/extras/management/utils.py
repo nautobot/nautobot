@@ -3,7 +3,6 @@ import json
 from django.core.management.base import CommandError
 from django.utils import timezone
 
-from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import Job, JobLogEntry
@@ -13,7 +12,7 @@ def validate_job_and_job_data(command, user, job_class_path, data=None):
     job_data = {}
     try:
         if data:
-            job_data = json.loads(data, cls=NautobotKombuJSONEncoder)
+            job_data = json.loads(data)
     except json.decoder.JSONDecodeError as error:
         raise CommandError(f"Invalid JSON data:\n{error!s}") from error
 
