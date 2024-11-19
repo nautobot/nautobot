@@ -1468,10 +1468,9 @@ class ControllerManagedDeviceGroupTable(BaseTable):
         return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
-class VirtualDeviceContextTable(StatusTableMixin, BaseTable):
+class VirtualDeviceContextTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    role = tables.Column(linkify=True)
     tenant = TenantColumn()
     device = tables.Column(linkify=True)
     primary_ip = tables.Column(linkify=True, order_by=("primary_ip6", "primary_ip4"), verbose_name="IP Address")
