@@ -62,7 +62,7 @@ self.logger.success("All data is valid.")
 
 When running in a Kubernetes (k8s) deployment, such as with Nautobot's [Helm chart](https://docs.nautobot.com/projects/helm-charts/en/stable/), Nautobot now supports an alternative method of running Nautobot Jobs - instead of (or in addition to) running one or more Celery Workers as long-lived persistent pods, Nautobot can dispatch Nautobot Jobs to be executed as short-lived [Kubernetes Job](https://kubernetes.io/docs/concepts/workloads/controllers/job/) task pods.
 
-In support of this functionality, Nautobot now supports the definition of [`JobQueue` records](../user-guide/platform-functionality/jobs/jobqueue.md), which represent either Celery task queues **or** a Kubernetes job queue. Individual Nautobot Jobs can be associated to queues of either or both types, and the Job Queue selected when submitting a Job will dictate whether it is executed via Celery or via Kubernetes.
+In support of this functionality, Nautobot now supports the definition of [`JobQueue` records](../user-guide/platform-functionality/jobs/jobqueue.md), which represent either a Celery task queue **or** a Kubernetes job queue. Nautobot Jobs can be associated to queues of either or both types, and the Job Queue selected when submitting a Job will dictate whether it is executed via Celery or via Kubernetes.
 
 Refer to the [Jobs documentation](../user-guide/platform-functionality/jobs/index.md) for more details.
 
@@ -72,7 +72,7 @@ Users can now configure their preferred display time zone via the User Preferenc
 
 #### UI Component Framework
 
-Nautobot's new [UI Component Framework](../development/core/ui-component-framework.md) provides a set of Python APIs for defining parts of the Nautobot UI without needing, in many cases, to write custom HTML templates. In this release of Nautobot, the focus is primarily on definition of object "detail" views as those were the most common case where custom templates have been required in the past.
+Nautobot's new [UI Component Framework](../development/core/ui-component-framework.md) provides a set of Python APIs for defining parts of the Nautobot UI without needing, in many cases, to write custom HTML templates. In this release of Nautobot, the focus is primarily on the definition of object "detail" views as those were the most common cases where custom templates have been required in the past.
 
 [Adoption of this framework](../development/apps/migration/ui-component-framework/index.md) significantly reduces the amount of boilerplate needed to define an object detail view, drives increased self-consistency across views, and encourages code reuse. It also insulates Apps from the details of Nautobot's CSS (Bootstrap 3 framework), smoothing the way for Nautobot to adopt a new CSS framework in the future with minimal impact to compliant apps.
 
