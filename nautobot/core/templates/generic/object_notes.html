@@ -35,10 +35,10 @@
 {% block javascript %}
     {{ block.super }}
     <script>
-        document.addEventListener('keydown', function(event) {
+        document.addEventListener("keydown", function(event) {
         // command + enter
-        if (event.metaKey && event.key === 'Enter') {
-            const button = document.getElementById('createNote');
+        if ((event.metaKey && event.key === "Enter") || (event.ctrlKey && event.key === "Enter")) {
+            const button = document.getElementById("createNote");
             button.click();
         }
         });
