@@ -666,6 +666,9 @@ Markdown rendering is supported for log messages, as well as [a limited subset o
 +/- 2.0.0
     The `AbortTransaction` class was moved from the `nautobot.utilities.exceptions` module to `nautobot.core.exceptions`.
 
++++ 2.4.0
+    You can now use `self.logger.success()` to set the log level to `SUCCESS`.
+
 ### File Output
 
 +++ 2.1.0
