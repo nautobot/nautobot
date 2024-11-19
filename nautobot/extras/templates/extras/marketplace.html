@@ -21,8 +21,24 @@
         margin-top: 0;
     }
 
+    .tile-actions-placeholder {
+        height: 30px;
+        margin-left: 3px;
+        width: 35px;
+    }
+
     .tile-description {
         margin-top: 10px;
+    }
+
+    .tile-actions {
+        position: absolute;
+        right: 21px;
+        top: 21px;
+    }
+
+    .tile-actions .btn {
+        padding: 3px 8px;  /* Enlarge action buttons to 32px x 32px */
     }
 
     .app-details {
@@ -57,29 +73,53 @@
         <div class="col-md-12">
             <section class="tiles">
                 {% for app in apps %}
-                    <a class="tile clickable" data-app="{{ app.package_name }}" href="?app={{ app.package_name }}">
-                        <header class="tile-header">
-                            <img
-                                alt="{{ app.name }}"
-                                src="{% if app.icon|default:None != None %}{{ app.icon }}{% else %}{% static 'img/nautobot_icon_192x192.png' %}{% endif %}"
-                                height="64"
-                                width="64"
-                            />
+                    <div style="position: relative;">
+                        <a class="tile clickable" data-app="{{ app.package_name }}" href="?app={{ app.package_name }}">
+                            <header class="tile-header">
+                                <img
+                                    alt="{{ app.name }}"
+                                    src="{% if app.icon|default:None != None %}{{ app.icon }}{% else %}{% static 'img/nautobot_icon_192x192.png' %}{% endif %}"
+                                    height="64"
+                                    width="64"
+                                />
 
-                            <h2>{{ app.name }}</h2>
+                                <!--
+                                   Occupy `.tile-actions` dedicated space with `.tile-actions-placeholder`. See comment
+                                   above `.tile-actions` element for detailed explanation of this solution and why it
+                                   is required here.
+                                -->
+                                <div aria-hidden="true" class="tile-actions-placeholder pull-right"></div>
 
-                            {% for use_case in app.use_cases %}
-                                <label class="label label-default">{{ use_case }}</label>
-                            {% endfor %}
-                        </header>
+                                <h2>{{ app.name }}</h2>
 
-                        <p class="tile-description">{{ app.headline }}</p>
+                                {% for use_case in app.use_cases %}
+                                    <label class="label label-default">{{ use_case }}</label>
+                                {% endfor %}
+                            </header>
 
-                        <footer class="tile-footer">
-                            <div>Author: {{ app.author }}</div>
-                            <div>Availability: {{ app.availability }}</div>
-                        </footer>
-                    </a>
+                            <p class="tile-description">{{ app.headline }}</p>
+
+                            <footer class="tile-footer">
+                                <div>Author: {{ app.author }}</div>
+                                <div>Availability: {{ app.availability }}</div>
+                            </footer>
+                        </a>
+
+                        <!--
+                            Place app action links outside the "main" `a` tile to adhere to HTML rule that forbid
+                            nesting anchors within anchors. Absolutely position the actions to make them appear inside
+                            the tile though. Fill their dedicated space with `.tile-actions-placeholder` element.
+                        -->
+                        <div class="tile-actions">
+                            {% if app.docs|default:None != None %}
+                                <a href="{{ app.docs }}" class="btn btn-info btn-xs" target="_blank" title="Docs">
+                            {% else %}
+                                <a href="" class="btn btn-info btn-xs disabled" target="_blank" title="No docs provided">
+                            {% endif %}
+                                <i class="mdi mdi-book-open-page-variant"></i>
+                            </a>
+                        </div>
+                    </div>
 
                     <div class="modal fade" tabindex="-1" id="modal-{{ app.package_name }}">
                         <div class="modal-dialog modal-lg" role="document">
