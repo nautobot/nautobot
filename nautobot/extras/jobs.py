@@ -523,7 +523,7 @@ class BaseJob:
         # It is not clear to me why pylint thinks that this is a constant, the comparison and form rendering
         # works correctly.
         if cls.is_singleton:  # pylint: disable=using-constant-test
-            form.fields["_ignore_singleton"] = forms.BooleanField(
+            form.fields["_ignore_singleton_lock"] = forms.BooleanField(
                 required=False,
                 initial=False,
                 label="Ignore singleton lock",
@@ -562,7 +562,7 @@ class BaseJob:
                 field.disabled = True
 
         # Ensure non-Job-specific fields are still last after applying field_order
-        for field in ["_job_queue", "_profile", "_ignore_singleton"]:
+        for field in ["_job_queue", "_profile", "_ignore_singleton_lock"]:
             if field not in form.fields:
                 continue
             value = form.fields.pop(field)
