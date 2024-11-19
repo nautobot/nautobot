@@ -1079,7 +1079,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
             ("info", "action: create"),
             ("info", f"jobresult.user: {self.user.username}"),
             ("info", "Test Job Hook Location 1"),
-            ("info", "Job completed"),
+            ("success", "Job completed"),
         ]
         log_messages = models.JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")
         self.assertSequenceEqual(log_messages, expected_log_messages)
@@ -1105,7 +1105,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
             ("info", "action: update"),
             ("info", f"jobresult.user: {self.user.username}"),
             ("info", "Test Job Hook Location 1"),
-            ("info", "Job completed"),
+            ("success", "Job completed"),
         ]
         log_messages = models.JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")
         self.assertSequenceEqual(log_messages, expected_log_messages)
