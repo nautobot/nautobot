@@ -4756,6 +4756,12 @@ class VirtualDeviceContextTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "Sample Description",
         }
 
+        cls.update_data = {
+            "name": "Virtual Device Context 3",
+            "tenant": tenants[3].pk,
+            "status": vdc_status.pk,
+        }
+
         cls.bulk_edit_data = {
             "tenant": tenants[1].pk,
         }
