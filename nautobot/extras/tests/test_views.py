@@ -2207,13 +2207,10 @@ class JobQueueTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": Tenant.objects.first().pk,
             "tags": [t.pk for t in Tag.objects.get_for_model(JobQueue)],
         }
-        secrets_group = SecretsGroup.objects.create(name="Secrets Group 1")
         cls.bulk_edit_data = {
             "queue_type": JobQueueTypeChoices.TYPE_KUBERNETES,
             "description": "This is a very detailed new description",
             "tenant": Tenant.objects.last().pk,
-            "secrets_group": secrets_group.pk,
-            "context": "simple_token",
             # TODO add tests for add_tags/remove_tags fields in TagsBulkEditFormMixin
         }
 
