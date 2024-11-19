@@ -470,7 +470,6 @@ class ViewTestCases:
                 "path": self._get_url("edit", instance),
                 "data": utils.post_data(update_data),
             }
-            print(self.client.post(**request).content)
             self.assertHttpStatus(self.client.post(**request), 302)
             self.assertInstanceEqual(self._get_queryset().get(pk=instance.pk), update_data)
 

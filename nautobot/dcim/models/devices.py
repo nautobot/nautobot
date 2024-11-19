@@ -1988,7 +1988,6 @@ class VirtualDeviceContext(PrimaryModel):
                 raise ValidationError({"device": "Virtual Device Context's device cannot be changed once created"})
 
 
-
 @extras_features(
     "custom_links",
     "custom_validators",
