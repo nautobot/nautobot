@@ -190,6 +190,18 @@
                                                 </p>
                                             {% endif %}
 
+                                            {% if app.availability == "Private" %}
+                                                <p>
+                                                    <strong>
+                                                        This app is private. Reach out to
+                                                        <a href="https://networktocode.com/nautobot/" target="_blank">
+                                                            Nautobot Team
+                                                        </a>
+                                                        for more information.
+                                                    </strong>
+                                                </p>
+                                            {% endif %}
+
                                             <div>
                                                 {% for use_case in app.use_cases %}
                                                     <label class="label label-default">{{ use_case }}</label>
