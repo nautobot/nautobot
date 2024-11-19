@@ -1087,7 +1087,7 @@ class VirtualDeviceContextSerializer(NautobotModelSerializer):
 
     def validate(self, data):
         """Validate device cannot be changed for VirtualDeviceContext."""
-        if data.get("device") and self.instance.device != data.get("device"):
+        if data.get("device") and self.instance and self.instance.device != data.get("device"):
             raise serializers.ValidationError("Changing the device of a VirtualDeviceContext is not allowed.")
         return super().validate(data)
 
