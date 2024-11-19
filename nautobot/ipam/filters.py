@@ -101,11 +101,6 @@ class VRFFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFil
         to_field_name="pk",  # TODO: Make this work with `prefix` "somehow"
         label="Prefix (ID or name)",
     )
-    prefixes = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Prefix.objects.all(),
-        to_field_name="pk",  # TODO: Make this work with `prefix` "somehow"
-        label="Prefix (ID or name)",
-    )
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Namespace.objects.all(),
         to_field_name="name",
