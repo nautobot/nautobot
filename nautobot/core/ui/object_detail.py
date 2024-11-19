@@ -190,7 +190,8 @@ class Button(Component):
             color (ButtonColorChoices): The color (class) of this button.
             link_name (str, optional): View name to link to, for example "dcim:locationtype_retrieve".
                 This link will be reversed and will automatically include the current object's PK as a parameter to the
-                `reverse()` call when the button is rendered.
+                `reverse()` call when the button is rendered. For more complex link construction, you can subclass this
+                and override the `get_link()` method.
             icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
             template_path (str): Template to render for this button.
             required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
@@ -213,11 +214,22 @@ class Button(Component):
         """Render if and only if the requesting user has appropriate permissions (if any)."""
         return context["request"].user.has_perms(self.required_permissions)
 
+    def get_link(self, context: Context):
+        """
+        Get the hyperlink URL (if any) for this button.
+
+        Defaults to reversing `self.link_name` with `pk: obj.pk` as a kwarg, but subclasses may override this for
+        more advanced link construction.
+        """
+        if self.link_name:
+            obj = get_obj_from_context(context)
+            return reverse(self.link_name, kwargs={"pk": obj.pk})
+        return None
+
     def get_extra_context(self, context: Context):
         """Add the relevant attributes of this Button to the context."""
-        obj = get_obj_from_context(context)
         return {
-            "link": reverse(self.link_name, kwargs={"pk": obj.pk}) if self.link_name else None,
+            "link": self.get_link(context),
             "label": self.label,
             "color": self.color,
             "icon": self.icon,
