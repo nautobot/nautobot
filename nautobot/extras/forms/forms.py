@@ -1246,11 +1246,6 @@ class JobQueueBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         queryset=Tenant.objects.all(),
         required=False,
     )
-    secrets_group = DynamicModelChoiceField(
-        queryset=SecretsGroup.objects.all(),
-        required=False,
-    )
-    context = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
     description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
 
     class Meta:
@@ -1272,10 +1267,6 @@ class JobQueueFilterForm(NautobotFilterForm):
         required=False,
         widget=StaticSelect2Multiple(),
     )
-    context = forms.CharField(required=False)
-    secrets_group = DynamicModelMultipleChoiceField(
-        queryset=SecretsGroup.objects.all(), to_field_name="name", required=False
-    )
     tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="name", required=False)
     tags = TagFilterField(model)
 
@@ -1290,17 +1281,12 @@ class JobQueueForm(NautobotModelForm):
         queryset=Tenant.objects.all(),
         required=False,
     )
-    context = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
-    secrets_group = DynamicModelChoiceField(
-        queryset=SecretsGroup.objects.all(),
-        required=False,
-    )
     description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = JobQueue
-        fields = ("name", "queue_type", "context", "description", "secrets_group", "tenant", "tags")
+        fields = ("name", "queue_type", "description", "tenant", "tags")
 
 
 class JobScheduleForm(BootstrapMixin, forms.Form):
