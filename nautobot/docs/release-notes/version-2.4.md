@@ -113,7 +113,7 @@ The `Job.task_queues` field (a list of queue name strings) is deprecated in favo
 
 Similarly, `ScheduledJob.queue` is deprecated in favor of `ScheduledJob.job_queue`.
 
-#### `TemplateExtension.detail_tabs()`, `TemplateExtension.left_page()` etc.
+#### `TemplateExtension.detail_tabs()`, `TemplateExtension.left_page()` and others
 
 With the introduction of the UI Component Framework (described above), new APIs are available for Apps to extend core Nautobot views with additional content using this framework. A number of new APIs have been added to the `TemplateExtension` base class in support of this functionality, and several existing `TemplateExtension` APIs have been deprecated in favor of these new APIs. Refer to the [App development documentation](../development/apps/api/ui-extensions/object-views.md) for details.
 
