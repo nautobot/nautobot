@@ -1968,16 +1968,11 @@ class DeviceView(generic.ObjectView):
 class DeviceComponentTabView(generic.ObjectView):
     queryset = Device.objects.all()
 
-    object_detail_content = object_detail.ObjectDetailContent(
-        extra_buttons=DeviceView.object_detail_content.extra_buttons,
-    )
-
     def get_extra_context(self, request, instance):
         modulebay_count = instance.module_bays.count()
         module_count = instance.module_bays.filter(installed_module__isnull=False).count()
 
         return {
-            **super().get_extra_context(request, instance),
             "modulebay_count": modulebay_count,
             "module_count": f"{module_count}/{modulebay_count}",
         }
@@ -2182,9 +2177,6 @@ class DeviceModuleBaysView(DeviceComponentTabView):
 class DeviceInventoryView(generic.ObjectView):
     queryset = Device.objects.all()
     template_name = "dcim/device/inventory.html"
-    object_detail_content = object_detail.ObjectDetailContent(
-        extra_buttons=DeviceView.object_detail_content.extra_buttons,
-    )
 
     def get_extra_context(self, request, instance):
         inventoryitems = (
@@ -2195,7 +2187,6 @@ class DeviceInventoryView(generic.ObjectView):
             inventoryitem_table.columns.show("pk")
 
         return {
-            **super().get_extra_context(request, instance),
             "inventoryitem_table": inventoryitem_table,
             "active_tab": "inventory",
         }
@@ -2205,13 +2196,9 @@ class DeviceStatusView(generic.ObjectView):
     additional_permissions = ["dcim.napalm_read_device"]
     queryset = Device.objects.all()
     template_name = "dcim/device/status.html"
-    object_detail_content = object_detail.ObjectDetailContent(
-        extra_buttons=DeviceView.object_detail_content.extra_buttons,
-    )
 
     def get_extra_context(self, request, instance):
         return {
-            **super().get_extra_context(request, instance),
             "active_tab": "status",
         }
 
@@ -2220,9 +2207,6 @@ class DeviceLLDPNeighborsView(generic.ObjectView):
     additional_permissions = ["dcim.napalm_read_device"]
     queryset = Device.objects.all()
     template_name = "dcim/device/lldp_neighbors.html"
-    object_detail_content = object_detail.ObjectDetailContent(
-        extra_buttons=DeviceView.object_detail_content.extra_buttons,
-    )
 
     def get_extra_context(self, request, instance):
         interfaces = (
@@ -2232,7 +2216,6 @@ class DeviceLLDPNeighborsView(generic.ObjectView):
         )
 
         return {
-            **super().get_extra_context(request, instance),
             "interfaces": interfaces,
             "active_tab": "lldp-neighbors",
         }
@@ -2242,23 +2225,15 @@ class DeviceConfigView(generic.ObjectView):
     additional_permissions = ["dcim.napalm_read_device"]
     queryset = Device.objects.all()
     template_name = "dcim/device/config.html"
-    object_detail_content = object_detail.ObjectDetailContent(
-        extra_buttons=DeviceView.object_detail_content.extra_buttons,
-    )
 
     def get_extra_context(self, request, instance):
         return {
-            **super().get_extra_context(request, instance),
             "active_tab": "config",
         }
 
 
 class DeviceConfigContextView(ObjectConfigContextView):
     base_template = "dcim/device/base.html"
-
-    object_detail_content = object_detail.ObjectDetailContent(
-        extra_buttons=DeviceView.object_detail_content.extra_buttons,
-    )
 
     @cached_property
     def queryset(self):  # pylint: disable=method-hidden

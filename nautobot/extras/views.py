@@ -39,7 +39,6 @@ from nautobot.core.utils.lookup import (
     get_route_for_model,
     get_table_class_string_from_view_name,
     get_table_for_model,
-    get_view_for_model,
 )
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
@@ -2292,7 +2291,6 @@ class ObjectChangeLogView(generic.GenericView):
             "extras/object_changelog.html",
             {
                 "object": obj,
-                "object_detail_content": getattr(get_view_for_model(obj), "object_detail_content", None),
                 "verbose_name": obj._meta.verbose_name,
                 "verbose_name_plural": obj._meta.verbose_name_plural,
                 "table": objectchanges_table,
@@ -2423,7 +2421,6 @@ class ObjectNotesView(generic.GenericView):
             "extras/object_notes.html",
             {
                 "object": obj,
-                "object_detail_content": getattr(get_view_for_model(obj), "object_detail_content", None),
                 "verbose_name": obj._meta.verbose_name,
                 "verbose_name_plural": obj._meta.verbose_name_plural,
                 "table": notes_table,
