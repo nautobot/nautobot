@@ -632,7 +632,6 @@ class JobTransactionTest(TransactionTestCase):
             failed_job_result.status, JobResultStatusChoices.STATUS_SUCCESS, msg="Duplicate singleton job didn't error."
         )
 
-
     @mock.patch("nautobot.extras.context_managers.enqueue_webhooks")
     def test_job_fires_webhooks(self, mock_enqueue_webhooks):
         module = "atomic_transaction"
