@@ -3337,5 +3337,12 @@ class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
             f"same device as the Virtual Device Context's device.",
         )
 
-    def test_get_docs_url(self):
-        """No docs for VirtualDeviceContext yet."""
+    def test_modifying_vdc_device_not_allowed(self):
+        vdc = VirtualDeviceContext.objects.first()
+        old_device = vdc.device
+        new_device = Device.objects.exclude(pk=old_device.pk).first()
+        with self.assertRaises(ValidationError) as err:
+            vdc.device = new_device
+            vdc.validated_save()
+
+        self.assertIn("Virtual Device Context's device cannot be changed once created", str(err.exception))
