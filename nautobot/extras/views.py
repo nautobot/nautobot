@@ -45,6 +45,7 @@ from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
+    ObjectBulkCreateViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
     ObjectChangeLogViewMixin,
@@ -52,6 +53,7 @@ from nautobot.core.views.mixins import (
     ObjectDetailViewMixin,
     ObjectEditViewMixin,
     ObjectListViewMixin,
+    ObjectNotesViewMixin,
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
@@ -2589,38 +2591,56 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
 #
 
 
-class SecretListView(generic.ObjectListView):
+class SecretUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkCreateViewMixin,  # 3.0 TODO: remove, unused
+    ObjectBulkDestroyViewMixin,
+    # no ObjectBulkUpdateViewMixin here yet
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
+):
     queryset = Secret.objects.all()
-    filterset = filters.SecretFilterSet
-    filterset_form = forms.SecretFilterForm
-    table = tables.SecretTable
+    form_class = forms.SecretForm
+    filterset_class = filters.SecretFilterSet
+    filterset_form_class = forms.SecretFilterForm
+    table_class = tables.SecretTable
 
-
-class SecretView(generic.ObjectView):
-    queryset = Secret.objects.all()
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                weight=100, section=SectionChoices.LEFT_HALF, fields="__all__", exclude_fields=["parameters"]
+            ),
+            object_detail.KeyValueTablePanel(
+                weight=200, section=SectionChoices.LEFT_HALF, label="Parameters", context_data_key="parameters"
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_title="Groups containing this secret",
+                table_class=tables.SecretsGroupTable,
+                table_attribute="secrets_groups",
+                footer_content_template_path=None,
+            ),
+        ],
+        extra_buttons=[
+            object_detail.Button(
+                weight=100,
+                label="Check Secret",
+                icon="mdi-test-tube",
+                javascript_template_path="extras/secret_check.js",
+                attributes={"onClick": "checkSecret()"},
+            ),
+        ],
+    )
 
     def get_extra_context(self, request, instance):
-        # Determine user's preferred output format
-        if request.GET.get("format") in ["json", "yaml"]:
-            format_ = request.GET.get("format")
-            if request.user.is_authenticated:
-                request.user.set_config("extras.configcontext.format", format_, commit=True)
-        elif request.user.is_authenticated:
-            format_ = request.user.get_config("extras.configcontext.format", "json")
-        else:
-            format_ = "json"
-
-        provider = registry["secrets_providers"].get(instance.provider)
-
-        groups = instance.secrets_groups.distinct()
-        groups_table = tables.SecretsGroupTable(groups, orderable=False)
-
-        return {
-            "format": format_,
-            "provider_name": provider.name if provider else instance.provider,
-            "groups_table": groups_table,
-            **super().get_extra_context(request, instance),
-        }
+        ctx = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            ctx["parameters"] = instance.parameters
+        return ctx
 
 
 class SecretProviderParametersFormView(generic.GenericView):
@@ -2637,27 +2657,6 @@ class SecretProviderParametersFormView(generic.GenericView):
             "extras/inc/secret_provider_parameters_form.html",
             {"form": provider.ParametersForm(initial=request.GET)},
         )
-
-
-class SecretEditView(generic.ObjectEditView):
-    queryset = Secret.objects.all()
-    model_form = forms.SecretForm
-    template_name = "extras/secret_edit.html"
-
-
-class SecretDeleteView(generic.ObjectDeleteView):
-    queryset = Secret.objects.all()
-
-
-class SecretBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Secret.objects.all()
-    table = tables.SecretTable
-
-
-class SecretBulkDeleteView(generic.BulkDeleteView):
-    queryset = Secret.objects.all()
-    filterset = filters.SecretFilterSet
-    table = tables.SecretTable
 
 
 class SecretsGroupListView(generic.ObjectListView):

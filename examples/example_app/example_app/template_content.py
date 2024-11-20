@@ -2,6 +2,8 @@ from django.urls import reverse
 
 from nautobot.apps.ui import (
     BaseTextPanel,
+    Button,
+    ButtonColorChoices,
     DistinctViewTab,
     ObjectFieldsPanel,
     ObjectTextPanel,
@@ -173,6 +175,16 @@ class ExampleModelContent(TemplateExtension):
     model = "example_app.examplemodel"
     template_name = "example_app/panel.html"
 
+    object_detail_buttons = (
+        Button(
+            weight=100,
+            label="Example App Button",
+            color=ButtonColorChoices.BLUE,
+            icon="mdi-information",
+            attributes={"onClick": 'alert("I am from the example app template_extension.")'},
+        ),
+    )
+
     #
     # Old (deprecated) way to do things follows
     # See examples above for preferred (Nautobot 2.4+) approach using `object_detail_panels` attribute
@@ -209,14 +221,6 @@ class ExampleModelContent(TemplateExtension):
                 "panel_body": "I'm a full width panel that shows up following other full-width panels defined in the detail view template.",
             },
         )
-
-    def buttons(self):
-        return """
-        <a href="#" onClick="alert('I am from the example app template_extension.')" class="btn btn-primary">
-            <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
-            Example App Button
-        </a>
-        """
 
 
 # Don't forget to register your template extensions!

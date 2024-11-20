@@ -10,6 +10,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model
 from django.urls import get_resolver, URLPattern, URLResolver
 from django.utils.module_loading import import_string
+from django.views.generic.base import RedirectView
 
 
 def get_changes_for_model(model):
@@ -312,7 +313,7 @@ def get_created_and_last_updated_usernames_for_model(instance):
     return created_by, last_updated_by
 
 
-def get_url_patterns(urlconf=None, patterns_list=None, base_path="/"):
+def get_url_patterns(urlconf=None, patterns_list=None, base_path="/", ignore_redirects=False):
     """
     Recursively yield a list of registered URL patterns.
 
@@ -323,6 +324,7 @@ def get_url_patterns(urlconf=None, patterns_list=None, base_path="/"):
             Default if unspecified is the `url_patterns` attribute of the given `urlconf` module.
         base_path (str): String to prepend to all URL patterns yielded.
             Default if unspecified is the string `"/"`.
+        ignore_redirects (bool): If True, skip URL patterns that correspond to RedirectViews.
 
     Yields:
         (str): Each URL pattern defined in the given urlconf and its descendants
@@ -381,10 +383,18 @@ def get_url_patterns(urlconf=None, patterns_list=None, base_path="/"):
 
     for item in patterns_list:
         if isinstance(item, URLPattern):
+            if (
+                ignore_redirects
+                and hasattr(item.callback, "view_class")
+                and issubclass(item.callback.view_class, RedirectView)
+            ):
+                continue
             yield base_path + str(item.pattern)
         elif isinstance(item, URLResolver):
             # Recurse!
-            yield from get_url_patterns(urlconf, item.url_patterns, base_path + str(item.pattern))
+            yield from get_url_patterns(
+                urlconf, item.url_patterns, base_path + str(item.pattern), ignore_redirects=ignore_redirects
+            )
 
 
 def get_url_for_url_pattern(url_pattern):
