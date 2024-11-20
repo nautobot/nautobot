@@ -16,6 +16,7 @@ from django.forms import (
     MultipleHiddenInput,
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
+from django.urls import reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
 from django.utils.html import format_html
@@ -1945,6 +1946,9 @@ class DeviceView(generic.ObjectView):
             "tenant", "primary_ip4", "primary_ip6"
         )
         vdcs_table = tables.VirtualDeviceContextTable(vdcs, orderable=False, exclude=("device",))
+        vdc_url = reverse("dcim:virtualdevicecontext_add")
+        return_url = instance.get_absolute_url()
+        vdcs_table_add_url = f"{vdc_url}?device={instance.id}&return_url={return_url}"
 
         paginate = {
             "paginator_class": EnhancedPaginator,
@@ -1962,6 +1966,7 @@ class DeviceView(generic.ObjectView):
             "modulebay_count": modulebay_count,
             "module_count": f"{module_count}/{modulebay_count}",
             "vdcs_table": vdcs_table,
+            "vdcs_table_add_url": vdcs_table_add_url,
         }
 
 

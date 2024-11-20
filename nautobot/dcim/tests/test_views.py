@@ -2224,6 +2224,19 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_vdc_panel_includes_add_vdc_btn(self):
+        """Assert Add Virtual device Contexts button is in Device detail view: Issue from #6348"""
+        device = Device.objects.first()
+        url = reverse("dcim:device", kwargs={"pk": device.pk})
+        response = self.client.get(url)
+        response_context = response.content.decode(response.charset)
+        vdc_url = reverse("dcim:virtualdevicecontext_add")
+        return_url = device.get_absolute_url()
+        vdcs_table_add_url = f"{vdc_url}?device={device.id}&amp;return_url={return_url}"
+        self.assertIn("Add virtual device contexts", response_context)
+        self.assertIn(vdcs_table_add_url, response_context)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_consoleports(self):
         device = Device.objects.first()
 
