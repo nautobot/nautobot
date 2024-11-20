@@ -409,8 +409,6 @@ class BulkEditObjects(Job):
 
                 for obj in queryset:
                     self.logger.debug(f"Performing update on {obj} (PK: {obj.pk})")
-                    # TODO (timizuo): Figure this out
-                    # obj = self.alter_obj(obj, request, [], kwargs) # Unable to archive this now
 
                     # Update standard fields. If a field is listed in _nullify, delete its value.
                     for name in standard_fields:
@@ -460,9 +458,6 @@ class BulkEditObjects(Job):
                     if hasattr(form, "save_note") and callable(form.save_note):
                         form.save_note(instance=obj, user=self.user)
 
-                    # TODO (timizuo): Figure this out
-                    # self.extra_post_save_action(obj, form)
-
                 # Enforce object-level permissions
                 if queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(updated_objects):
                     raise ObjectDoesNotExist
@@ -499,11 +494,8 @@ class BulkEditObjects(Job):
         try:
             form_cls = get_form_for_model(model, form_prefix="BulkEdit")
         except Exception:
-            # Cant determine the exceptions to handle because any exception could be raised,
-            # e.g InterfaceForm would raise a ObjectDoesNotExist Error since no device was provided
-            # While other forms might raise other errors, also if model_form is None a TypeError would be raised.
             self.logger.debug(
-                'Could not find the "%s.%s" data bulk edit form. Unable to process CSV for this model.',
+                'Could not find the "%s.%s" data bulk edit form. Unable to process Bulk Edit for this model.',
                 content_type.app_label,
                 content_type.model,
             )

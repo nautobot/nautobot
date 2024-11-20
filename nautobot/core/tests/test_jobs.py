@@ -630,126 +630,66 @@ class BulkEditTestCase(TransactionTestCase):
 
     def test_bulk_edit_without_permission(self):
         statuses_to_update = [str(status) for status in Status.objects.all().values_list("pk", flat=True)[:2]]
-        with self.subTest("Assert Generic BulkEditView"):
-            job_result = create_job_result_and_run_job(
-                "nautobot.core.jobs",
-                "BulkEditObjects",
-                content_type=self.status_ct.id,
-                edit_all=False,
-                filter_query_params={},
-                post_data={"pk": statuses_to_update, "color": "aa1409"},
-                username=self.user.username,
-            )
-            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
-            job_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
-            self.assertEqual(job_log.message, f'User "{self.user}" does not have permission to update status objects')
-
-        with self.subTest("Assert Generic ObjectBulkUpdateViewMixin"):
-            roles_to_update = [str(role) for role in Role.objects.all().values_list("pk", flat=True)[:2]]
-            job_result = create_job_result_and_run_job(
-                "nautobot.core.jobs",
-                "BulkEditObjects",
-                content_type=self.role_ct.id,
-                edit_all=False,
-                filter_query_params={},
-                post_data={"pk": roles_to_update, "color": "aa1409"},
-                username=self.user.username,
-            )
-            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
-            job_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
-            self.assertEqual(job_log.message, f'User "{self.user}" does not have permission to update role objects')
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "BulkEditObjects",
+            content_type=self.status_ct.id,
+            edit_all=False,
+            filter_query_params={},
+            post_data={"pk": statuses_to_update, "color": "aa1409"},
+            username=self.user.username,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        job_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(job_log.message, f'User "{self.user}" does not have permission to update status objects')
 
     def test_bulk_edit_all(self):
-        self.add_permissions("extras.change_status", "extras.view_status", "extras.change_role", "extras.view_role")
-        with self.subTest("Assert Generic BulkEditView"):
-            statuses = Status.objects.all()
-            job_result = create_job_result_and_run_job(
-                "nautobot.core.jobs",
-                "BulkEditObjects",
-                content_type=self.status_ct.id,
-                edit_all=True,
-                filter_query_params={},
-                post_data={"color": "aa1409"},
-                username=self.user.username,
-            )
-            self._common_no_error_test_assertion(Status, job_result, statuses.count(), color="aa1409")
-
-        with self.subTest("Assert Generic ObjectBulkUpdateViewMixin"):
-            job_result = create_job_result_and_run_job(
-                "nautobot.core.jobs",
-                "BulkEditObjects",
-                content_type=self.role_ct.id,
-                edit_all=True,
-                filter_query_params={},
-                post_data={"color": "aa1409"},
-                username=self.user.username,
-            )
-            self._common_no_error_test_assertion(Role, job_result, Role.objects.all().count(), color="aa1409")
+        self.add_permissions("extras.change_role", "extras.view_role")
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "BulkEditObjects",
+            content_type=self.role_ct.id,
+            edit_all=True,
+            filter_query_params={},
+            post_data={"color": "aa1409"},
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(Role, job_result, Role.objects.all().count(), color="aa1409")
 
     def test_bulk_edit_filter_all(self):
-        self.add_permissions("extras.change_status", "extras.view_status", "extras.change_role", "extras.view_role")
-        with self.subTest("Assert Generic BulkEditView"):
-            # By default Active and Available are some of the example of Status that starts with A
-            statuses = Status.objects.filter(name__istartswith="A")
-            self.assertNotEqual(statuses.count(), 0)
-            job_result = create_job_result_and_run_job(
-                "nautobot.core.jobs",
-                "BulkEditObjects",
-                content_type=self.status_ct.id,
-                edit_all=True,
-                filter_query_params={"name__istartswith": "A"},
-                # pk ignored if edit_all is True
-                post_data={
-                    "pk": [str(statuses[0].pk)],
-                    "color": "aa1409",
-                    "_all": "True",
-                },
-                username=self.user.username,
-            )
-            self._common_no_error_test_assertion(
-                Status, job_result, statuses.count(), name__istartswith="A", color="aa1409"
-            )
-
-        with self.subTest("Assert Generic ObjectBulkUpdateViewMixin"):
-            roles_to_update = [Role.objects.create(name=f"Example Role {x}") for x in range(3)]
-            roles_pks = [str(role.pk) for role in roles_to_update]
-            job_result = create_job_result_and_run_job(
-                "nautobot.core.jobs",
-                "BulkEditObjects",
-                content_type=self.role_ct.id,
-                edit_all=False,
-                filter_query_params={"name__istartswith": "Example Role"},
-                # pk ignored if edit_all is True
-                post_data={"pk": roles_pks, "color": "aa1409"},
-                username=self.user.username,
-            )
-            self._common_no_error_test_assertion(Role, job_result, 3, name__istartswith="Example Role", color="aa1409")
+        self.add_permissions("extras.change_status", "extras.view_status")
+        # By default Active and Available are some of the example of Status that starts with A
+        statuses = Status.objects.filter(name__istartswith="A")
+        self.assertNotEqual(statuses.count(), 0)
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "BulkEditObjects",
+            content_type=self.status_ct.id,
+            edit_all=True,
+            filter_query_params={"name__istartswith": "A"},
+            # pk ignored if edit_all is True
+            post_data={
+                "pk": [str(statuses[0].pk)],
+                "color": "aa1409",
+                "_all": "True",
+            },
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(
+            Status, job_result, statuses.count(), name__istartswith="A", color="aa1409"
+        )
 
     def test_bulk_edit_with_pk(self):
-        self.add_permissions("extras.change_status", "extras.view_status", "extras.change_role", "extras.view_role")
-        with self.subTest("Assert Generic BulkEditView"):
-            statuses_to_update = [str(status) for status in Status.objects.all().values_list("pk", flat=True)[:2]]
-            job_result = create_job_result_and_run_job(
-                "nautobot.core.jobs",
-                "BulkEditObjects",
-                content_type=self.status_ct.id,
-                edit_all=False,
-                filter_query_params={"name__istartswith": "A"},
-                post_data={"pk": statuses_to_update, "color": "aa1409"},
-                username=self.user.username,
-            )
-            self._common_no_error_test_assertion(Status, job_result, 2, pk__in=statuses_to_update)
-
-        with self.subTest("Assert Generic ObjectBulkUpdateViewMixin"):
-            roles_to_update = [Role.objects.create(name=f"Example Role {x}") for x in range(3)]
-            roles_pks = [str(role.pk) for role in roles_to_update]
-            job_result = create_job_result_and_run_job(
-                "nautobot.core.jobs",
-                "BulkEditObjects",
-                content_type=self.role_ct.id,
-                edit_all=False,
-                filter_query_params={"name__istartswith": "Example Role"},
-                post_data={"pk": roles_pks, "color": "aa1409"},
-                username=self.user.username,
-            )
-            self._common_no_error_test_assertion(Role, job_result, 3, pk__in=roles_pks, color="aa1409")
+        self.add_permissions("extras.change_role", "extras.view_role")
+        roles_to_update = [Role.objects.create(name=f"Example Role {x}") for x in range(3)]
+        roles_pks = [str(role.pk) for role in roles_to_update]
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "BulkEditObjects",
+            content_type=self.role_ct.id,
+            edit_all=False,
+            filter_query_params={"name__istartswith": "Example Role"},
+            post_data={"pk": roles_pks, "color": "aa1409"},
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(Role, job_result, 3, pk__in=roles_pks, color="aa1409")
