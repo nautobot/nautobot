@@ -626,10 +626,10 @@ class JobTransactionTest(TransactionTestCase):
         job_class, _ = get_job_class_and_model(module, name, "local")
         self.assertTrue(job_class.is_singleton)
         cache.set(job_class.singleton_cache_key, 1)
-        failed_job_result = create_job_result_and_run_job(module, name, _ignore_singleton_lock=True)
+        passed_job_result = create_job_result_and_run_job(module, name, _ignore_singleton_lock=True)
 
         self.assertEqual(
-            failed_job_result.status, JobResultStatusChoices.STATUS_SUCCESS, msg="Duplicate singleton job didn't error."
+            passed_job_result.status, JobResultStatusChoices.STATUS_SUCCESS, msg="Duplicate singleton job didn't succeed with _ignore_singleton_lock=True."
         )
 
     @mock.patch("nautobot.extras.context_managers.enqueue_webhooks")
