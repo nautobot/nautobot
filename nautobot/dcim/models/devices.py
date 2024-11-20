@@ -1981,6 +1981,12 @@ class VirtualDeviceContext(PrimaryModel):
         super().clean()
         self.validate_primary_ips()
 
+        # Validate that device is not being modified
+        if self.present_in_database:
+            vdc = VirtualDeviceContext.objects.get(id=self.id)
+            if vdc.device != self.device:
+                raise ValidationError({"device": "Virtual Device Context's device cannot be changed once created"})
+
 
 @extras_features(
     "custom_links",

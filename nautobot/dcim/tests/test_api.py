@@ -3488,6 +3488,21 @@ class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
             vdc.refresh_from_db()
             self.assertEqual(vdc.primary_ip6, ip_v6)
 
+    def test_changing_device_on_vdc_raise_validation_error(self):
+        """
+        Validate that changing device on the virutal device context is not allowed.
+        """
+        self.add_permissions("dcim.change_virtualdevicecontext")
+        vdc = VirtualDeviceContext.objects.first()
+        old_device = vdc.device
+        new_device = Device.objects.exclude(pk=old_device.pk).first()
+        patch_data = {"device": new_device.pk}
+        response = self.client.patch(self._get_detail_url(vdc), patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(
+            "Changing the device of a VirtualDeviceContext is not allowed.", response.data["non_field_errors"][0]
+        )
+
 
 class InterfaceVDCAssignmentTestCase(APIViewTestCases.APIViewTestCase):
     model = InterfaceVDCAssignment

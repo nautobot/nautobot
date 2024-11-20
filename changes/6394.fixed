@@ -1,0 +1,2 @@
+Fixed unexpected error `{'default_job_queue': ['This field cannot be null.']}` on Job Bulk Update.
+Fixed overriding custom `job_queues` on Job Bulk Update when no changes made on this field.

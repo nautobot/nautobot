@@ -280,7 +280,7 @@ class BaseJob:
             self._delete_file_proxies(*file_ids)
 
         if status == JobResultStatusChoices.STATUS_SUCCESS:
-            self.logger.info("Job completed", extra={"grouping": "post_run"})
+            self.logger.success("Job completed", extra={"grouping": "post_run"})
 
     @final
     @classproperty
