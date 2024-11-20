@@ -31,16 +31,3 @@
     {% include 'responsive_table.html' %}
     {% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
 {% endblock %}
-
-{% block javascript %}
-    {{ block.super }}
-    <script>
-        document.addEventListener("keydown", function(event) {
-        // command + enter
-        if ((event.metaKey && event.key === "Enter") || (event.ctrlKey && event.key === "Enter")) {
-            const button = document.getElementById("createNote");
-            button.click();
-        }
-        });
-    </script>
-{% endblock javascript %}
