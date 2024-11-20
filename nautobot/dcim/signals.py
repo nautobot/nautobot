@@ -301,7 +301,7 @@ def validate_vdcs_interface_relationships(sender, instance, action, **kwargs):
     if action != "pre_add":
         return
 
-    pk_set = kwargs["pk_set"]
+    pk_set = kwargs.get("pk_set", [])
     if isinstance(instance, Interface):
         invalid_vdcs = kwargs["model"].objects.filter(pk__in=pk_set).exclude(device=instance.device)
         if invalid_vdcs.count():

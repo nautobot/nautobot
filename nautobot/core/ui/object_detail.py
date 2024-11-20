@@ -6,9 +6,9 @@ from enum import Enum
 import logging
 
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db import models
-from django.db.models import JSONField, URLField
+from django.db.models import CharField, JSONField, URLField
 from django.db.models.fields.related import ManyToManyField
 from django.template import Context
 from django.template.defaultfilters import truncatechars
@@ -18,6 +18,7 @@ from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
 from django_tables2 import RequestConfig
 
+from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags.helpers import (
     badge,
@@ -70,7 +71,7 @@ class ObjectDetailContent:
     A legacy `ObjectView` can similarly define its own `object_detail_content` attribute as well.
     """
 
-    def __init__(self, *, panels=(), layout=LayoutChoices.DEFAULT, extra_tabs=None):
+    def __init__(self, *, panels=(), layout=LayoutChoices.DEFAULT, extra_buttons=None, extra_tabs=None):
         """
         Create an ObjectDetailContent with a "main" tab and all standard "extras" tabs (advanced, contacts, etc.).
 
@@ -78,6 +79,8 @@ class ObjectDetailContent:
             panels (list): List of `Panel` instances to include in this layout by default. Standard `extras` Panels
                 (custom fields, relationships, etc.) do not need to be specified as they will be automatically included.
             layout (str): One of the `LayoutChoices` values, indicating the layout of the "main" tab for this view.
+            extra_buttons (list): Optional list of `Button` instances. Standard detail-view "actions" dropdown
+                (clone, edit, delete) does not need to be specified as it will be automatically included.
             extra_tabs (list): Optional list of `Tab` instances. Standard `extras` Tabs (advanced, contacts,
                 dynamic-groups, metadata, etc.) do not need to be specified as they will be automatically included.
         """
@@ -94,7 +97,17 @@ class ObjectDetailContent:
         ]
         if extra_tabs is not None:
             tabs.extend(extra_tabs)
+        self.extra_buttons = extra_buttons or []
         self.tabs = tabs
+
+    @property
+    def extra_buttons(self):
+        """The extra buttons defined for this detail view, ordered by their `weight`."""
+        return sorted(self._extra_buttons, key=lambda button: button.weight)
+
+    @extra_buttons.setter
+    def extra_buttons(self, value):
+        self._extra_buttons = value
 
     @property
     def tabs(self):
@@ -151,6 +164,110 @@ class Component:
             (dict): Additional context data.
         """
         return {}
+
+
+class Button(Component):
+    """Base class for UI framework definition of a single button within an Object Detail (Object Retrieve) page."""
+
+    def __init__(
+        self,
+        *,
+        label,
+        color=ButtonColorChoices.DEFAULT,
+        link_name=None,
+        icon=None,
+        template_path="components/button/default.html",
+        required_permissions=None,
+        javascript_template_path=None,
+        attributes=None,
+        **kwargs,
+    ):
+        """
+        Initialize a Button component.
+
+        Args:
+            label (str): The text of this button, not including any icon.
+            color (ButtonColorChoices): The color (class) of this button.
+            link_name (str, optional): View name to link to, for example "dcim:locationtype_retrieve".
+                This link will be reversed and will automatically include the current object's PK as a parameter to the
+                `reverse()` call when the button is rendered. For more complex link construction, you can subclass this
+                and override the `get_link()` method.
+            icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
+            template_path (str): Template to render for this button.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The button will only be rendered if the user has these permissions.
+            javascript_template_path (str, optional): JavaScript template to render and include with this button.
+                Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
+            attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
+        """
+        self.label = label
+        self.color = color
+        self.link_name = link_name
+        self.icon = icon
+        self.template_path = template_path
+        self.required_permissions = required_permissions or []
+        self.javascript_template_path = javascript_template_path
+        self.attributes = attributes
+        super().__init__(**kwargs)
+
+    def should_render(self, context: Context):
+        """Render if and only if the requesting user has appropriate permissions (if any)."""
+        return context["request"].user.has_perms(self.required_permissions)
+
+    def get_link(self, context: Context):
+        """
+        Get the hyperlink URL (if any) for this button.
+
+        Defaults to reversing `self.link_name` with `pk: obj.pk` as a kwarg, but subclasses may override this for
+        more advanced link construction.
+        """
+        if self.link_name:
+            obj = get_obj_from_context(context)
+            return reverse(self.link_name, kwargs={"pk": obj.pk})
+        return None
+
+    def get_extra_context(self, context: Context):
+        """Add the relevant attributes of this Button to the context."""
+        return {
+            "link": self.get_link(context),
+            "label": self.label,
+            "color": self.color,
+            "icon": self.icon,
+            "attributes": self.attributes,
+        }
+
+    def render(self, context: Context):
+        """Render this button to HTML, possibly including any associated JavaScript."""
+        if not self.should_render(context):
+            return ""
+
+        button = render_component_template(self.template_path, context, **self.get_extra_context(context))
+        if self.javascript_template_path:
+            button += format_html(
+                "<script>{}</script>", render_component_template(self.javascript_template_path, context)
+            )
+        return button
+
+
+class DropdownButton(Button):
+    """A Button that has one or more other buttons as `children`, which it renders into a dropdown menu."""
+
+    def __init__(self, children: list[Button], template_path="components/button/dropdown.html", **kwargs):
+        """Initialize a DropdownButton component.
+
+        Args:
+            children (list[Button]): Elements of the dropdown menu associated to this DropdownButton.
+            template_path (str): Dropdown-specific template file.
+        """
+        self.children = children
+        super().__init__(template_path=template_path, **kwargs)
+
+    def get_extra_context(self, context: Context):
+        """Add the children of this DropdownButton to the other Button context."""
+        return {
+            **super().get_extra_context(context),
+            "children": [child.get_extra_context(context) for child in self.children if child.should_render(context)],
+        }
 
 
 class Tab(Component):
@@ -638,6 +755,7 @@ class ObjectsTablePanel(Panel):
                 )
             if self.order_by_fields:
                 body_content_table_queryset = body_content_table_queryset.order_by(*self.order_by_fields)
+            body_content_table_queryset = body_content_table_queryset.distinct()
             body_content_table = body_content_table_class(
                 body_content_table_queryset, hide_hierarchy_ui=self.hide_hierarchy_ui
             )
@@ -692,7 +810,8 @@ class KeyValueTablePanel(Panel):
     def __init__(
         self,
         *,
-        data,
+        data=None,
+        context_data_key=None,
         hide_if_unset=(),
         value_transforms=None,
         body_wrapper_template_path="components/panel/body_wrapper_key_value_table.html",
@@ -703,7 +822,8 @@ class KeyValueTablePanel(Panel):
 
         Args:
             data (dict): The dictionary of key/value data to display in this panel.
-                May be `None` if it will be derived dynamically by `get_data()` instead.
+                May be `None` if it will be derived dynamically by `get_data()` or from `context_data_key` instead.
+            context_data_key (str): The render context key that will contain the data, if `data` wasn't provided.
             hide_if_unset (list): Keys that should be omitted from the display entirely if they have a falsey value,
                 instead of displaying the usual em-dash placeholder text.
             value_transforms (dict): Dictionary of `{key: [list of transform functions]}`, used to specify custom
@@ -713,7 +833,10 @@ class KeyValueTablePanel(Panel):
                 - `[render_markdown, placeholder]` - render the given text as Markdown, or render a placeholder if blank
                 - `[humanize_speed, placeholder]` - convert the given kbps value to Mbps or Gbps for display
         """
+        if data and context_data_key:
+            raise ValueError("The data and context_data_key parameters are mutually exclusive")
         self.data = data
+        self.context_data_key = context_data_key or "data"
         self.hide_if_unset = hide_if_unset
         self.value_transforms = value_transforms or {}
         super().__init__(body_wrapper_template_path=body_wrapper_template_path, **kwargs)
@@ -730,7 +853,7 @@ class KeyValueTablePanel(Panel):
         Returns:
             (dict): Key/value dictionary to be rendered in this panel.
         """
-        return self.data or context["data"]
+        return self.data or context[self.context_data_key]
 
     def render_key(self, key, value, context: Context):
         """
@@ -894,7 +1017,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         *,
         fields="__all__",
         exclude_fields=(),
-        context_object_key="object",
+        context_object_key=None,
         ignore_nonexistent_fields=False,
         label=None,
         **kwargs,
@@ -922,12 +1045,13 @@ class ObjectFieldsPanel(KeyValueTablePanel):
     def render_label(self, context: Context):
         """Default to rendering the provided object's `verbose_name` if no more specific `label` was defined."""
         if self.label is None:
-            return bettertitle(get_obj_from_context(context)._meta.verbose_name)
+            return bettertitle(get_obj_from_context(context, self.context_object_key)._meta.verbose_name)
         return super().render_label(context)
 
     def render_value(self, key, value, context: Context):
+        obj = get_obj_from_context(context, self.context_object_key)
         try:
-            field_instance = get_obj_from_context(context)._meta.get_field(key)
+            field_instance = obj._meta.get_field(key)
         except FieldDoesNotExist:
             field_instance = None
 
@@ -943,6 +1067,11 @@ class ObjectFieldsPanel(KeyValueTablePanel):
         if isinstance(field_instance, ManyToManyField) and field_instance.related_model == ContentType:
             return render_content_types(value)
 
+        if isinstance(field_instance, CharField) and hasattr(obj, f"get_{key}_display"):
+            # For example, Secret.provider -> Secret.get_provider_display()
+            # Note that we *don't* want to do this for models with a StatusField and its `get_status_display()`
+            return super().render_value(key, getattr(obj, f"get_{key}_display")(), context)
+
         return super().render_value(key, value, context)
 
     def get_data(self, context: Context):
@@ -953,7 +1082,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             (dict): Key-value pairs corresponding to the object's fields, or `{}` if no object is present.
         """
         fields = self.fields
-        instance = context.get(self.context_object_key, None)
+        instance = get_obj_from_context(context, self.context_object_key)
 
         if instance is None:
             return {}
@@ -989,6 +1118,8 @@ class ObjectFieldsPanel(KeyValueTablePanel):
                 continue
             try:
                 field_value = getattr(instance, field_name)
+            except ObjectDoesNotExist:
+                field_value = None
             except AttributeError:
                 if self.ignore_nonexistent_fields:
                     continue
@@ -1000,7 +1131,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
     def render_key(self, key, value, context: Context):
         """Render the `verbose_name` of the model field whose name corresponds to the given key, if applicable."""
-        instance = context.get(self.context_object_key, None)
+        instance = get_obj_from_context(context, self.context_object_key)
 
         if instance is not None:
             try:
@@ -1534,7 +1665,7 @@ class _ObjectDataProvenancePanel(ObjectFieldsPanel):
         data["created_by"] = context["created_by"]
         data["last_updated_by"] = context["last_updated_by"]
         with contextlib.suppress(AttributeError):
-            data["api_url"] = context[self.context_object_key].get_absolute_url(api=True)
+            data["api_url"] = get_obj_from_context(context, self.context_object_key).get_absolute_url(api=True)
         return data
 
     def render_key(self, key, value, context: Context):

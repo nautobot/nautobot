@@ -29,12 +29,13 @@ from rest_framework.response import Response
 from nautobot.circuits.models import Circuit
 from nautobot.cloud.models import CloudAccount
 from nautobot.cloud.tables import CloudAccountTable
+from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import has_perms
+from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
-from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
@@ -228,20 +229,20 @@ class LocationTypeUIViewSet(
     form_class = forms.LocationTypeForm
     serializer_class = serializers.LocationSerializer
 
-    object_detail_content = ObjectDetailContent(
+    object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            ObjectFieldsPanel(
+            object_detail.ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields="__all__",
             ),
-            ObjectsTablePanel(
+            object_detail.ObjectsTablePanel(
                 weight=100,
                 table_class=tables.LocationTypeTable,
                 table_filter="parent",
                 table_title="Child Location Type(s)",
             ),
-            ObjectsTablePanel(
+            object_detail.ObjectsTablePanel(
                 weight=200,
                 table_class=tables.LocationTable,
                 table_title="Location(s) of this Type",
@@ -1764,6 +1765,149 @@ class DeviceView(generic.ObjectView):
         "status",
     )
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        extra_buttons=(
+            object_detail.DropdownButton(
+                weight=100,
+                color=ButtonColorChoices.BLUE,
+                label="Add Components",
+                icon="mdi-plus-thick",
+                required_permissions=["dcim.change_device"],
+                children=(
+                    object_detail.Button(
+                        weight=100,
+                        link_name="dcim:device_consoleports_add",
+                        label="Console Ports",
+                        icon="mdi-console",
+                        required_permissions=["dcim.add_consoleport"],
+                    ),
+                    object_detail.Button(
+                        weight=200,
+                        link_name="dcim:device_consoleserverports_add",
+                        label="Console Server Ports",
+                        icon="mdi-console-network-outline",
+                        required_permissions=["dcim.add_consoleserverport"],
+                    ),
+                    object_detail.Button(
+                        weight=300,
+                        link_name="dcim:device_powerports_add",
+                        label="Power Ports",
+                        icon="mdi-power-plug-outline",
+                        required_permissions=["dcim.add_powerport"],
+                    ),
+                    object_detail.Button(
+                        weight=400,
+                        link_name="dcim:device_poweroutlets_add",
+                        label="Power Outlets",
+                        icon="mdi-power-socket",
+                        required_permissions=["dcim.add_poweroutlet"],
+                    ),
+                    object_detail.Button(
+                        weight=500,
+                        link_name="dcim:device_interfaces_add",
+                        label="Interfaces",
+                        icon="mdi-ethernet",
+                        required_permissions=["dcim.add_interface"],
+                    ),
+                    object_detail.Button(
+                        weight=600,
+                        link_name="dcim:device_frontports_add",
+                        label="Front Ports",
+                        icon="mdi-square-rounded-outline",
+                        required_permissions=["dcim.add_frontport"],
+                    ),
+                    object_detail.Button(
+                        weight=700,
+                        link_name="dcim:device_rearports_add",
+                        label="Rear Ports",
+                        icon="mdi-square-rounded-outline",
+                        required_permissions=["dcim.add_rearport"],
+                    ),
+                    object_detail.Button(
+                        weight=800,
+                        link_name="dcim:device_devicebays_add",
+                        label="Device Bays",
+                        icon="mdi-circle-outline",
+                        required_permissions=["dcim.add_devicebay"],
+                    ),
+                    object_detail.Button(
+                        weight=900,
+                        link_name="dcim:device_modulebays_add",
+                        label="Module Bays",
+                        icon="mdi-tray",
+                        required_permissions=["dcim.add_modulebay"],
+                    ),
+                    object_detail.Button(
+                        weight=1000,
+                        link_name="dcim:device_inventoryitems_add",
+                        label="Inventory Items",
+                        icon="mdi-invoice-list-outline",
+                        required_permissions=["dcim.add_inventoryitem"],
+                    ),
+                ),
+            ),
+        ),
+        panels=(),  # not yet ported over due to complexity of this template
+        # TODO
+        #     ObjectFieldsPanel(
+        #         weight=100,
+        #         section=SectionChoices.LEFT_HALF,
+        #         fields=["location", "rack", "position", "face", "tenant", "device_type", "serial", "asset_tag"],
+        #         # TODO add device_type.device_family, device_type.u_height,
+        #     ),
+        #     TODO: Virtual Chassis panel
+        #     ObjectFieldsPanel(
+        #         weight=110,
+        #         section=SectionChoices.LEFT_HALF,
+        #         label="Virtual Chassis",
+        #     ),
+        #     ObjectFieldsPanel(
+        #         weight=120,
+        #         section=SectionChoices.LEFT_HALF,
+        #         label="Management",
+        #         fields=["role", "platform", "status", "primary_ip4", "primary_ip6", "secrets_group", "device_redundancy_group", "controller_managed_device_group", "software_version"],
+        #     ),
+        #     TODO: power utilization panel
+        #     ObjectsTablePanel(
+        #       weight=100,
+        #       section=SectionChoices.RIGHT_HALF,
+        #       table_title="Power Utilization",
+        #       table_class=???,
+        #       table_filter="device",
+        #     ),
+        #     ObjectsTablePanel(
+        #         weight=100,
+        #         section=SectionChoices.RIGHT_HALF,
+        #         table_title="Assigned VRFs",
+        #         table_class=VRFDeviceAssignmentTable,
+        #         table_filter="device",
+        #         exclude_columns=["virtual_machine", "device"],
+        #     ),
+        #     TODO: services panel
+        #     ObjectsTablePanel(
+        #         weight=200,
+        #         section=SectionChoices.RIGHT_HALF,
+        #         table_class=???,
+        #         table_filter="device",
+        #     ),
+        #     TODO: images panel
+        #     ObjectsTablePanel(
+        #         weight=300,
+        #         section=SectionChoices.RIGHT_HALF,
+        #         table_class=???,
+        #         table_filter="device",
+        #     ),
+        #     ObjectsTablePanel(
+        #         weight=100,
+        #         section=SectionChoices.FULL_WIDTH,
+        #         table_class=tables.VirtualDeviceContextTable,
+        #         table_filter="device",
+        #         select_related_fields=["tenant", "primary_ip4", "primary_ip6"],
+        #         exclude_columns=["device"],
+        #     ),
+        # ),
+    )
+
     def get_extra_context(self, request, instance):
         # VirtualChassis members
         if instance.virtual_chassis is not None:
@@ -1809,6 +1953,7 @@ class DeviceView(generic.ObjectView):
         RequestConfig(request, paginate).configure(vdcs_table)
 
         return {
+            **super().get_extra_context(request, instance),
             "services": services,
             "software_version_images": software_version_images,
             "vc_members": vc_members,

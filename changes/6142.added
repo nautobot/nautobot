@@ -1,0 +1,2 @@
+Added `Button` UI framework class and `ObjectDetailContent.extra_buttons` attribute, enabling declarative specification of custom buttons in an object detail view.
+Added support for App `TemplateExtension` implementations to define `object_detail_buttons`.
