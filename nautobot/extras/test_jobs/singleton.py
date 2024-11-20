@@ -10,7 +10,7 @@ class TestSingletonJob(Job):
         is_singleton = True
 
     def run(self):
-        time.sleep(60)
+        time.sleep(10)
 
 
 register_jobs(TestSingletonJob)
