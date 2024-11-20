@@ -103,6 +103,8 @@ jsonschema = "^4.7.0"
 # Messaging library for Python - dependency of Celery
 # Included as an explicit dependency (for now?) to require a version with https://github.com/celery/kombu/pull/2007
 kombu = "~5.4.2"
+# Library to access Kubernetes API used to develop K8s integration
+kubernetes = "^31.0.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.6"
 # MySQL database adapter
@@ -166,8 +168,6 @@ example-app-with-view-override = {path = "examples/example_app_with_view_overrid
 factory-boy = "~3.3.1"
 # Factory Boy dependency.
 faker = ">=30.1.0,<30.2.0"
-# Library to access Kubernetes API used to develop K8s integration
-kubernetes = "^31.0.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
