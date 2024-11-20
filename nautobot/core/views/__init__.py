@@ -15,7 +15,7 @@ from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin, UserPass
 from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponseForbidden, HttpResponseServerError, JsonResponse
 from django.shortcuts import get_object_or_404, render
-from django.template import engines, loader, RequestContext, Template
+from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import NoReverseMatch, resolve, reverse
 from django.utils.encoding import smart_str
@@ -484,10 +484,3 @@ class RenderJinjaView(TemplateView):
     """Render a Jinja template with context data."""
 
     template_name = "utilities/render_jinja2.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        jinja_engine_env = engines["jinja"].env
-        context["lstrip_blocks"] = jinja_engine_env.lstrip_blocks
-        context["trim_blocks"] = jinja_engine_env.trim_blocks
-        return context
