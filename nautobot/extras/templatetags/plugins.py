@@ -90,7 +90,12 @@ def plugin_buttons(context, obj, view="detail"):
         # The object_list.html template passes content_type.model_class as obj
         # This is a bit of a hack however, _get_registered_content() only really needs the model in its own logic
         return _get_registered_content(obj, "list_buttons", context)
-    return _get_registered_content(obj, "buttons", context)
+
+    html = format_html_join(
+        " ", "{}", ([button.render(context)] for button in _get_registered_ui_content(obj, "object_detail_buttons"))
+    )
+    html += _get_registered_content(obj, "buttons", context)
+    return html
 
 
 @register.simple_tag(takes_context=True)

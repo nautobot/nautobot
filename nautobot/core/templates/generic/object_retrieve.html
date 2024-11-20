@@ -46,6 +46,7 @@
     <div class="pull-right noprint">
     {% block buttons %}
         {% plugin_buttons object %}
+        {% render_detail_view_extra_buttons %}
         {% block extra_buttons %}{% endblock extra_buttons %}
         {% consolidate_detail_view_action_buttons %}
     {% endblock buttons %}

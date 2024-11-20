@@ -3126,6 +3126,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "status": status_active.pk,
             "role": role.pk,
             "vrf": vrfs[0].pk,
+            "virtual_device_contexts": [v.pk for v in vdcs],
         }
 
         cls.bulk_add_data = {
@@ -4753,6 +4754,12 @@ class VirtualDeviceContextTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": tenants[0].pk,
             "interfaces": [interface.pk for interface in devices[0].all_interfaces[:3]],
             "description": "Sample Description",
+        }
+
+        cls.update_data = {
+            "name": "Virtual Device Context 3",
+            "tenant": tenants[3].pk,
+            "status": vdc_status.pk,
         }
 
         cls.bulk_edit_data = {

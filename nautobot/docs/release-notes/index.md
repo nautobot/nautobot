@@ -1,5 +1,16 @@
 # Release Notes
 
+## [2.4 - November 2024](version-2.4.md)
+
+- Event Publication Framework
+- Jinja2 Template Rendering REST API
+- Job `success` Log Level
+- Kubernetes Job Execution and Job Queue Data Model
+- Per-User Time Zone Support
+- UI Component Framework
+- Virtual Device Context Data Models
+- Wireless Data Models
+
 ## [2.3 - August 2024](version-2.3.md)
 
 - Cloud Models

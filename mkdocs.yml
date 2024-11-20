@@ -17,6 +17,7 @@ theme:
     admonition:
       example: "fontawesome/solid/flask"
   features:
+    - "content.code.annotate"
     - "content.code.copy"
     - "content.tabs.link"
     - "navigation.footer"

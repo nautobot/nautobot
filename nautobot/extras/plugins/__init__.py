@@ -296,6 +296,8 @@ class TemplateExtension:
 
     model: str = None
     """The model (as a string in the form `<app_label>.<model>`) that this TemplateExtension subclass applies to."""
+    object_detail_buttons = None
+    """List of Button instances to add to the specified model's detail view."""
     object_detail_tabs = None
     """List of Tab instances to add to the specified model's detail view."""
     object_detail_panels = None
@@ -331,7 +333,7 @@ class TemplateExtension:
         (Deprecated) Provide content that will be rendered on the left of the detail page view.
 
         In Nautobot v2.4.0 and later, Apps can (should) instead register `Panel` instances in `object_detail_panels`,
-        instead of registering a `TemplateExtension` with a `.left_page()` method.
+        instead of implementing a `.left_page()` method.
 
         Content should be returned as an HTML string.
         Note that content does not need to be marked as safe because this is automatically handled.
@@ -343,7 +345,7 @@ class TemplateExtension:
         (Deprecated) Provide content that will be rendered on the right of the detail page view.
 
         In Nautobot v2.4.0 and later, Apps can (should) instead register `Panel` instances in `object_detail_panels`,
-        instead of registering a `TemplateExtension` with a `.right_page()` method.
+        instead of implementing a `.right_page()` method.
 
         Content should be returned as an HTML string.
         Note that content does not need to be marked as safe because this is automatically handled.
@@ -355,7 +357,7 @@ class TemplateExtension:
         (Deprecated) Provide content that will be rendered within the full width of the detail page view.
 
         In Nautobot v2.4.0 and later, Apps can (should) instead register `Panel` instances in `object_detail_panels`,
-        instead of registering a `TemplateExtension` with a `.full_width_page()` method.
+        instead of implementing a `.full_width_page()` method.
 
         Content should be returned as an HTML string.
         Note that content does not need to be marked as safe because this is automatically handled.
@@ -364,9 +366,13 @@ class TemplateExtension:
 
     def buttons(self):
         """
-        Buttons that will be rendered and added to the existing list of buttons on the detail page view. Content
-        should be returned as an HTML string. Note that content does not need to be marked as safe because this is
-        automatically handled.
+        (Deprecated) Provide content that will be added to the existing list of buttons on the detail page view.
+
+        In Nautobot v2.4.0 and later, Apps can (should) instead register `Button` instances in `object_detail_buttons`,
+        instead of implementing a `.buttons()` method.
+
+        Content should be returned as an HTML string.
+        Note that content does not need to be marked as safe because this is automatically handled.
         """
         raise NotImplementedError
 
