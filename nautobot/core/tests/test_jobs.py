@@ -631,7 +631,7 @@ class BulkEditTestCase(TransactionTestCase):
     def test_bulk_edit_without_permission(self):
         statuses_to_update = [str(status) for status in Status.objects.all().values_list("pk", flat=True)[:2]]
         job_result = create_job_result_and_run_job(
-            "nautobot.core.jobs",
+            "nautobot.core.jobs.bulk_actions",
             "BulkEditObjects",
             content_type=self.status_ct.id,
             edit_all=False,
@@ -646,7 +646,7 @@ class BulkEditTestCase(TransactionTestCase):
     def test_bulk_edit_all(self):
         self.add_permissions("extras.change_role", "extras.view_role")
         job_result = create_job_result_and_run_job(
-            "nautobot.core.jobs",
+            "nautobot.core.jobs.bulk_actions",
             "BulkEditObjects",
             content_type=self.role_ct.id,
             edit_all=True,
@@ -660,13 +660,14 @@ class BulkEditTestCase(TransactionTestCase):
         self.add_permissions("extras.change_status", "extras.view_status")
         # By default Active and Available are some of the example of Status that starts with A
         statuses = Status.objects.filter(name__istartswith="A")
+        status_to_ignore = Status.objects.create(name="Ignore Example Status")
         self.assertNotEqual(statuses.count(), 0)
         job_result = create_job_result_and_run_job(
-            "nautobot.core.jobs",
+            "nautobot.core.jobs.bulk_actions",
             "BulkEditObjects",
             content_type=self.status_ct.id,
             edit_all=True,
-            filter_query_params={"name__istartswith": "A"},
+            filter_query_params={"name__isw": "A"},
             # pk ignored if edit_all is True
             post_data={
                 "pk": [str(statuses[0].pk)],
@@ -678,18 +679,22 @@ class BulkEditTestCase(TransactionTestCase):
         self._common_no_error_test_assertion(
             Status, job_result, statuses.count(), name__istartswith="A", color="aa1409"
         )
+        self.assertNotEqual(status_to_ignore.color, "aa1409")
 
     def test_bulk_edit_with_pk(self):
         self.add_permissions("extras.change_role", "extras.view_role")
         roles_to_update = [Role.objects.create(name=f"Example Role {x}") for x in range(3)]
+        roles_to_ignore = Role.objects.create(name="Ignore Example Role")
         roles_pks = [str(role.pk) for role in roles_to_update]
         job_result = create_job_result_and_run_job(
-            "nautobot.core.jobs",
+            "nautobot.core.jobs.bulk_actions",
             "BulkEditObjects",
             content_type=self.role_ct.id,
             edit_all=False,
-            filter_query_params={"name__istartswith": "Example Role"},
+            filter_query_params={"name__isw": "Example Role"},
             post_data={"pk": roles_pks, "color": "aa1409"},
             username=self.user.username,
         )
         self._common_no_error_test_assertion(Role, job_result, 3, pk__in=roles_pks, color="aa1409")
+        roles_to_ignore.refresh_from_db
+        self.assertNotEqual(roles_to_ignore.color, "aa1409")

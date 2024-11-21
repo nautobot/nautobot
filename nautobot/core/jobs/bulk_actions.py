@@ -116,7 +116,7 @@ class BulkEditObjects(Job):
     def _process_valid_form(self, model, form, filter_query_params, edit_all, nullified_fields):
         try:
             total_updated_objs = self._update_objects(model, form, filter_query_params, edit_all, nullified_fields)
-            msg = f"Updated {len(total_updated_objs)} {model._meta.verbose_name_plural}"
+            msg = f"Updated {total_updated_objs} {model._meta.verbose_name_plural}"
             self.logger.info(msg)
             return msg
         except ValidationError as e:
