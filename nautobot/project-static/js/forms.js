@@ -931,10 +931,20 @@ function createInput(element){
     replaceEl(element, input_field)
 }
 
+function submitOnEnter(event) {
+    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+        if (!event.repeat) {
+            event.target.form.requestSubmit();
+        }
+
+        event.preventDefault(); // Prevents the addition of a new line in the text field
+    }
+}
 
 $(document).ready((e) => {
     jsify_form(this.document);
     initializeResultPerPageSelection(this.document);
+    document.querySelectorAll("textarea.form-control").forEach(function(element) {element.addEventListener("keydown", submitOnEnter)});
 })
 
 // Scroll up an offset equal to the first nav element if a hash is present
