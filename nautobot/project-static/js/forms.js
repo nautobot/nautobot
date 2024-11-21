@@ -934,8 +934,7 @@ function createInput(element){
 function submitOnEnter(event) {
     if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
         if (!event.repeat) {
-            const newEvent = new Event("submit", {cancelable: true});
-            event.target.form.dispatchEvent(newEvent);
+            event.target.form.requestSubmit();
         }
 
         event.preventDefault(); // Prevents the addition of a new line in the text field
