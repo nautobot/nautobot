@@ -1,1 +1,0 @@
-Added `nautobot.core.events` module, Redis and syslog event brokers, and event publication of CRUD events.
