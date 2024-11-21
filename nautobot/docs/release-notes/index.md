@@ -2,6 +2,7 @@
 
 ## [2.4 - November 2024](version-2.4.md)
 
+- Apps Marketplace Page and Installed Apps Page Tile View
 - Event Publication Framework
 - Jinja2 Template Rendering REST API
 - Job `success` Log Level
@@ -10,7 +11,6 @@
 - UI Component Framework
 - Virtual Device Context Data Models
 - Wireless Data Models
-- Apps Marketplace Page and Installed Apps Page Tile View
 
 ## [2.3 - August 2024](version-2.3.md)
 

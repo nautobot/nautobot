@@ -23,6 +23,10 @@ This document describes all new features and changes in Nautobot 2.4.
 
 ### Added
 
+#### Apps Marketplace Page and Installed Apps Page Tile View
+
+Nautobot 2.4 introduces Apps Marketplace page containing information about available but not installed Nautobot Apps. In addition to that, Installed Apps page is getting a brand-new tile view as an alternative to already existing list view.
+
 #### Event Publication Framework
 
 Nautobot now includes a general-purpose, extensible [event publication framework](../user-guide/platform-functionality/events.md) for publication of system event notifications to other systems such as Redis publish/subscribe, syslog, Kafka, and others. An abstract `EventBroker` API can be implemented and extended with system-specific functionality to enable publication of Nautobot events to any desired system.
@@ -97,10 +101,6 @@ Nautobot 2.4 adds a [`VirtualDeviceContext`](../user-guide/core-data-model/dcim/
 Nautobot 2.4 adds the data models [`WirelessNetwork`](../user-guide/core-data-model/wireless/wirelessnetwork.md), [`RadioProfile`](../user-guide/core-data-model/wireless/radioprofile.md), and [`SupportedDataRate`](../user-guide/core-data-model/wireless/supporteddatarate.md), enabling Nautobot to model campus wireless networks. In support of this functionality, the [`Controller`](../user-guide/core-data-model/dcim/controller.md) and [`ControllerManagedDeviceGroup`](../user-guide/core-data-model/dcim/controllermanageddevicegroup.md) models have been enhanced with additional capabilities as well.
 
 Refer to the [Wireless](../user-guide/core-data-model/wireless/index.md) documentation for more details.
-
-#### Apps Marketplace Page and Installed Apps Page Tile View
-
-Nautobot 2.4 introduces Apps Marketplace page containing information about uninstalled Nautobot apps. In addition to that, Installed Apps page is getting a brand-new tile view as an alternative to already existing list view.
 
 ### Deprecated
 
