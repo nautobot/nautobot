@@ -2229,12 +2229,13 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         device = Device.objects.first()
         url = reverse("dcim:device", kwargs={"pk": device.pk})
         response = self.client.get(url)
-        response_context = response.content.decode(response.charset)
+        response_body = extract_page_body(response.content.decode(response.charset))
         vdc_url = reverse("dcim:virtualdevicecontext_add")
         return_url = device.get_absolute_url()
-        vdcs_table_add_url = f"{vdc_url}?device={device.id}&amp;return_url={return_url}"
-        self.assertIn("Add virtual device contexts", response_context)
-        self.assertIn(vdcs_table_add_url, response_context)
+        expected_vdcs_table_add_url = f"{vdc_url}?device={device.id}&return_url={return_url}"
+
+        self.assertIn(f'<a href="{expected_vdcs_table_add_url}" class="btn btn-primary btn-xs">', response_body)
+        self.assertIn("Add virtual device context", response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_consoleports(self):

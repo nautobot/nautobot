@@ -18,12 +18,11 @@
         <div class="panel-footer noprint">
             <div class="pull-right">
                 <a href="{{ add_obj_url }}" class="btn btn-primary btn-xs">
-                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add {{ table.data.data.model|meta:"verbose_name_plural" }}
+                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add {{ table.data.data.model|meta:"verbose_name" }}
                 </a>
             </div>
         
             <div class="clearfix"></div>
         </div>
-
     {% endif %}
 </div>
