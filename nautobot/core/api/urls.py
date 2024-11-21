@@ -32,7 +32,7 @@ core_api_patterns = [
         GetFilterSetFieldDOMElementAPIView.as_view(),
         name="filtersetfield-retrieve-lookupvaluedomelement",
     ),
-    path("render-jinja-template", RenderJinjaView.as_view(), name="render_jinja_template"),
+    path("render-jinja-template/", RenderJinjaView.as_view(), name="render_jinja_template"),
 ]
 ui_api_patterns = [
     # Lookup Expr

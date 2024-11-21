@@ -3083,7 +3083,7 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
         required=False,
         query_params={"available_on_device": "$device"},
     )
-    virtual_device_contexts = DynamicModelChoiceField(
+    virtual_device_contexts = DynamicModelMultipleChoiceField(
         queryset=VirtualDeviceContext.objects.all(),
         label="Virtual Device Contexts",
         required=False,
@@ -5286,6 +5286,14 @@ class VirtualDeviceContextForm(NautobotModelForm):
             "description",
             "tags",
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Not allowing the device to be changed if the VirtualDeviceContext is already present in the database
+        if self.instance.present_in_database:
+            self.fields["device"].disabled = True
+            self.fields["device"].required = False
 
     def save(self, commit=True):
         instance = super().save(commit)
