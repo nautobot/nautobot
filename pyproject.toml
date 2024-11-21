@@ -41,7 +41,7 @@ Django = "~4.2.16"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
-django-auth-ldap = {version = "~4.8.0", optional = true}
+django-auth-ldap = {version = "~5.1.0", optional = true}
 # Base functionality for task scheduling with Celery
 django-celery-beat = "~2.6.0"
 # Provides a database backend & models for Celery task results
@@ -66,7 +66,7 @@ django-prometheus = "~2.3.1"
 # Redis cache for Django used for distributed locking
 django-redis = "~5.4.0"
 # Django silk for request profiling
-django-silk = "~5.1.0"
+django-silk = "~5.3.0"
 # External Storage support (i.e. S3)
 # Pinned temporarily to 1.14.3 due to https://github.com/revsys/django-health-check/issues/434
 django-storages = {version = "1.14.3", optional = true}
@@ -103,12 +103,12 @@ jsonschema = "^4.7.0"
 # Messaging library for Python - dependency of Celery
 # Included as an explicit dependency (for now?) to require a version with https://github.com/celery/kombu/pull/2007
 kombu = "~5.4.2"
+# Library to access Kubernetes API used to develop K8s integration
+kubernetes = "^31.0.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.6"
-# Escape text to use HTML and XML
-MarkupSafe = "~2.1.5"
 # MySQL database adapter
-mysqlclient = {version = "~2.2.3", optional = true}
+mysqlclient = {version = "~2.2.5", optional = true}
 # NAPALM automation library
 napalm = {version = ">=4.1.0,<6.0.0", optional = true}
 # IP prefix and address handling
@@ -122,7 +122,7 @@ nh3 = "~0.2.15"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
-Pillow = "~10.3.0"
+Pillow = "~11.0.0"
 # Custom prometheus metrics
 prometheus-client = "~0.20.0"
 # PostgreSQL database adapter
@@ -168,8 +168,6 @@ example-app-with-view-override = {path = "examples/example_app_with_view_overrid
 factory-boy = "~3.3.1"
 # Factory Boy dependency.
 faker = ">=30.1.0,<30.2.0"
-# Library to access Kubernetes API used to develop K8s integration
-kubernetes = "^31.0.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
@@ -196,7 +194,7 @@ mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see optional-settings.md and required-settings.md
 mkdocs-macros-plugin = "~1.0.5"
 # Material for mkdocs theme
-mkdocs-material = "~9.5.41"
+mkdocs-material = "~9.5.42"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.1"
 # Automatically handle index pages for docs sections

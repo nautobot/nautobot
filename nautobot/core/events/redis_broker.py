@@ -26,8 +26,6 @@ listen()
 Then perform any action that triggers an event, such as creating or updating a record through the Nautobot UI.
 """
 
-import json
-
 import redis
 
 from .base import EventBroker
@@ -47,4 +45,4 @@ class RedisEventBroker(EventBroker):
         super().__init__(*args, **kwargs)
 
     def publish(self, *, topic, payload):
-        self.connection.publish(topic, json.dumps(payload))
+        self.connection.publish(topic, payload)

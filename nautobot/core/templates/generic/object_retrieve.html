@@ -39,13 +39,14 @@
                 </div>
             </form>
         </div>
-        {% endif%}
+        {% endif %}
         {% endwith %}
     </div>
 
     <div class="pull-right noprint">
     {% block buttons %}
         {% plugin_buttons object %}
+        {% render_detail_view_extra_buttons %}
         {% block extra_buttons %}{% endblock extra_buttons %}
         {% consolidate_detail_view_action_buttons %}
     {% endblock buttons %}
@@ -276,6 +277,7 @@
             </div>
         {% endif %}
       {% endif %}
+        {% plugin_object_detail_tab_content object %}
         {% block extra_tab_content %}{% endblock extra_tab_content %}
     </div>
 {% endblock content %}

@@ -14,6 +14,7 @@ from nautobot.core.api.views import (
     GraphQLDRFAPIView,
     NautobotSpectacularRedocView,
     NautobotSpectacularSwaggerView,
+    RenderJinjaView,
     SettingsJSONSchemaView,
     StatusView,
 )
@@ -31,6 +32,7 @@ core_api_patterns = [
         GetFilterSetFieldDOMElementAPIView.as_view(),
         name="filtersetfield-retrieve-lookupvaluedomelement",
     ),
+    path("render-jinja-template/", RenderJinjaView.as_view(), name="render_jinja_template"),
 ]
 ui_api_patterns = [
     # Lookup Expr
@@ -48,6 +50,7 @@ urlpatterns = [
     path("tenancy/", include("nautobot.tenancy.api.urls")),
     path("users/", include("nautobot.users.api.urls")),
     path("virtualization/", include("nautobot.virtualization.api.urls")),
+    path("wireless/", include("nautobot.wireless.api.urls")),
     path("status/", StatusView.as_view(), name="api-status"),
     path("docs/", NautobotSpectacularSwaggerView.as_view(url_name="schema"), name="api_docs"),
     path("redoc/", NautobotSpectacularRedocView.as_view(url_name="schema"), name="api_redocs"),

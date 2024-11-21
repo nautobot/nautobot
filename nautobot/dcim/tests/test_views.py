@@ -3126,6 +3126,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "status": status_active.pk,
             "role": role.pk,
             "vrf": vrfs[0].pk,
+            "virtual_device_contexts": [v.pk for v in vdcs],
         }
 
         cls.bulk_add_data = {
@@ -4723,6 +4724,11 @@ class ControllerManagedDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCa
             "controller": controllers[0].pk,
             "weight": 100,
             "devices": [item.pk for item in Device.objects.all()[:2]],
+            # Management form fields required for the dynamic Wireless Network formset
+            "wireless_network_assignments-TOTAL_FORMS": "0",
+            "wireless_network_assignments-INITIAL_FORMS": "1",
+            "wireless_network_assignments-MIN_NUM_FORMS": "0",
+            "wireless_network_assignments-MAX_NUM_FORMS": "1000",
         }
 
         cls.bulk_edit_data = {
@@ -4748,6 +4754,12 @@ class VirtualDeviceContextTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": tenants[0].pk,
             "interfaces": [interface.pk for interface in devices[0].all_interfaces[:3]],
             "description": "Sample Description",
+        }
+
+        cls.update_data = {
+            "name": "Virtual Device Context 3",
+            "tenant": tenants[3].pk,
+            "status": vdc_status.pk,
         }
 
         cls.bulk_edit_data = {

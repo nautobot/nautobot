@@ -382,6 +382,11 @@ SPECTACULAR_SETTINGS = {
         #    enum naming encountered a non-optimally resolvable collision for fields named "protocol".
         "InterfaceRedundancyGroupProtocolChoices": "nautobot.dcim.choices.InterfaceRedundancyGroupProtocolChoices",
         "ServiceProtocolChoices": "nautobot.ipam.choices.ServiceProtocolChoices",
+        # These choice enums need to be overridden because they get assigned to the `mode` field and
+        # result in this error:
+        #    enum naming encountered a non-optimally resolvable collision for fields named "mode".
+        "InterfaceModeChoices": "nautobot.dcim.choices.InterfaceModeChoices",
+        "WirelessNetworkModeChoices": "nautobot.wireless.choices.WirelessNetworkModeChoices",
     },
     # Create separate schema components for PATCH requests (fields generally are not `required` on PATCH)
     "COMPONENT_SPLIT_PATCH": True,
@@ -531,6 +536,7 @@ INSTALLED_APPS = [
     "nautobot.tenancy",
     "nautobot.users",
     "nautobot.virtualization",
+    "nautobot.wireless",
     "drf_spectacular",
     "drf_spectacular_sidecar",
     "graphene_django",
@@ -1092,3 +1098,29 @@ def silk_request_logging_intercept_logic(request):
 
 
 SILKY_INTERCEPT_FUNC = silk_request_logging_intercept_logic
+
+#
+# Kubernetes settings variables
+#
+
+# Host of the kubernetes pod created in the kubernetes cluster
+KUBERNETES_DEFAULT_SERVICE_ADDRESS = os.getenv("NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS", "")
+
+# A dictionary that stores the kubernetes pod manifest used to create a job pod in the kubernetes cluster
+KUBERNETES_JOB_MANIFEST = {}
+
+# Name of the kubernetes pod created in the kubernetes cluster
+KUBERNETES_JOB_POD_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAME", "")
+
+# Namespace of the kubernetes pod created in the kubernetes cluster
+KUBERNETES_JOB_POD_NAMESPACE = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE", "")
+
+# File path to the SSL CA CERT used for authentication to create the job and job pod
+KUBERNETES_SSL_CA_CERT_PATH = os.getenv(
+    "NAUTOBOT_KUBERNETES_SSL_CA_CERT_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+)
+
+# File path to the Bearer token used for authentication to create the job and job pod
+KUBERNETES_TOKEN_PATH = os.getenv(
+    "NAUTOBOT_KUBERNETES_TOKEN_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/token"
+)

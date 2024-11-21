@@ -10,6 +10,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model
 from django.urls import get_resolver, URLPattern, URLResolver
 from django.utils.module_loading import import_string
+from django.views.generic.base import RedirectView
 
 
 def get_changes_for_model(model):
@@ -177,6 +178,41 @@ def get_form_for_model(model, form_prefix=""):
     return get_related_class_for_model(model, module_name="forms", object_suffix=object_suffix)
 
 
+def get_related_field_for_models(from_model, to_model):
+    """
+    Find the field on `from_model` that is a relation to `to_model`.
+
+    If no such field is found, returns None.
+    If more than one such field is found, raises an AttributeError.
+
+    Args:
+        from_model (BaseModel): The model class that should contain the relevant field or relation.
+        to_model (BaseModel): The model class that we're looking for as the destination.
+
+    Examples:
+        >>> get_related_field_for_models(Device, Location)
+        <django.db.models.fields.related.ForeignKey: location>
+        >>> get_related_field_for_models(Location, Device)
+        <ManyToOneRel: dcim.device>
+        >>> get_related_field_for_models(Prefix, Location)
+        <django.db.models.fields.related.ManyToManyField: locations>
+        >>> get_related_field_for_models(Location, Prefix)
+        <ManyToManyRel: ipam.prefix>
+        >>> get_related_field_for_models(Device, IPAddress)
+        AttributeError: Device has more than one relation to IPAddress: primary_ip4, primary_ip6
+    """
+    matching_field = None
+    for field in from_model._meta.get_fields():
+        if hasattr(field, "remote_field") and field.remote_field and field.remote_field.model == to_model:
+            if matching_field is not None:
+                raise AttributeError(
+                    f"{from_model.__name__} has more than one relation to {to_model.__name__}: "
+                    f"{matching_field.name}, {field.name}"
+                )
+            matching_field = field
+    return matching_field
+
+
 def get_table_for_model(model):
     """Return the `Table` class associated with a given `model`.
 
@@ -277,7 +313,7 @@ def get_created_and_last_updated_usernames_for_model(instance):
     return created_by, last_updated_by
 
 
-def get_url_patterns(urlconf=None, patterns_list=None, base_path="/"):
+def get_url_patterns(urlconf=None, patterns_list=None, base_path="/", ignore_redirects=False):
     """
     Recursively yield a list of registered URL patterns.
 
@@ -288,6 +324,7 @@ def get_url_patterns(urlconf=None, patterns_list=None, base_path="/"):
             Default if unspecified is the `url_patterns` attribute of the given `urlconf` module.
         base_path (str): String to prepend to all URL patterns yielded.
             Default if unspecified is the string `"/"`.
+        ignore_redirects (bool): If True, skip URL patterns that correspond to RedirectViews.
 
     Yields:
         (str): Each URL pattern defined in the given urlconf and its descendants
@@ -346,10 +383,18 @@ def get_url_patterns(urlconf=None, patterns_list=None, base_path="/"):
 
     for item in patterns_list:
         if isinstance(item, URLPattern):
+            if (
+                ignore_redirects
+                and hasattr(item.callback, "view_class")
+                and issubclass(item.callback.view_class, RedirectView)
+            ):
+                continue
             yield base_path + str(item.pattern)
         elif isinstance(item, URLResolver):
             # Recurse!
-            yield from get_url_patterns(urlconf, item.url_patterns, base_path + str(item.pattern))
+            yield from get_url_patterns(
+                urlconf, item.url_patterns, base_path + str(item.pattern), ignore_redirects=ignore_redirects
+            )
 
 
 def get_url_for_url_pattern(url_pattern):

@@ -18,7 +18,7 @@ class NavMenuTestCase(TestCase):
             for group in registry["nav_menu"]["tabs"][tab]["groups"]:
                 for item_url, item_details in registry["nav_menu"]["tabs"][tab]["groups"][group]["items"].items():
                     with self.subTest(f"{tab} > {group} > {item_url}"):
-                        view_func = resolve(item_url).func
+                        view_func = resolve(item_url.split("?")[0]).func
                         try:
                             # NautobotUIViewSet
                             view_class = view_func.view_class
@@ -31,10 +31,12 @@ class NavMenuTestCase(TestCase):
 
                             if item_details["name"] not in {
                                 "Elevations",
+                                "Example Models filtered",
                                 "Interface Connections",
                                 "Console Connections",
                                 "Power Connections",
                                 "Job Approval Queue",
+                                "Wireless Controllers",
                             }:
                                 expected_name = bettertitle(view_model._meta.verbose_name_plural)
                                 if expected_name == "VM Interfaces":
@@ -42,7 +44,7 @@ class NavMenuTestCase(TestCase):
                                 elif expected_name == "Object Changes":
                                     expected_name = "Change Log"
                                 elif expected_name == "Controller Managed Device Groups":
-                                    expected_name = "Managed Device Groups"
+                                    expected_name = "Device Groups"
                                 self.assertEqual(item_details["name"], expected_name)
                             if item_url == get_route_for_model(view_model, "list"):
                                 # Not assertEqual as some menu items have additional permissions defined.

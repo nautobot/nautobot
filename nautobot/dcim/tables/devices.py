@@ -1,4 +1,4 @@
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 
@@ -174,8 +174,10 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     device_redundancy_group_priority = tables.TemplateColumn(
         template_code="""{% if record.device_redundancy_group %}<span class="badge badge-default">{{ record.device_redundancy_group_priority|default:'None' }}</span>{% else %}—{% endif %}"""
     )
-    controller_managed_device_group = tables.Column(linkify=True)
+    controller_managed_device_group = tables.Column(linkify=True, verbose_name="Device Group")
+    software_version = tables.Column(linkify=True, verbose_name="Software Version")
     secrets_group = tables.Column(linkify=True)
+    capabilities = tables.Column(orderable=False, accessor="controller_managed_device_group.capabilities")
     tags = TagColumn(url_name="dcim:device_list")
 
     class Meta(BaseTable.Meta):
@@ -203,8 +205,10 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "vc_priority",
             "device_redundancy_group",
             "device_redundancy_group_priority",
+            "software_version",
             "controller_managed_device_group",
             "secrets_group",
+            "capabilities",
             "tags",
         )
         default_columns = (
@@ -218,6 +222,12 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "device_type",
             "primary_ip",
         )
+
+    def render_capabilities(self, value):
+        """Render capabilities."""
+        if not value:
+            return format_html("&mdash;")
+        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
 class DeviceImportTable(BaseTable):
@@ -618,7 +628,7 @@ class DeviceModulePowerOutletTable(PowerOutletTable):
         row_attrs = {"class": cable_status_color_css}
 
 
-class BaseInterfaceTable(BaseTable):
+class BaseInterfaceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     enabled = BooleanColumn()
     ip_addresses = tables.TemplateColumn(
         template_code=INTERFACE_IPADDRESSES,
@@ -634,7 +644,7 @@ class BaseInterfaceTable(BaseTable):
     vrf = tables.Column(linkify=True, verbose_name="VRF")
 
 
-class InterfaceTable(StatusTableMixin, ModularDeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
+class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
     mgmt_only = BooleanColumn()
     tags = TagColumn(url_name="dcim:interface_list")
     virtual_device_context_count = LinkedCountColumn(
@@ -1285,6 +1295,9 @@ class SoftwareImageFileTable(StatusTableMixin, BaseTable):
 class SoftwareVersionTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     version = tables.Column(linkify=True)
+    platform = tables.Column(linkify=True)
+    release_date = tables.DateColumn()
+    end_of_support_date = tables.DateColumn()
     software_image_file_count = LinkedCountColumn(
         viewname="dcim:softwareimagefile_list",
         url_params={"software_version": "pk"},
@@ -1348,6 +1361,7 @@ class ControllerTable(BaseTable):
     platform = tables.Column(linkify=True)
     role = tables.Column(linkify=True)
     tenant = TenantColumn()
+    capabilities = tables.Column()
     external_integration = tables.Column(linkify=True)
     controller_device = tables.Column(linkify=True)
     controller_device_redundancy_group = tables.Column(linkify=True)
@@ -1366,6 +1380,7 @@ class ControllerTable(BaseTable):
             "platform",
             "role",
             "tenant",
+            "capabilities",
             "external_integration",
             "controller_device",
             "controller_device_redundancy_group",
@@ -1380,8 +1395,15 @@ class ControllerTable(BaseTable):
             "platform",
             "role",
             "tenant",
+            "capabilities",
             "actions",
         )
+
+    def render_capabilities(self, value):
+        """Render capabilities."""
+        if not value:
+            return format_html("&mdash;")
+        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
 class ControllerManagedDeviceGroupTable(BaseTable):
@@ -1391,12 +1413,23 @@ class ControllerManagedDeviceGroupTable(BaseTable):
     name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
     weight = tables.Column()
     controller = tables.Column(linkify=True)
+    capabilities = tables.Column()
     tags = TagColumn(url_name="dcim:controllermanageddevicegroup_list")
     actions = ButtonsColumn(ControllerManagedDeviceGroup)
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
         url_params={"controller_managed_device_group": "pk"},
         verbose_name="Devices",
+    )
+    radio_profiles_count = LinkedCountColumn(
+        viewname="wireless:radioprofile_list",
+        url_params={"controller_managed_device_groups": "pk"},
+        verbose_name="Radio Profiles",
+    )
+    wireless_networks_count = LinkedCountColumn(
+        viewname="wireless:wirelessnetwork_list",
+        url_params={"controller_managed_device_groups": "pk"},
+        verbose_name="Wireless Networks",
     )
 
     class Meta(BaseTable.Meta):
@@ -1407,8 +1440,11 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "pk",
             "name",
             "device_count",
+            "radio_profiles_count",
+            "wireless_networks_count",
             "controller",
             "weight",
+            "capabilities",
             "tags",
             "actions",
         )
@@ -1416,17 +1452,25 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "pk",
             "name",
             "device_count",
+            "radio_profiles_count",
+            "wireless_networks_count",
             "controller",
             "weight",
+            "capabilities",
             "tags",
             "actions",
         )
 
+    def render_capabilities(self, value):
+        """Render capabilities."""
+        if not value:
+            return format_html("&mdash;")
+        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
-class VirtualDeviceContextTable(StatusTableMixin, BaseTable):
+
+class VirtualDeviceContextTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    role = tables.Column(linkify=True)
     tenant = TenantColumn()
     device = tables.Column(linkify=True)
     primary_ip = tables.Column(linkify=True, order_by=("primary_ip6", "primary_ip4"), verbose_name="IP Address")

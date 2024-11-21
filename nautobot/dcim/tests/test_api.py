@@ -688,9 +688,10 @@ class RackTest(APIViewTestCases.APIViewTestCase):
             status=statuses[0],
         )
         # Place a device in Rack 4
-        device = Device.objects.filter(
-            location=populated_rack.location, rack__isnull=True, device_type__u_height__gt=0
-        ).first()
+        device = Device.objects.filter(location=populated_rack.location, rack__isnull=True).first()
+        # Ensure the device height is non-zero, choosing 1 for simplicity
+        device.device_type.u_height = 1
+        device.device_type.save()
         device.rack = populated_rack
         device.face = "front"
         device.position = 10
@@ -2035,7 +2036,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
         cls.create_data = [
             {
                 "device": cls.devices[0].pk,
-                "name": "Interface 8",
+                "name": "Test Interface 8",
                 "type": "1000base-t",
                 "status": interface_status.pk,
                 "role": intf_role.pk,
@@ -2046,7 +2047,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             },
             {
                 "device": cls.devices[0].pk,
-                "name": "Interface 9",
+                "name": "Test Interface 9",
                 "type": "1000base-t",
                 "status": interface_status.pk,
                 "role": intf_role.pk,
@@ -2058,7 +2059,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             },
             {
                 "device": cls.devices[0].pk,
-                "name": "Interface 10",
+                "name": "Test Interface 10",
                 "type": "virtual",
                 "status": interface_status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
@@ -3344,6 +3345,7 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
                 "status": statuses[0].pk,
                 "role": roles[0].pk,
                 "location": locations[0].pk,
+                "capabilities": [],
             },
             {
                 "name": "Controller 2",
@@ -3351,6 +3353,7 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
                 "status": statuses[1].pk,
                 "role": roles[1].pk,
                 "location": locations[1].pk,
+                "capabilities": [],
             },
             {
                 "name": "Controller 3",
@@ -3358,6 +3361,7 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
                 "status": statuses[2].pk,
                 "role": roles[2].pk,
                 "location": locations[2].pk,
+                "capabilities": ["wireless"],
             },
         ]
         cls.bulk_update_data = {
@@ -3379,16 +3383,19 @@ class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
                 "name": "ControllerManagedDeviceGroup 1",
                 "controller": controllers[0].pk,
                 "weight": 100,
+                "capabilities": [],
             },
             {
                 "name": "ControllerManagedDeviceGroup 2",
                 "controller": controllers[1].pk,
                 "weight": 150,
+                "capabilities": [],
             },
             {
                 "name": "ControllerManagedDeviceGroup 3",
                 "controller": controllers[2].pk,
                 "weight": 200,
+                "capabilities": ["wireless"],
             },
         ]
         # changing controller is error-prone since a child group must have the same controller as its parent
@@ -3480,6 +3487,21 @@ class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
             self.assertHttpStatus(response, status.HTTP_200_OK)
             vdc.refresh_from_db()
             self.assertEqual(vdc.primary_ip6, ip_v6)
+
+    def test_changing_device_on_vdc_raise_validation_error(self):
+        """
+        Validate that changing device on the virutal device context is not allowed.
+        """
+        self.add_permissions("dcim.change_virtualdevicecontext")
+        vdc = VirtualDeviceContext.objects.first()
+        old_device = vdc.device
+        new_device = Device.objects.exclude(pk=old_device.pk).first()
+        patch_data = {"device": new_device.pk}
+        response = self.client.patch(self._get_detail_url(vdc), patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(
+            "Changing the device of a VirtualDeviceContext is not allowed.", response.data["non_field_errors"][0]
+        )
 
 
 class InterfaceVDCAssignmentTestCase(APIViewTestCases.APIViewTestCase):

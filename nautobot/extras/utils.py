@@ -1,5 +1,6 @@
 import collections
 import contextlib
+import copy
 import hashlib
 import hmac
 import logging
@@ -15,6 +16,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
+import kubernetes.client
 import redis.exceptions
 
 from nautobot.core.choices import ColorChoices
@@ -435,6 +437,29 @@ def get_job_queue_worker_count(request=None, job_queue=None):
     return celery_queues.get(queue, 0)
 
 
+def get_job_queue(job_queue):
+    """
+    Search for a JobQueue instance based on the str job_queue.
+    If no existing Job Queue not found, return None
+    """
+    from nautobot.extras.models import JobQueue
+
+    queue = None
+    if is_uuid(job_queue):
+        try:
+            # check if the string passed in is a valid UUID
+            queue = JobQueue.objects.get(pk=job_queue)
+        except JobQueue.DoesNotExist:
+            queue = None
+    else:
+        try:
+            # check if the string passed in is a valid name
+            queue = JobQueue.objects.get(name=job_queue)
+        except JobQueue.DoesNotExist:
+            queue = None
+    return queue
+
+
 def task_queues_as_choices(task_queues):
     """
     Returns a list of 2-tuples for use in the form field `choices` argument. Appends
@@ -609,6 +634,42 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
     )
 
     return (job_model, created)
+
+
+def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
+    """
+    Pass the job to a kubernetes pod and execute it there.
+    """
+    pod_name = settings.KUBERNETES_JOB_POD_NAME
+    pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
+    pod_manifest = copy.deepcopy(settings.KUBERNETES_JOB_MANIFEST)
+    pod_ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
+    pod_token = settings.KUBERNETES_TOKEN_PATH
+
+    configuration = kubernetes.client.Configuration()
+    configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
+    configuration.ssl_ca_cert = pod_ssl_ca_cert
+    with open(pod_token, "r") as token_file:
+        token = token_file.read().strip()
+    # configure API Key authorization: BearerToken
+    configuration.api_key_prefix["authorization"] = "Bearer"
+    configuration.api_key["authorization"] = token
+    with kubernetes.client.ApiClient(configuration) as api_client:
+        api_instance = kubernetes.client.BatchV1Api(api_client)
+
+    job_result.task_kwargs = job_kwargs
+    job_result.save()
+    pod_manifest["metadata"]["name"] = "nautobot-job-" + str(job_result.pk)
+    pod_manifest["spec"]["template"]["spec"]["containers"][0]["command"] = [
+        "nautobot-server",
+        "runjob_with_job_result",
+        f"{job_result.pk}",
+    ]
+    logger.info("Creating job pod %s in namespace %s", pod_name, pod_namespace)
+    api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
+    logger.info("Reading job pod %s in namespace %s", pod_name, pod_namespace)
+    api_instance.read_namespaced_job(name="nautobot-job-" + str(job_result.pk), namespace=pod_namespace)
+    return job_result
 
 
 def remove_prefix_from_cf_key(field_name):

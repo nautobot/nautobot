@@ -27,6 +27,7 @@ from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
     ConsolePortTypeChoices,
+    ControllerCapabilitiesChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     InterfaceModeChoices,
@@ -987,12 +988,20 @@ class DeviceTypeToSoftwareImageFileSerializer(ValidatedModelSerializer):
 
 
 class ControllerSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    capabilities = serializers.ListField(
+        child=ChoiceField(choices=ControllerCapabilitiesChoices, required=False), allow_empty=True
+    )
+
     class Meta:
         model = Controller
         fields = "__all__"
 
 
 class ControllerManagedDeviceGroupSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    capabilities = serializers.ListField(
+        child=ChoiceField(choices=ControllerCapabilitiesChoices, required=False), allow_empty=True
+    )
+
     class Meta:
         model = ControllerManagedDeviceGroup
         fields = "__all__"
@@ -1075,6 +1084,12 @@ class VirtualDeviceContextSerializer(NautobotModelSerializer):
     class Meta:
         model = VirtualDeviceContext
         fields = "__all__"
+
+    def validate(self, data):
+        """Validate device cannot be changed for VirtualDeviceContext."""
+        if data.get("device") and self.instance and self.instance.device != data.get("device"):
+            raise serializers.ValidationError("Changing the device of a VirtualDeviceContext is not allowed.")
+        return super().validate(data)
 
 
 class InterfaceVDCAssignmentSerializer(ValidatedModelSerializer):

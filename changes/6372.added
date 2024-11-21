@@ -1,1 +1,0 @@
-Added environment variable support for setting `CSRF_TRUSTED_ORIGINS`.

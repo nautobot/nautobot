@@ -1,4 +1,6 @@
 from datetime import timedelta
+from http import HTTPStatus
+import json
 from unittest import mock
 import urllib.parse
 import uuid
@@ -13,10 +15,13 @@ from django.utils import timezone
 from django.utils.html import escape, format_html
 
 from nautobot.circuits.models import Circuit
+from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
+from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import extract_form_failures, extract_page_body, ModelViewTestCase, TestCase, ViewTestCases
+from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import disable_warnings, get_deletable_objects, post_data
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
@@ -87,6 +92,7 @@ from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
+from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -2034,6 +2040,16 @@ class ApprovalQueueTestCase(
             self.assertEqual(1, len(ScheduledJob.objects.filter(pk=instance.pk)), msg=str(user))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @load_event_broker_override_settings(
+        EVENT_BROKERS={
+            "SyslogEventBroker": {
+                "CLASS": "nautobot.core.events.SyslogEventBroker",
+                "TOPICS": {
+                    "INCLUDE": ["*"],
+                },
+            }
+        }
+    )
     def test_post_deny_different_user_permitted(self):
         """A user with appropriate permissions can deny a job request."""
         user = User.objects.create_user(username="testuser1")
@@ -2054,10 +2070,19 @@ class ApprovalQueueTestCase(
         data = {"_deny": True}
 
         self.client.force_login(user)
-        response = self.client.post(self._get_url("view", instance), data)
+        with self.assertLogs("nautobot.events") as cm:
+            response = self.client.post(self._get_url("view", instance), data)
         self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
         # Request was deleted
         self.assertEqual(0, len(ScheduledJob.objects.filter(pk=instance.pk)))
+        # Event was published
+        expected_payload = {"data": serialize_object_v2(instance)}
+        self.assertEqual(
+            cm.output,
+            [
+                f"INFO:nautobot.events.nautobot.jobs.approval.denied:{json.dumps(expected_payload, cls=NautobotKombuJSONEncoder, indent=4)}"
+            ],
+        )
 
         # Check object-based permissions are enforced for a different instance
         instance = self._get_queryset().first()
@@ -2115,6 +2140,16 @@ class ApprovalQueueTestCase(
             self.assertIsNone(instance.approved_by_user)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @load_event_broker_override_settings(
+        EVENT_BROKERS={
+            "SyslogEventBroker": {
+                "CLASS": "nautobot.core.events.SyslogEventBroker",
+                "TOPICS": {
+                    "INCLUDE": ["*"],
+                },
+            }
+        }
+    )
     def test_post_approve_different_user_permitted(self):
         """A user with appropriate permissions can approve a job request."""
         user = User.objects.create_user(username="testuser1")
@@ -2135,11 +2170,21 @@ class ApprovalQueueTestCase(
         data = {"_approve": True}
 
         self.client.force_login(user)
-        response = self.client.post(self._get_url("view", instance), data)
+        with self.assertLogs("nautobot.events") as cm:
+            response = self.client.post(self._get_url("view", instance), data)
+
         self.assertRedirects(response, reverse("extras:scheduledjob_approval_queue_list"))
         # Job was scheduled
         instance.refresh_from_db()
         self.assertEqual(instance.approved_by_user, user)
+        # Event was published
+        expected_payload = {"data": serialize_object_v2(instance)}
+        self.assertEqual(
+            cm.output,
+            [
+                f"INFO:nautobot.events.nautobot.jobs.approval.approved:{json.dumps(expected_payload, cls=NautobotKombuJSONEncoder, indent=4)}"
+            ],
+        )
 
         # Check object-based permissions are enforced for a different instance
         instance = self._get_queryset().last()
@@ -2162,7 +2207,6 @@ class JobQueueTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": Tenant.objects.first().pk,
             "tags": [t.pk for t in Tag.objects.get_for_model(JobQueue)],
         }
-
         cls.bulk_edit_data = {
             "queue_type": JobQueueTypeChoices.TYPE_KUBERNETES,
             "description": "This is a very detailed new description",
@@ -2800,6 +2844,59 @@ class JobTestCase(
         response = self.client.get(instance.get_changelog_url())
         self.assertBodyContains(response, f"{instance.name} - Change Log")
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_job_bulk_edit_default_queue_stays_default_after_one_field_update(self):
+        self.add_permissions("extras.change_job")
+        job_class_to_test = "TestPass"
+        job_description = "default job queue test"
+        job_to_test = self.model.objects.get(job_class_name=job_class_to_test)
+        queryset = self.model.objects.filter(installed=True, hidden=False, job_class_name=job_class_to_test)
+        default_job_queue = job_to_test.default_job_queue
+        pk_list = list(queryset.values_list("pk", flat=True))
+
+        data = {
+            "description": job_description,
+            "pk": pk_list,
+            "_apply": True,
+        }
+
+        self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), HTTPStatus.FOUND)
+        instance = self.model.objects.get(job_class_name=job_class_to_test)
+        self.assertEqual(instance.description, job_description)
+        self.assertEqual(instance.default_job_queue, default_job_queue)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_job_bulk_edit_preserve_job_queues_after_one_field_update(self):
+        self.add_permissions("extras.change_job")
+        job_class_to_test = "TestPass"
+        job_description = "job queues test"
+        job_to_test = self.model.objects.get(job_class_name=job_class_to_test)
+
+        # Simulate 3 job queues set
+        job_queues = JobQueue.objects.all()[:3]
+        job_to_test.job_queues.set(job_queues)
+        job_to_test.job_queues.add(job_to_test.default_job_queue)
+        job_to_test.job_queues_override = True
+        job_to_test.save()
+
+        expected_job_queues = list(job_to_test.job_queues.values_list("pk", flat=True))
+
+        queryset = self.model.objects.filter(installed=True, hidden=False, job_class_name=job_class_to_test)
+        pk_list = list(queryset.values_list("pk", flat=True))
+
+        data = {
+            "description": job_description,
+            "pk": pk_list,
+            "_apply": True,
+        }
+
+        self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), HTTPStatus.FOUND)
+
+        instance = self.model.objects.get(job_class_name=job_class_to_test)
+        self.assertEqual(instance.description, job_description)
+        self.assertEqual(instance.job_queues.count(), 4)  # 3 custom one + 1 default
+        self.assertQuerySetEqual(instance.job_queues.all(), JobQueue.objects.filter(pk__in=expected_job_queues))
+
 
 class JobButtonTestCase(
     ViewTestCases.CreateObjectViewTestCase,
@@ -3077,8 +3174,6 @@ class ObjectChangeTestCase(TestCase):
 
 
 class ObjectMetadataTestCase(
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = ObjectMetadata
@@ -3196,6 +3291,7 @@ class RelationshipTestCase(
         IPAddress.objects.all().delete()
         Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
+        ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.all().delete()
         VLAN.objects.all().delete()
 
         # Parameterized tests (for creating and updating single objects):

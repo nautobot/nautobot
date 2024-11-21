@@ -97,11 +97,9 @@ function initializeSlugField(context){
     if (slug_field.length != 0) {
         var slug_source_arr = slug_field.attr('slug-source').split(" ");
         var slug_length = slug_field.attr('maxlength');
-        if (slug_field.val()) {
-            slug_field.attr('_changed', true);
-        }
+        slug_field.attr('_changed', Boolean(slug_field.val()));
         slug_field.change(function() {
-            $(this).attr('_changed', true);
+            $(this).attr('_changed', Boolean($(this).val()));
         });
         function reslugify() {
             let slug_str = "";
@@ -118,7 +116,7 @@ function initializeSlugField(context){
         for (slug_source_str of slug_source_arr) {
             let slug_source = $('#id_' + slug_source_str);
             slug_source.on('keyup change', function() {
-                if (slug_field && !slug_field.attr('_changed')) {
+                if (slug_field && slug_field.attr('_changed')=="false") {
                     reslugify();
                 }
             });
@@ -268,6 +266,11 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                                     if(element_id.includes("id_form-")){
                                         let id_prefix = element_id.match(/id_form-[0-9]+-/i, "")[0];
                                         ref_field = $("#" + id_prefix + value.slice(1));
+                                    }
+                                    // If the element is in a table row with a class containing "dynamic-formset"
+                                    // We need to find the reference field in the same row
+                                    else if ($(element).closest("tr") && $(element).closest("tr").attr("class") && $(element).closest("tr").attr("class").includes("dynamic-formset")){
+                                        ref_field = $(element).closest("tr").find("select[id*=" + value.slice(1) + "]");
                                     }
                                     else {
                                         ref_field = $('#id_' + value.slice(1));

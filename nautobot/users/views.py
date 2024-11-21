@@ -17,8 +17,10 @@ from django.utils.timezone import get_default_timezone_name
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
+from nautobot.core.events import publish_event
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.views.generic import GenericView
+from nautobot.users.utils import serialize_user_without_config_and_views
 
 from .forms import AdvancedProfileSettingsForm, LoginForm, PasswordChangeForm, PreferenceProfileSettingsForm, TokenForm
 from .models import Token
@@ -62,8 +64,11 @@ class LoginView(View):
             logger.debug("Login form validation was successful")
 
             # Authenticate user
+            user = form.get_user()
             auth_login(request, form.get_user())
             messages.info(request, f"Logged in as {request.user}.")
+            payload = serialize_user_without_config_and_views(user)
+            publish_event(topic="nautobot.users.user.login", payload=payload)
 
             return self.redirect_to_next(request, logger)
 
@@ -92,6 +97,10 @@ class LoginView(View):
         return HttpResponseRedirect(iri_to_uri(redirect_to))
 
 
+# TODO: The LogoutView should inherit from `LoginRequiredMixin` or `GenericView`
+#   to prevent unauthenticated users from accessing the logout page.
+#   However, using `LoginRequiredMixin` or `GenericView` as-is currently redirects
+#   users to the login page with `?next=/logout/`, which is not desired.
 class LogoutView(View):
     """
     Deauthenticate a web user.
@@ -99,6 +108,9 @@ class LogoutView(View):
 
     def get(self, request):
         # Log out the user
+        if request.user.is_authenticated:
+            payload = serialize_user_without_config_and_views(request.user)
+            publish_event(topic="nautobot.users.user.logout", payload=payload)
         auth_logout(request)
         messages.info(request, "You have logged out.")
 
@@ -223,6 +235,8 @@ class ChangePasswordView(GenericView):
             form.save()
             update_session_auth_hash(request, form.user)
             messages.success(request, "Your password has been changed successfully.")
+            payload = serialize_user_without_config_and_views(request.user)
+            publish_event(topic="nautobot.users.user.change_password", payload=payload)
             return redirect("user:profile")
 
         return render(
