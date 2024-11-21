@@ -661,6 +661,7 @@ nav:
           - Model Features: "development/core/model-features.md"
           - Natural Keys: "development/core/natural-keys.md"
           - Navigation Menu: "development/core/navigation-menu.md"
+          - Kubernetes Job Support: "development/core/kubernetes-job-support.md"
           - Page Templates: "development/core/templates.md"
           - Role Internals: "development/core/role-internals.md"
           - Style Guide: "development/core/style-guide.md"
