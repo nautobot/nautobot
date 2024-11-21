@@ -141,7 +141,7 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
     return final_filter_params
 
 
-def normalize_querydict(querydict, form_class=None):
+def normalize_querydict(querydict, form_class=None, filterset=None):
     """
     Convert a QueryDict to a normal, mutable dictionary, preserving list values. For example,
 
@@ -154,9 +154,20 @@ def normalize_querydict(querydict, form_class=None):
     This function is necessary because QueryDict does not provide any built-in mechanism which preserves multiple
     values.
 
-    A `form_class` can be provided as a way to hint which query parameters should be treated as lists.
+    Args:
+        - `querydict` (QueryDict): The input QueryDict to be normalized.
+        - `form_class` (forms.Form, optional): A form class used to determine whether specific query
+          parameters should be treated as lists (e.g., fields of type `MultipleChoiceField` or `ModelMultipleChoiceField`).
+        - `filterset` (django_filters.FilterSet, optional): A FilterSet instance used to determine which 
+          filters should be treated as multi-value. Fields identified as non-single-choice in the filterset will
+          preserve their list values.
+
+    Either `form_class` or `filterset` can be provided, but not both. Providing both will raise an `AttributeError`.
     """
     result = {}
+    if form_class and filterset:
+        raise AttributeError("Either form_class or filterset_class is to be provided not both")
+
     if querydict:
         for key, value_list in querydict.lists():
             if len(value_list) > 1:
@@ -170,6 +181,12 @@ def normalize_querydict(querydict, form_class=None):
                 and isinstance(form_class.base_fields[key], (forms.MultipleChoiceField, forms.ModelMultipleChoiceField))
             ):
                 # Even though there's only a single value in the querydict for this key, the form wants it as a list
+                result[key] = value_list
+            elif (
+                filterset is not None
+                and filterset.filters.get(key)
+                and not is_single_choice_field(filterset, key)
+            ):
                 result[key] = value_list
             else:
                 # Only a single value in the querydict for this key, and no guidance otherwise, so make it single

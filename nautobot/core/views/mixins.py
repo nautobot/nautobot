@@ -38,7 +38,6 @@ from nautobot.core.forms import (
 )
 from nautobot.core.jobs import BulkEditObjects
 from nautobot.core.utils import lookup, permissions
-from nautobot.core.utils.form import serialize_query_dict_for_filterset, serialize_query_dict_for_form
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params, normalize_querydict
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utils import (
@@ -912,7 +911,7 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             return self.form_invalid(form)
 
 
-class EditAndDeleteModelMixin:
+class BulkEditAndBulkDeleteModelMixin:
     """
     UI mixin to bulk destroy and bulk edit all model instances.
     """
@@ -955,16 +954,15 @@ class EditAndDeleteModelMixin:
     def send_bulk_edit_objects_to_job(self, request, form, model):
         """Prepare and enqueue a bulk edit job."""
         job_model = Job.objects.get_for_class_path(BulkEditObjects.class_path)
-        post_data = serialize_query_dict_for_form(request.POST, form)
+        post_data = normalize_querydict(request.POST, form)
         if filterset_class := lookup.get_filterset_for_model(model):
-            filter_query_params = serialize_query_dict_for_filterset(request.GET, filterset_class())
+            filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
         else:
             filter_query_params = None
         job_form = BulkEditObjects.as_form(
             data={
                 "post_data": post_data,
                 "content_type": ContentType.objects.get_for_model(model),
-                # This feature is not yet available on the next branch
                 "edit_all": request.POST.get("_all") is not None,
                 "filter_query_params": filter_query_params,
             }
@@ -980,7 +978,7 @@ class EditAndDeleteModelMixin:
             return redirect("extras:jobresult", pk=job_result.pk)
 
 
-class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, EditAndDeleteModelMixin):
+class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, BulkEditAndBulkDeleteModelMixin):
     """
     UI mixin to bulk destroy model instances.
     """
@@ -1109,7 +1107,7 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):  # 3.0 TODO: remove, unus
             return self.form_invalid(form)
 
 
-class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, EditAndDeleteModelMixin):
+class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, BulkEditAndBulkDeleteModelMixin):
     """
     UI mixin to bulk update model instances.
     """
