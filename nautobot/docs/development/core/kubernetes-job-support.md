@@ -42,6 +42,22 @@ Client Version: v1.31.2
 Kustomize Version: v5.4.2
 ```
 
+We also need to check if our default service account is enabled to create jobs, we can check the permission by executing the following command:
+
+```bash
+kubectl auth can-i --as=system:serviceaccount:default:default create jobs -n default
+```
+
+If the output from the above command is yes, then you are all good to go. However, if the output is no, then we need to create a rolebinding to grant the default user appropriate permissions. We can achieve this by running the following command:
+
+```bash
+kubectl create rolebinding admin-namespace-default-new --clusterrole=admin --serviceaccount=default:default --namespace=default
+```
+
+This command will assign the admin role to our default serviceaccount in the namespace `default`. Check out kubernetes [RBAC authorization page](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) to learn how to create more granular role and permission assignments.
+
+We can run the `kubectl auth can-i --as=system:serviceaccount:default:default create jobs -n default` again and this time the output should be yes.
+
 ## Starting Required Deployments
 
 ### Check Required Files
