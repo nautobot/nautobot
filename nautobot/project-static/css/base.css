@@ -934,7 +934,7 @@ code.hljs {
 .tiles {
     display: grid;
     grid-gap: 20px;
-    grid-template-columns: repeat(auto-fit, minmax(445px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(445px, 1fr));
 }
 @media (max-width: 1007px) {
     .tiles {
@@ -950,6 +950,24 @@ code.hljs {
     display: flex;
     flex-direction: column;
     padding: 20px;
+}
+.tile.clickable {
+    cursor: pointer;
+    outline: none;
+    transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.tile.clickable:active,
+.tile.clickable:focus-visible,
+.tile.clickable:hover {
+    border-color: #007dff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+a.tile.clickable,
+a.tile.clickable:hover,
+a.tile.clickable:focus,
+a.tile.clickable:visited {
+    color: inherit;
+    text-decoration: none;
 }
 .tile.disabled {
     background: #f4f4f4;
@@ -971,12 +989,19 @@ code.hljs {
     font-weight: 400;
     margin: 0;
 }
+.tile-header img {
+    float: left;
+    margin-right: 20px;
+}
 .tile-description {
     flex: 1;
 }
 .tile-footer {
     border-top: 1px solid #d8d8d8;
+    column-gap: 10px;
     display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
     padding-top: 10px;
 }
 
