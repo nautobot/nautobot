@@ -98,6 +98,10 @@ Nautobot 2.4 adds the data models [`WirelessNetwork`](../user-guide/core-data-mo
 
 Refer to the [Wireless](../user-guide/core-data-model/wireless/index.md) documentation for more details.
 
+#### Apps Marketplace Page and Installed Apps Page Tile View
+
+Nautobot 2.4 introduces Apps Marketplace page containing information about uninstalled Nautobot apps. In addition to that, Installed Apps page is getting a brand-new tile view as an alternative to already existing list view.
+
 ### Deprecated
 
 #### `FilterTestCases.NameOnlyFilterTestCase` and `FilterTestCases.NameSlugFilterTestCase`
