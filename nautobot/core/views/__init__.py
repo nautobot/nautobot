@@ -480,7 +480,7 @@ def get_file_with_authorization(request, *args, **kwargs):
     return get_file(request, *args, **kwargs)
 
 
-class RenderJinjaView(TemplateView):
+class RenderJinjaView(LoginRequiredMixin, TemplateView):
     """Render a Jinja template with context data."""
 
     template_name = "utilities/render_jinja2.html"
