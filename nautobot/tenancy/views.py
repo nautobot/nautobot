@@ -5,7 +5,7 @@ from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, StatsPanel
 from nautobot.core.views import generic
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.dcim.models import Device, Location, Rack, RackReservation
+from nautobot.dcim.models import Device, Location, Rack, RackReservation, Controller, ControllerManagedDeviceGroup
 from nautobot.extras.models import DynamicGroup
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
 from nautobot.virtualization.models import Cluster, VirtualMachine
@@ -104,6 +104,8 @@ class TenantView(generic.ObjectView):
                     VirtualMachine,
                     VLAN,
                     VRF,
+                    Controller,
+                    ControllerManagedDeviceGroup,
                 ],
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,

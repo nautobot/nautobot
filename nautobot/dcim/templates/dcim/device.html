@@ -51,15 +51,7 @@
                                             {% endif %}
                                         </td>
                                     </tr>
-                                    <tr>
-                                        <td>Tenant</td>
-                                        <td>
-                                            {% if object.tenant and object.tenant.tenant_group %}
-                                                {{ object.tenant.tenant_group|hyperlinked_object }} /
-                                            {% endif %}
-                                            {{ object.tenant|hyperlinked_object }}
-                                        </td>
-                                    </tr>
+                                    {% include 'inc/tenant_table_row.html' %}
                                     <tr>
                                         <td>Device Family</td>
                                         <td>{{ object.device_type.device_family|hyperlinked_object }}</td>
