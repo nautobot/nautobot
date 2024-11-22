@@ -517,9 +517,14 @@ menu_items = (
                 weight=100,
                 items=(
                     NavMenuItem(
+                        link="apps:apps_marketplace",
+                        name="Apps Marketplace",
+                        weight=100,
+                    ),
+                    NavMenuItem(
                         link="apps:apps_list",
                         name="Installed Apps",
-                        weight=100,
+                        weight=200,
                     ),
                 ),
             ),
