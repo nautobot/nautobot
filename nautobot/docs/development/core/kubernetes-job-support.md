@@ -113,7 +113,7 @@ deployment.apps/nautobot created
 deployment.apps/redis created
 ```
 
-You can confirm the health of the each deployment by running the following command:
+You can confirm the health of the deployment by running the following command:
 
 ```bash
 kubectl get deployments
@@ -247,181 +247,74 @@ deployment.apps/nautobot      1/1     1            1           30m
 deployment.apps/redis         1/1     1            1           30m
 ```
 
-## Environment Variables and Job Pod Manifest
+### Port Forward to Local Host
 
-## Running Jobs
-
-To pass stdin into the nautobot container that exists with in the nautobot pod, first you need to get the name of the nautobot pod.
-
-You can execute the following command to see all the pods.
+We can use the `port-forward` command from `kubectl` to make your Nautobot instance on the kubernetes cluster accessible in `localhost:8080`:
 
 ```bash
-kubectl get pods
+kubectl port-forward <nautobot-pod-name> 8080:8080
 ```
 
-You should see the following output and note that the pod with the prefix `nautobot-*`. That is what we need for our command.
+The output should be:
 
 ```bash
-NAME                               READY   STATUS    RESTARTS      AGE
-pod/celery-beat-6fb67477b7-rsw62   1/1     Running   0             30m
-pod/db-8687b48964-gtvtc            1/1     Running   0             30m
-pod/nautobot-679bdc765-pl2ld       1/1     Running   0             30m
-pod/redis-7cc58577c-tl5sq          1/1     Running   0             30m
+Forwarding from 127.0.0.1:8080 -> 8080
+Forwarding from [::1]:8080 -> 8080
+Handling connection for 8080
 ```
 
-Now to get to the CLI of the nautobot container in the pod, we execute the following command:
+Now go to your web browser and navigate to `localhost:8080`. You should see your Nautobot instance running.
 
-```bash
-kubectl exec --stdin --tty <nautobot-pod-name> -- /bin/bash
-```
+![K8s Nautobot Login](../../img/kubernetes/k8s_nautobot_login.png)
 
-You should see that we are inside the container as the root user:
+## Run a Kubernetes Job
 
-```bash
-root@nautobot-679bdc765-pl2ld:/source#
-```
+### Configure a New Job Queue of Type Kubernetes
 
-### Create and Assign a Kubernetes Job Queue to a Job
+Go to the Navigation bar on your left hand side and look at the Jobs Section. You should see Job Queues at the very end of the section. Click on the plus button next to the Job Queues entry and this will take us to a form for creating a new job queue.
 
-Now we are inside the container, we can access `nbshell` using `nautobot-server nbshell` and make modifications to our database records. You should see the following output:
+![K8s Job Queue Add](../../img/kubernetes/k8s_job_queue_add.png)
 
-```py
-# Django version 4.2.16
-# Nautobot version 2.4.0a1
-# Example Nautobot App version 1.0.0
-Python 3.11.10 (main, Nov 12 2024, 22:19:37) [GCC 12.2.0] on linux
-Type "help", "copyright", "credits" or "license" for more information.
-(InteractiveConsole)
->>>
-```
+We can give the name "kubernetes" to the new job queue and select "Kubernetes" from the Queue Type dropdown.
 
-In order to run kubernetes jobs, we need to create a [Job Queue](../../user-guide/platform-functionality/jobs/jobqueue.md) with type Kubernetes.
+![K8s Job Queue Config](../../img/kubernetes/k8s_job_queue_config.png)
 
-```py
->>> from nautobot.extras.choices import JobQueueTypeChoices
->>> jq = JobQueue.objects.create(name="kubernetes", queue_type=JobQueueTypeChoices.TYPE_KUBERNETES)
-```
+Scroll down and click on the create button. A new Job Queue with name "kubernetes" and with type Kubernetes should be created.
 
-After the job queue is created, we can assign the job queue to an existing job in Nautobot. We are going to pick `nautobot.core.jobs.ExportObjectList` for this guide.
+![K8s Job Queue Detail](../../img/kubernetes/k8s_job_queue.png)
 
-```py
->>> job = Job.objects.get(name="Export Object List")
->>> job.job_queues_override = True
->>> job.default_job_queue_override = True
->>> job.default_job_queue = jq
->>> job.save()
-```
+### Assign that Job Queue to a Job
 
-Check if the job queue is assigned successfully to the job and save the job's pk as we will be using it later:
+Go to a Job's edit form and assign the newly created kubernetes job queue to the job. We will be using the "Export Object List" system job here.
 
-```py
->>> job.default_job_queue
-<JobQueue: kubernetes: kubernetes>
->>> job.pk
-"5cbbd015-0693-42e7-943d-b1964e7684dc"
-```
+![K8s Job Edit Button](../../img/kubernetes/k8s_job_edit_button.png)
 
-Now the job and job queue are set up and configured, we are ready to run our first kubernetes job.
+Check the override default value checkbox on the `Job Queues` field and select the kubernetes job queue from the dropdown.
+Check the override default value checkbox on the `Default Job Queue` field and select the kubernetes job queue from the dropdown.
 
-### Running a Job Immediately
+![K8s Job Edit](../../img/kubernetes/k8s_job_edit.png)
 
-If you are still in `nbshell`, you can press `ctrl+d` to exit the shell. We will be making a curl request in the container CLI to the run job api endpoint.
+Click on the update button when we are finished.
 
-Run the following curl command and replace the `<job-id>` in the url with the job id you saved from the previous section.
+### Run the Job
 
-```bash
-root@nautobot-679bdc765-pl2ld:/source# curl -X POST -H "Authorization: Token 0123456789abcdef0123456789abcdef01234567" -H "Content-Type: application/json" -H "Accept: application/json; version=2.4; indent=4" http://localhost:8080/api/extras/jobs/<job-id>/run/ --data '{"data": {"content_type":1}}'
-```
+After clicking on the update button after the previous step, we should be redirected to the table of jobs. Click on the link that says "Export Object List". This should take us to the Job Run Form.
 
-You should see the following output. Note that the `job_result.status` is `PENDING`.
+![K8s Run Job](../../img/kubernetes/k8s_run_job.png)
 
-```bash
-{
-    "scheduled_job": null,
-    "job_result":
-    {
-        "id": "f7abcac8-caa3-48a4-8658-b8c66f7df2fb",
-        "object_type": "extras.jobresult",
-        "display": "Export Object List started at 2024-11-20 21:25:27.710643+00:00 (PENDING)",
-        "url": "http://localhost:8080/api/extras/job-results/f7abcac8-caa3-48a4-8658-b8c66f7df2fb/",
-        "natural_slug": "f7abcac8-caa3-48a4-8658-b8c66f7df2fb_f7ab",
-        "status":
-        {
-            "value": "PENDING",
-            "label": "PENDING"
-        },
-        "name": "Export Object List",
-        "task_name": null,
-        "date_created": "2024-11-20T21:25:27.710643Z",
-        "date_done": null,
-        "result": null,
-        "worker": null,
-        "task_args": [],
-        "task_kwargs": "{\"content_type\": 1, \"query_string\": \"\", \"export_format\": \"\", \"export_template\": null}",
-        "celery_kwargs": {},
-        "traceback": null,
-        "meta": null,
-        "job_model":
-        {
-            "id": "5cbbd015-0693-42e7-943d-b1964e7684dc",
-            "object_type": "extras.job",
-            "url": "http://localhost:8080/api/extras/jobs/5cbbd015-0693-42e7-943d-b1964e7684dc/"
-        },
-        "user":
-        {
-            "id": "327ad435-d59a-4c92-9f00-b722e2d72e2f",
-            "object_type": "users.user",
-            "url": "http://localhost:8080/api/users/users/327ad435-d59a-4c92-9f00-b722e2d72e2f/"
-        },
-        "scheduled_job": null,
-        "custom_fields": {},
-        "computed_fields": {},
-        "files": []
-    }
-}
-```
+Select an option for the Content Type field dropdown and notice that the Job queue is already filled out with the kubernetes job queue that we assigned to this job from previous steps. So we do not need to make any changes there.
 
-You can confirm that the job is completed by opening another terminal and running the command `kubectl get pods`:
+![K8s Run Job Form](../../img/kubernetes/k8s_run_job_form.png)
 
-```bash
-NAME                                                      READY   STATUS      RESTARTS   AGE
-celery-beat-6fb67477b7-rsw62                              1/1     Running     0          1h
-db-8687b48964-gtvtc                                       1/1     Running     0          1h
-nautobot-679bdc765-pl2ld                                  1/1     Running     0          1h
-nautobot-job-85bb96a0-8168-44c1-9324-99afe1e55c0a-vfpl9   0/1     Completed   0          7s
-redis-7cc58577c-tl5sq                                     1/1     Running     0          1h
-```
+Click on the "Run Job Now" button and we should be directed to the job result page.
 
-Notice that we have a new pod with the prefix `nautobot-job-*` and status `Completed`.
+![K8s Job Result Pending](../../img/kubernetes/k8s_job_result_pending.png)
 
-Alternatively, we can confirm that the job is running by running the command `kubectl get jobs`:
+### Inspect the Job Result
 
-```bash
-NAME                                                STATUS    COMPLETIONS   DURATION   AGE
-nautobot-job-7442d540-10a5-4123-95f6-d7e2899012b2   Running   0/1           6s         6s
-```
+You can inspect the job result and the job logs in this page. Notice the two job log entries that reads something like "Creating job pod (pod-name) in namespace default" and Reading job pod (pod-name) in namespace default". Those entries indicate that a Kubernetes Job pod was executing the job for us.
 
-If the job is completed, then you will see the following output:
-
-```bash
-NAME                                                STATUS     COMPLETIONS   DURATION   AGE
-nautobot-job-7442d540-10a5-4123-95f6-d7e2899012b2   Complete   1/1           8s         11s
-```
-
-In order to confirm the job is completed successfully from the perspective of nautobot, we can again use `nbshell` and examine the latest job result:
-
-```py
-# Django version 4.2.16
-# Nautobot version 2.4.0a1
-# Example Nautobot App version 1.0.0
-Python 3.11.10 (main, Nov 12 2024, 22:19:37) [GCC 12.2.0] on linux
-Type "help", "copyright", "credits" or "license" for more information.
-(InteractiveConsole)
->>> JobResult.objects.latest()
-<JobResult: Export Object List started at 2024-11-20 21:35:49.812765+00:00 (SUCCESS)>
-```
-
-The job is completed successfully as indicated by the job result status.
+![K8s Job Result Completed](../../img/kubernetes/k8s_job_result_completed.png)
 
 ### Running a Scheduled Job
 
@@ -454,17 +347,26 @@ Open another terminal and execute the command `kubectl exec --stdin --tty <nauto
 First we import all the required packages:
 
 ```py
->>> from nautobot.extras.choices import JobExecutionType
->>> from datetime import datetime
->>> from zoneinfo import ZoneInfo
+from nautobot.extras.choices import JobExecutionType
+from datetime import datetime
+from zoneinfo import ZoneInfo
 ```
 
 Then we can create the Scheduled Job
 
 ```py
->>> ScheduledJob.objects.create(name="Export Object List Hourly", task="nautobot.core.jobs.ExportObjectList", job_model=Job.objects.ge
-t(name="Export Object List"), interval=JobExecutionType.TYPE_HOURLY, user=User.objects.first(), approval_required=False, start_time=da
-tetime.now(ZoneInfo("America/New_York")), time_zone=ZoneInfo("America/New_York"), job_queue=JobQueue.objects.get(name="kubernetes"), kwargs={"content_type": 1})
+scheduled_job = ScheduledJob()
+scheduled_job.name = "Export Object List Hourly"
+scheduled_job.task = "nautobot.core.jobs.ExportObjectList"
+scheduled_job.job_model = Job.objects.get(name="Export Object List")
+scheduled_job.interval = JobExecutionType.TYPE_HOURLY
+scheduled_job.user = User.objects.first()
+scheduled_job.approval_required = False
+scheduled_job.start_time = datetime.now(ZoneInfo("America/New_York"))
+scheduled_job.time_zone = ZoneInfo("America/New_York")
+scheduled_job.job_queue = JobQueue.objects.get(name="kubernetes")
+scheduled_job.kwargs = {"content_type": 1}
+schedule_job.save()
 ```
 
 To confirm that the Scheduled Job is running, we go back to the terminal that was logging celery beat. You should see the following logs or something similar:
@@ -483,12 +385,13 @@ To confirm that the Scheduled Job is running, we go back to the terminal that wa
 
 You can also confirm if the job is running or is completed by running `kubectl get jobs` and `kubectl get pods` in another terminal.
 
-Go back to the terminal with `nbshell` running and confirm that the latest job result has the correct timestamps and the status `SUCCESS`.
+Go back to your broswer and click on the Job Results entry from the Jobs navigation menu.
 
-```py
->>> JobResult.objects.latest()
-<JobResult: Export Object List started at 2024-11-21 02:09:57.776370+00:00 (SUCCESS)>
-```
+![K8s Job Result Navigation](../../img/kubernetes/k8s_job_result_nav.png)
+
+Inspect the Job Result
+
+![K8s Scheduled Job Job Result](../../img/kubernetes/k8s_scheduled_job_result.png)
 
 ## After Running a Job
 
