@@ -125,7 +125,7 @@ With the introduction of the UI Component Framework (described [above](#ui-compo
 As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python 3.9.
 
 <!-- towncrier release notes start -->
-## v2.4.0b1 (2024-11-21)
+## v2.4.0b1 (2024-11-22)
 
 ### Added
 
@@ -179,6 +179,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6513](https://github.com/nautobot/nautobot/issues/6513) - Added `pre_tag` helper/filter method to wrap content within `<pre>` tags.
 - [#6537](https://github.com/nautobot/nautobot/issues/6537) - Added logic to prevent users from modifying device on Virtual Device Contexts.
 - [#6539](https://github.com/nautobot/nautobot/issues/6539) - Added Installed Apps page tile view.
+- [#6555](https://github.com/nautobot/nautobot/issues/6555) - Added a Jinja template renderer to the UI.
 
 ### Changed
 
