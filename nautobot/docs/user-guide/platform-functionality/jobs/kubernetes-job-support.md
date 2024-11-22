@@ -139,6 +139,6 @@ deployment.apps/nautobot      1/1     1            1           1h
 deployment.apps/redis         1/1     1            1           1h
 ```
 
-![Kubernetes Component Flow After Job Execution](../../../img/kubernetes/k8s_components_flow_after.png)
+![Kubernetes Component Flow After Job Execution](../../../img/kubernetes/k8s_component_flow_after.png)
 
 ## How to Configure Environment Variables
