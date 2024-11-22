@@ -2,6 +2,7 @@
 
 ## [2.4 - November 2024](version-2.4.md)
 
+- Apps Marketplace Page and Installed Apps Page Tile View
 - Event Publication Framework
 - Jinja2 Template Rendering REST API
 - Job `success` Log Level
