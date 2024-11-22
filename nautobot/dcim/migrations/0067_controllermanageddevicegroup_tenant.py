@@ -5,16 +5,21 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('tenancy', '0009_update_all_charfields_max_length_to_255'),
-        ('dcim', '0066_controllermanageddevicegroup_radio_profiles_and_more'),
+        ("tenancy", "0009_update_all_charfields_max_length_to_255"),
+        ("dcim", "0066_controllermanageddevicegroup_radio_profiles_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='controllermanageddevicegroup',
-            name='tenant',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='controller_managed_device_groups', to='tenancy.tenant'),
+            model_name="controllermanageddevicegroup",
+            name="tenant",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="controller_managed_device_groups",
+                to="tenancy.tenant",
+            ),
         ),
     ]
