@@ -15,6 +15,7 @@
             {% render_field form.capabilities %}
             {% render_field form.weight %}
             {% render_field form.radio_profiles %}
+            {% render_field form.description %}
         </div>
     </div>
     <div class="panel panel-default">
@@ -69,6 +70,7 @@
             </table>
         </div>
     </div>
+    {% include 'inc/tenancy_form_panel.html' %}
     {% include 'inc/extras_features_edit_form_fields.html' %}
 {% endblock form %}
 

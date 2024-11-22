@@ -1884,7 +1884,10 @@ class ControllerFilterSet(
         fields = "__all__"
 
 
-class ControllerManagedDeviceGroupFilterSet(NautobotFilterSet):
+class ControllerManagedDeviceGroupFilterSet(
+    NautobotFilterSet,
+    TenancyModelFilterSetMixin,
+):
     """Filters for ControllerManagedDeviceGroup model."""
 
     q = SearchFilter(
