@@ -47,9 +47,9 @@ As of Nautobot 2.4.0, Nautobot publishes events with the following topics:
 
 Nautobot Apps can also make use of this framework to publish additional events specific to the App's functionality as desired.
 
-#### Jinja2 Template Rendering REST API
+#### Jinja2 Template Rendering Tool
 
-Nautobot 2.4 adds a new REST API endpoint `/api/core/render-jinja-template/` that can be called to [render a user-provided Jinja2 template](../user-guide/platform-functionality/rendering-jinja-templates.md) with user-provided context data and access to Nautobot's built-in Jinja2 tags and filters. This can be used by users and Apps such as [Nautobot Golden Config](https://docs.nautobot.com/projects/golden-config/en/latest/) to assist with the development and validation of Jinja2 template content.
+Nautobot 2.4 adds a new REST API endpoint `/api/core/render-jinja-template/` that can be called to [render a user-provided Jinja2 template](../user-guide/platform-functionality/rendering-jinja-templates.md) with user-provided context data and access to Nautobot's built-in Jinja2 tags and filters. This can be used by users and Apps such as [Nautobot Golden Config](https://docs.nautobot.com/projects/golden-config/en/latest/) to assist with the development and validation of Jinja2 template content. There is a UI at `/render-jinja-template/` that provides a form for entering template content and context data to render a template. This UI can also be accessed from a link in the footer of any Nautobot page.
 
 #### Job `success` Log Level
 
