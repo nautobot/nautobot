@@ -51,7 +51,7 @@ After clicking on the update button after the previous step, we should be redire
 
 Select an option for the Content Type field dropdown and notice that the Job queue is already filled out with the kubernetes job queue that we assigned to this job from previous steps. So we do not need to make any changes there.
 
-![K8s Run Job Form](../../../img/kubernetes/k8s_run_job_form.png)
+![K8s Run Job Form](../../../img/kubernetes/k8s_job_run_form.png)
 
 Click on the "Run Job Now" button and we should be directed to the job result page.
 
