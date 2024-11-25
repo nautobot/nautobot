@@ -1458,7 +1458,6 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "wireless_networks_count",
             "controller",
             "weight",
-            "tenant",
             "capabilities",
             "tags",
             "actions",
