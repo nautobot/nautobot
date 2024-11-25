@@ -124,6 +124,7 @@ from nautobot.extras.models import (
     Tag,
     Team,
 )
+from nautobot.extras.models.jobs import JobResult
 from nautobot.ipam.choices import IPAddressTypeChoices
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
@@ -4581,9 +4582,7 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             status=device_status,
             software_version=software_version,
         )
-        device_type_to_software_image_file = DeviceTypeToSoftwareImageFile.objects.create(
-            device_type=device_type, software_image_file=software_image_file
-        )
+        DeviceTypeToSoftwareImageFile.objects.create(device_type=device_type, software_image_file=software_image_file)
 
         self.add_permissions("dcim.delete_softwareimagefile")
         pk_list = [software_image_file.pk]
@@ -4592,9 +4591,14 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "confirm": True,
             "_confirm": True,  # Form button
         }
-        response = self.client.post(self._get_url("bulk_delete"), data, follow=True)
-        # Assert protected error message included in the response body
-        self.assertBodyContains(response, f"<span>{device_type_to_software_image_file}</span>", html=True)
+        response = self.client.post(self._get_url("bulk_delete"), data)
+        job_result = JobResult.objects.filter(name="Bulk Delete Objects").first()
+        self.assertRedirects(
+            response,
+            reverse("extras:jobresult", args=[job_result.pk]),
+            status_code=302,
+            target_status_code=200,
+        )
 
 
 class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):

@@ -1054,6 +1054,9 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     def get_deletable_object(self):
         return VLANGroup.objects.create(name="TEST DELETE ME")
 
+    def get_deletable_object_pks(self):
+        return [VLANGroup.objects.create(name="TEST DELETE ME").pk]
+
 
 class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = VLAN

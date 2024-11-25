@@ -24,6 +24,7 @@ from nautobot.core.utils import lookup
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
 from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
 from nautobot.extras.models import CustomFieldModel, RelationshipModel
+from nautobot.extras.models.jobs import JobResult
 from nautobot.extras.models.mixins import NotesMixin
 from nautobot.ipam.models import Prefix
 from nautobot.users import models as users_models
@@ -1193,7 +1194,6 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_objects_with_permission(self):
             pk_list = self.get_deletable_object_pks()
-            initial_count = self._get_queryset().count()
             data = {
                 "pk": pk_list,
                 "confirm": True,
@@ -1201,11 +1201,18 @@ class ViewTestCases:
             }
 
             # Assign unconstrained permission
-            self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")
+            self.add_permissions(
+                f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}", "extras.view_jobresult"
+            )
 
-            # Try POST with model-level permission
-            self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 302)
-            self.assertEqual(self._get_queryset().count(), initial_count - len(pk_list))
+            response = self.client.post(self._get_url("bulk_delete"), data)
+            job_result = JobResult.objects.filter(name="Bulk Delete Objects").first()
+            self.assertRedirects(
+                response,
+                reverse("extras:jobresult", args=[job_result.pk]),
+                status_code=302,
+                target_status_code=200,
+            )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_form_contains_all_objects(self):
@@ -1289,9 +1296,16 @@ class ViewTestCases:
             obj_perm.constraints = {"pk__isnull": False}  # Match a non-existent pk (i.e., allow all)
             obj_perm.save()
 
-            # Bulk delete permitted objects
-            self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 302)
-            self.assertEqual(self._get_queryset().count(), initial_count - len(pk_list))
+            # User would be redirected to Job Result soGive User Permission to view Job Result
+            self.add_permissions("extras.view_jobresult")
+            response = self.client.post(self._get_url("bulk_delete"), data)
+            job_result = JobResult.objects.filter(name="Bulk Delete Objects").first()
+            self.assertRedirects(
+                response,
+                reverse("extras:jobresult", args=[job_result.pk]),
+                status_code=302,
+                target_status_code=200,
+            )
 
     class BulkRenameObjectsViewTestCase(ModelViewTestCase):
         """

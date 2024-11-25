@@ -15,6 +15,7 @@ from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
+from nautobot.core.jobs.bulk_actions import BulkDeleteObjects
 from nautobot.core.jobs.cleanup import LogsCleanup
 from nautobot.core.jobs.groups import RefreshDynamicGroupCaches
 from nautobot.core.utils.lookup import get_filterset_for_model
@@ -347,5 +348,13 @@ class ImportObjects(Job):
             raise RunJobTaskFailed("CSV import not fully successful, see logs")
 
 
-jobs = [ExportObjectList, GitRepositorySync, GitRepositoryDryRun, ImportObjects, LogsCleanup, RefreshDynamicGroupCaches]
+jobs = [
+    ExportObjectList,
+    GitRepositorySync,
+    GitRepositoryDryRun,
+    ImportObjects,
+    LogsCleanup,
+    RefreshDynamicGroupCaches,
+    BulkDeleteObjects,
+]
 register_jobs(*jobs)

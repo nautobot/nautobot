@@ -2419,31 +2419,21 @@ class JobTestCase(
     def test_bulk_delete_system_jobs_fail(self):
         system_job_queryset = self.model.objects.filter(module_name__startswith="nautobot.")
         pk_list = system_job_queryset.values_list("pk", flat=True)[:3]
-        initial_count = self._get_queryset().count()
         data = {
             "pk": pk_list,
             "confirm": True,
             "_confirm": True,  # Form button
         }
         # Try bulk delete with delete job permission
-        self.add_permissions("extras.delete_job")
-        response = self.client.post(self._get_url("bulk_delete"), data, follow=True)
-        self.assertBodyContains(
+        self.add_permissions("extras.delete_job", "extras.view_jobresult")
+        response = self.client.post(self._get_url("bulk_delete"), data)
+        job_result = JobResult.objects.filter(name="Bulk Delete Objects").first()
+        self.assertRedirects(
             response,
-            f"Unable to delete Job {system_job_queryset.first()}. System Job cannot be deleted",
-            status_code=403,
+            reverse("extras:jobresult", args=[job_result.pk]),
+            status_code=302,
+            target_status_code=200,
         )
-        self.assertEqual(self._get_queryset().count(), initial_count)
-
-        # Try bulk delete as a superuser
-        self.user.is_superuser = True
-        response = self.client.post(self._get_url("bulk_delete"), data, follow=True)
-        self.assertBodyContains(
-            response,
-            f"Unable to delete Job {system_job_queryset.first()}. System Job cannot be deleted",
-            status_code=403,
-        )
-        self.assertEqual(self._get_queryset().count(), initial_count)
 
     def validate_job_data_after_bulk_edit(self, pk_list, old_data):
         # Name is bulk-editable

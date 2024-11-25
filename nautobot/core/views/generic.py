@@ -60,7 +60,7 @@ from nautobot.core.views.utils import (
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
-from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
+from nautobot.extras.utils import remove_prefix_from_cf_key
 
 
 class GenericView(LoginRequiredMixin, View):
@@ -1285,48 +1285,30 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDe
     def get(self, request):
         return redirect(self.get_return_url(request))
 
-    def _perform_delete_operation(self, request, queryset, model):
-        logger = logging.getLogger(__name__ + ".BulkDeleteView")
-        self.perform_pre_delete(request, queryset)
-        try:
-            _, deleted_info = bulk_delete_with_bulk_change_logging(queryset)
-            deleted_count = deleted_info[model._meta.label]
-        except ProtectedError as e:
-            logger.info("Caught ProtectedError while attempting to delete objects")
-            handle_protectederror(queryset, request, e)
-            return redirect(self.get_return_url(request))
-        msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
-        logger.info(msg)
-        messages.success(request, msg)
-        return redirect(self.get_return_url(request))
-
     def post(self, request, **kwargs):
         logger = logging.getLogger(f"{__name__}.BulkDeleteView")
         model = self.queryset.model
+        delete_all = request.POST.get("_all") is not None
 
         # Are we deleting *all* objects in the queryset or just a selected subset?
-        if request.POST.get("_all"):
+        if delete_all:
             queryset = self._get_bulk_edit_delete_all_queryset(request)
-
-            if "_confirm" in request.POST:
-                return self._perform_delete_operation(request, queryset, model)
-
-            context = self._bulk_delete_all_context(request, queryset)
-            context.update(self.extra_context())
-            return render(request, self.template_name, context)
-
-        pk_list = request.POST.getlist("pk")
+            pk_list = []
+        else:
+            pk_list = request.POST.getlist("pk")
+            queryset = self.queryset.filter(pk__in=pk_list)
 
         form_cls = self.get_form()
 
         if "_confirm" in request.POST:
             form = form_cls(request.POST)
+            # Set pk field requirement here instead of BulkDeleteForm since get_form() may return a different form class
+            if delete_all:
+                form.fields["pk"].required = False
+
             if form.is_valid():
                 logger.debug("Form validation was successful")
-
-                # Delete objects
-                queryset = self.queryset.filter(pk__in=pk_list)
-                return self._perform_delete_operation(request, queryset, model)
+                return self.send_bulk_delete_objects_to_job(request, pk_list, model, delete_all)
             else:
                 logger.debug("Form validation failed")
 
@@ -1339,23 +1321,26 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDe
             )
 
         # Retrieve objects being deleted
-        table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
-        if not table.rows:
-            messages.warning(
-                request,
-                f"No {model._meta.verbose_name_plural} were selected for deletion.",
-            )
-            return redirect(self.get_return_url(request))
-        # Hide actions column if present
-        if "actions" in table.columns:
-            table.columns.hide("actions")
+        table = None
+        if not delete_all:
+            table = self.table(queryset, orderable=False)
+            if not table.rows:
+                messages.warning(
+                    request,
+                    f"No {model._meta.verbose_name_plural} were selected for deletion.",
+                )
+                return redirect(self.get_return_url(request))
+            # Hide actions column if present
+            if "actions" in table.columns:
+                table.columns.hide("actions")
 
         context = {
             "form": form,
             "obj_type_plural": model._meta.verbose_name_plural,
             "table": table,
             "return_url": self.get_return_url(request),
-            "total_objs_to_delete": len(table.rows),
+            "total_objs_to_delete": queryset.count(),
+            "delete_all": delete_all,
         }
         context.update(self.extra_context())
         return render(request, self.template_name, context)
@@ -1373,6 +1358,9 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDe
 
         class BulkDeleteForm(ConfirmationForm):
             pk = ModelMultipleChoiceField(queryset=self.queryset, widget=MultipleHiddenInput)
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
 
         if self.form:
             return self.form

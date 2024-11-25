@@ -244,12 +244,11 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 restrict_form_fields(form, request.user)
             elif view.action == "bulk_destroy":
                 pk_list = getattr(view, "pk_list", [])
-                if pk_list:
-                    initial = {
-                        "pk": pk_list,
-                        "return_url": return_url,
-                    }
-                    form = form_class(initial=initial)
+                initial = {
+                    "pk": pk_list,
+                    "return_url": return_url,
+                }
+                form = form_class(initial=initial)
                 delete_all = request.POST.get("_all")
                 if not delete_all:
                     table = self.construct_table(view, pk_list=pk_list)
@@ -347,6 +346,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         # Ensure the proper inheritance of context variables is applied: the view's returned data takes priority over the viewset's get_extra_context
         context.update(view.get_extra_context(request, instance))
         context.update(self.get_template_context(data, renderer_context))
+
         return context
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
