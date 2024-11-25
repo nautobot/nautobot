@@ -1,6 +1,6 @@
 # Kubernetes Job Support
 
-Kubernetes Job Support is added in Nautobot v2.4.0. This documentation is a end-to-end development guide on topics from how to set up your local kubernetes cluster with [minikube](https://minikube.sigs.k8s.io/docs/) and how to run a nautobot job in a remote kubernetes job pod.
+Kubernetes Job Support is added in Nautobot v2.4.0. This documentation is a end-to-end development guide on topics from how to set up your local Kubernetes cluster with [minikube](https://minikube.sigs.k8s.io/docs/) and how to run a Nautobot Job in a Kubernetes job pod.
 
 ## Preliminary Setup
 
@@ -48,15 +48,15 @@ We also need to check if our default service account is enabled to create jobs, 
 kubectl auth can-i --as=system:serviceaccount:default:default create jobs -n default
 ```
 
-If the output from the above command is yes, then you are all good to go. However, if the output is no, then we need to create a rolebinding to grant the default user appropriate permissions. We can achieve this by running the following command:
+If the output from the above command is `yes`, then you are all good to go. However, if the output is `no`, then you will need to create a role binding to grant the default user appropriate permissions. You can achieve this by running the following command:
 
 ```bash
 kubectl create rolebinding admin-namespace-default-new --clusterrole=admin --serviceaccount=default:default --namespace=default
 ```
 
-This command will assign the admin role to our default serviceaccount in the namespace `default`. Check out kubernetes [RBAC authorization page](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) to learn how to create more granular role and permission assignments.
+This command will assign the admin role to your default service account in the namespace `default`. Check out Kubernetes [RBAC authorization page](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) to learn how to create more granular role and permission assignments.
 
-We can run the `kubectl auth can-i --as=system:serviceaccount:default:default create jobs -n default` again and this time the output should be yes.
+You can run the `kubectl auth can-i --as=system:serviceaccount:default:default create jobs -n default` again and this time the output should be `yes`.
 
 ## Starting Required Deployments
 
@@ -159,7 +159,7 @@ nautobot        ClusterIP   10.106.32.53     <none>        8080/TCP   12m
 redis           ClusterIP   10.102.99.143    <none>        6379/TCP   12m
 ```
 
-### Starting the Configuration Maps and Persistent Volumn Claims
+### Starting the Configuration Maps and Persistent Volume Claims
 
 Once you have started all deployments and services. We can start the required configuration maps and persistent volume claims:
 
@@ -312,7 +312,7 @@ Click on the "Run Job Now" button and we should be directed to the job result pa
 
 ### Inspect the Job Result
 
-You can inspect the job result and the job logs in this page. Notice the two job log entries that reads something like "Creating job pod (pod-name) in namespace default" and Reading job pod (pod-name) in namespace default". Those entries indicate that a Kubernetes Job pod was executing the job for us.
+You can inspect the job result and the job logs in this page. Notice the two job log entries that reads something like "Creating job pod (pod-name) in namespace default" and "Reading job pod (pod-name) in namespace default". Those entries indicate that a Kubernetes Job pod was executing the job for us.
 
 ![K8s Job Result Completed](../../media/development/core/kubernetes/k8s_job_result_completed.png)
 
@@ -385,7 +385,7 @@ To confirm that the Scheduled Job is running, we go back to the terminal that wa
 
 You can also confirm if the job is running or is completed by running `kubectl get jobs` and `kubectl get pods` in another terminal.
 
-Go back to your broswer and click on the Job Results entry from the Jobs navigation menu.
+Go back to your browser and click on the Job Results entry from the Jobs navigation menu.
 
 ![K8s Job Result Navigation](../../media/development/core/kubernetes/k8s_job_result_nav.png)
 

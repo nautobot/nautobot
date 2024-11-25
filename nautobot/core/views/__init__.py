@@ -478,3 +478,9 @@ def get_file_with_authorization(request, *args, **kwargs):
     get_object_or_404(queryset, file=request.GET.get("name"))
 
     return get_file(request, *args, **kwargs)
+
+
+class RenderJinjaView(LoginRequiredMixin, TemplateView):
+    """Render a Jinja template with context data."""
+
+    template_name = "utilities/render_jinja2.html"

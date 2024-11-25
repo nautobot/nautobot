@@ -9,6 +9,7 @@ from nautobot.core.views import (
     HomeView,
     NautobotMetricsView,
     NautobotMetricsViewAuth,
+    RenderJinjaView,
     SearchView,
     StaticMediaFailureView,
     ThemePreviewView,
@@ -69,6 +70,8 @@ urlpatterns = [
     ),
     # Celery worker status page
     path("worker-status/", WorkerStatusView.as_view(), name="worker_status"),
+    # Jinja template renderer tool
+    path("render-jinja-template/", RenderJinjaView.as_view(), name="render_jinja_template"),
     # Templated css file
     path(
         "template.css", TemplateView.as_view(template_name="template.css", content_type="text/css"), name="template_css"
