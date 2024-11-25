@@ -1,0 +1,1 @@
+Defined a generic SSO group authentication module that can be shared by any OAuth2/OIDC backend.
