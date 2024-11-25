@@ -20,26 +20,26 @@ Once you have the correct environment setup, executing kubernetes job would just
 
 Go to the Navigation bar on your left hand side and look at the Jobs Section. You should see Job Queues at the very end of the section. Click on the plus button next to the Job Queues entry and this will take us to a form for creating a new job queue.
 
-![K8s Job Queue Add](../../../img/kubernetes/k8s_job_queue_add.png)
+![K8s Job Queue Add](../../../media/development/core/kubernetes/k8s_job_queue_add.png)
 
 We can give the name "kubernetes" to the new job queue and select "Kubernetes" from the Queue Type dropdown.
 
-![K8s Job Queue Config](../../../img/kubernetes/k8s_job_queue_config.png)
+![K8s Job Queue Config](../../../media/development/core/kubernetes/k8s_job_queue_config.png)
 
 Scroll down and click on the create button. A new Job Queue with name "kubernetes" and with type Kubernetes should be created.
 
-![K8s Job Queue Detail](../../../img/kubernetes/k8s_job_queue.png)
+![K8s Job Queue Detail](../../../media/development/core/kubernetes/k8s_job_queue.png)
 
 ### Assign that Job Queue to a Job
 
 Go to a Job's edit form and assign the newly created kubernetes job queue to the job. We will be using the "Export Object List" system job here.
 
-![K8s Job Edit Button](../../../img/kubernetes/k8s_job_edit_button.png)
+![K8s Job Edit Button](../../../media/development/core/kubernetes/k8s_job_edit_button.png)
 
 Check the override default value checkbox on the `Job Queues` field and select the kubernetes job queue from the dropdown.
 Check the override default value checkbox on the `Default Job Queue` field and select the kubernetes job queue from the dropdown.
 
-![K8s Job Edit](../../../img/kubernetes/k8s_job_edit.png)
+![K8s Job Edit](../../../media/development/core/kubernetes/k8s_job_edit.png)
 
 Click on the update button when we are finished.
 
@@ -47,21 +47,21 @@ Click on the update button when we are finished.
 
 After clicking on the update button after the previous step, we should be redirected to the table of jobs. Click on the link that says "Export Object List". This should take us to the Job Run Form.
 
-![K8s Run Job](../../../img/kubernetes/k8s_run_job.png)
+![K8s Run Job](../../../media/development/core/kubernetes/k8s_run_job.png)
 
 Select an option for the Content Type field dropdown and notice that the Job queue is already filled out with the kubernetes job queue that we assigned to this job from previous steps. So we do not need to make any changes there.
 
-![K8s Run Job Form](../../../img/kubernetes/k8s_job_run_form.png)
+![K8s Run Job Form](../../../media/development/core/kubernetes/k8s_job_run_form.png)
 
 Click on the "Run Job Now" button and we should be directed to the job result page.
 
-![K8s Job Result Pending](../../../img/kubernetes/k8s_job_result_pending.png)
+![K8s Job Result Pending](../../../media/development/core/kubernetes/k8s_job_result_pending.png)
 
 ### Inspect the Job Result
 
 You can inspect the job result and the job logs in this page. Notice the two job log entries that reads something like "Creating job pod (pod-name) in namespace default" and Reading job pod (pod-name) in namespace default". Those entries indicate that a Kubernetes Job pod was executing the job for us.
 
-![K8s Job Result Completed](../../../img/kubernetes/k8s_job_result_completed.png)
+![K8s Job Result Completed](../../../media/development/core/kubernetes/k8s_job_result_completed.png)
 
 ## High Level Flow of Kubernetes Components
 
@@ -88,7 +88,7 @@ deployment.apps/nautobot      1/1     1            1           1h
 deployment.apps/redis         1/1     1            1           1h
 ```
 
-![Kubernetes Component Flow Before Job Execution](../../../img/kubernetes/k8s_component_flow_before.png)
+![Kubernetes Component Flow Before Job Execution](../../../media/development/core/kubernetes/k8s_component_flow_before.png)
 
 During job execution, your nautobot pod will create a new job result and spin up a new kubernetes job and job pod that shares the same redis and db instances as your nautobot pod. The kubernetes job pod will execute the job locally and made modifications to the job result.
 
@@ -116,7 +116,7 @@ NAME                                                          STATUS    COMPLETI
 job.batch/nautobot-job-11892564-b0b6-4d5b-8fd1-02a88c85f501   Running   0/1           2s         2s
 ```
 
-![Kubernetes Component Flow During Job Execution](../../../img/kubernetes/k8s_component_flow_during.png)
+![Kubernetes Component Flow During Job Execution](../../../media/development/core/kubernetes/k8s_component_flow_during.png)
 
 After the job is executed, the kubernetes job and job pod will clean themselves up.
 
@@ -139,6 +139,6 @@ deployment.apps/nautobot      1/1     1            1           1h
 deployment.apps/redis         1/1     1            1           1h
 ```
 
-![Kubernetes Component Flow After Job Execution](../../../img/kubernetes/k8s_component_flow_after.png)
+![Kubernetes Component Flow After Job Execution](../../../media/development/core/kubernetes/k8s_component_flow_after.png)
 
 ## How to Configure Environment Variables

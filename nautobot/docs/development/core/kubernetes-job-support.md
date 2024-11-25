@@ -4,7 +4,7 @@ Kubernetes Job Support is added in Nautobot v2.4.0. This documentation is a end-
 
 ## Preliminary Setup
 
-First we need to install minikube, go to the offical [get started page](https://minikube.sigs.k8s.io/docs/start/?arch=%2Fmacos%2Farm64%2Fstable%2Fbinary+download) to learn how to download minikube.
+First we need to install minikube, go to the offical [get started page](https://minikube.sigs.k8s.io/docs/start/) to learn how to download minikube for your specific OS and architecture.
 
 Once minikube is downloaded, create and start your minikube cluster with the following command:
 
@@ -265,7 +265,7 @@ Handling connection for 8080
 
 Now go to your web browser and navigate to `localhost:8080`. You should see your Nautobot instance running.
 
-![K8s Nautobot Login](../../img/kubernetes/k8s_nautobot_login.png)
+![K8s Nautobot Login](../../media/development/core/kubernetes/k8s_nautobot_login.png)
 
 ## Run a Kubernetes Job
 
@@ -273,26 +273,26 @@ Now go to your web browser and navigate to `localhost:8080`. You should see your
 
 Go to the Navigation bar on your left hand side and look at the Jobs Section. You should see Job Queues at the very end of the section. Click on the plus button next to the Job Queues entry and this will take us to a form for creating a new job queue.
 
-![K8s Job Queue Add](../../img/kubernetes/k8s_job_queue_add.png)
+![K8s Job Queue Add](../../media/development/core/kubernetes/k8s_job_queue_add.png)
 
 We can give the name "kubernetes" to the new job queue and select "Kubernetes" from the Queue Type dropdown.
 
-![K8s Job Queue Config](../../img/kubernetes/k8s_job_queue_config.png)
+![K8s Job Queue Config](../../media/development/core/kubernetes/k8s_job_queue_config.png)
 
 Scroll down and click on the create button. A new Job Queue with name "kubernetes" and with type Kubernetes should be created.
 
-![K8s Job Queue Detail](../../img/kubernetes/k8s_job_queue.png)
+![K8s Job Queue Detail](../../media/development/core/kubernetes/k8s_job_queue.png)
 
 ### Assign that Job Queue to a Job
 
 Go to a Job's edit form and assign the newly created kubernetes job queue to the job. We will be using the "Export Object List" system job here.
 
-![K8s Job Edit Button](../../img/kubernetes/k8s_job_edit_button.png)
+![K8s Job Edit Button](../../media/development/core/kubernetes/k8s_job_edit_button.png)
 
 Check the override default value checkbox on the `Job Queues` field and select the kubernetes job queue from the dropdown.
 Check the override default value checkbox on the `Default Job Queue` field and select the kubernetes job queue from the dropdown.
 
-![K8s Job Edit](../../img/kubernetes/k8s_job_edit.png)
+![K8s Job Edit](../../media/development/core/kubernetes/k8s_job_edit.png)
 
 Click on the update button when we are finished.
 
@@ -300,21 +300,21 @@ Click on the update button when we are finished.
 
 After clicking on the update button after the previous step, we should be redirected to the table of jobs. Click on the link that says "Export Object List". This should take us to the Job Run Form.
 
-![K8s Run Job](../../img/kubernetes/k8s_run_job.png)
+![K8s Run Job](../../media/development/core/kubernetes/k8s_run_job.png)
 
 Select an option for the Content Type field dropdown and notice that the Job queue is already filled out with the kubernetes job queue that we assigned to this job from previous steps. So we do not need to make any changes there.
 
-![K8s Run Job Form](../../img/kubernetes/k8s_job_run_form.png)
+![K8s Run Job Form](../../media/development/core/kubernetes/k8s_job_run_form.png)
 
 Click on the "Run Job Now" button and we should be directed to the job result page.
 
-![K8s Job Result Pending](../../img/kubernetes/k8s_job_result_pending.png)
+![K8s Job Result Pending](../../media/development/core/kubernetes/k8s_job_result_pending.png)
 
 ### Inspect the Job Result
 
 You can inspect the job result and the job logs in this page. Notice the two job log entries that reads something like "Creating job pod (pod-name) in namespace default" and Reading job pod (pod-name) in namespace default". Those entries indicate that a Kubernetes Job pod was executing the job for us.
 
-![K8s Job Result Completed](../../img/kubernetes/k8s_job_result_completed.png)
+![K8s Job Result Completed](../../media/development/core/kubernetes/k8s_job_result_completed.png)
 
 ### Running a Scheduled Job
 
@@ -387,11 +387,11 @@ You can also confirm if the job is running or is completed by running `kubectl g
 
 Go back to your broswer and click on the Job Results entry from the Jobs navigation menu.
 
-![K8s Job Result Navigation](../../img/kubernetes/k8s_job_result_nav.png)
+![K8s Job Result Navigation](../../media/development/core/kubernetes/k8s_job_result_nav.png)
 
 Inspect the Job Result
 
-![K8s Scheduled Job Job Result](../../img/kubernetes/k8s_scheduled_job_result.png)
+![K8s Scheduled Job Job Result](../../media/development/core/kubernetes/k8s_scheduled_job_result.png)
 
 ## After Running a Job
 
