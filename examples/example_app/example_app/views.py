@@ -6,8 +6,8 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from nautobot.apps import ui, views
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
-from nautobot.core.ui.object_detail import TextPanel
 from nautobot.circuits.views import CircuitUIViewSet
+from nautobot.core.ui.object_detail import TextPanel
 from nautobot.dcim.models import Device
 
 from example_app import filters, forms, tables
