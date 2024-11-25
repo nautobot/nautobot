@@ -961,14 +961,15 @@ class EditAndDeleteAllModelMixin:
                 "filter_query_params": filter_query_params,
             }
         )
-        if job_form.is_valid():
-            job_kwargs = BulkDeleteObjects.prepare_job_kwargs(job_form.cleaned_data)
-            job_result = JobResult.enqueue_job(
-                job_model,
-                request.user,
-                **BulkDeleteObjects.serialize_data(job_kwargs),
-            )
-            return redirect("extras:jobresult", pk=job_result.pk)
+        # BulkDeleteObjects job form cannot be invalid; Hence no handling of invalid case.
+        job_form.is_valid()
+        job_kwargs = BulkDeleteObjects.prepare_job_kwargs(job_form.cleaned_data)
+        job_result = JobResult.enqueue_job(
+            job_model,
+            request.user,
+            **BulkDeleteObjects.serialize_data(job_kwargs),
+        )
+        return redirect("extras:jobresult", pk=job_result.pk)
 
 
 class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, EditAndDeleteAllModelMixin):
