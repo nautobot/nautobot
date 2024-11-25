@@ -207,8 +207,9 @@ class NautobotAppConfig(NautobotConfig):
         override_views = import_object(f"{self.__module__}.{self.override_views}")
         if override_views is not None:
             for qualified_view_name, view in override_views.items():
+                view_class_name = view.view_class.__name__ if hasattr(view, "view_class") else view.cls.__name__
                 self.features.setdefault("overridden_views", []).append(
-                    (qualified_view_name, f"{view.__module__}.{view.view_class.__name__}")
+                    (qualified_view_name, f"{view.__module__}.{view_class_name}")
                 )
             register_override_views(override_views, self.name)
 
