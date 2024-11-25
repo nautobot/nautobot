@@ -312,7 +312,7 @@ Click on the "Run Job Now" button and we should be directed to the job result pa
 
 ### Inspect the Job Result
 
-You can inspect the job result and the job logs in this page. Notice the two job log entries that reads something like "Creating job pod (pod-name) in namespace default" and Reading job pod (pod-name) in namespace default". Those entries indicate that a Kubernetes Job pod was executing the job for us.
+You can inspect the job result and the job logs in this page. Notice the two job log entries that reads something like "Creating job pod (pod-name) in namespace default" and "Reading job pod (pod-name) in namespace default". Those entries indicate that a Kubernetes Job pod was executing the job for us.
 
 ![K8s Job Result Completed](../../img/kubernetes/k8s_job_result_completed.png)
 
