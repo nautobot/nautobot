@@ -1,6 +1,6 @@
 # Kubernetes Job Support
 
-Kubernetes Job Support is added in Nautobot v2.4.0. This documentation is a end-to-end development guide on topics from how to set up your local kubernetes cluster with [minikube](https://minikube.sigs.k8s.io/docs/) and how to run a nautobot job in a remote kubernetes job pod.
+Kubernetes Job Support is added in Nautobot v2.4.0. This documentation is a end-to-end development guide on topics from how to set up your local Kubernetes cluster with [minikube](https://minikube.sigs.k8s.io/docs/) and how to run a Nautobot Job in a Kubernetes job pod.
 
 ## Preliminary Setup
 
@@ -48,15 +48,15 @@ We also need to check if our default service account is enabled to create jobs, 
 kubectl auth can-i --as=system:serviceaccount:default:default create jobs -n default
 ```
 
-If the output from the above command is yes, then you are all good to go. However, if the output is no, then we need to create a rolebinding to grant the default user appropriate permissions. We can achieve this by running the following command:
+If the output from the above command is `yes`, then you are all good to go. However, if the output is `no`, then you will need to create a role binding to grant the default user appropriate permissions. You can achieve this by running the following command:
 
 ```bash
 kubectl create rolebinding admin-namespace-default-new --clusterrole=admin --serviceaccount=default:default --namespace=default
 ```
 
-This command will assign the admin role to our default serviceaccount in the namespace `default`. Check out kubernetes [RBAC authorization page](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) to learn how to create more granular role and permission assignments.
+This command will assign the admin role to your default service account in the namespace `default`. Check out Kubernetes [RBAC authorization page](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) to learn how to create more granular role and permission assignments.
 
-We can run the `kubectl auth can-i --as=system:serviceaccount:default:default create jobs -n default` again and this time the output should be yes.
+You can run the `kubectl auth can-i --as=system:serviceaccount:default:default create jobs -n default` again and this time the output should be `yes`.
 
 ## Starting Required Deployments
 
@@ -159,7 +159,7 @@ nautobot        ClusterIP   10.106.32.53     <none>        8080/TCP   12m
 redis           ClusterIP   10.102.99.143    <none>        6379/TCP   12m
 ```
 
-### Starting the Configuration Maps and Persistent Volumn Claims
+### Starting the Configuration Maps and Persistent Volume Claims
 
 Once you have started all deployments and services. We can start the required configuration maps and persistent volume claims:
 
