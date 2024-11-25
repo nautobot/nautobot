@@ -63,7 +63,6 @@
                                     <tr>
                                         <td>Device Family</td>
                                         <td>{{ object.device_type.device_family|hyperlinked_object }}</td>
-                                        </td>
                                     </tr>
                                     <tr>
                                         <td>Device Type</td>
@@ -336,7 +335,7 @@
                         </div>
                     </div>
                     {% block content_full_width_page %}
-                        {% include 'panel_table.html' with table=vdcs_table heading="Virtual Device Contexts" %}
+                        {% include 'panel_table.html' with table=vdcs_table heading="Virtual Device Contexts" add_obj_url=vdcs_table_add_url %}
                     {% endblock content_full_width_page %}
                     <div class="row">
                         <div class="col-md-12">
