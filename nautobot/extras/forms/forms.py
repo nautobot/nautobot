@@ -504,7 +504,9 @@ class CustomFieldBulkDeleteForm(ConfirmationForm):
     def __init__(self, *args, delete_all=False, **kwargs):
         super().__init__(*args, **kwargs)
         queryset = CustomField.objects.all()
-        self.fields["pk"] = ModelMultipleChoiceField(queryset=queryset, widget=MultipleHiddenInput, required=not delete_all)
+        self.fields["pk"] = ModelMultipleChoiceField(
+            queryset=queryset, widget=MultipleHiddenInput, required=not delete_all
+        )
 
     def construct_custom_field_delete_tasks(self, queryset):
         """

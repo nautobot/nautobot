@@ -659,7 +659,6 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
     form = forms.CustomFieldBulkDeleteForm
 
 
-
 #
 # Custom Links
 #

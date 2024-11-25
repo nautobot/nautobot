@@ -52,7 +52,7 @@ from nautobot.extras.forms import NoteForm
 from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
 from nautobot.extras.models.jobs import Job, JobResult
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
-from nautobot.extras.utils import get_base_template, remove_prefix_from_cf_key
+from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template, remove_prefix_from_cf_key
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -978,6 +978,29 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Ed
 
     bulk_destroy_form_class = None
     filterset_class = None
+
+    def _process_bulk_destroy_form(self, form):
+        request = self.request
+        pk_list = self.pk_list
+        queryset = self.get_queryset()
+        model = queryset.model
+        # Delete objects
+        if self.request.POST.get("_all"):
+            queryset = self._get_bulk_edit_delete_all_queryset(self.request)
+        else:
+            queryset = queryset.filter(pk__in=pk_list)
+
+        try:
+            with transaction.atomic():
+                deleted_count = bulk_delete_with_bulk_change_logging(queryset)[1][model._meta.label]
+                msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
+                self.logger.info(msg)
+                self.success_url = self.get_return_url(request)
+                messages.success(request, msg)
+        except ProtectedError as e:
+            self.logger.info("Caught ProtectedError while attempting to delete objects")
+            handle_protectederror(queryset, request, e)
+            self.success_url = self.get_return_url(request)
 
     def bulk_destroy(self, request, *args, **kwargs):
         """
