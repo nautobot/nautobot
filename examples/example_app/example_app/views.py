@@ -7,6 +7,7 @@ from nautobot.apps import ui, views
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
 from nautobot.core.ui.object_detail import TextPanel
+from nautobot.circuits.views import CircuitUIViewSet
 from nautobot.dcim.models import Device
 
 from example_app import filters, forms, tables
@@ -240,3 +241,8 @@ class ViewWithCustomPermissions(views.ObjectListViewMixin):
     queryset = ExampleModel.objects.all()
     serializer_class = serializers.ExampleModelSerializer
     table_class = tables.ExampleModelTable
+
+
+override_views = {
+    "circuits:circuit_list": CircuitUIViewSet.as_view({"get": "list"})  # For testing override_views
+}

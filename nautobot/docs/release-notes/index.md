@@ -15,20 +15,20 @@
 ## [2.3 - August 2024](version-2.3.md)
 
 - Cloud Models
-- Device Modules
+- Device Modules Model
 - Dynamic Group Enhancements
 - Interface Roles
-- Object Metadata Framework
+- Object Metadata Framework & Models
 - Saved Views
 - Worker Status Page
 
 ## [2.2 - March 2024](version-2.2.md)
 
-- Contacts & Teams
+- Contacts & Teams Models
 - Controller Model
 - DeviceFamily Model
 - Prefix and VLAN Many Locations
-- Software Image File and Software Version models
+- Software Image File and Software Version Models
 - Syntax Highlighting
 
 ## [2.1 - December 2023](version-2.1.md)
@@ -44,7 +44,7 @@
 
 - Assign an IP Address to Multiple Interfaces
 - Generic Role Model
-- IPAM Namespaces
+- IPAM Namespaces Model
 - Natural Key Support Across Nautobot Models
 - REST API Query Depth Parameter
 - Site Fields Added to Location

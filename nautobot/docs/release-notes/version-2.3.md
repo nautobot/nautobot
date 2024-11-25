@@ -124,6 +124,41 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
+## v2.3.12 (2024-11-25)
+
+### Added
+
+- [#6532](https://github.com/nautobot/nautobot/issues/6532) - Added a keyboard shortcut (⌘+enter or ctrl+enter) to submit forms when typing in a textarea.
+- [#6543](https://github.com/nautobot/nautobot/issues/6543) - Defined a generic SSO group authentication module that can be shared by any OAuth2/OIDC backend.
+- [#6550](https://github.com/nautobot/nautobot/issues/6550) - Added OSFP-XD (800GE and 1600GE) and OSFP1600 interface types.
+
+### Fixed
+
+- [#6242](https://github.com/nautobot/nautobot/issues/6242) - Fixed "copy" button on Device tabbed views to now only copy the device name.
+- [#6478](https://github.com/nautobot/nautobot/issues/6478) - Fixed inconsistent rendering of the Role field.
+- [#6509](https://github.com/nautobot/nautobot/issues/6509) - Disallowed association of `ObjectMetadata` as metadata to other `ObjectMetadata` records.
+- [#6509](https://github.com/nautobot/nautobot/issues/6509) - Removed unused object-detail view for `ObjectMetadata` records.
+- [#6519](https://github.com/nautobot/nautobot/issues/6519) - Fixed `vrf` field options not loading in VMInterfaceBulkEditForm, VMInterfaceForm, and VMInterfaceCreateForm.
+- [#6519](https://github.com/nautobot/nautobot/issues/6519) - Added missing `VRF` entry in VMInterface detail view.
+- [#6533](https://github.com/nautobot/nautobot/issues/6533) - Fixed an issue where the string representation of the Note model would throw an error if accessed before saving it to the database.
+- [#6547](https://github.com/nautobot/nautobot/issues/6547) - Fixed incorrect VRF filter specified on VRF column on Prefix Table.
+- [#6564](https://github.com/nautobot/nautobot/issues/6564) - Fixed an `AttributeError` raised when an App overrides a NautobotUIViewSet view.
+
+### Dependencies
+
+- [#6459](https://github.com/nautobot/nautobot/issues/6459) - Updated `mysqlclient` dependency to `~2.2.6`.
+
+### Documentation
+
+- [#6516](https://github.com/nautobot/nautobot/issues/6516) - Updated release notes to make it clearer which are model changes.
+- [#6524](https://github.com/nautobot/nautobot/issues/6524) - Updated AzureAD authentication documentation.
+- [#6567](https://github.com/nautobot/nautobot/issues/6567) - Fixed incorrect example in documentation on using test factories.
+
+### Housekeeping
+
+- [#6459](https://github.com/nautobot/nautobot/issues/6459) - Updated documentation dependencies `mkdocs-redirects` to `1.2.2` and `mkdocs-material` to `9.5.46`.
+- [#6500](https://github.com/nautobot/nautobot/issues/6500) - Added support for `invoke showmigrations` command.
+
 ## v2.3.11 (2024-11-12)
 
 ### Added

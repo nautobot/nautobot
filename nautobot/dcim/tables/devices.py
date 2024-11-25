@@ -230,13 +230,11 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
         return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
-class DeviceImportTable(BaseTable):
+class DeviceImportTable(StatusTableMixin, RoleTableMixin, BaseTable):
     name = tables.TemplateColumn(template_code=DEVICE_LINK)
-    status = ColoredLabelColumn()
     tenant = TenantColumn()
     location = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
-    role = tables.Column(verbose_name="Role")
     device_type = tables.Column(verbose_name="Type")
 
     class Meta(BaseTable.Meta):
@@ -1351,15 +1349,13 @@ class SoftwareVersionTable(StatusTableMixin, BaseTable):
         )
 
 
-class ControllerTable(BaseTable):
+class ControllerTable(StatusTableMixin, RoleTableMixin, BaseTable):
     """Table for list view."""
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    status = ColoredLabelColumn()
     location = tables.Column(linkify=True)
     platform = tables.Column(linkify=True)
-    role = tables.Column(linkify=True)
     tenant = TenantColumn()
     capabilities = tables.Column()
     external_integration = tables.Column(linkify=True)
