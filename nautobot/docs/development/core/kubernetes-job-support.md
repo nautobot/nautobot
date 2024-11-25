@@ -342,32 +342,19 @@ Configuration ->
 [2024-11-20 18:49:41,161: INFO/MainProcess] beat: Starting...
 ```
 
-Open another terminal and execute the command `kubectl exec --stdin --tty <nautobot-pod-name> -- /bin/bash` and run `nautobot-server nbshell`. We are going to create a new Scheduled Export Object List Job.
+Now you are going to create a new Scheduled Export Object List Job. Starting from Nautobot homepage, you can go to the Jobs dropdown on the left navigation menu and navigate to the job list view.
 
-First we import all the required packages:
+![K8s Job List Nav](../../media/development/core/kubernetes/k8s_job_list_nav.png)
 
-```py
-from nautobot.extras.choices import JobExecutionType
-from datetime import datetime
-from zoneinfo import ZoneInfo
-```
+![K8s Job List View](../../media/development/core/kubernetes/k8s_job_list_view.png)
 
-Then we can create the Scheduled Job
+Click on the Run/Schedule link for Export Object List Job.
 
-```py
-scheduled_job = ScheduledJob()
-scheduled_job.name = "Export Object List Hourly"
-scheduled_job.task = "nautobot.core.jobs.ExportObjectList"
-scheduled_job.job_model = Job.objects.get(name="Export Object List")
-scheduled_job.interval = JobExecutionType.TYPE_HOURLY
-scheduled_job.user = User.objects.first()
-scheduled_job.approval_required = False
-scheduled_job.start_time = datetime.now(ZoneInfo("America/New_York"))
-scheduled_job.time_zone = ZoneInfo("America/New_York")
-scheduled_job.job_queue = JobQueue.objects.get(name="kubernetes")
-scheduled_job.kwargs = {"content_type": 1}
-schedule_job.save()
-```
+![K8s Run Job](../../media/development/core/kubernetes/k8s_run_job.png)
+
+Fill in the data shown below (for the "Starting date and time" field, pick a date and time that is close to the current date and time) and click on the "Schedule Job" button on the bottom right.
+
+![K8s Run Scheduled Job Form](../../media/development/core/kubernetes/k8s_run_scheduled_job_form.png)
 
 To confirm that the Scheduled Job is running, we go back to the terminal that was logging celery beat. You should see the following logs or something similar:
 
