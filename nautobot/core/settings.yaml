@@ -1791,6 +1791,37 @@ properties:
       "Single Sign On": "./authentication/sso.md"
       "`social-auth-app-django`": "https://python-social-auth.readthedocs.io/en/latest/configuration/django.html"
     type: "string"
+  SSO_CLAIMS_GROUP:
+    default: "groups"
+    description: "OAuth2/OIDC claim which will contain the groups which the authenticated user is a member of."
+    environment_variable: "NAUTOBOT_SSO_CLAIMS_GROUP"
+    see_also:
+      "Single Sign On": "./authentication/sso.md"
+  SSO_ENABLE_GROUP_SYNC:
+    default: false
+    type: "boolean"
+    description: "Enables the group syncing authentication module."
+    environment_variable: "NAUTOBOT_SSO_ENABLE_GROUP_SYNC"
+    see_also:
+      "Single Sign On": "./authentication/sso.md"
+  SSO_STAFF_GROUPS:
+    default: []
+    description: "List of groups that a user can be a member of to get the Django Staff permission."
+    environment_variable: "NAUTOBOT_SSO_STAFF_GROUPS"
+    see_also:
+      "Single Sign On": "./authentication/sso.md"
+    items:
+      type: "string"
+    type: "array"
+  SSO_SUPERUSER_GROUPS:
+    default: []
+    description: "List of groups that a user can be a member of to be a Django Super User."
+    environment_variable: "NAUTOBOT_SSO_SUPERUSER_GROUPS"
+    see_also:
+      "Single Sign On": "./authentication/sso.md"
+    items:
+      type: "string"
+    type: "array"
   STATIC_ROOT:
     "$ref": "#/definitions/absolute_path"
     default: "~/.nautobot/static"

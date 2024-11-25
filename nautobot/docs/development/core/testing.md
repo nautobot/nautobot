@@ -88,8 +88,8 @@ Factories for each Nautobot app's models are defined in the corresponding `nauto
 >>> # Create 5 Tenant instances
 >>> TenantFactory.create_batch(5)
 [<Tenant: Smith-Vance>, <Tenant: Sanchez, Brown and Davis>, <Tenant: Benson and Sons>, <Tenant: Pennington PLC>, <Tenant: Perez and Sons>]
->>> # Create 5 more Tenant instances all with a specified "group" value
->>> TenantFactory.create_batch(5, group=TenantGroup.objects.first())
+>>> # Create 5 more Tenant instances all with a specified "tenant_group" value
+>>> TenantFactory.create_batch(5, tenant_group=TenantGroup.objects.first())
 [<Tenant: Mercado, Wilson and Fuller>, <Tenant: Blackburn-Andrade>, <Tenant: Oliver-Ramirez>, <Tenant: Pugh-Clay>, <Tenant: Norman and Sons>]
 ```
 
