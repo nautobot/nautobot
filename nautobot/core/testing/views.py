@@ -1296,7 +1296,7 @@ class ViewTestCases:
             obj_perm.constraints = {"pk__isnull": False}  # Match a non-existent pk (i.e., allow all)
             obj_perm.save()
 
-            # User would be redirected to Job Result soGive User Permission to view Job Result
+            # User would be redirected to Job Result therefore user needs to have permission to view Job Result
             self.add_permissions("extras.view_jobresult")
             response = self.client.post(self._get_url("bulk_delete"), data)
             job_result = JobResult.objects.filter(name="Bulk Delete Objects").first()

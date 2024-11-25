@@ -4,7 +4,7 @@ from django.core.exceptions import (
 )
 from django.db.models import ProtectedError
 
-from nautobot.core.utils.lookup import get_filterset_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.jobs import (
     BooleanVar,
     Job,
@@ -62,6 +62,13 @@ class BulkDeleteObjects(Job):
             queryset = model.objects.restrict(self.user, "delete").filter(pk__in=pk_list)
 
         verbose_name_plural = model._meta.verbose_name_plural
+
+        # Currently the only purpose of a bulk delete form is to perform a `pre_delete` operation
+        if form_cls := get_form_for_model(model, form_prefix="BulkDelete"):
+            form = form_cls(model, {"pk": pk_list}, delete_all=delete_all)
+            if hasattr(form, "perform_pre_delete"):
+                form.perform_pre_delete(queryset)
+
         try:
             self.logger.info(f"Deleting {queryset.count()} {verbose_name_plural}...")
             _, deleted_info = bulk_delete_with_bulk_change_logging(queryset)

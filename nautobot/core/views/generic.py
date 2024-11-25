@@ -1359,9 +1359,6 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDe
         class BulkDeleteForm(ConfirmationForm):
             pk = ModelMultipleChoiceField(queryset=self.queryset, widget=MultipleHiddenInput)
 
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-
         if self.form:
             return self.form
 
