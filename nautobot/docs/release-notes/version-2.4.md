@@ -125,7 +125,7 @@ With the introduction of the UI Component Framework (described [above](#ui-compo
 As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python 3.9.
 
 <!-- towncrier release notes start -->
-## v2.4.0b1 (2024-11-22)
+## v2.4.0b1 (2024-11-25)
 
 ### Added
 
@@ -231,10 +231,6 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6397](https://github.com/nautobot/nautobot/issues/6397) - Fixed incorrect handling of JobQueue objects in `get_worker_count()`.
 - [#6403](https://github.com/nautobot/nautobot/issues/6403) - Fixed wrong Primary IPv6 field label on VirtualDeviceContextForm.
 - [#6428](https://github.com/nautobot/nautobot/issues/6428) - Fixed some issues causing failures with reverse migrations.
-- [#6509](https://github.com/nautobot/nautobot/issues/6509) - Disallowed association of `ObjectMetadata` as metadata to other `ObjectMetadata` records.
-- [#6509](https://github.com/nautobot/nautobot/issues/6509) - Removed unused object-detail view for `ObjectMetadata` records.
-- [#6519](https://github.com/nautobot/nautobot/issues/6519) - Fixed `vrf` field options not loading in VMInterfaceBulkEditForm, VMInterfaceForm, and VMInterfaceCreateForm.
-- [#6519](https://github.com/nautobot/nautobot/issues/6519) - Added missing `VRF` entry in VMInterface detail view.
 - [#6537](https://github.com/nautobot/nautobot/issues/6537) - Fixed unexpected failure when adding an interface component to a device from the Device detail view.
 - [#6546](https://github.com/nautobot/nautobot/issues/6546) - Fixed inconsistent rendering of the Role column on the Virtual Device Context list table.
 - [#6549](https://github.com/nautobot/nautobot/issues/6549) - Added missing `/` to `/api/core/render-jinja-template/` URL.
