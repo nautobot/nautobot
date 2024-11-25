@@ -129,5 +129,5 @@ class ViewWithCustomPermissions(views.ObjectListViewMixin):
 
 
 override_views = {
-    "circuits:circuit_list": CircuitUIViewSet.as_view({'get': 'list'})  # For testing override_views
+    "circuits:circuit_list": CircuitUIViewSet.as_view({"get": "list"})  # For testing override_views
 }
