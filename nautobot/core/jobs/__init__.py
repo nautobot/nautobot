@@ -359,8 +359,6 @@ class ImportObjects(Job):
             raise RunJobTaskFailed("CSV import not fully successful, see logs")
 
 
-
-
 jobs = [
     ExportObjectList,
     GitRepositorySync,

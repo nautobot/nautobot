@@ -1,6 +1,7 @@
 from datetime import timedelta
 import json
 from pathlib import Path
+import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -8,6 +9,8 @@ from django.core.files.base import ContentFile
 from django.utils import timezone
 import yaml
 
+from nautobot.cloud.factory import CloudAccountFactory
+from nautobot.cloud.models import CloudNetwork, CloudResourceType, CloudService
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
@@ -682,19 +685,97 @@ class BulkEditTestCase(TransactionTestCase):
         self.assertNotEqual(status_to_ignore.color, "aa1409")
 
     def test_bulk_edit_with_pk(self):
-        self.add_permissions("extras.change_role", "extras.view_role")
-        roles_to_update = [Role.objects.create(name=f"Example Role {x}") for x in range(3)]
-        roles_to_ignore = Role.objects.create(name="Ignore Example Role")
-        roles_pks = [str(role.pk) for role in roles_to_update]
+        self.add_permissions(
+            "cloud.change_cloudservice",
+            "cloud.view_cloudservice",
+            "cloud.change_cloudnetwork",
+            "cloud.view_cloudnetwork",
+            "extras.change_note",
+            "extras.view_note",
+        )
+        cloud_service_ct = ContentType.objects.get_for_model(CloudService)
+        cloud_accounts = CloudAccountFactory.create_batch(3)
+        cloud_resource_types = CloudResourceType.objects.get_for_model(CloudService).all()
+        cloud_networks = CloudNetwork.objects.all()
+
+        cloud_services = [
+            CloudService.objects.create(
+                name=f"Cloud Service {x}",
+                cloud_account=cloud_accounts[0],
+                cloud_resource_type=cloud_resource_types[0],
+            )
+            for x in range(4)
+        ]
+        for cloud_service in cloud_services:
+            cloud_service.cloud_networks.add(cloud_networks[0])
+
+        cloud_service_to_ignore = cloud_services[3]
+        cloud_services_pks = [str(cloud_service.pk) for cloud_service in cloud_services[:3]]
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=cloud_service_ct.id,
+            edit_all=False,
+            filter_query_params={},
+            post_data={
+                "pk": cloud_services_pks,
+                "description": "Example description for bulk edit",
+                "add_cloud_networks": [str(cloud_networks[1].pk)],
+                "remove_cloud_networks": [str(cloud_networks[0].pk)],
+            },
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(
+            CloudService,
+            job_result,
+            3,
+            description="Example description for bulk edit",
+            cloud_networks__name=cloud_networks[1].name,
+        )
+        for cloud_service in cloud_services[:3]:
+            self.assertFalse(cloud_service.cloud_networks.filter(name=cloud_networks[0].name).exists())
+
+        cloud_service_to_ignore.refresh_from_db()
+        self.assertNotEqual(cloud_service_to_ignore.description, "Example description for bulk edit")
+        self.assertTrue(cloud_service_to_ignore.cloud_networks.filter(name=cloud_networks[0].name).exists())
+        self.assertFalse(cloud_service_to_ignore.cloud_networks.filter(name=cloud_networks[1].name).exists())
+
+    def test_bulk_edit_objects_with_constrained_permission(self):
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": str(uuid.uuid4())},  # Match a non-existent pk (i.e., deny all)
+            actions=["change", "view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(self.role_ct)
+
+        role_to_update = Role.objects.create(name="Example Role")
         job_result = create_job_result_and_run_job(
             "nautobot.core.jobs.bulk_actions",
             "BulkEditObjects",
             content_type=self.role_ct.id,
             edit_all=False,
-            filter_query_params={"name__isw": "Example Role"},
-            post_data={"pk": roles_pks, "color": "aa1409"},
+            filter_query_params={},
+            post_data={"pk": [str(role_to_update.pk)], "color": "aa1409"},
             username=self.user.username,
         )
-        self._common_no_error_test_assertion(Role, job_result, 3, pk__in=roles_pks, color="aa1409")
-        roles_to_ignore.refresh_from_db
-        self.assertNotEqual(roles_to_ignore.color, "aa1409")
+        error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertIn("Form validation unsuccessful", error_log.message)
+        self.assertIn(f"{role_to_update.pk} is not one of the available choices.", error_log.message)
+        role_to_update.refresh_from_db()
+        self.assertNotEqual(role_to_update.color, "aa1409")
+
+        obj_perm.constraints = {"pk__isnull": False}  # Match a non-existent pk (i.e., allow all)
+        obj_perm.save()
+
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=self.role_ct.id,
+            edit_all=False,
+            filter_query_params={},
+            post_data={"pk": [str(role_to_update.pk)], "color": "aa1409"},
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(Role, job_result, 1, name="Example Role", color="aa1409")

@@ -588,7 +588,7 @@ class RackBulkEditForm(
         required=False,
         widget=StaticSelect2(),
     )
-    u_height = forms.IntegerField(required=False, label="Height (U)")
+    u_height = forms.IntegerField(required=False, label="Height (U)", min_value=1, max_value=100)
     desc_units = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Descending units")
     outer_width = forms.IntegerField(required=False, min_value=1)
     outer_depth = forms.IntegerField(required=False, min_value=1)
@@ -5323,6 +5323,16 @@ class VirtualDeviceContextBulkEditForm(
         nullable_fields = [
             "tenant",
         ]
+
+    def post_save(self, obj):
+        if self.cleaned_data.get("add_interfaces", None):
+            obj.prefixes.add(*self.cleaned_data["add_interfaces"])
+        if self.cleaned_data.get("remove_interfaces", None):
+            obj.prefixes.remove(*self.cleaned_data["remove_interfaces"])
+        if self.cleaned_data.get("add_tags", None):
+            obj.tags.add(*self.cleaned_data["add_tags"])
+        if self.cleaned_data.get("remove_tags", None):
+            obj.tags.remove(*self.cleaned_data["remove_tags"])
 
 
 class VirtualDeviceContextFilterForm(

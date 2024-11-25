@@ -126,6 +126,28 @@ class BulkEditForm(forms.Form):
             self.fields["pk"].required = False
             self.fields["_all"] = forms.BooleanField(widget=forms.HiddenInput(), required=False, initial=True)
 
+    def _save_m2m_fields(self, obj):
+        """Save M2M fields"""
+        m2m_field_names = []
+        # Handle M2M Save
+        for key in self.cleaned_data.keys():
+            if key.startswith("add_"):
+                # If both add_<field_name> and remove<field_name> is in cleaned_data, then that field is an M2M field.
+                field_name = key.lstrip("add_")
+                if f"remove_{field_name}" in self.cleaned_data:
+                    m2m_field_names.append(field_name)
+
+        for field_name in m2m_field_names:
+            m2m_field = getattr(obj, field_name)
+            if self.cleaned_data.get(f"add_{field_name}", None):
+                m2m_field.add(*self.cleaned_data[f"add_{field_name}"])
+            if self.cleaned_data.get(f"remove_{field_name}", None):
+                m2m_field.remove(*self.cleaned_data[f"remove_{field_name}"])
+
+    def post_save(self, obj):
+        """Post save action"""
+        self._save_m2m_fields(obj)
+
 
 class BulkRenameForm(forms.Form):
     """

@@ -1,4 +1,3 @@
-
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
@@ -70,11 +69,12 @@ class BulkEditObjects(Job):
                         model_field = None
 
                     # Handle nullification
-                    if name in form.nullable_fields and name in nullified_fields:
-                        if isinstance(model_field, ManyToManyField):
-                            getattr(obj, name).set([])
-                        else:
-                            setattr(obj, name, None if model_field is not None and model_field.null else "")
+                    if nullified_fields:
+                        if name in form.nullable_fields and name in nullified_fields:
+                            if isinstance(model_field, ManyToManyField):
+                                getattr(obj, name).set([])
+                            else:
+                                setattr(obj, name, None if model_field is not None and model_field.null else "")
 
                     # ManyToManyFields
                     elif isinstance(model_field, ManyToManyField):
@@ -94,12 +94,7 @@ class BulkEditObjects(Job):
                 obj.full_clean()
                 obj.save()
                 updated_objects_pk.append(obj.pk)
-
-                # Add/remove tags
-                if form.cleaned_data.get("add_tags", None):
-                    obj.tags.add(*form.cleaned_data["add_tags"])
-                if form.cleaned_data.get("remove_tags", None):
-                    obj.tags.remove(*form.cleaned_data["remove_tags"])
+                form.post_save(obj)
 
                 if hasattr(form, "save_relationships") and callable(form.save_relationships):
                     # Add/remove relationship associations
@@ -120,7 +115,7 @@ class BulkEditObjects(Job):
             self.logger.info(msg)
             return msg
         except ValidationError as e:
-            self.logger.error(e.message)
+            self.logger.error(str(e))
         except ObjectDoesNotExist:
             msg = "Object update failed due to object-level permissions violation"
             self.logger.error(msg)
