@@ -385,7 +385,7 @@ To confirm that the Scheduled Job is running, we go back to the terminal that wa
 
 You can also confirm if the job is running or is completed by running `kubectl get jobs` and `kubectl get pods` in another terminal.
 
-Go back to your broswer and click on the Job Results entry from the Jobs navigation menu.
+Go back to your browser and click on the Job Results entry from the Jobs navigation menu.
 
 ![K8s Job Result Navigation](../../img/kubernetes/k8s_job_result_nav.png)
 
