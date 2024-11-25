@@ -1,1 +1,0 @@
-Fixed an issue where the string representation of the Note model would throw an error if accessed pre_save.

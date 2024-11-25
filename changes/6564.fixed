@@ -1,1 +1,0 @@
-Fixed an `AttributeError` raised when an App overrides a NautobotUIViewSet view.
