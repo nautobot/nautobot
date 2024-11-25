@@ -462,7 +462,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         label="VRF",
         required=False,
         query_params={
-            "virtual_machine": "$virtual_machine",
+            "virtual_machines": "$virtual_machine",
         },
     )
 
@@ -571,7 +571,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm, RoleNotRequired
         label="VRF",
         required=False,
         query_params={
-            "virtual_machine": "$virtual_machine",
+            "virtual_machines": "$virtual_machine",
         },
     )
 
@@ -611,7 +611,7 @@ class VMInterfaceBulkEditForm(
         queryset=VRF.objects.all(),
         required=False,
         query_params={
-            "virtual_machine": "$virtual_machine",
+            "virtual_machines": "$virtual_machine",
         },
     )
     bridge = DynamicModelChoiceField(
