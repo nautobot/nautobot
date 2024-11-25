@@ -1,6 +1,7 @@
 from datetime import timedelta
 import json
 from pathlib import Path
+import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -642,6 +643,28 @@ class BulkDeleteTestCase(TransactionTestCase):
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
         job_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertEqual(job_log.message, f'User "{self.user}" does not have permission to delete status objects')
+
+    def test_bulk_delete_objects_with_constrained_permission(self):
+        statuses_to_delete = [str(status) for status in Status.objects.all().values_list("pk", flat=True)[:2]]
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": str(uuid.uuid4())},  # Match a non-existent pk (i.e., deny all)
+            actions=["delete"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Status))
+
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            content_type=self.status_ct.id,
+            pk_list=statuses_to_delete,
+            username=self.user.username,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        job_logs = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_INFO)
+        self.assertEqual(job_logs[1].message, "Deleting 0 statuses...")
 
     def test_bulk_delete_all(self):
         self.add_permissions("dcim.delete_device")
