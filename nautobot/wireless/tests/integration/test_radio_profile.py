@@ -5,7 +5,7 @@ from nautobot.core.testing.integration import SeleniumTestCase
 
 class RadioProfileTestCase(SeleniumTestCase):
     """
-    Create a radio profile and perform integration tests on it.
+    Perform set of Radio Profile tests using Selenium.
     """
 
     def test_radio_profile_bulk_edit(self):
