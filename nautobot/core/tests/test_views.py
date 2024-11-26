@@ -322,8 +322,29 @@ class NavAppsUITestCase(TestCase):
     def setUp(self):
         super().setUp()
 
-        self.url = reverse("apps:apps_list")
-        self.item_weight = 100  # TODO: not easy to introspect from the nav menu struct, so hard-code it here for now
+        self.apps_marketplace_url = reverse("apps:apps_marketplace")
+        self.apps_marketplace_item_weight = (
+            100  # TODO: not easy to introspect from the nav menu struct, so hard-code it here for now
+        )
+
+        self.apps_list_url = reverse("apps:apps_list")
+        self.apps_list_item_weight = (
+            200  # TODO: not easy to introspect from the nav menu struct, so hard-code it here for now
+        )
+
+    def test_apps_marketplace_visible(self):
+        """The "Apps Marketplace" menu item should be available to an authenticated user regardless of permissions."""
+        response = self.client.get(reverse("home"))
+        self.assertContains(
+            response,
+            f"""
+            <a href="{self.apps_marketplace_url}"
+                data-item-weight="{self.apps_marketplace_item_weight}">
+                Apps Marketplace
+            </a>
+            """,
+            html=True,
+        )
 
     def test_installed_apps_visible(self):
         """The "Installed Apps" menu item should be available to an authenticated user regardless of permissions."""
@@ -331,8 +352,8 @@ class NavAppsUITestCase(TestCase):
         self.assertContains(
             response,
             f"""
-            <a href="{self.url}"
-                data-item-weight="{self.item_weight}">
+            <a href="{self.apps_list_url}"
+                data-item-weight="{self.apps_list_item_weight}">
                 Installed Apps
             </a>
             """,

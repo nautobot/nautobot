@@ -51,7 +51,9 @@ class NavMenuTestCase(TestCase):
                                 self.assertIn(get_permission_for_model(view_model, "view"), item_details["permissions"])
                         except AttributeError:
                             # Not a model view?
-                            self.assertIn(item_details["name"], {"Installed Apps", "Interface Connections"})
+                            self.assertIn(
+                                item_details["name"], {"Apps Marketplace", "Installed Apps", "Interface Connections"}
+                            )
 
                     for button, button_details in item_details["buttons"].items():
                         with self.subTest(f"{tab} > {group} > {item_url} > {button}"):

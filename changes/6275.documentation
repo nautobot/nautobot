@@ -1,4 +1,0 @@
-Added documentation about migration from template-based views into UI Component Framework.
-Added UI Component Framework documentation.
-Updated documentation of `development/apps/api/views/` to inform users about preferred usage of UI Component Framework.
-Updated docstrings for some of UI related classes to improve auto-generated docs.
