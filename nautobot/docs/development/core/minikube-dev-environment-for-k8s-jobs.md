@@ -1,10 +1,10 @@
-# Kubernetes Job Support
+# Minikube Dev Environment for K8s Jobs
 
 Kubernetes Job Support is added in Nautobot v2.4.0. This documentation is a end-to-end development guide on topics from how to set up your local Kubernetes cluster with [minikube](https://minikube.sigs.k8s.io/docs/) and how to run a Nautobot Job in a Kubernetes job pod.
 
 ## Preliminary Setup
 
-First we need to install minikube, go to the offical [get started page](https://minikube.sigs.k8s.io/docs/start/) to learn how to download minikube for your specific OS and architecture.
+First you need to install minikube, go to the offical [get started page](https://minikube.sigs.k8s.io/docs/start/) to learn how to download minikube for your specific OS and architecture.
 
 Once minikube is downloaded, create and start your minikube cluster with the following command:
 
@@ -27,7 +27,7 @@ You should see the following output:
 🏄  Done! kubectl is now configured to use "minikube" cluster and "default" namespace by default
 ```
 
-Next we need [`kubectl`](https://kubernetes.io/docs/reference/kubectl/) to interact with the new cluster we just created. See [Kubernetes official documentation](https://kubernetes.io/docs/tasks/tools/#kubectl) on how to download `kubectl` for your respective operating system.
+Next you need [`kubectl`](https://kubernetes.io/docs/reference/kubectl/) to interact with the new cluster you just created. See [Kubernetes official documentation](https://kubernetes.io/docs/tasks/tools/#kubectl) on how to download `kubectl` for your respective operating system.
 
 Once you have `kubectl` downloaded and installed, run the following command to ensure the version you installed is up-to-date:
 
@@ -42,7 +42,7 @@ Client Version: v1.31.2
 Kustomize Version: v5.4.2
 ```
 
-We also need to check if our default service account is enabled to create jobs, we can check the permission by executing the following command:
+You also need to check if your default service account is enabled to create jobs, you can check the permission by executing the following command:
 
 ```bash
 kubectl auth can-i --as=system:serviceaccount:default:default create jobs -n default
@@ -62,7 +62,7 @@ You can run the `kubectl auth can-i --as=system:serviceaccount:default:default c
 
 ### Check Required Files
 
-If this is your first time installing `minikube` and creating a new cluster, there should be nothing running on the cluster yet. Assuming that your current working directory is in the `nautobot` folder, what we need to do is to confirm that we have all the deployment files that we need in the `/development/kubernetes` folder.
+If this is your first time installing `minikube` and creating a new cluster, there should be nothing running on the cluster yet. Assuming that your current working directory is in the `nautobot` folder, what you need to do is to confirm that you have all the deployment files that you need in the `/development/kubernetes` folder.
 
 You can confirm that by running the following command:
 
@@ -84,19 +84,19 @@ You should see several yaml files with post-fixes like `*-deployment.yaml`, `*-s
 
 ### Build an up-to-date Nautobot Docker Image
 
-An up-to-date Nautobot local docker image named `local/nautobot-dev:local-py${PYTHON_VER}` is required before we start building our kubernetes deployments. The default `PYTHON_VER` is set to 3.11. If you have a different python version, for example 3.9, you will need to replace every occurrence of `local/nautobot-dev:local-py3.11` in `nautobot-deployment.yaml` and `nautobot-cm1-configmap.yaml` with `local/nautobot-dev:local-py3.9` to make sure that minikube pick up the correct local nautobot image in your docker environment.
+An up-to-date Nautobot local docker image named `local/nautobot-dev:local-py${PYTHON_VER}` is required before you start building your kubernetes deployments. The default `PYTHON_VER` is set to 3.11. If you have a different python version, for example 3.9, you will need to replace every occurrence of `local/nautobot-dev:local-py3.11` in `nautobot-deployment.yaml` and `nautobot-cm1-configmap.yaml` with `local/nautobot-dev:local-py3.9` to make sure that minikube pick up the correct local nautobot image in your docker environment.
 
-Run the following command to point your terminal to use the docker daemon inside minikube. This will ensure that your up-to-date local image named `local/nautobot-final-dev:local-py${PYTHON_VER}` is used when we build our kubernetes deployments.
+Run the following command to point your terminal to use the docker daemon inside minikube. This will ensure that your up-to-date local image named `local/nautobot-final-dev:local-py${PYTHON_VER}` is used when you build your kubernetes deployments.
 
 ```bash
 eval $(minikube docker-env)
 ```
 
-Now you can build your nautobot image locally using the `invoke build` command. After the build is complete, we are ready to build our kubernetes deployments.
+Now you can build your nautobot image locally using the `invoke build` command. After the build is complete, you are ready to build your kubernetes deployments.
 
 ### Starting the Deployments and Services
 
-Once you have confirmed that you have all the files listed above. We can start the required deployments and services:
+Once you have confirmed that you have all the files listed above. You can start the required deployments and services:
 
 To start all deployments:
 
@@ -161,7 +161,7 @@ redis           ClusterIP   10.102.99.143    <none>        6379/TCP   12m
 
 ### Starting the Configuration Maps and Persistent Volume Claims
 
-Once you have started all deployments and services. We can start the required configuration maps and persistent volume claims:
+Once you have started all deployments and services. You can start the required configuration maps and persistent volume claims:
 
 To start all configuration maps:
 
@@ -225,7 +225,7 @@ To confirm all required kubernetes entities are up and running, run the followin
 kubectl get all
 ```
 
-You should see the following output, note that pods are automatically created when we create deployments:
+You should see the following output, note that pods are automatically created when you create deployments:
 
 ```bash
 NAME                               READY   STATUS    RESTARTS      AGE
@@ -249,7 +249,7 @@ deployment.apps/redis         1/1     1            1           30m
 
 ### Port Forward to Local Host
 
-We can use the `port-forward` command from `kubectl` to make your Nautobot instance on the kubernetes cluster accessible in `localhost:8080`:
+You can use the `port-forward` command from `kubectl` to make your Nautobot instance on the kubernetes cluster accessible in `localhost:8080`:
 
 ```bash
 kubectl port-forward <nautobot-pod-name> 8080:8080
@@ -271,11 +271,11 @@ Now go to your web browser and navigate to `localhost:8080`. You should see your
 
 ### Configure a New Job Queue of Type Kubernetes
 
-Go to the Navigation bar on your left hand side and look at the Jobs Section. You should see Job Queues at the very end of the section. Click on the plus button next to the Job Queues entry and this will take us to a form for creating a new job queue.
+Go to the Navigation bar on your left hand side and look at the Jobs Section. You should see Job Queues at the very end of the section. Click on the plus button next to the Job Queues entry and this will take you to a form for creating a new job queue.
 
 ![K8s Job Queue Add](../../media/development/core/kubernetes/k8s_job_queue_add.png)
 
-We can give the name "kubernetes" to the new job queue and select "Kubernetes" from the Queue Type dropdown.
+You can give the name "kubernetes" to the new job queue and select "Kubernetes" from the Queue Type dropdown.
 
 ![K8s Job Queue Config](../../media/development/core/kubernetes/k8s_job_queue_config.png)
 
@@ -285,7 +285,7 @@ Scroll down and click on the create button. A new Job Queue with name "kubernete
 
 ### Assign that Job Queue to a Job
 
-Go to a Job's edit form and assign the newly created kubernetes job queue to the job. We will be using the "Export Object List" system job here.
+Go to a Job's edit form and assign the newly created kubernetes job queue to the job. You will be using the "Export Object List" system job here.
 
 ![K8s Job Edit Button](../../media/development/core/kubernetes/k8s_job_edit_button.png)
 
@@ -294,31 +294,31 @@ Check the override default value checkbox on the `Default Job Queue` field and s
 
 ![K8s Job Edit](../../media/development/core/kubernetes/k8s_job_edit.png)
 
-Click on the update button when we are finished.
+Click on the update button when you are finished.
 
 ### Run the Job
 
-After clicking on the update button after the previous step, we should be redirected to the table of jobs. Click on the link that says "Export Object List". This should take us to the Job Run Form.
+After clicking on the update button after the previous step, you should be redirected to the table of jobs. Click on the link that says "Export Object List". This should take you to the Job Run Form.
 
 ![K8s Run Job](../../media/development/core/kubernetes/k8s_run_job.png)
 
-Select an option for the Content Type field dropdown and notice that the Job queue is already filled out with the kubernetes job queue that we assigned to this job from previous steps. So we do not need to make any changes there.
+Select an option for the Content Type field dropdown and notice that the Job queue is already filled out with the kubernetes job queue that you assigned to this job from previous steps. So you do not need to make any changes there.
 
 ![K8s Run Job Form](../../media/development/core/kubernetes/k8s_job_run_form.png)
 
-Click on the "Run Job Now" button and we should be directed to the job result page.
+Click on the "Run Job Now" button and you should be directed to the job result page.
 
 ![K8s Job Result Pending](../../media/development/core/kubernetes/k8s_job_result_pending.png)
 
 ### Inspect the Job Result
 
-You can inspect the job result and the job logs in this page. Notice the two job log entries that reads something like "Creating job pod (pod-name) in namespace default" and "Reading job pod (pod-name) in namespace default". Those entries indicate that a Kubernetes Job pod was executing the job for us.
+You can inspect the job result and the job logs in this page. Notice the two job log entries that reads something like "Creating job pod (pod-name) in namespace default" and "Reading job pod (pod-name) in namespace default". Those entries indicate that a Kubernetes Job pod was executing the job for you.
 
 ![K8s Job Result Completed](../../media/development/core/kubernetes/k8s_job_result_completed.png)
 
 ### Running a Scheduled Job
 
-We can run scheduled jobs as well. In order to run scheduled jobs, we do need celery beat which should already be running from previous steps. To confirm that the celery beat is running, we need to retrieve the celery beat pod name by running the command `kubectl get pods`. You should see the following output or something similar, copy the pod name with prefix `celery-beat-*`.
+You can run scheduled jobs as well. In order to run scheduled jobs, you do need celery beat which should already be running from previous steps. To confirm that the celery beat is running, you need to retrieve the celery beat pod name by running the command `kubectl get pods`. You should see the following output or something similar, copy the pod name with prefix `celery-beat-*`.
 
 ```bash
 NAME                           READY   STATUS    RESTARTS   AGE
@@ -328,7 +328,7 @@ nautobot-679bdc765-pl2ld       1/1     Running   0          10m
 redis-7cc58577c-tl5sq          1/1     Running   0          10m
 ```
 
-we can run the command `kubectl logs <celery-beat-pod-name> -f` and you should see the following output or something similar:
+you can run the command `kubectl logs <celery-beat-pod-name> -f` and you should see the following output or something similar:
 
 ```bash
 LocalTime -> 2024-11-20 18:49:41
@@ -356,7 +356,7 @@ Fill in the data shown below (for the "Starting date and time" field, pick a dat
 
 ![K8s Run Scheduled Job Form](../../media/development/core/kubernetes/k8s_run_scheduled_job_form.png)
 
-To confirm that the Scheduled Job is running, we go back to the terminal that was logging celery beat. You should see the following logs or something similar:
+To confirm that the Scheduled Job is running, you go back to the terminal that was logging celery beat. You should see the following logs or something similar:
 
 ```bash
 [2024-11-21 02:09:57,756: INFO/MainProcess] DatabaseScheduler: Schedule changed.

@@ -657,7 +657,7 @@ nav:
           - Controllers: "development/core/controllers.md"
           - Generic Views: "development/core/generic-views.md"
           - Home Page Panels: "development/core/homepage.md"
-          - Kubernetes Job Support: "development/core/kubernetes-job-support.md"
+          - Minikube Dev Environment for K8s Jobs: "development/core/minikube-dev-environment-for-k8s-jobs.md"
           - Model Development Checklist: "development/core/model-checklist.md"
           - Model Features: "development/core/model-features.md"
           - Natural Keys: "development/core/natural-keys.md"
