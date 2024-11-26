@@ -519,6 +519,7 @@ class TableExtension:
     """
 
     model = None
+    suffix = None
     table_columns = {}
     add_to_default_columns = ()
     remove_from_default_columns = ()
@@ -594,7 +595,7 @@ def _add_columns_into_model_table(table_extension, app_name):
         logger.error(error)
         return
 
-    table = get_table_for_model(table_extension.model)
+    table = get_table_for_model(table_extension.model, suffix=table_extension.suffix)
     for name, column in table_extension.table_columns.items():
         _validate_table_column_name_is_prefixed_with_app_name(name, app_name)
         _add_column_to_table_base_columns(table, name, column, app_name)
@@ -629,18 +630,28 @@ def _modify_default_table_columns(table_extension, app_name):
     """Add or remove columns from the table default columns."""
     from nautobot.core.utils.lookup import get_table_for_model
 
-    table = get_table_for_model(table_extension.model)
+    table = get_table_for_model(table_extension.model, suffix=table_extension.suffix)
     message = (
         f"{app_name}: Cannot {{action}} column `{{column_name}}` {{preposition}} the default columns for `{table}`."
     )
 
     for column_name in table_extension.add_to_default_columns:
+        if not getattr(table.Meta, "default_columns", None):
+            logger.warning(
+                f"{app_name}: Table `{table}` does not have a `default_columns` attribute. Cannot add column: {column_name}."
+            )
+            continue
         if column_name in table.base_columns:
             table.Meta.default_columns = (*table.Meta.default_columns, column_name)
         else:
             logger.debug(message.format(action="add", column_name=column_name, preposition="to"))
 
     for column_name in table_extension.remove_from_default_columns:
+        if not getattr(table.Meta, "default_columns", None):
+            logger.warning(
+                f"{app_name}: Table `{table}` does not have a `default_columns` attribute. Cannot remove column: {column_name}."
+            )
+            continue
         if column_name in table.Meta.default_columns:
             table.Meta.default_columns = tuple(name for name in table.Meta.default_columns if name != column_name)
         else:
