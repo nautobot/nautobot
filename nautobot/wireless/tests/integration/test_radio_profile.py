@@ -36,4 +36,4 @@ class RadioProfileTestCase(SeleniumTestCase):
         self.browser.find_by_xpath("//button[@name='_apply']", wait_time=5).click()
 
         self.assertEqual(self.browser.url, self.live_server_url + reverse("wireless:radioprofile_list"))
-        self.assertTrue(self.browser.is_text_present("Updated 1 radio profiles ", wait_time=5))
+        self.assertTrue(self.browser.is_text_present("Updated 1 radio profiles", wait_time=5))
