@@ -1,2 +1,0 @@
-Fixed `ObjectsTablePanel.related_field_name` fallback logic to be more correct.
-Fixed incorrect configuration of "Contacts", "Dynamic Groups", and "Object Metadata" tables in component-based views.
