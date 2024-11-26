@@ -484,6 +484,7 @@ class ImageAttachmentViewSet(ModelViewSet):
     queryset = ImageAttachment.objects.all()
     serializer_class = serializers.ImageAttachmentSerializer
     filterset_class = filters.ImageAttachmentFilterSet
+    parser_classes = [JSONParser, MultiPartParser]
 
 
 #
