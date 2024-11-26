@@ -9,8 +9,7 @@ from django.core.files.base import ContentFile
 from django.utils import timezone
 import yaml
 
-from nautobot.cloud.factory import CloudAccountFactory
-from nautobot.cloud.models import CloudNetwork, CloudResourceType, CloudService
+from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudResourceType, CloudService
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
@@ -694,7 +693,11 @@ class BulkEditTestCase(TransactionTestCase):
             "extras.view_note",
         )
         cloud_service_ct = ContentType.objects.get_for_model(CloudService)
-        cloud_accounts = CloudAccountFactory.create_batch(3)
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer")
+        cloud_accounts = [
+            CloudAccount.objects.create(name=f"Cloud Account {x}", account_number="12345", provider=manufacturer)
+            for x in range(3)
+        ]
         cloud_resource_types = CloudResourceType.objects.get_for_model(CloudService).all()
         cloud_networks = CloudNetwork.objects.all()
 
