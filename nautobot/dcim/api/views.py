@@ -19,6 +19,7 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 from nautobot.circuits.models import Circuit
 from nautobot.cloud.models import CloudAccount
 from nautobot.core.api.exceptions import ServiceUnavailable
+from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.views import ModelViewSet
 from nautobot.core.models.querysets import count_related
@@ -301,7 +302,7 @@ class DeviceTypeViewSet(NautobotModelViewSet):
     )
     serializer_class = serializers.DeviceTypeSerializer
     filterset_class = filters.DeviceTypeFilterSet
-    parser_classes = [JSONParser, MultiPartParser]
+    parser_classes = [JSONParser, NautobotCSVParser, MultiPartParser]
 
 
 #
