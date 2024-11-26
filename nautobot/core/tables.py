@@ -36,6 +36,7 @@ class BaseTable(django_tables2.Table):
     class Meta:
         attrs = {
             "class": "table table-hover table-headings",
+            "style": "overflow:visible;",
         }
 
     def __init__(
