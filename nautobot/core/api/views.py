@@ -254,12 +254,9 @@ class ModelViewSetMixin:
             if isinstance(field_instance, RelatedField):
                 # DRF uses `field.nested_field` instead of `field__nested_field`
                 select_fields.append(field_instance.source.replace(".", "__"))
-            if isinstance(field_instance, ManyRelatedField):
+            elif isinstance(field_instance, ManyRelatedField):
                 # DRF uses `field.nested_field` instead of `field__nested_field`
                 prefetch_fields.append(field_instance.source.replace(".", "__"))
-
-        print(f"prefetch_fields: {prefetch_fields}")
-        print(f"select_fields: {select_fields}")
 
         if select_fields:
             queryset = maybe_select_related(queryset, select_fields)

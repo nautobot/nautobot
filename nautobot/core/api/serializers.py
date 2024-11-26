@@ -21,7 +21,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.fields import CreateOnlyDefault
 from rest_framework.reverse import reverse
-from rest_framework.serializers import SerializerMethodField
+from rest_framework.serializers import ManyRelatedField, SerializerMethodField
 from rest_framework.utils.model_meta import _get_to_field, RelationInfo
 
 from nautobot.core import constants
@@ -33,6 +33,7 @@ from nautobot.core.api.utils import (
 from nautobot.core.models.fields import LaxURLField as LaxURLModelField
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug
+from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.extras.api.customfields import CustomFieldDefaultValues, CustomFieldsDataField
@@ -46,8 +47,9 @@ logger = logging.getLogger(__name__)
 
 class OptInFieldsMixin:
     """
-    A serializer mixin that takes an additional `opt_in_fields` argument that controls
-    which fields should be displayed.
+    Serializer mixin that adjusts its fields based on the `include` and `exclude_m2m` query parameters in a request.
+
+    The serializer's `Meta.opt_in_fields` controls which fields are influenced by `include`.
     """
 
     def __init__(self, *args, **kwargs):
@@ -57,8 +59,11 @@ class OptInFieldsMixin:
     @property
     def fields(self):
         """
-        Removes all serializer fields specified in a serializers `opt_in_fields` list that aren't specified in the
-        `include` query parameter.
+        Dynamically adjust the dictionary of fields attributed to this serializer instance.
+
+        - Removes all serializer fields specified in `Meta.opt_in_fields` list that aren't specified in the
+          `include` query parameter.
+        - If the `exclude_m2m` query parameter is truthy, remove all many-to-many serializer fields for performance.
 
         As an example, if the serializer specifies that `opt_in_fields = ["computed_fields"]`
         but `computed_fields` is not specified in the `?include` query parameter, `computed_fields` will be popped
@@ -83,8 +88,8 @@ class OptInFieldsMixin:
                 # No available request?
                 return fields
 
-            # opt-in fields only applies on GET requests, for other methods we support these fields regardless
-            if request is not None and request.method != "GET":
+            # opt-in fields only applies on GET / OPTIONS requests, for other methods we support these fields regardless
+            if request is not None and request.method not in ["GET", "OPTIONS"]:
                 return fields
 
             # NOTE: drf test framework builds a request object where the query
@@ -101,6 +106,14 @@ class OptInFieldsMixin:
             for field in serializer_opt_in_fields:
                 if field not in user_opt_in_fields:
                     fields.pop(field, None)
+
+            # If exclude_m2m is present and truthy, drop any "many" fields.
+            # Currently this is only forward many-to-many relations,
+            # but if in the future we extend the API to include reverse relations, they'll be affected by this too.
+            if is_truthy(params.get("exclude_m2m", "false")):
+                fields = {
+                    name: instance for name, instance in fields.items() if not isinstance(instance, ManyRelatedField)
+                }
 
             self.__pruned_fields = fields
 

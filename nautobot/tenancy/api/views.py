@@ -27,9 +27,7 @@ class TenantGroupViewSet(NautobotModelViewSet):
 
 class TenantViewSet(NautobotModelViewSet):
     queryset = (
-        Tenant.objects.select_related("tenant_group")
-        .prefetch_related("tags")
-        .annotate(
+        Tenant.objects.annotate(
             circuit_count=count_related(Circuit, "tenant"),
             device_count=count_related(Device, "tenant"),
             ipaddress_count=count_related(IPAddress, "tenant"),
