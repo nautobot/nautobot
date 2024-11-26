@@ -522,3 +522,9 @@ class AboutView(AccessMixin, TemplateView):
         )
 
         return self.render_to_response(context)
+
+
+class RenderJinjaView(LoginRequiredMixin, TemplateView):
+    """Render a Jinja template with context data."""
+
+    template_name = "utilities/render_jinja2.html"

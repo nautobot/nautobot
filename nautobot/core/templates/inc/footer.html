@@ -41,6 +41,7 @@
                             <a href="{% static 'docs/index.html' %}">Docs</a>
                         {% endif %}
                         &middot;
+                        <img src="{% static 'img/jinja_logo.svg' %}" style="height:20px"> <a href="{% url 'render_jinja_template' %}">Jinja Renderer</a> &middot;
                         <i class="mdi mdi-cloud-braces text-primary"></i> <a href="{% url 'api_docs' %}">API</a> &middot;
                         <i class="mdi mdi-graphql text-primary"></i> <a href="{% url 'graphql' %}">GraphQL</a> &middot;
                         <i class="mdi mdi-xml text-primary"></i> <a href="{{ settings.BRANDING_URLS.code }}">Code</a> &middot;
