@@ -50,9 +50,7 @@ class NamespaceViewSet(NautobotModelViewSet):
 
 
 class VRFViewSet(NautobotModelViewSet):
-    queryset = VRF.objects.select_related("namespace", "tenant").prefetch_related(
-        "devices", "virtual_machines", "prefixes", "import_targets", "export_targets", "tags"
-    )
+    queryset = VRF.objects.all()
     serializer_class = serializers.VRFSerializer
     filterset_class = filters.VRFFilterSet
 
@@ -125,6 +123,7 @@ class PrefixViewSet(NautobotModelViewSet):
     def get_serializer_class(self):
         if (
             not getattr(self, "swagger_fake_view", False)
+            and hasattr(self.request, "major_version")
             and self.request.major_version == 2
             and self.request.minor_version < 2
         ):
@@ -604,6 +603,7 @@ class VLANViewSet(NautobotModelViewSet):
     def get_serializer_class(self):
         if (
             not getattr(self, "swagger_fake_view", False)
+            and hasattr(self.request, "major_version")
             and self.request.major_version == 2
             and self.request.minor_version < 2
         ):

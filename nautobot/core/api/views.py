@@ -9,7 +9,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
-from django.db.models import ProtectedError
+from django.db.models import Prefetch, ProtectedError
 from django.http.response import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect
 from drf_spectacular.plumbing import get_relative_url, set_query_parameters
@@ -29,6 +29,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
+from rest_framework.serializers import ManyRelatedField, RelatedField
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet as ModelViewSet_, ReadOnlyModelViewSet as ReadOnlyModelViewSet_
 import yaml
@@ -41,6 +42,7 @@ from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.utils.data import is_uuid, render_jinja2
 from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
 from nautobot.core.utils.lookup import get_form_for_model
+from nautobot.core.utils.querysets import maybe_prefetch_related, maybe_select_related
 from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
 from nautobot.core.views.utils import get_csv_form_fields_from_serializer_class
 
@@ -231,6 +233,41 @@ class ModelViewSetMixin:
             context["depth"] = 0
 
         return context
+
+    def get_queryset(self):
+        """
+        Attempt to optimize the queryset based on the fields present in the associated serializer.
+
+        See similar logic in nautobot.core.tables.BaseTable.
+        """
+        queryset = super().get_queryset()
+        serializer = self.get_serializer()
+
+        select_fields = []
+        prefetch_fields = []
+
+        for field_name, field_instance in serializer.fields.items():
+            if field_instance.write_only:
+                continue
+            if field_instance.source == "*":
+                continue
+            if isinstance(field_instance, RelatedField):
+                # DRF uses `field.nested_field` instead of `field__nested_field`
+                select_fields.append(field_instance.source.replace(".", "__"))
+            if isinstance(field_instance, ManyRelatedField):
+                # DRF uses `field.nested_field` instead of `field__nested_field`
+                prefetch_fields.append(field_instance.source.replace(".", "__"))
+
+        print(f"prefetch_fields: {prefetch_fields}")
+        print(f"select_fields: {select_fields}")
+
+        if select_fields:
+            queryset = maybe_select_related(queryset, select_fields)
+
+        if prefetch_fields:
+            queryset = maybe_prefetch_related(queryset, prefetch_fields)
+
+        return queryset
 
     def restrict_queryset(self, request, *args, **kwargs):
         """
