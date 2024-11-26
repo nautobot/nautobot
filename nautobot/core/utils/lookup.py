@@ -222,12 +222,12 @@ def get_table_for_model(model, suffix=None):
 
     Args:
         model (BaseModel): A model class
-        suffix (str): An additional suffix for the table name (e.g. `Detail`, such as to retrieve `FooDetailTable`)
+        suffix (str): A replacement suffix for the table name (e.g. `DetailTable`, such as to retrieve `FooDetailTable`)
 
     Returns:
         (Union[Table, None]): Either the `Table` class or `None`
     """
-    return get_related_class_for_model(model, module_name="tables", object_suffix=f"{suffix or ''}Table")
+    return get_related_class_for_model(model, module_name="tables", object_suffix=suffix or "Table")
 
 
 def get_view_for_model(model, view_type=""):

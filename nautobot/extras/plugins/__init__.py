@@ -637,7 +637,9 @@ def _modify_default_table_columns(table_extension, app_name):
 
     for column_name in table_extension.add_to_default_columns:
         if not getattr(table.Meta, "default_columns", None):
-            logger.warning(f"{app_name}: Table `{table}` does not have a `default_columns` attribute. Cannot add column: {column_name}.")
+            logger.warning(
+                f"{app_name}: Table `{table}` does not have a `default_columns` attribute. Cannot add column: {column_name}."
+            )
             continue
         if column_name in table.base_columns:
             table.Meta.default_columns = (*table.Meta.default_columns, column_name)
@@ -646,7 +648,9 @@ def _modify_default_table_columns(table_extension, app_name):
 
     for column_name in table_extension.remove_from_default_columns:
         if not getattr(table.Meta, "default_columns", None):
-            logger.warning(f"{app_name}: Table `{table}` does not have a `default_columns` attribute. Cannot remove column: {column_name}.")
+            logger.warning(
+                f"{app_name}: Table `{table}` does not have a `default_columns` attribute. Cannot remove column: {column_name}."
+            )
             continue
         if column_name in table.Meta.default_columns:
             table.Meta.default_columns = tuple(name for name in table.Meta.default_columns if name != column_name)

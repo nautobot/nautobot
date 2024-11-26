@@ -72,7 +72,7 @@ class DeviceTableExtension(TableExtension):
 
 class IPAddressTableExtension(TableExtension):
     model = "ipam.ipaddress"
-    suffix = "Detail"
+    suffix = "DetailTable"
 
     table_columns = {
         "example_app_mask_length": tables.Column(
