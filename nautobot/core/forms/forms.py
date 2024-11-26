@@ -134,7 +134,7 @@ class BulkEditForm(forms.Form):
             if key.startswith("add_"):
                 # If both add_<field_name> and remove<field_name> is in cleaned_data, then that field is an M2M field.
                 field_name = key.lstrip("add_")
-                if f"remove_{field_name}" in self.cleaned_data:
+                if hasattr(obj, field_name) and f"remove_{field_name}" in self.cleaned_data:
                     m2m_field_names.append(field_name)
 
         for field_name in m2m_field_names:
