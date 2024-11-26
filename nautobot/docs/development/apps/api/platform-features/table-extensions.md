@@ -10,7 +10,8 @@ The requirements to extend a table are:
 * The variable `table_extensions` must be declared in that file, and contain a list of `TableExtension` subclasses
 * The `model` attribute of each `TableExtension` subclass must be set to a valid model name in the dotted pair format (`{app_label}.{model}`, e.g. `tenant.tenant` or `dcim.device`)
 
-Optionally, you can provide the additional `suffix` to be added when looking up the Table. This is useful for models that use a different table for the list view than `{model}Table`.
++++ 2.3.13
+    Optionally, you can provide the additional `suffix` to be added when looking up the Table. This is useful for models that use a different table for the list view than `{model}Table`.
 
 There are four ways that `TableExtension` can be used to modify a table.
 
@@ -65,7 +66,7 @@ class IPAddressTableExtension(TableExtension):
     """Table Extension for ipam.ipaddress model, which the List view uses IPAddressDetailTable."""
 
     model = "ipam.ipaddress"
-    suffix = "Detail"
+    suffix = "DetailTable"  # Available in 2.3.13
 
     table_columns = {
         "my_app_mask_length": tables.Column(
