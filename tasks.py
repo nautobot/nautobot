@@ -480,6 +480,14 @@ def makemigrations(context, name=""):
 
 
 @task
+def showmigrations(context):
+    """Perform showmigrations operation in Django."""
+    command = "nautobot-server showmigrations"
+
+    run_command(context, command)
+
+
+@task
 def migrate(context):
     """Perform migrate operation in Django."""
     command = "nautobot-server migrate"

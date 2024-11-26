@@ -1,1 +1,0 @@
-Moved `kubernetes` from a development-only dependency to a required dependency.

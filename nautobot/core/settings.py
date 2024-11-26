@@ -219,6 +219,32 @@ SOCIAL_AUTH_POSTGRES_JSONFIELD = False
 # Nautobot related - May be overridden if using custom social auth backend
 SOCIAL_AUTH_BACKEND_PREFIX = "social_core.backends"
 
+# Enables adding the OAuth2/OIDC group sync module to the authentication pipeline
+SSO_ENABLE_GROUP_SYNC = is_truthy(os.getenv("NAUTOBOT_SSO_ENABLE_GROUP_SYNC", "false"))
+if SSO_ENABLE_GROUP_SYNC:
+    SOCIAL_AUTH_PIPELINE = (
+        "social_core.pipeline.social_auth.social_details",
+        "social_core.pipeline.social_auth.social_uid",
+        "social_core.pipeline.social_auth.auth_allowed",
+        "social_core.pipeline.social_auth.social_user",
+        "social_core.pipeline.user.get_username",
+        "social_core.pipeline.user.create_user",
+        "social_core.pipeline.social_auth.associate_user",
+        "social_core.pipeline.social_auth.load_extra_data",
+        "social_core.pipeline.user.user_details",
+        "nautobot.extras.group_sync",
+    )
+# OAuth2/OIDC claim where the list of groups the authenticating user is a part of
+SSO_CLAIMS_GROUP = os.getenv("NAUTOBOT_SSO_CLAIMS_GROUP", "groups")
+# list of groups that an authenticating user can be a part of to get the Django staff permission
+SSO_STAFF_GROUPS = [
+    group for group in os.getenv("NAUTOBOT_SSO_STAFF_GROUPS", "").split(_CONFIG_SETTING_SEPARATOR) if group != ""
+]
+# list of groups that an authenticating user can be a part of to be a Django super user
+SSO_SUPERUSER_GROUPS = [
+    group for group in os.getenv("NAUTOBOT_SSO_SUPERUSER_GROUPS", "").split(_CONFIG_SETTING_SEPARATOR) if group != ""
+]
+
 # Job log entry sanitization and similar
 SANITIZER_PATTERNS = [
     # General removal of username-like and password-like tokens
