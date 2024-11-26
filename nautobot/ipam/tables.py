@@ -175,14 +175,6 @@ VLAN_PREFIXES = """
 {% endfor %}
 """
 
-VLAN_ROLE_LINK = """
-{% if record.role %}
-    <a href="{% url 'ipam:vlan_list' %}?role={{ record.role.name }}">{{ record.role }}</a>
-{% else %}
-    &mdash;
-{% endif %}
-"""
-
 VLANGROUP_ADD_VLAN = """
 {% with next_vid=record.get_next_available_vid %}
     {% if next_vid and perms.ipam.add_vlan %}
@@ -346,7 +338,9 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     prefix = tables.TemplateColumn(
         template_code=PREFIX_COPY_LINK, attrs={"td": {"class": "text-nowrap"}}, order_by=("network", "prefix_length")
     )
-    vrf_count = LinkedCountColumn(viewname="ipam:vrf_list", url_params={"prefixes": "pk"}, verbose_name="VRFs")
+    vrf_count = LinkedCountColumn(
+        viewname="ipam:vrf_list", url_params={"prefix": "pk"}, reverse_lookup="prefixes", verbose_name="VRFs"
+    )
     tenant = TenantColumn()
     namespace = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
@@ -766,7 +760,7 @@ class VLANVirtualMachinesTable(VLANMembersTable):
         fields = ("virtual_machine", "name", "tagged", "actions")
 
 
-class InterfaceVLANTable(StatusTableMixin, BaseTable):
+class InterfaceVLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
     """
     List VLANs assigned to a specific Interface.
     """
@@ -775,7 +769,6 @@ class InterfaceVLANTable(StatusTableMixin, BaseTable):
     tagged = BooleanColumn()
     vlan_group = tables.Column(accessor=Accessor("vlan_group__name"), verbose_name="Group")
     tenant = TenantColumn()
-    role = tables.TemplateColumn(template_code=VLAN_ROLE_LINK)
     location_count = LinkedCountColumn(
         viewname="dcim:location_list",
         url_params={"vlans": "pk"},

@@ -740,15 +740,15 @@ def querystring(request, **kwargs):
 
 
 @register.simple_tag()
-def table_config_button(table, table_name=None, extra_classes=""):
+def table_config_button(table, table_name=None, extra_classes="", disabled=False):
     if table_name is None:
         table_name = table.__class__.__name__
     html_template = (
         '<button type="button" class="btn btn-default {}'
-        '" data-toggle="modal" data-target="#{}_config" title="Configure table">'
+        '" data-toggle="modal" data-target="#{}_config" {} title="Configure table">'
         '<i class="mdi mdi-cog"></i> Configure</button>'
     )
-    return format_html(html_template, extra_classes, table_name)
+    return format_html(html_template, extra_classes, table_name, 'disabled="disabled"' if disabled else "")
 
 
 @register.simple_tag()

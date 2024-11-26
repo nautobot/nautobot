@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic.base import RedirectView
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras.views import ImageAttachmentEditView, ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
@@ -599,9 +600,23 @@ urlpatterns = [
         name="device_consoleports",
     ),
     path(
+        "devices/<uuid:pk>/console-ports/add/",
+        RedirectView.as_view(
+            url="/dcim/console-ports/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/console-ports/"
+        ),
+        name="device_consoleports_add",
+    ),
+    path(
         "devices/<uuid:pk>/console-server-ports/",
         views.DeviceConsoleServerPortsView.as_view(),
         name="device_consoleserverports",
+    ),
+    path(
+        "devices/<uuid:pk>/console-server-ports/add/",
+        RedirectView.as_view(
+            url="/dcim/console-server-ports/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/console-server-ports/"
+        ),
+        name="device_consoleserverports_add",
     ),
     path(
         "devices/<uuid:pk>/power-ports/",
@@ -609,9 +624,21 @@ urlpatterns = [
         name="device_powerports",
     ),
     path(
+        "devices/<uuid:pk>/power-ports/add/",
+        RedirectView.as_view(url="/dcim/power-ports/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/power-ports/"),
+        name="device_powerports_add",
+    ),
+    path(
         "devices/<uuid:pk>/power-outlets/",
         views.DevicePowerOutletsView.as_view(),
         name="device_poweroutlets",
+    ),
+    path(
+        "devices/<uuid:pk>/power-outlets/add/",
+        RedirectView.as_view(
+            url="/dcim/power-outlets/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/power-outlets/"
+        ),
+        name="device_poweroutlets_add",
     ),
     path(
         "devices/<uuid:pk>/interfaces/",
@@ -619,9 +646,19 @@ urlpatterns = [
         name="device_interfaces",
     ),
     path(
+        "devices/<uuid:pk>/interfaces/add/",
+        RedirectView.as_view(url="/dcim/interfaces/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/interfaces/"),
+        name="device_interfaces_add",
+    ),
+    path(
         "devices/<uuid:pk>/front-ports/",
         views.DeviceFrontPortsView.as_view(),
         name="device_frontports",
+    ),
+    path(
+        "devices/<uuid:pk>/front-ports/add/",
+        RedirectView.as_view(url="/dcim/front-ports/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/front-ports/"),
+        name="device_frontports_add",
     ),
     path(
         "devices/<uuid:pk>/rear-ports/",
@@ -629,14 +666,31 @@ urlpatterns = [
         name="device_rearports",
     ),
     path(
+        "devices/<uuid:pk>/rear-ports/add/",
+        RedirectView.as_view(url="/dcim/rear-ports/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/rear-ports/"),
+        name="device_rearports_add",
+    ),
+    path(
         "devices/<uuid:pk>/device-bays/",
         views.DeviceDeviceBaysView.as_view(),
         name="device_devicebays",
     ),
     path(
+        "devices/<uuid:pk>/device-bays/add/",
+        RedirectView.as_view(url="/dcim/device-bays/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/device-bays/"),
+        name="device_devicebays_add",
+    ),
+    path(
         "devices/<uuid:pk>/module-bays/",
         views.DeviceModuleBaysView.as_view(),
         name="device_modulebays",
+    ),
+    path(
+        "devices/<uuid:pk>/module-bays/add/",
+        RedirectView.as_view(
+            url="/dcim/module-bays/add/?parent_device=%(pk)s&return_url=/dcim/devices/%(pk)s/module-bays/"
+        ),
+        name="device_modulebays_add",
     ),
     path(
         "devices/<uuid:pk>/inventory/",
@@ -1318,6 +1372,11 @@ urlpatterns = [
         "devices/inventory-items/add/",
         views.DeviceBulkAddInventoryItemView.as_view(),
         name="device_bulk_add_inventoryitem",
+    ),
+    path(
+        "devices/<uuid:pk>/inventory-items/add/",
+        RedirectView.as_view(url="/dcim/inventory-items/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/inventory/"),
+        name="device_inventoryitems_add",
     ),
     # Cables
     path("cables/", views.CableListView.as_view(), name="cable_list"),

@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from nautobot.apps import ui, views
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
+from nautobot.circuits.views import CircuitUIViewSet
 from nautobot.core.ui.object_detail import TextPanel
 from nautobot.dcim.models import Device
 
@@ -240,3 +241,8 @@ class ViewWithCustomPermissions(views.ObjectListViewMixin):
     queryset = ExampleModel.objects.all()
     serializer_class = serializers.ExampleModelSerializer
     table_class = tables.ExampleModelTable
+
+
+override_views = {
+    "circuits:circuit_list": CircuitUIViewSet.as_view({"get": "list"})  # For testing override_views
+}
