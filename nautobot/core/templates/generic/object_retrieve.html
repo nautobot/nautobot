@@ -56,7 +56,7 @@
         <h1>
             <span class="hover_copy">
                 <span id="copy_title">{% block title %}{{object.display|default:object}}{% endblock %}</span>
-                <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_title">
+                <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-text="{{ object.display | default:object }}">
                     <span class="mdi mdi-content-copy"></span>
                 </button>
             </span>

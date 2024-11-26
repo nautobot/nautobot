@@ -831,7 +831,7 @@ class Note(ChangeLoggedModel, BaseModel):
         unique_together = [["assigned_object_type", "assigned_object_id", "user_name", "created"]]
 
     def __str__(self):
-        return f"{self.assigned_object} - {self.created.isoformat()}"
+        return f"{self.assigned_object} - {self.created.isoformat() if self.created else None}"
 
     def save(self, *args, **kwargs):
         # Record the user's name as static strings

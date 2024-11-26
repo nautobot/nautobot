@@ -1,3 +1,0 @@
-Fixed Panel rendering to not include the header or footer if the content is only whitespace.
-Fixed incorrect/unnecessary rendering of many-to-many fields in ObjectFieldsPanel.
-Fixed various references to `context["object"]` to use `get_obj_from_context()` appropriately.
