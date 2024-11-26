@@ -1,2 +1,0 @@
-Moved definition of nav and homepage base classes from `nautobot.core.apps` to new `nautobot.core.ui` module. (These classes are still available to App authors via the same `nautobot.apps.ui` import aliases as previously).
-Added support for `--quiet` option to `invoke nbshell` task.

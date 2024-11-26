@@ -1,1 +1,0 @@
-Added exception handling and fallback logic for Constance config lookups as `django-constance` 4.x removed some built-in exception handling.

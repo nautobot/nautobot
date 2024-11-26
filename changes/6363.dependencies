@@ -1,3 +1,0 @@
-Removed direct dependency on `MarkupSafe` as Nautobot does not use it directly, only through the `Jinja2` dependency.
-Updated dependency `Pillow` to `~11.0.0`.
-Updated dependency `django-auth-ldap` to `~5.1.0`.
