@@ -16,7 +16,7 @@ So if you have any concerns with running Celery workers in your Kubernetes deplo
 
 ## How to Use Kubernetes Jobs
 
-Consult the documentation from the offical [Kubernetes page](https://kubernetes.io/docs/home/) and learn how to set up a simple Kubernetes cluster with pods running Nautobot containers in your own development environment from this [doc](../../../development/core/kubernetes-job-support.md).
+Consult the documentation from the offical [Kubernetes page](https://kubernetes.io/docs/home/) and learn how to set up a simple Kubernetes cluster with pods running Nautobot containers in your own development environment from this [doc](../../../development/core/minikube-dev-environment-for-k8s-jobs.md).
 
 Once you have the correct environment setup, executing Kubernetes job would just be as simple as assigning a [job queue](../jobs/jobqueue.md) with type "Kubernetes" and running the job on it. Below is a detail guide on how you can do that in Nautobot.
 
