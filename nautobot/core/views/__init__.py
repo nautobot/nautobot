@@ -1,4 +1,5 @@
 import contextlib
+import datetime
 import logging
 import os
 import platform
@@ -45,6 +46,7 @@ from nautobot.core.celery import app
 from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.extras.forms import GraphQLQueryForm
@@ -503,10 +505,19 @@ class AboutView(AccessMixin, TemplateView):
                         "url": release_url,
                     }
 
+        # Support contract state
+        support_expiration_date = get_settings_or_config("NTC_SUPPORT_CONTRACT_EXPIRATION_DATE")
+        if support_expiration_date and support_expiration_date >= datetime.date.today():
+            support_contract_active = True
+        else:
+            support_contract_active = False
+
         context = self.get_context_data()
         context.update(
             {
                 "new_release": new_release,
+                "support_contract_active": support_contract_active,
+                "support_expiration_date": support_expiration_date,
             }
         )
 

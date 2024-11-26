@@ -23,16 +23,18 @@
                 <div class="panel-heading">
                     <strong>About</strong>
                 </div>
-                <table class="table table-hover panel-body attr-table">
-                    <tr>
-                        <td>Description</td>
-                        <td>Nautobot is a product of Network to Code. Nautobot is a Network Source of Truth and Network Automation Platform.</td>
-                    </tr>
-                    <tr>
-                        <td>Version</td>
-                        <td>{{ version }}</td>
-                    </tr>
-                </table>
+                <div class="panel-body">
+                    Nautobot is a product of <a href="https://networktocode.com/">Network to Code</a>. Nautobot is a Network Source of Truth and Network Automation Platform.
+                    <br>
+                    <br>
+                    <b>Flexible Source of Truth for Networking</b> - Nautobot core data models are used to define the intended state of network infrastructure enabling it as a Source of Truth. While a baseline set of models are provided (such as IP networks and addresses, devices and racks, circuits and cable, etc.) it is Nautobot's goal to offer maximum data model flexibility. This is enabled through features such as user-defined relationships, custom fields on any model, and data validation that permits users to codify everything from naming standards to having automated tests run before data can be populated into Nautobot.
+                    <br>
+                    <br>
+                    <b>Network Automation Platform</b> - Nautobot has a rich feature set to seamlessly integrate with network automation solutions. Nautobot offers GraphQL and native Git integration along with REST APIs and webhooks. Git integration dynamically loads YAML data files as Nautobot config contexts. Nautobot also has an evolving app development API that enables users to create custom models, APIs, and UI elements. The app development API is also used to unify and aggregate disparate data sources creating a Single Source of Truth to streamline data management for network automation.
+                    <br>
+                    <br>
+                    <b>App Ecosystem</b> - Nautobot has an extensive ecosystem of solutions that can be installed to provide power Network Automation feature sets. Please checkout the <a href="{% url 'apps:apps_list' %}">App Marketplace</a> to learn more.
+                </div>
             </div>
         </div>
         <div class="col-md-6">
@@ -43,16 +45,28 @@
                 <table class="table table-hover panel-body attr-table">
                     <tr>
                         <td>Vendor Support Contract</td>
-                        <td>{{ support_contract_active }}</td>
+                        <td>{{ support_contract_active | render_boolean }}</td>
                     </tr>
                     <tr>
                         <td>Contract Expiry Date</td>
-                        <td>{{ contract_expiry_date }}</td>
+                        <td>
+                            {% if support_contract_active %}
+                                {{ support_expiration_date | date }}
+                            {% elif support_expiration_date %}
+                                <span style="color: red;">{{ support_expiration_date | date }}</span>
+                            {% else %}
+                                &mdash;
+                            {% endif %}
+                        </td>
                     </tr>
                     <tr>
                         <td>&nbsp;</td>
                         <td>
-                            If there is any question on the status of your support contract with Network to Code, please email <a href="mailto:info@networktocode.com">info@networktocode.com</a>.
+                            {% if not support_expiration_date %}
+                                To inquire about Nautobot support with Network to Code, please email <a href="mailto:info@networktocode.com">info@networktocode.com</a>.
+                            {% else %}
+                                If there is any question on the status of your support contract with Network to Code, please email <a href="mailto:info@networktocode.com">info@networktocode.com</a>.
+                            {% endif %}
                         </td>
                     </tr>
                 </table>

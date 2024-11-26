@@ -4,6 +4,7 @@ import platform
 import re
 import sys
 import tempfile
+from datetime import date
 
 from django.contrib.messages import constants as messages
 import django.forms
@@ -692,6 +693,13 @@ CONSTANCE_ADDITIONAL_FIELDS = {
             "required": False,
         },
     ],
+    "optional_date_field": [
+        "django.forms.DateField",
+        {
+            "widget": "nautobot.core.forms.widgets.DatePicker",
+            "required": False,
+        }
+    ]
 }
 
 CONSTANCE_CONFIG = {
@@ -814,6 +822,12 @@ CONSTANCE_CONFIG = {
         "Markdown is supported, as are some HTML tags and attributes.\n"
         "If unspecified, instructions to join Network to Code's Slack community will be provided.",
     ),
+    "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE": ConstanceConfigItem(
+        default="",
+        help_text="Expiration date for an active Nautobot support contract with Network to Code. "
+        "This value is displayed in the About page to provide additional support information.",
+        field_type="optional_date_field",
+    )
 }
 
 CONSTANCE_CONFIG_FIELDSETS = {
@@ -830,7 +844,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT",
     ],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["SUPPORT_MESSAGE"],
+    "User Interface": ["SUPPORT_MESSAGE", "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"],
     "Debugging": ["ALLOW_REQUEST_PROFILING"],
 }
 
