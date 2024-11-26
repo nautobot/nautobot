@@ -12,6 +12,11 @@ Kubernetes job support was added in Nautobot v2.4.0 to provide an alternative fo
 
 So if you have any concerns with running Celery workers in your Kubernetes deployment, executing jobs with Kubernetes might be for you.
 
+## How to Configure Environment Variables
+
+
+
+
 ## How to Use Kubernetes Jobs
 
 Consult the documentation from the offical [Kubernetes page](https://kubernetes.io/docs/home/) and learn how to set up a simple Kubernetes cluster with pods running Nautobot containers in your own development environment from this [doc](../../../development/core/kubernetes-job-support.md).
@@ -90,7 +95,20 @@ deployment.apps/nautobot      1/1     1            1           1h
 deployment.apps/redis         1/1     1            1           1h
 ```
 
-![Kubernetes Component Flow Before Job Execution](../../../media/development/core/kubernetes/k8s_component_flow_before.png)
+```mermaid
+---
+title: Kubernetes Component Flow Before Job Execution
+---
+erDiagram
+    Nautobot-Deployment ||--|{ Nautobot-Pod: contains
+    Redis ||--|{ Redis-Service: exposes
+    DB ||--|{ DB-Service: exposes
+    Celery-Beat-Deployment ||--|{ Celery-Beat-Pod: contains
+    Redis-Service }|..|{ Nautobot-Pod: interacts
+    DB-Service }|..|{ Nautobot-Pod: interacts
+    Redis-Service }|..|{ Celery-Beat-Pod: interacts
+    DB-Service }|..|{ Celery-Beat-Pod: interacts
+```
 
 During job execution, your Nautobot pod will create a new job result and spin up a new Kubernetes job and job pod that shares the same redis and db instances as your Nautobot pod. The Kubernetes job pod will execute the job locally and made modifications to the job result.
 
@@ -118,7 +136,24 @@ NAME                                                          STATUS    COMPLETI
 job.batch/nautobot-job-11892564-b0b6-4d5b-8fd1-02a88c85f501   Running   0/1           2s         2s
 ```
 
-![Kubernetes Component Flow During Job Execution](../../../media/development/core/kubernetes/k8s_component_flow_during.png)
+```mermaid
+---
+title: Kubernetes Component Flow During Job Execution
+---
+erDiagram
+    Nautobot-Deployment ||--|{ Nautobot-Pod: contains
+    Nautobot-Pod ||--o{ Nautobot-Job: creates
+    Nautobot-Job ||--|{ Nautobot-Job-Pod: contains
+    Redis ||--|{ Redis-Service: exposes
+    DB ||--|{ DB-Service: exposes
+    Celery-Beat-Deployment ||--|{ Celery-Beat-Pod: contains
+    Redis-Service }|..|{ Nautobot-Pod: interacts
+    DB-Service }|..|{ Nautobot-Pod: interacts
+    Redis-Service }|..|{ Celery-Beat-Pod: interacts
+    DB-Service }|..|{ Celery-Beat-Pod: interacts
+    Redis-Service }|..|{ Nautobot-Job-Pod: interacts
+    DB-Service }|..|{ Nautobot-Job-Pod: interacts
+```
 
 After the job is executed, the Kubernetes job and job pod will clean themselves up.
 
@@ -141,6 +176,17 @@ deployment.apps/nautobot      1/1     1            1           1h
 deployment.apps/redis         1/1     1            1           1h
 ```
 
-![Kubernetes Component Flow After Job Execution](../../../media/development/core/kubernetes/k8s_component_flow_after.png)
-
-## How to Configure Environment Variables
+```mermaid
+---
+title: Kubernetes Component Flow After Job Execution
+---
+erDiagram
+    Nautobot-Deployment ||--|{ Nautobot-Pod: contains
+    Redis ||--|{ Redis-Service: exposes
+    DB ||--|{ DB-Service: exposes
+    Celery-Beat-Deployment ||--|{ Celery-Beat-Pod: contains
+    Redis-Service }|..|{ Nautobot-Pod: interacts
+    DB-Service }|..|{ Nautobot-Pod: interacts
+    Redis-Service }|..|{ Celery-Beat-Pod: interacts
+    DB-Service }|..|{ Celery-Beat-Pod: interacts
+```
