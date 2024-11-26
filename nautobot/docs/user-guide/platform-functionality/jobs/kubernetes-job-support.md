@@ -14,9 +14,6 @@ So if you have any concerns with running Celery workers in your Kubernetes deplo
 
 ## How to Configure Environment Variables
 
-
-
-
 ## How to Use Kubernetes Jobs
 
 Consult the documentation from the offical [Kubernetes page](https://kubernetes.io/docs/home/) and learn how to set up a simple Kubernetes cluster with pods running Nautobot containers in your own development environment from this [doc](../../../development/core/kubernetes-job-support.md).
