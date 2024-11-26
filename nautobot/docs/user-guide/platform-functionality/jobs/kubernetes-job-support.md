@@ -14,6 +14,123 @@ So if you have any concerns with running Celery workers in your Kubernetes deplo
 
 ## How to Configure Environment Variables
 
+### NAUTOBOT_KUBERNETES_JOB_MANIFEST
+
+This environment variable should store a [Kubernetes Job](https://kubernetes.io/docs/concepts/workloads/controllers/job/) template as a python dictionary. Below is a sample kubernetes job manifest.
+
+!!!important
+    Ensure this job template uses the same Docker image as your Nautobot Kubernetes deployment. You can specify the image name in spec.template.spec.containers.image. Additionally, configure and map the required environment variables to corresponding [Kubernetes ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/) instances. These variables can be defined in the spec.template.spec.containers.env list. For consistency, it is recommended to use the same environment configuration for this Job manifest as that of your Nautobot Kubernetes deployment.
+
+```python
+{
+    "apiVersion": "batch/v1",
+    "kind": "Job",
+    "metadata": {"name": "nautobot-job"},
+    "spec": {
+        "ttlSecondsAfterFinished": 5,
+        "template": {
+            "spec": {
+                "containers": [
+                    {
+                        "env": [
+                            {
+                                "name": "MYSQL_DATABASE",
+                                "valueFrom": {"configMapKeyRef": {"key": "MYSQL_DATABASE", "name": "dev-env"}},
+                            },
+                            {
+                                "name": "NAUTOBOT_REDIS_PORT",
+                                "valueFrom": {"configMapKeyRef": {"key": "NAUTOBOT_REDIS_PORT", "name": "dev-env"}},
+                            },
+                            {
+                                "name": "POSTGRES_DB",
+                                "valueFrom": {"configMapKeyRef": {"key": "POSTGRES_DB", "name": "dev-env"}},
+                            },
+                            {
+                                "name": "POSTGRES_PASSWORD",
+                                "valueFrom": {"configMapKeyRef": {"key": "POSTGRES_PASSWORD", "name": "dev-env"}},
+                            },
+                            {
+                                "name": "POSTGRES_USER",
+                                "valueFrom": {"configMapKeyRef": {"key": "POSTGRES_USER", "name": "dev-env"}},
+                            },
+                            ...
+                        ]
+                        "name": "nautobot-job",
+                        "image": "local/nautobot-dev:local-py3.11",
+                        "ports": [{"containerPort": 8080, "protocol": "TCP"}],
+                        "tty": True,
+                        "volumeMounts": [
+                            {"mountPath": "/opt/nautobot/media", "name": "media-root"},
+                            {
+                                "mountPath": "/opt/nautobot/nautobot_config.py",
+                                "name": "nautobot-cm1",
+                                "subPath": "nautobot_config.py",
+                            },
+                        ],
+                    }
+                ],
+                "volumes": [
+                    {"name": "media-root", "persistentVolumeClaim": {"claimName": "media-root"}},
+                    {
+                        "configMap": {
+                            "items": [{"key": "nautobot_config.py", "path": "nautobot_config.py"}],
+                            "name": "nautobot-cm1",
+                        },
+                        "name": "nautobot-cm1",
+                    },
+                ],
+                "restartPolicy": "Never",
+            }
+        },
+        "backoffLimit": 0,
+    },
+}
+```
+
+### NAUTOBOT_KUBERNETES_JOB_POD_NAME
+
+The default value for this environment variable is "nautobot-job". You can modify this value as needed; however, ensure that `metadata.name` field in NAUTOBOT_KUBERNETES_JOB_MANIFEST is updated accordingly to maintain consistencty
+
+### NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE
+
+The default value for this environment variable is "default". However, this value could be inaccurate depending on the setup of your Nautobot deployment. To ensure you have the right value for this variable. You can run the command `kubectl describe pod <nautobot-pod-name>` and you should see an output similar to what is below:
+
+```bash
+Name:             nautobot-679bdc765-hl72m
+Namespace:        default
+Priority:         0
+Service Account:  default
+Node:             minikube/192.168.58.2
+Start Time:       Fri, 22 Nov 2024 10:43:38 -0500
+Labels:           io.kompose.service=nautobot
+                  pod-template-hash=679bdc765
+Annotations:      kompose.cmd: kompose --file docker-compose-min.yml convert
+                  kompose.version: 1.34.0 (HEAD)
+Status:           Running
+IP:               10.244.1.148
+...
+```
+
+Note that the field with label `Namespace` tells you exactly what namespace your Nautobot deployment is in and what value you should assign to the environment variable `NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE`. To ensure you have the right value for this variable. You can run the command `kubectl describe pod <nautobot-pod-name>` and you should see an output similar to what is below:
+
+### NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS
+
+The default value for this environment variable is <https://kubernetes.default.svc>. However, this value may vary depending on your Nautobot deployment setup. The format for the base URL is `https://<kubernetes-service-name>.<kubernetes-service-namespace>.svc.`
+
+If you know the namespace where your Kubernetes service is running, you can run the command `kubectl get services -n <kubernetes-service-namespace>` to retrieve the service details. The output will resemble the example shown below.
+
+```bash
+NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+db           ClusterIP   10.111.0.30     <none>        5432/TCP   27d
+kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP    27d
+nautobot     ClusterIP   10.106.32.53    <none>        8080/TCP   6d1h
+redis        ClusterIP   10.102.99.143   <none>        6379/TCP   27d
+```
+
+If you are not sure which namespace your Kubernetes service is running in, you can run the command `kubectl get namespaces` to list out all namespaces and examine each one until you find the Kubernetes service.
+
+Now you have the name and the namespace of the Kubernetes service, you have all the information you need to configure this url correctly.
+
 ## How to Use Kubernetes Jobs
 
 Consult the documentation from the offical [Kubernetes page](https://kubernetes.io/docs/home/) and learn how to set up a simple Kubernetes cluster with pods running Nautobot containers in your own development environment from this [doc](../../../development/core/minikube-dev-environment-for-k8s-jobs.md).
