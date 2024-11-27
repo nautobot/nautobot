@@ -1,1 +1,2 @@
 Added REST API support for an `?exclude_m2m=true` query parameter. Specifying this parameter prevents the API from retrieving and serializing many-to-many relations on the requested object(s) (for example, the list of all Prefixes associated with a given VRF), which can in some cases greatly improve the performance of the API and reduce memory and network overhead substantially.
+Added automatic optimization of REST API querysets via appropriate `select_related` and `prefetch_related` calls.
