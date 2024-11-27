@@ -2,7 +2,6 @@ import logging
 
 from django.db import NotSupportedError
 
-
 logger = logging.getLogger(__name__)
 
 

@@ -151,15 +151,13 @@ class LocationTypeViewSet(NautobotModelViewSet):
 
 
 class LocationViewSet(NautobotModelViewSet):
-    queryset = (
-        Location.objects.annotate(
-            device_count=count_related(Device, "location"),
-            rack_count=count_related(Rack, "location"),
-            prefix_count=count_related(Prefix, "locations"),
-            vlan_count=count_related(VLAN, "locations"),
-            circuit_count=count_related(Circuit, "circuit_terminations__location"),
-            virtual_machine_count=count_related(VirtualMachine, "cluster__location"),
-        )
+    queryset = Location.objects.annotate(
+        device_count=count_related(Device, "location"),
+        rack_count=count_related(Rack, "location"),
+        prefix_count=count_related(Prefix, "locations"),
+        vlan_count=count_related(VLAN, "locations"),
+        circuit_count=count_related(Circuit, "circuit_terminations__location"),
+        virtual_machine_count=count_related(VirtualMachine, "cluster__location"),
     )
     serializer_class = serializers.LocationSerializer
     filterset_class = filters.LocationFilterSet
@@ -182,12 +180,9 @@ class RackGroupViewSet(NautobotModelViewSet):
 
 
 class RackViewSet(NautobotModelViewSet):
-    queryset = (
-        Rack.objects.select_related("rack_group__location")
-        .annotate(
-            device_count=count_related(Device, "rack"),
-            power_feed_count=count_related(PowerFeed, "rack"),
-        )
+    queryset = Rack.objects.select_related("rack_group__location").annotate(
+        device_count=count_related(Device, "rack"),
+        power_feed_count=count_related(PowerFeed, "rack"),
     )
     serializer_class = serializers.RackSerializer
     filterset_class = filters.RackFilterSet
@@ -598,9 +593,9 @@ class InventoryItemViewSet(NautobotModelViewSet):
 
 
 class ModuleBayViewSet(NautobotModelViewSet):
-    queryset = ModuleBay.objects.select_related(
-        "parent_device__tenant", "parent_device__location"
-    ).prefetch_related("installed_module")
+    queryset = ModuleBay.objects.select_related("parent_device__tenant", "parent_device__location").prefetch_related(
+        "installed_module"
+    )
     serializer_class = serializers.ModuleBaySerializer
     filterset_class = filters.ModuleBayFilterSet
 
