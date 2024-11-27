@@ -4982,10 +4982,6 @@ class ControllerForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         queryset=Platform.objects.all(),
         required=False,
     )
-    tenant = DynamicModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-    )
     external_integration = DynamicModelChoiceField(
         queryset=ExternalIntegration.objects.all(),
         required=False,
@@ -5007,6 +5003,7 @@ class ControllerForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "role",
             "description",
             "platform",
+            "tenant_group",
             "tenant",
             "location",
             "capabilities",
@@ -5059,6 +5056,7 @@ class ControllerFilterForm(
         "description",
         "location",
         "platform",
+        "tenant_group",
         "tenant",
         "external_integration",
         "controller_device",
@@ -5085,7 +5083,7 @@ class ControllerBulkEditForm(
         required=False,
     )
     capabilities = JSONArrayFormField(
-        choices=add_blank_choice(ControllerCapabilitiesChoices),
+        choices=ControllerCapabilitiesChoices,
         base_field=forms.CharField(),
         required=False,
     )
@@ -5114,15 +5112,18 @@ class ControllerBulkEditForm(
             "description",
             "location",
             "platform",
-            "tenant",
             "external_integration",
             "controller_device",
             "controller_device_redundancy_group",
             "tags",
         )
+        nullable_fields = (
+            "tenant",
+            "capabilities",
+        )
 
 
-class ControllerManagedDeviceGroupForm(NautobotModelForm):
+class ControllerManagedDeviceGroupForm(NautobotModelForm, TenancyForm):
     """ControllerManagedDeviceGroup create/edit form."""
 
     controller = DynamicModelChoiceField(queryset=Controller.objects.all(), required=True)
@@ -5139,12 +5140,15 @@ class ControllerManagedDeviceGroupForm(NautobotModelForm):
         fields = (
             "controller",
             "name",
+            "description",
             "devices",
             "parent",
             "capabilities",
             "weight",
             "radio_profiles",
             "tags",
+            "tenant_group",
+            "tenant",
         )
 
     def __init__(self, *args, **kwargs):
@@ -5159,12 +5163,13 @@ class ControllerManagedDeviceGroupForm(NautobotModelForm):
         return instance
 
 
-class ControllerManagedDeviceGroupFilterForm(NautobotFilterForm):
+class ControllerManagedDeviceGroupFilterForm(NautobotFilterForm, TenancyFilterForm):
     """ControllerManagedDeviceGroup basic filter form."""
 
     model = ControllerManagedDeviceGroup
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False, label="Name")
+    description = forms.CharField(required=False, label="Description")
     controller = DynamicModelChoiceField(
         queryset=Controller.objects.all(),
         required=False,
@@ -5185,11 +5190,14 @@ class ControllerManagedDeviceGroupFilterForm(NautobotFilterForm):
     field_order = (
         "q",
         "name",
+        "description",
         "controller",
         "parent",
         "weight",
         "subtree",
         "tags",
+        "tenant",
+        "tenant_group",
     )
 
 
@@ -5214,10 +5222,11 @@ class ControllerManagedDeviceGroupBulkEditForm(TagsBulkEditFormMixin, NautobotBu
         label="Remove Radio Profiles",
     )
     capabilities = JSONArrayFormField(
-        choices=add_blank_choice(ControllerCapabilitiesChoices),
+        choices=ControllerCapabilitiesChoices,
         base_field=forms.CharField(),
         required=False,
     )
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
 
     class Meta:
         model = ControllerManagedDeviceGroup
@@ -5225,8 +5234,11 @@ class ControllerManagedDeviceGroupBulkEditForm(TagsBulkEditFormMixin, NautobotBu
             "controller",
             "parent",
             "weight",
-            "capabilities",
             "tags",
+        )
+        nullable_fields = (
+            "tenant",
+            "capabilities",
         )
 
 
