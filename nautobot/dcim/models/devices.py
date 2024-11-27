@@ -1481,6 +1481,13 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
         null=True,
         help_text="List of capabilities supported by the controller device group, these capabilities are used to enhance views in Nautobot.",
     )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="controller_managed_device_groups",
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         ordering = ("weight",)
