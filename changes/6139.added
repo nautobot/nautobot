@@ -1,2 +1,0 @@
-Added `ObjectTextPanel` for rendering text with markdown/json/yaml from given object field.
-Added `TextPanel` for rendering text with markdown/json/yaml from given value in the context.

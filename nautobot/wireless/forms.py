@@ -183,7 +183,7 @@ class RadioProfileBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         widget=StaticSelect2(),
     )
     channel_width = JSONArrayFormField(
-        choices=add_blank_choice(RadioProfileChannelWidthChoices),
+        choices=RadioProfileChannelWidthChoices,
         base_field=forms.IntegerField(),
         required=False,
     )
