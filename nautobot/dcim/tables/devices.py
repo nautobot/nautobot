@@ -1409,6 +1409,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
     name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
     weight = tables.Column()
     controller = tables.Column(linkify=True)
+    tenant = TenantColumn()
     capabilities = tables.Column()
     tags = TagColumn(url_name="dcim:controllermanageddevicegroup_list")
     actions = ButtonsColumn(ControllerManagedDeviceGroup)
@@ -1440,6 +1441,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "wireless_networks_count",
             "controller",
             "weight",
+            "tenant",
             "capabilities",
             "tags",
             "actions",

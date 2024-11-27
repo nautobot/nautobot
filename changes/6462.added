@@ -1,0 +1,2 @@
+Added tenant relationship to the `ControllerManagedDeviceGroup`
+Added `tenant` and `description` fields to forms, filtersets and tables for `Controller` and `ControllerManagedDeviceGroup`
