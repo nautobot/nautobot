@@ -8,6 +8,7 @@
 - Job `success` Log Level
 - Kubernetes Job Execution and Job Queue Data Model
 - Per-User Time Zone Support
+- REST API `exclude_m2m` Support
 - UI Component Framework
 - Virtual Device Context Data Models
 - Wireless Data Models
