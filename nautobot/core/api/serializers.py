@@ -112,7 +112,9 @@ class OptInFieldsMixin:
             # but if in the future we extend the API to include reverse relations, they'll be affected by this too.
             if is_truthy(params.get("exclude_m2m", "false")):
                 fields = {
-                    name: instance for name, instance in fields.items() if not isinstance(instance, ManyRelatedField)
+                    name: instance
+                    for name, instance in fields.items()
+                    if not isinstance(instance, (ManyRelatedField, serializers.ListSerializer))
                 }
 
             self.__pruned_fields = fields

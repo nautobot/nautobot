@@ -381,6 +381,7 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
             (
                 '<select name="role" class="form-control nautobot-select2-api" data-multiple="1" '
                 'data-query-param-content_types="[&quot;dcim.device&quot;, &quot;virtualization.virtualmachine&quot;]" '
+                'data-query-param-exclude_m2m="[&quot;true&quot;]" '
                 'display-field="display" value-field="name" data-depth="0" data-url="/api/extras/roles/" id="id_for_role" '
                 "multiple>\n</select>"
             ),

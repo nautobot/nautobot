@@ -112,13 +112,13 @@ class NautobotAutoSchema(AutoSchema):
                 "required": True,
             }
 
-        # Inject a custom description for the "id" parameter since ours has custom lookup behavior.
         if operation is not None and "parameters" in operation:
             for param in operation["parameters"]:
+                # Inject a custom description for the "id" parameter since ours has custom lookup behavior.
                 if param["name"] == "id" and "description" not in param:
                     param["description"] = "Unique object identifier, either a UUID primary key or a composite key."
             if self.method == "GET":
-                if "depth" not in operation["parameters"]:
+                if not any(param["name"] == "depth" for param in operation["parameters"]):
                     operation["parameters"].append(
                         {
                             "in": "query",
@@ -128,6 +128,17 @@ class NautobotAutoSchema(AutoSchema):
                             "schema": {"type": "integer", "minimum": 0, "maximum": 10, "default": 1},
                         }
                     )
+                if not any(param["name"] == "exclude_m2m" for param in operation["parameters"]):
+                    operation["parameters"].append(
+                        {
+                            "in": "query",
+                            "name": "exclude_m2m",
+                            "required": False,
+                            "description": "Exclude many-to-many fields from the response",
+                            "schema": {"type": "boolean", "default": False},
+                        }
+                    )
+                # TODO: add "include" parameter to the schema where relevant - nautobot/nautobot#685
         return operation
 
     def get_operation_id(self):
