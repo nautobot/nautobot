@@ -529,6 +529,7 @@ nav:
           - Image Attachments: "user-guide/platform-functionality/imageattachment.md"
           - Jobs:
               - "user-guide/platform-functionality/jobs/index.md"
+              - Kubernetes Job Support: "user-guide/platform-functionality/jobs/kubernetes-job-support.md"
               - Job Buttons: "user-guide/platform-functionality/jobs/jobbutton.md"
               - Job Hooks: "user-guide/platform-functionality/jobs/jobhook.md"
               - Job Models: "user-guide/platform-functionality/jobs/models.md"
@@ -656,7 +657,7 @@ nav:
           - Controllers: "development/core/controllers.md"
           - Generic Views: "development/core/generic-views.md"
           - Home Page Panels: "development/core/homepage.md"
-          - Local Kubernetes Cluster: "development/core/local-k8s.md"
+          - Minikube Dev Environment for K8s Jobs: "development/core/minikube-dev-environment-for-k8s-jobs.md"
           - Model Development Checklist: "development/core/model-checklist.md"
           - Model Features: "development/core/model-features.md"
           - Natural Keys: "development/core/natural-keys.md"
