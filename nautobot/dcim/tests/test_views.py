@@ -116,6 +116,7 @@ from nautobot.extras.models import (
     CustomField,
     CustomFieldChoice,
     ExternalIntegration,
+    JobResult,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -1135,6 +1136,51 @@ module-bays:
         self.assertEqual(len(data), device_types.count())
         self.assertEqual(data[0]["manufacturer"], device_type.manufacturer.name)
         self.assertEqual(data[0]["model"], device_type.model)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_rack_height_bulk_edit_set_zero(self):
+        """Test that rack height can be set to "0" in bulk_edit."""
+        self.add_permissions("dcim.change_devicetype")
+        url = self._get_url("bulk_edit")
+        pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
+
+        data = {
+            "u_height": 0,
+            "pk": pk_list,
+            "_apply": True,  # Form button
+        }
+
+        response = self.client.post(url, data)
+        job_result = JobResult.objects.filter(name="Bulk Edit Objects").first()
+        # Assert successfull redirect to Job Results; whcih means no form validation error was raised
+        self.assertRedirects(
+            response,
+            reverse("extras:jobresult", args=[job_result.pk]),
+            status_code=302,
+            target_status_code=200,
+        )
+        self.assertHttpStatus(response, 302)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_rack_height_bulk_edit_invalid(self):
+        """Test that a rack height cannot be set to an invalid value in bulk_edit."""
+        self.add_permissions("dcim.change_devicetype")
+        url = self._get_url("bulk_edit")
+        pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
+
+        data = {
+            "u_height": -1,  # Invalid rack height
+            "pk": pk_list,
+            "_apply": True,  # Form button
+        }
+
+        response = self.client.post(url, data)
+        response_content = response.content.decode(response.charset)
+        self.assertHttpStatus(response, 200)
+        self.assertInHTML(
+            '<strong class="panel-title">U height</strong>: <ul class="errorlist"><li>Ensure this value is greater than or equal to 0.</li></ul>',
+            response_content,
+        )
 
 
 class ModuleTypeTestCase(

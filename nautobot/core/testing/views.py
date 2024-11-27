@@ -1016,6 +1016,10 @@ class ViewTestCases:
 
         bulk_edit_data = {}
 
+        def validate_object_data_after_bulk_edit(self, pk_list):
+            for instance in self._get_queryset().filter(pk__in=pk_list):
+                self.assertInstanceEqual(instance, self.bulk_edit_data)
+
         def validate_redirect_to_job_result(self, response):
             # Get the last Bulk Edit Objects JobResult created
             job_result = JobResult.objects.filter(name="Bulk Edit Objects").first()

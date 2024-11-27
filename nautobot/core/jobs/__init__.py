@@ -360,12 +360,12 @@ class ImportObjects(Job):
 
 
 jobs = [
+    BulkEditObjects,
     ExportObjectList,
     GitRepositorySync,
     GitRepositoryDryRun,
     ImportObjects,
     LogsCleanup,
     RefreshDynamicGroupCaches,
-    BulkEditObjects,
 ]
 register_jobs(*jobs)

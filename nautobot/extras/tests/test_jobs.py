@@ -306,7 +306,7 @@ class JobTransactionTest(TransactionTestCase):
             content_type=job_ct.id,
             edit_all=False,
             filter_query_params={},
-            post_data={
+            form_data={
                 "pk": pk_list,
                 "description": job_description,
             },
@@ -349,7 +349,7 @@ class JobTransactionTest(TransactionTestCase):
             content_type=job_ct.id,
             edit_all=False,
             filter_query_params={},
-            post_data={
+            form_data={
                 "pk": pk_list,
                 "description": job_description,
             },

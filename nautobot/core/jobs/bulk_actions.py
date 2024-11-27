@@ -27,7 +27,7 @@ class BulkEditObjects(Job):
         model=ContentType,
         description="Type of objects to update",
     )
-    post_data = JSONVar(description="Data to update with i.e request.POST")
+    form_data = JSONVar(description="BulkEditForm data")
     edit_all = BooleanVar(description="Bulk Edit all object / all filtered objects", required=False)
     filter_query_params = JSONVar(label="Filter Query Params", required=False)
 
@@ -42,8 +42,13 @@ class BulkEditObjects(Job):
         with deferred_change_logging_for_bulk_operation():
             updated_objects_pk = []
             filterset_cls = get_filterset_for_model(model)
+
+            if filter_query_params and not filterset_cls:
+                self.logger.error(f"Filterset not found for {model}")
+                raise RunJobTaskFailed(f"Filter query provided but {model} do not have a filterset.")
+
             if edit_all:
-                if filterset_cls:
+                if filterset_cls and filter_query_params:
                     queryset = filterset_cls(filter_query_params).qs.restrict(self.user, "change")
                 else:
                     queryset = model.objects.restrict(self.user, "change")
@@ -59,7 +64,7 @@ class BulkEditObjects(Job):
             ]
 
             self.logger.debug(f"Performing update on {queryset.count()} {model._meta.verbose_name_plural}")
-            for obj in queryset:
+            for obj in queryset.iterator():
                 # Update standard fields. If a field is listed in _nullify, delete its value.
                 for name in standard_fields:
                     try:
@@ -121,7 +126,7 @@ class BulkEditObjects(Job):
             self.logger.error(msg)
         raise RunJobTaskFailed("Bulk Edit not fully successful, see logs")
 
-    def run(self, *, content_type, post_data, edit_all=False, filter_query_params=None):
+    def run(self, *, content_type, form_data, edit_all=False, filter_query_params=None):
         if not self.user.has_perm(f"{content_type.app_label}.change_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to update %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have change permissions on the requested content-type")
@@ -143,12 +148,12 @@ class BulkEditObjects(Job):
                 content_type.model,
             )
             raise
-        form = form_cls(model, post_data, edit_all=edit_all)
+        form = form_cls(model, form_data, edit_all=edit_all)
         restrict_form_fields(form, self.user)
 
         if form.is_valid():
             self.logger.debug("Form validation was successful")
-            nullified_fields = post_data.get("_nullify")
+            nullified_fields = form_data.get("_nullify")
             return self._process_valid_form(model, form, filter_query_params, edit_all, nullified_fields)
         else:
             self.logger.error(f"Form validation unsuccessful: {form.errors.as_json()}")

@@ -956,14 +956,14 @@ class BulkEditAndBulkDeleteModelMixin:
     def send_bulk_edit_objects_to_job(self, request, form, model):
         """Prepare and enqueue a bulk edit job."""
         job_model = Job.objects.get_for_class_path(BulkEditObjects.class_path)
-        post_data = normalize_querydict(request.POST, form)
+        form_data = normalize_querydict(request.POST, form)
         if filterset_class := lookup.get_filterset_for_model(model):
             filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
         else:
             filter_query_params = None
         job_form = BulkEditObjects.as_form(
             data={
-                "post_data": post_data,
+                "form_data": form_data,
                 "content_type": ContentType.objects.get_for_model(model),
                 "edit_all": request.POST.get("_all") is not None,
                 "filter_query_params": filter_query_params,

@@ -1,8 +1,11 @@
+import contextlib
 import json
 import logging
 import re
 
 from django import forms
+from django.core.exceptions import FieldDoesNotExist
+from django.db.models.fields.related import ManyToManyField
 from django.forms import formset_factory
 from django.urls import reverse
 import yaml
@@ -128,14 +131,20 @@ class BulkEditForm(forms.Form):
 
     def _save_m2m_fields(self, obj):
         """Save M2M fields"""
+        from nautobot.core.models.fields import TagsField  # Avoid circular dependency
+
         m2m_field_names = []
         # Handle M2M Save
         for key in self.cleaned_data.keys():
-            if key.startswith("add_"):
-                # If both add_<field_name> and remove<field_name> is in cleaned_data, then that field is an M2M field.
+            if key.startswith(("add_", "remove_")):
                 field_name = key.lstrip("add_")
-                if hasattr(obj, field_name) and f"remove_{field_name}" in self.cleaned_data:
-                    m2m_field_names.append(field_name)
+                if field_name in m2m_field_names:
+                    continue
+                with contextlib.suppress(FieldDoesNotExist):
+                    field = obj._meta.get_field(field_name)
+                    is_m2m_field = isinstance(field, (ManyToManyField, TagsField))
+                    if is_m2m_field:
+                        m2m_field_names.append(field_name)
 
         for field_name in m2m_field_names:
             m2m_field = getattr(obj, field_name)

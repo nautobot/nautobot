@@ -1445,7 +1445,7 @@ class RequiredRelationshipTestMixin:
             required_on="source",
         )
         relationship_o2o.validated_save()
-        vlan_group = VLANGroup.objects.first()
+        vlan_group = VLANGroup.objects.create(name="Test VLANGroup 1")
 
         tests_params = [
             # Required many-to-many:
@@ -1730,7 +1730,7 @@ class RequiredRelationshipTestMixin:
 class RelationshipJobTestCase(RequiredRelationshipTestMixin, TransactionTestCase):
     databases = ("default", "job_logs")
 
-    def create_job(self, pk_list, **extra_post_data):
+    def create_job(self, pk_list, **extra_form_data):
         """"""
         vlan_ct = ContentType.objects.get_for_model(VLAN)
         job_result = create_job_result_and_run_job(
@@ -1739,7 +1739,7 @@ class RelationshipJobTestCase(RequiredRelationshipTestMixin, TransactionTestCase
             content_type=vlan_ct.id,
             edit_all=False,
             filter_query_params={},
-            post_data={"pk": pk_list, **extra_post_data},
+            form_data={"pk": pk_list, **extra_form_data},
             username=self.user.username,
         )
         return job_result

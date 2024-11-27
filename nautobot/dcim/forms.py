@@ -878,7 +878,7 @@ class DeviceTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     device_family = DynamicModelChoiceField(queryset=DeviceFamily.objects.all(), required=False)
     software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
-    u_height = forms.IntegerField(required=False)
+    u_height = forms.IntegerField(required=False, min_value=0)
     is_full_depth = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect(), label="Is full depth")
     comments = CommentField(label="Comments", required=False)
 
@@ -5323,16 +5323,6 @@ class VirtualDeviceContextBulkEditForm(
         nullable_fields = [
             "tenant",
         ]
-
-    def post_save(self, obj):
-        if self.cleaned_data.get("add_interfaces", None):
-            obj.prefixes.add(*self.cleaned_data["add_interfaces"])
-        if self.cleaned_data.get("remove_interfaces", None):
-            obj.prefixes.remove(*self.cleaned_data["remove_interfaces"])
-        if self.cleaned_data.get("add_tags", None):
-            obj.tags.add(*self.cleaned_data["add_tags"])
-        if self.cleaned_data.get("remove_tags", None):
-            obj.tags.remove(*self.cleaned_data["remove_tags"])
 
 
 class VirtualDeviceContextFilterForm(
