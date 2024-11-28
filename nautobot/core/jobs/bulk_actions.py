@@ -22,10 +22,10 @@ class BulkDeleteObjects(Job):
 
     content_type = ObjectVar(
         model=ContentType,
-        description="Type of objects to import",
+        description="Type of objects to delete",
     )
     pk_list = JSONVar(description="PK List of objects to delete", required=False)
-    delete_all = BooleanVar(description="Bulk Delete all object / all filtered objects", required=False)
+    delete_all = BooleanVar(description="Delete all (filtered) objects instead of a list of PKs", required=False)
     filter_query_params = JSONVar(label="Filter Query Params", required=False)
 
     class Meta:
