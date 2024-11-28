@@ -1,0 +1,1 @@
+Fixed inability of ImageAttachment and DeviceType API endpoints to accept `multipart/form-data` file uploads.
