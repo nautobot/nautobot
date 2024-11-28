@@ -57,4 +57,6 @@ class ControllerTestCase(SeleniumTestCase):
         self.browser.find_by_xpath("//button[@name='_apply']", wait_time=5).click()
 
         job_result = JobResult.objects.filter(name="Bulk Edit Objects").first()
-        self.assertEqual(self.browser.url, self.live_server_url + reverse("extras:jobresult", args=[job_result.pk]))
+        self.assertEqual(
+            self.browser.url, self.live_server_url + reverse("extras:jobresult", args=[job_result.pk]) + "?tab=main"
+        )
