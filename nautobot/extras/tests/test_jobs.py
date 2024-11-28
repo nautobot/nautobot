@@ -618,7 +618,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertEqual(
             failed_job_result.status, JobResultStatusChoices.STATUS_FAILURE, msg="Duplicate singleton job didn't error."
         )
-        self.assertEqual(cache.get(job_class.singleton_cache_key, None))
+        self.assertEqual(cache.get(job_class.singleton_cache_key, None), None)
 
     def test_job_ignore_singleton(self):
         module = "singleton"
@@ -634,7 +634,7 @@ class JobTransactionTest(TransactionTestCase):
             JobResultStatusChoices.STATUS_SUCCESS,
             msg="Duplicate singleton job didn't succeed with _ignore_singleton_lock=True.",
         )
-        self.assertEqual(cache.get(job_class.singleton_cache_key, None))
+        self.assertEqual(cache.get(job_class.singleton_cache_key, None), None)
 
     @mock.patch("nautobot.extras.context_managers.enqueue_webhooks")
     def test_job_fires_webhooks(self, mock_enqueue_webhooks):

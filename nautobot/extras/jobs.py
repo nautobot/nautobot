@@ -191,7 +191,7 @@ class BaseJob:
             )
             raise RunJobTaskFailed(f"Job {self.job_model} is not enabled to be run!")
 
-        if self.job_model.is_singleton and not kwargs.get("_ignore_singleton_lock", False):
+        if self.job_model.is_singleton and not self.celery_kwargs.get("nautobot_job_ignore_singleton_lock", False):
             is_running = cache.get(self.singleton_cache_key)
             if is_running:
                 self.logger.error(
@@ -520,9 +520,13 @@ class BaseJob:
             label="Profile job execution",
             help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
         )
-        # It is not clear to me why pylint thinks that this is a constant, the comparison and form rendering
-        # works correctly.
-        if cls.is_singleton:  # pylint: disable=using-constant-test
+        # If the class already exists there may be overrides, so we have to check this.
+        try:
+            job_model = JobModel.objects.get(module_name=cls.__module__, job_class_name=cls.__name__)
+            is_singleton = job_model.is_singleton
+        except JobModel.DoesNotExist:
+            is_singleton = cls.is_singleton
+        if is_singleton:
             form.fields["_ignore_singleton_lock"] = forms.BooleanField(
                 required=False,
                 initial=False,

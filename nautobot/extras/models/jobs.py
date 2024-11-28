@@ -1331,6 +1331,7 @@ class ScheduledJob(BaseModel):
         profile=False,
         approval_required=False,
         task_queue=None,
+        ignore_singleton_lock=False,
         **job_kwargs,
     ):
         """
@@ -1351,6 +1352,7 @@ class ScheduledJob(BaseModel):
             profile (bool, optional): Flag indicating whether to profile the job. Defaults to False.
             approval_required (bool, optional): Flag indicating if approval is required. Defaults to False.
             task_queue (str, optional): The task queue for the job. Defaults to None, which will use the configured default celery queue.
+            ignore_singleton_lock (bool, optional): Flag indicating whether to ignore singleton locks. Defaults to False.
             **job_kwargs: Additional keyword arguments to pass to the job.
 
         Returns:
@@ -1369,6 +1371,7 @@ class ScheduledJob(BaseModel):
         celery_kwargs = {
             "nautobot_job_profile": profile,
             "queue": task_queue,
+            "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
         }
         if job_model.soft_time_limit > 0:
             celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
