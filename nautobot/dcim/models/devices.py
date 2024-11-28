@@ -725,22 +725,6 @@ class Device(PrimaryModel, ConfigContextModel):
                         }
                     )
 
-                # Validate rack space
-                rack_face = self.face if not self.device_type.is_full_depth else None
-                exclude_list = [self.pk] if self.present_in_database else []
-                available_units = self.rack.get_available_units(
-                    u_height=self.device_type.u_height,
-                    rack_face=rack_face,
-                    exclude=exclude_list,
-                )
-                if self.position and self.position not in available_units:
-                    raise ValidationError(
-                        {
-                            "position": f"U{self.position} is already occupied or does not have sufficient space to "
-                            f"accommodate this device type: {self.device_type} ({self.device_type.u_height}U)"
-                        }
-                    )
-
             except DeviceType.DoesNotExist:
                 pass
 
@@ -833,6 +817,26 @@ class Device(PrimaryModel, ConfigContextModel):
 
     def save(self, *args, **kwargs):
         is_new = not self.present_in_database
+
+        if self.rack and self.position:
+            # Validate rack space
+            rack_face = self.face if not self.device_type.is_full_depth else None
+            exclude_list = [self.pk] if self.present_in_database else []
+            available_units = self.rack.get_available_units(
+                u_height=self.device_type.u_height,
+                rack_face=rack_face,
+                exclude=exclude_list,
+            )
+
+            if any(
+                unit not in available_units for unit in range(self.position, self.position + self.device_type.u_height)
+            ):
+                raise ValidationError(
+                    {
+                        "position": f"U{self.position} is already occupied or does not have sufficient space to "
+                        f"accommodate this device type: {self.device_type} ({self.device_type.u_height}U)"
+                    }
+                )
 
         super().save(*args, **kwargs)
 
