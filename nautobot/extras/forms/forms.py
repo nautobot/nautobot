@@ -1137,12 +1137,9 @@ class JobBulkEditForm(NautobotBulkEditForm):
         model = Job
 
     def post_save(self, obj):
-        cleaned_data = self.cleaned_data
+        super().post_save(obj)
 
-        if self.cleaned_data.get("add_tags", None):
-            obj.tags.add(*self.cleaned_data["add_tags"])
-        if self.cleaned_data.get("remove_tags", None):
-            obj.tags.remove(*self.cleaned_data["remove_tags"])
+        cleaned_data = self.cleaned_data
 
         # Handle text related fields
         for overridable_field in JOB_OVERRIDABLE_FIELDS:
