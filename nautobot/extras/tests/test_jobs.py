@@ -707,7 +707,9 @@ class JobTransactionTest(TransactionTestCase):
         job_class, _ = get_job_class_and_model(module, name, "local")
         self.assertTrue(job_class.is_singleton)
         cache.set(job_class.singleton_cache_key, 1)
-        passed_job_result = create_job_result_and_run_job(module, name, _ignore_singleton_lock=True)
+        passed_job_result = create_job_result_and_run_job(
+            module, name, celery_kwargs={"nautobot_job_ignore_singleton_lock": True}
+        )
 
         self.assertEqual(
             passed_job_result.status,
