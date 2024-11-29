@@ -34,7 +34,6 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import (
     JobExecutionType,
-    JobQueueTypeChoices,
     JobResultStatusChoices,
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
@@ -1258,23 +1257,6 @@ class JobQueueTest(ModelTestCases.BaseModelTestCase):
 
     model = JobQueue
 
-    def test_context_and_secrets_group_not_allowed_on_job_queue_type_celery(self):
-        celery_job_queue = JobQueue.objects.filter(queue_type=JobQueueTypeChoices.TYPE_CELERY).first()
-        secrets_group = SecretsGroup.objects.create(name="Secrets Group 1")
-        celery_job_queue.secrets_group = secrets_group
-        with self.assertRaises(ValidationError) as cm:
-            celery_job_queue.validated_save()
-        self.assertIn(
-            f"Secrets groups are not allowed on job queues of type {JobQueueTypeChoices.TYPE_CELERY}", str(cm.exception)
-        )
-        celery_job_queue.secrets_group = None
-        celery_job_queue.context = "simple_token"
-        with self.assertRaises(ValidationError) as cm:
-            celery_job_queue.validated_save()
-        self.assertIn(
-            f"Context is not allowed on job queues of type {JobQueueTypeChoices.TYPE_CELERY}", str(cm.exception)
-        )
-
 
 class MetadataChoiceTest(ModelTestCases.BaseModelTestCase):
     model = MetadataChoice
@@ -2137,6 +2119,33 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             with time_machine.travel("2024-03-10 17:00 -0400"):
                 is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
                 self.assertTrue(is_due)
+
+    # TODO uncomment when we have a way to setup the NautobotDatabaseScheduler correctly
+    # @mock.patch("nautobot.extras.utils.run_kubernetes_job_and_return_job_result")
+    # def test_nautobot_database_scheduler_apply_async_method(self, mock_run_kubernetes_job_and_return_job_result):
+    #     jq = JobQueue.objects.create(name="kubernetes", queue_type=JobQueueTypeChoices.TYPE_KUBERNETES)
+    #     sj = ScheduledJob.objects.create(
+    #         name="Export Object List Hourly",
+    #         task="nautobot.core.jobs.ExportObjectList",
+    #         job_model=JobModel.objects.get(name="Export Object List"),
+    #         interval=JobExecutionType.TYPE_HOURLY,
+    #         user=User.objects.first(),
+    #         approval_required=False,
+    #         start_time=datetime.now(ZoneInfo("America/New_York")),
+    #         time_zone=ZoneInfo("America/New_York"),
+    #         job_queue=jq,
+    #         kwargs='{"content_type": 1}',
+    #     )
+    #     jr = JobResult.objects.create(
+    #         name=sj.job_model.name,
+    #         job_model=sj.job_model,
+    #         scheduled_job=sj,
+    #         user=sj.user,
+    #     )
+    #     mock_run_kubernetes_job_and_return_job_result.return_value = jr
+    #     entry = NautobotScheduleEntry(model=sj)
+    #     scheduler = NautobotDatabaseScheduler(app=entry.app)
+    #     scheduler.apply_async(entry=entry, producer=None, advance=False)
 
 
 class SecretTest(ModelTestCases.BaseModelTestCase):

@@ -6,6 +6,7 @@
 - [Getting Started](#getting-started)
 - [Core Concepts](#core-concepts)
 - [Panel Types](#panel-types)
+- [Button Types](#button-types)
 - [Complete Example](#complete-example)
 - [Layouts and Sections](#layouts-and-sections)
 - [Best Practices](#best-practices)
@@ -57,17 +58,21 @@ class ExampleUIViewSet(views.NautobotUIViewSet):
 
 ## Core Concepts
 
-### ViewSet Configuration
+### ObjectDetailContent Definition
 
-The UI Framework is built around the concept of configurable ViewSets. Each ViewSet defines:
+Each object detail view (whether based on a `NautobotUIViewSet` or a legacy `ObjectView`) that implements the UI Framework does so by defining an `object_detail_content` attribute which is an instance of the `ObjectDetailContent` class. This class automatically does a lot of the "heavy lifting" for you as a developer, but you'll generally want to configure it for your specific data model, usually by defining any of the following:
 
-- Query handling
-- Panel layouts
-- Content organization
+- Extra `Tab`s (beyond the default "main", "advanced", "contacts", etc. tabs that are automatically provided)
+- `Panel`s in the "main" tab or any extra tabs
+- Extra `Button`s to display at the top of the page (beyond the default "actions" dropdown)
+
+### Tabs
+
+A `Tab` is one of the major building blocks of your UI. The user can toggle between tabs, each of which displays distinct page content, typically consisting of one or more `Panel`s. Multiple tabs can be rendered in a single HTML response (for example, the "main" and "advanced" tabs are both part of the same page; toggling between them is a client-side action only and does not require Nautobot to reload or re-render the page), while to optimize performance, certain other tabs may correspond to distinct `View`s that are retrieved and rendered on request. The UI Framework supports both patterns.
 
 ### Panels
 
-Panels are the building blocks of your UI. They contain specific types of content and can be positioned within sections.
+`Panel`s are another of the major building blocks of your UI. They contain specific types of content and can be positioned within sections within a Tab.
 
 <!-- markdownlint-disable no-inline-html -->
 <div class="grid cards example-images" markdown>
@@ -76,6 +81,10 @@ Panels are the building blocks of your UI. They contain specific types of conten
 
 </div>
 <!-- markdownlint-enable no-inline-html -->
+
+### Buttons
+
+`Button`s are the third major building block for the UI. Defining `extra_buttons` on your `ObjectDetailContent` instance allows you to add buttons that appear at the top of the page, alongside the standard "actions" dropdown and any custom buttons added by Apps. These buttons may operate as simple hyperlinks, or may use JavaScript to provide more advanced functionality.
 
 ## Panel Types
 
@@ -345,7 +354,7 @@ TextPanel(
 
 ### DataTablePanel
 
-`DataTablePanel` is a Panel component that renders tabular data directly from a list of dictionaries, providing a lightweight alternative to django_tables2 Table classes.
+`DataTablePanel` is a Panel component that renders tabular data directly from a list of dictionaries, providing a lightweight alternative to `django_tables2` Table classes.
 
 [Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.DataTablePanel)
 
@@ -375,7 +384,7 @@ DataTablePanel(
 
 ### ObjectsTablePanel
 
-The `ObjectsTablePanel` is a powerful component for rendering tables of Django model objects, particularly suited for displaying related objects within a detail view. It integrates with django_tables2 and provides extensive customization options.
+The `ObjectsTablePanel` is a powerful component for rendering tables of Django model objects, particularly suited for displaying related objects within a detail view. It integrates with `django_tables2` and provides extensive customization options.
 
 #### Configuration Parameters
 
@@ -387,7 +396,7 @@ The `ObjectsTablePanel` is a powerful component for rendering tables of Django m
 |-----------|----------|---------|-------------|
 | `context_table_key` | No | `None` | Key for pre-configured table in render context |
 | `table_class` | No | `None` | Table class to instantiate (e.g., DeviceTable) |
-| `table_filter` | No | `None` | Filter name for queryset (e.g., 'location_type') |
+| `table_filter` | No | `None` | Filter name for queryset (e.g., `location_type`) |
 | `table_attribute` | No | `None` | Object attribute containing queryset |
 | `table_title` | No | Model's plural name | Title displayed in panel heading |
 
@@ -395,8 +404,8 @@ The `ObjectsTablePanel` is a powerful component for rendering tables of Django m
 
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
-| `select_related_fields` | No | `None` | Fields to include in select_related() |
-| `prefetch_related_fields` | No | `None` | Fields to include in prefetch_related() |
+| `select_related_fields` | No | `None` | Fields to include in `select_related()` |
+| `prefetch_related_fields` | No | `None` | Fields to include in `prefetch_related()` |
 | `order_by_fields` | No | `None` | Fields to order queryset by |
 | `max_display_count` | No | User preference | Maximum items to display |
 
@@ -449,6 +458,78 @@ ObjectsTablePanel(
     select_related_fields=["manufacturers", "locations"],
 )
 ```
+
+## Button Types
+
+### Button
+
+The Button component defines a single button in an object detail view.
+
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.Button)
+
+#### Button Examples
+
+```python
+class SecretUIViewSet(...):
+    ...
+    object_detail_content = ObjectDetailContent(
+        panels=[...],
+        extra_buttons=[
+            Button(
+                weight=100,
+                label="Check Secret",
+                icon="mdi-test-tube",
+                javascript_template_path="extras/secret_check.js",
+                attributes={"onClick": "checkSecret()"},
+            ),
+        ],
+    )
+```
+
+![Button Example](../../media/development/core/ui-component-framework/button-example.png)
+
+### DropdownButton
+
+`DropdownButton` is a subclass of `Button` that may itself contain other `Buttons` as its `children`, which it will render as a dropdown menu. For an example of usage, refer to the `Add Components` dropdown on the Device detail view.
+
+[Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.DropdownButton)
+
+#### DropdownButton Examples
+
+```python
+class DeviceView(generic.ObjectView):
+    ...
+    object_detail_content = ObjectDetailContent(
+        extra_buttons=[
+            object_detail.DropdownButton(
+                weight=100,
+                color=ButtonColorChoices.BLUE,
+                label="Add Components",
+                icon="mdi-plus-thick",
+                required_permissions=["dcim.change_device"],
+                children=(
+                    object_detail.Button(
+                        weight=100,
+                        link_name="dcim:device_consoleports_add",
+                        label="Console Ports",
+                        icon="mdi-console",
+                        required_permissions=["dcim.add_consoleport"],
+                    ),
+                    object_detail.Button(
+                        weight=200,
+                        link_name="dcim:device_consoleserverports_add",
+                        label="Console Server Ports",
+                        icon="mdi-console-network-outline",
+                        required_permissions=["dcim.add_consoleserverport"],
+                    ),
+                    ...
+                ),
+            ),
+        ],
+    )
+```
+
+![DropdownButton Example](../../media/development/core/ui-component-framework/dropdown-button-example.png)
 
 ## Complete Example
 
@@ -531,7 +612,7 @@ class LocationUIViewSet(views.NautobotUIViewSet):
 
 - Document custom transformations
 - Keep related model lists updated
-- Use meaningful body_id values
+- Use meaningful `body_id` values
 
 ## Troubleshooting
 

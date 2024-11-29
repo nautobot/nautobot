@@ -2,7 +2,6 @@ import logging
 from urllib.parse import parse_qs
 
 from celery import chain
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -45,6 +44,7 @@ from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
+    ObjectBulkCreateViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
     ObjectChangeLogViewMixin,
@@ -52,6 +52,7 @@ from nautobot.core.views.mixins import (
     ObjectDetailViewMixin,
     ObjectEditViewMixin,
     ObjectListViewMixin,
+    ObjectNotesViewMixin,
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
@@ -66,7 +67,6 @@ from nautobot.dcim.tables import (
     RackTable,
     VirtualDeviceContextTable,
 )
-from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.signals import change_context_state
 from nautobot.extras.tasks import delete_custom_field_data
@@ -1537,55 +1537,6 @@ class JobBulkEditView(generic.BulkEditView):
     form = forms.JobBulkEditForm
     template_name = "extras/job_bulk_edit.html"
 
-    def extra_post_save_action(self, obj, form):
-        cleaned_data = form.cleaned_data
-
-        # Handle text related fields
-        for overridable_field in JOB_OVERRIDABLE_FIELDS:
-            override_field = overridable_field + "_override"
-            clear_override_field = "clear_" + overridable_field + "_override"
-            reset_override = cleaned_data.get(clear_override_field, False)
-            override_value = cleaned_data.get(overridable_field)
-            if reset_override:
-                setattr(obj, override_field, False)
-            elif not reset_override and override_value not in [None, ""]:
-                setattr(obj, override_field, True)
-                setattr(obj, overridable_field, override_value)
-
-        # Handle job queues
-        clear_override_field = "clear_job_queues_override"
-        reset_override = cleaned_data.get(clear_override_field, False)
-        if reset_override:
-            meta_task_queues = obj.job_class.task_queues
-            job_queues = []
-            for queue_name in meta_task_queues:
-                try:
-                    job_queues.append(JobQueue.objects.get(name=queue_name))
-                except JobQueue.DoesNotExist:
-                    # Do we want to create the Job Queue for the users here if we do not have it in the database?
-                    pass
-            obj.job_queues_override = False
-            obj.job_queues.set(job_queues)
-        else:
-            obj.job_queues_override = True
-            obj.job_queues.set(cleaned_data["job_queues"])
-
-        # Handle default job queue
-        clear_override_field = "clear_default_job_queue_override"
-        reset_override = cleaned_data.get(clear_override_field, False)
-        if reset_override:
-            meta_task_queues = obj.job_class.task_queues
-            job_queues = []
-            obj.default_job_queue_override = False
-            obj.default_job_queue, _ = JobQueue.objects.get_or_create(
-                name=meta_task_queues[0] if meta_task_queues else settings.CELERY_TASK_DEFAULT_QUEUE
-            )
-        else:
-            obj.default_job_queue_override = True
-            obj.default_job_queue = cleaned_data["default_job_queue"]
-
-        obj.validated_save()
-
 
 class JobDeleteView(generic.ObjectDeleteView):
     queryset = JobModel.objects.all()
@@ -2598,38 +2549,56 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
 #
 
 
-class SecretListView(generic.ObjectListView):
+class SecretUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkCreateViewMixin,  # 3.0 TODO: remove, unused
+    ObjectBulkDestroyViewMixin,
+    # no ObjectBulkUpdateViewMixin here yet
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
+):
     queryset = Secret.objects.all()
-    filterset = filters.SecretFilterSet
-    filterset_form = forms.SecretFilterForm
-    table = tables.SecretTable
+    form_class = forms.SecretForm
+    filterset_class = filters.SecretFilterSet
+    filterset_form_class = forms.SecretFilterForm
+    table_class = tables.SecretTable
 
-
-class SecretView(generic.ObjectView):
-    queryset = Secret.objects.all()
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                weight=100, section=SectionChoices.LEFT_HALF, fields="__all__", exclude_fields=["parameters"]
+            ),
+            object_detail.KeyValueTablePanel(
+                weight=200, section=SectionChoices.LEFT_HALF, label="Parameters", context_data_key="parameters"
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_title="Groups containing this secret",
+                table_class=tables.SecretsGroupTable,
+                table_attribute="secrets_groups",
+                footer_content_template_path=None,
+            ),
+        ],
+        extra_buttons=[
+            object_detail.Button(
+                weight=100,
+                label="Check Secret",
+                icon="mdi-test-tube",
+                javascript_template_path="extras/secret_check.js",
+                attributes={"onClick": "checkSecret()"},
+            ),
+        ],
+    )
 
     def get_extra_context(self, request, instance):
-        # Determine user's preferred output format
-        if request.GET.get("format") in ["json", "yaml"]:
-            format_ = request.GET.get("format")
-            if request.user.is_authenticated:
-                request.user.set_config("extras.configcontext.format", format_, commit=True)
-        elif request.user.is_authenticated:
-            format_ = request.user.get_config("extras.configcontext.format", "json")
-        else:
-            format_ = "json"
-
-        provider = registry["secrets_providers"].get(instance.provider)
-
-        groups = instance.secrets_groups.distinct()
-        groups_table = tables.SecretsGroupTable(groups, orderable=False)
-
-        return {
-            "format": format_,
-            "provider_name": provider.name if provider else instance.provider,
-            "groups_table": groups_table,
-            **super().get_extra_context(request, instance),
-        }
+        ctx = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            ctx["parameters"] = instance.parameters
+        return ctx
 
 
 class SecretProviderParametersFormView(generic.GenericView):
@@ -2646,27 +2615,6 @@ class SecretProviderParametersFormView(generic.GenericView):
             "extras/inc/secret_provider_parameters_form.html",
             {"form": provider.ParametersForm(initial=request.GET)},
         )
-
-
-class SecretEditView(generic.ObjectEditView):
-    queryset = Secret.objects.all()
-    model_form = forms.SecretForm
-    template_name = "extras/secret_edit.html"
-
-
-class SecretDeleteView(generic.ObjectDeleteView):
-    queryset = Secret.objects.all()
-
-
-class SecretBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Secret.objects.all()
-    table = tables.SecretTable
-
-
-class SecretBulkDeleteView(generic.BulkDeleteView):
-    queryset = Secret.objects.all()
-    filterset = filters.SecretFilterSet
-    table = tables.SecretTable
 
 
 class SecretsGroupListView(generic.ObjectListView):

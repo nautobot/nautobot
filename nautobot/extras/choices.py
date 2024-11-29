@@ -305,6 +305,7 @@ class LogLevelChoices(ChoiceSet):
     LOG_WARNING = "warning"
     LOG_ERROR = "error"
     LOG_CRITICAL = "critical"
+    LOG_SUCCESS = "success"
 
     CHOICES = (
         (LOG_DEBUG, "Debug"),
@@ -312,6 +313,7 @@ class LogLevelChoices(ChoiceSet):
         (LOG_WARNING, "Warning"),
         (LOG_ERROR, "Error"),
         (LOG_CRITICAL, "Critical"),
+        (LOG_SUCCESS, "Success"),
     )
 
     CSS_CLASSES = {
@@ -320,6 +322,7 @@ class LogLevelChoices(ChoiceSet):
         LOG_WARNING: "warning",
         LOG_ERROR: "error",
         LOG_CRITICAL: "critical",
+        LOG_SUCCESS: "success",
     }
 
 

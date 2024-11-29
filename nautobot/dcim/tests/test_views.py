@@ -116,6 +116,7 @@ from nautobot.extras.models import (
     CustomField,
     CustomFieldChoice,
     ExternalIntegration,
+    JobResult,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -1150,9 +1151,15 @@ module-bays:
         }
 
         response = self.client.post(url, data)
+        job_result = JobResult.objects.filter(name="Bulk Edit Objects").first()
+        # Assert successfull redirect to Job Results; whcih means no form validation error was raised
+        self.assertRedirects(
+            response,
+            reverse("extras:jobresult", args=[job_result.pk]),
+            status_code=302,
+            target_status_code=200,
+        )
         self.assertHttpStatus(response, 302)
-        for instance in self._get_queryset().filter(pk__in=pk_list):
-            self.assertEqual(instance.u_height, data["u_height"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_rack_height_bulk_edit_invalid(self):
@@ -1168,7 +1175,12 @@ module-bays:
         }
 
         response = self.client.post(url, data)
-        self.assertBodyContains(response, "failed validation")
+        response_content = response.content.decode(response.charset)
+        self.assertHttpStatus(response, 200)
+        self.assertInHTML(
+            '<strong class="panel-title">U height</strong>: <ul class="errorlist"><li>Ensure this value is greater than or equal to 0.</li></ul>',
+            response_content,
+        )
 
 
 class ModuleTypeTestCase(
@@ -2224,6 +2236,24 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_vdc_panel_includes_add_vdc_btn(self):
+        """Assert Add Virtual device Contexts button is in Device detail view: Issue from #6348"""
+        device = Device.objects.first()
+        url = reverse("dcim:device", kwargs={"pk": device.pk})
+        response = self.client.get(url)
+        response_body = extract_page_body(response.content.decode(response.charset))
+
+        add_vdc_url = reverse("dcim:virtualdevicecontext_add")
+        return_url = device.get_absolute_url()
+        expected_add_vdc_button_html = f"""
+        <a href="{add_vdc_url}?device={device.id}&amp;return_url={return_url}" class="btn btn-primary btn-xs">
+            <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add virtual device context
+        </a>
+        """
+        self.assertInHTML(expected_add_vdc_button_html, response_body)
+        self.assertIn("Add virtual device context", response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_consoleports(self):
         device = Device.objects.first()
 
@@ -3126,6 +3156,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "status": status_active.pk,
             "role": role.pk,
             "vrf": vrfs[0].pk,
+            "virtual_device_contexts": [v.pk for v in vdcs],
         }
 
         cls.bulk_add_data = {
@@ -4753,6 +4784,12 @@ class VirtualDeviceContextTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": tenants[0].pk,
             "interfaces": [interface.pk for interface in devices[0].all_interfaces[:3]],
             "description": "Sample Description",
+        }
+
+        cls.update_data = {
+            "name": "Virtual Device Context 3",
+            "tenant": tenants[3].pk,
+            "status": vdc_status.pk,
         }
 
         cls.bulk_edit_data = {

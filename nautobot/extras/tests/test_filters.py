@@ -929,35 +929,24 @@ class JobQueueFilterSetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.
     tenancy_related_name = "job_queues"
     generic_filter_tests = [
         ["name"],
-        ["context"],
-        ["secrets_group", "secrets_group__id"],
-        ["secrets_group", "secrets_group__name"],
     ]
 
     @classmethod
     def setUpTestData(cls):
         # create some job queues that do not have jobs attached to them
         # for has_jobs boolean filter
-        secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 1"),
-            SecretsGroup.objects.create(name="Secrets Group 2"),
-            SecretsGroup.objects.create(name="Secrets Group 3"),
-        )
         JobQueue.objects.create(
-            name="Empty Job Queue 1", queue_type=JobQueueTypeChoices.TYPE_KUBERNETES, secrets_group=secrets_groups[0]
+            name="Empty Job Queue 1",
+            queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
         )
         JobQueue.objects.create(name="Empty Job Queue 2", queue_type=JobQueueTypeChoices.TYPE_CELERY)
         JobQueue.objects.create(
             name="Empty Job Queue 3",
             queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
-            secrets_group=secrets_groups[1],
-            context="simple_token",
         )
         JobQueue.objects.create(
             name="Empty Job Queue 4",
             queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
-            secrets_group=secrets_groups[2],
-            context="ssl",
         )
 
     def test_queue_type(self):

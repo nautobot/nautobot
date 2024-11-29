@@ -1481,6 +1481,13 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
         null=True,
         help_text="List of capabilities supported by the controller device group, these capabilities are used to enhance views in Nautobot.",
     )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="controller_managed_device_groups",
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         ordering = ("weight",)
@@ -1980,6 +1987,12 @@ class VirtualDeviceContext(PrimaryModel):
     def clean(self):
         super().clean()
         self.validate_primary_ips()
+
+        # Validate that device is not being modified
+        if self.present_in_database:
+            vdc = VirtualDeviceContext.objects.get(id=self.id)
+            if vdc.device != self.device:
+                raise ValidationError({"device": "Virtual Device Context's device cannot be changed once created"})
 
 
 @extras_features(

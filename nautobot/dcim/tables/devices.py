@@ -174,7 +174,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     device_redundancy_group_priority = tables.TemplateColumn(
         template_code="""{% if record.device_redundancy_group %}<span class="badge badge-default">{{ record.device_redundancy_group_priority|default:'None' }}</span>{% else %}—{% endif %}"""
     )
-    controller_managed_device_group = tables.Column(linkify=True)
+    controller_managed_device_group = tables.Column(linkify=True, verbose_name="Device Group")
     software_version = tables.Column(linkify=True, verbose_name="Software Version")
     secrets_group = tables.Column(linkify=True)
     capabilities = tables.Column(orderable=False, accessor="controller_managed_device_group.capabilities")
@@ -230,13 +230,11 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
         return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
-class DeviceImportTable(BaseTable):
+class DeviceImportTable(StatusTableMixin, RoleTableMixin, BaseTable):
     name = tables.TemplateColumn(template_code=DEVICE_LINK)
-    status = ColoredLabelColumn()
     tenant = TenantColumn()
     location = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
-    role = tables.Column(verbose_name="Role")
     device_type = tables.Column(verbose_name="Type")
 
     class Meta(BaseTable.Meta):
@@ -1351,15 +1349,13 @@ class SoftwareVersionTable(StatusTableMixin, BaseTable):
         )
 
 
-class ControllerTable(BaseTable):
+class ControllerTable(StatusTableMixin, RoleTableMixin, BaseTable):
     """Table for list view."""
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    status = ColoredLabelColumn()
     location = tables.Column(linkify=True)
     platform = tables.Column(linkify=True)
-    role = tables.Column(linkify=True)
     tenant = TenantColumn()
     capabilities = tables.Column()
     external_integration = tables.Column(linkify=True)
@@ -1413,6 +1409,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
     name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
     weight = tables.Column()
     controller = tables.Column(linkify=True)
+    tenant = TenantColumn()
     capabilities = tables.Column()
     tags = TagColumn(url_name="dcim:controllermanageddevicegroup_list")
     actions = ButtonsColumn(ControllerManagedDeviceGroup)
@@ -1444,6 +1441,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "wireless_networks_count",
             "controller",
             "weight",
+            "tenant",
             "capabilities",
             "tags",
             "actions",
@@ -1468,10 +1466,9 @@ class ControllerManagedDeviceGroupTable(BaseTable):
         return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
 
 
-class VirtualDeviceContextTable(StatusTableMixin, BaseTable):
+class VirtualDeviceContextTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    role = tables.Column(linkify=True)
     tenant = TenantColumn()
     device = tables.Column(linkify=True)
     primary_ip = tables.Column(linkify=True, order_by=("primary_ip6", "primary_ip4"), verbose_name="IP Address")

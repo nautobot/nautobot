@@ -1147,6 +1147,54 @@ class JobBulkEditForm(NautobotBulkEditForm):
     class Meta:
         model = Job
 
+    def post_save(self, obj):
+        super().post_save(obj)
+
+        cleaned_data = self.cleaned_data
+
+        # Handle text related fields
+        for overridable_field in JOB_OVERRIDABLE_FIELDS:
+            override_field = overridable_field + "_override"
+            clear_override_field = "clear_" + overridable_field + "_override"
+            reset_override = cleaned_data.get(clear_override_field, False)
+            override_value = cleaned_data.get(overridable_field)
+            if reset_override:
+                setattr(obj, override_field, False)
+            elif not reset_override and override_value not in [None, ""]:
+                setattr(obj, override_field, True)
+                setattr(obj, overridable_field, override_value)
+
+        # Handle job queues
+        clear_override_field = "clear_job_queues_override"
+        reset_override = cleaned_data.get(clear_override_field, False)
+        if reset_override:
+            meta_task_queues = obj.job_class.task_queues
+            job_queues = []
+            for queue_name in meta_task_queues:
+                try:
+                    job_queues.append(JobQueue.objects.get(name=queue_name))
+                except JobQueue.DoesNotExist:
+                    # Do we want to create the Job Queue for the users here if we do not have it in the database?
+                    pass
+            obj.job_queues_override = False
+            obj.job_queues.set(job_queues)
+        elif cleaned_data["job_queues"]:
+            obj.job_queues_override = True
+
+        # Handle default job queue
+        clear_override_field = "clear_default_job_queue_override"
+        reset_override = cleaned_data.get(clear_override_field, False)
+        if reset_override:
+            meta_task_queues = obj.job_class.task_queues
+            obj.default_job_queue_override = False
+            obj.default_job_queue, _ = JobQueue.objects.get_or_create(
+                name=meta_task_queues[0] if meta_task_queues else settings.CELERY_TASK_DEFAULT_QUEUE
+            )
+        elif cleaned_data["default_job_queue"]:
+            obj.default_job_queue_override = True
+
+        obj.validated_save()
+
 
 class JobFilterForm(BootstrapMixin, forms.Form):
     model = Job
@@ -1257,11 +1305,6 @@ class JobQueueBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         queryset=Tenant.objects.all(),
         required=False,
     )
-    secrets_group = DynamicModelChoiceField(
-        queryset=SecretsGroup.objects.all(),
-        required=False,
-    )
-    context = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
     description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
 
     class Meta:
@@ -1283,10 +1326,6 @@ class JobQueueFilterForm(NautobotFilterForm):
         required=False,
         widget=StaticSelect2Multiple(),
     )
-    context = forms.CharField(required=False)
-    secrets_group = DynamicModelMultipleChoiceField(
-        queryset=SecretsGroup.objects.all(), to_field_name="name", required=False
-    )
     tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="name", required=False)
     tags = TagFilterField(model)
 
@@ -1301,17 +1340,12 @@ class JobQueueForm(NautobotModelForm):
         queryset=Tenant.objects.all(),
         required=False,
     )
-    context = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
-    secrets_group = DynamicModelChoiceField(
-        queryset=SecretsGroup.objects.all(),
-        required=False,
-    )
     description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
     tags = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
     class Meta:
         model = JobQueue
-        fields = ("name", "queue_type", "context", "description", "secrets_group", "tenant", "tags")
+        fields = ("name", "queue_type", "description", "tenant", "tags")
 
 
 class JobScheduleForm(BootstrapMixin, forms.Form):

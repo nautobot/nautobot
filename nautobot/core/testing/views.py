@@ -24,6 +24,7 @@ from nautobot.core.utils import lookup
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
 from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
 from nautobot.extras.models import CustomFieldModel, RelationshipModel
+from nautobot.extras.models.jobs import JobResult
 from nautobot.extras.models.mixins import NotesMixin
 from nautobot.ipam.models import Prefix
 from nautobot.users import models as users_models
@@ -1019,6 +1020,17 @@ class ViewTestCases:
             for instance in self._get_queryset().filter(pk__in=pk_list):
                 self.assertInstanceEqual(instance, self.bulk_edit_data)
 
+        def validate_redirect_to_job_result(self, response):
+            # Get the last Bulk Edit Objects JobResult created
+            job_result = JobResult.objects.filter(name="Bulk Edit Objects").first()
+            # Assert redirect to Job Results
+            self.assertRedirects(
+                response,
+                reverse("extras:jobresult", args=[job_result.pk]),
+                status_code=302,
+                target_status_code=200,
+            )
+
         def test_bulk_edit_objects_without_permission(self):
             pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
             data = {
@@ -1044,9 +1056,8 @@ class ViewTestCases:
             # Assign model-level permission
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
-            # Try POST with model-level permission
-            self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 302)
-            self.validate_object_data_after_bulk_edit(pk_list)
+            response = self.client.post(self._get_url("bulk_edit"), data)
+            self.validate_redirect_to_job_result(response)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_edit_form_contains_all_pks(self):
@@ -1071,7 +1082,7 @@ class ViewTestCases:
             for pk in pk_list:
                 self.assertNotIn(str(pk), response_body)
             self.assertInHTML(
-                '<input type="hidden" name="_all" value="True" class="form-control" required="required" placeholder="None" id="id__all">',
+                '<input type="hidden" name="_all" value="True" class="form-control" placeholder="None" id="id__all">',
                 response_body,
             )
 
@@ -1107,7 +1118,7 @@ class ViewTestCases:
             self.assertNotIn(str(third_pk), response_body)
             self.assertIn("Editing 2 ", response_body)
             self.assertInHTML(
-                '<input type="hidden" name="_all" value="True" class="form-control" required="required" placeholder="None" id="id__all">',
+                '<input type="hidden" name="_all" value="True" class="form-control" placeholder="None" id="id__all">',
                 response_body,
             )
 
@@ -1147,21 +1158,9 @@ class ViewTestCases:
 
             # Attempt to bulk edit permitted objects into a non-permitted state
             response = self.client.post(self._get_url("bulk_edit"), data)
-            # 200 because we're sent back to the edit form to try again; if the update were successful it'd be a 302
-            self.assertHttpStatus(response, 200)
-            # Assert that the objects are NOT updated
-            for instance in self._get_queryset().filter(pk__in=pk_list):
-                self.assertIn(field.value_from_object(instance), values)
-                self.assertNotEqual(field.value_from_object(instance), self.bulk_edit_data[attr_name])
-
-            # Update permission constraints to permit all objects
-            obj_perm.constraints = {"pk__gt": 0}
-            obj_perm.save()
-
-            # Bulk edit permitted objects and expect a redirect back to the list view
-            self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 302)
-            # Assert that the objects were all updated correctly
-            self.validate_object_data_after_bulk_edit(pk_list)
+            # NOTE: There is no way of testing constrained failure as bulk edit is a system Job;
+            # and can only be tested by checking JobLogs.
+            self.validate_redirect_to_job_result(response)
 
     class BulkDeleteObjectsViewTestCase(ModelViewTestCase):
         """

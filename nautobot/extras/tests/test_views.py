@@ -25,7 +25,6 @@ from nautobot.core.testing.utils import disable_warnings, get_deletable_objects,
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
     ConsolePort,
-    Controller,
     Device,
     DeviceType,
     Interface,
@@ -33,7 +32,6 @@ from nautobot.dcim.models import (
     LocationType,
     Manufacturer,
 )
-from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     DynamicGroupTypeChoices,
@@ -88,10 +86,9 @@ from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
-from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -2206,13 +2203,10 @@ class JobQueueTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": Tenant.objects.first().pk,
             "tags": [t.pk for t in Tag.objects.get_for_model(JobQueue)],
         }
-        secrets_group = SecretsGroup.objects.create(name="Secrets Group 1")
         cls.bulk_edit_data = {
             "queue_type": JobQueueTypeChoices.TYPE_KUBERNETES,
             "description": "This is a very detailed new description",
             "tenant": Tenant.objects.last().pk,
-            "secrets_group": secrets_group.pk,
-            "context": "simple_token",
             # TODO add tests for add_tags/remove_tags fields in TagsBulkEditFormMixin
         }
 
@@ -3236,94 +3230,6 @@ class RelationshipTestCase(
         }
 
         cls.slug_test_object = "Primary Interface"
-
-    def test_required_relationships(self):
-        """
-        1. Try creating an object when no required target object exists
-        2. Try creating an object without specifying required target object(s)
-        3. Try creating an object when all required data is present
-        4. Test bulk edit
-        """
-
-        # Delete existing factory generated objects that may interfere with this test
-        IPAddress.objects.all().delete()
-        Prefix.objects.update(parent=None)
-        Prefix.objects.all().delete()
-        ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.all().delete()
-        VLAN.objects.all().delete()
-
-        # Parameterized tests (for creating and updating single objects):
-        self.required_relationships_test(interact_with="ui")
-
-        # 4. Bulk create/edit tests:
-
-        vlan_status = Status.objects.get_for_model(VLAN).first()
-        vlans = (
-            VLAN.objects.create(name="test_required_relationships1", vid=1, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships2", vid=2, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships3", vid=3, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships4", vid=4, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships5", vid=5, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships6", vid=6, status=vlan_status),
-        )
-
-        # Try deleting all devices and then editing the 6 VLANs (fails):
-        Controller.objects.filter(controller_device__isnull=False).delete()
-        Device.objects.all().delete()
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans], "_apply": [""]}
-        )
-        self.assertContains(response, "VLANs require at least one device, but no devices exist yet.")
-
-        # Create test device for association
-        device_for_association = test_views.create_test_device("VLAN Required Device")
-
-        # Try editing all 6 VLANs without adding the required device(fails):
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans], "_apply": [""]}
-        )
-        self.assertContains(
-            response,
-            "6 VLANs require a device for the required relationship &quot;VLANs require at least one Device&quot;",
-        )
-
-        # Try editing 3 VLANs without adding the required device(fails):
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans[:3]], "_apply": [""]}
-        )
-        self.assertContains(
-            response,
-            "These VLANs require a device for the required "
-            "relationship &quot;VLANs require at least one Device&quot;",
-        )
-        for vlan in vlans[:3]:
-            self.assertContains(response, str(vlan))
-
-        # Try editing 6 VLANs and adding the required device (succeeds):
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"),
-            data={
-                "pk": [str(vlan.id) for vlan in vlans],
-                "add_cr_vlans_devices_m2m__source": [str(device_for_association.id)],
-                "_apply": [""],
-            },
-            follow=True,
-        )
-        self.assertContains(response, "Updated 6 VLANs")
-
-        # Try editing 6 VLANs and removing the required device (fails):
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"),
-            data={
-                "pk": [str(vlan.id) for vlan in vlans],
-                "remove_cr_vlans_devices_m2m__source": [str(device_for_association.id)],
-                "_apply": [""],
-            },
-        )
-        self.assertContains(
-            response,
-            "6 VLANs require a device for the required relationship &quot;VLANs require at least one Device&quot;",
-        )
 
 
 class RelationshipAssociationTestCase(

@@ -2,22 +2,25 @@
 
 ## Extending Object Detail Views
 
-Apps can inject custom content into certain areas of the detail and list views of applicable models. This is accomplished by subclassing `TemplateExtension`, designating a particular Nautobot model, and defining the desired attributes and/or methods to provide custom content. Two attributes and six methods are available:
+Apps can inject custom content into certain areas of the detail and list views of applicable models. This is accomplished by subclassing `TemplateExtension`, designating a particular Nautobot model, and defining the desired attributes and/or methods to provide custom content. Several attributes and methods are available:
 
 * `object_detail_tabs` - List of `Tab` instances to add to the detail view as additional tabs.
+* `object_detail_buttons` - List of `Button` instances to add to the detail view.
 * `object_detail_panels` - List of `Panel` instances to add to the main tab of the detail view.
 * `left_page()` - Inject content on the left side of the object detail page (deprecated since Nautobot 2.4.0; `object_detail_panels` is preferred)
 * `right_page()` - Inject content on the right side of the object detail page (deprecated since Nautobot 2.4.0; `object_detail_panels` is preferred)
 * `full_width_page()` - Inject content across the entire bottom of the object detail page (deprecated since Nautobot 2.4.0; `object_detail_panels` is preferred)
-* `buttons()` - Add buttons to the top of the object detail page
+* `buttons()` - Add buttons to the top of the object detail page (deprecated since Nautobot 2.4.0; `object_detail_buttons` is preferred)
 * `list_buttons()` - Add buttons to the object list page. This works in the same way as `buttons()` for the object detail page.
 * `detail_tabs()` - Add extra tabs to the end of the list of tabs within the object detail page tabs navigation (deprecated since Nautobot 2.4.0; `object_detail_tabs` is preferred)
 
 +++ 2.1.8 "`list_buttons()` support"
     Support for the `list_buttons()` method was added.
 
-+/- 2.4.0 "`object_detail_tabs` and `object_detail_panels` support, deprecation of some patterns"
-    Support for the `object_detail_tabs` and `object_detail_panels` attributes was added. The `left_page()`, `right_page()`, `full_width_page()`, and `detail_tabs()` methods were deprecated.
++/- 2.4.0 "`object_detail_tabs`, `object_detail_buttons`, `object_detail_panels` support, deprecation of some patterns"
+    Support for the `object_detail_tabs`, `object_detail_buttons`, and `object_detail_panels` attributes was added. The `detail_tabs()`, `buttons()`, `left_page()`, `right_page()`, and `full_width_page()` methods were deprecated.
+
+For details about the `Tab`, `Button`, and `Panel` classes and their subclasses, refer to the [relevant section of documentation](../../../../code-reference/nautobot/apps/ui.md) for full details. You may also find the [UI Component Framework documentation](../../../core/ui-component-framework.md) a useful reference as most of the concepts described therein apply to template extensions as well.
 
 Declared subclasses should be gathered into a list or tuple for integration with Nautobot. By default, Nautobot looks for an iterable named `template_extensions` within a `template_content.py` file. (This can be overridden by setting `template_extensions` to a custom value on the app's `NautobotAppConfig`.)
 

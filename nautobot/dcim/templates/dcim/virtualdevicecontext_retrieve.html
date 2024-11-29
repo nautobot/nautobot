@@ -54,15 +54,7 @@
                     {{ object.primary_ip6|hyperlinked_object }}
                 </td>
             </tr>
-            <tr>
-                <td>Tenant</td>
-                <td>
-                    {% if object.tenant and object.tenant.tenant_group %}
-                        {{ object.tenant.tenant_group|hyperlinked_object }} /
-                    {% endif %}
-                    {{ object.tenant|hyperlinked_object }}
-                </td>
-            </tr>
+            {% include 'inc/tenant_table_row.html' %}
             <tr>
                 <td>Description</td>
                 <td>{{ object.description|placeholder }}</td>
