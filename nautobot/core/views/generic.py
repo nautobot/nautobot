@@ -8,12 +8,11 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
-    FieldDoesNotExist,
     ObjectDoesNotExist,
     ValidationError,
 )
 from django.db import IntegrityError, transaction
-from django.db.models import ManyToManyField, ProtectedError, Q
+from django.db.models import ProtectedError, Q
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -47,7 +46,7 @@ from nautobot.core.utils.requests import (
     get_filterable_params_from_filter_params,
     normalize_querydict,
 )
-from nautobot.core.views.mixins import EditAndDeleteAllModelMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.core.views.mixins import BulkEditAndBulkDeleteModelMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
     check_filter_for_display,
@@ -58,9 +57,8 @@ from nautobot.core.views.utils import (
     prepare_cloned_fields,
     view_changes_not_saved,
 )
-from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
-from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
+from nautobot.extras.utils import bulk_delete_with_bulk_change_logging
 
 
 class GenericView(LoginRequiredMixin, View):
@@ -982,7 +980,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  #
         )
 
 
-class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDeleteAllModelMixin, View):
+class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAndBulkDeleteModelMixin, View):
     """
     Edit objects in bulk.
 
@@ -1032,93 +1030,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDele
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
-                form_custom_fields = getattr(form, "custom_fields", [])
-                form_relationships = getattr(form, "relationships", [])
-                standard_fields = [
-                    field
-                    for field in form.fields
-                    if field not in form_custom_fields + form_relationships + ["pk"] + ["object_note"]
-                ]
-                nullified_fields = request.POST.getlist("_nullify")
-
-                try:
-                    with deferred_change_logging_for_bulk_operation():
-                        updated_objects = []
-                        queryset = queryset if edit_all else queryset.filter(pk__in=form.cleaned_data["pk"])
-                        for obj in queryset:
-                            obj = self.alter_obj(obj, request, [], kwargs)
-
-                            # Update standard fields. If a field is listed in _nullify, delete its value.
-                            for name in standard_fields:
-                                try:
-                                    model_field = model._meta.get_field(name)
-                                except FieldDoesNotExist:
-                                    # This form field is used to modify a field rather than set its value directly
-                                    model_field = None
-
-                                # Handle nullification
-                                if name in form.nullable_fields and name in nullified_fields:
-                                    if isinstance(model_field, ManyToManyField):
-                                        getattr(obj, name).set([])
-                                    else:
-                                        setattr(obj, name, None if model_field is not None and model_field.null else "")
-
-                                # ManyToManyFields
-                                elif isinstance(model_field, ManyToManyField):
-                                    if form.cleaned_data[name]:
-                                        getattr(obj, name).set(form.cleaned_data[name])
-                                # Normal fields
-                                elif form.cleaned_data[name] not in (None, ""):
-                                    setattr(obj, name, form.cleaned_data[name])
-
-                            # Update custom fields
-                            for field_name in form_custom_fields:
-                                if field_name in form.nullable_fields and field_name in nullified_fields:
-                                    obj.cf[remove_prefix_from_cf_key(field_name)] = None
-                                elif form.cleaned_data.get(field_name) not in (None, "", []):
-                                    obj.cf[remove_prefix_from_cf_key(field_name)] = form.cleaned_data[field_name]
-
-                            obj.full_clean()
-                            obj.save()
-                            updated_objects.append(obj)
-                            logger.debug(f"Saved {obj} (PK: {obj.pk})")
-
-                            # Add/remove tags
-                            if form.cleaned_data.get("add_tags", None):
-                                obj.tags.add(*form.cleaned_data["add_tags"])
-                            if form.cleaned_data.get("remove_tags", None):
-                                obj.tags.remove(*form.cleaned_data["remove_tags"])
-
-                            if hasattr(form, "save_relationships") and callable(form.save_relationships):
-                                # Add/remove relationship associations
-                                form.save_relationships(instance=obj, nullified_fields=nullified_fields)
-
-                            if hasattr(form, "save_note") and callable(form.save_note):
-                                form.save_note(instance=obj, user=request.user)
-
-                            self.extra_post_save_action(obj, form)
-
-                        # Enforce object-level permissions
-                        if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(
-                            updated_objects
-                        ):
-                            raise ObjectDoesNotExist
-
-                    if updated_objects:
-                        msg = f"Updated {len(updated_objects)} {model._meta.verbose_name_plural}"
-                        logger.info(msg)
-                        messages.success(self.request, msg)
-
-                    return redirect(self.get_return_url(request))
-
-                except ValidationError as e:
-                    messages.error(self.request, f"{obj} failed validation: {e}")
-
-                except ObjectDoesNotExist:
-                    msg = "Object update failed due to object-level permissions violation"
-                    logger.debug(msg)
-                    form.add_error(None, msg)
-
+                return self.send_bulk_edit_objects_to_job(request, form, model)
             else:
                 logger.debug("Form validation failed")
 
@@ -1262,7 +1174,7 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         return ""
 
 
-class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDeleteAllModelMixin, View):
+class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAndBulkDeleteModelMixin, View):
     """
     Delete objects in bulk.
 

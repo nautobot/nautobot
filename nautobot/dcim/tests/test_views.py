@@ -116,6 +116,7 @@ from nautobot.extras.models import (
     CustomField,
     CustomFieldChoice,
     ExternalIntegration,
+    JobResult,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -1150,9 +1151,15 @@ module-bays:
         }
 
         response = self.client.post(url, data)
+        job_result = JobResult.objects.filter(name="Bulk Edit Objects").first()
+        # Assert successfull redirect to Job Results; whcih means no form validation error was raised
+        self.assertRedirects(
+            response,
+            reverse("extras:jobresult", args=[job_result.pk]),
+            status_code=302,
+            target_status_code=200,
+        )
         self.assertHttpStatus(response, 302)
-        for instance in self._get_queryset().filter(pk__in=pk_list):
-            self.assertEqual(instance.u_height, data["u_height"])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_rack_height_bulk_edit_invalid(self):
@@ -1168,7 +1175,12 @@ module-bays:
         }
 
         response = self.client.post(url, data)
-        self.assertBodyContains(response, "failed validation")
+        response_content = response.content.decode(response.charset)
+        self.assertHttpStatus(response, 200)
+        self.assertInHTML(
+            '<strong class="panel-title">U height</strong>: <ul class="errorlist"><li>Ensure this value is greater than or equal to 0.</li></ul>',
+            response_content,
+        )
 
 
 class ModuleTypeTestCase(
