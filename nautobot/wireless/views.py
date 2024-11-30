@@ -56,16 +56,6 @@ class RadioProfileUIViewSet(NautobotUIViewSet):
 
         return context
 
-    def extra_post_save_action(self, obj, form):
-        if form.cleaned_data.get("add_supported_data_rates", None):
-            obj.supported_data_rates.add(*form.cleaned_data["add_supported_data_rates"])
-        if form.cleaned_data.get("remove_supported_data_rates", None):
-            obj.supported_data_rates.remove(*form.cleaned_data["remove_supported_data_rates"])
-        if form.cleaned_data.get("add_controller_managed_device_groups", None):
-            obj.controller_managed_device_groups.add(*form.cleaned_data["add_controller_managed_device_groups"])
-        if form.cleaned_data.get("remove_controller_managed_device_groups", None):
-            obj.controller_managed_device_groups.remove(*form.cleaned_data["remove_controller_managed_device_groups"])
-
 
 class SupportedDataRateUIViewSet(NautobotUIViewSet):
     queryset = SupportedDataRate.objects.all()
