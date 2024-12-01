@@ -1199,7 +1199,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditA
     def post(self, request, **kwargs):
         logger = logging.getLogger(f"{__name__}.BulkDeleteView")
         model = self.queryset.model
-        delete_all = request.POST.get("_all") is not None
+        delete_all = request.POST.get("_all")
 
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if delete_all:

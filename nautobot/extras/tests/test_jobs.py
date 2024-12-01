@@ -290,6 +290,27 @@ class JobTransactionTest(TransactionTestCase):
         self.request.id = uuid.uuid4()
         self.request.user = self.user
 
+    def test_bulk_delete_system_jobs_fail(self):
+        system_job_queryset = Job.objects.filter(module_name__startswith="nautobot.")
+        pk_list = [str(pk) for pk in system_job_queryset.values_list("pk", flat=True)[:3]]
+        initial_count = Job.objects.all().count()
+        self.add_permissions("extras.delete_job")
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            content_type=ContentType.objects.get_for_model(Job).id,
+            delete_all=False,
+            filter_query_params={},
+            pk_list=pk_list,
+            username=self.user.username,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertIn(
+            f"Unable to delete Job {system_job_queryset.first()}. System Job cannot be deleted", error_log.message
+        )
+        self.assertEqual(initial_count, Job.objects.all().count())
+
     def test_job_bulk_edit_default_queue_stays_default_after_one_field_update(self):
         self.add_permissions("extras.change_job", "extras.view_job")
         job_class_to_test = "TestPass"

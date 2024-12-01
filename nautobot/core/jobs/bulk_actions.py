@@ -196,14 +196,16 @@ class BulkDeleteObjects(Job):
             raise RunJobTaskFailed("Model not found")
 
         if pk_list and (delete_all or filter_query_params):
-            self.logger.error("You can either delete objs within `pk_list` provided or `delete_all` with `filter_query_params` if needed.")
+            self.logger.error(
+                "You can either delete objs within `pk_list` provided or `delete_all` with `filter_query_params` if needed."
+            )
             raise RunJobTaskFailed("Both `pk_list` and `delete_all` can not both be set.")
 
         filterset_cls = get_filterset_for_model(model)
 
         if filter_query_params and not filterset_cls:
-                self.logger.error(f"Filterset not found for {model}")
-                raise RunJobTaskFailed(f"Filter query provided but {model} do not have a filterset.")
+            self.logger.error(f"Filterset not found for {model}")
+            raise RunJobTaskFailed(f"Filter query provided but {model} do not have a filterset.")
 
         if delete_all:
             if filterset_cls and filter_query_params:
@@ -215,6 +217,11 @@ class BulkDeleteObjects(Job):
                 queryset = model.objects.restrict(self.user, "delete")
         else:
             queryset = model.objects.restrict(self.user, "delete").filter(pk__in=pk_list)
+            if queryset.count() < len(pk_list):
+                # We do not check ObjectPermission error for `delete_all` case because user is trying to
+                # delete all objs they have permission to which would not raise any issue.
+                self.logger.error("You do not have permissions to delete some of the objects provided in `pk_list`.")
+                raise RunJobTaskFailed("Caught ObjectPermission error while attempting to delete objects")
 
         verbose_name_plural = model._meta.verbose_name_plural
 
@@ -229,7 +236,7 @@ class BulkDeleteObjects(Job):
             _, deleted_info = bulk_delete_with_bulk_change_logging(queryset)
             deleted_count = deleted_info[model._meta.label]
         except ProtectedError as err:
-            self.logger.info(f"Caught ProtectedError while attempting to delete objects: {err}")
+            self.logger.error(f"Caught ProtectedError while attempting to delete objects: {err}")
             raise RunJobTaskFailed("Caught ProtectedError while attempting to delete objects")
         msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
         self.logger.info(msg)

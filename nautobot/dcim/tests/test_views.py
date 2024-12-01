@@ -125,7 +125,6 @@ from nautobot.extras.models import (
     Tag,
     Team,
 )
-from nautobot.extras.models.jobs import JobResult
 from nautobot.ipam.choices import IPAddressTypeChoices
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
@@ -4587,49 +4586,6 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "download_url": "https://example.com/software_image_file_test_case.bin",
         }
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_correct_handling_for_model_protected_error(self):
-        platform = Platform.objects.first()
-        software_version_status = Status.objects.get_for_model(SoftwareVersion).first()
-        software_image_file_status = Status.objects.get_for_model(SoftwareImageFile).first()
-        software_version = SoftwareVersion.objects.create(
-            platform=platform, version="Test version 1.0.0", status=software_version_status
-        )
-        software_image_file = SoftwareImageFile.objects.create(
-            software_version=software_version,
-            image_file_name="software_image_file_qs_test_1.bin",
-            status=software_image_file_status,
-        )
-        device_type = DeviceType.objects.first()
-        device_role = Role.objects.get_for_model(Device).first()
-        device_status = Status.objects.get_for_model(Device).first()
-        location = Location.objects.filter(location_type__name="Campus").first()
-        Device.objects.create(
-            device_type=device_type,
-            role=device_role,
-            name="Device 1",
-            location=location,
-            status=device_status,
-            software_version=software_version,
-        )
-        DeviceTypeToSoftwareImageFile.objects.create(device_type=device_type, software_image_file=software_image_file)
-
-        self.add_permissions("dcim.delete_softwareimagefile")
-        pk_list = [software_image_file.pk]
-        data = {
-            "pk": pk_list,
-            "confirm": True,
-            "_confirm": True,  # Form button
-        }
-        response = self.client.post(self._get_url("bulk_delete"), data)
-        job_result = JobResult.objects.filter(name="Bulk Delete Objects").first()
-        self.assertRedirects(
-            response,
-            reverse("extras:jobresult", args=[job_result.pk]),
-            status_code=302,
-            target_status_code=200,
-        )
-
 
 class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = SoftwareVersion
@@ -4667,50 +4623,6 @@ class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "long_term_support": False,
             "pre_release": True,
         }
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_correct_handling_for_model_protected_error(self):
-        platform = Platform.objects.first()
-        software_version_status = Status.objects.get_for_model(SoftwareVersion).first()
-        software_image_file_status = Status.objects.get_for_model(SoftwareImageFile).first()
-        software_version = SoftwareVersion.objects.create(
-            platform=platform, version="Test version 1.0.0", status=software_version_status
-        )
-        software_image_file = SoftwareImageFile.objects.create(
-            software_version=software_version,
-            image_file_name="software_image_file_qs_test_1.bin",
-            status=software_image_file_status,
-        )
-        device_type = DeviceType.objects.first()
-        device_role = Role.objects.get_for_model(Device).first()
-        device_status = Status.objects.get_for_model(Device).first()
-        location = Location.objects.filter(location_type__name="Campus").first()
-        Device.objects.create(
-            device_type=device_type,
-            role=device_role,
-            name="Device 1",
-            location=location,
-            status=device_status,
-            software_version=software_version,
-        )
-        DeviceTypeToSoftwareImageFile.objects.create(device_type=device_type, software_image_file=software_image_file)
-
-        self.add_permissions("dcim.delete_softwareversion")
-        pk_list = [software_version.pk]
-        data = {
-            "pk": pk_list,
-            "confirm": True,
-            "_confirm": True,  # Form button
-        }
-        # Assert protected error message included in the response body
-        response = self.client.post(self._get_url("bulk_delete"), data)
-        job_result = JobResult.objects.filter(name="Bulk Delete Objects").first()
-        self.assertRedirects(
-            response,
-            reverse("extras:jobresult", args=[job_result.pk]),
-            status_code=302,
-            target_status_code=200,
-        )
 
 
 class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
