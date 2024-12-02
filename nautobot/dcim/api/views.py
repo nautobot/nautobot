@@ -76,7 +76,7 @@ from nautobot.extras.api.views import (
 )
 from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupSecretTypeChoices
 from nautobot.extras.secrets.exceptions import SecretError
-from nautobot.ipam.models import Prefix, VLAN
+from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.virtualization.models import VirtualMachine
 
 from . import serializers
@@ -563,7 +563,9 @@ class PowerOutletViewSet(PathEndpointMixin, NautobotModelViewSet):
 
 
 class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = Interface.objects.prefetch_related("_path__destination", "_cable_peer")
+    queryset = Interface.objects.prefetch_related("_path__destination", "_cable_peer").annotate(
+        _ip_address_count=count_related(IPAddress, "interfaces")  # avoid conflict with Interface.ip_address_count()
+    )
     serializer_class = serializers.InterfaceSerializer
     filterset_class = filters.InterfaceFilterSet
 

@@ -5,8 +5,10 @@ from typing import Optional, Sequence, Union
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.db import connections, DEFAULT_DB_ALIAS
 from django.db.models import ForeignKey, ManyToManyField, QuerySet
 from django.test import override_settings, tag
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils.text import slugify
 from rest_framework import status
@@ -242,6 +244,18 @@ class APIViewTestCases:
                         depth_fields.append(field.name)
             return depth_fields
 
+        def get_m2m_fields(self):
+            """Get a list of model fields that are many-to-many and thus should be affected by ?exclude_m2m=true."""
+            m2m_fields = []
+            for field in self.model._meta.fields:
+                if not field.name.startswith("_"):
+                    if (
+                        isinstance(field, (ManyToManyField, core_fields.TagsField))
+                        and field.related_model != ContentType
+                    ):
+                        m2m_fields.append(field.name)
+            return m2m_fields
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
             """
@@ -269,9 +283,12 @@ class APIViewTestCases:
             GET a list of objects using the "?depth=0" parameter.
             """
             depth_fields = self.get_depth_fields()
+            m2m_fields = self.get_m2m_fields()
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
-            url = f"{self._get_list_url()}?depth=0"
-            response = self.client.get(url, **self.header)
+            list_url = f"{self._get_list_url()}?depth=0"
+            with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:
+                response = self.client.get(list_url, **self.header)
+            base_num_queries = len(cqc)
 
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertIsInstance(response.data, dict)
@@ -280,15 +297,20 @@ class APIViewTestCases:
             self.assert_no_verboten_content(response)
 
             for response_data in response.data["results"]:
+                for field in m2m_fields:
+                    self.assertIn(field, response_data)
+                    self.assertIsInstance(response_data[field], list)
                 for field in depth_fields:
                     self.assertIn(field, response_data)
                     if isinstance(response_data[field], list):
                         for entry in response_data[field]:
                             self.assertIsInstance(entry, dict)
                             self.assertTrue(is_uuid(entry["id"]))
+                            self.assertEqual(len(entry.keys()), 3)  # just id/object_type/url
                     else:
                         if response_data[field] is not None:
                             self.assertIsInstance(response_data[field], dict)
+                            self.assertEqual(len(response_data[field].keys()), 3)  # just id/object_type/url
                             url = response_data[field]["url"]
                             pk = response_data[field]["id"]
                             object_type = response_data[field]["object_type"]
@@ -303,15 +325,48 @@ class APIViewTestCases:
                                 app_label, model_name = object_type.split(".")
                                 ContentType.objects.get(app_label=app_label, model=model_name)
 
+            list_url += "&exclude_m2m=true"
+            with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:
+                response = self.client.get(list_url, **self.header)
+
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, dict)
+            self.assertIn("results", response.data)
+            self.assert_no_verboten_content(response)
+
+            if m2m_fields:
+                if model._meta.app_label in [
+                    "circuits", "cloud", "dcim", "extras", "ipam", "tenancy", "users", "virtualization", "wireless"
+                ]:
+                    self.assertLess(
+                        len(cqc), base_num_queries, "Number of queries did not decrease with ?exclude_m2m=true"
+                    )
+                else:
+                    # Less strict check for non-core APIs
+                    self.assertLessEqual(
+                        len(cqc), base_num_queries, "Number of queries increased with ?exclude_m2m=true"
+                    )
+            else:
+                # No M2M fields to exclude
+                self.assertLessEqual(len(cqc), base_num_queries, "Number of queries increased with ?exclude_m2m=true")
+
+            for response_data in response.data["results"]:
+                for field in m2m_fields:
+                    self.assertNotIn(field, response_data)
+                # TODO: we should assert that all other fields are still present, but there's a few corner cases...
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_depth_1(self):
             """
             GET a list of objects using the "?depth=1" parameter.
             """
             depth_fields = self.get_depth_fields()
+            m2m_fields = self.get_m2m_fields()
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
-            url = f"{self._get_list_url()}?depth=1"
-            response = self.client.get(url, **self.header)
+            list_url = f"{self._get_list_url()}?depth=1"
+            with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:
+                response = self.client.get(list_url, **self.header)
+            base_num_queries = len(cqc)
 
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertIsInstance(response.data, dict)
@@ -320,16 +375,51 @@ class APIViewTestCases:
             self.assert_no_verboten_content(response)
 
             for response_data in response.data["results"]:
+                for field in m2m_fields:
+                    self.assertIn(field, response_data)
+                    self.assertIsInstance(response_data[field], list)
                 for field in depth_fields:
                     self.assertIn(field, response_data)
                     if isinstance(response_data[field], list):
                         for entry in response_data[field]:
                             self.assertIsInstance(entry, dict)
                             self.assertTrue(is_uuid(entry["id"]))
+                            self.assertGreater(len(entry.keys()), 3)  # not just id/object_type/url!
                     else:
                         if response_data[field] is not None:
                             self.assertIsInstance(response_data[field], dict)
                             self.assertTrue(is_uuid(response_data[field]["id"]))
+                            self.assertGreater(len(response_data[field].keys()), 3)  # not just id/object_type/url!
+
+            list_url += "&exclude_m2m=true"
+            with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:
+                response = self.client.get(list_url, **self.header)
+
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, dict)
+            self.assertIn("results", response.data)
+            self.assert_no_verboten_content(response)
+
+            if m2m_fields:
+                if model._meta.app_label in [
+                    "circuits", "cloud", "dcim", "extras", "ipam", "tenancy", "users", "virtualization", "wireless"
+                ]:
+                    self.assertLess(
+                        len(cqc), base_num_queries, "Number of queries did not decrease with ?exclude_m2m=true"
+                    )
+                else:
+                    # Less strict check for non-core APIs
+                    self.assertLessEqual(
+                        len(cqc), base_num_queries, "Number of queries increased with ?exclude_m2m=true"
+                    )
+            else:
+                # No M2M fields to exclude
+                self.assertLessEqual(len(cqc), base_num_queries, "Number of queries increased with ?exclude_m2m=true")
+
+            for response_data in response.data["results"]:
+                for field in m2m_fields:
+                    self.assertNotIn(field, response_data)
+                # TODO: we should assert that all other fields are still present, but there's a few corner cases...
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
