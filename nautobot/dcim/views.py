@@ -4502,12 +4502,6 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
 
         return obj
 
-    def extra_post_save_action(self, obj, form):
-        if form.cleaned_data.get("add_radio_profiles", None):
-            obj.radio_profiles.add(*form.cleaned_data["add_radio_profiles"])
-        if form.cleaned_data.get("remove_radio_profiles", None):
-            obj.radio_profiles.remove(*form.cleaned_data["remove_radio_profiles"])
-
 
 #
 # Virtual Device Context
@@ -4534,9 +4528,3 @@ class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
                 **super().get_extra_context(request, instance),
             }
         return super().get_extra_context(request, instance)
-
-    def extra_post_save_action(self, obj, form):
-        if form.cleaned_data.get("add_interfaces", None):
-            obj.prefixes.add(*form.cleaned_data["add_interfaces"])
-        if form.cleaned_data.get("remove_interfaces", None):
-            obj.prefixes.remove(*form.cleaned_data["remove_interfaces"])

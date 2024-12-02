@@ -1,6 +1,7 @@
 from django.urls import reverse
 
 from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.extras.models import JobResult
 
 
 class RadioProfileTestCase(SeleniumTestCase):
@@ -35,5 +36,7 @@ class RadioProfileTestCase(SeleniumTestCase):
         # Submit bulk edit form without any changes
         self.browser.find_by_xpath("//button[@name='_apply']", wait_time=5).click()
 
-        self.assertEqual(self.browser.url, self.live_server_url + reverse("wireless:radioprofile_list"))
-        self.assertTrue(self.browser.is_text_present("Updated 1 radio profiles", wait_time=5))
+        job_result = JobResult.objects.filter(name="Bulk Edit Objects").first()
+        self.assertEqual(
+            self.browser.url, self.live_server_url + reverse("extras:jobresult", args=[job_result.pk]) + "?tab=main"
+        )

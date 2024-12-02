@@ -37,6 +37,7 @@ from nautobot.core.forms import (
     CSVFileField,
     restrict_form_fields,
 )
+from nautobot.core.jobs import BulkEditObjects
 from nautobot.core.utils import lookup, permissions
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params, normalize_querydict
 from nautobot.core.views.renderers import NautobotHTMLRenderer
@@ -48,7 +49,7 @@ from nautobot.core.views.utils import (
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.forms import NoteForm
-from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
+from nautobot.extras.models import ExportTemplate, Job, JobResult, SavedView, UserSavedViewAssociation
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template, remove_prefix_from_cf_key
 
@@ -912,9 +913,9 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             return self.form_invalid(form)
 
 
-class EditAndDeleteAllModelMixin:
+class BulkEditAndBulkDeleteModelMixin:
     """
-    UI mixin to bulk destroy all and bulk edit all model instances.
+    UI mixin to bulk destroy and bulk edit all model instances.
     """
 
     def _get_bulk_edit_delete_all_queryset(self, request):
@@ -952,8 +953,34 @@ class EditAndDeleteAllModelMixin:
             "table": None,
         }
 
+    def send_bulk_edit_objects_to_job(self, request, form, model):
+        """Prepare and enqueue a bulk edit job."""
+        job_model = Job.objects.get_for_class_path(BulkEditObjects.class_path)
+        form_data = normalize_querydict(request.POST, form)
+        if filterset_class := lookup.get_filterset_for_model(model):
+            filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
+        else:
+            filter_query_params = None
+        job_form = BulkEditObjects.as_form(
+            data={
+                "form_data": form_data,
+                "content_type": ContentType.objects.get_for_model(model),
+                "edit_all": request.POST.get("_all") is not None,
+                "filter_query_params": filter_query_params,
+            }
+        )
+        # NOTE: BulkEditObjects cant be invalid, so there is no need for handling invalid error
+        job_form.is_valid()
+        job_kwargs = BulkEditObjects.prepare_job_kwargs(job_form.cleaned_data)
+        job_result = JobResult.enqueue_job(
+            job_model,
+            request.user,
+            **BulkEditObjects.serialize_data(job_kwargs),
+        )
+        return redirect("extras:jobresult", pk=job_result.pk)
 
-class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, EditAndDeleteAllModelMixin):
+
+class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, BulkEditAndBulkDeleteModelMixin):
     """
     UI mixin to bulk destroy model instances.
     """
@@ -1082,14 +1109,14 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):  # 3.0 TODO: remove, unus
             return self.form_invalid(form)
 
 
-class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, EditAndDeleteAllModelMixin):
+class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, BulkEditAndBulkDeleteModelMixin):
     """
     UI mixin to bulk update model instances.
     """
 
     filterset_class = None
-    bulk_update_form_class = None
 
+    # NOTE: Performing BulkEdit Objects has been moved to a system job, but the logic remains here to ensure backward compatibility.
     def _process_bulk_update_form(self, form):
         request = self.request
         queryset = self.get_queryset()
@@ -1200,7 +1227,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Edit
             form = form_class(queryset.model, request.POST, edit_all=edit_all)
             restrict_form_fields(form, request.user)
             if form.is_valid():
-                return self.form_valid(form)
+                return self.send_bulk_edit_objects_to_job(self.request, form, queryset.model)
             else:
                 return self.form_invalid(form)
         table = None
