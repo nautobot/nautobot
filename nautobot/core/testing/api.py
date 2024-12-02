@@ -3,7 +3,6 @@ from io import StringIO
 from typing import Optional, Sequence, Union
 
 from django.conf import settings
-from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import connections, DEFAULT_DB_ALIAS
 from django.db.models import ForeignKey, ManyToManyField, QuerySet
@@ -233,9 +232,9 @@ class APIViewTestCases:
         def get_depth_fields(self):
             """Get a list of model fields that could be tested with the ?depth query parameter"""
             depth_fields = []
-            for field in self.model._meta.fields:
+            for field in self.model._meta.get_fields():
                 if not field.name.startswith("_"):
-                    if isinstance(field, (ForeignKey, GenericForeignKey, ManyToManyField, core_fields.TagsField)) and (
+                    if isinstance(field, (ForeignKey, ManyToManyField, core_fields.TagsField)) and (
                         # we represent content-types as "app_label.modelname" rather than as FKs
                         field.related_model != ContentType
                         # user is a model field on Token but not a field on TokenSerializer
@@ -247,7 +246,7 @@ class APIViewTestCases:
         def get_m2m_fields(self):
             """Get a list of model fields that are many-to-many and thus should be affected by ?exclude_m2m=true."""
             m2m_fields = []
-            for field in self.model._meta.fields:
+            for field in self.model._meta.get_fields():
                 if not field.name.startswith("_"):
                     if (
                         isinstance(field, (ManyToManyField, core_fields.TagsField))
@@ -335,8 +334,16 @@ class APIViewTestCases:
             self.assert_no_verboten_content(response)
 
             if m2m_fields:
-                if model._meta.app_label in [
-                    "circuits", "cloud", "dcim", "extras", "ipam", "tenancy", "users", "virtualization", "wireless"
+                if self.model._meta.app_label in [
+                    "circuits",
+                    "cloud",
+                    "dcim",
+                    "extras",
+                    "ipam",
+                    "tenancy",
+                    "users",
+                    "virtualization",
+                    "wireless",
                 ]:
                     self.assertLess(
                         len(cqc), base_num_queries, "Number of queries did not decrease with ?exclude_m2m=true"
@@ -401,8 +408,16 @@ class APIViewTestCases:
             self.assert_no_verboten_content(response)
 
             if m2m_fields:
-                if model._meta.app_label in [
-                    "circuits", "cloud", "dcim", "extras", "ipam", "tenancy", "users", "virtualization", "wireless"
+                if self.model._meta.app_label in [
+                    "circuits",
+                    "cloud",
+                    "dcim",
+                    "extras",
+                    "ipam",
+                    "tenancy",
+                    "users",
+                    "virtualization",
+                    "wireless",
                 ]:
                     self.assertLess(
                         len(cqc), base_num_queries, "Number of queries did not decrease with ?exclude_m2m=true"

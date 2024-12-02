@@ -1,0 +1,2 @@
+Added missing `tags` field to `VirtualDeviceContext` and `DeviceFamily` REST APIs.
+Fixed incorrect field identification logic in generic REST API `ListObjectsViewTestCase.get_depth_fields()`.
