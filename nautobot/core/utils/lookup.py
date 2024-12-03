@@ -276,13 +276,17 @@ def get_table_class_string_from_view_name(view_name):
     Returns:
         table_class_name (String): The name of the model table class or None e.g. LocationTable, CircuitTable
     """
-    model = get_model_for_view_name(view_name)
-    if model:
-        table_class = get_table_for_model(model)
-        if table_class:
-            return table_class.__name__
+    app_label, model_name = view_name.split(":")
+    model_name = model_name.split("_")[0]
+    model_name = f"{app_label}.{model_name}"
+    # model name should be in the form of "dcim.location".
+    model = get_model_from_name(model_name)
+    view_class = get_view_for_model(model, "List")
+    if hasattr(view_class, "table_class"):
+        return view_class.table_class.__name__
+    if hasattr(view_class, "table"):
+        return view_class.table.__name__
     return None
-
 
 def get_created_and_last_updated_usernames_for_model(instance):
     """
