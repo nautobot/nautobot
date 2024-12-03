@@ -165,7 +165,7 @@ class BulkEditObjects(Job):
 
 class BulkDeleteObjects(Job):
     """
-    System job to bulk delete objs`.
+    System job to bulk delete objects.
     """
 
     content_type = ObjectVar(
