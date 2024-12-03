@@ -288,6 +288,7 @@ def get_table_class_string_from_view_name(view_name):
         return view_class.table.__name__
     return None
 
+
 def get_created_and_last_updated_usernames_for_model(instance):
     """
     Args:
