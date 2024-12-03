@@ -247,12 +247,8 @@ class APIViewTestCases:
             """Get a list of model fields that are many-to-many and thus should be affected by ?exclude_m2m=true."""
             m2m_fields = []
             for field in self.model._meta.get_fields():
-                if not field.name.startswith("_"):
-                    if (
-                        isinstance(field, (ManyToManyField, core_fields.TagsField))
-                        and field.related_model != ContentType
-                    ):
-                        m2m_fields.append(field.name)
+                if isinstance(field, (ManyToManyField, core_fields.TagsField)) and not field.name.startswith("_"):
+                    m2m_fields.append(field.name)
             return m2m_fields
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -304,7 +300,10 @@ class APIViewTestCases:
                     if isinstance(response_data[field], list):
                         for entry in response_data[field]:
                             self.assertIsInstance(entry, dict)
-                            self.assertTrue(is_uuid(entry["id"]))
+                            if entry["object_type"] in ["auth.group"]:
+                                self.assertIsInstance(entry["id"], int)
+                            else:
+                                self.assertTrue(is_uuid(entry["id"]))
                             self.assertEqual(len(entry.keys()), 3)  # just id/object_type/url
                     else:
                         if response_data[field] is not None:
@@ -317,8 +316,12 @@ class APIViewTestCases:
                             # URL ending in the UUID of the relevant object:
                             # http://nautobot.example.com/api/circuits/providers/<uuid>/
                             #                                                    ^^^^^^
-                            self.assertTrue(is_uuid(url.split("/")[-2]))
-                            self.assertTrue(is_uuid(pk))
+                            if object_type in ["auth.group"]:
+                                self.assertIsInstance(url.split("/")[-2], int)
+                                self.assertIsInstance(pk, int)
+                            else:
+                                self.assertTrue(is_uuid(url.split("/")[-2]))
+                                self.assertTrue(is_uuid(pk))
 
                             with self.subTest(f"Assert object_type {object_type} is valid"):
                                 app_label, model_name = object_type.split(".")
@@ -390,13 +393,19 @@ class APIViewTestCases:
                     if isinstance(response_data[field], list):
                         for entry in response_data[field]:
                             self.assertIsInstance(entry, dict)
-                            self.assertTrue(is_uuid(entry["id"]))
-                            self.assertGreater(len(entry.keys()), 3)  # not just id/object_type/url!
+                            if entry["object_type"] in ["auth.group"]:
+                                self.assertIsInstance(entry["id"], int)
+                            else:
+                                self.assertTrue(is_uuid(entry["id"]))
+                            self.assertGreater(len(entry.keys()), 3, entry)  # not just id/object_type/url!
                     else:
                         if response_data[field] is not None:
                             self.assertIsInstance(response_data[field], dict)
-                            self.assertTrue(is_uuid(response_data[field]["id"]))
-                            self.assertGreater(len(response_data[field].keys()), 3)  # not just id/object_type/url!
+                            if response_data[field]["object_type"] in ["auth.group"]:
+                                self.assertIsInstance(response_data[field]["id"], int)
+                            else:
+                                self.assertTrue(is_uuid(response_data[field]["id"]))
+                            self.assertGreater(len(response_data[field].keys()), 3, response_data[field])
 
             list_url += "&exclude_m2m=true"
             with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:

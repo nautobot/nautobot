@@ -71,12 +71,7 @@ class OptInFieldsMixin:
         """
         if self.__pruned_fields is None:
             fields = dict(super().fields)
-            serializer_opt_in_fields = getattr(self.Meta, "opt_in_fields", None)
-
-            if not serializer_opt_in_fields:
-                # This serializer has no defined opt_in_fields, so we never need to go further than this
-                self.__pruned_fields = fields
-                return self.__pruned_fields
+            serializer_opt_in_fields = getattr(self.Meta, "opt_in_fields", [])
 
             if not hasattr(self, "_context"):
                 # We are being called before a request cycle
@@ -606,7 +601,7 @@ class WritableNestedSerializer(BaseModelSerializer):
         pk = None
 
         if isinstance(self.Meta.model._meta.pk, models.AutoField):
-            # PK is an int for this model. This is usually the User model
+            # PK is an int for this model. This is usually the Group or Content-Type model
             try:
                 pk = int(data)
             except (TypeError, ValueError):

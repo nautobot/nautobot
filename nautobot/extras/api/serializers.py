@@ -19,7 +19,6 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
 )
 from nautobot.core.api.exceptions import SerializerNotFound
-from nautobot.core.api.fields import NautobotHyperlinkedRelatedField
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
     get_nested_serializer_depth,
@@ -200,10 +199,7 @@ class ConfigContextSchemaSerializer(NautobotModelSerializer):
 #
 
 
-class ContactSerializer(NautobotModelSerializer):
-    # needed since this is the reverse side of the M2M field.
-    teams = NautobotHyperlinkedRelatedField(queryset=Team.objects.all(), many=True, required=False)
-
+class ContactSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = Contact
         fields = "__all__"
@@ -212,7 +208,14 @@ class ContactSerializer(NautobotModelSerializer):
         extra_kwargs = {
             "email": {"default": ""},
             "phone": {"default": ""},
+            "teams": {"required": False},
         }
+
+    def get_default_field_names(self, declared_fields, model_info):
+        """Add reverse M2M for teams to the "all" fields for this serializer."""
+        field_names = super().get_default_field_names(declared_fields, model_info)
+        field_names.append("teams")
+        return field_names
 
     def validate(self, data):
         attrs = data.copy()
@@ -433,7 +436,7 @@ class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelS
 #
 
 
-class ExternalIntegrationSerializer(NautobotModelSerializer):
+class ExternalIntegrationSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = ExternalIntegration
         fields = "__all__"
@@ -455,7 +458,7 @@ class FileProxySerializer(BaseModelSerializer):
 #
 
 
-class GitRepositorySerializer(NautobotModelSerializer):
+class GitRepositorySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     """Git repositories defined as a data source."""
 
     provided_contents = MultipleChoiceJSONField(
@@ -816,7 +819,7 @@ class JobButtonSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 #
 
 
-class MetadataTypeSerializer(NautobotModelSerializer):
+class MetadataTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     content_types = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
         many=True,
@@ -1092,9 +1095,7 @@ class TagSerializer(NautobotModelSerializer):
 #
 
 
-class TeamSerializer(NautobotModelSerializer):
-    contacts = NautobotHyperlinkedRelatedField(queryset=Contact.objects.all(), many=True, required=False)
-
+class TeamSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = Team
         fields = "__all__"
