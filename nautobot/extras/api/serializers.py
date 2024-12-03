@@ -135,12 +135,12 @@ class ConfigContextSerializer(ValidatedModelSerializer, TaggedModelSerializerMix
     owner = serializers.SerializerMethodField(read_only=True)
 
     # Conditional enablement of dynamic groups filtering
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
+    @property
+    def fields(self):
+        fields = super().fields
         if not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
-            # In the case of a nested serializer, we won't have a `dynamic_groups` field at all.
-            self.fields.pop("dynamic_groups", None)
+            fields.pop("dynamic_groups", None)
+        return fields
 
     class Meta:
         model = ConfigContext
