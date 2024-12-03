@@ -487,6 +487,7 @@ class AboutView(AccessMixin, TemplateView):
     Nautobot About View which displays general information about Nautobot and contact details
     for Network to Code.
     """
+
     template_name = "about.html"
 
     def get(self, request, *args, **kwargs):

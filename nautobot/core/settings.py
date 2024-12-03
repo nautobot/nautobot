@@ -4,7 +4,6 @@ import platform
 import re
 import sys
 import tempfile
-from datetime import date
 
 from django.contrib.messages import constants as messages
 import django.forms
@@ -724,8 +723,8 @@ CONSTANCE_ADDITIONAL_FIELDS = {
         {
             "widget": "nautobot.core.forms.widgets.DatePicker",
             "required": False,
-        }
-    ]
+        },
+    ],
 }
 
 CONSTANCE_CONFIG = {
@@ -853,7 +852,7 @@ CONSTANCE_CONFIG = {
         help_text="Expiration date for an active Nautobot support contract with Network to Code. "
         "This value is displayed in the About page to provide additional support information.",
         field_type="optional_date_field",
-    )
+    ),
 }
 
 CONSTANCE_CONFIG_FIELDSETS = {
