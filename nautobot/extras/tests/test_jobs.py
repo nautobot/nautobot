@@ -686,6 +686,38 @@ class JobTransactionTest(TransactionTestCase):
         self.assertTrue(profiling_result.exists())
         profiling_result.unlink()
 
+    def test_job_singleton(self):
+        module = "singleton"
+        name = "TestSingletonJob"
+
+        job_class, _ = get_job_class_and_model(module, name, "local")
+        self.assertTrue(job_class.is_singleton)
+        cache.set(job_class.singleton_cache_key, 1)
+        failed_job_result = create_job_result_and_run_job(module, name)
+
+        self.assertEqual(
+            failed_job_result.status, JobResultStatusChoices.STATUS_FAILURE, msg="Duplicate singleton job didn't error."
+        )
+        self.assertIsNone(cache.get(job_class.singleton_cache_key, None))
+
+    def test_job_ignore_singleton(self):
+        module = "singleton"
+        name = "TestSingletonJob"
+
+        job_class, _ = get_job_class_and_model(module, name, "local")
+        self.assertTrue(job_class.is_singleton)
+        cache.set(job_class.singleton_cache_key, 1)
+        passed_job_result = create_job_result_and_run_job(
+            module, name, celery_kwargs={"nautobot_job_ignore_singleton_lock": True}
+        )
+
+        self.assertEqual(
+            passed_job_result.status,
+            JobResultStatusChoices.STATUS_SUCCESS,
+            msg="Duplicate singleton job didn't succeed with nautobot_job_ignore_singleton_lock=True.",
+        )
+        self.assertIsNone(cache.get(job_class.singleton_cache_key, None))
+
     @mock.patch("nautobot.extras.context_managers.enqueue_webhooks")
     def test_job_fires_webhooks(self, mock_enqueue_webhooks):
         module = "atomic_transaction"

@@ -1363,6 +1363,9 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                             pass
                     initial["_job_queue"] = jq
                     initial["_profile"] = job_result.celery_kwargs.get("nautobot_job_profile", False)
+                    initial["_ignore_singleton_lock"] = job_result.celery_kwargs.get(
+                        "nautobot_job_ignore_singleton_lock", False
+                    )
                     initial.update(explicit_initial)
                 except JobResult.DoesNotExist:
                     messages.warning(
@@ -1445,6 +1448,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
             profile = job_form.cleaned_data.pop("_profile")
+            ignore_singleton_lock = job_form.cleaned_data.pop("_ignore_singleton_lock", False)
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
             if (not dryrun and job_model.approval_required) or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
@@ -1458,6 +1462,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     approval_required=job_model.approval_required,
                     task_queue=jq.name if jq else None,
                     profile=profile,
+                    ignore_singleton_lock=ignore_singleton_lock,
                     **job_class.serialize_data(job_form.cleaned_data),
                 )
 
@@ -1475,6 +1480,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     job_model,
                     request.user,
                     profile=profile,
+                    ignore_singleton_lock=ignore_singleton_lock,
                     task_queue=jq.name if jq else None,
                     **job_class.serialize_data(job_kwargs),
                 )

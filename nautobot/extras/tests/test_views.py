@@ -2649,10 +2649,16 @@ class JobTestCase(
         job_celery_kwargs = {
             "nautobot_job_job_model_id": self.test_required_args.id,
             "nautobot_job_profile": True,
+            "nautobot_job_ignore_singleton_lock": True,
             "nautobot_job_user_id": self.user.id,
             "queue": job_queue.name,
         }
         self.test_required_args.job_queues.set([job_queue])
+        self.test_required_args.is_singleton_override = True
+        self.test_required_args.has_sensitive_variables_override = True
+        self.test_required_args.is_singleton = True
+        self.test_required_args.has_sensitive_variables = False
+        self.test_required_args.validated_save()
         previous_result = JobResult.objects.create(
             job_model=self.test_required_args,
             user=self.user,
@@ -2669,6 +2675,9 @@ class JobTestCase(
             content,
         )
         self.assertInHTML('<input type="hidden" name="_profile" value="True" id="id__profile">', content)
+        self.assertInHTML(
+            '<input type="checkbox" name="_ignore_singleton_lock" id="id__ignore_singleton_lock" checked>', content
+        )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_later_missing_name(self, _):
