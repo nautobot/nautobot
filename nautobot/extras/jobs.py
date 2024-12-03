@@ -191,15 +191,24 @@ class BaseJob:
             )
             raise RunJobTaskFailed(f"Job {self.job_model} is not enabled to be run!")
 
-        if self.job_model.is_singleton and not self.celery_kwargs.get("nautobot_job_ignore_singleton_lock", False):
+        ignore_singleton_lock = self.celery_kwargs.get("nautobot_job_ignore_singleton_lock", False)
+        if self.job_model.is_singleton:
             is_running = cache.get(self.singleton_cache_key)
             if is_running:
-                self.logger.error(
-                    "Job %s is a singleton and already running.",
-                    self.job_model,
-                    extra={"object": self.job_model, "grouping": "initialization"},
-                )
-                raise RunJobTaskFailed(f"Job '{self.job_model}' is a singleton and already running.")
+                if ignore_singleton_lock:
+                    self.logger.info(
+                        "Job %s is a singleton and already running, but singleton will be ignored because"
+                        " `ignore_singleton_lock` is set.",
+                        self.job_model,
+                        extra={"object": self.job_model, "grouping": "initialization"},
+                    )
+                else:
+                    self.logger.error(
+                        "Job %s is a singleton and already running.",
+                        self.job_model,
+                        extra={"object": self.job_model, "grouping": "initialization"},
+                    )
+                    raise RunJobTaskFailed(f"Job '{self.job_model}' is a singleton and already running.")
             cache_parameters = {
                 "key": self.singleton_cache_key,
                 "value": 1,
