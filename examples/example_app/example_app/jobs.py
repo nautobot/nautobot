@@ -225,6 +225,15 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
             self.logger.error("Unable to run Job Button for type %s.", type(obj).__name__, extra={"object": obj})
 
 
+class ExampleSingletonJob(Job):
+    class Meta:
+        name = "Example job, only one can run at any given time."
+        is_singleton = True
+
+    def run(self):
+        time.sleep(60)
+
+
 jobs = (
     ExampleDryRunJob,
     ExampleJob,
@@ -235,5 +244,6 @@ jobs = (
     ExampleJobHookReceiver,
     ExampleSimpleJobButtonReceiver,
     ExampleComplexJobButtonReceiver,
+    ExampleSingletonJob,
 )
 register_jobs(*jobs)

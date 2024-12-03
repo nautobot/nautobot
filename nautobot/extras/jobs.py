@@ -18,6 +18,7 @@ from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import UploadedFile
@@ -112,6 +113,7 @@ class BaseJob:
         - time_limit (int)
         - has_sensitive_variables (bool)
         - task_queues (list)
+        - is_singleton (bool)
         """
 
     def __init__(self):
@@ -188,6 +190,31 @@ class BaseJob:
                 extra={"object": self.job_model, "grouping": "initialization"},
             )
             raise RunJobTaskFailed(f"Job {self.job_model} is not enabled to be run!")
+
+        ignore_singleton_lock = self.celery_kwargs.get("nautobot_job_ignore_singleton_lock", False)
+        if self.job_model.is_singleton:
+            is_running = cache.get(self.singleton_cache_key)
+            if is_running:
+                if ignore_singleton_lock:
+                    self.logger.info(
+                        "Job %s is a singleton and already running, but singleton will be ignored because"
+                        " `ignore_singleton_lock` is set.",
+                        self.job_model,
+                        extra={"object": self.job_model, "grouping": "initialization"},
+                    )
+                else:
+                    self.logger.error(
+                        "Job %s is a singleton and already running.",
+                        self.job_model,
+                        extra={"object": self.job_model, "grouping": "initialization"},
+                    )
+                    raise RunJobTaskFailed(f"Job '{self.job_model}' is a singleton and already running.")
+            cache_parameters = {
+                "key": self.singleton_cache_key,
+                "value": 1,
+                "timeout": self.job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT,
+            }
+            cache.set(**cache_parameters)
 
         soft_time_limit = self.job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
         time_limit = self.job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
@@ -281,6 +308,14 @@ class BaseJob:
 
         if status == JobResultStatusChoices.STATUS_SUCCESS:
             self.logger.success("Job completed", extra={"grouping": "post_run"})
+
+        cache.delete(self.singleton_cache_key)
+
+    @final
+    @classproperty
+    def singleton_cache_key(cls) -> str:  # pylint: disable=no-self-argument
+        """Cache key for singleton jobs."""
+        return f"nautobot.extras.jobs.running.{cls.class_path}"
 
     @final
     @classproperty
@@ -403,6 +438,11 @@ class BaseJob:
 
     @final
     @classproperty
+    def is_singleton(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("is_singleton", False, expected_type=bool)
+
+    @final
+    @classproperty
     def properties_dict(cls) -> dict:  # pylint: disable=no-self-argument
         """
         Return all relevant classproperties as a dict.
@@ -419,6 +459,7 @@ class BaseJob:
             "time_limit": cls.time_limit,
             "has_sensitive_variables": cls.has_sensitive_variables,
             "task_queues": cls.task_queues,
+            "is_singleton": cls.is_singleton,
         }
 
     @final
@@ -486,6 +527,19 @@ class BaseJob:
             label="Profile job execution",
             help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
         )
+        # If the class already exists there may be overrides, so we have to check this.
+        try:
+            job_model = JobModel.objects.get(module_name=cls.__module__, job_class_name=cls.__name__)
+            is_singleton = job_model.is_singleton
+        except JobModel.DoesNotExist:
+            is_singleton = cls.is_singleton
+        if is_singleton:
+            form.fields["_ignore_singleton_lock"] = forms.BooleanField(
+                required=False,
+                initial=False,
+                label="Ignore singleton lock",
+                help_text="Allow this singleton job to run even when another instance is already running",
+            )
 
         job_model = JobModel.objects.get_for_class_path(cls.class_path)
         dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else cls.dryrun_default
@@ -519,7 +573,9 @@ class BaseJob:
                 field.disabled = True
 
         # Ensure non-Job-specific fields are still last after applying field_order
-        for field in ["_job_queue", "_profile"]:
+        for field in ["_job_queue", "_profile", "_ignore_singleton_lock"]:
+            if field not in form.fields:
+                continue
             value = form.fields.pop(field)
             form.fields[field] = value
 

@@ -140,6 +140,11 @@ class Job(PrimaryModel):
         default=True, help_text="Whether this job contains sensitive variables"
     )
 
+    is_singleton = models.BooleanField(
+        default=False,
+        help_text="Whether this job should fail to run if another instance of this job is already running",
+    )
+
     # Additional properties, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
     approval_required = models.BooleanField(
@@ -232,6 +237,10 @@ class Job(PrimaryModel):
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
     default_job_queue_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    is_singleton_override = models.BooleanField(
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
@@ -781,6 +790,7 @@ class JobResult(BaseModel, CustomFieldModel):
         task_queue=None,
         job_result=None,
         synchronous=False,
+        ignore_singleton_lock=False,
         **job_kwargs,
     ):
         """Create/Modify a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
@@ -794,6 +804,9 @@ class JobResult(BaseModel, CustomFieldModel):
             task_queue (str, optional): The celery queue to send the job to. If not set, use the default celery queue.
             job_result (JobResult, optional): Existing JobResult with status PENDING, to be modified and to be used in kubernetes job execution.
             synchronous (bool, optional): If True, run the job in the current process, blocking until the job completes.
+            ignore_singleton_lock (bool, optional): If True, invalidate the singleton lock before running the job.
+              This allows singleton jobs to run twice, or makes it possible to remove the lock when the first instance
+              of the job failed to remove it for any reason.
             *job_args: positional args passed to the job task (UNUSED)
             **job_kwargs: keyword args passed to the job task
 
@@ -838,6 +851,7 @@ class JobResult(BaseModel, CustomFieldModel):
             "nautobot_job_job_model_id": job_model.id,
             "nautobot_job_profile": profile,
             "nautobot_job_user_id": user.id,
+            "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
             "queue": task_queue,
         }
 
@@ -1291,6 +1305,7 @@ class ScheduledJob(BaseModel):
         profile=False,
         approval_required=False,
         task_queue=None,
+        ignore_singleton_lock=False,
         **job_kwargs,
     ):
         """
@@ -1311,6 +1326,7 @@ class ScheduledJob(BaseModel):
             profile (bool, optional): Flag indicating whether to profile the job. Defaults to False.
             approval_required (bool, optional): Flag indicating if approval is required. Defaults to False.
             task_queue (str, optional): The task queue for the job. Defaults to None, which will use the configured default celery queue.
+            ignore_singleton_lock (bool, optional): Flag indicating whether to ignore singleton locks. Defaults to False.
             **job_kwargs: Additional keyword arguments to pass to the job.
 
         Returns:
@@ -1329,6 +1345,7 @@ class ScheduledJob(BaseModel):
         celery_kwargs = {
             "nautobot_job_profile": profile,
             "queue": task_queue,
+            "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
         }
         if job_model.soft_time_limit > 0:
             celery_kwargs["soft_time_limit"] = job_model.soft_time_limit

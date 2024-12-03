@@ -874,6 +874,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "is_job_button_receiver",
             "soft_time_limit",
             "time_limit",
+            "is_singleton",
             "grouping_override",
             "name_override",
             "approval_required_override",
@@ -883,6 +884,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "soft_time_limit_override",
             "time_limit_override",
             "has_sensitive_variables_override",
+            "is_singleton_override",
             "tags",
         ]
 

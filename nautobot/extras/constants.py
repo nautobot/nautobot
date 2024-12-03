@@ -30,6 +30,7 @@ JOB_OVERRIDABLE_FIELDS = (
     "soft_time_limit",
     "time_limit",
     "has_sensitive_variables",
+    "is_singleton",
 )
 
 
@@ -52,4 +53,5 @@ JOB_RESULT_CUSTOM_CELERY_KWARGS = (
     "nautobot_job_job_model_id",
     "nautobot_job_scheduled_job_id",
     "nautobot_job_user_id",
+    "nautobot_job_ignore_singleton_lock",
 )

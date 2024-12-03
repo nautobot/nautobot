@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0119_remove_task_queues_from_job_and_queue_from_scheduled_job"),
+        ("extras", "0120_job_is_singleton_job_is_singleton_override"),
     ]
 
     operations = [
