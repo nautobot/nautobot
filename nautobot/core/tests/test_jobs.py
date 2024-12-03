@@ -811,6 +811,7 @@ class BulkDeleteTestCase(TransactionTestCase):
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
         job_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
         self.assertEqual(job_log.message, f'User "{self.user}" does not have permission to delete status objects')
+        self.assertEqual(Status.objects.filter(pk__in=statuses_to_delete).count(), len(statuses_to_delete))
 
     def test_bulk_delete_objects_with_constrained_permission(self):
         statuses_to_delete = [str(status) for status in Status.objects.all().values_list("pk", flat=True)[:2]]
@@ -835,6 +836,7 @@ class BulkDeleteTestCase(TransactionTestCase):
         self.assertEqual(
             error_log.message, "You do not have permissions to delete some of the objects provided in `pk_list`."
         )
+        self.assertEqual(Status.objects.filter(pk__in=statuses_to_delete).count(), len(statuses_to_delete))
 
     def test_bulk_delete_all(self):
         self.add_permissions("extras.delete_objectmetadata")

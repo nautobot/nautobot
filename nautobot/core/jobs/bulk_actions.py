@@ -19,6 +19,8 @@ from nautobot.extras.jobs import (
 )
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
 
+name = "System Jobs"
+
 
 class BulkEditObjects(Job):
     """System Job to bulk Edit objects."""
@@ -170,7 +172,7 @@ class BulkDeleteObjects(Job):
         model=ContentType,
         description="Type of objects to delete",
     )
-    pk_list = JSONVar(description="PK List of objects to delete", required=False)
+    pk_list = JSONVar(description="List of objects pks to delete", required=False)
     delete_all = BooleanVar(description="Delete all (filtered) objects instead of a list of PKs", required=False)
     filter_query_params = JSONVar(label="Filter Query Params", required=False)
 
