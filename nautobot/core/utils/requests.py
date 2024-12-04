@@ -165,9 +165,10 @@ def normalize_querydict(querydict, form_class=None, filterset=None):
     Raises:
         AttributeError: If both `form_class` and `filterset` are provided.
     """
-    result = {}
     if form_class and filterset:
         raise AttributeError("Either form_class or filterset_class is to be provided not both")
+
+    result = {}
 
     if querydict:
         for key, value_list in querydict.lists():
