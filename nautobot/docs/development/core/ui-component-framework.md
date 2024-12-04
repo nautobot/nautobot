@@ -86,6 +86,33 @@ A `Tab` is one of the major building blocks of your UI. The user can toggle betw
 
 `Button`s are the third major building block for the UI. Defining `extra_buttons` on your `ObjectDetailContent` instance allows you to add buttons that appear at the top of the page, alongside the standard "actions" dropdown and any custom buttons added by Apps. These buttons may operate as simple hyperlinks, or may use JavaScript to provide more advanced functionality.
 
+#### Buttons Example
+
+```python
+from nautobot.apps.ui import ObjectDetailContent, Button
+
+object_detail_content = ObjectDetailContent(
+        panels=[...],
+        extra_buttons=[
+            Button(
+                weight=100,
+                label="Check Secret",
+                icon="mdi-test-tube",
+                javascript_template_path="extras/secret_check.js",
+                attributes={"onClick": "checkSecret()"},
+            ),
+        ],
+    )
+```
+
+<!-- markdownlint-disable no-inline-html -->
+<div class="grid cards example-images" markdown>
+
+- ![Buttons Example](../../media/development/core/ui-component-framework/buttons-example.png){ .on-glb }
+
+</div>
+<!-- markdownlint-enable no-inline-html -->
+
 ## Panel Types
 
 ### Base Panel
@@ -149,26 +176,29 @@ ObjectFieldsPanel(
 ```
 
 ```python
-from nautobot.apps.ui import ObjectFieldsPanel, SectionChoices
+from nautobot.apps import ui
+from nautobot.core.templatetags import helpers
 
-ObjectFieldsPanel(
-   weight=200,
-   section=SectionChoices.LEFT_HALF,
-   label="Object Fields Panel",
-   fields=["name", "status", "type", "notes"],
-   context_object_key="obj",
-   ignore_nonexistent_fields=True,
-   value_transforms={
-        "status": [status_to_badge],
-        "type": [type_to_link]
+
+panels = ui.ObjectFieldsPanel(
+    weight=200,
+    section=ui.SectionChoices.LEFT_HALF,
+    label="Object Fields Panel",
+    fields=["name", "number", "notes", "notexists"],
+    context_object_key="obj",
+    ignore_nonexistent_fields=True,
+    value_transforms={
+        "name": [helpers.bettertitle],
+        "number": [lambda v: helpers.hyperlinked_field(v, "https://nautobot.com")]
     },
-)
+),
 ```
 
 <!-- markdownlint-disable no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/object-fields-panel-example.png){ .on-glb }
+- ![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/object-fields-panel-example_2.png){ .on-glb }
 
 </div>
 <!-- markdownlint-enable no-inline-html -->
@@ -293,6 +323,7 @@ StatsPanel(
 <!-- markdownlint-disable no-inline-html -->
 <div class="grid cards example-images" markdown>
 
+- ![StatsPanel Code Example](../../media/development/core/ui-component-framework/stats-panel-example-code.png){ .on-glb }
 - ![StatsPanel Example](../../media/development/core/ui-component-framework/stats-panel-example.png){ .on-glb }
 
 </div>
