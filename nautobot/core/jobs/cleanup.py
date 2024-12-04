@@ -66,7 +66,6 @@ class LogsCleanup(Job):
                 self.recursive_delete_with_cascade(cascade_queryset)
         return queryset.delete()
 
-
     def run(self, *, cleanup_types, max_age=None):
         if max_age in (None, ""):
             max_age = get_settings_or_config("CHANGELOG_RETENTION")
@@ -110,7 +109,7 @@ class LogsCleanup(Job):
             if CleanupTypes.OBJECT_CHANGE in cleanup_types:
                 self.logger.info("Deleting ObjectChange records prior to %s", cutoff)
                 queryset = ObjectChange.objects.restrict(self.user, "delete").filter(time__lt=cutoff)
-                deleted_count, _  = self.recursive_delete_with_cascade(queryset)
+                deleted_count, _ = self.recursive_delete_with_cascade(queryset)
                 self.logger.info("Deleted %d ObjectChange records", deleted_count)
                 result["extras.ObjectChange"] = deleted_count
 
