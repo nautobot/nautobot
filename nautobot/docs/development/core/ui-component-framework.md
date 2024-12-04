@@ -517,7 +517,13 @@ class SecretUIViewSet(...):
     )
 ```
 
-![Button Example](../../media/development/core/ui-component-framework/button-example.png)
+<!-- markdownlint-disable no-inline-html -->
+<div class="grid cards example-images" markdown>
+
+- ![Button Example](../../media/development/core/ui-component-framework/button-example.png){ .on-glb }
+
+</div>
+<!-- markdownlint-enable no-inline-html -->
 
 ### DropdownButton
 
@@ -560,7 +566,13 @@ class DeviceView(generic.ObjectView):
     )
 ```
 
-![DropdownButton Example](../../media/development/core/ui-component-framework/dropdown-button-example.png)
+<!-- markdownlint-disable no-inline-html -->
+<div class="grid cards example-images" markdown>
+
+- ![DropdownButton Example](../../media/development/core/ui-component-framework/dropdown-button-example.png){ .on-glb }
+
+</div>
+<!-- markdownlint-enable no-inline-html -->
 
 ## Complete Example
 
