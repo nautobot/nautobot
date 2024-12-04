@@ -1,4 +1,4 @@
-# Nautobot UI Framework
+# Nautobot UI Component Framework
 
 ## Table of Contents
 
