@@ -68,28 +68,28 @@ class BulkEditObjects(Job):
             self.logger.debug(f"Performing update on {queryset.count()} {model._meta.verbose_name_plural}")
             for obj in queryset.iterator():
                 # Update standard fields. If a field is listed in _nullify, delete its value.
-                for name in standard_fields:
+                for field_name in standard_fields:
                     try:
-                        model_field = model._meta.get_field(name)
+                        model_field = model._meta.get_field(field_name)
                     except FieldDoesNotExist:
                         # This form field is used to modify a field rather than set its value directly
                         model_field = None
 
                     # Handle nullification
                     if nullified_fields:
-                        if name in form.nullable_fields and name in nullified_fields:
+                        if field_name in form.nullable_fields and field_name in nullified_fields:
                             if isinstance(model_field, ManyToManyField):
-                                getattr(obj, name).set([])
+                                getattr(obj, field_name).set([])
                             else:
-                                setattr(obj, name, None if model_field is not None and model_field.null else "")
+                                setattr(obj, field_name, None if model_field is not None and model_field.null else "")
 
                     # ManyToManyFields
                     elif isinstance(model_field, ManyToManyField):
-                        if form.cleaned_data[name]:
-                            getattr(obj, name).set(form.cleaned_data[name])
+                        if form.cleaned_data[field_name]:
+                            getattr(obj, field_name).set(form.cleaned_data[field_name])
                     # Normal fields
-                    elif form.cleaned_data[name] not in (None, ""):
-                        setattr(obj, name, form.cleaned_data[name])
+                    elif form.cleaned_data[field_name] not in (None, ""):
+                        setattr(obj, field_name, form.cleaned_data[field_name])
 
                 # Update custom fields
                 for field_name in form_custom_fields:
