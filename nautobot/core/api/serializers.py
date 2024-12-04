@@ -62,7 +62,7 @@ class OptInFieldsMixin:
         Dynamically adjust the dictionary of fields attributed to this serializer instance.
 
         - Removes all serializer fields specified in `Meta.opt_in_fields` list that aren't specified in the
-          `include` query parameter.
+          `include` query parameter. (applies to GET requests only)
         - If the `exclude_m2m` query parameter is truthy, remove all many-to-many serializer fields for performance.
 
         As an example, if the serializer specifies that `opt_in_fields = ["computed_fields"]`
@@ -87,8 +87,8 @@ class OptInFieldsMixin:
             # parameters are found under the GET attribute.
             params = normalize_querydict(getattr(request, "query_params", getattr(request, "GET", None)))
 
-            # opt-in fields only applies on GET / OPTIONS requests, for other methods we support these fields regardless
-            if request is None or request.method in ["GET", "OPTIONS"]:
+            # opt-in fields only applies on GET requests, for other methods we support these fields regardless
+            if request is None or request.method == "GET":
                 try:
                     user_opt_in_fields = params.get("include", [])
                 except AttributeError:
