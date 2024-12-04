@@ -125,7 +125,7 @@ There are many attributes and methods of the Job class that serve as reserved na
 !!! example
     One classic pitfall here is the the reserved `name` metadata attribute - if you attempt to redefine `name` as a user input variable, your Job will not work.
 
-As of Nautobot 2.2.3, the current list of reserved names (not including low-level Python built-ins such as `__dict__` or `__str__` includes:
+As of Nautobot 2.4.0, the current list of reserved names (not including low-level Python built-ins such as `__dict__` or `__str__` includes:
 
 | Reserved Name             | Purpose                                                 |
 | ------------------------- | ------------------------------------------------------- |
@@ -148,6 +148,7 @@ As of Nautobot 2.2.3, the current list of reserved names (not including low-leve
 | `grouping`                | [module metadata property](#module-metadata-attributes) |
 | `has_sensitive_variables` | [metadata property](#has_sensitive_variables)           |
 | `hidden`                  | [metadata property](#hidden)                            |
+| `is_singleton`            | [metadata property](#is_singleton)                      |
 | `job_model`               | property                                                |
 | `job_result`              | property                                                |
 | `load_json`               | [helper method](#reading-data-from-files)               |
@@ -264,6 +265,21 @@ Important notes about hidden jobs:
 * All Job UI and REST API endpoints still exist for hidden jobs and can be accessed by any user who is aware of their existence.
 * Hidden jobs can still be executed through the UI or the REST API given the appropriate URL.
 * Results for hidden jobs will still appear in the Job Results list after they are run.
+
+#### `is_singleton`
+
++++ 2.4.0
+
+Default: `False`
+A Boolean that if set to `True` prevents the job from running twice simultaneously.
+
+Any duplicate job instances will error out with a singleton-specific error message.
+
+Important notes about singleton jobs:
+
+* The singleton functionality is implemented with a Redis key set to timeout either on the hard time out of the job or whenever the job terminates.
+    * Therefore, a restart of Redis will wipe the singleton locks
+* A checkbox on the job run form makes it possible to force the singleton lock to be overridden. This makes it possible to recover from failure scenarios such as the original singleton job being stopped before it can unset the lock.
 
 #### `read_only`
 

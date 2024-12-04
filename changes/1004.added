@@ -1,0 +1,1 @@
+Added singleton job functionality to limit specified jobs to one concurrent execution.

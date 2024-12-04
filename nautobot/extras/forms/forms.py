@@ -1037,6 +1037,8 @@ class JobEditForm(NautobotModelForm):
             "job_queues",
             "default_job_queue_override",
             "default_job_queue",
+            "is_singleton",
+            "is_singleton_override",
             "tags",
         ]
 
@@ -1136,6 +1138,11 @@ class JobBulkEditForm(NautobotBulkEditForm):
         required=False,
         help_text="Default Job Queue the job runs on if no Job Queue is specified",
     )
+    is_singleton = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="Whether this job should fail to run if another instance of this job is already running",
+    )
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
     # Text field overrides
     clear_grouping_override = forms.BooleanField(
@@ -1178,6 +1185,10 @@ class JobBulkEditForm(NautobotBulkEditForm):
     clear_has_sensitive_variables_override = forms.BooleanField(
         required=False,
         help_text="If checked, the values of has sensitive variables will be reverted to the default values defined in each Job's source code",
+    )
+    is_singleton_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, the values of is singleton will be reverted to the default values defined in each Job's source code",
     )
 
     class Meta:
