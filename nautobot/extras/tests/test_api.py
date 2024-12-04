@@ -221,18 +221,6 @@ class ConfigContextTest(APIViewTestCases.APIViewTestCase):
         ConfigContext.objects.create(name="Config Context 2", weight=200, data={"bar": 456})
         ConfigContext.objects.create(name="Config Context 3", weight=300, data={"baz": 789})
 
-    def get_depth_fields(self):
-        depth_fields = super().get_depth_fields()
-        if "dynamic_groups" in depth_fields and not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
-            depth_fields.remove("dynamic_groups")
-        return depth_fields
-
-    def get_m2m_fields(self):
-        m2m_fields = super().get_m2m_fields()
-        if "dynamic_groups" in m2m_fields and not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
-            m2m_fields.remove("dynamic_groups")
-        return m2m_fields
-
     def test_render_configcontext_for_object(self):
         """
         Test rendering config context data for a device.

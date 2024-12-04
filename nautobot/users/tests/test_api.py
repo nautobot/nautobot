@@ -88,16 +88,6 @@ class UserTest(APIViewTestCases.APIViewTestCase):
         """Get an instance that can be deleted, being sure not to delete the test user!"""
         return User.objects.create(username="User_100")
 
-    def get_depth_fields(self):
-        depth_fields = super().get_depth_fields()
-        depth_fields.remove("user_permissions")
-        return depth_fields
-
-    def get_m2m_fields(self):
-        m2m_fields = super().get_m2m_fields()
-        m2m_fields.remove("user_permissions")
-        return m2m_fields
-
     def test_create_object(self):
         """Add validation of the password on the created users."""
         self.maxDiff = None
@@ -157,16 +147,6 @@ class GroupTest(APIViewTestCases.APIViewTestCase):
     def _get_list_url(self):
         """Can't use get_route_for_model because this is not a Nautobot core model."""
         return reverse("users-api:group-list")
-
-    def get_depth_fields(self):
-        depth_fields = super().get_depth_fields()
-        depth_fields.remove("permissions")
-        return depth_fields
-
-    def get_m2m_fields(self):
-        m2m_fields = super().get_m2m_fields()
-        m2m_fields.remove("permissions")
-        return m2m_fields
 
     @classmethod
     def setUpTestData(cls):

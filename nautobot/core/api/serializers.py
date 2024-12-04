@@ -21,7 +21,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.fields import CreateOnlyDefault
 from rest_framework.reverse import reverse
-from rest_framework.serializers import ManyRelatedField, SerializerMethodField
+from rest_framework.serializers import SerializerMethodField
 from rest_framework.utils.model_meta import _get_to_field, RelationInfo
 
 from nautobot.core import constants
@@ -83,34 +83,29 @@ class OptInFieldsMixin:
                 # No available request?
                 return fields
 
-            # opt-in fields only applies on GET / OPTIONS requests, for other methods we support these fields regardless
-            if request is not None and request.method not in ["GET", "OPTIONS"]:
-                return fields
-
             # NOTE: drf test framework builds a request object where the query
             # parameters are found under the GET attribute.
             params = normalize_querydict(getattr(request, "query_params", getattr(request, "GET", None)))
 
-            try:
-                user_opt_in_fields = params.get("include", [])
-            except AttributeError:
-                # include parameter was not specified
-                user_opt_in_fields = []
+            # opt-in fields only applies on GET / OPTIONS requests, for other methods we support these fields regardless
+            if request is None or request.method in ["GET", "OPTIONS"]:
+                try:
+                    user_opt_in_fields = params.get("include", [])
+                except AttributeError:
+                    # include parameter was not specified
+                    user_opt_in_fields = []
 
-            # Drop any fields that are not specified in the users opt in fields
-            for field in serializer_opt_in_fields:
-                if field not in user_opt_in_fields:
-                    fields.pop(field, None)
+                # Drop any fields that are not specified in the users opt in fields
+                for field in serializer_opt_in_fields:
+                    if field not in user_opt_in_fields:
+                        fields.pop(field, None)
 
-            # If exclude_m2m is present and truthy, drop any "many" fields.
-            # Currently this is only forward many-to-many relations,
-            # but if in the future we extend the API to include reverse relations, they'll be affected by this too.
+            # If exclude_m2m is present and truthy, mark any many-to-many fields as write-only so they
+            # don't get included in the response.
             if is_truthy(params.get("exclude_m2m", "false")):
-                fields = {
-                    name: instance
-                    for name, instance in fields.items()
-                    if not isinstance(instance, (ManyRelatedField, serializers.ListSerializer))
-                }
+                for field_instance in fields.values():
+                    if isinstance(field_instance, (serializers.ManyRelatedField, serializers.ListSerializer)):
+                        field_instance.write_only = True
 
             self.__pruned_fields = fields
 
