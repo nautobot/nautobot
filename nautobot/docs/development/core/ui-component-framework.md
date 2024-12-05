@@ -415,7 +415,9 @@ DataTablePanel(
 
 ### ObjectsTablePanel
 
-The `ObjectsTablePanel` is a powerful component for rendering tables of Django model objects, particularly suited for displaying related objects within a detail view. It integrates with `django_tables2` and provides extensive customization options.
+The `ObjectsTablePanel` is a powerful component for rendering tables of Django model objects,
+particularly suited for displaying related objects within a detail view.
+It integrates with `django_tables2` and provides extensive customization options.
 
 #### Configuration Parameters
 
