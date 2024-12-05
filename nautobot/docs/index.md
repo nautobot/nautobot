@@ -1,4 +1,6 @@
-<!-- pyml disable-num-lines 3 no-inline-html,first-line-heading -->
+# Nautobot
+
+<!-- pyml disable-num-lines 3 no-inline-html -->
 <figure markdown="span">
   ![Nautobot Logo](assets/nautobot_logo.svg "Welcome"){ width="400" }
 </figure>
