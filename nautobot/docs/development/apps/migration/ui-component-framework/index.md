@@ -16,11 +16,13 @@ For complete UI Component Framework documentation, see: [Nautobot UI Framework D
 - Consistent UI patterns across apps
 - Standardized component behavior
 
-### Before and After Example
+## Before and After Examples
+
+### `Secret` model
 
 In this example, we're migrating an existing view (the detail view for the `Secret` model) to use the UI Component Framework. We'll also convert it from using older generic class-based views to using the newer `NautobotUIViewSet` class pattern.
 
-#### Before
+#### `Secret` Before
 
 ```python title="nautobot/extras/views.py"
 ...
@@ -165,7 +167,7 @@ class SecretBulkDeleteView(generic.BulkDeleteView):
 ...
 ```
 
-#### After
+#### `Secret` After
 
 ```python title="nautobot/extras/views.py"
 ...
@@ -265,3 +267,122 @@ router.register("secrets", views.SecretUIViewSet)
 ```
 
 As a side benefit of this change, we've also reduced the amount of code (Python + HTML) that we have to maintain for this set of views by a fairly significant percentage.
+
+### `ClusterType` model
+
+Screenshot of migrated view:
+
+<!-- markdownlint-disable no-inline-html -->
+<div class="grid cards example-images" markdown>
+
+- ![ClusterTypeView Before/After Example](../../../../media/development/core/ui-component-framework/cluster-type-before-after-example.png){ .on-glb }
+
+</div>
+<!-- markdownlint-enable no-inline-html -->
+
+#### `ClusterType` Before
+
+```html title="nautobot/virtualization/templates/virtualization/clustertype.html"
+{% load helpers %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Cluster Type</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Description</td>
+                    <td>{{ object.description|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Clusters</td>
+                    <td>
+                        <a href="{% url 'virtualization:cluster_list' %}?cluster_type={{ object.name }}">{{ cluster_table.rows|length }}</a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Clusters</strong>
+            </div>
+            {% include 'inc/table.html' with table=cluster_table %}
+            {% if perms.virtualization.add_cluster %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'virtualization:cluster_add' %}?cluster_type={{ object.pk }}" class="btn btn-xs btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add cluster
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        {% include 'inc/paginator.html' with paginator=cluster_table.paginator page=cluster_table.page %}
+        <div class="row"></div>
+{% endblock content_right_page %}
+```
+
+1. Both panels are declared in the HTML.
+2. `Add cluster` button needed to be added manually in HTML code.
+
+```python title="nautobot/virtualization/views.py"
+
+class ClusterTypeView(generic.ObjectView):
+    queryset = ClusterType.objects.all()
+
+    def get_extra_context(self, request, instance):
+        # Clusters
+        clusters = Cluster.objects.restrict(request.user, "view").filter(cluster_type=instance)
+
+        cluster_table = tables.ClusterTable(clusters)
+        cluster_table.columns.hide("cluster_type")
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(cluster_table)
+
+        return {"cluster_table": cluster_table, **super().get_extra_context(request, instance)}
+```
+
+1. You need to manually get the data to populate `Clusters` table along with pagination.
+2. To pass the data into the template you need to override the `get_extra_context` method.
+
+#### `ClusterType` After
+
+File `nautobot/virtualization/templates/virtualization/clustertype.html` can be deleted.
+
+`ClusterTypeView` after changes:
+
+```python title="nautobot/virtualization/views.py"
+
+class ClusterTypeView(generic.ObjectView):
+    queryset = ClusterType.objects.all()
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.ClusterTable,
+                table_filter="cluster_type",
+                exclude_columns=["cluster_type"],
+            ),
+        ),
+    )
+```
+
+1. There is no need to override `get_extra_context` method or fetch data for the table manually.
+2. Proper labels are set automatically both for `Cluster Type` and `Clusters` panel according to the models names.
+3. `ObjectsTablePanel` has built in support for `Add` button and render `Add cluster` button automatically.
+4. There is no need for custom template or to maintain custom HTML file. HTML template is standardized across the Nautobot.
+5. Pagination support is also built-in into `ObjectsTablePanel`.
+6. You can easily shuffle Panels if needed or adjust displayed fields at the Panel declaration level without need to look for HTML template.
