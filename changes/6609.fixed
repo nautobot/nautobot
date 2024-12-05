@@ -1,1 +1,1 @@
-Fix useless call to the DB when logging with the parameter extra={"skip_db_logging": True}.
+Fixed unnecessary call to the database when logging from a Job with the parameter `extra={"skip_db_logging": True}`.
