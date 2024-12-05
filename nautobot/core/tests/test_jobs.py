@@ -776,3 +776,135 @@ class BulkEditTestCase(TransactionTestCase):
             username=self.user.username,
         )
         self._common_no_error_test_assertion(Role, job_result, 2, pk__in=pk_list, color="aa1409")
+
+
+class BulkDeleteTestCase(TransactionTestCase):
+    """
+    Test the BulkDelete system job.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.status_ct = ContentType.objects.get_for_model(Status)
+        self.role_ct = ContentType.objects.get_for_model(Role)
+        self.device_ct = ContentType.objects.get_for_model(Device)
+
+    def _common_no_error_test_assertion(self, model, job_result, **filter_params):
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(model.objects.filter(**filter_params).count(), 0)
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        )
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
+        )
+
+    def test_bulk_delete_without_permission(self):
+        statuses_to_delete = [str(status) for status in Status.objects.all().values_list("pk", flat=True)[:2]]
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            content_type=self.status_ct.id,
+            pk_list=statuses_to_delete,
+            username=self.user.username,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        job_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(job_log.message, f'User "{self.user}" does not have permission to delete status objects')
+        self.assertEqual(Status.objects.filter(pk__in=statuses_to_delete).count(), len(statuses_to_delete))
+
+    def test_bulk_delete_objects_with_constrained_permission(self):
+        statuses_to_delete = [str(status) for status in Status.objects.all().values_list("pk", flat=True)[:2]]
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": str(statuses_to_delete[0])},
+            actions=["delete"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Status))
+
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            content_type=self.status_ct.id,
+            pk_list=statuses_to_delete,
+            username=self.user.username,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(
+            error_log.message, "You do not have permissions to delete some of the objects provided in `pk_list`."
+        )
+        self.assertEqual(Status.objects.filter(pk__in=statuses_to_delete).count(), len(statuses_to_delete))
+
+    def test_bulk_delete_all(self):
+        self.add_permissions("extras.delete_objectmetadata")
+
+        # Assert ObjectMetadata is not empty
+        self.assertNotEqual(ObjectMetadata.objects.all().count(), 0)
+
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            content_type=ContentType.objects.get_for_model(ObjectMetadata).id,
+            delete_all=True,
+            filter_query_params={},
+            pk_list=[],
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(ObjectMetadata, job_result)
+
+    def test_bulk_delete_filter_all(self):
+        self.add_permissions("extras.delete_status")
+        for x in range(10):
+            Status.objects.create(name=f"Example Status {x}")
+
+        status_to_ignore = Status.objects.create(name="Ignore Example Status")
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            content_type=self.status_ct.id,
+            delete_all=True,
+            filter_query_params={"name__isw": "Example Status"},
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(Status, job_result, name__istartswith="Example Status")
+        self.assertTrue(Status.objects.filter(name=status_to_ignore.name).exists())
+
+    def test_bulk_delete_passing_both_pk_list_and_delete_all(self):
+        self.add_permissions("extras.delete_status")
+        status_count = Status.objects.all().count()
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            content_type=self.status_ct.id,
+            delete_all=True,
+            filter_query_params={"name__isw": "Example Status"},
+            pk_list=[str(Status.objects.first().pk)],
+            username=self.user.username,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        job_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(
+            job_log.message,
+            "You can either delete objs within `pk_list` provided or `delete_all` with `filter_query_params` if needed.",
+        )
+        self.assertEqual(status_count, Status.objects.all().count())
+
+    def test_bulk_delete_with_pk(self):
+        self.add_permissions("extras.delete_role")
+        roles_to_delete = [Role.objects.create(name=f"Example Role {x}") for x in range(3)]
+        roles_to_ignore = Role.objects.create(name="Ignore Example Role")
+        roles_pks = [str(role.pk) for role in roles_to_delete]
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            content_type=self.role_ct.id,
+            delete_all=False,
+            filter_query_params={},
+            pk_list=roles_pks,
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(Role, job_result, pk__in=roles_pks)
+        self.assertTrue(Role.objects.filter(name=roles_to_ignore.name).exists())
