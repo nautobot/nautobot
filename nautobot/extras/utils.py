@@ -579,6 +579,7 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
                     "installed": True,
                     "enabled": False,
                     "default_job_queue": default_job_queue,
+                    "is_singleton": job_class.is_singleton,
                 },
             )
 
@@ -665,9 +666,9 @@ def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
         "runjob_with_job_result",
         f"{job_result.pk}",
     ]
-    logger.info("Creating job pod %s in namespace %s", pod_name, pod_namespace)
+    job_result.log(f"Creating job pod {pod_name} in namespace {pod_namespace}")
     api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
-    logger.info("Reading job pod %s in namespace %s", pod_name, pod_namespace)
+    job_result.log(f"Reading job pod {pod_name} in namespace {pod_namespace}")
     api_instance.read_namespaced_job(name="nautobot-job-" + str(job_result.pk), namespace=pod_namespace)
     return job_result
 

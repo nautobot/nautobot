@@ -1,8 +1,6 @@
 import logging
 from urllib.parse import parse_qs
 
-from celery import chain
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -68,10 +66,7 @@ from nautobot.dcim.tables import (
     RackTable,
     VirtualDeviceContextTable,
 )
-from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
-from nautobot.extras.signals import change_context_state
-from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_job_queue, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
@@ -659,37 +654,7 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
     queryset = CustomField.objects.all()
     table = tables.CustomFieldTable
     filterset = filters.CustomFieldFilterSet
-
-    def construct_custom_field_delete_tasks(self, queryset):
-        """
-        Helper method to construct a list of celery tasks to execute when bulk deleting custom fields.
-        """
-        change_context = change_context_state.get()
-        if change_context is None:
-            context = None
-        else:
-            context = change_context.as_dict(queryset)
-            context["context_detail"] = "bulk delete custom field data"
-        tasks = [
-            delete_custom_field_data.si(obj.key, set(obj.content_types.values_list("pk", flat=True)), context)
-            for obj in queryset
-        ]
-        return tasks
-
-    def perform_pre_delete(self, request, queryset):
-        """
-        Remove all Custom Field Keys/Values from _custom_field_data of the related ContentType in the background.
-        """
-        if not get_worker_count():
-            messages.error(
-                request, "Celery worker process not running. Object custom fields may fail to reflect this deletion."
-            )
-            return
-        tasks = self.construct_custom_field_delete_tasks(queryset)
-        # Executing the tasks in the background sequentially using chain() aligns with how a single
-        # CustomField object is deleted.  We decided to not check the result because it needs at least one worker
-        # to be active and comes with extra performance penalty.
-        chain(*tasks).apply_async()
+    form = forms.CustomFieldBulkDeleteForm
 
 
 #
@@ -1365,6 +1330,9 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                             pass
                     initial["_job_queue"] = jq
                     initial["_profile"] = job_result.celery_kwargs.get("nautobot_job_profile", False)
+                    initial["_ignore_singleton_lock"] = job_result.celery_kwargs.get(
+                        "nautobot_job_ignore_singleton_lock", False
+                    )
                     initial.update(explicit_initial)
                 except JobResult.DoesNotExist:
                     messages.warning(
@@ -1447,6 +1415,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
             profile = job_form.cleaned_data.pop("_profile")
+            ignore_singleton_lock = job_form.cleaned_data.pop("_ignore_singleton_lock", False)
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
             if (not dryrun and job_model.approval_required) or schedule_type in JobExecutionType.SCHEDULE_CHOICES:
@@ -1460,6 +1429,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     approval_required=job_model.approval_required,
                     task_queue=jq.name if jq else None,
                     profile=profile,
+                    ignore_singleton_lock=ignore_singleton_lock,
                     **job_class.serialize_data(job_form.cleaned_data),
                 )
 
@@ -1477,6 +1447,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     job_model,
                     request.user,
                     profile=profile,
+                    ignore_singleton_lock=ignore_singleton_lock,
                     task_queue=jq.name if jq else None,
                     **job_class.serialize_data(job_kwargs),
                 )
@@ -1532,52 +1503,6 @@ class JobBulkEditView(generic.BulkEditView):
     table = tables.JobTable
     form = forms.JobBulkEditForm
     template_name = "extras/job_bulk_edit.html"
-
-    def extra_post_save_action(self, obj, form):
-        cleaned_data = form.cleaned_data
-
-        # Handle text related fields
-        for overridable_field in JOB_OVERRIDABLE_FIELDS:
-            override_field = overridable_field + "_override"
-            clear_override_field = "clear_" + overridable_field + "_override"
-            reset_override = cleaned_data.get(clear_override_field, False)
-            override_value = cleaned_data.get(overridable_field)
-            if reset_override:
-                setattr(obj, override_field, False)
-            elif not reset_override and override_value not in [None, ""]:
-                setattr(obj, override_field, True)
-                setattr(obj, overridable_field, override_value)
-
-        # Handle job queues
-        clear_override_field = "clear_job_queues_override"
-        reset_override = cleaned_data.get(clear_override_field, False)
-        if reset_override:
-            meta_task_queues = obj.job_class.task_queues
-            job_queues = []
-            for queue_name in meta_task_queues:
-                try:
-                    job_queues.append(JobQueue.objects.get(name=queue_name))
-                except JobQueue.DoesNotExist:
-                    # Do we want to create the Job Queue for the users here if we do not have it in the database?
-                    pass
-            obj.job_queues_override = False
-            obj.job_queues.set(job_queues)
-        elif cleaned_data["job_queues"]:
-            obj.job_queues_override = True
-
-        # Handle default job queue
-        clear_override_field = "clear_default_job_queue_override"
-        reset_override = cleaned_data.get(clear_override_field, False)
-        if reset_override:
-            meta_task_queues = obj.job_class.task_queues
-            obj.default_job_queue_override = False
-            obj.default_job_queue, _ = JobQueue.objects.get_or_create(
-                name=meta_task_queues[0] if meta_task_queues else settings.CELERY_TASK_DEFAULT_QUEUE
-            )
-        elif cleaned_data["default_job_queue"]:
-            obj.default_job_queue_override = True
-
-        obj.validated_save()
 
 
 class JobDeleteView(generic.ObjectDeleteView):

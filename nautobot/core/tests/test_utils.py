@@ -19,6 +19,8 @@ from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_
 from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models, tables
 from nautobot.extras import models as extras_models, utils as extras_utils
 from nautobot.extras.choices import ObjectChangeActionChoices, RelationshipTypeChoices
+from nautobot.extras.filters import StatusFilterSet
+from nautobot.extras.forms import StatusForm
 from nautobot.extras.models import ObjectChange
 from nautobot.ipam import models as ipam_models
 
@@ -63,6 +65,18 @@ class NormalizeQueryDictTest(TestCase):
         self.assertDictEqual(
             requests.normalize_querydict(QueryDict("foo=1&bar=2&bar=3&baz=")),
             {"foo": "1", "bar": ["2", "3"], "baz": ""},
+        )
+
+        self.assertDictEqual(
+            requests.normalize_querydict(QueryDict("name=Sample Status&content_types=1"), form_class=StatusForm),
+            {"name": "Sample Status", "content_types": ["1"]},
+        )
+
+        self.assertDictEqual(
+            requests.normalize_querydict(
+                QueryDict("name=Sample Status&content_types=dcim.device"), filterset=StatusFilterSet()
+            ),
+            {"name": ["Sample Status"], "content_types": ["dcim.device"]},
         )
 
 

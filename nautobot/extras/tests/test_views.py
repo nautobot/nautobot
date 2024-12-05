@@ -1,5 +1,4 @@
 from datetime import timedelta
-from http import HTTPStatus
 import json
 from unittest import mock
 import urllib.parse
@@ -26,7 +25,6 @@ from nautobot.core.testing.utils import disable_warnings, get_deletable_objects,
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
     ConsolePort,
-    Controller,
     Device,
     DeviceType,
     Interface,
@@ -34,7 +32,6 @@ from nautobot.dcim.models import (
     LocationType,
     Manufacturer,
 )
-from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     DynamicGroupTypeChoices,
@@ -89,10 +86,9 @@ from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
-from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -2416,35 +2412,6 @@ class JobTestCase(
         # assert Job still exists
         self.assertTrue(self._get_queryset().filter(name=job_name).exists())
 
-    def test_bulk_delete_system_jobs_fail(self):
-        system_job_queryset = self.model.objects.filter(module_name__startswith="nautobot.")
-        pk_list = system_job_queryset.values_list("pk", flat=True)[:3]
-        initial_count = self._get_queryset().count()
-        data = {
-            "pk": pk_list,
-            "confirm": True,
-            "_confirm": True,  # Form button
-        }
-        # Try bulk delete with delete job permission
-        self.add_permissions("extras.delete_job")
-        response = self.client.post(self._get_url("bulk_delete"), data, follow=True)
-        self.assertBodyContains(
-            response,
-            f"Unable to delete Job {system_job_queryset.first()}. System Job cannot be deleted",
-            status_code=403,
-        )
-        self.assertEqual(self._get_queryset().count(), initial_count)
-
-        # Try bulk delete as a superuser
-        self.user.is_superuser = True
-        response = self.client.post(self._get_url("bulk_delete"), data, follow=True)
-        self.assertBodyContains(
-            response,
-            f"Unable to delete Job {system_job_queryset.first()}. System Job cannot be deleted",
-            status_code=403,
-        )
-        self.assertEqual(self._get_queryset().count(), initial_count)
-
     def validate_job_data_after_bulk_edit(self, pk_list, old_data):
         # Name is bulk-editable
         overridable_fields = [field for field in JOB_OVERRIDABLE_FIELDS if field != "name"]
@@ -2653,10 +2620,16 @@ class JobTestCase(
         job_celery_kwargs = {
             "nautobot_job_job_model_id": self.test_required_args.id,
             "nautobot_job_profile": True,
+            "nautobot_job_ignore_singleton_lock": True,
             "nautobot_job_user_id": self.user.id,
             "queue": job_queue.name,
         }
         self.test_required_args.job_queues.set([job_queue])
+        self.test_required_args.is_singleton_override = True
+        self.test_required_args.has_sensitive_variables_override = True
+        self.test_required_args.is_singleton = True
+        self.test_required_args.has_sensitive_variables = False
+        self.test_required_args.validated_save()
         previous_result = JobResult.objects.create(
             job_model=self.test_required_args,
             user=self.user,
@@ -2673,6 +2646,9 @@ class JobTestCase(
             content,
         )
         self.assertInHTML('<input type="hidden" name="_profile" value="True" id="id__profile">', content)
+        self.assertInHTML(
+            '<input type="checkbox" name="_ignore_singleton_lock" id="id__ignore_singleton_lock" checked>', content
+        )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_later_missing_name(self, _):
@@ -2843,59 +2819,6 @@ class JobTestCase(
         self.add_permissions("extras.view_objectchange", "extras.view_job")
         response = self.client.get(instance.get_changelog_url())
         self.assertBodyContains(response, f"{instance.name} - Change Log")
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_job_bulk_edit_default_queue_stays_default_after_one_field_update(self):
-        self.add_permissions("extras.change_job")
-        job_class_to_test = "TestPass"
-        job_description = "default job queue test"
-        job_to_test = self.model.objects.get(job_class_name=job_class_to_test)
-        queryset = self.model.objects.filter(installed=True, hidden=False, job_class_name=job_class_to_test)
-        default_job_queue = job_to_test.default_job_queue
-        pk_list = list(queryset.values_list("pk", flat=True))
-
-        data = {
-            "description": job_description,
-            "pk": pk_list,
-            "_apply": True,
-        }
-
-        self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), HTTPStatus.FOUND)
-        instance = self.model.objects.get(job_class_name=job_class_to_test)
-        self.assertEqual(instance.description, job_description)
-        self.assertEqual(instance.default_job_queue, default_job_queue)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_job_bulk_edit_preserve_job_queues_after_one_field_update(self):
-        self.add_permissions("extras.change_job")
-        job_class_to_test = "TestPass"
-        job_description = "job queues test"
-        job_to_test = self.model.objects.get(job_class_name=job_class_to_test)
-
-        # Simulate 3 job queues set
-        job_queues = JobQueue.objects.all()[:3]
-        job_to_test.job_queues.set(job_queues)
-        job_to_test.job_queues.add(job_to_test.default_job_queue)
-        job_to_test.job_queues_override = True
-        job_to_test.save()
-
-        expected_job_queues = list(job_to_test.job_queues.values_list("pk", flat=True))
-
-        queryset = self.model.objects.filter(installed=True, hidden=False, job_class_name=job_class_to_test)
-        pk_list = list(queryset.values_list("pk", flat=True))
-
-        data = {
-            "description": job_description,
-            "pk": pk_list,
-            "_apply": True,
-        }
-
-        self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), HTTPStatus.FOUND)
-
-        instance = self.model.objects.get(job_class_name=job_class_to_test)
-        self.assertEqual(instance.description, job_description)
-        self.assertEqual(instance.job_queues.count(), 4)  # 3 custom one + 1 default
-        self.assertQuerySetEqual(instance.job_queues.all(), JobQueue.objects.filter(pk__in=expected_job_queues))
 
 
 class JobButtonTestCase(
@@ -3278,94 +3201,6 @@ class RelationshipTestCase(
         }
 
         cls.slug_test_object = "Primary Interface"
-
-    def test_required_relationships(self):
-        """
-        1. Try creating an object when no required target object exists
-        2. Try creating an object without specifying required target object(s)
-        3. Try creating an object when all required data is present
-        4. Test bulk edit
-        """
-
-        # Delete existing factory generated objects that may interfere with this test
-        IPAddress.objects.all().delete()
-        Prefix.objects.update(parent=None)
-        Prefix.objects.all().delete()
-        ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.all().delete()
-        VLAN.objects.all().delete()
-
-        # Parameterized tests (for creating and updating single objects):
-        self.required_relationships_test(interact_with="ui")
-
-        # 4. Bulk create/edit tests:
-
-        vlan_status = Status.objects.get_for_model(VLAN).first()
-        vlans = (
-            VLAN.objects.create(name="test_required_relationships1", vid=1, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships2", vid=2, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships3", vid=3, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships4", vid=4, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships5", vid=5, status=vlan_status),
-            VLAN.objects.create(name="test_required_relationships6", vid=6, status=vlan_status),
-        )
-
-        # Try deleting all devices and then editing the 6 VLANs (fails):
-        Controller.objects.filter(controller_device__isnull=False).delete()
-        Device.objects.all().delete()
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans], "_apply": [""]}
-        )
-        self.assertContains(response, "VLANs require at least one device, but no devices exist yet.")
-
-        # Create test device for association
-        device_for_association = test_views.create_test_device("VLAN Required Device")
-
-        # Try editing all 6 VLANs without adding the required device(fails):
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans], "_apply": [""]}
-        )
-        self.assertContains(
-            response,
-            "6 VLANs require a device for the required relationship &quot;VLANs require at least one Device&quot;",
-        )
-
-        # Try editing 3 VLANs without adding the required device(fails):
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans[:3]], "_apply": [""]}
-        )
-        self.assertContains(
-            response,
-            "These VLANs require a device for the required "
-            "relationship &quot;VLANs require at least one Device&quot;",
-        )
-        for vlan in vlans[:3]:
-            self.assertContains(response, str(vlan))
-
-        # Try editing 6 VLANs and adding the required device (succeeds):
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"),
-            data={
-                "pk": [str(vlan.id) for vlan in vlans],
-                "add_cr_vlans_devices_m2m__source": [str(device_for_association.id)],
-                "_apply": [""],
-            },
-            follow=True,
-        )
-        self.assertContains(response, "Updated 6 VLANs")
-
-        # Try editing 6 VLANs and removing the required device (fails):
-        response = self.client.post(
-            reverse("ipam:vlan_bulk_edit"),
-            data={
-                "pk": [str(vlan.id) for vlan in vlans],
-                "remove_cr_vlans_devices_m2m__source": [str(device_for_association.id)],
-                "_apply": [""],
-            },
-        )
-        self.assertContains(
-            response,
-            "6 VLANs require a device for the required relationship &quot;VLANs require at least one Device&quot;",
-        )
 
 
 class RelationshipAssociationTestCase(

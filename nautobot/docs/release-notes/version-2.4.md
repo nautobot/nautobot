@@ -71,6 +71,10 @@ Refer to the [Jobs documentation](../user-guide/platform-functionality/jobs/inde
 
 Users can now configure their preferred display time zone via the User Preferences UI and Nautobot will display dates and times in the configured time zone for each user.
 
+#### Singleton Jobs
+
+Job authors can now set their jobs to only allow a single concurrent execution across all workers, preventing mistakes where, e.g., data synchronization jobs accidentally run twice and create multiple instances of the same data. This functionality and the corresponding setting are documented in [the section on developing Jobs](../development/jobs/index.md).
+
 #### UI Component Framework
 
 Nautobot's new [UI Component Framework](../development/core/ui-component-framework.md) provides a set of Python APIs for defining parts of the Nautobot UI without needing, in many cases, to write custom HTML templates. In this release of Nautobot, the focus is primarily on the definition of object "detail" views as those were the most common cases where custom templates have been required in the past.

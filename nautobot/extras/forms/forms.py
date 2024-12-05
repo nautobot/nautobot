@@ -1,5 +1,7 @@
 import inspect
+import logging
 
+from celery import chain
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -7,7 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db.models.fields import TextField
-from django.forms import inlineformset_factory, ModelMultipleChoiceField
+from django.forms import inlineformset_factory, ModelMultipleChoiceField, MultipleHiddenInput
 from django.urls.base import reverse
 from django.utils.timezone import get_current_timezone_name
 
@@ -35,6 +37,7 @@ from nautobot.core.forms import (
     TagFilterField,
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.forms.forms import ConfirmationForm
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
@@ -88,9 +91,12 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.registry import registry
+from nautobot.extras.signals import change_context_state
+from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     FeatureQuery,
+    get_worker_count,
     RoleModelsQuery,
     TaggableClassesQuery,
 )
@@ -111,6 +117,8 @@ from .mixins import (
     TagsBulkEditFormMixin,
 )
 
+logger = logging.getLogger(__name__)
+
 __all__ = (
     "BaseDynamicGroupMembershipFormSet",
     "ComputedFieldForm",
@@ -125,6 +133,7 @@ __all__ = (
     "CustomFieldFilterForm",
     "CustomFieldModelCSVForm",
     "CustomFieldBulkCreateForm",  # 2.0 TODO remove this deprecated class
+    "CustomFieldBulkDeleteForm",
     "CustomFieldChoiceFormSet",
     "CustomLinkForm",
     "CustomLinkFilterForm",
@@ -489,6 +498,44 @@ class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
 @class_deprecated_in_favor_of(CustomFieldModelBulkEditFormMixin)
 class CustomFieldBulkCreateForm(CustomFieldModelBulkEditFormMixin):
     """No longer needed as a separate class - use CustomFieldModelBulkEditFormMixin instead."""
+
+
+class CustomFieldBulkDeleteForm(ConfirmationForm):
+    def __init__(self, *args, delete_all=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        queryset = CustomField.objects.all()
+        self.fields["pk"] = ModelMultipleChoiceField(
+            queryset=queryset, widget=MultipleHiddenInput, required=not delete_all
+        )
+
+    def construct_custom_field_delete_tasks(self, queryset):
+        """
+        Helper method to construct a list of celery tasks to execute when bulk deleting custom fields.
+        """
+        change_context = change_context_state.get()
+        if change_context is None:
+            context = None
+        else:
+            context = change_context.as_dict(queryset)
+            context["context_detail"] = "bulk delete custom field data"
+        tasks = [
+            delete_custom_field_data.si(obj.key, set(obj.content_types.values_list("pk", flat=True)), context)
+            for obj in queryset
+        ]
+        return tasks
+
+    def perform_pre_delete(self, queryset):
+        """
+        Remove all Custom Field Keys/Values from _custom_field_data of the related ContentType in the background.
+        """
+        if not get_worker_count():
+            logger.error("Celery worker process not running. Object custom fields may fail to reflect this deletion.")
+            return
+        tasks = self.construct_custom_field_delete_tasks(queryset)
+        # Executing the tasks in the background sequentially using chain() aligns with how a single
+        # CustomField object is deleted.  We decided to not check the result because it needs at least one worker
+        # to be active and comes with extra performance penalty.
+        chain(*tasks).apply_async()
 
 
 #
@@ -990,6 +1037,8 @@ class JobEditForm(NautobotModelForm):
             "job_queues",
             "default_job_queue_override",
             "default_job_queue",
+            "is_singleton",
+            "is_singleton_override",
             "tags",
         ]
 
@@ -1089,6 +1138,11 @@ class JobBulkEditForm(NautobotBulkEditForm):
         required=False,
         help_text="Default Job Queue the job runs on if no Job Queue is specified",
     )
+    is_singleton = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="Whether this job should fail to run if another instance of this job is already running",
+    )
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
     # Text field overrides
     clear_grouping_override = forms.BooleanField(
@@ -1132,9 +1186,61 @@ class JobBulkEditForm(NautobotBulkEditForm):
         required=False,
         help_text="If checked, the values of has sensitive variables will be reverted to the default values defined in each Job's source code",
     )
+    is_singleton_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, the values of is singleton will be reverted to the default values defined in each Job's source code",
+    )
 
     class Meta:
         model = Job
+
+    def post_save(self, obj):
+        super().post_save(obj)
+
+        cleaned_data = self.cleaned_data
+
+        # Handle text related fields
+        for overridable_field in JOB_OVERRIDABLE_FIELDS:
+            override_field = overridable_field + "_override"
+            clear_override_field = "clear_" + overridable_field + "_override"
+            reset_override = cleaned_data.get(clear_override_field, False)
+            override_value = cleaned_data.get(overridable_field)
+            if reset_override:
+                setattr(obj, override_field, False)
+            elif not reset_override and override_value not in [None, ""]:
+                setattr(obj, override_field, True)
+                setattr(obj, overridable_field, override_value)
+
+        # Handle job queues
+        clear_override_field = "clear_job_queues_override"
+        reset_override = cleaned_data.get(clear_override_field, False)
+        if reset_override:
+            meta_task_queues = obj.job_class.task_queues
+            job_queues = []
+            for queue_name in meta_task_queues:
+                try:
+                    job_queues.append(JobQueue.objects.get(name=queue_name))
+                except JobQueue.DoesNotExist:
+                    # Do we want to create the Job Queue for the users here if we do not have it in the database?
+                    pass
+            obj.job_queues_override = False
+            obj.job_queues.set(job_queues)
+        elif cleaned_data["job_queues"]:
+            obj.job_queues_override = True
+
+        # Handle default job queue
+        clear_override_field = "clear_default_job_queue_override"
+        reset_override = cleaned_data.get(clear_override_field, False)
+        if reset_override:
+            meta_task_queues = obj.job_class.task_queues
+            obj.default_job_queue_override = False
+            obj.default_job_queue, _ = JobQueue.objects.get_or_create(
+                name=meta_task_queues[0] if meta_task_queues else settings.CELERY_TASK_DEFAULT_QUEUE
+            )
+        elif cleaned_data["default_job_queue"]:
+            obj.default_job_queue_override = True
+
+        obj.validated_save()
 
 
 class JobFilterForm(BootstrapMixin, forms.Form):

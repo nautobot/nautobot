@@ -62,6 +62,7 @@ An administrator or user with `extras.change_job` permission can also edit a Job
 * `soft_time_limit`
 * `time_limit`
 * `job_queues`
+* `is_singleton`
 
 This is done by setting the corresponding "override" flag (`grouping_override`, `name_override`, etc.) to `True` then providing a new value for the attribute in question. An overridden attribute will remain set to its overridden value even if the underlying Job class definition changes and `nautobot-server <migrate|post_upgrade>` gets run again. Conversely, clearing the "override" flag for an attribute and saving the database record will revert the attribute to the underlying value defined within the Job class source code.
 

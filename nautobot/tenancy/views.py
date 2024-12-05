@@ -5,7 +5,7 @@ from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, StatsPanel
 from nautobot.core.views import generic
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.dcim.models import Device, Location, Rack, RackReservation
+from nautobot.dcim.models import Controller, ControllerManagedDeviceGroup, Device, Location, Rack, RackReservation
 from nautobot.extras.models import DynamicGroup
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
 from nautobot.virtualization.models import Cluster, VirtualMachine
@@ -93,14 +93,16 @@ class TenantView(generic.ObjectView):
                 related_models=[
                     Circuit,
                     Cluster,
+                    Controller,
+                    ControllerManagedDeviceGroup,
                     Device,
+                    DynamicGroup,
                     IPAddress,
                     # TODO: Should we include child locations of the filtered locations in the location_count below?
                     Location,
                     Prefix,
                     Rack,
                     RackReservation,
-                    DynamicGroup,
                     VirtualMachine,
                     VLAN,
                     VRF,

@@ -38,6 +38,8 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
 from nautobot.extras.jobs import get_job, get_jobs
+from nautobot.extras.models import Job, JobQueue
+from nautobot.extras.models.jobs import JobLogEntry
 
 
 class JobTest(TestCase):
@@ -287,6 +289,105 @@ class JobTransactionTest(TransactionTestCase):
         self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
         self.request.id = uuid.uuid4()
         self.request.user = self.user
+
+    def test_bulk_delete_system_jobs_fail(self):
+        system_job_queryset = Job.objects.filter(module_name__startswith="nautobot.")
+        pk_list = [str(pk) for pk in system_job_queryset.values_list("pk", flat=True)[:3]]
+        initial_count = Job.objects.all().count()
+        self.add_permissions("extras.delete_job")
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            content_type=ContentType.objects.get_for_model(Job).id,
+            delete_all=False,
+            filter_query_params={},
+            pk_list=pk_list,
+            username=self.user.username,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertIn(
+            f"Unable to delete Job {system_job_queryset.first()}. System Job cannot be deleted", error_log.message
+        )
+        self.assertEqual(initial_count, Job.objects.all().count())
+
+    def test_job_bulk_edit_default_queue_stays_default_after_one_field_update(self):
+        self.add_permissions("extras.change_job", "extras.view_job")
+        job_class_to_test = "TestPass"
+        job_description = "default job queue test"
+        job_to_test = Job.objects.get(job_class_name=job_class_to_test)
+        queryset = Job.objects.filter(installed=True, hidden=False, job_class_name=job_class_to_test)
+        default_job_queue = job_to_test.default_job_queue
+        pk_list = list(queryset.values_list("pk", flat=True))
+
+        job_ct = ContentType.objects.get_for_model(Job)
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=job_ct.id,
+            edit_all=False,
+            filter_query_params={},
+            form_data={
+                "pk": pk_list,
+                "description": job_description,
+            },
+            username=self.user.username,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(Job.objects.filter(description=job_description).count(), queryset.count())
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        )
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
+        )
+        instance = Job.objects.get(job_class_name=job_class_to_test)
+        self.assertEqual(instance.description, job_description)
+        self.assertEqual(instance.default_job_queue, default_job_queue)
+
+    def test_job_bulk_edit_preserve_job_queues_after_one_field_update(self):
+        self.add_permissions("extras.change_job", "extras.view_job")
+        job_class_to_test = "TestPass"
+        job_description = "job queues test"
+        job_to_test = Job.objects.get(job_class_name=job_class_to_test)
+
+        # Simulate 3 job queues set
+        job_queues = JobQueue.objects.all()[:3]
+        job_to_test.job_queues.set(job_queues)
+        job_to_test.job_queues.add(job_to_test.default_job_queue)
+        job_to_test.job_queues_override = True
+        job_to_test.save()
+
+        expected_job_queues = list(job_to_test.job_queues.values_list("pk", flat=True))
+
+        queryset = Job.objects.filter(installed=True, hidden=False, job_class_name=job_class_to_test)
+        pk_list = list(queryset.values_list("pk", flat=True))
+
+        job_ct = ContentType.objects.get_for_model(Job)
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=job_ct.id,
+            edit_all=False,
+            filter_query_params={},
+            form_data={
+                "pk": pk_list,
+                "description": job_description,
+            },
+            username=self.user.username,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(Job.objects.filter(description=job_description).count(), queryset.count())
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        )
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
+        )
+
+        instance = Job.objects.get(job_class_name=job_class_to_test)
+        self.assertEqual(instance.description, job_description)
+        self.assertQuerySetEqual(instance.job_queues.all(), JobQueue.objects.filter(pk__in=expected_job_queues))
 
     def test_job_hard_time_limit_less_than_soft_time_limit(self):
         """
@@ -605,6 +706,38 @@ class JobTransactionTest(TransactionTestCase):
         profiling_result = Path(f"{tempfile.gettempdir()}/nautobot-jobresult-{job_result.id}.pstats")
         self.assertTrue(profiling_result.exists())
         profiling_result.unlink()
+
+    def test_job_singleton(self):
+        module = "singleton"
+        name = "TestSingletonJob"
+
+        job_class, _ = get_job_class_and_model(module, name, "local")
+        self.assertTrue(job_class.is_singleton)
+        cache.set(job_class.singleton_cache_key, 1)
+        failed_job_result = create_job_result_and_run_job(module, name)
+
+        self.assertEqual(
+            failed_job_result.status, JobResultStatusChoices.STATUS_FAILURE, msg="Duplicate singleton job didn't error."
+        )
+        self.assertIsNone(cache.get(job_class.singleton_cache_key, None))
+
+    def test_job_ignore_singleton(self):
+        module = "singleton"
+        name = "TestSingletonJob"
+
+        job_class, _ = get_job_class_and_model(module, name, "local")
+        self.assertTrue(job_class.is_singleton)
+        cache.set(job_class.singleton_cache_key, 1)
+        passed_job_result = create_job_result_and_run_job(
+            module, name, celery_kwargs={"nautobot_job_ignore_singleton_lock": True}
+        )
+
+        self.assertEqual(
+            passed_job_result.status,
+            JobResultStatusChoices.STATUS_SUCCESS,
+            msg="Duplicate singleton job didn't succeed with nautobot_job_ignore_singleton_lock=True.",
+        )
+        self.assertIsNone(cache.get(job_class.singleton_cache_key, None))
 
     @mock.patch("nautobot.extras.context_managers.enqueue_webhooks")
     def test_job_fires_webhooks(self, mock_enqueue_webhooks):
