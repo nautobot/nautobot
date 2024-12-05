@@ -75,7 +75,7 @@ urlpatterns = [
     ),
 ]
 
-if settings.NO_INDEX_ROBOTS:
+if settings.PUBLISH_ROBOTS_TXT:
     urlpatterns += [
         path(
             "robots.txt",

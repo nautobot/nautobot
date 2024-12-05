@@ -173,6 +173,9 @@ PLUGINS_CONFIG = {}
 if "NAUTOBOT_PREFER_IPV4" in os.environ and os.environ["NAUTOBOT_PREFER_IPV4"] != "":
     PREFER_IPV4 = is_truthy(os.environ["NAUTOBOT_PREFER_IPV4"])
 
+# Publish a simple "no-index" robots.txt for Nautobot?
+PUBLISH_ROBOTS_TXT = is_truthy(os.getenv("NAUTOBOT_PUBLISH_ROBOTS_TXT", "True"))
+
 # Default height and width in pixels of a single rack unit in rendered rack elevations. Defaults are 22 and 220
 if (
     "NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_HEIGHT" in os.environ
@@ -430,7 +433,6 @@ CSRF_FAILURE_VIEW = "nautobot.core.views.csrf_failure"
 DATE_FORMAT = os.getenv("NAUTOBOT_DATE_FORMAT", "N j, Y")
 DATETIME_FORMAT = os.getenv("NAUTOBOT_DATETIME_FORMAT", "N j, Y g:i a")
 DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "False"))
-NO_INDEX_ROBOTS = is_truthy(os.getenv("NAUTOBOT_NO_INDEX_ROBOTS", "True"))
 INTERNAL_IPS = ["127.0.0.1", "::1"]
 FORCE_SCRIPT_NAME = None
 
