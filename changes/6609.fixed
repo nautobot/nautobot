@@ -1,0 +1,1 @@
+Fix useless call to the DB when logging the extra={"skip_db_logging": True}.
