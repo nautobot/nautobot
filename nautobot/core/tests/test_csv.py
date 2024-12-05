@@ -267,6 +267,9 @@ class CSVParsingRelatedTestCase(TestCase):
         url = reverse("dcim:device_import")
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
+        # uploading the CSV always returns a 200 code with a page with an error message on it
+        # ensure we don't have that error message
+        self.assertNotIn("FORM-ERROR", response.content.decode(response.charset))
         self.assertEqual(Device.objects.count(), 4)
 
         # Assert TestDevice3 got created with the right fields

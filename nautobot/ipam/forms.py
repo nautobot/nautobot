@@ -752,6 +752,7 @@ class VLANForm(NautobotModelForm, TenancyForm):
     )
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
+        query_params={"location": "$locations"},
         required=False,
     )
 
@@ -779,6 +780,22 @@ class VLANForm(NautobotModelForm, TenancyForm):
         }
 
     def clean(self):
+        vlan_group = self.cleaned_data["vlan_group"]
+        locations = self.cleaned_data["locations"]
+        # Validate Vlan Group Location is one of the ancestors of the VLAN locations specified.
+        if vlan_group and vlan_group.location and locations:
+            vlan_group_location = vlan_group.location
+            is_vlan_group_valid = False
+            for location in locations:
+                if vlan_group_location in location.ancestors(include_self=True):
+                    is_vlan_group_valid = True
+                    break
+
+            if not is_vlan_group_valid:
+                locations = list(locations.values_list("name", flat=True))
+                raise ValidationError(
+                    {"vlan_group": [f"VLAN Group {vlan_group} is not in locations {locations} or their ancestors."]}
+                )
         # Validation error raised in signal is not properly handled in form clean
         # Hence handling any validationError that might occur.
         try:

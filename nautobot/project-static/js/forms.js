@@ -97,11 +97,9 @@ function initializeSlugField(context){
     if (slug_field.length != 0) {
         var slug_source_arr = slug_field.attr('slug-source').split(" ");
         var slug_length = slug_field.attr('maxlength');
-        if (slug_field.val()) {
-            slug_field.attr('_changed', true);
-        }
+        slug_field.attr('_changed', Boolean(slug_field.val()));
         slug_field.change(function() {
-            $(this).attr('_changed', true);
+            $(this).attr('_changed', Boolean($(this).val()));
         });
         function reslugify() {
             let slug_str = "";
@@ -118,7 +116,7 @@ function initializeSlugField(context){
         for (slug_source_str of slug_source_arr) {
             let slug_source = $('#id_' + slug_source_str);
             slug_source.on('keyup change', function() {
-                if (slug_field && !slug_field.attr('_changed')) {
+                if (slug_field && slug_field.attr('_changed')=="false") {
                     reslugify();
                 }
             });
@@ -933,10 +931,20 @@ function createInput(element){
     replaceEl(element, input_field)
 }
 
+function submitOnEnter(event) {
+    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+        if (!event.repeat) {
+            event.target.form.requestSubmit();
+        }
+
+        event.preventDefault(); // Prevents the addition of a new line in the text field
+    }
+}
 
 $(document).ready((e) => {
     jsify_form(this.document);
     initializeResultPerPageSelection(this.document);
+    document.querySelectorAll("textarea.form-control").forEach(function(element) {element.addEventListener("keydown", submitOnEnter)});
 })
 
 // Scroll up an offset equal to the first nav element if a hash is present

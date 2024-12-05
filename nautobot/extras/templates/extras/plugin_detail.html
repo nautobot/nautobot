@@ -278,6 +278,39 @@
                                 </td>
                             </tr>
                             <tr>
+                                <td>Table Extensions</td>
+                                <td>
+                                    {% if features.table_extensions %}
+                                        {% if features.table_extensions.columns %}
+                                        <b>Custom Columns</b>
+                                        <ul class="list-unstyled">
+                                            {% for column in features.table_extensions.columns %}
+                                                <li><code>{{ column }}</code></li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% endif %}
+                                        {% if features.table_extensions.add_to_default_columns %}
+                                        <b>Additional Default Columns</b>
+                                        <ul class="list-unstyled">
+                                            {% for column in features.table_extensions.add_to_default_columns %}
+                                                <li><code>{{ column }}</code></li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% endif %}
+                                        {% if features.table_extensions.remove_from_default_columns %}
+                                        <b>Remove from Default Columns</b>
+                                        <ul class="list-unstyled">
+                                            {% for column in features.table_extensions.remove_from_default_columns %}
+                                                <li><code>{{ column }}</code></li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% endif %}
+                                    {% else %}
+                                        {% include 'utilities/render_boolean.html' with value=features.table_extensions %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
                                 <td>Views/URLs</td>
                                 <td>
                                     {% if features.urlpatterns %}

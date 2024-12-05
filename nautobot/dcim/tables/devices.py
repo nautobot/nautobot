@@ -173,6 +173,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
         template_code="""{% if record.device_redundancy_group %}<span class="badge badge-default">{{ record.device_redundancy_group_priority|default:'None' }}</span>{% else %}—{% endif %}"""
     )
     controller_managed_device_group = tables.Column(linkify=True)
+    software_version = tables.Column(linkify=True, verbose_name="Software Version")
     secrets_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:device_list")
 
@@ -201,6 +202,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "vc_priority",
             "device_redundancy_group",
             "device_redundancy_group_priority",
+            "software_version",
             "controller_managed_device_group",
             "secrets_group",
             "tags",
@@ -218,13 +220,11 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
         )
 
 
-class DeviceImportTable(BaseTable):
+class DeviceImportTable(StatusTableMixin, RoleTableMixin, BaseTable):
     name = tables.TemplateColumn(template_code=DEVICE_LINK)
-    status = ColoredLabelColumn()
     tenant = TenantColumn()
     location = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
-    role = tables.Column(verbose_name="Role")
     device_type = tables.Column(verbose_name="Type")
 
     class Meta(BaseTable.Meta):
@@ -616,7 +616,7 @@ class DeviceModulePowerOutletTable(PowerOutletTable):
         row_attrs = {"class": cable_status_color_css}
 
 
-class BaseInterfaceTable(BaseTable):
+class BaseInterfaceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     enabled = BooleanColumn()
     ip_addresses = tables.TemplateColumn(
         template_code=INTERFACE_IPADDRESSES,
@@ -632,7 +632,7 @@ class BaseInterfaceTable(BaseTable):
     vrf = tables.Column(linkify=True, verbose_name="VRF")
 
 
-class InterfaceTable(StatusTableMixin, ModularDeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
+class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
     mgmt_only = BooleanColumn()
     tags = TagColumn(url_name="dcim:interface_list")
 
@@ -1275,6 +1275,9 @@ class SoftwareImageFileTable(StatusTableMixin, BaseTable):
 class SoftwareVersionTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     version = tables.Column(linkify=True)
+    platform = tables.Column(linkify=True)
+    release_date = tables.DateColumn()
+    end_of_support_date = tables.DateColumn()
     software_image_file_count = LinkedCountColumn(
         viewname="dcim:softwareimagefile_list",
         url_params={"software_version": "pk"},
@@ -1328,15 +1331,13 @@ class SoftwareVersionTable(StatusTableMixin, BaseTable):
         )
 
 
-class ControllerTable(BaseTable):
+class ControllerTable(StatusTableMixin, RoleTableMixin, BaseTable):
     """Table for list view."""
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    status = ColoredLabelColumn()
     location = tables.Column(linkify=True)
     platform = tables.Column(linkify=True)
-    role = tables.Column(linkify=True)
     tenant = TenantColumn()
     external_integration = tables.Column(linkify=True)
     controller_device = tables.Column(linkify=True)

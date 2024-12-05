@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model
-from django.urls import get_resolver, URLPattern, URLResolver
+from django.urls import get_resolver, resolve, reverse, URLPattern, URLResolver
 from django.utils.module_loading import import_string
 
 
@@ -177,7 +177,42 @@ def get_form_for_model(model, form_prefix=""):
     return get_related_class_for_model(model, module_name="forms", object_suffix=object_suffix)
 
 
-def get_table_for_model(model):
+def get_related_field_for_models(from_model, to_model):
+    """
+    Find the field on `from_model` that is a relation to `to_model`.
+
+    If no such field is found, returns None.
+    If more than one such field is found, raises an AttributeError.
+
+    Args:
+        from_model (BaseModel): The model class that should contain the relevant field or relation.
+        to_model (BaseModel): The model class that we're looking for as the destination.
+
+    Examples:
+        >>> get_related_field_for_models(Device, Location)
+        <django.db.models.fields.related.ForeignKey: location>
+        >>> get_related_field_for_models(Location, Device)
+        <ManyToOneRel: dcim.device>
+        >>> get_related_field_for_models(Prefix, Location)
+        <django.db.models.fields.related.ManyToManyField: locations>
+        >>> get_related_field_for_models(Location, Prefix)
+        <ManyToManyRel: ipam.prefix>
+        >>> get_related_field_for_models(Device, IPAddress)
+        AttributeError: Device has more than one relation to IPAddress: primary_ip4, primary_ip6
+    """
+    matching_field = None
+    for field in from_model._meta.get_fields():
+        if hasattr(field, "remote_field") and field.remote_field and field.remote_field.model == to_model:
+            if matching_field is not None:
+                raise AttributeError(
+                    f"{from_model.__name__} has more than one relation to {to_model.__name__}: "
+                    f"{matching_field.name}, {field.name}"
+                )
+            matching_field = field
+    return matching_field
+
+
+def get_table_for_model(model, suffix=None):
     """Return the `Table` class associated with a given `model`.
 
     The `Table` class is expected to be in the `tables` module within the application
@@ -187,11 +222,12 @@ def get_table_for_model(model):
 
     Args:
         model (BaseModel): A model class
+        suffix (str): A replacement suffix for the table name (e.g. `DetailTable`, such as to retrieve `FooDetailTable`)
 
     Returns:
         (Union[Table, None]): Either the `Table` class or `None`
     """
-    return get_related_class_for_model(model, module_name="tables", object_suffix="Table")
+    return get_related_class_for_model(model, module_name="tables", object_suffix=suffix or "Table")
 
 
 def get_view_for_model(model, view_type=""):
@@ -240,11 +276,13 @@ def get_table_class_string_from_view_name(view_name):
     Returns:
         table_class_name (String): The name of the model table class or None e.g. LocationTable, CircuitTable
     """
-    model = get_model_for_view_name(view_name)
-    if model:
-        table_class = get_table_for_model(model)
-        if table_class:
-            return table_class.__name__
+
+    view_func = resolve(reverse(view_name)).func
+    view_class = getattr(view_func, "cls", getattr(view_func, "view_class", None))
+    if hasattr(view_class, "table_class"):
+        return view_class.table_class.__name__
+    if hasattr(view_class, "table"):
+        return view_class.table.__name__
     return None
 
 
