@@ -180,19 +180,19 @@ You need to create a release tag locally so that you can use it later when you d
 To create the tag locally:
 
 ```bash
-$ git tag v1.4.3
+git tag v1.4.3
 ```
 
 To list all the tags to see if it is created successfully:
 
 ```bash
-$ git tag
+git tag
 ```
 
 To push the tag upstream:
 
 ```bash
-$ git push origin v1.4.3
+git push origin v1.4.3
 ```
 
 ### Create a New Release

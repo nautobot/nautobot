@@ -52,9 +52,7 @@ jobs:
           poetry-install-options: "--only dev"
           poetry-version: "1.8.2"
           python-version: "3.12"
-      - name: "Install markdownlint"
-        run: "npm install markdownlint-cli@0.38.0"
-      - name: "Linting: markdownlint"
+      - name: "Linting: pymarkdownlnt"
         run: "poetry run invoke markdownlint"
   hadolint:
     runs-on: "ubuntu-20.04"

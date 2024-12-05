@@ -654,19 +654,11 @@ def hadolint(context):
 @task
 def markdownlint(context, fix=False):
     """Lint Markdown files."""
-    if is_truthy(context.nautobot.local) and not context.run("command -v markdownlint", warn=True):
-        command = "npm exec -- markdownlint "
-    else:
-        command = "markdownlint "
-
     if fix:
-        command += "--fix "
-
-    command += (
-        "--ignore nautobot/project-static "
-        "--config .markdownlint.yml --rules scripts/use-relative-md-links.js "
-        "nautobot examples *.md"
-    )
+        command = "pymarkdown fix --recurse nautobot examples *.md"
+        run_command(context, command)
+    # fix mode doesn't scan/report issues it can't fix, so always run scan even after fixing
+    command = "pymarkdown scan --recurse nautobot examples *.md"
     run_command(context, command)
 
 
