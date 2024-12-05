@@ -103,13 +103,12 @@ object_detail_content = ObjectDetailContent(
     )
 ```
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![Buttons Example](../../media/development/core/ui-component-framework/buttons-example.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ## Panel Types
 
@@ -514,13 +513,12 @@ class SecretUIViewSet(...):
     )
 ```
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![Button Example](../../media/development/core/ui-component-framework/button-example.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ### DropdownButton
 
@@ -563,13 +561,12 @@ class DeviceView(generic.ObjectView):
     )
 ```
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![DropdownButton Example](../../media/development/core/ui-component-framework/dropdown-button-example.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ## Complete Example
 
