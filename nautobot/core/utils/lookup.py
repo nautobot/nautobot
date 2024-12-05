@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model
-from django.urls import get_resolver, URLPattern, URLResolver
+from django.urls import get_resolver, resolve, reverse, URLPattern, URLResolver
 from django.utils.module_loading import import_string
 
 
@@ -276,12 +276,9 @@ def get_table_class_string_from_view_name(view_name):
     Returns:
         table_class_name (String): The name of the model table class or None e.g. LocationTable, CircuitTable
     """
-    app_label, model_name = view_name.split(":")
-    model_name = model_name.split("_")[0]
-    model_name = f"{app_label}.{model_name}"
-    # model name should be in the form of "dcim.location".
-    model = get_model_from_name(model_name)
-    view_class = get_view_for_model(model, "List")
+
+    view_func = resolve(reverse(view_name)).func
+    view_class = getattr(view_func, "cls", getattr(view_func, "view_class", None))
     if hasattr(view_class, "table_class"):
         return view_class.table_class.__name__
     if hasattr(view_class, "table"):
