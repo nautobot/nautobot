@@ -1,1 +1,1 @@
-Added comments parameter on device bulk edit
+Added `Comments` field on DeviceBulkEditForm.
