@@ -698,7 +698,7 @@ class CoreConfig(NautobotConfig):
             self.select_related = False
             self.clear_deferred_loading()
             self.clear_select_fields()
-            self.has_select_fields = True
+            self.selected = fields
 
             if fields:
                 for field in fields:
