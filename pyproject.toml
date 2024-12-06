@@ -345,11 +345,11 @@ signature-mutators=["unittest.mock.patch"]
 
 [tool.pymarkdown]
 extensions.front-matter.enabled = true  # needed for mkdocs-macros compatibility
-plugins.ul-indent.enabled = false  # doesn't work well with MkDocs expectations, use list-anchored-indent instead
-plugins.list-anchored-indent.enabled = true  # in place of ul-indent, see above
-plugins.line-length.enabled = false  # we don't wrap markdown to 80 characters.
-plugins.code-block-style.enabled = false  # inconsistency between "code" blocks and "admonition" blocks is expected
 plugins.additional_paths = "scripts/file_relative_links.py"
+plugins.code-block-style.enabled = false  # inconsistency between "code" blocks and "admonition" blocks is expected
+plugins.line-length.enabled = false  # we don't wrap markdown to 80 characters.
+plugins.list-anchored-indent.enabled = true  # in place of ul-indent, see below
+plugins.ul-indent.enabled = false  # doesn't work well with MkDocs expectations, use list-anchored-indent instead
 
 [tool.ruff]
 line-length = 120
