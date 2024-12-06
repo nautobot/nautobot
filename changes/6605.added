@@ -1,0 +1,3 @@
+Added `BaseTable` support for a `data_transform_callback` function that can be used to modify the table data after performing automatic QuerySet optimizations. (Several IPAM tables now use this functionality).
+Enhanced `LinkedCountColumn` to support a `distinct` parameter to handle cases where counts may otherwise be incorrect.
+Added `ip_addresses` and `has_ip_addresses` filter support to Device, Interface, and VirtualMachine FilterSets.

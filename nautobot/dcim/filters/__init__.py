@@ -903,6 +903,19 @@ class DeviceFilterSet(
         to_field_name="version",
         label="Software version (version or ID)",
     )
+    ip_addresses = MultiValueCharFilter(
+        method="filter_ip_addresses",
+        label="IP addresses (address or ID)",
+        distinct=True,
+    )
+    has_ip_addresses = RelatedMembershipBooleanFilter(field_name="interfaces__ip_addresses", label="Has IP addresses")
+
+    def filter_ip_addresses(self, queryset, name, value):
+        pk_values = set(item for item in value if is_uuid(item))
+        addresses = set(item for item in value if item not in pk_values)
+
+        ip_queryset = IPAddress.objects.filter_address_or_pk_in(addresses, pk_values)
+        return queryset.filter(interfaces__ip_addresses__in=ip_queryset).distinct()
 
     class Meta:
         model = Device
@@ -1130,6 +1143,19 @@ class InterfaceFilterSet(
         queryset=InterfaceRedundancyGroup.objects.all(),
         to_field_name="name",
     )
+    ip_addresses = MultiValueCharFilter(
+        method="filter_ip_addresses",
+        label="IP addresses (address or ID)",
+        distinct=True,
+    )
+    has_ip_addresses = RelatedMembershipBooleanFilter(field_name="ip_addresses", label="Has IP addresses")
+
+    def filter_ip_addresses(self, queryset, name, value):
+        pk_values = set(item for item in value if is_uuid(item))
+        addresses = set(item for item in value if item not in pk_values)
+
+        ip_queryset = IPAddress.objects.filter_address_or_pk_in(addresses, pk_values)
+        return queryset.filter(ip_addresses__in=ip_queryset).distinct()
 
     class Meta:
         model = Interface
@@ -1144,7 +1170,6 @@ class InterfaceFilterSet(
             "description",
             "label",
             "tags",
-            "interface_redundancy_groups",
         ]
 
     def generate_query_filter_device(self, value):
