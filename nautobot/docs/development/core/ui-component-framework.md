@@ -16,13 +16,12 @@
 
 The Nautobot UI Framework revolutionizes how you create object detail views in your applications. Instead of writing HTML templates, you declaratively define your UI structure using Python objects, resulting in consistent, maintainable, and responsive interfaces.
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![UI Framework Example](../../media/development/core/ui-component-framework/ui-framework-example.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ### Why Use the UI Framework?
 
@@ -74,13 +73,12 @@ A `Tab` is one of the major building blocks of your UI. The user can toggle betw
 
 `Panel`s are another of the major building blocks of your UI. They contain specific types of content and can be positioned within sections within a Tab.
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![Basic Panel Layout](../../media/development/core/ui-component-framework/basic-panel-layout.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ### Buttons
 
@@ -105,13 +103,12 @@ object_detail_content = ObjectDetailContent(
     )
 ```
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![Buttons Example](../../media/development/core/ui-component-framework/buttons-example.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ## Panel Types
 
@@ -194,14 +191,13 @@ panels = ui.ObjectFieldsPanel(
 ),
 ```
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/object-fields-panel-example.png){ .on-glb }
 - ![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/object-fields-panel-example_2.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ### KeyValueTablePanel
 
@@ -282,7 +278,7 @@ GroupedKeyValueTablePanel(
 )
 ```
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 7 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![GroupedKeyValueTablePanel Example 1](../../media/development/core/ui-component-framework/grouped-key-value-table-panel-example-1.png){ .on-glb }
@@ -290,7 +286,6 @@ GroupedKeyValueTablePanel(
 - ![GroupedKeyValueTablePanel Example 2](../../media/development/core/ui-component-framework/grouped-key-value-table-panel-example-2.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ### StatsPanel
 
@@ -320,14 +315,13 @@ StatsPanel(
 )
 ```
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![StatsPanel Code Example](../../media/development/core/ui-component-framework/stats-panel-example-code.png){ .on-glb }
 - ![StatsPanel Example](../../media/development/core/ui-component-framework/stats-panel-example.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ### BaseTextPanel
 
@@ -335,11 +329,12 @@ StatsPanel(
 
 [Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.BaseTextPanel)
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards" style="width: 300px;" markdown>
+
 - ![Text Panels Family](../../media/development/core/ui-component-framework/text-panels-family.png){ .on-glb }
+
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ### ObjectTextPanel
 
@@ -392,13 +387,12 @@ TextPanel(
 Note:
     `columns`/`context_columns_key` and `column_headers`/`context_column_headers_key` are mutually exclusive pairs.
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![Table Panels Family](../../media/development/core/ui-component-framework/table-panels-family.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 #### DataTablePanel Examples
 
@@ -519,13 +513,12 @@ class SecretUIViewSet(...):
     )
 ```
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![Button Example](../../media/development/core/ui-component-framework/button-example.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ### DropdownButton
 
@@ -568,13 +561,12 @@ class DeviceView(generic.ObjectView):
     )
 ```
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![DropdownButton Example](../../media/development/core/ui-component-framework/dropdown-button-example.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ## Complete Example
 
@@ -663,22 +655,22 @@ class LocationUIViewSet(views.NautobotUIViewSet):
 
 ### Common Issues and Solutions
 
-1. **Panels Not Appearing**
+1. Panels Not Appearing
     - Verify section choices
     - Check panel weights
     - Confirm data availability
 
-2. **Performance Issues**
+2. Performance Issues
     - Review query complexity in StatsPanel
     - Optimize field selections
     - Check database indexes
 
-3. **Layout Problems**
+3. Layout Problems
     - Validate section assignments
     - Review weight ordering
     - Check responsive behavior
 
-4. **Value Rendering**
+4. Value Rendering
     - Verify transform functions
     - Check data types
     - Confirm template paths

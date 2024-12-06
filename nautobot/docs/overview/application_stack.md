@@ -4,7 +4,7 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 
 ## Components
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 9 no-inline-html -->
 | Function           | Component                                                                                                                          |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
 | HTTP service       | :simple-nginx: NGINX                                                                                                               |
@@ -14,7 +14,6 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 | Cache              | :simple-redis: Django/Redis                                                                                                        |
 | Task queuing       | :simple-redis: Redis / :simple-celery: Celery                                                                                      |
 | Live device access | [NAPALM](https://napalm.readthedocs.io/en/latest/) and [NAPALM Community Drivers](https://github.com/napalm-automation-community). |
-<!-- markdownlint-enable no-inline-html -->
 
 ## Application Diagram
 

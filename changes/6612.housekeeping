@@ -1,0 +1,1 @@
+Replaced `markdownlint-cli` development dependency with Python package `pymarkdownlnt`.

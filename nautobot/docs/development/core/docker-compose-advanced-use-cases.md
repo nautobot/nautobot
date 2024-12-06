@@ -230,7 +230,7 @@ Using the Remote-Attach functionality of VS Code debugger is an alternative to d
 
 Follow the steps below to configure VS Code to debug Nautobot and Celery Worker running in a remote container:
 
-1. **Configure `invoke.yml` to use the `docker-compose.vscode-rdb.yml` file**
+1. **Configure `invoke.yml` to use the `docker-compose.vscode-rdb.yml` file.**
 
     This overrides the container settings without touching the original `docker-compose.yml` file.
 
@@ -250,7 +250,7 @@ Follow the steps below to configure VS Code to debug Nautobot and Celery Worker 
 
     See the [docker compose override](#docker-compose-overrides) documentation for more details.
 
-2. **VS Code debug configuration**
+2. **VS Code debug configuration.**
 
     If you have opened the workspace file `nautobot.code-workspace` then there are two debug
     configurations for remote debugging already available.

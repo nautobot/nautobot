@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Create a link to this file at .git/hooks/pre-commit to force various linting and static analysis prior to committing
 
 exec 1>&2
@@ -32,12 +32,8 @@ else
     invoke hadolint || EXIT=1
 fi
 
-if [ "$INVOKE_NAUTOBOT_LOCAL" = "True" ] && [ ! -x "$(command -v markdownlint)" ]; then
-    echo "Skipping Markdownlint check: markdownlint must be installed to run"
-else
-    echo "Checking Markdown files..."
-    invoke markdownlint || EXIT=1
-fi
+echo "Checking Markdown files..."
+invoke markdownlint || EXIT=1
 
 echo "Check formatting and static analysis via ruff..."
 invoke ruff || EXIT=1

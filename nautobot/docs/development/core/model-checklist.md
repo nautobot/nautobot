@@ -2,7 +2,7 @@
 
 A general best-practices checklist to follow when adding a new data model in Nautobot or adding new fields to an existing model.
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 9 no-inline-html -->
 <style>
 article ul li:before {
     content: '□';
@@ -12,7 +12,6 @@ article ul li {
     list-style-type: none;
 }
 </style>
-<!-- markdownlint-enable no-inline-html -->
 
 ## Bootstrapping a new Model
 

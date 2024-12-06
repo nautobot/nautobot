@@ -1,0 +1,1 @@
+Removed Node.js and `npm` from the development Docker images.
