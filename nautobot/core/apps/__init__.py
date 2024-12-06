@@ -727,9 +727,7 @@ class CoreConfig(NautobotConfig):
             # Selected annotations must be known before setting the GROUP BY
             # clause.
             if self.group_by is True:
-                self.add_fields(
-                    (f.attname for f in self.model._meta.concrete_fields), False
-                )
+                self.add_fields((f.attname for f in self.model._meta.concrete_fields), False)
                 # Disable GROUP BY aliases to avoid orphaning references to the
                 # SELECT clause which is about to be cleared.
                 self.set_group_by(allow_aliases=False)
