@@ -19,7 +19,6 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
 )
 from nautobot.core.api.exceptions import SerializerNotFound
-from nautobot.core.api.fields import NautobotHyperlinkedRelatedField
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
     get_nested_serializer_depth,
@@ -136,12 +135,12 @@ class ConfigContextSerializer(ValidatedModelSerializer, TaggedModelSerializerMix
     owner = serializers.SerializerMethodField(read_only=True)
 
     # Conditional enablement of dynamic groups filtering
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
+    @property
+    def fields(self):
+        fields = super().fields
         if not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
-            # In the case of a nested serializer, we won't have a `dynamic_groups` field at all.
-            self.fields.pop("dynamic_groups", None)
+            fields.pop("dynamic_groups", None)
+        return fields
 
     class Meta:
         model = ConfigContext
@@ -200,10 +199,7 @@ class ConfigContextSchemaSerializer(NautobotModelSerializer):
 #
 
 
-class ContactSerializer(NautobotModelSerializer):
-    # needed since this is the reverse side of the M2M field.
-    teams = NautobotHyperlinkedRelatedField(queryset=Team.objects.all(), many=True, required=False)
-
+class ContactSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = Contact
         fields = "__all__"
@@ -212,7 +208,14 @@ class ContactSerializer(NautobotModelSerializer):
         extra_kwargs = {
             "email": {"default": ""},
             "phone": {"default": ""},
+            "teams": {"required": False},
         }
+
+    def get_field_names(self, declared_fields, info):
+        """Add reverse M2M for teams to the fields for this serializer."""
+        field_names = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(field_names, "teams")
+        return field_names
 
     def validate(self, data):
         attrs = data.copy()
@@ -433,7 +436,7 @@ class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelS
 #
 
 
-class ExternalIntegrationSerializer(NautobotModelSerializer):
+class ExternalIntegrationSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = ExternalIntegration
         fields = "__all__"
@@ -455,7 +458,7 @@ class FileProxySerializer(BaseModelSerializer):
 #
 
 
-class GitRepositorySerializer(NautobotModelSerializer):
+class GitRepositorySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     """Git repositories defined as a data source."""
 
     provided_contents = MultipleChoiceJSONField(
@@ -816,7 +819,7 @@ class JobButtonSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 #
 
 
-class MetadataTypeSerializer(NautobotModelSerializer):
+class MetadataTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     content_types = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
         many=True,
@@ -1092,9 +1095,7 @@ class TagSerializer(NautobotModelSerializer):
 #
 
 
-class TeamSerializer(NautobotModelSerializer):
-    contacts = NautobotHyperlinkedRelatedField(queryset=Contact.objects.all(), many=True, required=False)
-
+class TeamSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = Team
         fields = "__all__"

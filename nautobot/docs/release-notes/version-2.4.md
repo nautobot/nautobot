@@ -16,6 +16,7 @@ This document describes all new features and changes in Nautobot 2.4.
 
 - App developers should begin to adopt the [UI Component Framework](#ui-component-framework) introduced in Nautobot 2.4, as this will reduce the amount of boilerplate HTML/CSS content that they need to develop and maintain, and will insulate Apps from future CSS changes planned for Nautobot v3.
 - Additionally, App developers should familiarize themselves with the new [Event Publication Framework](#event-publication-framework) and the possibilities it enables for Apps to publish their own relevant events.
+- As a side benefit of adding [REST API `exclude_m2m` support](#rest-api-exclude_m2m-support), the Nautobot REST API `ViewSet` classes now attempt to intelligently apply `select_related()` and/or `prefetch_related()` optimizations to the `queryset` associated to a given REST API viewset. Apps defining their own REST API viewsets (and requiring Nautobot 2.4.0 or later) can typically remove most explicit calls to `select_related()` and `prefetch_related()`; furthermore, in order to benefit most from the `exclude_m2m=true` query parameter, apps in Nautobot 2.4.0 and later **should not** explicitly `prefetch_related()` many-to-many related fields any longer. (Explicit calls to `select_related()` and `prefetch_related()` may still be necessary and appropriate if your API serializer needs to perform nested lookups, as the automatic optimization here currently only understands directly related object lookups.)
 - Job authors should be aware of the ability to log [`success`](#job-success-log-level) messages in Nautobot v2.4 and later and should adopt this log level as appropriate.
 - Job authors should be aware of the introduction of [Job Queues](#kubernetes-job-execution-and-job-queue-data-model) as a general-purpose replacement for the Celery-specific `Job.task_queues` attribute, and if a Job specifies its preferred `task_queues`, should verify that the queue selected as its `default_job_queue` after the Nautobot upgrade is correct.
 
@@ -70,6 +71,14 @@ Refer to the [Jobs documentation](../user-guide/platform-functionality/jobs/inde
 #### Per-user Time Zone Support
 
 Users can now configure their preferred display time zone via the User Preferences UI and Nautobot will display dates and times in the configured time zone for each user.
+
+#### REST API `exclude_m2m` Support
+
+Added REST API support for an `?exclude_m2m=true` query parameter. Specifying this parameter prevents the API from retrieving and serializing many-to-many relations on the requested object(s) (for example, the list of all Prefixes associated with a given VRF), which can in some cases greatly improve the performance of the API and reduce memory and network overhead substantially.
+
+A future Nautobot major release may change the REST API behavior to make `exclude_m2m=true` the default behavior.
+
+Additionally, the `DynamicModelChoiceField` and related form fields have been enhanced to use `exclude_m2m=true` when querying the REST API to populate their options, which can in some cases significantly improve the responsiveness of these fields.
 
 #### Singleton Jobs
 

@@ -68,7 +68,7 @@ Most new models should use the `custom_links`, `custom_validators`, `export_temp
     - Use appropriate [base class](best-practices.md#base-classes) and mixin(s)
 - Implement API `<Model>ViewSet` class in `nautobot.<app>.api.views` module
     - Use appropriate [base class](best-practices.md#base-classes) and mixin(s)
-    - Use appropriate `select_related`/`prefetch_related` for performance
+    - Use appropriate `select_related`/`prefetch_related` for performance (bearing in mind that in Nautobot 2.4.0 and later, the viewset can perform many of these optimizations automatically)
 - Add API viewset to `nautobot.<app>.api.urls` module
 
 ### UI
@@ -82,10 +82,11 @@ Most new models should use the `custom_links`, `custom_validators`, `export_temp
     - Use appropriate [base class](best-practices.md#base-classes) and mixin(s)
 - Implement `<Model>BulkEditForm` class in `nautobot.<app>.forms` module
     - Use appropriate [base class](best-practices.md#base-classes) and mixin(s)
-- Implement `nautobot/<app>/templates/<app>/<model>_retrieve.html` detail template
 - Implement `NautobotUIViewSet` subclass in `nautobot.<app>.views` module
     - Use appropriate [base class](best-practices.md#base-classes) and mixin(s)
-    - Use appropriate `select_related`/`prefetch_related` for performance
+    - Use appropriate `select_related`/`prefetch_related` for performance (bearing in mind that in the list view, the table class can perform many of these optimizations automatically)
+    - Implement `object_detail_content` using the UI Component Framework
+        - (only if strictly necessary) Implement `nautobot/<app>/templates/<app>/<model>_retrieve.html` detail template
 - Add UI viewset to `nautobot.<app>.urls` module
 - Add menu item in `nautobot.<app>.navigation` module
 - _optional_ Add model link and counter to home page panel in `nautobot.<app>.homepage` module

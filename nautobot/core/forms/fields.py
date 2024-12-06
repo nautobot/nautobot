@@ -504,6 +504,8 @@ class DynamicModelChoiceMixin:
     ):
         self.display_field = display_field
         self.query_params = query_params or {}
+        # Default to "exclude_m2m=true" for improved performance, if not otherwise specified
+        self.query_params.setdefault("exclude_m2m", "true")
         self.initial_params = initial_params or {}
         self.null_option = null_option
         self.disabled_indicator = disabled_indicator
