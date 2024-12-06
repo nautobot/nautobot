@@ -19,7 +19,7 @@ SUPERUSER_GROUPS = getattr(settings, "SSO_SUPERUSER_GROUPS", [])
 STAFF_GROUPS = getattr(settings, "SSO_STAFF_GROUPS", [])
 
 
-def sync(uid, user=None, response=None, *args, **kwargs):
+def group_sync(uid, user=None, response=None, *args, **kwargs):
     """Sync the users groups from OAuth2/OIDC auth and set staff/superuser as appropriate."""
     if user and response and CLAIMS_GROUP_NAME and response.get(CLAIMS_GROUP_NAME, False):
         group_memberships = response.get(CLAIMS_GROUP_NAME)
