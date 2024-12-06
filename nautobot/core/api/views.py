@@ -11,7 +11,7 @@ from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist, Valida
 from django.db import transaction
 from django.db.models import ProtectedError
 from django.db.models.fields.related import ForeignKey, ManyToManyField, RelatedField
-from django.db.models.fields.reverse_related import ManyToOneRel
+from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.http.response import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect
 from drf_spectacular.plumbing import get_relative_url, set_query_parameters
@@ -264,7 +264,7 @@ class ModelViewSetMixin:
                     model_field = model._meta.get_field(field_instance.source)
                 except FieldDoesNotExist:
                     continue
-                if isinstance(model_field, (ManyToManyField, RelatedField, ManyToOneRel, TagsField)):
+                if isinstance(model_field, (ManyToManyField, ManyToManyRel, RelatedField, ManyToOneRel, TagsField)):
                     prefetch_fields.append(field_instance.source)
             elif isinstance(field_instance, (drf_serializers.RelatedField, drf_serializers.Serializer)):
                 # Serializer with depth > 0, RelatedField with depth 0

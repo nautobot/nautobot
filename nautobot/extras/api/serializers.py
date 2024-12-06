@@ -211,10 +211,10 @@ class ContactSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             "teams": {"required": False},
         }
 
-    def get_default_field_names(self, declared_fields, model_info):
-        """Add reverse M2M for teams to the "all" fields for this serializer."""
-        field_names = super().get_default_field_names(declared_fields, model_info)
-        field_names.append("teams")
+    def get_field_names(self, declared_fields, info):
+        """Add reverse M2M for teams to the fields for this serializer."""
+        field_names = list(super().get_default_field_names(declared_fields, info))
+        self.extend_field_names(field_names, "teams")
         return field_names
 
     def validate(self, data):

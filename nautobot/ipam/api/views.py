@@ -356,7 +356,7 @@ class PrefixLocationAssignmentViewSet(NautobotModelViewSet):
 
 
 class IPAddressViewSet(NautobotModelViewSet):
-    queryset = IPAddress.objects.all()
+    queryset = IPAddress.objects.select_related("parent__namespace")
     serializer_class = serializers.IPAddressSerializer
     filterset_class = filters.IPAddressFilterSet
 
