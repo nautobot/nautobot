@@ -586,7 +586,21 @@ class DataTablePanel(Panel):
 
 
 class ObjectsTablePanel(Panel):
-    """A panel that renders a Table of objects (typically related objects, rather than the "main" object of a view)."""
+    """A panel that renders a Table of objects (typically related objects, rather than the "main" object of a view).
+    Has built-in pagination support and "Add" button at bottom of the Table.
+
+    It renders the django-tables2 classes with Nautobot additions. You can pass the instance of Table Class
+    already configured in context and set the `context_table_key` or pass a Table Class to `__init__` via `table_class`.
+
+    When `table_class` is set, you need to pass `table_filter` or `table_attribute` for fetching data purpose.
+
+    Data fetching can be optimized by using `select_related_fields`, `prefetch_related_fields`.
+
+    How Table is displayed can be changed by using `include_columns`, `exclude_columns`, `table_title`,
+    `hide_hierarchy_ui`, `related_field_name` or `enable_bulk_actions`.
+
+    Please check the Args list for further details.
+    """
 
     def __init__(
         self,
