@@ -750,7 +750,6 @@ class CoreConfig(NautobotConfig):
         Query.set_values = set_values
 
 
-
 class NautobotConstanceConfig(ConstanceConfig):
     """Override "Constance" app name to "Configuration"."""
 
