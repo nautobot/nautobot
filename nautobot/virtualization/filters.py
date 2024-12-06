@@ -224,7 +224,11 @@ class VirtualMachineFilterSet(
         to_field_name="version",
         label="Software version (version or ID)",
     )
-    ip_addresses = MultiValueCharFilter(method="filter_ip_addresses", label="IP addresses (address or ID)")
+    ip_addresses = MultiValueCharFilter(
+        method="filter_ip_addresses",
+        label="IP addresses (address or ID)",
+        distinct=True,
+    )
     has_ip_addresses = RelatedMembershipBooleanFilter(field_name="interfaces__ip_addresses", label="Has IP addresses")
 
     def filter_ip_addresses(self, queryset, name, value):
@@ -232,7 +236,7 @@ class VirtualMachineFilterSet(
         addresses = set(item for item in value if item not in pk_values)
 
         ip_queryset = IPAddress.objects.filter_address_or_pk_in(addresses, pk_values)
-        return queryset.filter(interfaces__ip_addresses__in=ip_queryset)
+        return queryset.filter(interfaces__ip_addresses__in=ip_queryset).distinct()
 
     class Meta:
         model = VirtualMachine
