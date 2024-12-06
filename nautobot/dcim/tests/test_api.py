@@ -1469,11 +1469,24 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             SecretsGroup.objects.create(name="Secrets Group 2"),
         )
 
-        device_type = DeviceType.objects.filter(software_image_files__isnull=False).first()
+        device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
 
-        software_version = SoftwareVersion.objects.filter(software_image_files__device_types=device_type).first()
-        software_image_files = SoftwareImageFile.objects.exclude(software_version=software_version)[:2]
+        software_version = SoftwareVersion.objects.first()
+        software_image_files = (
+            SoftwareImageFile.objects.create(
+                status=Status.objects.get_for_model(SoftwareImageFile).first(),
+                software_version=software_version,
+                image_file_name="test_software_image_file_1.bin",
+            ),
+            SoftwareImageFile.objects.create(
+                status=Status.objects.get_for_model(SoftwareImageFile).last(),
+                software_version=software_version,
+                image_file_name="test_software_image_file_2.bin",
+            ),
+        )
+        for software_image_file in software_image_files:
+            software_image_file.device_types.add(device_type)
 
         Device.objects.create(
             device_type=device_type,

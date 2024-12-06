@@ -180,14 +180,7 @@ class ConfigContextQuerySetMixin:
 
 
 class ConfigContextViewSet(NotesViewSetMixin, ModelViewSet):
-    queryset = ConfigContext.objects.prefetch_related(
-        "locations",
-        "roles",
-        "device_types",
-        "platforms",
-        "tenant_groups",
-        "tenants",
-    )
+    queryset = ConfigContext.objects.all()
     serializer_class = serializers.ConfigContextSerializer
     filterset_class = filters.ConfigContextFilterSet
 
@@ -304,7 +297,7 @@ class DynamicGroupViewSet(NotesViewSetMixin, ModelViewSet):
     Manage Dynamic Groups through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
-    queryset = DynamicGroup.objects.select_related("content_type")
+    queryset = DynamicGroup.objects.all()
     serializer_class = serializers.DynamicGroupSerializer
     filterset_class = filters.DynamicGroupFilterSet
 
@@ -329,7 +322,7 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
     Manage Dynamic Group Memberships through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
-    queryset = DynamicGroupMembership.objects.select_related("group", "parent_group")
+    queryset = DynamicGroupMembership.objects.all()
     serializer_class = serializers.DynamicGroupMembershipSerializer
     filterset_class = filters.DynamicGroupMembershipFilterSet
 
@@ -340,13 +333,13 @@ class DynamicGroupMembershipViewSet(ModelViewSet):
 
 
 class SavedViewViewSet(ModelViewSet):
-    queryset = SavedView.objects.select_related("owner")
+    queryset = SavedView.objects.all()
     serializer_class = serializers.SavedViewSerializer
     filterset_class = filters.SavedViewFilterSet
 
 
 class UserSavedViewAssociationViewSet(ModelViewSet):
-    queryset = UserSavedViewAssociation.objects.select_related("user", "saved_view")
+    queryset = UserSavedViewAssociation.objects.all()
     serializer_class = serializers.UserSavedViewAssociationSerializer
     filterset_class = filters.UserSavedViewAssociationFilterSet
 
@@ -356,7 +349,7 @@ class StaticGroupAssociationViewSet(NautobotModelViewSet):
     Manage Static Group Associations through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
-    queryset = StaticGroupAssociation.objects.select_related("associated_object_type", "dynamic_group")
+    queryset = StaticGroupAssociation.objects.all()
     serializer_class = serializers.StaticGroupAssociationSerializer
     filterset_class = filters.StaticGroupAssociationFilterSet
 
@@ -367,7 +360,7 @@ class StaticGroupAssociationViewSet(NautobotModelViewSet):
             and "dynamic_group" in self.request.GET
             and self.action in ["list", "retrieve"]
         ):
-            self.queryset = StaticGroupAssociation.all_objects.select_related("associated_object_type", "dynamic_group")
+            self.queryset = StaticGroupAssociation.all_objects.all()
         return super().get_queryset()
 
 
@@ -388,7 +381,7 @@ class ExportTemplateViewSet(NotesViewSetMixin, ModelViewSet):
 
 
 class ExternalIntegrationViewSet(NautobotModelViewSet):
-    queryset = ExternalIntegration.objects.select_related("secrets_group")
+    queryset = ExternalIntegration.objects.all()
     serializer_class = serializers.ExternalIntegrationSerializer
     filterset_class = filters.ExternalIntegrationFilterSet
 
@@ -399,7 +392,7 @@ class ExternalIntegrationViewSet(NautobotModelViewSet):
 
 
 class FileProxyViewSet(ReadOnlyModelViewSet):
-    queryset = FileProxy.objects.select_related("job_result")
+    queryset = FileProxy.objects.all()
     serializer_class = serializers.FileProxySerializer
     filterset_class = filters.FileProxyFilterSet
 
@@ -838,7 +831,7 @@ class JobQueueAssignmentViewSet(NautobotModelViewSet):
     Manage job queue assignments through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
-    queryset = JobQueueAssignment.objects.select_related("job", "job_queue")
+    queryset = JobQueueAssignment.objects.all()
     serializer_class = serializers.JobQueueAssignmentSerializer
     filterset_class = filters.JobQueueAssignmentFilterSet
 
@@ -853,7 +846,7 @@ class JobLogEntryViewSet(ReadOnlyModelViewSet):
     Retrieve a list of job log entries.
     """
 
-    queryset = JobLogEntry.objects.select_related("job_result")
+    queryset = JobLogEntry.objects.all()
     serializer_class = serializers.JobLogEntrySerializer
     filterset_class = filters.JobLogEntryFilterSet
 
@@ -871,7 +864,7 @@ class JobResultViewSet(
     Retrieve a list of job results
     """
 
-    queryset = JobResult.objects.select_related("job_model", "user")
+    queryset = JobResult.objects.all()
     serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
 
@@ -908,7 +901,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
     Retrieve a list of scheduled jobs
     """
 
-    queryset = ScheduledJob.objects.select_related("user")
+    queryset = ScheduledJob.objects.all()
     serializer_class = serializers.ScheduledJobSerializer
     filterset_class = filters.ScheduledJobFilterSet
 
@@ -1061,7 +1054,7 @@ class MetadataTypeViewSet(NautobotModelViewSet):
 
 
 class MetadataChoiceViewSet(ModelViewSet):
-    queryset = MetadataChoice.objects.select_related("metadata_type")
+    queryset = MetadataChoice.objects.all()
     serializer_class = serializers.MetadataChoiceSerializer
     filterset_class = filters.MetadataChoiceFilterSet
 
@@ -1078,7 +1071,7 @@ class ObjectMetadataViewSet(NautobotModelViewSet):
 
 
 class NoteViewSet(ModelViewSet):
-    queryset = Note.objects.select_related("user")
+    queryset = Note.objects.all()
     serializer_class = serializers.NoteSerializer
     filterset_class = filters.NoteFilterSet
 
@@ -1097,7 +1090,7 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
     Retrieve a list of recent changes.
     """
 
-    queryset = ObjectChange.objects.select_related("user")
+    queryset = ObjectChange.objects.all()
     serializer_class = serializers.ObjectChangeSerializer
     filterset_class = filters.ObjectChangeFilterSet
 

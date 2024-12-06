@@ -348,6 +348,8 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "prefix": "192.168.4.0/24",
+                "network": "192.168.4.0",  # not required, but possible to specify
+                "broadcast": "192.168.4.255",  # not required, but possible to specify
                 "status": cls.status.pk,
                 "rir": rir.pk,
                 "type": choices.PrefixTypeChoices.TYPE_POOL,

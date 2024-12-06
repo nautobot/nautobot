@@ -823,6 +823,7 @@ class Device(PrimaryModel, ConfigContextModel):
 
         # If any software image file is specified, validate that
         # each of the software image files belongs to the device's device type or is a default image
+        # TODO: this is incorrect as we cannot validate a ManyToMany during clean() - nautobot/nautobot#6344
         for image_file in self.software_image_files.all():
             if not image_file.default_image and self.device_type not in image_file.device_types.all():
                 raise ValidationError(

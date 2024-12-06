@@ -7,9 +7,11 @@ from django import __version__ as DJANGO_VERSION, forms
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.db.models import ProtectedError
+from django.db.models.fields.related import ForeignKey, ManyToManyField, RelatedField
+from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.http.response import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect
 from drf_spectacular.plumbing import get_relative_url, set_query_parameters
@@ -23,7 +25,7 @@ from graphql.execution import ExecutionResult
 from graphql.execution.middleware import MiddlewareManager
 from graphql.type.schema import GraphQLSchema
 import redis.exceptions
-from rest_framework import routers, status
+from rest_framework import routers, serializers as drf_serializers, status
 from rest_framework.exceptions import APIException, ParseError, PermissionDenied
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
@@ -38,9 +40,11 @@ from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
+from nautobot.core.models.fields import TagsField
 from nautobot.core.utils.data import is_uuid, render_jinja2
 from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
 from nautobot.core.utils.lookup import get_form_for_model
+from nautobot.core.utils.querysets import maybe_prefetch_related, maybe_select_related
 from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
 from nautobot.core.views.utils import get_csv_form_fields_from_serializer_class
 
@@ -231,6 +235,53 @@ class ModelViewSetMixin:
             context["depth"] = 0
 
         return context
+
+    def get_queryset(self):
+        """
+        Attempt to optimize the queryset based on the fields present in the associated serializer.
+
+        See similar logic in nautobot.core.tables.BaseTable.
+        """
+        queryset = super().get_queryset()
+        model = queryset.model
+        serializer = self.get_serializer()
+
+        select_fields = []
+        prefetch_fields = []
+
+        for field_instance in serializer.fields.values():
+            if field_instance.write_only:
+                continue
+            if field_instance.source == "*":
+                continue
+            if "." in field_instance.source:
+                # DRF uses `field.nested_field` instead of `field__nested_field`
+                # TODO: We don't currently attempt to optimize nested lookups.
+                continue
+            if isinstance(field_instance, (drf_serializers.ManyRelatedField, drf_serializers.ListSerializer)):
+                # ListSerializer with depth > 0, ManyRelatedField with depth 0
+                try:
+                    model_field = model._meta.get_field(field_instance.source)
+                except FieldDoesNotExist:
+                    continue
+                if isinstance(model_field, (ManyToManyField, ManyToManyRel, RelatedField, ManyToOneRel, TagsField)):
+                    prefetch_fields.append(field_instance.source)
+            elif isinstance(field_instance, (drf_serializers.RelatedField, drf_serializers.Serializer)):
+                # Serializer with depth > 0, RelatedField with depth 0
+                try:
+                    model_field = model._meta.get_field(field_instance.source)
+                except FieldDoesNotExist:
+                    continue
+                if isinstance(model_field, ForeignKey):
+                    select_fields.append(field_instance.source)
+
+        if select_fields:
+            queryset = maybe_select_related(queryset, select_fields)
+
+        if prefetch_fields:
+            queryset = maybe_prefetch_related(queryset, prefetch_fields)
+
+        return queryset
 
     def restrict_queryset(self, request, *args, **kwargs):
         """

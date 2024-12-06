@@ -311,7 +311,30 @@ On retrieval, the REST API will include the `object_type` and `object_id` fields
 
 +++ 2.0.0
 
-Many-to-many relationships differ from one-to-many and one-to-one relationships because they utilize a separate database table called a "through table" to track the relationships instead of a single field in an existing table. In Nautobot 2.0, some relationships such as `IPAddress` to `Interface`/`VMInterface`, `Prefix` to `VRF`, and `VRF` to `Device`/`VirtualMachine` are represented as many-to-many relationships. The REST API represents these relationships as nested objects for retrieval, but in order to create, update or delete these relationships, the through table endpoint must be used. Currently, the only through table endpoint available is the [`IPAddress` to `Interface`/`VMInterface` at `/api/ipam/ip-address-to-interface/`](../../administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#new-interface-to-ip-address-relationship-endpoint).
+Many-to-many relationships differ from one-to-many and one-to-one relationships because they utilize a separate database table called a "through table" to track the relationships instead of a single field in an existing table. In Nautobot 2.0, some relationships such as `IPAddress` to `Interface`/`VMInterface`, `Prefix` to `VRF`, and `VRF` to `Device`/`VirtualMachine` are represented as many-to-many relationships. The REST API typically provides a separate endpoint for manipulating the contents of each such "through table", for example:
+
+* `/api/dcim/interface-redundancy-group-associations/`
+* `/api/dcim/device-types-to-software-image-files/`
+* `/api/extras/contact-associations/`
+* `/api/extras/job-queue-assignments/`
+* `/api/extras/secrets-groups-associations/`
+* `/api/extras/static-group-associations/`
+* `/api/ipam/ip-address-to-interface/`
+* `/api/ipam/prefix-location-assignments/`
+* `/api/ipam/vlan-location-assignments/`
+* `/api/ipam/vrf-device-assignments/`
+* `/api/ipam/vrf-prefix-assignments/`
+* etc.
+
+In many (but not necessarily all) cases, as a convenience for users, the REST API for objects involved in a many-to-many relationship may also represent -- as a **read-only** field -- the objects on the other side of the relationship (bypassing the through table itself). For example, the `/api/ipam/vrfs/` REST API may include fields for each VRF record such as `prefixes` (the set of `Prefix` objects related to a given `VRF` by the `VRFPrefixAssignment` through table) and `devices` (the set of `Device` objects related to a given `VRF` by the `VRFDeviceAssignment` through table).
+
+!!! warning "Many-to-many at scale"
+    When Nautobot contains a substantial number of related records, the inclusion of many-to-many related objects in the REST API may impose a significant amount of performance overhead in terms of processing time and memory usage. For example, if you have many VRFs, each of which is associated to 1000 Prefixes, listing VRFs in the REST API would also by default retrieve, serialize, and list the 1000 Prefix records _per VRF retrieved_.
+
++++ 2.4.0 "The `exclude_m2m` query parameter"
+    To address the aforementioned performance/scalability concern, Nautobot 2.4.0 introduced support for the REST API query parameter `exclude_m2m`. When this parameter is specified (for example `GET /api/ipam/vrfs/?exclude_m2m=true`), many-to-many related objects will **not** be included in the REST API response, and in most cases will not even be retrieved from the database.
+
+    In a future Nautobot major release, a change in the REST API may make `exclude_m2m=true` the default behavior.
 
 ## Pagination
 

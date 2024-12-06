@@ -1,3 +1,4 @@
+from unittest import mock
 import uuid
 
 from django import forms as django_forms
@@ -14,7 +15,7 @@ from nautobot.core.api import utils as api_utils
 from nautobot.core.forms.utils import compress_range
 from nautobot.core.models import fields as core_fields, utils as models_utils, validators
 from nautobot.core.testing import TestCase
-from nautobot.core.utils import data as data_utils, filtering, lookup, requests
+from nautobot.core.utils import data as data_utils, filtering, lookup, querysets, requests
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
 from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models, tables
 from nautobot.extras import models as extras_models, utils as extras_utils
@@ -922,3 +923,42 @@ class TestMigrationUtils(TestCase):
             )
             self.assertEqual(ObjectChange.objects.get(request_id=request_id).changed_object_type, location_ct)
             self.assertEqual(ObjectChange.objects.get(request_id=request_id).related_object_type, location_ct)
+
+
+class TestQuerySetUtils(TestCase):
+    def test_maybe_select_related(self):
+        # If possible, select_related should be called
+        queryset = ipam_models.IPAddress.objects.all()
+        with mock.patch.object(queryset, "select_related", wraps=queryset.select_related) as mock_select_related:
+            new_queryset = querysets.maybe_select_related(queryset, ["parent", "status"])
+            mock_select_related.assert_called_with("parent", "status")
+            self.assertIsNot(new_queryset, queryset)
+
+        # Case where it shouldn't be called
+        queryset = ipam_models.IPAddress.objects.values_list("host", flat=True)
+        with mock.patch.object(queryset, "select_related", wraps=queryset.select_related) as mock_select_related:
+            new_queryset = querysets.maybe_select_related(queryset, ["parent", "status"])
+            mock_select_related.assert_not_called()
+            self.assertIs(new_queryset, queryset)
+
+        # Another case where it shouldn't be called
+        queryset = ipam_models.IPAddress.objects.difference(ipam_models.IPAddress.objects.filter(ip_version=4))
+        with mock.patch.object(queryset, "select_related", wraps=queryset.select_related) as mock_select_related:
+            new_queryset = querysets.maybe_select_related(queryset, ["parent", "status"])
+            mock_select_related.assert_not_called()
+            self.assertIs(new_queryset, queryset)
+
+    def test_maybe_prefetch_related(self):
+        # If possible, prefetch_related should be called
+        queryset = ipam_models.IPAddress.objects.all()
+        with mock.patch.object(queryset, "prefetch_related", wraps=queryset.prefetch_related) as mock_prefetch_related:
+            new_queryset = querysets.maybe_prefetch_related(queryset, ["nat_outside_list"])
+            mock_prefetch_related.assert_called_with("nat_outside_list")
+            self.assertIsNot(new_queryset, queryset)
+
+        # Case where it shouldn't be called
+        queryset = ipam_models.IPAddress.objects.difference(ipam_models.IPAddress.objects.filter(ip_version=4))
+        with mock.patch.object(queryset, "prefetch_related", wraps=queryset.prefetch_related) as mock_prefetch_related:
+            new_queryset = querysets.maybe_prefetch_related(queryset, ["nat_outside_list"])
+            mock_prefetch_related.assert_not_called()
+            self.assertIs(new_queryset, queryset)
