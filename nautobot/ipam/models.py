@@ -612,6 +612,16 @@ class Prefix(PrimaryModel):
             protected_objects.update(parent=self.parent)
             return super().delete(*args, **kwargs)
 
+    def get_parent(self):
+        # Determine if a parent exists and set it to the closest ancestor by `prefix_length`.
+        if supernets := self.supernets():
+            return max(supernets, key=operator.attrgetter("prefix_length"))
+        return None
+
+    def clean(self):
+        self.parent = self.get_parent()
+        return super().clean()
+
     def save(self, *args, **kwargs):
         if isinstance(self.prefix, netaddr.IPNetwork):
             # Clear host bits from prefix
@@ -619,11 +629,7 @@ class Prefix(PrimaryModel):
             # which will (re)set the broadcast and ip_version values of this instance to their correct values.
             self.prefix = self.prefix.cidr
 
-        # Determine if a parent exists and set it to the closest ancestor by `prefix_length`.
-        supernets = self.supernets()
-        if supernets:
-            parent = max(supernets, key=operator.attrgetter("prefix_length"))
-            self.parent = parent
+        self.parent = self.get_parent()
 
         # Validate that creation of this prefix does not create an invalid parent/child relationship
         # 3.0 TODO: uncomment this to enforce this constraint
