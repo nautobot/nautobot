@@ -4,7 +4,8 @@ from unittest.mock import patch
 
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.test import override_settings
+from django.db import models
+from django.test import override_settings, skipUnlessDBFeature
 
 from nautobot.core.models import BaseModel
 from nautobot.utilities.testing import TestCase
@@ -14,6 +15,12 @@ class BaseModelTest(TestCase):
     class FakeBaseModel(BaseModel):
         def clean(self):
             raise ValidationError("validation error")
+
+    class JSONFieldModel(BaseModel):
+        data = models.JSONField(null=True)
+
+        class Meta:
+            required_db_features = {"supports_json_field"}
 
     def test_validated_save_calls_full_clean(self):
         with self.assertRaises(ValidationError):
@@ -61,3 +68,12 @@ class BaseModelTest(TestCase):
             self.FakeBaseModel._content_type_cached
             self.FakeBaseModel._content_type_cached
             self.assertEqual(mock__content_type.call_count, 2)
+
+    @skipUnlessDBFeature("supports_json_field")
+    def test_values_expression_alias_sql_injection_json_field(self):
+        crafted_alias = """injected_name" from "expressions_company"; --"""
+        msg = "Column aliases cannot contain whitespace characters, quotation marks, semicolons, or SQL comments."
+        with self.assertRaisesMessage(ValueError, msg):
+            self.JSONFieldModel.objects.values(f"data__{crafted_alias}")
+        with self.assertRaisesMessage(ValueError, msg):
+            self.JSONFieldModel.objects.values_list(f"data__{crafted_alias}")

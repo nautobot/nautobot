@@ -691,6 +691,18 @@ class CoreConfig(NautobotConfig):
 
         monkey_mix(TaggableManager, mixins.TaggableManagerMonkeyMixin)
 
+        from django.db.models.sql.query import Query
+
+        Query._set_values = Query.set_values
+
+        def set_values(self, fields):
+            if fields:
+                for field in fields:
+                    self.check_alias(field)
+            self._set_values(fields)
+
+        Query.set_values = set_values
+
 
 class NautobotConstanceConfig(ConstanceConfig):
     """Override "Constance" app name to "Configuration"."""
