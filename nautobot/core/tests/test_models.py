@@ -72,7 +72,7 @@ class BaseModelTest(TestCase):
     @skipUnlessDBFeature("supports_json_field")
     def test_values_expression_alias_sql_injection_json_field(self):
         crafted_alias = """injected_name" from "expressions_company"; --"""
-        msg = "Column aliases cannot contain whitespace characters, quotation marks, " "semicolons, or SQL comments."
+        msg = "Column aliases cannot contain whitespace characters, quotation marks, semicolons, or SQL comments."
         with self.assertRaisesMessage(ValueError, msg):
             self.JSONFieldModel.objects.values(f"data__{crafted_alias}")
         with self.assertRaisesMessage(ValueError, msg):
