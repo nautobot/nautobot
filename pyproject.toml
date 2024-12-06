@@ -37,7 +37,7 @@ python = ">=3.9,<3.13"
 # Background task processing
 celery = "~5.3.6"
 # Fundamental web framework for Nautobot
-Django = "~4.2.16"
+Django = "~4.2.17"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -71,7 +71,7 @@ django-silk = "~5.3.0"
 # Pinned temporarily to 1.14.3 due to https://github.com/revsys/django-health-check/issues/434
 django-storages = {version = "1.14.3", optional = true}
 # Structured logging for Django
-django-structlog = {version = "^8.1.0", extras = ["celery"]}
+django-structlog = {version = "^9.0.0", extras = ["celery"]}
 # Advanced HTML tables
 django-tables2 = "~2.7.0"
 # Tags
@@ -167,7 +167,7 @@ example-app-with-view-override = {path = "examples/example_app_with_view_overrid
 # Random data generation
 factory-boy = "~3.3.1"
 # Factory Boy dependency.
-faker = ">=30.1.0,<30.2.0"
+faker = ">=33.1.0,<33.2.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
@@ -175,7 +175,7 @@ rich = "~13.7.1"
 # Change log management and generation
 towncrier = "~24.8.0"
 # Watch files for celery and mkdocs reload
-watchdog = "~5.0.0"
+watchdog = "~6.0.0"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
