@@ -692,58 +692,14 @@ class CoreConfig(NautobotConfig):
         monkey_mix(TaggableManager, mixins.TaggableManagerMonkeyMixin)
 
         from django.db.models.sql.query import Query
-        from django.db.models.expressions import Ref
+
+        Query._set_values = Query.set_values
 
         def set_values(self, fields):
-            self.select_related = False
-            self.clear_deferred_loading()
-            self.clear_select_fields()
-
             if fields:
                 for field in fields:
                     self.check_alias(field)
-                field_names = []
-                extra_names = []
-                annotation_names = []
-                if not self.extra and not self.annotations:
-                    # Shortcut - if there are no extra or annotations, then
-                    # the values() clause must be just field names.
-                    field_names = list(fields)
-                else:
-                    self.default_cols = False
-                    for f in fields:
-                        if f in self.extra_select:
-                            extra_names.append(f)
-                        elif f in self.annotation_select:
-                            annotation_names.append(f)
-                        else:
-                            field_names.append(f)
-                self.set_extra_mask(extra_names)
-                self.set_annotation_mask(annotation_names)
-                selected = frozenset(field_names + extra_names + annotation_names)
-            else:
-                field_names = [f.attname for f in self.model._meta.concrete_fields]
-                selected = frozenset(field_names)
-            # Selected annotations must be known before setting the GROUP BY
-            # clause.
-            if self.group_by is True:
-                self.add_fields((f.attname for f in self.model._meta.concrete_fields), False)
-                # Disable GROUP BY aliases to avoid orphaning references to the
-                # SELECT clause which is about to be cleared.
-                self.set_group_by(allow_aliases=False)
-                self.clear_select_fields()
-            elif self.group_by:
-                # Resolve GROUP BY annotation references if they are not part of
-                # the selected fields anymore.
-                group_by = []
-                for expr in self.group_by:
-                    if isinstance(expr, Ref) and expr.refs not in selected:
-                        expr = self.annotations[expr.refs]
-                    group_by.append(expr)
-                self.group_by = tuple(group_by)
-
-            self.values_select = tuple(field_names)
-            self.add_fields(field_names, True)
+            self._set_values(fields)
 
         Query.set_values = set_values
 
