@@ -33,6 +33,7 @@ from nautobot.ipam.api import serializers
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 
+from ..core.utils.lookup import get_model_for_view_name
 from . import filters, forms, tables
 from .models import (
     IPAddress,
@@ -447,6 +448,14 @@ class PrefixPrefixesView(generic.ObjectView):
             .restrict(request.user, "view")
             .select_related("parent", "status", "role", "vlan", "namespace")
             .annotate(location_count=count_related(Location, "prefixes"))
+        )
+
+        # Manually adding a VRF's prefetch since "add_available_prefixes" will convert QuerySet to the list
+        # and BaseTable.__init__ won't add it automatically
+        vrfs_column_model = get_model_for_view_name("ipam:vrf_list")
+        vrfs_prefetch = Prefetch("vrfs", vrfs_column_model.objects.all()[:1], to_attr="vrfs_list")
+        child_prefixes = child_prefixes.annotate(vrf_count=count_related(VRF, "prefixes")).prefetch_related(
+            vrfs_prefetch
         )
 
         # Add available prefixes to the table if requested
