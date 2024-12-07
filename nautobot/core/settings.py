@@ -11,7 +11,7 @@ from django.utils.safestring import mark_safe
 
 from nautobot import __version__
 from nautobot.core.constants import CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR
-from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
+from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, load_yaml_config, parse_redis_connection
 
 #
 # Environment setup
@@ -168,6 +168,15 @@ if "NAUTOBOT_PER_PAGE_DEFAULTS" in os.environ and os.environ["NAUTOBOT_PER_PAGE_
 # Plugins
 PLUGINS = []
 PLUGINS_CONFIG = {}
+
+NAUTOBOT_APP_CONFIG = os.getenv("NAUTOBOT_APP_CONFIG")
+if NAUTOBOT_APP_CONFIG and os.path.exists(NAUTOBOT_APP_CONFIG):
+    # load the file referenced by NAUTOBOT_APP_CONFIG with our yaml loader which supports loading env vars
+    # by prefixing the value with !env_var
+    app_config = load_yaml_config(NAUTOBOT_APP_CONFIG)
+    # the top level keys should match apps/plugins to enable
+    PLUGINS.extend(app_config.keys())
+    PLUGINS_CONFIG.update(app_config)
 
 # Prefer IPv6 addresses or IPv4 addresses in selecting a device's primary IP address? Default False
 if "NAUTOBOT_PREFER_IPV4" in os.environ and os.environ["NAUTOBOT_PREFER_IPV4"] != "":
