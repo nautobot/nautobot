@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 
 from django import forms as django_forms
@@ -44,6 +45,9 @@ __all__ = (
     "SlugField",
     "TagFilterField",
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class CSVDataField(django_forms.CharField):
@@ -518,6 +522,16 @@ class DynamicModelChoiceMixin:
 
         super().__init__(*args, **kwargs)
 
+        if not isinstance(self.widget, widgets.APISelect):
+            logger.warning(
+                "This %s has a specified widget (%s) which is not an APISelect instance, which may not work well. "
+                "Perhaps you should use a standard Model%sChoiceField instead?",
+                self.__class__.__name__,
+                self.widget.__class__.__name__,
+                "Multiple" if "Multiple" in self.__class__.__name__ else "",
+                stacklevel=2,  # so that the message reports at the point of declaration of this field
+            )
+
     def widget_attrs(self, widget):
         attrs = {
             "display-field": self.display_field,
@@ -538,9 +552,10 @@ class DynamicModelChoiceMixin:
         # Toggle depth
         attrs["data-depth"] = self.depth
 
-        # Attach any static query parameters
-        for key, value in self.query_params.items():
-            widget.add_query_param(key, value)
+        # Attach any static query parameters if supported
+        if isinstance(widget, widgets.APISelect) or hasattr(widget, "add_query_param"):
+            for key, value in self.query_params.items():
+                widget.add_query_param(key, value)
 
         return attrs
 
