@@ -130,6 +130,7 @@ from nautobot.ipam.choices import IPAddressTypeChoices
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
+from nautobot.virtualization.models import Cluster, ClusterType
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -2047,6 +2048,9 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         rack_group = RackGroup.objects.create(location=locations[0], name="Rack Group 1")
 
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        cluster = Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type)
+
         rack_status = Status.objects.get_for_model(Rack).first()
         racks = (
             Rack.objects.create(
@@ -2218,6 +2222,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses[2].pk,
             "location": locations[1].pk,
             "rack": racks[1].pk,
+            "cluster": cluster.pk,
+            "comments": "An older device",
             "position": None,
             "face": DeviceFaceChoices.FACE_FRONT,
             "secrets_group": secrets_groups[1].pk,

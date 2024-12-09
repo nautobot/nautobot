@@ -225,7 +225,7 @@ if SSO_ENABLE_GROUP_SYNC:
         "social_core.pipeline.social_auth.associate_user",
         "social_core.pipeline.social_auth.load_extra_data",
         "social_core.pipeline.user.user_details",
-        "nautobot.extras.group_sync",
+        "nautobot.extras.group_sync.group_sync",
     )
 # OAuth2/OIDC claim where the list of groups the authenticating user is a part of
 SSO_CLAIMS_GROUP = os.getenv("NAUTOBOT_SSO_CLAIMS_GROUP", "groups")

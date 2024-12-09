@@ -795,7 +795,13 @@ def saved_view_modal(
         "clear_view",
     ]
 
-    table_name = lookup.get_table_for_model(model).__name__
+    view_class = lookup.get_view_for_model(model, "List")
+    table_name = None
+    if hasattr(view_class, "table"):
+        table_name = view_class.table.__name__
+    if hasattr(view_class, "table_class"):
+        table_name = view_class.table_class.__name__
+
     for param in non_filter_params:
         if param == "saved_view":
             current_saved_view_pk = filters_applied.pop(param, None)

@@ -1682,6 +1682,8 @@ class RoleBulkEditForm(NautobotBulkEditForm):
 
     pk = forms.ModelMultipleChoiceField(queryset=Role.objects.all(), widget=forms.MultipleHiddenInput)
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    weight = forms.IntegerField(required=False)
     content_types = MultipleContentTypeField(
         queryset=RoleModelsQuery().as_queryset(), required=False, label="Content Type(s)"
     )
