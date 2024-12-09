@@ -691,6 +691,24 @@ class CoreConfig(NautobotConfig):
 
         monkey_mix(TaggableManager, mixins.TaggableManagerMonkeyMixin)
 
+        # The code block below is to address an issue describe in https://www.cvedetails.com/cve/CVE-2024-42005/
+        # An issue was discovered in Django 5.0 before 5.0.8 and 4.2 before 4.2.15.
+        # QuerySet.values() and values_list() methods on models with a JSONField are subject to SQL injection
+        # in column aliases via a crafted JSON object key as a passed *arg.
+        # The fix in Django 4.2 https://github.com/django/django/commit/f4af67b9b41e0f4c117a8741da3abbd1c869ab28/
+        # is backported here to Nautobot v1.6.x running on Django 3.2.
+        from django.db.models.sql.query import Query
+
+        Query._set_values = Query.set_values
+
+        def set_values(self, fields):
+            if fields:
+                for field in fields:
+                    self.check_alias(field)
+            self._set_values(fields)
+
+        Query.set_values = set_values
+
 
 class NautobotConstanceConfig(ConstanceConfig):
     """Override "Constance" app name to "Configuration"."""
