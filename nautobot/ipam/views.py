@@ -449,6 +449,13 @@ class PrefixPrefixesView(generic.ObjectView):
             .annotate(location_count=count_related(Location, "prefixes"))
         )
 
+        # Manually adding a VRF's prefetch since "add_available_prefixes" will convert QuerySet to the list
+        # and BaseTable.__init__ won't add it automatically
+        vrfs_prefetch = Prefetch("vrfs", VRF.objects.all()[:1], to_attr="vrfs_list")
+        child_prefixes = child_prefixes.annotate(vrf_count=count_related(VRF, "prefixes")).prefetch_related(
+            vrfs_prefetch
+        )
+
         # Add available prefixes to the table if requested
         if child_prefixes and request.GET.get("show_available", "true") == "true":
             child_prefixes = add_available_prefixes(instance.prefix, child_prefixes)
