@@ -413,6 +413,13 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.child1 = Prefix.objects.create(prefix="101.102.0.0/26", status=self.status, namespace=self.namespace)
         self.child2 = Prefix.objects.create(prefix="101.102.0.64/26", status=self.status, namespace=self.namespace)
 
+    def test_parent_exists_after_model_clean(self):
+        prefix = Prefix(
+            prefix="101.102.0.2/26", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
+        prefix.clean()
+        self.assertEqual(prefix.parent, self.child1)
+
     def test_location_queries(self):
         locations = Location.objects.all()[:4]
         for location in locations:
