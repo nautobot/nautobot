@@ -1,0 +1,2 @@
+Improved rendering performance of the IPAddress list view in cases where the `Interfaces`, `Devices`, `VM Interfaces`, `Virtual Machines`, and/or `Assigned` columns are not shown.
+Improved performance of `TreeModel.display` calculation by making better use of the cache.
