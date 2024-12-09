@@ -58,14 +58,15 @@ class LogsCleanup(Job):
             deletion_summary (dict): A dictionary to store the count of deleted objects for each model.
         """
         related_objects = queryset.model._meta.related_objects
+        queryset = queryset.only("id")
 
         for related_object in related_objects:
             if related_object.on_delete == CASCADE:
                 related_model = related_object.related_model
                 related_field_name = related_object.field.name
-                cascade_queryset = related_model.objects.filter(**{f"{related_field_name}__in": queryset})
+                cascade_queryset = related_model.objects.filter(**{f"{related_field_name}__id__in": queryset})
                 self.recursive_delete_with_cascade(cascade_queryset, deletion_summary)
-        _, deleted_dict = queryset.only("id").delete()
+        _, deleted_dict = queryset.delete()
         deletion_summary.update(deleted_dict)
         return deletion_summary
 
