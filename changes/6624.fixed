@@ -1,2 +1,0 @@
-Fixed issue with `group_sync.py` where it was accessing the settings using environment variable name vs the actual settings name. 
-Fixed the `SOCIAL_AUTH_PIPELINE` settings to include the entire path of the `group_sync` function. 
