@@ -61,7 +61,7 @@ class LogsCleanup(Job):
         queryset = queryset.only("id")
 
         for related_object in related_objects:
-            if related_object.on_delete == CASCADE:
+            if related_object.on_delete is CASCADE:
                 related_model = related_object.related_model
                 related_field_name = related_object.field.name
                 cascade_queryset = related_model.objects.filter(**{f"{related_field_name}__id__in": queryset})
