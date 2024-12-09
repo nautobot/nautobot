@@ -1,0 +1,1 @@
+Fixed a `ProgrammingError` when applying permissions containing network-address-based constraints.
