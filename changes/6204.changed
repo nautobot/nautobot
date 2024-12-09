@@ -1,0 +1,1 @@
+Recursive deletion for JobResult and or ObjectChange querysets with CASCADE dependencies in LogsCleanup.
