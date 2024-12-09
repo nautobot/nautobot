@@ -1,5 +1,3 @@
-<!-- markdownlint-disable MD024 -->
-
 # Nautobot v2.4
 
 This document describes all new features and changes in Nautobot 2.4.
@@ -137,8 +135,11 @@ With the introduction of the UI Component Framework (described [above](#ui-compo
 
 As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python 3.9.
 
+<!-- pyml disable-num-lines 2 blanks-around-headers -->
 <!-- towncrier release notes start -->
 ## v2.4.0b1 (2024-11-25)
+
+### Added in v2.4.0b1
 
 - [#3263](https://github.com/nautobot/nautobot/issues/3263) - Added support for users to specify their timezone from the user Preferences UI.
 - [#6087](https://github.com/nautobot/nautobot/issues/6087) - Added JobQueue and JobQueueAssignment models, GraphQL, UI and API.
@@ -192,7 +193,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6539](https://github.com/nautobot/nautobot/issues/6539) - Added Installed Apps page tile view.
 - [#6555](https://github.com/nautobot/nautobot/issues/6555) - Added a Jinja template renderer to the UI.
 
-### Changed
+### Changed in v2.4.0b1
 
 - [#6125](https://github.com/nautobot/nautobot/issues/6125) - Refactored Job run related code to be able to use Job Queues.
 - [#6133](https://github.com/nautobot/nautobot/issues/6133) - Converted `Circuit` detail view to use the new UI framework.
@@ -210,18 +211,18 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6476](https://github.com/nautobot/nautobot/issues/6476) - Converted `ClusterType` detail view to use UI framework.
 - [#6503](https://github.com/nautobot/nautobot/issues/6503) - Addressed Wireless models UI Feedback.
 
-### Deprecated
+### Deprecated in v2.4.0b1
 
 - [#6108](https://github.com/nautobot/nautobot/issues/6108) - Deprecated the `FilterTestCases.NameOnlyFilterTestCase` and `FilterTestCases.NameSlugFilterTestCase` generic test classes. Apps should migrate to `FilterTestCases.FilterTestCase` with an appropriately defined list of `generic_filter_tests` instead.
 - [#6142](https://github.com/nautobot/nautobot/issues/6142) - Deprecated the `TemplateExtension.buttons()` API in favor of `TemplateExtension.object_detail_buttons` implementation based around the UI Component Framework.
 - [#6276](https://github.com/nautobot/nautobot/issues/6276) - Deprecated the `TemplateExtension.left_page()`, `TemplateExtension.right_page()`, and `TemplateExtension.full_width_page()` APIs in favor of `TemplateExtension.object_detail_panels` implementation based around the UI Component Framework.
 
-### Removed
+### Removed in v2.4.0b1
 
 - [#6108](https://github.com/nautobot/nautobot/issues/6108) - Removed the previously deprecated `ViewTestCases.BulkImportObjectsViewTestCase` generic test class as obsolete.
 - [#6342](https://github.com/nautobot/nautobot/issues/6342) - Removed remnants of the React UI prototype - `NavContext`, `NavGrouping`, `NavItem`, `GetMenuAPIView`, `GetObjectCountsView`, `ViewConfigException`, `get_all_new_ui_ready_routes()`, `get_only_new_ui_ready_routes()`, `is_route_new_ui_ready()`.
 
-### Fixed
+### Fixed in v2.4.0b1
 
 - [#6089](https://github.com/nautobot/nautobot/issues/6089) - Fixed warning message `No sanitizer support for <class 'NoneType'> data` emitted by the `nautobot-server runjob --local ...` command.
 - [#6108](https://github.com/nautobot/nautobot/issues/6108) - Fixed incorrect definition of `VirtualMachineFilterSet.cluster` filter.
@@ -247,7 +248,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6546](https://github.com/nautobot/nautobot/issues/6546) - Fixed inconsistent rendering of the Role column on the Virtual Device Context list table.
 - [#6549](https://github.com/nautobot/nautobot/issues/6549) - Added missing `/` to `/api/core/render-jinja-template/` URL.
 
-### Dependencies
+### Dependencies in v2.4.0b1
 
 - [#5963](https://github.com/nautobot/nautobot/issues/5963) - Updated `django-taggit` to `~6.1.0`.
 - [#6252](https://github.com/nautobot/nautobot/issues/6252) - Dropped support for Python 3.8. Python 3.9 is now the minimum version required by Nautobot.
@@ -259,7 +260,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6469](https://github.com/nautobot/nautobot/issues/6469) - Updated dependency `django-silk` to `~5.3.0`.
 - [#6549](https://github.com/nautobot/nautobot/issues/6549) - Moved `kubernetes` from a development-only dependency to a required dependency.
 
-### Documentation
+### Documentation in v2.4.0b1
 
 - [#6144](https://github.com/nautobot/nautobot/issues/6144) - Added documentation for Virtual Device Contexts.
 - [#6254](https://github.com/nautobot/nautobot/issues/6254) - Added documentation of how to use K8s Kind cluster for local K8s integrations development.
@@ -270,7 +271,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6381](https://github.com/nautobot/nautobot/issues/6381) - Added Wireless Model documentation.
 - [#6549](https://github.com/nautobot/nautobot/issues/6549) - Added 2.4 release overview.
 
-### Housekeeping
+### Housekeeping in v2.4.0b1
 
 - [#5963](https://github.com/nautobot/nautobot/issues/5963) - Updated development dependency `faker` to `>=30.1.0,<30.2.0`.
 - [#5963](https://github.com/nautobot/nautobot/issues/5963) - Updated documentation dependency `towncrier` to `~24.8.0`.

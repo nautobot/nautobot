@@ -1,20 +1,20 @@
 # Best Practices for Migration
 
-1. **Incremental Migration**
+1. Incremental Migration
     - Migrate one view at a time
     - Test thoroughly after each conversion
     - Keep backup of template-based views
 
-2. **Panel Organization**
+2. Panel Organization
     - Use weights relative to the `Panel.WEIGHT_*_PANEL` constants for consistency.
     - Group related panels together
 
-3. **Performance Considerations**
+3. Performance Considerations
     - Use `select_related`/`prefetch_related` in `ObjectsTablePanel` (though note that `BaseTable` may handle some simple optimizations automatically)
     - Optimize `StatsPanel` queries in terms of selecting proper fields and relations for counting
     - Cache complex transformations
 
-4. **Common Patterns**
+4. Common Patterns
 
 Statistics and related objects
 

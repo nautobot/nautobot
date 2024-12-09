@@ -272,13 +272,12 @@ As a side benefit of this change, we've also reduced the amount of code (Python 
 
 Screenshot of migrated view:
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![ClusterTypeView Before/After Example](../../../../media/development/core/ui-component-framework/cluster-type-before-after-example.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 #### `ClusterType` Before
 
