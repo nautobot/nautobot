@@ -1,5 +1,4 @@
 import json
-import logging
 import re
 
 from django import forms as django_forms
@@ -45,9 +44,6 @@ __all__ = (
     "SlugField",
     "TagFilterField",
 )
-
-
-logger = logging.getLogger(__name__)
 
 
 class CSVDataField(django_forms.CharField):
@@ -521,16 +517,6 @@ class DynamicModelChoiceMixin:
         self.data_queryset = kwargs.get("queryset")  # may be updated in get_bound_field()
 
         super().__init__(*args, **kwargs)
-
-        if not isinstance(self.widget, widgets.APISelect):
-            logger.warning(
-                "This %s has a specified widget (%s) which is not an APISelect instance, which may not work well. "
-                "Perhaps you should use a standard Model%sChoiceField instead?",
-                self.__class__.__name__,
-                self.widget.__class__.__name__,
-                "Multiple" if "Multiple" in self.__class__.__name__ else "",
-                stacklevel=2,  # so that the message reports at the point of declaration of this field
-            )
 
     def widget_attrs(self, widget):
         attrs = {
