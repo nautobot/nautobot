@@ -72,6 +72,56 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.28 (2024-09-24)
+
+### Fixed
+
+- [#6152](https://github.com/nautobot/nautobot/issues/6152) - Fixed table column ordering.
+- [#6237](https://github.com/nautobot/nautobot/issues/6237) - Corrected presentation of rendered Markdown content in Notes table.
+- [#6262](https://github.com/nautobot/nautobot/issues/6262) - Fixed invalid installation of `xmlsec` library in the Nautobot Docker images.
+
+### Housekeeping
+
+- [#5637](https://github.com/nautobot/nautobot/issues/5637) - Removed "version" from development `docker-compose.yml` files as newer versions of Docker complain about it being obsolete.
+- [#5637](https://github.com/nautobot/nautobot/issues/5637) - Fixed behavior of `invoke stop` so that it also stops the optional `mkdocs` container if present.
+- [#6262](https://github.com/nautobot/nautobot/issues/6262) - Brought `.gitignore` up to date with latest to aid in branch switching.
+
+## v1.6.27 (2024-09-03)
+
+### Security
+
+- [#6182](https://github.com/nautobot/nautobot/issues/6182) - Updated `cryptography` to `43.0.1` to address `GHSA-h4gh-qq45-vh27`. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+### Fixed
+
+- [#6081](https://github.com/nautobot/nautobot/issues/6081) - Fixed AttributeError during pre_migrate when permission constraints are applied to custom fields.
+
+## v1.6.26 (2024-07-22)
+
+### Fixed
+
+- [#5935](https://github.com/nautobot/nautobot/issues/5935) - Fixed issue in which a save() could be called unnecessarily on child devices.
+
+## v1.6.25 (2024-07-09)
+
+### Security
+
+- [#5891](https://github.com/nautobot/nautobot/issues/5891) - Updated `certifi` to `2024.7.4` to address `CVE-2024-39689`. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+### Dependencies
+
+- [#5897](https://github.com/nautobot/nautobot/pull/5897) - Pinned dev dependency `faker` to `>=0.7.0,<26.0.0` to work around breaking change in v26.0.0 ([faker/#2070](https://github.com/joke2k/faker/issues/2070)).
+
+## v1.6.24 (2024-06-24)
+
+### Security
+
+- [#5821](https://github.com/nautobot/nautobot/issues/5821) - Updated `urllib3` to 2.2.2 due to CVE-2024-37891. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+### Housekeeping
+
+- [#5754](https://github.com/nautobot/nautobot/issues/5754) - Updated development dependency `requests` to `~2.32.2`.
+
 ## v1.6.23 (2024-05-28)
 
 ### Security
