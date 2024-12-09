@@ -538,9 +538,10 @@ class DynamicModelChoiceMixin:
         # Toggle depth
         attrs["data-depth"] = self.depth
 
-        # Attach any static query parameters
-        for key, value in self.query_params.items():
-            widget.add_query_param(key, value)
+        # Attach any static query parameters if supported
+        if isinstance(widget, widgets.APISelect) or hasattr(widget, "add_query_param"):
+            for key, value in self.query_params.items():
+                widget.add_query_param(key, value)
 
         return attrs
 
