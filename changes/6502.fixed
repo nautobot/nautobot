@@ -1,2 +1,0 @@
-Fixed a bug in the dockerfile that prevented "docker build" from working on some platforms.
-Fixed docker builds failing in Gitlab CI.
