@@ -199,7 +199,8 @@ class BaseTable(django_tables2.Table):
                     if lookup is not None:
                         # Also attempt to prefetch the first matching record for display - see LinkedCountColumn
                         prefetch_fields.append(
-                            Prefetch(lookup, column_model.objects.all()[:1], to_attr=f"{lookup}_list")
+                            # Use order_by() because we don't care about ordering here and it's potentially expensive
+                            Prefetch(lookup, column_model.objects.order_by()[:1], to_attr=f"{lookup}_list")
                         )
                     continue
 
