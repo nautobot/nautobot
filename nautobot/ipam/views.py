@@ -45,9 +45,9 @@ from .models import (
     VRF,
 )
 from .utils import (
-    add_available_ipaddresses,
-    add_available_prefixes,
-    add_available_vlans,
+    get_add_available_ipaddresses_callback,
+    get_add_available_prefixes_callback,
+    get_add_available_vlans_callback,
     handle_relationship_changes_when_merging_ips,
     retrieve_interface_or_vminterface_from_request,
 )
@@ -486,12 +486,9 @@ class PrefixPrefixesView(generic.ObjectView):
         child_prefixes = instance.descendants().restrict(request.user, "view")
 
         # Add available prefixes to the table if requested
-        if child_prefixes and request.GET.get("show_available", "true") == "true":
-
-            def data_transform_callback(prefixes):
-                return add_available_prefixes(instance.prefix, prefixes)
-        else:
-            data_transform_callback = None
+        data_transform_callback = get_add_available_prefixes_callback(
+            show_available=request.GET.get("show_available", "true") == "true", parent=instance
+        )
 
         prefix_table = tables.PrefixDetailTable(
             child_prefixes,
@@ -533,22 +530,12 @@ class PrefixIPAddressesView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Find all IPAddresses belonging to this Prefix
-        ipaddresses = (
-            instance.get_all_ips()
-            .restrict(request.user, "view")
-            .select_related("role", "status", "tenant")
-            .prefetch_related("primary_ip4_for", "primary_ip6_for")
-        )
+        ipaddresses = instance.get_all_ips().restrict(request.user, "view")
 
         # Add available IP addresses to the table if requested
-        if request.GET.get("show_available", "true") == "true":
-
-            def data_transform_callback(ip_addresses):
-                return add_available_ipaddresses(
-                    instance.prefix, ip_addresses, instance.type == choices.PrefixTypeChoices.TYPE_POOL
-                )
-        else:
-            data_transform_callback = None
+        data_transform_callback = get_add_available_ipaddresses_callback(
+            show_available=request.GET.get("show_available", "true") == "true", parent=instance
+        )
 
         ip_table = tables.IPAddressTable(
             ipaddresses, exclude=["parent__namespace"], data_transform_callback=data_transform_callback
@@ -1271,14 +1258,12 @@ class VLANGroupView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         vlans = (
             VLAN.objects.restrict(request.user, "view")
-            .annotate(location_count=count_related(Location, "vlans"))
             .filter(vlan_group=instance)
             .prefetch_related(Prefetch("prefixes", queryset=Prefix.objects.restrict(request.user)))
         )
         vlans_count = vlans.count()
 
-        def data_transform_callback(vlans):
-            return add_available_vlans(vlan_group=instance, vlans=vlans)
+        data_transform_callback = get_add_available_vlans_callback(show_available=True, vlan_group=instance)
 
         vlan_table = tables.VLANDetailTable(
             vlans, exclude=["vlan_group"], data_transform_callback=data_transform_callback
