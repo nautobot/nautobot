@@ -49,12 +49,13 @@ class LogsCleanup(Job):
         description = "Delete ObjectChange and/or JobResult/JobLogEntry records older than a specified cutoff."
         has_sensitive_variables = False
 
-    def recursive_delete_with_cascade(self, queryset):
+    def recursive_delete_with_cascade(self, queryset, deletion_summary):
         """
         Recursively deletes all related objects with CASCADE for a given queryset.
 
         Args:
             queryset (QuerySet): The queryset of objects to delete.
+            deletion_summary (dict): A dictionary to store the count of deleted objects for each model.
         """
         related_objects = queryset.model._meta.related_objects
 
@@ -63,8 +64,10 @@ class LogsCleanup(Job):
                 related_model = related_object.related_model
                 related_field_name = related_object.field.name
                 cascade_queryset = related_model.objects.filter(**{f"{related_field_name}__in": queryset})
-                self.recursive_delete_with_cascade(cascade_queryset)
-        return queryset.delete()
+                self.recursive_delete_with_cascade(cascade_queryset, deletion_summary)
+        _, deleted_dict = queryset.only("id").delete()
+        deletion_summary.update(deleted_dict)
+        return deletion_summary
 
     def run(self, *, cleanup_types, max_age=None):
         if max_age in (None, ""):
@@ -96,10 +99,9 @@ class LogsCleanup(Job):
             if CleanupTypes.JOB_RESULT in cleanup_types:
                 self.logger.info("Deleting JobResult records prior to %s", cutoff)
                 queryset = JobResult.objects.restrict(self.user, "delete").filter(date_done__lt=cutoff)
-                _, deleted_dict = self.recursive_delete_with_cascade(queryset)
+                self.recursive_delete_with_cascade(queryset, result)
                 result.setdefault("extras.JobResult", 0)
                 result.setdefault("extras.JobLogEntry", 0)
-                result.update(**deleted_dict)
                 self.logger.info(
                     "Deleted %d JobResult records and their associated %d JobLogEntry records",
                     result["extras.JobResult"],
@@ -109,10 +111,9 @@ class LogsCleanup(Job):
             if CleanupTypes.OBJECT_CHANGE in cleanup_types:
                 self.logger.info("Deleting ObjectChange records prior to %s", cutoff)
                 queryset = ObjectChange.objects.restrict(self.user, "delete").filter(time__lt=cutoff)
-                deleted_count, _ = self.recursive_delete_with_cascade(queryset)
-                self.logger.info("Deleted %d ObjectChange records", deleted_count)
-                result["extras.ObjectChange"] = deleted_count
-
+                self.recursive_delete_with_cascade(queryset, result)
+                result.setdefault("extras.ObjectChange", 0)
+                self.logger.info("Deleted %d ObjectChange records", result["extras.ObjectChange"])
             return result
         finally:
             # Be sure to clean up after ourselves!
