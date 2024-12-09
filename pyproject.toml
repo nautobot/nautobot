@@ -209,6 +209,8 @@ mkdocstrings-python = "~1.10.9"
 pylint = "~3.2.7"
 # Pylint extensions for Django
 pylint-django = "~2.5.3"
+# Python implementation of markdownlint
+pymarkdownlnt = "~0.9.25"
 # Combination linter and code formatter
 ruff = "~0.5.7"
 # YAML linting
@@ -340,6 +342,14 @@ notes = """,
 [tool.pylint.typecheck]
 # @patch changes the signature of a function it's applied to; don't raise "no-value-for-parameter" here
 signature-mutators=["unittest.mock.patch"]
+
+[tool.pymarkdown]
+extensions.front-matter.enabled = true  # needed for mkdocs-macros compatibility
+plugins.additional_paths = "scripts/file_relative_links.py"
+plugins.code-block-style.enabled = false  # inconsistency between "code" blocks and "admonition" blocks is expected
+plugins.line-length.enabled = false  # we don't wrap markdown to 80 characters.
+plugins.list-anchored-indent.enabled = true  # in place of ul-indent, see below
+plugins.ul-indent.enabled = false  # doesn't work well with MkDocs expectations, use list-anchored-indent instead
 
 [tool.ruff]
 line-length = 120

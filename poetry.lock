@@ -26,6 +26,22 @@ files = [
 ]
 
 [[package]]
+name = "application-properties"
+version = "0.8.2"
+description = "A simple, easy to use, unified manner of accessing program properties."
+optional = false
+python-versions = ">=3.8.0"
+files = [
+    {file = "application_properties-0.8.2-py3-none-any.whl", hash = "sha256:a4fe684e4d95fc45054d3316acf763a7b0f29342ccea02eee09de53004f0139c"},
+    {file = "application_properties-0.8.2.tar.gz", hash = "sha256:e5e6918c8e29ab57175567d51dfa39c00a1d75b3205625559bb02250f50f0420"},
+]
+
+[package.dependencies]
+pyyaml = ">=5.4.1"
+tomli = ">=2.0.1"
+typing-extensions = ">=4.5.0"
+
+[[package]]
 name = "asgiref"
 version = "3.8.1"
 description = "ASGI specs, helper code, and adapters"
@@ -505,6 +521,21 @@ files = [
     {file = "colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"},
     {file = "colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44"},
 ]
+
+[[package]]
+name = "columnar"
+version = "1.4.1"
+description = "A tool for printing data in a columnar format."
+optional = false
+python-versions = "*"
+files = [
+    {file = "Columnar-1.4.1-py3-none-any.whl", hash = "sha256:8efb692a7e6ca07dcc8f4ea889960421331a5dffa8e5af81f0a67ad8ea1fc798"},
+    {file = "Columnar-1.4.1.tar.gz", hash = "sha256:c3cb57273333b2ff9cfaafc86f09307419330c97faa88dcfe23df05e6fbb9c72"},
+]
+
+[package.dependencies]
+toolz = "*"
+wcwidth = "*"
 
 [[package]]
 name = "coverage"
@@ -2860,6 +2891,22 @@ files = [
 pylint = ">=1.7"
 
 [[package]]
+name = "pymarkdownlnt"
+version = "0.9.25"
+description = "A GitHub Flavored Markdown compliant Markdown linter."
+optional = false
+python-versions = ">=3.8.0"
+files = [
+    {file = "pymarkdownlnt-0.9.25-py3-none-any.whl", hash = "sha256:9a6e66cd821dca2ca57c3bedbe837867f41c74bf6609f10a9d827029dc71553c"},
+    {file = "pymarkdownlnt-0.9.25.tar.gz", hash = "sha256:f2c54cd1ec842610be607240e26bf3bc34b8d51b3c25083e26c9e5903fa54f62"},
+]
+
+[package.dependencies]
+application-properties = ">=0.8.2"
+columnar = ">=1.4.0"
+typing-extensions = ">=4.7.0"
+
+[[package]]
 name = "pymdown-extensions"
 version = "10.8.1"
 description = "Extension pack for Python Markdown."
@@ -3915,6 +3962,17 @@ files = [
 ]
 
 [[package]]
+name = "toolz"
+version = "1.0.0"
+description = "List processing tools and functional utilities"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "toolz-1.0.0-py3-none-any.whl", hash = "sha256:292c8f1c4e7516bf9086f8850935c799a874039c8bcf959d47b600e4c44a6236"},
+    {file = "toolz-1.0.0.tar.gz", hash = "sha256:2c86e3d9a04798ac556793bced838816296a2f085017664e4995cb40a1047a02"},
+]
+
+[[package]]
 name = "towncrier"
 version = "24.8.0"
 description = "Building newsfiles for your project."
@@ -4310,4 +4368,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "09ab8831f35f3c0a8606c1cdfbdb7415f67ef337b5369ba0f7c05a97501eb67b"
+content-hash = "8640ce595357f5ac0b873152a16219f0b8230ea5b67f874d34feeadd7693dd18"
