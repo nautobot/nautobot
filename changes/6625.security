@@ -1,1 +1,0 @@
-Patched `set_values()` method of Query class from django.db.models.sql.query to address `CVE-2024-42005`.
