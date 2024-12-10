@@ -125,11 +125,11 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 <!-- towncrier release notes start -->
 ## v2.3.13 (2024-12-10)
 
-### Security
+### Security in v2.3.13
 
 - [#6615](https://github.com/nautobot/nautobot/issues/6615) - Updated `Django` to `~4.2.17` due to `CVE-2024-53907` and `CVE-2024-53908`.
 
-### Added
+### Added in v2.3.13
 
 - [#4817](https://github.com/nautobot/nautobot/issues/4817) - Added `Cluster` field on DeviceBulkEditForm.
 - [#5333](https://github.com/nautobot/nautobot/issues/5333) - Added `Comments` field on DeviceBulkEditForm.
@@ -141,32 +141,32 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6613](https://github.com/nautobot/nautobot/issues/6613) - Enhanced Prefix detail view "Child Prefixes" table to render associated Locations more intelligently.
 - [#6614](https://github.com/nautobot/nautobot/issues/6614) - Enhanced IP Address tables to show the name of the associated Interface or VM Interface if only a single such association is present for a given IP Address.
 
-### Changed
+### Changed in v2.3.13
 
 - [#6166](https://github.com/nautobot/nautobot/issues/6166) - Enhanced the REST API to generally make it possible to create objects with known ids on request.
 
-### Fixed
+### Fixed in v2.3.13
 
 - [#3124](https://github.com/nautobot/nautobot/issues/3124) - Fixed inability of ImageAttachment and DeviceType API endpoints to accept `multipart/form-data` file uploads.
 - [#5166](https://github.com/nautobot/nautobot/issues/5166) - Fixed a `ProgrammingError` when applying permissions containing network-address-based constraints.
 - [#6466](https://github.com/nautobot/nautobot/issues/6466) - Fixed `table_config` field not showing up correctly in the Saved View modal.
-- [#6498](https://github.com/nautobot/nautobot/issues/6498) - Fixed error when using TableExtension when the table is missing Meta.default_columns.
+- [#6498](https://github.com/nautobot/nautobot/issues/6498) - Fixed error when using TableExtension when the table is missing `Meta.default_columns`.
 - [#6605](https://github.com/nautobot/nautobot/issues/6605) - Improved rendering performance of the IPAddress list view in cases where the `Interfaces`, `Devices`, `VM Interfaces`, `Virtual Machines`, and/or `Assigned` columns are not shown.
 - [#6605](https://github.com/nautobot/nautobot/issues/6605) - Improved performance of `TreeModel.display` calculation by making better use of the cache.
 - [#6609](https://github.com/nautobot/nautobot/issues/6609) - Fixed unnecessary call to the database when logging from a Job with the parameter `extra={"skip_db_logging": True}`.
 - [#6624](https://github.com/nautobot/nautobot/issues/6624) - Fixed issue with `group_sync.py` where it was accessing the settings using environment variable name vs the actual settings name.
 - [#6624](https://github.com/nautobot/nautobot/issues/6624) - Fixed the `SOCIAL_AUTH_PIPELINE` settings to include the entire path of the `group_sync` function.
 
-### Dependencies
+### Dependencies in v2.3.13
 
 - [#6615](https://github.com/nautobot/nautobot/issues/6615) - Updated `nh3` to `~0.2.19`.
 
-### Documentation
+### Documentation in v2.3.13
 
 - [#6622](https://github.com/nautobot/nautobot/issues/6622) - Fixed AzureAD documentation for custom_module logging example.
-- [#6636](https://github.com/nautobot/nautobot/issues/6636) - Fixed group_sync path in the SSO documentation.
+- [#6636](https://github.com/nautobot/nautobot/issues/6636) - Fixed `group_sync` path in the SSO documentation.
 
-### Housekeeping
+### Housekeeping in v2.3.13
 
 - [#6615](https://github.com/nautobot/nautobot/issues/6615) - Updated documentation dependency `mkdocs-material` to `~9.5.47`.
 

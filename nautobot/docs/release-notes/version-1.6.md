@@ -69,15 +69,16 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
+<!-- pyml disable-num-lines 2 blanks-around-headers -->
 <!-- towncrier release notes start -->
 ## v1.6.29 (2024-12-09)
 
-### Security
+### Security in v1.6.29
 
 - [#5911](https://github.com/nautobot/nautobot/issues/5911) - Updated `zipp` to `3.19.2` to address `CVE-2024-5569`. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
 - [#6625](https://github.com/nautobot/nautobot/issues/6625) - Patched `set_values()` method of Query class from django.db.models.sql.query to address `CVE-2024-42005`.
 
-### Fixed
+### Fixed in v1.6.29
 
 - [#5924](https://github.com/nautobot/nautobot/issues/5924) - Fixed the redirect URL for the Device Bay Populate/Depopulate view to take the user back to the Device Bays tab on the Device page.
 - [#6502](https://github.com/nautobot/nautobot/issues/6502) - Fixed a bug in the Dockerfile that prevented `docker build` from working on some platforms.
@@ -85,13 +86,13 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 
 ## v1.6.28 (2024-09-24)
 
-### Fixed
+### Fixed in v1.6.28
 
 - [#6152](https://github.com/nautobot/nautobot/issues/6152) - Fixed table column ordering.
 - [#6237](https://github.com/nautobot/nautobot/issues/6237) - Corrected presentation of rendered Markdown content in Notes table.
 - [#6262](https://github.com/nautobot/nautobot/issues/6262) - Fixed invalid installation of `xmlsec` library in the Nautobot Docker images.
 
-### Housekeeping
+### Housekeeping in v1.6.28
 
 - [#5637](https://github.com/nautobot/nautobot/issues/5637) - Removed "version" from development `docker-compose.yml` files as newer versions of Docker complain about it being obsolete.
 - [#5637](https://github.com/nautobot/nautobot/issues/5637) - Fixed behavior of `invoke stop` so that it also stops the optional `mkdocs` container if present.
@@ -99,37 +100,37 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 
 ## v1.6.27 (2024-09-03)
 
-### Security
+### Security in v1.6.27
 
 - [#6182](https://github.com/nautobot/nautobot/issues/6182) - Updated `cryptography` to `43.0.1` to address `GHSA-h4gh-qq45-vh27`. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
 
-### Fixed
+### Fixed in v1.6.27
 
-- [#6081](https://github.com/nautobot/nautobot/issues/6081) - Fixed AttributeError during pre_migrate when permission constraints are applied to custom fields.
+- [#6081](https://github.com/nautobot/nautobot/issues/6081) - Fixed AttributeError during `pre_migrate` when permission constraints are applied to custom fields.
 
 ## v1.6.26 (2024-07-22)
 
-### Fixed
+### Fixed in v1.6.26
 
 - [#5935](https://github.com/nautobot/nautobot/issues/5935) - Fixed issue in which a save() could be called unnecessarily on child devices.
 
 ## v1.6.25 (2024-07-09)
 
-### Security
+### Security in v1.6.25
 
 - [#5891](https://github.com/nautobot/nautobot/issues/5891) - Updated `certifi` to `2024.7.4` to address `CVE-2024-39689`. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
 
-### Dependencies
+### Dependencies in v1.6.25
 
 - [#5897](https://github.com/nautobot/nautobot/pull/5897) - Pinned dev dependency `faker` to `>=0.7.0,<26.0.0` to work around breaking change in v26.0.0 ([faker/#2070](https://github.com/joke2k/faker/issues/2070)).
 
 ## v1.6.24 (2024-06-24)
 
-### Security
+### Security in v1.6.24
 
 - [#5821](https://github.com/nautobot/nautobot/issues/5821) - Updated `urllib3` to 2.2.2 due to CVE-2024-37891. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
 
-### Housekeeping
+### Housekeeping in v1.6.24
 
 - [#5754](https://github.com/nautobot/nautobot/issues/5754) - Updated development dependency `requests` to `~2.32.2`.
 
