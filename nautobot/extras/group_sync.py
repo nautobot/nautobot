@@ -8,15 +8,15 @@ from django.contrib.auth.models import Group
 logger = logging.getLogger(__name__)
 
 
-CLAIMS_GROUP_NAME = getattr(settings, "NAUTOBOT_SSO_CLAIMS_GROUP", "groups")
+CLAIMS_GROUP_NAME = getattr(settings, "SSO_CLAIMS_GROUP", "groups")
 """ Which claim to look at in the OAuth2/OIDC response
 
     For Okta you can look at `Okta -> Authorization Servers -> Claims`. And a reasonable
     default is "groups". For Azure a reasonable default is "roles".
 """
 
-SUPERUSER_GROUPS = getattr(settings, "NAUTOBOT_SSO_SUPERUSER_GROUPS", [])
-STAFF_GROUPS = getattr(settings, "NAUTOBOT_SSO_STAFF_GROUPS", [])
+SUPERUSER_GROUPS = getattr(settings, "SSO_SUPERUSER_GROUPS", [])
+STAFF_GROUPS = getattr(settings, "SSO_STAFF_GROUPS", [])
 
 
 def group_sync(uid, user=None, response=None, *args, **kwargs):

@@ -59,6 +59,7 @@ class UserSerializer(ValidatedModelSerializer):
 
 
 class GroupSerializer(ValidatedModelSerializer):
+    id = serializers.IntegerField(read_only=True)
     url = serializers.HyperlinkedIdentityField(view_name="users-api:group-detail")
     user_count = serializers.IntegerField(read_only=True)
 

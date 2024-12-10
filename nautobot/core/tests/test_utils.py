@@ -282,6 +282,14 @@ class GetFooForModelTest(TestCase):
                 lookup.get_model_for_view_name("unknown:plugins:example_app:examplemodel_list")
             self.assertEqual(str(err.exception), "Unexpected View Name: unknown:plugins:example_app:examplemodel_list")
 
+    def test_get_table_class_string_from_view_name(self):
+        # Testing UIViewSet
+        self.assertEqual(lookup.get_table_class_string_from_view_name("circuits:circuit_list"), "CircuitTable")
+        # Testing Legacy View
+        self.assertEqual(lookup.get_table_class_string_from_view_name("dcim:location_list"), "LocationTable")
+        # Testing unconventional table name
+        self.assertEqual(lookup.get_table_class_string_from_view_name("ipam:prefix_list"), "PrefixDetailTable")
+
 
 class IsTaggableTest(TestCase):
     def test_is_taggable_true(self):

@@ -2,7 +2,9 @@ import logging
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models, transaction
 from django.db.models import Prefetch, ProtectedError, Q
 from django.forms.models import model_to_dict
@@ -27,7 +29,7 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import handle_protectederror
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device, Interface, Location
-from nautobot.extras.models import Role, Status, Tag
+from nautobot.extras.models import Role, SavedView, Status, Tag
 from nautobot.ipam import choices, constants
 from nautobot.ipam.api import serializers
 from nautobot.tenancy.models import Tenant
@@ -47,9 +49,9 @@ from .models import (
     VRF,
 )
 from .utils import (
-    add_available_ipaddresses,
-    add_available_prefixes,
-    add_available_vlans,
+    get_add_available_ipaddresses_callback,
+    get_add_available_prefixes_callback,
+    get_add_available_vlans_callback,
     handle_relationship_changes_when_merging_ips,
     retrieve_interface_or_vminterface_from_request,
 )
@@ -105,22 +107,11 @@ class NamespaceIPAddressesView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Find all IPAddresses belonging to this Namespace
-        ip_addresses = (
-            instance.ip_addresses.restrict(request.user, "view")
-            .select_related("role", "status", "tenant")
-            .annotate(
-                interface_count=count_related(Interface, "ip_addresses"),
-                interface_parent_count=count_related(Device, "interfaces__ip_addresses", distinct=True),
-                vm_interface_count=count_related(VMInterface, "ip_addresses"),
-                vm_interface_parent_count=count_related(VirtualMachine, "interfaces__ip_addresses", distinct=True),
-            )
-        )
+        ip_addresses = instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant")
 
-        ip_address_table = tables.IPAddressTable(ip_addresses)
+        ip_address_table = tables.IPAddressTable(ip_addresses, exclude=["namespace"])
         if request.user.has_perm("ipam.change_ipaddress") or request.user.has_perm("ipam.delete_ipaddress"):
             ip_address_table.columns.show("pk")
-
-        ip_address_table.exclude = ("namespace",)
 
         paginate = {
             "paginator_class": EnhancedPaginator,
@@ -158,11 +149,9 @@ class NamespacePrefixesView(generic.ObjectView):
         # Find all Prefixes belonging to this Namespace
         prefixes = instance.prefixes.restrict(request.user, "view").select_related("status")
 
-        prefix_table = tables.PrefixTable(prefixes)
+        prefix_table = tables.PrefixTable(prefixes, exclude=["namespace"])
         if request.user.has_perm("ipam.change_prefix") or request.user.has_perm("ipam.delete_prefix"):
             prefix_table.columns.show("pk")
-
-        prefix_table.exclude = ("namespace",)
 
         paginate = {
             "paginator_class": EnhancedPaginator,
@@ -200,11 +189,9 @@ class NamespaceVRFsView(generic.ObjectView):
         # Find all VRFs belonging to this Namespace
         vrfs = instance.vrfs.restrict(request.user, "view")
 
-        vrf_table = tables.VRFTable(vrfs)
+        vrf_table = tables.VRFTable(vrfs, exclude=["namespace"])
         if request.user.has_perm("ipam.change_vrf") or request.user.has_perm("ipam.delete_vrf"):
             vrf_table.columns.show("pk")
-
-        vrf_table.exclude = ("namespace",)
 
         paginate = {
             "paginator_class": EnhancedPaginator,
@@ -410,8 +397,7 @@ class PrefixView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Parent prefixes table
         parent_prefixes = instance.ancestors().restrict(request.user, "view")
-        parent_prefix_table = tables.PrefixTable(parent_prefixes)
-        parent_prefix_table.exclude = ("namespace",)
+        parent_prefix_table = tables.PrefixTable(parent_prefixes, exclude=["namespace"])
 
         vrfs = instance.vrf_assignments.restrict(request.user, "view")
         vrf_table = tables.VRFPrefixAssignmentTable(vrfs, orderable=False)
@@ -442,19 +428,19 @@ class PrefixPrefixesView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Child prefixes table
-        child_prefixes = (
-            instance.descendants()
-            .restrict(request.user, "view")
-            .select_related("parent", "status", "role", "vlan", "namespace")
-            .annotate(location_count=count_related(Location, "prefixes"))
-        )
+        child_prefixes = instance.descendants().restrict(request.user, "view")
 
         # Add available prefixes to the table if requested
-        if child_prefixes and request.GET.get("show_available", "true") == "true":
-            child_prefixes = add_available_prefixes(instance.prefix, child_prefixes)
+        data_transform_callback = get_add_available_prefixes_callback(
+            show_available=request.GET.get("show_available", "true") == "true", parent=instance
+        )
 
-        prefix_table = tables.PrefixDetailTable(child_prefixes, hide_hierarchy_ui=True)
-        prefix_table.exclude = ("namespace",)
+        prefix_table = tables.PrefixDetailTable(
+            child_prefixes,
+            hide_hierarchy_ui=True,
+            exclude=["namespace"],
+            data_transform_callback=data_transform_callback,
+        )
         if request.user.has_perm("ipam.change_prefix") or request.user.has_perm("ipam.delete_prefix"):
             prefix_table.columns.show("pk")
 
@@ -489,26 +475,16 @@ class PrefixIPAddressesView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Find all IPAddresses belonging to this Prefix
-        ipaddresses = (
-            instance.get_all_ips()
-            .restrict(request.user, "view")
-            .select_related("role", "status", "tenant")
-            .prefetch_related("primary_ip4_for", "primary_ip6_for")
-            .annotate(
-                interface_count=count_related(Interface, "ip_addresses"),
-                interface_parent_count=count_related(Device, "interfaces__ip_addresses", distinct=True),
-                vm_interface_count=count_related(VMInterface, "ip_addresses"),
-                vm_interface_parent_count=count_related(VirtualMachine, "interfaces__ip_addresses", distinct=True),
-            )
-        )
+        ipaddresses = instance.get_all_ips().restrict(request.user, "view")
 
         # Add available IP addresses to the table if requested
-        if request.GET.get("show_available", "true") == "true":
-            ipaddresses = add_available_ipaddresses(
-                instance.prefix, ipaddresses, instance.type == choices.PrefixTypeChoices.TYPE_POOL
-            )
+        data_transform_callback = get_add_available_ipaddresses_callback(
+            show_available=request.GET.get("show_available", "true") == "true", parent=instance
+        )
 
-        ip_table = tables.IPAddressTable(ipaddresses)
+        ip_table = tables.IPAddressTable(
+            ipaddresses, exclude=["parent__namespace"], data_transform_callback=data_transform_callback
+        )
         if request.user.has_perm("ipam.change_ipaddress") or request.user.has_perm("ipam.delete_ipaddress"):
             ip_table.columns.show("pk")
 
@@ -695,17 +671,36 @@ class PrefixBulkDeleteView(generic.BulkDeleteView):
 
 
 class IPAddressListView(generic.ObjectListView):
-    queryset = IPAddress.objects.annotate(
-        interface_count=count_related(Interface, "ip_addresses"),
-        interface_parent_count=count_related(Device, "interfaces__ip_addresses", distinct=True),
-        vm_interface_count=count_related(VMInterface, "ip_addresses"),
-        vm_interface_parent_count=count_related(VirtualMachine, "interfaces__ip_addresses", distinct=True),
-        assigned_count=count_related(Interface, "ip_addresses") + count_related(VMInterface, "ip_addresses"),
-    )
+    queryset = IPAddress.objects.all()
     filterset = filters.IPAddressFilterSet
     filterset_form = forms.IPAddressFilterForm
     table = tables.IPAddressDetailTable
     template_name = "ipam/ipaddress_list.html"
+
+    def alter_queryset(self, request):
+        queryset = super().alter_queryset(request)
+
+        # All of the below is just to determine whether we are displaying the "assigned_count" column, and if so,
+        # perform the relevant queryset annotation. Ref: nautobot/nautobot#6605
+        if request.user is None or isinstance(request.user, AnonymousUser):
+            table_columns = None
+        else:
+            table_columns = request.user.get_config("tables.IPAddressDetailTable.columns")
+        current_saved_view_pk = request.GET.get("saved_view", None)
+        if current_saved_view_pk:
+            try:
+                current_saved_view = SavedView.objects.get(view="ipam:ipaddress_list", pk=current_saved_view_pk)
+                view_table_config = current_saved_view.config.get("table_config", {}).get("IPAddressDetailTable", None)
+                if view_table_config is not None:
+                    table_columns = view_table_config.get("columns", table_columns)
+            except ObjectDoesNotExist:
+                pass
+
+        if table_columns and "assigned_count" in table_columns:
+            queryset = queryset.annotate(
+                assigned_count=count_related(Interface, "ip_addresses") + count_related(VMInterface, "ip_addresses"),
+            )
+        return queryset
 
 
 class IPAddressView(generic.ObjectView):
@@ -1197,17 +1192,18 @@ class VLANGroupView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         vlans = (
             VLAN.objects.restrict(request.user, "view")
-            .annotate(location_count=count_related(Location, "vlans"))
             .filter(vlan_group=instance)
             .prefetch_related(Prefetch("prefixes", queryset=Prefix.objects.restrict(request.user)))
         )
         vlans_count = vlans.count()
-        vlans = add_available_vlans(vlan_group=instance, vlans=vlans)
 
-        vlan_table = tables.VLANDetailTable(vlans)
+        data_transform_callback = get_add_available_vlans_callback(show_available=True, vlan_group=instance)
+
+        vlan_table = tables.VLANDetailTable(
+            vlans, exclude=["vlan_group"], data_transform_callback=data_transform_callback
+        )
         if request.user.has_perm("ipam.change_vlan") or request.user.has_perm("ipam.delete_vlan"):
             vlan_table.columns.show("pk")
-        vlan_table.columns.hide("vlan_group")
 
         paginate = {
             "paginator_class": EnhancedPaginator,
@@ -1282,8 +1278,7 @@ class VLANView(generic.ObjectView):
                 "namespace",
             )
         )
-        prefix_table = tables.PrefixTable(list(prefixes), hide_hierarchy_ui=True)
-        prefix_table.exclude = ("vlan",)
+        prefix_table = tables.PrefixTable(list(prefixes), hide_hierarchy_ui=True, exclude=["vlan"])
 
         paginate = {
             "paginator_class": EnhancedPaginator,

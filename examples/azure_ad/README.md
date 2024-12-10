@@ -59,7 +59,7 @@ Update `LOGGING` in **nautobot_config.py**.
 LOGGING = {
     # .....Omitted.....
     "loggers": {
-        "my_custom_module": {"handlers": ["console", "file", "level": "DEBUG"]},
+        "my_custom_module": {"handlers": ["console", "file"], "level": "DEBUG"},
     }
 }
 ```

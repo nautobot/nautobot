@@ -553,7 +553,7 @@ A group syncing function is provided and but needs to be configured. See [Group 
 
 ## Group Syncing
 
-To do so `nautobot.extras.group_sync` must be part of `SOCIAL_AUTH_PIPELINE` which can be achieved
+To do so `nautobot.extras.group_sync.group_sync` must be part of `SOCIAL_AUTH_PIPELINE` which can be achieved
 by setting the environment variable `NAUTOBOT_SSO_ENABLE_GROUP_SYNC` to `true`. Or by setting
 the following in your settings:
 
@@ -568,7 +568,7 @@ SOCIAL_AUTH_PIPELINE = (
     "social_core.pipeline.social_auth.associate_user",
     "social_core.pipeline.social_auth.load_extra_data",
     "social_core.pipeline.user.user_details",
-    "nautobot.extras.group_sync",
+    "nautobot.extras.group_sync.group_sync",
 )
 ```
 

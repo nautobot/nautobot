@@ -206,6 +206,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
     tenancy_related_name = "virtual_machines"
 
     generic_filter_tests = (
+        ["ip_addresses", "interfaces__ip_addresses__id"],
         ("cluster", "cluster__id"),
         ("cluster", "cluster__name"),
         ("cluster_group", "cluster__cluster_group__id"),
@@ -453,6 +454,22 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
             virtual_machines[i].software_version = software_versions[i]
             virtual_machines[i].save()
         return super().test_filters_generic()
+
+    def test_name(self):
+        params = {"name": ["Virtual Machine 1", "Virtual Machine 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_comments(self):
+        params = {"comments": ["This is VM 1", "This is VM 2"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_ip_addresses(self):
+        ipaddresses = list(IPAddress.objects.filter(vm_interfaces__isnull=False)[:2])
+        params = {"ip_addresses": [ipaddresses[0].address, ipaddresses[1].id]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(interfaces__ip_addresses__in=ipaddresses).distinct(),
+        )
 
     def test_primary_ip4(self):
         params = {"primary_ip4": ["192.0.2.1/24", self.ipaddresses[0].pk]}

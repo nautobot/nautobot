@@ -774,7 +774,11 @@ class APIViewTestCases:
             self.assertHttpStatus(response, status.HTTP_201_CREATED, csv_data)
             # Note that create via CSV is always treated as a bulk-create, and so the response is always a list of dicts
             new_instance = self._get_queryset().get(pk=response.data[0]["id"])
-            self.assertNotEqual(new_instance.pk, orig_pk)
+            if isinstance(orig_pk, int):
+                self.assertNotEqual(new_instance.pk, orig_pk)
+            else:
+                # for our non-integer PKs, we're expecting the creation to respect the requested PK
+                self.assertEqual(new_instance.pk, orig_pk)
 
             new_serializer = serializer_class(new_instance, context={"request": None})
             new_data = new_serializer.data

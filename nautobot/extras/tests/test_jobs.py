@@ -193,13 +193,15 @@ class JobTest(TestCase):
                 with override_settings(JOBS_ROOT=temp_dir):
                     # Create a new Job and make sure it's discovered correctly
                     with open(os.path.join(temp_dir, "my_jobs.py"), "w") as fd:
-                        fd.write("""\
+                        fd.write(
+                            """\
 from nautobot.apps.jobs import Job, register_jobs
 class MyJob(Job):
     def run(self):
         pass
 register_jobs(MyJob)
-""")
+"""
+                        )
                     jobs_data = get_jobs(reload=True)
                     self.assertIn("my_jobs.MyJob", jobs_data.keys())
                     self.assertIsNotNone(get_job("my_jobs.MyJob"))
@@ -209,11 +211,13 @@ register_jobs(MyJob)
 
                     # Create a second Job in the same module
                     with open(os.path.join(temp_dir, "my_jobs.py"), "a") as fd:
-                        fd.write("""
+                        fd.write(
+                            """
 class MyOtherJob(MyJob):
     pass
 register_jobs(MyOtherJob)
-""")
+"""
+                        )
                     jobs_data = get_jobs(reload=True)
                     self.assertIn("my_jobs.MyJob", jobs_data.keys())
                     self.assertIsNotNone(get_job("my_jobs.MyJob"))
@@ -222,14 +226,16 @@ register_jobs(MyOtherJob)
 
                     # Create a third Job in another module
                     with open(os.path.join(temp_dir, "their_jobs.py"), "w") as fd:
-                        fd.write("""
+                        fd.write(
+                            """
 from nautobot.apps.jobs import Job, register_jobs
 
 class MyJob(Job):
     def run(self):
         pass
 register_jobs(MyJob)
-""")
+"""
+                        )
                     jobs_data = get_jobs(reload=True)
                     self.assertIn("my_jobs.MyJob", jobs_data.keys())
                     self.assertIsNotNone(get_job("my_jobs.MyJob"))
@@ -251,14 +257,16 @@ register_jobs(MyJob)
 
                     # Create a module with an inauspicious name
                     with open(os.path.join(temp_dir, "traceback.py"), "w") as fd:
-                        fd.write("""
+                        fd.write(
+                            """
 from nautobot.apps.jobs import Job, register_jobs
 
 class BadJob(Job):
     def run(self):
         raise RuntimeError("You ran a bad job!")
 register_jobs(BadJob)
-""")
+"""
+                        )
                     jobs_data = get_jobs(reload=True)
                     self.assertIn("my_jobs.MyJob", jobs_data.keys())
                     self.assertIsNotNone(get_job("my_jobs.MyJob"))

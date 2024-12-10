@@ -1691,6 +1691,7 @@ class DeviceTestCase(
         ("front_ports", "front_ports__id"),
         ("interfaces", "interfaces__id"),
         ("interfaces", "interfaces__name"),
+        ("ip_addresses", "interfaces__ip_addresses__id"),
         ("mac_address", "interfaces__mac_address"),
         ("manufacturer", "device_type__manufacturer__id"),
         ("manufacturer", "device_type__manufacturer__name"),
@@ -1875,6 +1876,14 @@ class DeviceTestCase(
                 self.filterset(params, self.queryset).qs,
                 Device.objects.filter(primary_ip4__isnull=True, primary_ip6__isnull=True),
             )
+
+    def test_ip_addresses(self):
+        addresses = list(IPAddress.objects.filter(interfaces__isnull=False)[:2])
+        params = {"ip_addresses": [addresses[0].address, addresses[1].id]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(interfaces__ip_addresses__in=addresses).distinct(),
+        )
 
     def test_virtual_chassis_member(self):
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
@@ -2131,6 +2140,7 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         ("child_interfaces", "child_interfaces__name"),
         ("description",),
         # ("device", "device__id"),  # TODO - InterfaceFilterSet overrides device as a MultiValueCharFilter on name only
+        ("ip_addresses", "ip_addresses__id"),
         ("label",),
         ("lag", "lag__id"),
         ("lag", "lag__name"),
@@ -2378,6 +2388,20 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
             status=interface_statuses[3],
         )
 
+        ipaddr_status = Status.objects.get_for_model(IPAddress).first()
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        namespace = Namespace.objects.first()
+        Prefix.objects.create(prefix="192.0.2.0/24", namespace=namespace, status=prefix_status)
+        Prefix.objects.create(prefix="2600::/64", namespace=namespace, status=prefix_status)
+        ipaddresses = (
+            IPAddress.objects.create(address="192.0.2.1/24", namespace=namespace, status=ipaddr_status),
+            IPAddress.objects.create(address="192.0.2.2/24", namespace=namespace, status=ipaddr_status),
+            IPAddress.objects.create(address="2600::1/120", namespace=namespace, status=ipaddr_status),
+            IPAddress.objects.create(address="2600::0100/120", namespace=namespace, status=ipaddr_status),
+        )
+
+        cabled_interfaces[0].add_ip_addresses([ipaddresses[0], ipaddresses[2]])
+        cabled_interfaces[1].add_ip_addresses([ipaddresses[1], ipaddresses[3]])
         # Virtual Device Context
         vdc_status = Status.objects.get_for_model(VirtualDeviceContext).first()
         vdcs = [
@@ -2622,6 +2646,14 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
 
         with self.subTest("device (pk) filter with an invalid uuid"):
             self.assertFalse(self.filterset({"device": [uuid.uuid4()]}, self.queryset).is_valid())
+
+    def test_ip_addresses(self):
+        addresses = list(IPAddress.objects.filter(interfaces__isnull=False)[:2])
+        params = {"ip_addresses": [addresses[0].address, addresses[1].id]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(ip_addresses__in=addresses).distinct(),
+        )
 
     def test_kind(self):
         # TODO: Not a generic_filter_test because this is a single-value filter

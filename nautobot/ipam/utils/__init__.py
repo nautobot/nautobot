@@ -4,6 +4,7 @@ import netaddr
 from nautobot.core.forms.utils import compress_range
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import RelationshipAssociation
+from nautobot.ipam.choices import PrefixTypeChoices
 from nautobot.ipam.models import Prefix, VLAN
 from nautobot.ipam.querysets import IPAddressQuerySet
 from nautobot.virtualization.models import VMInterface
@@ -23,6 +24,13 @@ def add_available_prefixes(parent, prefix_list):
     prefix_list.sort(key=lambda p: p.prefix)
 
     return prefix_list
+
+
+def get_add_available_prefixes_callback(show_available, parent):
+    """Conditionally provide a callback for add_available_prefixes()."""
+    if show_available:
+        return lambda prefixes: add_available_prefixes(parent.prefix, prefixes)
+    return lambda prefixes: prefixes
 
 
 def add_available_ipaddresses(prefix, ipaddress_list, is_pool=False):
@@ -81,6 +89,15 @@ def add_available_ipaddresses(prefix, ipaddress_list, is_pool=False):
     return output
 
 
+def get_add_available_ipaddresses_callback(show_available, parent):
+    """Conditionally provide a callback for add_available_ipaddresses()."""
+    if show_available:
+        return lambda ip_addresses: add_available_ipaddresses(
+            parent.prefix, ip_addresses, is_pool=(parent.type == PrefixTypeChoices.TYPE_POOL)
+        )
+    return lambda ip_addresses: ip_addresses
+
+
 def add_available_vlans(vlan_group, vlans):
     """
     Create fake records for all gaps between used VLANs
@@ -97,6 +114,13 @@ def add_available_vlans(vlan_group, vlans):
     vlans = list(vlans) + fake_vlans
     vlans.sort(key=lambda v: v.vid if isinstance(v, VLAN) else v["vid"])
     return vlans
+
+
+def get_add_available_vlans_callback(show_available, vlan_group):
+    """Conditionally provide a callback for add_available_vlans()."""
+    if show_available:
+        return lambda vlans: add_available_vlans(vlan_group=vlan_group, vlans=vlans)
+    return lambda vlans: vlans
 
 
 def handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, collapsed_ips):

@@ -11,6 +11,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin
+from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ViewSet
@@ -18,6 +19,7 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 from nautobot.circuits.models import Circuit
 from nautobot.cloud.models import CloudAccount
 from nautobot.core.api.exceptions import ServiceUnavailable
+from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.views import ModelViewSet
 from nautobot.core.models.querysets import count_related
@@ -290,6 +292,7 @@ class DeviceTypeViewSet(NautobotModelViewSet):
     queryset = DeviceType.objects.annotate(device_count=count_related(Device, "device_type"))
     serializer_class = serializers.DeviceTypeSerializer
     filterset_class = filters.DeviceTypeFilterSet
+    parser_classes = [JSONParser, NautobotCSVParser, MultiPartParser]
 
 
 #

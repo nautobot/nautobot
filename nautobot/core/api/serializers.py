@@ -136,6 +136,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
     serializer_related_field = NautobotHyperlinkedRelatedField
 
+    id = serializers.UUIDField(read_only=False, default=serializers.CreateOnlyDefault(uuid.uuid4))
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
     object_type = ObjectTypeField()
     # composite_key = serializers.SerializerMethodField()  # TODO: Revisit if we reintroduce composite keys
