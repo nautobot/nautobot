@@ -37,7 +37,7 @@ python = ">=3.9,<3.13"
 # Background task processing
 celery = "~5.3.6"
 # Fundamental web framework for Nautobot
-Django = "~4.2.16"
+Django = "~4.2.17"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -71,7 +71,7 @@ django-silk = "~5.3.0"
 # Pinned temporarily to 1.14.3 due to https://github.com/revsys/django-health-check/issues/434
 django-storages = {version = "1.14.3", optional = true}
 # Structured logging for Django
-django-structlog = {version = "^8.1.0", extras = ["celery"]}
+django-structlog = {version = "^9.0.0", extras = ["celery"]}
 # Advanced HTML tables
 django-tables2 = "~2.7.0"
 # Tags
@@ -167,7 +167,7 @@ example-app-with-view-override = {path = "examples/example_app_with_view_overrid
 # Random data generation
 factory-boy = "~3.3.1"
 # Factory Boy dependency.
-faker = ">=30.1.0,<30.2.0"
+faker = ">=33.1.0,<33.2.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
@@ -175,7 +175,7 @@ rich = "~13.7.1"
 # Change log management and generation
 towncrier = "~24.8.0"
 # Watch files for celery and mkdocs reload
-watchdog = "~5.0.0"
+watchdog = "~6.0.0"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
@@ -209,6 +209,8 @@ mkdocstrings-python = "~1.10.9"
 pylint = "~3.2.7"
 # Pylint extensions for Django
 pylint-django = "~2.5.3"
+# Python implementation of markdownlint
+pymarkdownlnt = "~0.9.25"
 # Combination linter and code formatter
 ruff = "~0.5.7"
 # YAML linting
@@ -340,6 +342,14 @@ notes = """,
 [tool.pylint.typecheck]
 # @patch changes the signature of a function it's applied to; don't raise "no-value-for-parameter" here
 signature-mutators=["unittest.mock.patch"]
+
+[tool.pymarkdown]
+extensions.front-matter.enabled = true  # needed for mkdocs-macros compatibility
+plugins.additional_paths = "scripts/file_relative_links.py"
+plugins.code-block-style.enabled = false  # inconsistency between "code" blocks and "admonition" blocks is expected
+plugins.line-length.enabled = false  # we don't wrap markdown to 80 characters.
+plugins.list-anchored-indent.enabled = true  # in place of ul-indent, see below
+plugins.ul-indent.enabled = false  # doesn't work well with MkDocs expectations, use list-anchored-indent instead
 
 [tool.ruff]
 line-length = 120

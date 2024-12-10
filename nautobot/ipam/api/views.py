@@ -50,21 +50,19 @@ class NamespaceViewSet(NautobotModelViewSet):
 
 
 class VRFViewSet(NautobotModelViewSet):
-    queryset = VRF.objects.select_related("namespace", "tenant").prefetch_related(
-        "devices", "virtual_machines", "prefixes", "import_targets", "export_targets", "tags"
-    )
+    queryset = VRF.objects.all()
     serializer_class = serializers.VRFSerializer
     filterset_class = filters.VRFFilterSet
 
 
 class VRFDeviceAssignmentViewSet(NautobotModelViewSet):
-    queryset = VRFDeviceAssignment.objects.select_related("vrf", "device", "virtual_machine")
+    queryset = VRFDeviceAssignment.objects.all()
     serializer_class = serializers.VRFDeviceAssignmentSerializer
     filterset_class = filters.VRFDeviceAssignmentFilterSet
 
 
 class VRFPrefixAssignmentViewSet(NautobotModelViewSet):
-    queryset = VRFPrefixAssignment.objects.select_related("vrf", "prefix")
+    queryset = VRFPrefixAssignment.objects.all()
     serializer_class = serializers.VRFPrefixAssignmentSerializer
     filterset_class = filters.VRFPrefixAssignmentFilterSet
 
@@ -75,7 +73,7 @@ class VRFPrefixAssignmentViewSet(NautobotModelViewSet):
 
 
 class RouteTargetViewSet(NautobotModelViewSet):
-    queryset = RouteTarget.objects.select_related("tenant").prefetch_related("tags")
+    queryset = RouteTarget.objects.all()
     serializer_class = serializers.RouteTargetSerializer
     filterset_class = filters.RouteTargetFilterSet
 
@@ -110,21 +108,14 @@ class RIRViewSet(NautobotModelViewSet):
     update=extend_schema(responses={"200": serializers.PrefixLegacySerializer}, versions=["2.0", "2.1"]),
 )
 class PrefixViewSet(NautobotModelViewSet):
-    queryset = Prefix.objects.select_related(
-        "namespace",
-        "parent",
-        "rir",
-        "role",
-        "status",
-        "tenant",
-        "vlan",
-    ).prefetch_related("locations", "tags")
+    queryset = Prefix.objects.all()
     serializer_class = serializers.PrefixSerializer
     filterset_class = filters.PrefixFilterSet
 
     def get_serializer_class(self):
         if (
             not getattr(self, "swagger_fake_view", False)
+            and hasattr(self.request, "major_version")
             and self.request.major_version == 2
             and self.request.minor_version < 2
         ):
@@ -354,7 +345,7 @@ class PrefixViewSet(NautobotModelViewSet):
 
 
 class PrefixLocationAssignmentViewSet(NautobotModelViewSet):
-    queryset = PrefixLocationAssignment.objects.select_related("prefix", "location")
+    queryset = PrefixLocationAssignment.objects.all()
     serializer_class = serializers.PrefixLocationAssignmentSerializer
     filterset_class = filters.PrefixLocationAssignmentFilterSet
 
@@ -365,13 +356,7 @@ class PrefixLocationAssignmentViewSet(NautobotModelViewSet):
 
 
 class IPAddressViewSet(NautobotModelViewSet):
-    queryset = IPAddress.objects.select_related(
-        "nat_inside",
-        "parent",
-        "role",
-        "status",
-        "tenant",
-    ).prefetch_related("tags", "nat_outside_list")
+    queryset = IPAddress.objects.select_related("parent__namespace")
     serializer_class = serializers.IPAddressSerializer
     filterset_class = filters.IPAddressFilterSet
 
@@ -382,7 +367,7 @@ class IPAddressViewSet(NautobotModelViewSet):
 
 
 class IPAddressToInterfaceViewSet(NautobotModelViewSet):
-    queryset = IPAddressToInterface.objects.select_related("interface", "ip_address", "vm_interface")
+    queryset = IPAddressToInterface.objects.all()
     serializer_class = serializers.IPAddressToInterfaceSerializer
     filterset_class = filters.IPAddressToInterfaceFilterSet
 
@@ -393,11 +378,7 @@ class IPAddressToInterfaceViewSet(NautobotModelViewSet):
 
 
 class VLANGroupViewSet(NautobotModelViewSet):
-    queryset = (
-        VLANGroup.objects.select_related("location")
-        .prefetch_related("tags")
-        .annotate(vlan_count=count_related(VLAN, "vlan_group"))
-    )
+    queryset = VLANGroup.objects.annotate(vlan_count=count_related(VLAN, "vlan_group"))
     serializer_class = serializers.VLANGroupSerializer
     filterset_class = filters.VLANGroupFilterSet
 
@@ -580,16 +561,7 @@ class VLANGroupViewSet(NautobotModelViewSet):
     update=extend_schema(responses={"200": serializers.VLANLegacySerializer}, versions=["2.0", "2.1"]),
 )
 class VLANViewSet(NautobotModelViewSet):
-    queryset = (
-        VLAN.objects.select_related(
-            "vlan_group",
-            "status",
-            "role",
-            "tenant",
-        )
-        .prefetch_related("tags")
-        .annotate(prefix_count=count_related(Prefix, "vlan"))
-    )
+    queryset = VLAN.objects.annotate(prefix_count=count_related(Prefix, "vlan"))
     serializer_class = serializers.VLANSerializer
     filterset_class = filters.VLANFilterSet
 
@@ -604,6 +576,7 @@ class VLANViewSet(NautobotModelViewSet):
     def get_serializer_class(self):
         if (
             not getattr(self, "swagger_fake_view", False)
+            and hasattr(self.request, "major_version")
             and self.request.major_version == 2
             and self.request.minor_version < 2
         ):
@@ -631,7 +604,7 @@ class VLANViewSet(NautobotModelViewSet):
 
 
 class VLANLocationAssignmentViewSet(NautobotModelViewSet):
-    queryset = VLANLocationAssignment.objects.select_related("vlan", "location")
+    queryset = VLANLocationAssignment.objects.all()
     serializer_class = serializers.VLANLocationAssignmentSerializer
     filterset_class = filters.VLANLocationAssignmentFilterSet
 
@@ -642,6 +615,6 @@ class VLANLocationAssignmentViewSet(NautobotModelViewSet):
 
 
 class ServiceViewSet(NautobotModelViewSet):
-    queryset = Service.objects.select_related("device", "virtual_machine").prefetch_related("tags", "ip_addresses")
+    queryset = Service.objects.all()
     serializer_class = serializers.ServiceSerializer
     filterset_class = filters.ServiceFilterSet

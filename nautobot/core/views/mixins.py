@@ -37,7 +37,7 @@ from nautobot.core.forms import (
     CSVFileField,
     restrict_form_fields,
 )
-from nautobot.core.jobs import BulkEditObjects
+from nautobot.core.jobs import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.utils import lookup, permissions
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params, normalize_querydict
 from nautobot.core.views.renderers import NautobotHTMLRenderer
@@ -580,11 +580,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
             if self.action == "bulk_destroy":
                 queryset = self.get_queryset()
                 bulk_delete_all = bool(self.request.POST.get("_all"))
-                if bulk_delete_all:
-                    return ConfirmationForm
 
                 class BulkDestroyForm(ConfirmationForm):
-                    pk = ModelMultipleChoiceField(queryset=queryset, widget=MultipleHiddenInput)
+                    pk = ModelMultipleChoiceField(
+                        queryset=queryset, widget=MultipleHiddenInput, required=not bulk_delete_all
+                    )
 
                 return BulkDestroyForm
             else:
@@ -943,15 +943,32 @@ class BulkEditAndBulkDeleteModelMixin:
             queryset = model.objects.all()
         return queryset
 
-    def _bulk_delete_all_context(self, request, queryset):
-        model = queryset.model
-        return {
-            "obj_type_plural": model._meta.verbose_name_plural,
-            "return_url": self.get_return_url(request),
-            "total_objs_to_delete": queryset.count(),
-            "delete_all": True,
-            "table": None,
-        }
+    def send_bulk_delete_objects_to_job(self, request, pk_list, model, delete_all):
+        """Prepare and enqueue bulk delete job."""
+        job_model = Job.objects.get_for_class_path(BulkDeleteObjects.class_path)
+
+        if filterset_class := lookup.get_filterset_for_model(model):
+            filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
+        else:
+            filter_query_params = None
+
+        job_form = BulkDeleteObjects.as_form(
+            data={
+                "pk_list": pk_list,
+                "content_type": ContentType.objects.get_for_model(model),
+                "delete_all": delete_all,
+                "filter_query_params": filter_query_params,
+            }
+        )
+        # BulkDeleteObjects job form cannot be invalid; Hence no handling of invalid case.
+        job_form.is_valid()
+        job_kwargs = BulkDeleteObjects.prepare_job_kwargs(job_form.cleaned_data)
+        job_result = JobResult.enqueue_job(
+            job_model,
+            request.user,
+            **BulkDeleteObjects.serialize_data(job_kwargs),
+        )
+        return redirect("extras:jobresult", pk=job_result.pk)
 
     def send_bulk_edit_objects_to_job(self, request, form, model):
         """Prepare and enqueue a bulk edit job."""
@@ -1029,21 +1046,23 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
         data = {}
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if delete_all:
+            self.pk_list = []
             queryset = self._get_bulk_edit_delete_all_queryset(self.request)
-            data = self._bulk_delete_all_context(request, queryset)
         else:
             self.pk_list = list(request.POST.getlist("pk"))
+            queryset = queryset.filter(pk__in=self.pk_list)
 
-        form_class = self.get_form_class(**kwargs)
         if "_confirm" in request.POST:
+            form_class = self.get_form_class(**kwargs)
             form = form_class(request.POST, initial=normalize_querydict(request.GET, form_class=form_class))
             if form.is_valid():
-                return self.form_valid(form)
+                return self.send_bulk_delete_objects_to_job(request, self.pk_list, queryset.model, delete_all)
             else:
                 return self.form_invalid(form)
+        table = None
         if not delete_all:
             table_class = self.get_table_class()
-            table = table_class(queryset.filter(pk__in=self.pk_list), orderable=False)
+            table = table_class(queryset, orderable=False)
             if not table.rows:
                 messages.warning(
                     request,
@@ -1051,7 +1070,13 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
                 )
                 return redirect(self.get_return_url(request))
 
-            data.update({"table": table})
+        data.update(
+            {
+                "table": table,
+                "total_objs_to_delete": queryset.count(),
+                "delete_all": delete_all,
+            }
+        )
         return Response(data)
 
 

@@ -14,6 +14,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.exceptions import ParseError
 from rest_framework.settings import api_settings
+from rest_framework.test import APIRequestFactory, force_authenticate
 import yaml
 
 from nautobot.circuits.models import Provider
@@ -22,13 +23,14 @@ from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model, get_view_name
 from nautobot.core.api.versioning import NautobotAPIVersioning
+from nautobot.core.api.views import ModelViewSet
 from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
 from nautobot.core.templatetags.helpers import humanize_speed
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.api import serializers as dcim_serializers
 from nautobot.extras import choices, models as extras_models
-from nautobot.ipam import models as ipam_models
+from nautobot.ipam import filters as ipam_filters, models as ipam_models
 from nautobot.ipam.api import serializers as ipam_serializers, views as ipam_api_views
 from nautobot.tenancy import models as tenancy_models
 
@@ -381,6 +383,7 @@ class GenerateLookupValueDomElementViewTestCase(testing.APITestCase):
             (
                 '<select name="role" class="form-control nautobot-select2-api" data-multiple="1" '
                 'data-query-param-content_types="[&quot;dcim.device&quot;, &quot;virtualization.virtualmachine&quot;]" '
+                'data-query-param-exclude_m2m="[&quot;true&quot;]" '
                 'display-field="display" value-field="name" data-depth="0" data-url="/api/extras/roles/" id="id_for_role" '
                 "multiple>\n</select>"
             ),
@@ -514,6 +517,80 @@ class NautobotCSVRendererTest(TestCase):
         self.assertEqual(read_data["nestable"], str(location_type.nestable))
         self.assertIn("parent__name", read_data)
         self.assertEqual(read_data["parent__name"], location_type.parent.name)
+
+
+class ModelViewSetMixinTest(testing.APITestCase):
+    """Unit tests for ModelViewSetMixin, base class for ModelViewSet/ReadOnlyModelViewSet classes."""
+
+    class SimpleIPAddressViewSet(ModelViewSet):
+        queryset = ipam_models.IPAddress.objects.all()  # no explicit optimizations
+        serializer_class = ipam_serializers.IPAddressSerializer
+        filterset_class = ipam_filters.IPAddressFilterSet
+
+    def test_get_queryset_optimizations(self):
+        """Test that the queryset is appropriately optimized based on request parameters."""
+        self.user.is_superuser = True
+        self.user.save()
+
+        # Default behavior - m2m fields included
+        view = self.SimpleIPAddressViewSet()
+        view.action_map = {"get": "list"}
+        request = APIRequestFactory().get(reverse("ipam-api:ipaddress-list"), headers=self.header)
+        force_authenticate(request, user=self.user)
+        request = view.initialize_request(request)
+        view.setup(request)
+        view.initial(request)
+
+        queryset = view.get_queryset()
+        with self.assertNumQueries(5):  # IPAddress plus four prefetches
+            instance = queryset.first()
+        # FK related objects should have been auto-selected
+        with self.assertNumQueries(0):
+            instance.status
+            instance.role
+            instance.parent
+            instance.tenant
+            instance.nat_inside
+        # Reverse relations should have been auto-prefetched
+        with self.assertNumQueries(0):
+            list(instance.nat_outside_list.all())
+        # Many-to-many relations should have been auto-prefetched
+        with self.assertNumQueries(0):
+            list(instance.interfaces.all())
+            list(instance.vm_interfaces.all())
+            list(instance.tags.all())
+
+        # With exclude_m2m query parameter
+        view = self.SimpleIPAddressViewSet()
+        view.action_map = {"get": "list"}
+        request = APIRequestFactory().get(
+            reverse("ipam-api:ipaddress-list"), headers=self.header, data={"exclude_m2m": True}
+        )
+        force_authenticate(request, user=self.user)
+        request = view.initialize_request(request)
+        view.setup(request)
+        view.initial(request)
+
+        queryset = view.get_queryset()
+        with self.assertNumQueries(1):  # IPAddress only, no prefetches
+            instance = queryset.first()
+        # FK related objects should still have been auto-selected
+        with self.assertNumQueries(0):
+            instance.status
+            instance.role
+            instance.parent
+            instance.tenant
+            instance.nat_inside
+        # Reverse relations should NOT have been auto-prefetched
+        with self.assertNumQueries(1):
+            list(instance.nat_outside_list.all())
+        # Many-to-many relations should NOT have been auto-prefetched
+        with self.assertNumQueries(1):
+            list(instance.interfaces.all())
+        with self.assertNumQueries(1):
+            list(instance.vm_interfaces.all())
+        with self.assertNumQueries(1):
+            list(instance.tags.all())
 
 
 class WritableNestedSerializerTest(testing.APITestCase):

@@ -33,6 +33,7 @@ from nautobot.core.api.utils import (
 from nautobot.core.models.fields import LaxURLField as LaxURLModelField
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug
+from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.extras.api.customfields import CustomFieldDefaultValues, CustomFieldsDataField
@@ -46,8 +47,9 @@ logger = logging.getLogger(__name__)
 
 class OptInFieldsMixin:
     """
-    A serializer mixin that takes an additional `opt_in_fields` argument that controls
-    which fields should be displayed.
+    Serializer mixin that adjusts its fields based on the `include` and `exclude_m2m` query parameters in a request.
+
+    The serializer's `Meta.opt_in_fields` controls which fields are influenced by `include`.
     """
 
     def __init__(self, *args, **kwargs):
@@ -57,8 +59,11 @@ class OptInFieldsMixin:
     @property
     def fields(self):
         """
-        Removes all serializer fields specified in a serializers `opt_in_fields` list that aren't specified in the
-        `include` query parameter.
+        Dynamically adjust the dictionary of fields attributed to this serializer instance.
+
+        - Removes all serializer fields specified in `Meta.opt_in_fields` list that aren't specified in the
+          `include` query parameter. (applies to GET requests only)
+        - If the `exclude_m2m` query parameter is truthy, remove all many-to-many serializer fields for performance.
 
         As an example, if the serializer specifies that `opt_in_fields = ["computed_fields"]`
         but `computed_fields` is not specified in the `?include` query parameter, `computed_fields` will be popped
@@ -66,12 +71,7 @@ class OptInFieldsMixin:
         """
         if self.__pruned_fields is None:
             fields = dict(super().fields)
-            serializer_opt_in_fields = getattr(self.Meta, "opt_in_fields", None)
-
-            if not serializer_opt_in_fields:
-                # This serializer has no defined opt_in_fields, so we never need to go further than this
-                self.__pruned_fields = fields
-                return self.__pruned_fields
+            serializer_opt_in_fields = getattr(self.Meta, "opt_in_fields", [])
 
             if not hasattr(self, "_context"):
                 # We are being called before a request cycle
@@ -83,24 +83,29 @@ class OptInFieldsMixin:
                 # No available request?
                 return fields
 
-            # opt-in fields only applies on GET requests, for other methods we support these fields regardless
-            if request is not None and request.method != "GET":
-                return fields
-
             # NOTE: drf test framework builds a request object where the query
             # parameters are found under the GET attribute.
             params = normalize_querydict(getattr(request, "query_params", getattr(request, "GET", None)))
 
-            try:
-                user_opt_in_fields = params.get("include", [])
-            except AttributeError:
-                # include parameter was not specified
-                user_opt_in_fields = []
+            # opt-in fields only applies on GET requests, for other methods we support these fields regardless
+            if request is None or request.method == "GET":
+                try:
+                    user_opt_in_fields = params.get("include", [])
+                except AttributeError:
+                    # include parameter was not specified
+                    user_opt_in_fields = []
 
-            # Drop any fields that are not specified in the users opt in fields
-            for field in serializer_opt_in_fields:
-                if field not in user_opt_in_fields:
-                    fields.pop(field, None)
+                # Drop any fields that are not specified in the users opt in fields
+                for field in serializer_opt_in_fields:
+                    if field not in user_opt_in_fields:
+                        fields.pop(field, None)
+
+            # If exclude_m2m is present and truthy, mark any many-to-many fields as write-only so they
+            # don't get included in the response.
+            if is_truthy(params.get("exclude_m2m", "false")):
+                for field_instance in fields.values():
+                    if isinstance(field_instance, (serializers.ManyRelatedField, serializers.ListSerializer)):
+                        field_instance.write_only = True
 
             self.__pruned_fields = fields
 
@@ -591,7 +596,7 @@ class WritableNestedSerializer(BaseModelSerializer):
         pk = None
 
         if isinstance(self.Meta.model._meta.pk, models.AutoField):
-            # PK is an int for this model. This is usually the User model
+            # PK is an int for this model. This is usually the Group or Content-Type model
             try:
                 pk = int(data)
             except (TypeError, ValueError):

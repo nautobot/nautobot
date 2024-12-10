@@ -1,4 +1,4 @@
-# Nautobot UI Framework
+# Nautobot UI Component Framework
 
 ## Table of Contents
 
@@ -16,13 +16,12 @@
 
 The Nautobot UI Framework revolutionizes how you create object detail views in your applications. Instead of writing HTML templates, you declaratively define your UI structure using Python objects, resulting in consistent, maintainable, and responsive interfaces.
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![UI Framework Example](../../media/development/core/ui-component-framework/ui-framework-example.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ### Why Use the UI Framework?
 
@@ -74,17 +73,42 @@ A `Tab` is one of the major building blocks of your UI. The user can toggle betw
 
 `Panel`s are another of the major building blocks of your UI. They contain specific types of content and can be positioned within sections within a Tab.
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![Basic Panel Layout](../../media/development/core/ui-component-framework/basic-panel-layout.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ### Buttons
 
 `Button`s are the third major building block for the UI. Defining `extra_buttons` on your `ObjectDetailContent` instance allows you to add buttons that appear at the top of the page, alongside the standard "actions" dropdown and any custom buttons added by Apps. These buttons may operate as simple hyperlinks, or may use JavaScript to provide more advanced functionality.
+
+#### Buttons Example
+
+```python
+from nautobot.apps.ui import ObjectDetailContent, Button
+
+object_detail_content = ObjectDetailContent(
+        panels=[...],
+        extra_buttons=[
+            Button(
+                weight=100,
+                label="Check Secret",
+                icon="mdi-test-tube",
+                javascript_template_path="extras/secret_check.js",
+                attributes={"onClick": "checkSecret()"},
+            ),
+        ],
+    )
+```
+
+<!-- pyml disable-num-lines 5 no-inline-html -->
+<div class="grid cards example-images" markdown>
+
+- ![Buttons Example](../../media/development/core/ui-component-framework/buttons-example.png){ .on-glb }
+
+</div>
 
 ## Panel Types
 
@@ -149,29 +173,31 @@ ObjectFieldsPanel(
 ```
 
 ```python
-from nautobot.apps.ui import ObjectFieldsPanel, SectionChoices
+from nautobot.apps import ui
+from nautobot.core.templatetags import helpers
 
-ObjectFieldsPanel(
-   weight=200,
-   section=SectionChoices.LEFT_HALF,
-   label="Object Fields Panel",
-   fields=["name", "status", "type", "notes"],
-   context_object_key="obj",
-   ignore_nonexistent_fields=True,
-   value_transforms={
-        "status": [status_to_badge],
-        "type": [type_to_link]
+
+panels = ui.ObjectFieldsPanel(
+    weight=200,
+    section=ui.SectionChoices.LEFT_HALF,
+    label="Object Fields Panel",
+    fields=["name", "number", "notes", "notexists"],
+    context_object_key="obj",
+    ignore_nonexistent_fields=True,
+    value_transforms={
+        "name": [helpers.bettertitle],
+        "number": [lambda v: helpers.hyperlinked_field(v, "https://nautobot.com")]
     },
-)
+),
 ```
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/object-fields-panel-example.png){ .on-glb }
+- ![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/object-fields-panel-example_2.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ### KeyValueTablePanel
 
@@ -252,7 +278,7 @@ GroupedKeyValueTablePanel(
 )
 ```
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 7 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![GroupedKeyValueTablePanel Example 1](../../media/development/core/ui-component-framework/grouped-key-value-table-panel-example-1.png){ .on-glb }
@@ -260,7 +286,6 @@ GroupedKeyValueTablePanel(
 - ![GroupedKeyValueTablePanel Example 2](../../media/development/core/ui-component-framework/grouped-key-value-table-panel-example-2.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ### StatsPanel
 
@@ -290,13 +315,13 @@ StatsPanel(
 )
 ```
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
+- ![StatsPanel Code Example](../../media/development/core/ui-component-framework/stats-panel-example-code.png){ .on-glb }
 - ![StatsPanel Example](../../media/development/core/ui-component-framework/stats-panel-example.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ### BaseTextPanel
 
@@ -304,11 +329,12 @@ StatsPanel(
 
 [Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.BaseTextPanel)
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards" style="width: 300px;" markdown>
+
 - ![Text Panels Family](../../media/development/core/ui-component-framework/text-panels-family.png){ .on-glb }
+
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 ### ObjectTextPanel
 
@@ -361,13 +387,12 @@ TextPanel(
 Note:
     `columns`/`context_columns_key` and `column_headers`/`context_column_headers_key` are mutually exclusive pairs.
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
 - ![Table Panels Family](../../media/development/core/ui-component-framework/table-panels-family.png){ .on-glb }
 
 </div>
-<!-- markdownlint-enable no-inline-html -->
 
 #### DataTablePanel Examples
 
@@ -384,7 +409,9 @@ DataTablePanel(
 
 ### ObjectsTablePanel
 
-The `ObjectsTablePanel` is a powerful component for rendering tables of Django model objects, particularly suited for displaying related objects within a detail view. It integrates with `django_tables2` and provides extensive customization options.
+The `ObjectsTablePanel` is a powerful component for rendering tables of Django model objects,
+particularly suited for displaying related objects within a detail view.
+It integrates with `django_tables2` and provides extensive customization options.
 
 #### Configuration Parameters
 
@@ -486,7 +513,12 @@ class SecretUIViewSet(...):
     )
 ```
 
-![Button Example](../../media/development/core/ui-component-framework/button-example.png)
+<!-- pyml disable-num-lines 5 no-inline-html -->
+<div class="grid cards example-images" markdown>
+
+- ![Button Example](../../media/development/core/ui-component-framework/button-example.png){ .on-glb }
+
+</div>
 
 ### DropdownButton
 
@@ -529,7 +561,12 @@ class DeviceView(generic.ObjectView):
     )
 ```
 
-![DropdownButton Example](../../media/development/core/ui-component-framework/dropdown-button-example.png)
+<!-- pyml disable-num-lines 5 no-inline-html -->
+<div class="grid cards example-images" markdown>
+
+- ![DropdownButton Example](../../media/development/core/ui-component-framework/dropdown-button-example.png){ .on-glb }
+
+</div>
 
 ## Complete Example
 
@@ -618,22 +655,22 @@ class LocationUIViewSet(views.NautobotUIViewSet):
 
 ### Common Issues and Solutions
 
-1. **Panels Not Appearing**
+1. Panels Not Appearing
     - Verify section choices
     - Check panel weights
     - Confirm data availability
 
-2. **Performance Issues**
+2. Performance Issues
     - Review query complexity in StatsPanel
     - Optimize field selections
     - Check database indexes
 
-3. **Layout Problems**
+3. Layout Problems
     - Validate section assignments
     - Review weight ordering
     - Check responsive behavior
 
-4. **Value Rendering**
+4. Value Rendering
     - Verify transform functions
     - Check data types
     - Confirm template paths
