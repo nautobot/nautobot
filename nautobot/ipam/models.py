@@ -531,6 +531,7 @@ class Prefix(PrimaryModel):
         prefix = kwargs.pop("prefix", None)
         self._location = kwargs.pop("location", None)
         super().__init__(*args, **kwargs)
+        self._parent = None
 
         if self.present_in_database:
             self._network = self.network
@@ -619,8 +620,12 @@ class Prefix(PrimaryModel):
 
     def get_parent(self):
         # Determine if a parent exists and set it to the closest ancestor by `prefix_length`.
+        if self._parent is not None:
+            return self._parent
+
         if supernets := self.supernets():
             parent = max(supernets, key=operator.attrgetter("prefix_length"))
+            self._parent = parent
             return parent
         return None
 
