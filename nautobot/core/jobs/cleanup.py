@@ -100,11 +100,13 @@ class LogsCleanup(Job):
             if CleanupTypes.JOB_RESULT in cleanup_types:
                 self.logger.info("Deleting JobResult records prior to %s", cutoff)
                 queryset = JobResult.objects.restrict(self.user, "delete").filter(date_done__lt=cutoff)
-                self.recursive_delete_with_cascade(queryset, result)
+                deletion_summary = {}
+                self.recursive_delete_with_cascade(queryset, deletion_summary)
                 result.setdefault("extras.JobResult", 0)
                 result.setdefault("extras.JobLogEntry", 0)
+                result.update(deletion_summary)
 
-                for modelname, count in result.items():
+                for modelname, count in deletion_summary.items():
                     self.logger.info(
                         "As part of deleting %d JobResult records, also deleted %d related %s records",
                         result["extras.JobResult"],
@@ -112,18 +114,21 @@ class LogsCleanup(Job):
                         modelname,
                     )
 
-                self.logger.info(
-                    "Deleted %d JobResult records and their associated %d JobLogEntry records",
-                    result["extras.JobResult"],
-                    result["extras.JobLogEntry"],
-                )
-
             if CleanupTypes.OBJECT_CHANGE in cleanup_types:
                 self.logger.info("Deleting ObjectChange records prior to %s", cutoff)
                 queryset = ObjectChange.objects.restrict(self.user, "delete").filter(time__lt=cutoff)
-                self.recursive_delete_with_cascade(queryset, result)
+                deletion_summary = {}
+                self.recursive_delete_with_cascade(queryset, deletion_summary)
                 result.setdefault("extras.ObjectChange", 0)
-                self.logger.info("Deleted %d ObjectChange records", result["extras.ObjectChange"])
+                result.update(deletion_summary)
+
+                for modelname, count in deletion_summary.items():
+                    self.logger.info(
+                        "As part of deleting %d ObjectChange records, also deleted %d related %s records",
+                        result["extras.ObjectChange"],
+                        count,
+                        modelname,
+                    )
             return result
         finally:
             # Be sure to clean up after ourselves!
