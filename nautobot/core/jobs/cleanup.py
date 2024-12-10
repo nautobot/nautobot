@@ -103,6 +103,15 @@ class LogsCleanup(Job):
                 self.recursive_delete_with_cascade(queryset, result)
                 result.setdefault("extras.JobResult", 0)
                 result.setdefault("extras.JobLogEntry", 0)
+
+                for modelname, count in result.items():
+                    self.logger.info(
+                        "As part of deleting %d JobResult records, also deleted %d related %s records",
+                        result["extras.JobResult"],
+                        count,
+                        modelname,
+                    )
+
                 self.logger.info(
                     "Deleted %d JobResult records and their associated %d JobLogEntry records",
                     result["extras.JobResult"],
