@@ -135,7 +135,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#4817](https://github.com/nautobot/nautobot/issues/4817) - Added `Cluster` field on DeviceBulkEditForm.
 - [#5333](https://github.com/nautobot/nautobot/issues/5333) - Added `Comments` field on DeviceBulkEditForm.
 - [#6498](https://github.com/nautobot/nautobot/issues/6498) - Added support for an additional `suffix` when utilizing TableExtension to support tables like IPAddressDetailTable.
-- [#6586](https://github.com/nautobot/nautobot/issues/6586) - Added description and weight on RoleBulkEditForm
+- [#6586](https://github.com/nautobot/nautobot/issues/6586) - Added description and weight on RoleBulkEditForm.
 - [#6605](https://github.com/nautobot/nautobot/issues/6605) - Added `BaseTable` support for a `data_transform_callback` function that can be used to modify the table data after performing automatic QuerySet optimizations. (Several IPAM tables now use this functionality).
 - [#6605](https://github.com/nautobot/nautobot/issues/6605) - Enhanced `LinkedCountColumn` to support a `distinct` parameter to handle cases where counts may otherwise be incorrect.
 - [#6605](https://github.com/nautobot/nautobot/issues/6605) - Added `ip_addresses` and `has_ip_addresses` filter support to Device, Interface, and VirtualMachine FilterSets.
