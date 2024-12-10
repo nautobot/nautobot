@@ -6,7 +6,7 @@ This is an example of using Wireless Networks and Controllers to represent Wirel
 
 ## Optional Prerequisites
 
-Before we start adding Wireless Networks, there are features we can optionally setup to give enrich the data in Wireless Networks and Controllers. Here are links to each of the guides for the features:
+Before we start adding Wireless Networks, there are features we can optionally setup to enrich the data in Wireless Networks and Controllers. Here are links to each of the guides for the features:
 
 - [Devices](getting-started/creating-devices.md)
 - [Locations](getting-started/creating-location-types-and-locations.md)
