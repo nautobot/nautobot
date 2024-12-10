@@ -82,8 +82,8 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 ### Fixed
 
 - [#5924](https://github.com/nautobot/nautobot/issues/5924) - Fixed the redirect URL for the Device Bay Populate/Depopulate view to take the user back to the Device Bays tab on the Device page.
-- [#6502](https://github.com/nautobot/nautobot/issues/6502) - Fixed a bug in the dockerfile that prevented "docker build" from working on some platforms.
-- [#6502](https://github.com/nautobot/nautobot/issues/6502) - Fixed docker builds failing in Gitlab CI.
+- [#6502](https://github.com/nautobot/nautobot/issues/6502) - Fixed a bug in the Dockerfile that prevented `docker build` from working on some platforms.
+- [#6502](https://github.com/nautobot/nautobot/issues/6502) - Fixed Docker builds failing in Gitlab CI.
 
 ## v1.6.28 (2024-09-24)
 
