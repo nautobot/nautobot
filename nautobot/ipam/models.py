@@ -615,12 +615,16 @@ class Prefix(PrimaryModel):
     def get_parent(self):
         # Determine if a parent exists and set it to the closest ancestor by `prefix_length`.
         if supernets := self.supernets():
-            return max(supernets, key=operator.attrgetter("prefix_length"))
+            parent = max(supernets, key=operator.attrgetter("prefix_length"))
+            return parent
         return None
 
     def clean(self):
-        self.parent = self.get_parent()
-        return super().clean()
+        super().clean()
+
+        if self.prefix:
+            # self.parent depends on self.prefix having a value
+            self.parent = self.get_parent()
 
     def save(self, *args, **kwargs):
         if isinstance(self.prefix, netaddr.IPNetwork):
@@ -745,6 +749,7 @@ class Prefix(PrimaryModel):
         Returns:
             QuerySet
         """
+
         query = Prefix.objects.all()
 
         if for_update:
@@ -756,13 +761,15 @@ class Prefix(PrimaryModel):
         if not include_self:
             query = query.exclude(id=self.id)
 
-        return query.filter(
+        supernets = query.filter(
             ip_version=self.ip_version,
             prefix_length__lte=self.prefix_length,
             network__lte=self.network,
             broadcast__gte=self.broadcast,
             namespace=self.namespace,
         )
+
+        return supernets
 
     def subnets(self, direct=False, include_self=False, for_update=False):
         """
