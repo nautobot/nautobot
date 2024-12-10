@@ -110,6 +110,10 @@ CONFIG_SETTING_SEPARATOR = ","
 
 CHARFIELD_MAX_LENGTH = 255
 
+# Default values for pagination settings.
+MAX_PAGE_SIZE_DEFAULT = 1000
+PAGINATE_COUNT_DEFAULT = 50
+
 # Models excluded from the global search list
 GLOBAL_SEARCH_EXCLUDE_LIST = [
     "anotherexamplemodel",
@@ -146,12 +150,15 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
     "interfaceredundancygroup",
     "interfaceredundancygroupassociation",
     "interfacetemplate",
+    "interfacevdcassignment",
     "inventoryitem",
     "ipaddresstointerface",
     "job",
     "jobbutton",
     "jobhook",
     "joblogentry",
+    "jobqueue",
+    "jobqueueassignment",
     "jobresult",
     "locationtype",
     "manufacturer",

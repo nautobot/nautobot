@@ -8,12 +8,11 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
-    FieldDoesNotExist,
     ObjectDoesNotExist,
     ValidationError,
 )
 from django.db import IntegrityError, transaction
-from django.db.models import ManyToManyField, ProtectedError, Q
+from django.db.models import ProtectedError, Q
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -25,6 +24,7 @@ from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -46,7 +46,7 @@ from nautobot.core.utils.requests import (
     get_filterable_params_from_filter_params,
     normalize_querydict,
 )
-from nautobot.core.views.mixins import EditAndDeleteAllModelMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.core.views.mixins import BulkEditAndBulkDeleteModelMixin, GetReturnURLMixin, ObjectPermissionRequiredMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
     check_filter_for_display,
@@ -57,9 +57,7 @@ from nautobot.core.views.utils import (
     prepare_cloned_fields,
     view_changes_not_saved,
 )
-from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
-from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
 
 
 class GenericView(LoginRequiredMixin, View):
@@ -80,6 +78,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
 
     queryset = None
     template_name = None
+    object_detail_content = None
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -119,6 +118,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             "content_type": content_type,
             "verbose_name": self.queryset.model._meta.verbose_name,
             "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+            "object_detail_content": self.object_detail_content,
             **common_detail_view_context(request, instance),
             **self.get_extra_context(request, instance),
         }
@@ -347,7 +347,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             }
             RequestConfig(request, paginate).configure(table)
             table_config_form = TableConfigForm(table=table)
-            max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
+            max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
             if max_page_size and paginate["per_page"] > max_page_size:
                 messages.warning(
                     request,
@@ -979,7 +979,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  #
         )
 
 
-class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDeleteAllModelMixin, View):
+class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAndBulkDeleteModelMixin, View):
     """
     Edit objects in bulk.
 
@@ -1029,93 +1029,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDele
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
-                form_custom_fields = getattr(form, "custom_fields", [])
-                form_relationships = getattr(form, "relationships", [])
-                standard_fields = [
-                    field
-                    for field in form.fields
-                    if field not in form_custom_fields + form_relationships + ["pk"] + ["object_note"]
-                ]
-                nullified_fields = request.POST.getlist("_nullify")
-
-                try:
-                    with deferred_change_logging_for_bulk_operation():
-                        updated_objects = []
-                        queryset = queryset if edit_all else queryset.filter(pk__in=form.cleaned_data["pk"])
-                        for obj in queryset:
-                            obj = self.alter_obj(obj, request, [], kwargs)
-
-                            # Update standard fields. If a field is listed in _nullify, delete its value.
-                            for name in standard_fields:
-                                try:
-                                    model_field = model._meta.get_field(name)
-                                except FieldDoesNotExist:
-                                    # This form field is used to modify a field rather than set its value directly
-                                    model_field = None
-
-                                # Handle nullification
-                                if name in form.nullable_fields and name in nullified_fields:
-                                    if isinstance(model_field, ManyToManyField):
-                                        getattr(obj, name).set([])
-                                    else:
-                                        setattr(obj, name, None if model_field is not None and model_field.null else "")
-
-                                # ManyToManyFields
-                                elif isinstance(model_field, ManyToManyField):
-                                    if form.cleaned_data[name]:
-                                        getattr(obj, name).set(form.cleaned_data[name])
-                                # Normal fields
-                                elif form.cleaned_data[name] not in (None, ""):
-                                    setattr(obj, name, form.cleaned_data[name])
-
-                            # Update custom fields
-                            for field_name in form_custom_fields:
-                                if field_name in form.nullable_fields and field_name in nullified_fields:
-                                    obj.cf[remove_prefix_from_cf_key(field_name)] = None
-                                elif form.cleaned_data.get(field_name) not in (None, "", []):
-                                    obj.cf[remove_prefix_from_cf_key(field_name)] = form.cleaned_data[field_name]
-
-                            obj.full_clean()
-                            obj.save()
-                            updated_objects.append(obj)
-                            logger.debug(f"Saved {obj} (PK: {obj.pk})")
-
-                            # Add/remove tags
-                            if form.cleaned_data.get("add_tags", None):
-                                obj.tags.add(*form.cleaned_data["add_tags"])
-                            if form.cleaned_data.get("remove_tags", None):
-                                obj.tags.remove(*form.cleaned_data["remove_tags"])
-
-                            if hasattr(form, "save_relationships") and callable(form.save_relationships):
-                                # Add/remove relationship associations
-                                form.save_relationships(instance=obj, nullified_fields=nullified_fields)
-
-                            if hasattr(form, "save_note") and callable(form.save_note):
-                                form.save_note(instance=obj, user=request.user)
-
-                            self.extra_post_save_action(obj, form)
-
-                        # Enforce object-level permissions
-                        if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(
-                            updated_objects
-                        ):
-                            raise ObjectDoesNotExist
-
-                    if updated_objects:
-                        msg = f"Updated {len(updated_objects)} {model._meta.verbose_name_plural}"
-                        logger.info(msg)
-                        messages.success(self.request, msg)
-
-                    return redirect(self.get_return_url(request))
-
-                except ValidationError as e:
-                    messages.error(self.request, f"{obj} failed validation: {e}")
-
-                except ObjectDoesNotExist:
-                    msg = "Object update failed due to object-level permissions violation"
-                    logger.debug(msg)
-                    form.add_error(None, msg)
-
+                return self.send_bulk_edit_objects_to_job(request, form, model)
             else:
                 logger.debug("Form validation failed")
 
@@ -1259,7 +1173,7 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         return ""
 
 
-class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDeleteAllModelMixin, View):
+class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAndBulkDeleteModelMixin, View):
     """
     Delete objects in bulk.
 
@@ -1282,48 +1196,30 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDe
     def get(self, request):
         return redirect(self.get_return_url(request))
 
-    def _perform_delete_operation(self, request, queryset, model):
-        logger = logging.getLogger(__name__ + ".BulkDeleteView")
-        self.perform_pre_delete(request, queryset)
-        try:
-            _, deleted_info = bulk_delete_with_bulk_change_logging(queryset)
-            deleted_count = deleted_info[model._meta.label]
-        except ProtectedError as e:
-            logger.info("Caught ProtectedError while attempting to delete objects")
-            handle_protectederror(queryset, request, e)
-            return redirect(self.get_return_url(request))
-        msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
-        logger.info(msg)
-        messages.success(request, msg)
-        return redirect(self.get_return_url(request))
-
     def post(self, request, **kwargs):
         logger = logging.getLogger(f"{__name__}.BulkDeleteView")
         model = self.queryset.model
+        delete_all = request.POST.get("_all")
 
         # Are we deleting *all* objects in the queryset or just a selected subset?
-        if request.POST.get("_all"):
+        if delete_all:
             queryset = self._get_bulk_edit_delete_all_queryset(request)
-
-            if "_confirm" in request.POST:
-                return self._perform_delete_operation(request, queryset, model)
-
-            context = self._bulk_delete_all_context(request, queryset)
-            context.update(self.extra_context())
-            return render(request, self.template_name, context)
-
-        pk_list = request.POST.getlist("pk")
+            pk_list = []
+        else:
+            pk_list = request.POST.getlist("pk")
+            queryset = self.queryset.filter(pk__in=pk_list)
 
         form_cls = self.get_form()
 
         if "_confirm" in request.POST:
             form = form_cls(request.POST)
+            # Set pk field requirement here instead of BulkDeleteForm since get_form() may return a different form class
+            if delete_all:
+                form.fields["pk"].required = False
+
             if form.is_valid():
                 logger.debug("Form validation was successful")
-
-                # Delete objects
-                queryset = self.queryset.filter(pk__in=pk_list)
-                return self._perform_delete_operation(request, queryset, model)
+                return self.send_bulk_delete_objects_to_job(request, pk_list, model, delete_all)
             else:
                 logger.debug("Form validation failed")
 
@@ -1336,23 +1232,26 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDe
             )
 
         # Retrieve objects being deleted
-        table = self.table(self.queryset.filter(pk__in=pk_list), orderable=False)
-        if not table.rows:
-            messages.warning(
-                request,
-                f"No {model._meta.verbose_name_plural} were selected for deletion.",
-            )
-            return redirect(self.get_return_url(request))
-        # Hide actions column if present
-        if "actions" in table.columns:
-            table.columns.hide("actions")
+        table = None
+        if not delete_all:
+            table = self.table(queryset, orderable=False)
+            if not table.rows:
+                messages.warning(
+                    request,
+                    f"No {model._meta.verbose_name_plural} were selected for deletion.",
+                )
+                return redirect(self.get_return_url(request))
+            # Hide actions column if present
+            if "actions" in table.columns:
+                table.columns.hide("actions")
 
         context = {
             "form": form,
             "obj_type_plural": model._meta.verbose_name_plural,
             "table": table,
             "return_url": self.get_return_url(request),
-            "total_objs_to_delete": len(table.rows),
+            "total_objs_to_delete": queryset.count(),
+            "delete_all": delete_all,
         }
         context.update(self.extra_context())
         return render(request, self.template_name, context)

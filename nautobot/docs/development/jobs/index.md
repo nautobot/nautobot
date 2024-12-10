@@ -95,7 +95,7 @@ Similarly, only the `jobs` module is loaded from Git repositories. If you're usi
 
 If not using submodules, you should register your job in the file where your job is defined.
 
-Examples of the different directory structures when registering jobs in Git repositories:  
+Examples of the different directory structures when registering jobs in Git repositories:
 
 !!! note
     Take note of the `__init__.py` at the root of the repository.  This is required to register jobs in a Git repository.
@@ -125,7 +125,7 @@ There are many attributes and methods of the Job class that serve as reserved na
 !!! example
     One classic pitfall here is the the reserved `name` metadata attribute - if you attempt to redefine `name` as a user input variable, your Job will not work.
 
-As of Nautobot 2.2.3, the current list of reserved names (not including low-level Python built-ins such as `__dict__` or `__str__` includes:
+As of Nautobot 2.4.0, the current list of reserved names (not including low-level Python built-ins such as `__dict__` or `__str__` includes:
 
 | Reserved Name             | Purpose                                                 |
 | ------------------------- | ------------------------------------------------------- |
@@ -148,6 +148,7 @@ As of Nautobot 2.2.3, the current list of reserved names (not including low-leve
 | `grouping`                | [module metadata property](#module-metadata-attributes) |
 | `has_sensitive_variables` | [metadata property](#has_sensitive_variables)           |
 | `hidden`                  | [metadata property](#hidden)                            |
+| `is_singleton`            | [metadata property](#is_singleton)                      |
 | `job_model`               | property                                                |
 | `job_result`              | property                                                |
 | `load_json`               | [helper method](#reading-data-from-files)               |
@@ -265,6 +266,21 @@ Important notes about hidden jobs:
 * Hidden jobs can still be executed through the UI or the REST API given the appropriate URL.
 * Results for hidden jobs will still appear in the Job Results list after they are run.
 
+#### `is_singleton`
+
++++ 2.4.0
+
+Default: `False`
+A Boolean that if set to `True` prevents the job from running twice simultaneously.
+
+Any duplicate job instances will error out with a singleton-specific error message.
+
+Important notes about singleton jobs:
+
+* The singleton functionality is implemented with a Redis key set to timeout either on the hard time out of the job or whenever the job terminates.
+    * Therefore, a restart of Redis will wipe the singleton locks
+* A checkbox on the job run form makes it possible to force the singleton lock to be overridden. This makes it possible to recover from failure scenarios such as the original singleton job being stopped before it can unset the lock.
+
 #### `read_only`
 
 +++ 1.1.0
@@ -309,7 +325,10 @@ class ExampleJobWithSoftTimeLimit(Job):
 
 Default: `[]`
 
-A list of task queue names that the job can be routed to. An empty list will default to only allowing the user to select the [default queue](../../user-guide/administration/configuration/settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The first queue in the list will be used if a queue is not specified in a job run API call.
+A list of Job Queue names that the job can be routed to. An empty list will default to only allowing the user to select the [default Celery queue](../../user-guide/administration/configuration/settings.md#celery_task_default_queue) (`default` unless changed by an administrator). The queue specified in the job's `default_job_queue` will be used if a queue is not specified in a job run API call.
+
++/- 2.4.0 "Changed default queue selection"
+    As a result of the addition of Job Queues, the default queue when running a Job without explicitly selecting a queue is now the job queue specified in the `default_job_queue` field on the Job model. `default_job_queue` fields for any existing Job instances are automatically populated with the name of the first entry in `task_queues` list of the Job class. When `task_queues` list on the Job class is empty, the corresponding Job instance's `default_job_queue` will be the job queue with the name provided by `settings.CELERY_TASK_DEFAULT_QUEUE`. You can also override the initial `default_job_queue` by setting `default_job_queue_override` to True and assign the field with a different Job Queue instance.
 
 !!! note
     A worker must be listening on the requested queue or the job will not run. See the documentation on [task queues](../../user-guide/administration/guides/celery-queues.md) for more information.
@@ -662,6 +681,9 @@ Markdown rendering is supported for log messages, as well as [a limited subset o
 
 +/- 2.0.0
     The `AbortTransaction` class was moved from the `nautobot.utilities.exceptions` module to `nautobot.core.exceptions`.
+
++++ 2.4.0
+    You can now use `self.logger.success()` to set the log level to `SUCCESS`.
 
 ### File Output
 

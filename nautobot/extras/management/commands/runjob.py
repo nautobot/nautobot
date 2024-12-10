@@ -1,14 +1,11 @@
-import json
 import time
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
 
-from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
-from nautobot.extras.jobs import get_job
-from nautobot.extras.models import Job, JobLogEntry, JobResult
-from nautobot.extras.utils import get_worker_count
+from nautobot.extras.choices import JobResultStatusChoices
+from nautobot.extras.management.utils import report_job_status, validate_job_and_job_data
+from nautobot.extras.models import Job, JobResult
 
 
 class Command(BaseCommand):
@@ -38,42 +35,15 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if "." not in options["job"]:
             raise CommandError('Job must be specified in the Python module form: "<module_name>.<JobClassName>"')
-        job_class = get_job(options["job"])
-        if not job_class:
-            raise CommandError(f'Job "{options["job"]}" not found')
-
         User = get_user_model()
         try:
             user = User.objects.get(username=options["username"])
         except User.DoesNotExist as exc:
             raise CommandError("No such user") from exc
 
-        data = {}
-        try:
-            if options.get("data"):
-                data = json.loads(options["data"])
-        except json.decoder.JSONDecodeError as error:
-            raise CommandError(f"Invalid JSON data:\n{error!s}") from error
-
-        try:
-            job_model = Job.objects.get_for_class_path(options["job"])
-        except Job.DoesNotExist as error:
-            raise CommandError(f"Job {options['job']} does not exist.") from error
-
-        try:
-            job_model = Job.objects.restrict(user, "run").get_for_class_path(options["job"])
-        except Job.DoesNotExist:
-            raise CommandError(f"User {options['username']} does not have permission to run this Job") from None
-
-        if not job_model.installed or job_model.job_class is None:
-            raise CommandError("Job is not presently installed")
-        if not job_model.enabled:
-            raise CommandError("Job is not presently enabled to be run")
-        if not options["local"] and not get_worker_count():
-            raise CommandError("No Celery worker detected. Perhaps you meant to specify --local?")
-
-        # Run the job and create a new JobResult
-        self.stdout.write(f"[{timezone.now():%H:%M:%S}] Running {options['job']}...")
+        job_class_path = options["job"]
+        data = validate_job_and_job_data(self, user, job_class_path, options.get("data"))
+        job_model = Job.objects.get_for_class_path(job_class_path)
 
         if options["local"]:
             job_result = JobResult.execute_job(job_model, user, profile=options["profile"], **data)
@@ -86,46 +56,4 @@ class Command(BaseCommand):
                 job_result.refresh_from_db()
 
         # Report on success/failure
-        groups = set(JobLogEntry.objects.filter(job_result=job_result).values_list("grouping", flat=True))
-        for group in sorted(groups):
-            logs = JobLogEntry.objects.filter(job_result__pk=job_result.pk, grouping=group)
-            debug_count = logs.filter(log_level=LogLevelChoices.LOG_DEBUG).count()
-            info_count = logs.filter(log_level=LogLevelChoices.LOG_INFO).count()
-            warning_count = logs.filter(log_level=LogLevelChoices.LOG_WARNING).count()
-            error_count = logs.filter(log_level=LogLevelChoices.LOG_ERROR).count()
-            critical_count = logs.filter(log_level=LogLevelChoices.LOG_CRITICAL).count()
-
-            self.stdout.write(
-                f"\t{group}: {debug_count} debug, {info_count} info, {warning_count} warning, {error_count} error, {critical_count} critical"
-            )
-
-            for log_entry in logs:
-                status = log_entry.log_level
-                if status == "success":
-                    status = self.style.SUCCESS(status)
-                elif status == "info":
-                    status = status
-                elif status == "warning":
-                    status = self.style.WARNING(status)
-                elif status == "failure":
-                    status = self.style.NOTICE(status)
-
-                if log_entry.log_object:
-                    self.stdout.write(f"\t\t{status}: {log_entry.log_object}: {log_entry.message}")
-                else:
-                    self.stdout.write(f"\t\t{status}: {log_entry.message}")
-
-        if job_result.result:
-            self.stdout.write(str(job_result.result))
-
-        if job_result.status == JobResultStatusChoices.STATUS_FAILURE:
-            status = self.style.ERROR("FAILURE")
-        elif job_result.status == JobResultStatusChoices.STATUS_SUCCESS:
-            status = self.style.SUCCESS("SUCCESS")
-        else:
-            status = self.style.WARNING(job_result.status)
-        self.stdout.write(f"[{timezone.now():%H:%M:%S}] {options['job']}: {status}")
-
-        # Wrap things up
-        self.stdout.write(f"[{timezone.now():%H:%M:%S}] {options['job']}: Duration {job_result.duration}")
-        self.stdout.write(f"[{timezone.now():%H:%M:%S}] Finished")
+        report_job_status(self, job_result)

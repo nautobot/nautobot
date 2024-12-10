@@ -1,0 +1,27 @@
+{% load helpers %}
+<table class="table table-hover table-headings">
+    {% if data %}
+        {% if column_headers %}
+            <thead>
+                <tr>
+                    {% for column_header in column_headers %}
+                        <th>{{ column_header }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+        {% endif %}
+        <tbody>
+            {% for entry in data %}
+                <tr>
+                    {% for column in columns %}
+                        <td>{{ entry|get_item:column|placeholder }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    {% else %}
+        <tr>
+            <td colspan="{{ columns|length }}" class="text-center text-muted">&mdash; No data &mdash;</td>
+        </td>
+    {% endif %}
+</table>

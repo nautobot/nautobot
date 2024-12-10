@@ -243,7 +243,6 @@ class VirtualMachineFilterSet(
         fields = [
             "id",
             "name",
-            "cluster",
             "vcpus",
             "memory",
             "disk",

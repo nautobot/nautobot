@@ -20,6 +20,7 @@ from nautobot.core.factory import (
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.extras.choices import (
     DynamicGroupTypeChoices,
+    JobQueueTypeChoices,
     JobResultStatusChoices,
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
@@ -34,6 +35,7 @@ from nautobot.extras.models import (
     ExternalIntegration,
     Job,
     JobLogEntry,
+    JobQueue,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -138,6 +140,31 @@ class JobLogEntryFactory(BaseModelFactory):
                 datetime_start=self.job_result.date_created, datetime_end=self.job_result.date_done, tzinfo=timezone.utc
             )
         return faker.Faker().past_datetime(start_date=self.job_result.date_created, tzinfo=timezone.utc)
+
+
+class JobQueueFactory(PrimaryModelFactory):
+    """JobQueue model Factory"""
+
+    class Meta:
+        model = JobQueue
+
+    class Params:
+        has_description = NautobotBoolIterator()
+        has_tenant = NautobotBoolIterator()
+
+    name = factory.LazyAttributeSequence(lambda o, n: f"{o.queue_type} Job Queue - {n}")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
+    queue_type = factory.Iterator(JobQueueTypeChoices.CHOICES, getter=lambda choice: choice[0])
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant))
+
+    @factory.post_generation
+    def jobs(self, create, extracted, **kwargs):
+        jobs = get_random_instances(Job)
+        self.jobs.set(jobs)
+        for job in jobs:
+            if not job.job_queues_override:
+                job.job_queues_override = True
+                job.validated_save()
 
 
 class JobResultFactory(BaseModelFactory):

@@ -4,7 +4,6 @@ import logging
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist, FieldError
-from django.db import NotSupportedError
 from django.db.models import Prefetch
 from django.db.models.fields.related import ForeignKey, RelatedField
 from django.db.models.fields.reverse_related import ManyToOneRel
@@ -22,6 +21,7 @@ from tree_queries.models import TreeNode
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
 from nautobot.core.utils.lookup import get_model_for_view_name, get_related_field_for_models, get_route_for_model
+from nautobot.core.utils.querysets import maybe_prefetch_related, maybe_select_related
 from nautobot.extras import choices, models
 
 logger = logging.getLogger(__name__)
@@ -236,51 +236,10 @@ class BaseTable(django_tables2.Table):
                     prefetch_fields.append("__".join(prefetch_path))
 
             if select_fields:
-                # Django doesn't allow .select_related() on a QuerySet that had .values()/.values_list() applied, or
-                # one that has had union()/intersection()/difference() applied.
-                # We can detect and avoid these cases the same way that Django itself does.
-                if queryset._fields is not None:
-                    logger.debug(
-                        "NOT applying select_related(%s) to %s QuerySet as it includes .values()/.values_list()",
-                        select_fields,
-                        model.__name__,
-                    )
-                elif queryset.query.combinator:
-                    logger.debug(
-                        "NOT applying select_related(%s) to %s QuerySet as it is a combinator query",
-                        select_fields,
-                        model.__name__,
-                    )
-                else:
-                    logger.debug("Applying .select_related(%s) to %s QuerySet", select_fields, model.__name__)
-                    # Belt and suspenders - we should have avoided any error cases above, but be safe anyway:
-                    try:
-                        queryset = queryset.select_related(*select_fields)
-                    except (TypeError, ValueError, NotSupportedError) as exc:
-                        logger.warning(
-                            "Unexpected error when trying to .select_related() on %s QuerySet: %s",
-                            model.__name__,
-                            exc,
-                        )
+                queryset = maybe_select_related(queryset, select_fields)
 
             if prefetch_fields:
-                if queryset.query.combinator:
-                    logger.debug(
-                        "NOT applying prefetch_related(%s) to %s QuerySet as it is a combinator query",
-                        prefetch_fields,
-                        model.__name__,
-                    )
-                else:
-                    logger.debug("Applying .prefetch_related(%s) to %s QuerySet", prefetch_fields, model.__name__)
-                    # Belt and suspenders - we should have avoided any error cases above, but be safe anyway:
-                    try:
-                        queryset = queryset.prefetch_related(*prefetch_fields)
-                    except (AttributeError, TypeError, ValueError, NotSupportedError) as exc:
-                        logger.warning(
-                            "Unexpected error when trying to .prefetch_related() on %s QuerySet: %s",
-                            model.__name__,
-                            exc,
-                        )
+                queryset = maybe_prefetch_related(queryset, prefetch_fields)
 
             if count_fields:
                 for column_name, column_model, lookup_name, distinct in count_fields:

@@ -348,6 +348,8 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "prefix": "192.168.4.0/24",
+                "network": "192.168.4.0",  # not required, but possible to specify
+                "broadcast": "192.168.4.255",  # not required, but possible to specify
                 "status": cls.status.pk,
                 "rir": rir.pk,
                 "type": choices.PrefixTypeChoices.TYPE_POOL,
@@ -1303,24 +1305,24 @@ class VLANLocationAssignmentTest(APIViewTestCases.APIViewTestCase):
         # make sure there are 4 locations without vlans 1 and 2 for the create_data below
         for i in range(4):
             cls.locations[i].vlans.set([])
-        locations_without_vlans = cls.locations.exclude(vlans__in=[cls.vlans[0], cls.vlans[1]])
+        locations_without_vlans = cls.locations.filter(vlans__isnull=True)
 
         cls.create_data = [
+            {
+                "vlan": cls.vlans[0].pk,
+                "location": locations_without_vlans[0].pk,
+            },
             {
                 "vlan": cls.vlans[0].pk,
                 "location": locations_without_vlans[1].pk,
             },
             {
-                "vlan": cls.vlans[0].pk,
+                "vlan": cls.vlans[1].pk,
                 "location": locations_without_vlans[2].pk,
             },
             {
                 "vlan": cls.vlans[1].pk,
                 "location": locations_without_vlans[3].pk,
-            },
-            {
-                "vlan": cls.vlans[1].pk,
-                "location": locations_without_vlans[4].pk,
             },
         ]
 

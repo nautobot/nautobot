@@ -23,6 +23,7 @@ from nautobot.core.filters import (
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
+    JobQueueTypeChoices,
     JobResultStatusChoices,
     MetadataTypeDataTypeChoices,
     RelationshipTypeChoices,
@@ -73,6 +74,8 @@ from nautobot.extras.models import (
     JobButton,
     JobHook,
     JobLogEntry,
+    JobQueue,
+    JobQueueAssignment,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -133,6 +136,8 @@ __all__ = (
     "ImageAttachmentFilterSet",
     "JobFilterSet",
     "JobLogEntryFilterSet",
+    "JobQueueFilterSet",
+    "JobQueueAssignmentFilterSet",
     "JobResultFilterSet",
     "LocalContextFilterSet",
     "LocalContextModelFilterSetMixin",
@@ -869,6 +874,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "is_job_button_receiver",
             "soft_time_limit",
             "time_limit",
+            "is_singleton",
             "grouping_override",
             "name_override",
             "approval_required_override",
@@ -878,6 +884,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "soft_time_limit_override",
             "time_limit_override",
             "has_sensitive_variables_override",
+            "is_singleton_override",
             "tags",
         ]
 
@@ -904,6 +911,60 @@ class JobHookFilterSet(BaseFilterSet):
             "type_update",
             "type_delete",
         ]
+
+
+class JobQueueFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "queue_type": "icontains",
+            "description": "icontains",
+            "tenant__name": "icontains",
+        },
+    )
+    queue_type = django_filters.MultipleChoiceFilter(choices=JobQueueTypeChoices, null_value=None)
+    jobs = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Job.objects.all(),
+        label="Job (name or ID)",
+    )
+    has_jobs = RelatedMembershipBooleanFilter(
+        field_name="jobs",
+        label="Has jobs",
+    )
+
+    class Meta:
+        model = JobQueue
+        fields = [
+            "id",
+            "name",
+            "description",
+            "tags",
+        ]
+
+
+class JobQueueAssignmentFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "job__name": "icontains",
+            "job__grouping": "icontains",
+            "job__description": "icontains",
+            "job_queue__name": "icontains",
+            "job_queue__description": "icontains",
+            "job_queue__queue_type": "icontains",
+        }
+    )
+    job = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Job.objects.all(),
+        label="Job (name or ID)",
+    )
+    job_queue = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=JobQueue.objects.all(),
+        label="Job Queue (name or ID)",
+    )
+
+    class Meta:
+        model = JobQueueAssignment
+        fields = ["id"]
 
 
 class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):

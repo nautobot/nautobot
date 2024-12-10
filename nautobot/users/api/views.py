@@ -22,7 +22,7 @@ from . import serializers
 
 
 class UserViewSet(ModelViewSet):
-    queryset = RestrictedQuerySet(model=get_user_model()).prefetch_related("groups").order_by("username")
+    queryset = RestrictedQuerySet(model=get_user_model()).order_by("username")
     serializer_class = serializers.UserSerializer
     filterset_class = filters.UserFilterSet
 
@@ -69,7 +69,7 @@ class TokenViewSet(ModelViewSet):
 
 
 class ObjectPermissionViewSet(ModelViewSet):
-    queryset = ObjectPermission.objects.prefetch_related("object_types", "groups", "users")
+    queryset = ObjectPermission.objects.all()
     serializer_class = serializers.ObjectPermissionSerializer
     filterset_class = filters.ObjectPermissionFilterSet
 

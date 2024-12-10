@@ -56,7 +56,6 @@ logger = logging.getLogger(__name__)
 
 class HomeView(AccessMixin, TemplateView):
     template_name = "home.html"
-    use_new_ui = True
 
     def render_additional_content(self, request, context, details):
         # Collect all custom data using callback functions.
@@ -479,3 +478,9 @@ def get_file_with_authorization(request, *args, **kwargs):
     get_object_or_404(queryset, file=request.GET.get("name"))
 
     return get_file(request, *args, **kwargs)
+
+
+class RenderJinjaView(LoginRequiredMixin, TemplateView):
+    """Render a Jinja template with context data."""
+
+    template_name = "utilities/render_jinja2.html"

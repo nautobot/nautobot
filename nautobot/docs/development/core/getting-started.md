@@ -65,8 +65,6 @@ Remote repos are managed using the `git remote` command.
 
 Upon cloning Nautobot for the first time, you will have only a single remote:
 
-<!-- markdownlint-disable MD010 -->
-
 ```no-highlight
 git remote -v
 ```
@@ -74,11 +72,9 @@ git remote -v
 Example output:
 
 ```no-highlight
-origin	git@github.com:yourusername/nautobot.git (fetch)
-origin	git@github.com:yourusername/nautobot.git (push)
+origin      git@github.com:yourusername/nautobot.git (fetch)
+origin      git@github.com:yourusername/nautobot.git (push)
 ```
-
-<!-- markdownlint-enable MD010 -->
 
 Add the official Nautobot repo as a the `upstream` remote:
 
@@ -88,8 +84,6 @@ git remote add upstream git@github.com:nautobot/nautobot.git
 
 View your remotes again to confirm you've got both `origin` pointing to your fork and `upstream` pointing to the official repo:
 
-<!-- markdownlint-disable MD010 -->
-
 ```no-highlight
 git remote -v
 ```
@@ -97,13 +91,11 @@ git remote -v
 Example output:
 
 ```no-highlight
-origin	git@github.com:yourusername/nautobot.git (fetch)
-origin	git@github.com:yourusername/nautobot.git (push)
-upstream	git@github.com:nautobot/nautobot.git (fetch)
-upstream	git@github.com:nautobot/nautobot.git (push)
+origin      git@github.com:yourusername/nautobot.git (fetch)
+origin      git@github.com:yourusername/nautobot.git (push)
+upstream    git@github.com:nautobot/nautobot.git (fetch)
+upstream    git@github.com:nautobot/nautobot.git (push)
 ```
-
-<!-- markdownlint-enable MD010 -->
 
 You're now ready to proceed to the next steps.
 
@@ -318,14 +310,6 @@ For detailed installation instructions, please see the [official Poetry installa
 brew install hadolint
 ```
 
-#### Install markdownlint-cli
-
-[markdownlint-cli](https://github.com/igorshubovych/markdownlint-cli) is a tool used to validate and lint Markdown files, such as Nautobot's documentation, to ensure that they are correctly constructed. On macOS with [Homebrew](https://brew.sh/) you can install markdownlint-cli by running:
-
-```no-highlight
-brew install markdownlint-cli
-```
-
 #### Creating a Python Virtual Environment
 
 A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) (or *virtualenv*) is like a container for a set of Python packages. A virtualenv allow you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.
@@ -352,10 +336,10 @@ poetry shell
 Example output:
 
 ```no-highlight
-Spawning shell within /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8
+Spawning shell within /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.12
 
-. /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8/bin/activate
-(nautobot-Ams_xyDt-py3.8) $
+. /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.12/bin/activate
+(nautobot-Ams_xyDt-py3.12) $
 ```
 
 Notice that the console prompt changes to indicate the active environment. This updates the necessary system environment variables to ensure that any Python scripts are run within the virtual environment.
@@ -369,7 +353,7 @@ which python
 Example output:
 
 ```no-highlight
-(nautobot-Ams_xyDt-py3.8) $ /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.8/bin/python
+(nautobot-Ams_xyDt-py3.12) $ /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.12/bin/python
 ```
 
 To exit the virtual shell, use `exit`:
@@ -380,6 +364,7 @@ exit
 
 Example output:
 
+<!-- pyml disable-num-lines 3 commands-show-output -->
 ```no-highlight
 $
 ```
@@ -554,11 +539,10 @@ Example output:
 ...
 # Shell Plus Django Imports
 ...
-# Django version 3.2.16
-# Nautobot version 2.0.0a0
+# Django version 4.2.15
+# Nautobot version 2.3.3b1
 # Example Nautobot App version 1.0.0
-Python 3.8.16 (default, Mar 23 2023, 04:48:11)
-[GCC 10.2.1 20210110] on linux
+Python 3.12.6 (main, Sep 12 2024, 21:12:08) [GCC 12.2.0] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 (InteractiveConsole)
 >>>
@@ -739,12 +723,11 @@ If you make changes to the REST API, you should verify that the REST API OpenAPI
 
 To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Ruff](https://docs.astral.sh/ruff). Additionally, [static analysis](https://en.wikipedia.org/wiki/Static_program_analysis) of Nautobot code is performed by Ruff and [Pylint](https://pylint.pycqa.org/en/latest/). You should run all of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 4 no-inline-html -->
 | Docker Compose Workflow | Virtual Environment Workflow                                                                                                     |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `invoke ruff`           | `ruff format --check nautobot/ development/ examples/ tasks.py`<br>and<br>`ruff check nautobot/ development/ examples/ tasks.py` |
 | `invoke pylint`         | `nautobot-server pylint nautobot tasks.py`<br>and<br>`nautobot-server pylint --recursive development/ examples/`                 |
-<!-- markdownlint-enable no-inline-html -->
 
 ### Handling Migrations
 
@@ -818,11 +801,11 @@ Documentation is written in Markdown. If you need to add additional pages or sec
 
 ### Verifying Documentation
 
-Nautobot uses [`markdownlint-cli`](https://github.com/igorshubovych/markdownlint-cli) to verify correctness of the documentation. You should run this command and ensure that it passes fully with regard to your documentation changes before opening a pull request upstream.
+Nautobot uses [`pymarkdownlnt`](https://github.com/jackdewinter/pymarkdown) to verify correctness of the documentation. You should run this command and ensure that it passes fully with regard to your documentation changes before opening a pull request upstream.
 
-| Docker Compose Workflow | Virtual Environment Workflow                                                                      |
-| ----------------------- | ------------------------------------------------------------------------------------------------- |
-| `invoke markdownlint`   | `markdownlint --ignore nautobot/project-static --config .markdownlint.yml nautobot examples *.md` |
+| Docker Compose Workflow | Virtual Environment Workflow                       |
+| ----------------------- | -------------------------------------------------- |
+| `invoke markdownlint`   | `pymarkdown scan --recurse nautobot examples *.md` |
 
 ## Submitting Pull Requests
 
