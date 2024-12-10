@@ -3,6 +3,7 @@ from io import BytesIO, StringIO
 import json
 import os
 from unittest import skip
+import uuid
 
 from constance import config
 from constance.test import override_config
@@ -753,6 +754,25 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
+
+    def test_create_with_specified_id(self):
+        data = {
+            "id": str(uuid.uuid4()),
+            "vid": 400,
+            "name": "Test VLAN 400",
+            "status": self.statuses.first().pk,
+            "vlan_group": self.vlan_group1.pk,
+        }
+        url = reverse("ipam-api:vlan-list")
+        self.add_permissions("ipam.add_vlan")
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(str(response.data["vlan_group"]["url"]), self.absolute_api_url(self.vlan_group1))
+        self.assertEqual(str(response.data["id"]), data["id"])
+        vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
+        self.assertEqual(vlan.status, self.statuses.first())
+        self.assertEqual(vlan.vlan_group, self.vlan_group1)
 
 
 class APIOrderingTestCase(testing.APITestCase):
