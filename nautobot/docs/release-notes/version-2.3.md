@@ -126,8 +126,6 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 <!-- towncrier release notes start -->
 ## v2.3.13 (2024-12-10)
 
-## v2.3.13 (2024-12-10)
-
 ### Security
 
 - [#6615](https://github.com/nautobot/nautobot/issues/6615) - Updated `Django` to `~4.2.17` due to `CVE-2024-53907` and `CVE-2024-53908`.
