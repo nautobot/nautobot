@@ -531,6 +531,12 @@ class Prefix(PrimaryModel):
         prefix = kwargs.pop("prefix", None)
         self._location = kwargs.pop("location", None)
         super().__init__(*args, **kwargs)
+        self._parent = None
+
+        if self.present_in_database:
+            self._network = self.network
+            self._prefix_length = self.prefix_length
+            self._namespace = self.namespace
         self._deconstruct_prefix(prefix)
 
     def __str__(self):
@@ -612,6 +618,24 @@ class Prefix(PrimaryModel):
             protected_objects.update(parent=self.parent)
             return super().delete(*args, **kwargs)
 
+    def get_parent(self):
+        # Determine if a parent exists and set it to the closest ancestor by `prefix_length`.
+        if self._parent is not None:
+            return self._parent
+
+        if supernets := self.supernets():
+            parent = max(supernets, key=operator.attrgetter("prefix_length"))
+            self._parent = parent
+            return parent
+        return None
+
+    def clean(self):
+        super().clean()
+
+        if self.prefix:
+            # self.parent depends on self.prefix having a value
+            self.parent = self.get_parent()
+
     def save(self, *args, **kwargs):
         if isinstance(self.prefix, netaddr.IPNetwork):
             # Clear host bits from prefix
@@ -619,11 +643,7 @@ class Prefix(PrimaryModel):
             # which will (re)set the broadcast and ip_version values of this instance to their correct values.
             self.prefix = self.prefix.cidr
 
-        # Determine if a parent exists and set it to the closest ancestor by `prefix_length`.
-        supernets = self.supernets()
-        if supernets:
-            parent = max(supernets, key=operator.attrgetter("prefix_length"))
-            self.parent = parent
+        self.parent = self.get_parent()
 
         # Validate that creation of this prefix does not create an invalid parent/child relationship
         # 3.0 TODO: uncomment this to enforce this constraint
@@ -660,10 +680,17 @@ class Prefix(PrimaryModel):
             if self._location is not None:
                 self.location = self._location
 
-        # Determine the subnets and reparent them to this prefix.
-        self.reparent_subnets()
-        # Determine the child IPs and reparent them to this prefix.
-        self.reparent_ips()
+        # Only reparent subnets and ips if any of these fields has been updated.
+        if (
+            not self.present_in_database
+            or self._network is not self.network
+            or self._namespace is not self.namespace
+            or self._prefix_length is not self.prefix_length
+        ):
+            # Determine the subnets and reparent them to this prefix.
+            self.reparent_subnets()
+            # Determine the child IPs and reparent them to this prefix.
+            self.reparent_ips()
 
     @property
     def cidr_str(self):
@@ -739,6 +766,7 @@ class Prefix(PrimaryModel):
         Returns:
             QuerySet
         """
+
         query = Prefix.objects.all()
 
         if for_update:
@@ -750,13 +778,15 @@ class Prefix(PrimaryModel):
         if not include_self:
             query = query.exclude(id=self.id)
 
-        return query.filter(
+        supernets = query.filter(
             ip_version=self.ip_version,
             prefix_length__lte=self.prefix_length,
             network__lte=self.network,
             broadcast__gte=self.broadcast,
             namespace=self.namespace,
         )
+
+        return supernets
 
     def subnets(self, direct=False, include_self=False, for_update=False):
         """
