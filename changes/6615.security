@@ -1,1 +1,0 @@
-Updated `Django` to `~4.2.17` due to `CVE-2024-53907` and `CVE-2024-53908`.
