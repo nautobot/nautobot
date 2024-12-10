@@ -2,7 +2,6 @@ import logging
 import operator
 
 from django.contrib.contenttypes.models import ContentType
-from django.core.cache import cache
 from django.core.exceptions import MultipleObjectsReturned, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
@@ -615,13 +614,8 @@ class Prefix(PrimaryModel):
 
     def get_parent(self):
         # Determine if a parent exists and set it to the closest ancestor by `prefix_length`.
-        cache_key = f"nautobot.ipam.prefix.parent.{self.network}-{self.prefix_length}-{self.namespace}"
-        if cahched_parent := cache.get(cache_key):
-            return cahched_parent
-
         if supernets := self.supernets():
             parent = max(supernets, key=operator.attrgetter("prefix_length"))
-            cache.set(cache_key, parent)
             return parent
         return None
 
