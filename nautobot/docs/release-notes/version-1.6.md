@@ -72,6 +72,19 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.29 (2024-12-09)
+
+### Security
+
+- [#5911](https://github.com/nautobot/nautobot/issues/5911) - Updated `zipp` to `3.19.2` to address `CVE-2024-5569`. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#6625](https://github.com/nautobot/nautobot/issues/6625) - Patched `set_values()` method of Query class from django.db.models.sql.query to address `CVE-2024-42005`.
+
+### Fixed
+
+- [#5924](https://github.com/nautobot/nautobot/issues/5924) - Fixed the redirect URL for the Device Bay Populate/Depopulate view to take the user back to the Device Bays tab on the Device page.
+- [#6502](https://github.com/nautobot/nautobot/issues/6502) - Fixed a bug in the Dockerfile that prevented `docker build` from working on some platforms.
+- [#6502](https://github.com/nautobot/nautobot/issues/6502) - Fixed Docker builds failing in Gitlab CI.
+
 ## v1.6.28 (2024-09-24)
 
 ### Fixed
