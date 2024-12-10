@@ -63,7 +63,7 @@ class RadioProfileFilterSet(NautobotFilterSet):
         choices=choices.RadioProfileFrequencyChoices,
         null_value=None,
     )
-    controller_managed_device_group = NaturalKeyOrPKMultipleChoiceFilter(
+    controller_managed_device_groups = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
         label="Controller Managed Device Groups (name or ID)",
@@ -101,7 +101,7 @@ class WirelessNetworkFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         to_field_name="name",
         label="Secrets group (name or ID)",
     )
-    controller_managed_device_group = NaturalKeyOrPKMultipleChoiceFilter(
+    controller_managed_device_groups = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
         label="Controller Managed Device Groups (name or ID)",

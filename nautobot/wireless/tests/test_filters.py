@@ -1,4 +1,5 @@
 from nautobot.core.testing import FilterTestCases
+from nautobot.extras.models import SecretsGroup
 from nautobot.wireless import filters, models
 
 
@@ -7,6 +8,8 @@ class SupportedDataRateTestCase(FilterTestCases.FilterTestCase):
     filterset = filters.SupportedDataRateFilterSet
     generic_filter_tests = [
         ("mcs_index",),
+        ("radio_profiles", "radio_profiles__id"),
+        ("radio_profiles", "radio_profiles__name"),
         ("rate",),
         ("standard",),
     ]
@@ -17,19 +20,44 @@ class RadioProfileTestCase(FilterTestCases.FilterTestCase):
     filterset = filters.RadioProfileFilterSet
     generic_filter_tests = [
         ("name",),
-        ("regulatory_domain",),
+        ("controller_managed_device_groups", "controller_managed_device_groups__id"),
+        ("controller_managed_device_groups", "controller_managed_device_groups__name"),
         ("frequency",),
+        ("regulatory_domain",),
     ]
+
+    def test_channel_width(self):
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset({"channel_width": "80"}, self.queryset).qs,
+            self.queryset.filter(channel_width__contains=[80]),
+        )
 
 
 class WirelessNetworkTestCase(FilterTestCases.FilterTestCase):
     queryset = models.WirelessNetwork.objects.all()
     filterset = filters.WirelessNetworkFilterSet
     generic_filter_tests = [
+        ("authentication",),
+        ("controller_managed_device_groups", "controller_managed_device_groups__id"),
+        ("controller_managed_device_groups", "controller_managed_device_groups__name"),
         ("description",),
+        ("mode",),
         ("name",),
+        ("secrets_group", "secrets_group__id"),
+        ("secrets_group", "secrets_group__name"),
         ("ssid",),
     ]
+
+    @classmethod
+    def setUpTestData(cls):
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
+            SecretsGroup.objects.create(name="Secrets Group 3"),
+        )
+        for i, wireless_network in enumerate(models.WirelessNetwork.objects.all()[:3]):
+            wireless_network.secrets_group = secrets_groups[i]
+            wireless_network.validated_save()
 
 
 class ControllerManagedDeviceGroupWirelessNetworkAssignmentTestCase(FilterTestCases.FilterTestCase):
