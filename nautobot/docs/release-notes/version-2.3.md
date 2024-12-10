@@ -124,7 +124,9 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
-## v2.3.13 (2024-12-09)
+## v2.3.13 (2024-12-10)
+
+## v2.3.13 (2024-12-10)
 
 ### Security
 
@@ -136,12 +138,24 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#5333](https://github.com/nautobot/nautobot/issues/5333) - Added `Comments` field on DeviceBulkEditForm.
 - [#6498](https://github.com/nautobot/nautobot/issues/6498) - Added support for an additional `suffix` when utilizing TableExtension to support tables like IPAddressDetailTable.
 - [#6586](https://github.com/nautobot/nautobot/issues/6586) - Added description and weight on RoleBulkEditForm
+- [#6605](https://github.com/nautobot/nautobot/issues/6605) - Added `BaseTable` support for a `data_transform_callback` function that can be used to modify the table data after performing automatic QuerySet optimizations. (Several IPAM tables now use this functionality).
+- [#6605](https://github.com/nautobot/nautobot/issues/6605) - Enhanced `LinkedCountColumn` to support a `distinct` parameter to handle cases where counts may otherwise be incorrect.
+- [#6605](https://github.com/nautobot/nautobot/issues/6605) - Added `ip_addresses` and `has_ip_addresses` filter support to Device, Interface, and VirtualMachine FilterSets.
+- [#6613](https://github.com/nautobot/nautobot/issues/6613) - Enhanced Prefix detail view "Child Prefixes" table to render associated Locations more intelligently.
+- [#6614](https://github.com/nautobot/nautobot/issues/6614) - Enhanced IP Address tables to show the name of the associated Interface or VM Interface if only a single such association is present for a given IP Address.
+
+### Changed
+
+- [#6166](https://github.com/nautobot/nautobot/issues/6166) - Enhanced the REST API to generally make it possible to create objects with known ids on request.
 
 ### Fixed
 
 - [#3124](https://github.com/nautobot/nautobot/issues/3124) - Fixed inability of ImageAttachment and DeviceType API endpoints to accept `multipart/form-data` file uploads.
+- [#5166](https://github.com/nautobot/nautobot/issues/5166) - Fixed a `ProgrammingError` when applying permissions containing network-address-based constraints.
 - [#6466](https://github.com/nautobot/nautobot/issues/6466) - Fixed `table_config` field not showing up correctly in the Saved View modal.
 - [#6498](https://github.com/nautobot/nautobot/issues/6498) - Fixed error when using TableExtension when the table is missing Meta.default_columns.
+- [#6605](https://github.com/nautobot/nautobot/issues/6605) - Improved rendering performance of the IPAddress list view in cases where the `Interfaces`, `Devices`, `VM Interfaces`, `Virtual Machines`, and/or `Assigned` columns are not shown.
+- [#6605](https://github.com/nautobot/nautobot/issues/6605) - Improved performance of `TreeModel.display` calculation by making better use of the cache.
 - [#6609](https://github.com/nautobot/nautobot/issues/6609) - Fixed unnecessary call to the database when logging from a Job with the parameter `extra={"skip_db_logging": True}`.
 - [#6624](https://github.com/nautobot/nautobot/issues/6624) - Fixed issue with `group_sync.py` where it was accessing the settings using environment variable name vs the actual settings name.
 - [#6624](https://github.com/nautobot/nautobot/issues/6624) - Fixed the `SOCIAL_AUTH_PIPELINE` settings to include the entire path of the `group_sync` function.
@@ -153,6 +167,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 ### Documentation
 
 - [#6622](https://github.com/nautobot/nautobot/issues/6622) - Fixed AzureAD documentation for custom_module logging example.
+- [#6636](https://github.com/nautobot/nautobot/issues/6636) - Fixed group_sync path in the SSO documentation.
 
 ### Housekeeping
 
