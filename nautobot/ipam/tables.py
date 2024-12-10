@@ -442,13 +442,27 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     )
     tenant = TenantColumn()
     parent__namespace = tables.Column(linkify=True)
-    # Interface, Device, and VirtualMachine tables aren't currently filterable by IP address (?) so no LinkedCountColumn
-    interface_count = tables.Column(verbose_name="Interfaces")
-    interface_parent_count = tables.Column(verbose_name="Devices")
+    interface_count = LinkedCountColumn(
+        viewname="dcim:interface_list", url_params={"ip_addresses": "pk"}, verbose_name="Interfaces"
+    )
+    # TODO: what about interfaces assigned to modules?
+    interface_parent_count = LinkedCountColumn(
+        viewname="dcim:device_list",
+        url_params={"ip_addresses": "pk"},
+        reverse_lookup="interfaces__ip_addresses",
+        distinct=True,
+        verbose_name="Devices",
+    )
     vm_interface_count = LinkedCountColumn(
         viewname="virtualization:vminterface_list", url_params={"ip_addresses": "pk"}, verbose_name="VM Interfaces"
     )
-    vm_interface_parent_count = tables.Column(verbose_name="Virtual Machines")
+    vm_interface_parent_count = LinkedCountColumn(
+        viewname="virtualization:virtualmachine_list",
+        url_params={"ip_addresses": "pk"},
+        reverse_lookup="interfaces__ip_addresses",
+        distinct=True,
+        verbose_name="Virtual Machines",
+    )
 
     class Meta(BaseTable.Meta):
         model = IPAddress
