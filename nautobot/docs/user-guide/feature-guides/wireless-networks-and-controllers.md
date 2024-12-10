@@ -1,12 +1,12 @@
 # Wireless Networks and Controllers
 
-This is an example of using Wireless Networks and Controllers to represent Wireless Access Points managed by a Controller in a Data Center. We will be using Central Mode on the Wireless Networks so that traffic from the Access Points is tunnelled through the Controller.
+This guide demonstrates how to set up Wireless Networks and Controllers to manage Wireless Access Points via a Controller in a Data Center. In this example, we use **Central Mode**, where traffic from the Access Points is tunneled through the Controller.
 
 ![Central Mode Diagram](images/wireless/central-mode.png)
 
 ## Optional Prerequisites
 
-Before we start adding Wireless Networks, there are features we can optionally setup to enrich the data in Wireless Networks and Controllers. Here are links to each of the guides for the features:
+Before configuring Wireless Networks, you can optionally set up the following features to enrich the data:
 
 - [Devices](getting-started/creating-devices.md)
 - [Locations](getting-started/creating-location-types-and-locations.md)
@@ -17,19 +17,19 @@ Before we start adding Wireless Networks, there are features we can optionally s
 
 To create a Wireless Network:
 
-1. Click on **Wireless** in the Nav Menu Bar.
-2. Click on **Wireless Networks** in the **Wireless** group.
-3. Click on the blue `+ Add Wireless Network` button.
+1. Click on **Wireless** in the navigation menu.
+2. Select **Wireless Networks** under the **Wireless** group.
+3. Click the blue <kbd>+ Add Wireless Network</kbd> button.
 
 ![Add Wireless Network](images/wireless/wireless-network-add.png)
 
-Next, we will complete the required fields for the Wireless Network:
+Fill in the required fields for the Wireless Network:
 
 1. Enter the Wireless Network name.
 2. Enter the Wireless Network SSID.
 3. Select a Mode from the Dropdown (Central in this example).
 4. Choose the Authentication type.
-5. Click on the `Create` or `Create and Add Another` button.
+5. Click **Create** or **Create and Add Another** to save.
 
 ![Create Wireless Network Form](images/wireless/wireless-network-create.png)
 
@@ -37,21 +37,20 @@ Next, we will complete the required fields for the Wireless Network:
 
 To create a Wireless Controller:
 
-1. Click on **Wireless** in the Nav Menu Bar.
-2. Click on **Wireless Controllers** in the **Wireless** group.
-3. Click on the blue `+ Add Controller` button.
+1. Click on **Wireless** in the navigation menu.
+2. Select **Wireless Controllers** under the **Wireless** group.
+3. Click the blue <kbd>+ Add Controller</kbd> button.
 
 ![Add Wireless Controller](images/wireless/wireless-controller-add.png)
 
-Next, we will complete the required fields for the Wireless Controller:
+Complete the required fields for the Wireless Controller:
 
 1. Enter the Controller name.
-2. Select a Status for the Controller.
-3. Select a Location for the Controller.
-4. Select `Wireless` on the Capabilities dropdown.
-5. Optional: Click on the Controller Device tab.
-6. Optional: Choose the Device that hosts the Controller.
-7. Click on the `Create` or `Create and Add Another` button.
+2. Select the Controller status.
+3. Choose a Location for the Controller.
+4. Select **Wireless** from the Capabilities dropdown.
+5. (Optional) Click the **Controller Device** tab to assign a Device that hosts the Controller.
+6. Click **Create** or **Create and Add Another** to save.
 
 ![Create Wireless Controller Form](images/wireless/wireless-controller-create-1.png)
 ![Create Wireless Controller Optional Device](images/wireless/wireless-controller-create-2.png)
@@ -60,24 +59,24 @@ Next, we will complete the required fields for the Wireless Controller:
 
 To create a Device Group:
 
-1. Click on **Wireless** in the Nav Menu Bar.
-2. Click on **Device Groups** in the **Wireless** group.
-3. Click on the blue `+ Add Controller Managed Device Group`.
+1. Navigate to **Wireless** in the navigation menu.
+2. Select **Device Groups** under the **Wireless** group.
+3. Click the blue <kbd>+ Add Controller Managed Device Group</kbd> button.
 
 ![Add Device Group](images/wireless/device-group-add.png)
 
-Next, we will complete the required fields for the Device Groups:
+Fill in the required fields for the Device Group:
 
 1. Select the Controller created above.
 2. Enter the name of the Device Group.
-3. Choose the devices to belong to the Device Group.
-4. Select `Wireless` on the Capabilities dropdown.
+3. Choose the devices to include in the group.
+4. Select **Wireless** from the Capabilities dropdown.
 
-Now we will connect the Wireless Networks created above:
+To connect the Wireless Networks:
 
 1. Select the Wireless Network.
-2. Optional: Filter the VLANs by Location or VLAN Group, then select a VLAN.
-3. Click on the `Create` or `Create and Add Another` button.
+2. (Optional) Filter VLANs by Location or VLAN Group, then select a VLAN.
+3. Click **Create** or **Create and Add Another** to save.
 
 ![Create Device Group Form](images/wireless/device-group-create-1.png)
 ![Create Device Group Form Add Networks](images/wireless/device-group-create-2.png)
@@ -86,13 +85,13 @@ Now we will connect the Wireless Networks created above:
 
 This part is optional, Supported Data Rates supports tracking wireless speed and the MCS Index.
 
-1. Click on **Wireless** in the Nav Menu Bar.
-2. Click on **Supported Data Rates** in the **Wireless** group.
-3. Click on the blue `+ Add Supported Data Rate`.
+1. Click on **Wireless** in the navigation menu.
+2. Select **Supported Data Rates** under the **Wireless** group.
+3. Click the blue <kbd>+ Add Supported Data Rate</kbd>.
 
 ![Add Supported Data Rate](images/wireless/supported-data-rate-add.png)
 
-Next, we will complete the required fields for the Supported Data Rates:
+Fill in the required fields for Supported Data Rates:
 
 1. Select a Wireless Standard.
 2. Enter a rate in Kbps.
@@ -104,16 +103,16 @@ Next, we will complete the required fields for the Supported Data Rates:
 
 This part is optional, Radio Profiles provide context to the Wireless Radios of a Device (through the Device Group).
 
-1. Click on **Wireless** in the Nav Menu Bar.
-2. Click on **Radio Profiles** in the **Wireless** group.
-3. Click on the blue `+ Add Radio Profile`.
+1. Click on **Wireless** in the navigation menu.
+2. Select **Radio Profiles** under the **Wireless** group.
+3. Click the blue <kbd>+ Add Radio Profile</kbd>.
 
 ![Add Radio Profile](images/wireless/radio-profile-add.png)
 
-Next, we will complete the required fields for the Radio Profiles:
+Fill in the required fields for Radio Profiles:
 
 1. Enter a name for the Radio Profile.
 2. Set the regulatory domain. We can also fill out any other data that you have.
-3. Click on the `Create` or `Create and Add Another` button.
+3. Click **Create** or **Create and Add Another** to save.
 
 ![Radio Profile Create](images/wireless/radio-profile-create.png)
