@@ -3607,6 +3607,8 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         cls.bulk_edit_data = {
             "color": "000000",
+            "description": "I used to be a new role object.",
+            "weight": 255,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
