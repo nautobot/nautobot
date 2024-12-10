@@ -531,6 +531,11 @@ class Prefix(PrimaryModel):
         prefix = kwargs.pop("prefix", None)
         self._location = kwargs.pop("location", None)
         super().__init__(*args, **kwargs)
+
+        if self.present_in_database:
+            self._network = self.network
+            self._prefix_length = self.prefix_length
+            self._namespace = self.namespace
         self._deconstruct_prefix(prefix)
 
     def __str__(self):
@@ -670,10 +675,17 @@ class Prefix(PrimaryModel):
             if self._location is not None:
                 self.location = self._location
 
-        # Determine the subnets and reparent them to this prefix.
-        self.reparent_subnets()
-        # Determine the child IPs and reparent them to this prefix.
-        self.reparent_ips()
+        # Only reparent subnets and ips if any of these fields has been updated.
+        if (
+            not self.present_in_database
+            or self._network is not self.network
+            or self._namespace is not self.namespace
+            or self._prefix_length is not self.prefix_length
+        ):
+            # Determine the subnets and reparent them to this prefix.
+            self.reparent_subnets()
+            # Determine the child IPs and reparent them to this prefix.
+            self.reparent_ips()
 
     @property
     def cidr_str(self):
