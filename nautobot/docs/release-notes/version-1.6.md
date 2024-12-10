@@ -76,7 +76,7 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 
 ### Security
 
-- [#5911](https://github.com/nautobot/nautobot/issues/5911) - Updated `zipp` to `3.19.1` to address `CVE-2024-5569`. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#5911](https://github.com/nautobot/nautobot/issues/5911) - Updated `zipp` to `3.19.2` to address `CVE-2024-5569`. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
 - [#6625](https://github.com/nautobot/nautobot/issues/6625) - Patched `set_values()` method of Query class from django.db.models.sql.query to address `CVE-2024-42005`.
 
 ### Fixed
