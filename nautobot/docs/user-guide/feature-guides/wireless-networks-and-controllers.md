@@ -19,7 +19,7 @@ To create a Wireless Network:
 
 1. Click on **Wireless** in the navigation menu.
 2. Select **Wireless Networks** under the **Wireless** group.
-3. Click the blue <kbd>+ Add Wireless Network</kbd> button.
+3. Click the blue **+ Add Wireless Network** button.
 
 ![Add Wireless Network](images/wireless/wireless-network-add.png)
 
@@ -39,7 +39,7 @@ To create a Wireless Controller:
 
 1. Click on **Wireless** in the navigation menu.
 2. Select **Wireless Controllers** under the **Wireless** group.
-3. Click the blue <kbd>+ Add Controller</kbd> button.
+3. Click the blue **+ Add Controller** button.
 
 ![Add Wireless Controller](images/wireless/wireless-controller-add.png)
 
@@ -61,7 +61,7 @@ To create a Device Group:
 
 1. Navigate to **Wireless** in the navigation menu.
 2. Select **Device Groups** under the **Wireless** group.
-3. Click the blue <kbd>+ Add Controller Managed Device Group</kbd> button.
+3. Click the blue **+ Add Controller Managed Device Group** button.
 
 ![Add Device Group](images/wireless/device-group-add.png)
 
@@ -87,7 +87,7 @@ This part is optional, Supported Data Rates supports tracking wireless speed and
 
 1. Click on **Wireless** in the navigation menu.
 2. Select **Supported Data Rates** under the **Wireless** group.
-3. Click the blue <kbd>+ Add Supported Data Rate</kbd>.
+3. Click the blue **+ Add Supported Data Rate**.
 
 ![Add Supported Data Rate](images/wireless/supported-data-rate-add.png)
 
@@ -105,7 +105,7 @@ This part is optional, Radio Profiles provide context to the Wireless Radios of 
 
 1. Click on **Wireless** in the navigation menu.
 2. Select **Radio Profiles** under the **Wireless** group.
-3. Click the blue <kbd>+ Add Radio Profile</kbd>.
+3. Click the blue **+ Add Radio Profile**.
 
 ![Add Radio Profile](images/wireless/radio-profile-add.png)
 
