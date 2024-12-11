@@ -111,8 +111,11 @@ class TreeModel(TreeNode):
         if display_str:
             return display_str
         try:
-            if self.parent is not None:
-                display_str = self.parent.display + " → "
+            if self.parent_id is not None:
+                parent_display_str = cache.get(cache_key.replace(str(self.id), str(self.parent_id)), "")
+                if not parent_display_str:
+                    parent_display_str = self.parent.display
+                display_str = parent_display_str + " → "
         except self.DoesNotExist:
             # Expected to occur at times during bulk-delete operations
             pass
