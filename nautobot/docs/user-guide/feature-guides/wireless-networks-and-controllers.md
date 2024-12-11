@@ -4,7 +4,7 @@ This guide demonstrates how to set up Wireless Networks and Controllers to manag
 
 ![Central Mode Diagram](images/wireless/central-mode.png)
 
-## Optional Prerequisites
+## Optional Preparation
 
 Before configuring Wireless Networks, you can optionally set up the following features to enrich the data:
 
