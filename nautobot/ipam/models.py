@@ -531,13 +531,18 @@ class Prefix(PrimaryModel):
         prefix = kwargs.pop("prefix", None)
         self._location = kwargs.pop("location", None)
         super().__init__(*args, **kwargs)
-        self._parent = None
 
-        if self.present_in_database:
+        self._deconstruct_prefix(prefix)
+
+        self._parent = None
+        self._network = None
+        self._prefix_length = None
+        self._namespace = None
+
+        if self.pk:
             self._network = self.network
             self._prefix_length = self.prefix_length
             self._namespace = self.namespace
-        self._deconstruct_prefix(prefix)
 
     def __str__(self):
         return str(self.prefix)
@@ -630,11 +635,10 @@ class Prefix(PrimaryModel):
         return None
 
     def clean(self):
-        super().clean()
-
         if self.prefix:
             # self.parent depends on self.prefix having a value
             self.parent = self.get_parent()
+        super().clean()
 
     def save(self, *args, **kwargs):
         if isinstance(self.prefix, netaddr.IPNetwork):
@@ -675,6 +679,10 @@ class Prefix(PrimaryModel):
         #     )
         #     raise ValidationError({"__all__": err_msg})
 
+        # cache the value of present_in_database; because after `super().save()`
+        # `self.present_in_database` would always return True`
+        present_in_database = self.present_in_database
+
         with transaction.atomic():
             super().save(*args, **kwargs)
             if self._location is not None:
@@ -682,10 +690,10 @@ class Prefix(PrimaryModel):
 
         # Only reparent subnets and ips if any of these fields has been updated.
         if (
-            not self.present_in_database
-            or self._network is not self.network
-            or self._namespace is not self.namespace
-            or self._prefix_length is not self.prefix_length
+            not present_in_database
+            or self._network != self.network
+            or self._namespace != self.namespace
+            or self._prefix_length != self.prefix_length
         ):
             # Determine the subnets and reparent them to this prefix.
             self.reparent_subnets()
