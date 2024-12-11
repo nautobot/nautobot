@@ -532,17 +532,30 @@ class Prefix(PrimaryModel):
         self._location = kwargs.pop("location", None)
         super().__init__(*args, **kwargs)
 
-        self._deconstruct_prefix(prefix)
-
+        # Initialize cached fields
         self._parent = None
         self._network = None
         self._prefix_length = None
-        self._namespace = None
+        self._namespace_id = None
 
-        if self.pk:
-            self._network = self.network
-            self._prefix_length = self.prefix_length
-            self._namespace = self.namespace
+        self._deconstruct_prefix(prefix)
+
+    @staticmethod
+    def _extract_field_value(field_name, field_names, values):
+        for current_field, field_value in zip(field_names, values):
+            if field_name == current_field:
+                return field_value
+        return None
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        # These cached values are used to detect changes during save,
+        # avoiding unnecessary re-parenting of subnets and IPs if these fields have not been updated.
+        instance._network = cls._extract_field_value("network", field_names, values)
+        instance._prefix_length = cls._extract_field_value("prefix_length", field_names, values)
+        instance._namespace_id = cls._extract_field_value("namespace_id", field_names, values)
+        return instance
 
     def __str__(self):
         return str(self.prefix)
@@ -692,7 +705,7 @@ class Prefix(PrimaryModel):
         if (
             not present_in_database
             or self._network != self.network
-            or self._namespace != self.namespace
+            or self._namespace_id != self.namespace_id
             or self._prefix_length != self.prefix_length
         ):
             # Determine the subnets and reparent them to this prefix.
