@@ -1,1 +1,0 @@
-Enhanced the REST API to generally make it possible to create objects with known ids on request.
