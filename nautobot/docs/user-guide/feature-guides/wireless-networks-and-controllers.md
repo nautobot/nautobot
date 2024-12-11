@@ -43,7 +43,7 @@ To create a Wireless Controller:
 
 ![Add Wireless Controller](images/wireless/wireless-controller-add.png)
 
-Complete the required fields for the Wireless Controller:
+Fill in the required fields for the Wireless Controller:
 
 1. Enter the Controller name.
 2. Select the Controller status.
