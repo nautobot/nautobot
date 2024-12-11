@@ -275,6 +275,7 @@ class ContactAssociationSerializer(NautobotModelSerializer):
 
 
 class ContentTypeSerializer(BaseModelSerializer):
+    id = serializers.IntegerField(read_only=True)
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:contenttype-detail")
     display = serializers.SerializerMethodField()
 

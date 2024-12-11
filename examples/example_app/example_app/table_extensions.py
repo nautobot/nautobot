@@ -70,7 +70,22 @@ class DeviceTableExtension(TableExtension):
         return queryset.select_related("device_type__manufacturer")
 
 
+class IPAddressTableExtension(TableExtension):
+    model = "ipam.ipaddress"
+    suffix = "DetailTable"
+
+    table_columns = {
+        "example_app_mask_length": tables.Column(
+            verbose_name="Mask Length",
+            accessor="mask_length",
+        ),
+    }
+    remove_from_default_columns = ["tenant"]
+    add_to_default_columns = ["example_app_mask_length"]
+
+
 table_extensions = [
     CircuitTableExtension,
     DeviceTableExtension,
+    IPAddressTableExtension,
 ]
