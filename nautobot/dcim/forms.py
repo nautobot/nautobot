@@ -2127,6 +2127,8 @@ class DeviceBulkEditForm(
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(), required=False, query_params={"location": "$location"}
     )
+    cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), required=False)
+    comments = CommentField(widget=SmallTextarea, label="Comments")
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
     serial = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, label="Serial Number")
@@ -2150,6 +2152,8 @@ class DeviceBulkEditForm(
             "position",
             "face",
             "rack_group",
+            "cluster",
+            "comments",
             "secrets_group",
             "device_redundancy_group",
             "device_redundancy_group_priority",
