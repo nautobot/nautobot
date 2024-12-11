@@ -683,9 +683,9 @@ class Prefix(PrimaryModel):
         # Only reparent subnets and ips if any of these fields has been updated.
         if (
             not self.present_in_database
-            or self._network is not self.network
-            or self._namespace is not self.namespace
-            or self._prefix_length is not self.prefix_length
+            or self._network != self.network
+            or self._namespace != self.namespace
+            or self._prefix_length != self.prefix_length
         ):
             # Determine the subnets and reparent them to this prefix.
             self.reparent_subnets()
