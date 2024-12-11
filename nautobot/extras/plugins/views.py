@@ -29,6 +29,17 @@ def load_marketplace_data():
     return marketplace_data
 
 
+def get_app_description(package_name, app_configs, marketplace_data):
+    """If the given package_name is in the marketplace_data, use its headline there; else read from app_configs."""
+    for marketplace_app in marketplace_data["apps"]:
+        if marketplace_app["package_name"] == package_name and marketplace_app["headline"]:
+            return marketplace_app["headline"]
+    for app_config in app_configs:
+        if app_config.name == package_name:
+            return app_config.description
+    return ""
+
+
 class InstalledAppsView(GenericView):
     """
     View for listing all installed Apps.
@@ -37,8 +48,10 @@ class InstalledAppsView(GenericView):
     table = InstalledAppsTable
 
     def get(self, request):
+        marketplace_data = load_marketplace_data()
+        app_configs = apps.get_app_configs()
         data = []
-        for app in apps.get_app_configs():
+        for app in app_configs:
             if app.name in settings.PLUGINS:
                 try:
                     reverse(app.home_view_name)
@@ -62,7 +75,7 @@ class InstalledAppsView(GenericView):
                         "app_label": app.label,
                         "author": app.author,
                         "author_email": app.author_email,
-                        "description": app.description,
+                        "description": get_app_description(app.name, app_configs, marketplace_data),
                         "version": app.version,
                         "actions": {
                             "home": home_url,
@@ -79,7 +92,6 @@ class InstalledAppsView(GenericView):
         }
         RequestConfig(request, paginate).configure(table)
 
-        marketplace_data = load_marketplace_data()
         app_icons = {app["package_name"]: app.get("icon") for app in marketplace_data["apps"]}
 
         # Determine user's preferred display
@@ -124,6 +136,7 @@ class InstalledAppDetailView(GenericView):
             "extras/plugin_detail.html",
             {
                 "object": app_config,
+                "description": get_app_description(app_config.name, [app_config], load_marketplace_data()),
             },
         )
 
@@ -139,7 +152,7 @@ class InstalledAppsAPIView(NautobotAPIVersionMixin, APIView):
         return "Installed Apps"
 
     @staticmethod
-    def _get_app_data(app_config):
+    def _get_app_data(app_config, marketplace_data):
         try:
             home_url = reverse(app_config.home_view_name)
         except NoReverseMatch:
@@ -157,7 +170,7 @@ class InstalledAppsAPIView(NautobotAPIVersionMixin, APIView):
             "package": app_config.name,
             "author": app_config.author,
             "author_email": app_config.author_email,
-            "description": app_config.description,
+            "description": get_app_description(app_config.name, [app_config], marketplace_data),
             "version": app_config.version,
             "home_url": home_url,
             "config_url": config_url,
@@ -166,7 +179,8 @@ class InstalledAppsAPIView(NautobotAPIVersionMixin, APIView):
 
     @extend_schema(exclude=True)
     def get(self, request, format=None):  # pylint: disable=redefined-builtin
-        return Response([self._get_app_data(apps.get_app_config(app)) for app in settings.PLUGINS])
+        marketplace_data = load_marketplace_data()
+        return Response([self._get_app_data(apps.get_app_config(app), marketplace_data) for app in settings.PLUGINS])
 
 
 class AppsAPIRootView(AuthenticatedAPIRootView):
@@ -237,11 +251,11 @@ class MarketplaceView(GenericView):
 
         installed_apps = [app for app in apps.get_app_configs() if app.name in settings.PLUGINS]
 
-        # Filter out already installed apps from apps marketplace listing.
-        visible_marketplace_apps = [
-            app
-            for app in marketplace_data["apps"]
-            if all(installed_app.name != app["package_name"] for installed_app in installed_apps)
-        ]
+        # Flag already installed apps
+        for installed_app in installed_apps:
+            for marketplace_app in marketplace_data["apps"]:
+                if installed_app.name == marketplace_app["package_name"]:
+                    marketplace_app["installed"] = True
+                    break
 
-        return render(request, "extras/marketplace.html", {"apps": visible_marketplace_apps})
+        return render(request, "extras/marketplace.html", {"apps": marketplace_data["apps"]})
