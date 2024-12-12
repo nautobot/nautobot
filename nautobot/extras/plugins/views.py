@@ -29,15 +29,12 @@ def load_marketplace_data():
     return marketplace_data
 
 
-def get_app_headline(package_name, app_configs, marketplace_data):
-    """If the given package_name is in the marketplace_data, use its headline there; else read from app_configs."""
+def get_app_headline(package_name, description, marketplace_data):
+    """If the given package_name is in the marketplace_data, use its headline there; else use the given description."""
     for marketplace_app in marketplace_data["apps"]:
         if marketplace_app["package_name"] == package_name and marketplace_app["headline"]:
             return marketplace_app["headline"]
-    for app_config in app_configs:
-        if app_config.name == package_name:
-            return app_config.description
-    return ""
+    return description
 
 
 class InstalledAppsView(GenericView):
@@ -75,7 +72,7 @@ class InstalledAppsView(GenericView):
                         "app_label": app.label,
                         "author": app.author,
                         "author_email": app.author_email,
-                        "description": get_app_headline(app.name, app_configs, marketplace_data),
+                        "description": get_app_headline(app.name, app.description, marketplace_data),
                         "version": app.version,
                         "actions": {
                             "home": home_url,
@@ -136,7 +133,7 @@ class InstalledAppDetailView(GenericView):
             "extras/plugin_detail.html",
             {
                 "object": app_config,
-                "description": get_app_headline(app_config.name, [app_config], load_marketplace_data()),
+                "headline": get_app_headline(app_config.name, app_config.description, load_marketplace_data()),
             },
         )
 
@@ -170,7 +167,7 @@ class InstalledAppsAPIView(NautobotAPIVersionMixin, APIView):
             "package": app_config.name,
             "author": app_config.author,
             "author_email": app_config.author_email,
-            "description": get_app_headline(app_config.name, [app_config], marketplace_data),
+            "description": get_app_headline(app_config.name, app_config.headline, marketplace_data),
             "version": app_config.version,
             "home_url": home_url,
             "config_url": config_url,
