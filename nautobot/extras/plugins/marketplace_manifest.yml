@@ -199,9 +199,9 @@
   "package_name": "nautobot_event_bus"
   "author": "Network to Code"
   "display":
-    "cloud": true
-    "oss": true
-    "enterprise": true
+    "cloud": false
+    "oss": false
+    "enterprise": false
   "availability": "Private"
 - "name": "Firewall Models"
   "use_cases":
