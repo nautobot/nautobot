@@ -242,12 +242,12 @@ KeyValueTablePanel(
     value_transforms={
         "speed": [             # List of functions to apply in order
             humanize_speed,    # Convert 1000000 to "1 Gbps"
-            placeholder        # Show placeholder if empty
+            placeholder,       # Show placeholder if empty
         ],
         "notes": [
             render_markdown,   # Convert markdown to HTML
-            placeholder       # Show placeholder if empty
-        ]
+            placeholder,       # Show placeholder if empty
+        ],
     },
 )
 ```
