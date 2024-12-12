@@ -37,8 +37,9 @@ The Nautobot UI Framework revolutionizes how you create object detail views in y
 1. Create a view that inherits from `NautobotUIViewSet`:
 
 ```python
-from nautobot.apps import views
-from nautobot.apps.ui import ObjectDetailContent, SectionChoices, ObjectFieldsPanel
+from nautobot.apps.ui import ObjectDetailContent, ObjectFieldsPanel, SectionChoices
+from nautobot.apps.views import NautobotUIViewSet
+
 
 class ExampleUIViewSet(views.NautobotUIViewSet):
     queryset = Example.objects.all()
@@ -87,7 +88,8 @@ A `Tab` is one of the major building blocks of your UI. The user can toggle betw
 #### Buttons Example
 
 ```python
-from nautobot.apps.ui import ObjectDetailContent, Button
+from nautobot.apps.ui import Button, ObjectDetailContent
+
 
 object_detail_content = ObjectDetailContent(
         panels=[...],
@@ -123,6 +125,7 @@ The Panel component serves as a base class for creating individual display panel
 ```python
 from nautobot.apps.ui import Panel, SectionChoices
 
+
 Panel(
    weight=100,
    section=SectionChoices.FULL_WIDTH,
@@ -132,6 +135,7 @@ Panel(
 
 ```python
 from nautobot.apps.ui import Panel, SectionChoices
+
 
 Panel(
     weight=200,
@@ -163,6 +167,7 @@ NOTE:
 
 ```python
 from nautobot.apps.ui import ObjectFieldsPanel, SectionChoices
+
 
 ObjectFieldsPanel(
    weight=100,
@@ -213,6 +218,7 @@ panels = ui.ObjectFieldsPanel(
 ```python
 from nautobot.apps.ui import KeyValueTablePanel
 
+
 KeyValueTablePanel(
     weight=100,
     data={
@@ -224,6 +230,7 @@ KeyValueTablePanel(
 
 ```python
 from nautobot.apps.ui import KeyValueTablePanel
+
 
 KeyValueTablePanel(
     weight=100,
@@ -255,6 +262,7 @@ KeyValueTablePanel(
 
 ```python
 from nautobot.apps.ui import GroupedKeyValueTablePanel, SectionChoices
+
 
 GroupedKeyValueTablePanel(
     weight=300,
@@ -296,7 +304,8 @@ GroupedKeyValueTablePanel(
 #### StatsPanel Examples
 
 ```python
-from nautobot.apps.ui import StatsPanel, SectionChoices
+from nautobot.apps.ui import SectionChoices, StatsPanel
+
 
 StatsPanel(
     weight=700,
@@ -347,6 +356,7 @@ StatsPanel(
 ```python
 from nautobot.apps.ui import ObjectTextPanel, SectionChoices
 
+
 ObjectTextPanel(
    weight=500,
    section=SectionChoices.FULL_WIDTH,
@@ -366,7 +376,8 @@ ObjectTextPanel(
 #### TextPanel Examples
 
 ```python
-from nautobot.apps.ui import TextPanel, SectionChoices
+from nautobot.apps.ui import SectionChoices, TextPanel
+
 
 TextPanel(
    weight=600,
@@ -398,6 +409,7 @@ Note:
 
 ```python
 from nautobot.apps.ui import DataTablePanel
+
 
 DataTablePanel(
    weight=100,
@@ -458,6 +470,7 @@ It integrates with `django_tables2` and provides extensive customization options
 ```python
 from nautobot.apps.ui import ObjectsTablePanel, SectionChoices
 
+
 ObjectsTablePanel(
     weight=100,
     section=SectionChoices.RIGHT_HALF,
@@ -470,6 +483,7 @@ ObjectsTablePanel(
 
 ```python
 from nautobot.apps.ui import ObjectsTablePanel, SectionChoices
+
 
 ObjectsTablePanel(
     weight=200,
@@ -571,14 +585,16 @@ class DeviceView(generic.ObjectView):
 ## Complete Example
 
 ```python title="views.py"
+from nautobot.apps import views
 from nautobot.apps.ui import (
-    SectionChoices,
-    ObjectFieldsPanel,
     ObjectDetailContent,
+    ObjectFieldsPanel,
+    SectionChoices,
     StatsPanel,
 )
-from nautobot.apps import views
+
 from your_app.models import Location, Device, Circuit
+
 
 class LocationUIViewSet(views.NautobotUIViewSet):
     queryset = Location.objects.all()
