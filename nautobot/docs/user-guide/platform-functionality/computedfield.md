@@ -75,7 +75,7 @@ When explicitly requested as such, computed field data will be included in the `
 
 ```json
 {
-    "id": 9cd6092d-a4df-4708-94a5-349e845e2f79,
+    "id": "9cd6092d-a4df-4708-94a5-349e845e2f79",
     "url": "http://localhost:8080/api/dcim/locations/9cd6092d-a4df-4708-94a5-349e845e2f79/",
     "name": "Raleigh",
     ...
