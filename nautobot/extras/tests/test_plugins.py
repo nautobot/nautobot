@@ -21,6 +21,7 @@ from nautobot.extras.models import CustomField, Relationship, RelationshipAssoci
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
+from nautobot.extras.plugins.views import get_app_headline, load_marketplace_data
 from nautobot.extras.registry import DatasourceContent, registry
 from nautobot.ipam.models import IPAddress, Namespace, Prefix
 from nautobot.tenancy.filters import TenantFilterSet
@@ -314,6 +315,19 @@ class AppListViewTest(TestCase):
 
         response_body = extract_page_body(response.content.decode(response.charset)).lower()
         self.assertIn("example app", response_body, msg=response_body)
+
+    def test_get_app_headline(self):
+        marketplace_data = load_marketplace_data()
+        # For apps in the marketplace, if they have a headline in the data, use that
+        for app in marketplace_data["apps"]:
+            headline = get_app_headline(app["package_name"], "Hello world!", marketplace_data)
+            if app["headline"]:
+                self.assertEqual(headline, app["headline"])
+            else:
+                self.assertEqual(headline, "Hello world!")
+        # If an app isn't in the marketplace, use the provided headline
+        headline = get_app_headline("no_such_app", "Hello world!", marketplace_data)
+        self.assertEqual(headline, "Hello world!")
 
 
 class PluginDetailViewTest(TestCase):
