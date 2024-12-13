@@ -205,6 +205,12 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         write_only=True,
     )
 
+    def get_field_names(self, declared_fields, info):
+        """Add reverse M2M for VRF's to the fields for this serializer."""
+        field_names = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(field_names, "vrfs")
+        return field_names
+
     class Meta:
         model = Prefix
         fields = "__all__"
@@ -213,6 +219,7 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "namespace": {"default": get_default_namespace},
             "prefix_length": {"read_only": True},
             "locations": {"read_only": True},
+            "vrfs": {"read_only": True},
         }
 
 
