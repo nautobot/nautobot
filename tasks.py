@@ -173,7 +173,7 @@ def docker_compose(context, command, **kwargs):
     CURRENT_GIT_BASE_BRANCH = get_current_git_base_branch(context)
     compose_command_tokens = [
         "docker compose",
-        f'--project-name "{context.nautobot.project_name}-{CURRENT_GIT_BASE_BRANCH}"',
+        f'--project-name "{context.nautobot.project_name}-{CURRENT_GIT_BASE_BRANCH.replace(".", "_")}"',
         f'--project-directory "{context.nautobot.compose_dir}"',
     ]
 

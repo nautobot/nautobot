@@ -6,7 +6,6 @@ services:
     build:
       args:
         PYTHON_VER: "${PYTHON_VER}"
-        BASE_BRANCH: "${BASE_BRANCH}"
       context: ../
       dockerfile: docker/Dockerfile
       target: dev
