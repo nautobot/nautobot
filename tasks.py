@@ -228,7 +228,7 @@ def run_command(context, command, service="nautobot", **kwargs):
         "parent": "If specified with --create, use the given parent branch as baseline instead of the current branch",
     }
 )
-def branch(context, *, branch=None, create=False, parent=None):
+def branch(context, *, branch=None, create=False, parent=None):  # pylint: disable=redefined-outer-name
     """Switch to a different Git branch, creating it if requested."""
     if not branch:
         raise Exit("No branch specified, use --branch option")
@@ -390,7 +390,7 @@ def get_dependency_version(dependency_name):
         "datestamp": "Datestamp used to tag the develop image.",
     }
 )
-def docker_push(context, branch, commit="", datestamp=""):
+def docker_push(context, branch, commit="", datestamp=""):  # pylint: disable=redefined-outer-name
     """Tags and pushes docker images to the appropriate repos, intended for release use only.
 
     Before running this command, you **must** be on the `main` branch and **must** have run
