@@ -331,10 +331,13 @@ In many (but not necessarily all) cases, as a convenience for users, the REST AP
 !!! warning "Many-to-many at scale"
     When Nautobot contains a substantial number of related records, the inclusion of many-to-many related objects in the REST API may impose a significant amount of performance overhead in terms of processing time and memory usage. For example, if you have many VRFs, each of which is associated to 1000 Prefixes, listing VRFs in the REST API would also by default retrieve, serialize, and list the 1000 Prefix records _per VRF retrieved_.
 
-+++ 2.4.0 "The `exclude_m2m` query parameter"
-    To address the aforementioned performance/scalability concern, Nautobot 2.4.0 introduced support for the REST API query parameter `exclude_m2m`. When this parameter is specified (for example `GET /api/ipam/vrfs/?exclude_m2m=true`), many-to-many related objects will **not** be included in the REST API response, and in most cases will not even be retrieved from the database.
+To address the aforementioned performance/scalability concern, Nautobot supports the REST API query parameter `exclude_m2m`. When this parameter is specified (for example `GET /api/ipam/vrfs/?exclude_m2m=true`), many-to-many related objects will **not** be included in the REST API response, and in most cases will not even be retrieved from the database.
 
-    In a future Nautobot major release, a change in the REST API may make `exclude_m2m=true` the default behavior.
++++ 2.4.0 "Added support for the `exclude_m2m` query parameter"
+
+In a future Nautobot major release, a change in the REST API may make `exclude_m2m=true` the default behavior.
+
+See also [Filtering Included Fields](filtering.md#filtering-included-fields).
 
 ## Pagination
 
@@ -819,12 +822,16 @@ GET /api/dcim/locations/f472bb77-7f56-4e79-ac25-2dc73eb63924/?include=relationsh
 
 In the example above we can see that a single VRF, `green`, is a destination for the `site-to-vrf` Relationship from this Site, while there are currently no VRFs associated as sources for the `vrfs-to-locations` Relationship to this Site.
 
+See also [Filtering Included Fields](filtering.md#filtering-included-fields).
+
 ### Including Config Contexts
 
 When retrieving Devices and Virtual Machines via the REST API, it is possible to also retrive the rendered [configuration context data](../../core-data-model/extras/configcontext.md) for each such object if desired. Because rendering this data can be time consuming, it is _not_ included in the REST API responses by default. If you wish to include config context data in the response, you must opt in by specifying the query parameter `include=config_context` as a part of your request.
 
 +/- 2.0.0
     In Nautobot 1.x, the rendered configuration context was included by default in the REST API response unless specifically excluded with the query parameter `exclude=config_context`. This behavior has been reversed in Nautobot 2.0 and the `exclude` query parameter is no longer supported.
+
+See also [Filtering Included Fields](filtering.md#filtering-included-fields).
 
 ### Creating a New Object
 
