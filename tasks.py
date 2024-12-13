@@ -1,6 +1,6 @@
 """Tasks for use with Invoke.
 
-(c) 2020-2021 Network To Code
+(c) 2020-2024 Network To Code
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -15,7 +15,7 @@ limitations under the License.
 import os
 import re
 
-from invoke import Collection, task as invoke_task
+from invoke import Collection, Context, task as invoke_task
 from invoke.exceptions import Exit
 
 try:
@@ -59,13 +59,36 @@ def is_truthy(arg):
         raise ValueError(f"Invalid truthy value: `{arg}`")
 
 
+GIT_BASE_BRANCHES = ["main", "develop", "next", "ltm-1.6"]
+
+
+def get_current_git_base_branch(context):
+    current_branch = context.run("git rev-parse --abbrev-ref HEAD", hide=True).stdout.strip()
+    if current_branch in GIT_BASE_BRANCHES:
+        return current_branch
+    # Else, find which of the BASE_BRANCHES is our most immediate ancestor:
+    # See https://stackoverflow.com/a/78787587 for the inspiration here
+    command = (
+        r"git show-branch "  # show commit ancestry graph of all local branches
+        r"| grep '\*' "  # filter to commits that belong to the current branch (marked by an asterisk)
+        rf"| grep -v '{current_branch}' "  # exclude commits that are exclusive to the current branch
+        r"| sed 's/.*\[\(.*\)\].*/\1/' "  # get branch name and commit number from each line, e.g. "develop~164^2"
+        r"| sed 's/[\^~].*//' "  # get branch name alone from each line, e.g "develop"
+        r"| grep -m 1 '^\(" + r"\|".join(GIT_BASE_BRANCHES) + r"\)$'"  # find first match in any base branch
+    )
+    return context.run(command, pty=True, hide=True).stdout.strip()
+
+
+CURRENT_GIT_BASE_BRANCH = get_current_git_base_branch(Context())
+
+
 # Use pyinvoke configuration for default values, see http://docs.pyinvoke.org/en/stable/concepts/configuration.html
 # Variables may be overwritten in invoke.yml or by the environment variables INVOKE_NAUTOBOT_xxx
 namespace = Collection("nautobot")
 namespace.configure(
     {
         "nautobot": {
-            "project_name": "nautobot",
+            "project_name": f"nautobot-{CURRENT_GIT_BASE_BRANCH}",
             "python_ver": "3.12",
             "local": False,
             "compose_dir": os.path.join(BASE_DIR, "development/"),
@@ -170,7 +193,7 @@ def docker_compose(context, command, **kwargs):
     print(f'Running docker compose command "{command}"')
     compose_command = " ".join(compose_command_tokens)
     env = kwargs.pop("env", {})
-    env.update({"PYTHON_VER": context.nautobot.python_ver})
+    env.update({"PYTHON_VER": context.nautobot.python_ver, "BASE_BRANCH": CURRENT_GIT_BASE_BRANCH})
     if "hide" not in kwargs:
         print_command(compose_command, env=env)
     return context.run(compose_command, env=env, **kwargs)
@@ -195,6 +218,40 @@ def run_command(context, command, service="nautobot", **kwargs):
             compose_command = f"run {'--user=root ' if root else ''}--rm --entrypoint '{command}' {service}"
 
         return docker_compose(context, compose_command, pty=True, **kwargs)
+
+
+# ------------------------------------------------------------------------------
+# ENVIRONMENT
+# ------------------------------------------------------------------------------
+@task(
+    help={
+        "branch": "Branch name to switch to",
+        "create": "If specified, create the branch as a new branch",
+        "parent": "If specified with --create, use the given parent branch as baseline instead of the current branch",
+    }
+)
+def branch(context, *, branch=None, create=False, parent=None):
+    """Switch to a different Git branch, creating it if requested."""
+    if not branch:
+        raise Exit("No branch specified, use --branch option")
+
+    if not context.nautobot.local:
+        # Stop current containers as the new branch may have a different project name
+        # TODO: could we detect whether the new branch has the same base branch as current and skip this if so?
+        stop(context)
+
+    if create:
+        if parent is not None:
+            command = f"git checkout '{parent}' && git pull"
+            print_command(command)
+            context.run(command, pty=True)
+        command = f"git checkout -b '{branch}'"
+        print_command(command)
+        context.run(command, pty=True)
+    else:
+        command = f"git checkout '{branch}'"
+        print_command(command)
+        context.run(command, pty=True)
 
 
 # ------------------------------------------------------------------------------
