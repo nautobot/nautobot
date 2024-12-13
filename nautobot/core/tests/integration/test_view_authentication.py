@@ -31,6 +31,7 @@ class AuthenticationEnforcedTestCase(TestCase):
                     "/health/",
                     "/login/",
                     "/media-failure/",
+                    "/robots.txt",
                     "/template.css",
                 ]:
                     self.assertHttpStatus(response, 200, msg=url)
