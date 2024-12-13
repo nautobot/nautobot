@@ -15,7 +15,7 @@ limitations under the License.
 import os
 import re
 
-from invoke import Collection, Context, task as invoke_task
+from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit
 
 try:
@@ -79,16 +79,13 @@ def get_current_git_base_branch(context):
     return context.run(command, pty=True, hide=True).stdout.strip()
 
 
-CURRENT_GIT_BASE_BRANCH = get_current_git_base_branch(Context())
-
-
 # Use pyinvoke configuration for default values, see http://docs.pyinvoke.org/en/stable/concepts/configuration.html
 # Variables may be overwritten in invoke.yml or by the environment variables INVOKE_NAUTOBOT_xxx
 namespace = Collection("nautobot")
 namespace.configure(
     {
         "nautobot": {
-            "project_name": f"nautobot-{CURRENT_GIT_BASE_BRANCH}",
+            "project_name": "nautobot",  # extended automatically by `get_current_git_base_branch`, see docker_compose()
             "python_ver": "3.12",
             "local": False,
             "compose_dir": os.path.join(BASE_DIR, "development/"),
@@ -173,9 +170,10 @@ def docker_compose(context, command, **kwargs):
         command (str): Command string to append to the "docker compose ..." command, such as "build", "up", etc.
         **kwargs: Passed through to the context.run() call.
     """
+    CURRENT_GIT_BASE_BRANCH = get_current_git_base_branch(context)
     compose_command_tokens = [
         "docker compose",
-        f'--project-name "{context.nautobot.project_name}"',
+        f'--project-name "{context.nautobot.project_name}-{CURRENT_GIT_BASE_BRANCH}"',
         f'--project-directory "{context.nautobot.compose_dir}"',
     ]
 
