@@ -71,12 +71,9 @@ Fill in the required fields for the Device Group:
 2. Enter the name of the Device Group.
 3. Choose the devices to include in the group.
 4. Select **Wireless** from the Capabilities dropdown.
-
-To connect the Wireless Networks:
-
-1. Select the Wireless Network.
-2. (Optional) Filter VLANs by Location or VLAN Group, then select a VLAN.
-3. Click **Create** or **Create and Add Another** to save.
+5. Select the Wireless Network.
+6. (Optional) Filter VLANs by Location or VLAN Group, then select a VLAN.
+7. Click **Create** or **Create and Add Another** to save.
 
 ![Create Device Group Form](images/wireless/device-group-create-1.png)
 ![Create Device Group Form Add Networks](images/wireless/device-group-create-2.png)
