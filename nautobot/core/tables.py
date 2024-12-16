@@ -145,6 +145,7 @@ class BaseTable(django_tables2.Table):
         else:
             if user is not None and not isinstance(user, AnonymousUser):
                 columns = user.get_config(f"tables.{self.__class__.__name__}.columns")
+        self.sequence = []
         if columns:
             for name, column in self.base_columns.items():
                 if name in columns and name not in self.exclude:
@@ -152,6 +153,10 @@ class BaseTable(django_tables2.Table):
                 else:
                     self.columns.hide(name)
             self.sequence = [c for c in columns if c in self.base_columns]
+        else:
+            for c in self.base_columns:
+                if c not in self.exclude:
+                    self.sequence.append(c)
 
         # Always include PK and actions columns, if defined on the table, as first and last columns respectively
         if pk:
