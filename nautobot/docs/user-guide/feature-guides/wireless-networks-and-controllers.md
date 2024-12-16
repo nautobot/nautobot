@@ -2,8 +2,6 @@
 
 This guide demonstrates how to set up Wireless Networks and Controllers to manage Wireless Access Points via a Controller in a Data Center. In this example, we use **Central Mode**, where traffic from the Access Points is tunneled through the Controller.
 
-![Central Mode Diagram](images/wireless/central-mode.png)
-
 ## Optional Preparation
 
 Before configuring Wireless Networks, you can optionally set up the following features to enrich the data:
