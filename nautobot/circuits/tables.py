@@ -146,7 +146,7 @@ class CircuitTable(StatusTableMixin, BaseTable):
             "pk",
             "cid",
             "provider",
-            "type",
+            "circuit_type",
             "status",
             "tenant",
             "circuit_termination_a",
