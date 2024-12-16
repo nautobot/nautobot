@@ -800,6 +800,13 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         IPAddress.objects.create(address="10.0.0.4/24", status=self.status, namespace=self.namespace)
         self.assertEqual(parent_prefix.get_first_available_ip(), "10.0.0.5/24")
 
+    def test_get_first_available_ip_calculate_child_ips(self):
+        parent_prefix = Prefix.objects.create(prefix="10.0.3.0/29", status=self.status, namespace=self.namespace)
+        Prefix.objects.create(prefix="10.0.3.0/30", status=self.status, namespace=self.namespace)
+        IPAddress(address="10.0.3.1/30", status=self.status, namespace=self.namespace).save()
+
+        self.assertEqual(parent_prefix.get_first_available_ip(), "10.0.3.2/29")
+
     def test_get_utilization(self):
         # Container Prefix
         prefix = Prefix.objects.create(
