@@ -622,7 +622,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
 
         # Retrieve all available IPs
         response = self.client.get(url, **self.header)
-        self.assertEqual(len(response.data), 7)  # 8 because prefix.type = pool and one children IP
+        self.assertEqual(len(response.data), 7)  # 7 because prefix.type = pool got 8 IP's minus one children IP
 
     def test_create_single_available_ip_calculate_child_ips(self):
         """
