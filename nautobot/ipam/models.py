@@ -918,7 +918,7 @@ class Prefix(PrimaryModel):
         Return all available IPs within this prefix as an IPSet.
         """
         prefix = netaddr.IPSet(self.prefix)
-        child_ips = netaddr.IPSet([ip.address.ip for ip in self.ip_addresses.all()])
+        child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_all_ips()])
         available_ips = prefix - child_ips
 
         # IPv6, pool, or IPv4 /31-32 sets are fully usable
