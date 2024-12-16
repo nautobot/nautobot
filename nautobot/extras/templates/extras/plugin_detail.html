@@ -44,6 +44,12 @@
                             <td>Package Name</td>
                             <td><code>{{ object.name }}</code></td>
                         </tr>
+                        {% if headline and headline != object.description %}
+                            <tr>
+                                <td>Headline</td>
+                                <td>{{ headline }}</td>
+                            </tr>
+                        {% endif %}
                         <tr>
                             <td>Description</td>
                             <td>{{ object.description }}</td>
