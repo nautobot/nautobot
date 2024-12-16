@@ -1,0 +1,1 @@
+Fixed `circuit_type` column not included correctly in CircuitTable default columns.
