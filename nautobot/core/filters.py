@@ -620,6 +620,12 @@ class BaseFilterSet(django_filters.FilterSet):
         # Choose the lookup expression map based on the filter type
         if isinstance(
             existing_filter,
+            MultiValueUUIDFilter
+        ):
+            lookup_map = constants.FILTER_NEGATION_LOOKUP_MAP
+
+        elif isinstance(
+            existing_filter,
             (
                 MultiValueDateFilter,
                 MultiValueDateTimeFilter,
