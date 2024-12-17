@@ -55,33 +55,13 @@ def is_truthy(arg):
         raise ValueError(f"Invalid truthy value: `{arg}`")
 
 
-GIT_BASE_BRANCHES = ["main", "develop", "next", "ltm-1.6"]
-
-
-def get_current_git_base_branch(context):
-    current_branch = context.run("git rev-parse --abbrev-ref HEAD", hide=True).stdout.strip()
-    if current_branch in GIT_BASE_BRANCHES:
-        return current_branch
-    # Else, find which of the BASE_BRANCHES is our most immediate ancestor:
-    # See https://stackoverflow.com/a/78787587 for the inspiration here
-    command = (
-        r"git show-branch "  # show commit ancestry graph of all local branches
-        r"| grep '\*' "  # filter to commits that belong to the current branch (marked by an asterisk)
-        rf"| grep -v '{current_branch}' "  # exclude commits that are exclusive to the current branch
-        r"| sed 's/.*\[\(.*\)\].*/\1/' "  # get branch name and commit number from each line, e.g. "develop~164^2"
-        r"| sed 's/[\^~].*//' "  # get branch name alone from each line, e.g "develop"
-        r"| grep -m 1 '^\(" + r"\|".join(GIT_BASE_BRANCHES) + r"\)$'"  # find first match in any base branch
-    )
-    return context.run(command, pty=True, hide=True).stdout.strip()
-
-
 # Use pyinvoke configuration for default values, see http://docs.pyinvoke.org/en/stable/concepts/configuration.html
 # Variables may be overwritten in invoke.yml or by the environment variables INVOKE_NAUTOBOT_xxx
 namespace = Collection("nautobot")
 namespace.configure(
     {
         "nautobot": {
-            "project_name": "nautobot",  # extended automatically by `get_current_git_base_branch`, see docker_compose()
+            "project_name": "nautobot",  # extended automatically with Nautobot major/minor ver, see docker_compose()
             "python_ver": "3.8",
             "local": False,
             "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
@@ -158,6 +138,11 @@ def print_command(command, env=None):
         print(f"{formatted_env}{formatted_command}")
 
 
+def get_nautobot_major_minor_version(context):
+    command = r"""grep '^version = ' pyproject.toml | sed -E 's/version = "([0-9]+\.[0-9]+).*"/\1/'"""
+    return context.run(command, hide=True).stdout.strip()
+
+
 def docker_compose(context, command, **kwargs):
     """Helper function for running a specific docker compose command with all appropriate parameters and environment.
 
@@ -166,10 +151,10 @@ def docker_compose(context, command, **kwargs):
         command (str): Command string to append to the "docker compose ..." command, such as "build", "up", etc.
         **kwargs: Passed through to the context.run() call.
     """
-    CURRENT_GIT_BASE_BRANCH = get_current_git_base_branch(context)
+    NAUTOBOT_VER = get_nautobot_major_minor_version(context)
     compose_command_tokens = [
         "docker compose",
-        f'--project-name "{context.nautobot.project_name}-{CURRENT_GIT_BASE_BRANCH.replace(".", "_")}"',
+        f'--project-name "{context.nautobot.project_name}-{NAUTOBOT_VER.replace(".", "-")}"',
         f'--project-directory "{context.nautobot.compose_dir}"',
     ]
 
@@ -187,7 +172,7 @@ def docker_compose(context, command, **kwargs):
     print(f'Running docker compose command "{command}"')
     compose_command = " ".join(compose_command_tokens)
     env = kwargs.pop("env", {})
-    env.update({"PYTHON_VER": context.nautobot.python_ver, "BASE_BRANCH": CURRENT_GIT_BASE_BRANCH})
+    env.update({"PYTHON_VER": context.nautobot.python_ver, "NAUTOBOT_VER": NAUTOBOT_VER})
     if "hide" not in kwargs:
         print_command(compose_command, env=env)
     return context.run(compose_command, env=env, **kwargs)
