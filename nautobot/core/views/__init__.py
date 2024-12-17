@@ -17,6 +17,7 @@ from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
 from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.generic import TemplateView, View
+from django.views.static import serve
 from packaging import version
 from graphene_django.views import GraphQLView
 from prometheus_client import multiprocess
@@ -26,6 +27,7 @@ from prometheus_client.registry import Collector
 from nautobot.core.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
+from nautobot.core.views.generic import GenericView
 from nautobot.extras.models import GraphQLQuery, FileProxy
 from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
@@ -108,6 +110,15 @@ class HomeView(AccessMixin, TemplateView):
                                 )
 
         return self.render_to_response(context)
+
+
+class MediaView(GenericView):
+    """
+    Wrap Django's serve() view to enforce LOGIN_REQUIRED for static media.
+    """
+
+    def get(self, request, path):
+        return serve(request, path, document_root=settings.MEDIA_ROOT)
 
 
 class SearchView(AccessMixin, View):

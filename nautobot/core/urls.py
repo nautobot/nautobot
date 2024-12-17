@@ -1,11 +1,11 @@
 from django.conf import settings
 from django.conf.urls import include, url
 from django.urls import path
-from django.views.static import serve
 
 from nautobot.core.views import (
     CustomGraphQLView,
     HomeView,
+    MediaView,
     StaticMediaFailureView,
     SearchView,
     nautobot_metrics_view,
@@ -38,8 +38,8 @@ urlpatterns = [
     path("api/", include("nautobot.core.api.urls")),
     # GraphQL
     path("graphql/", CustomGraphQLView.as_view(graphiql=True), name="graphql"),
-    # Serving static media in Django
-    path("media/<path:path>", serve, {"document_root": settings.MEDIA_ROOT}),
+    # Serving static media in Django (TODO: should be DEBUG mode only - "This view is NOT hardened for production use")
+    path("media/<path:path>", MediaView.as_view(), name="media"),
     # Admin
     path("admin/", admin_site.urls),
     path("admin/background-tasks/", include("django_rq.urls")),
