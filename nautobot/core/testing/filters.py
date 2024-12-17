@@ -91,16 +91,17 @@ class FilterTestCases:
             """Verify that the filterset supports filtering by id with only lookup `__n`."""
             with self.subTest("Assert `id`"):
                 params = {"id": self.queryset.values_list("pk", flat=True)[:2]}
+                expected_queryset = self.queryset.filter(id__in=params["id"])
                 filterset = self.filterset(params, self.queryset)
                 self.assertTrue(filterset.is_valid())
-                self.assertEqual(filterset.qs.count(), 2)
+                self.assertQuerysetEqualAndNotEmpty(filterset.qs.order_by("id"), expected_queryset.order_by("id"))
 
             with self.subTest("Assert negate lookup"):
                 params = {"id__n": self.queryset.values_list("pk", flat=True)[:2]}
                 expected_queryset = self.queryset.exclude(id__in=params["id__n"])
                 filterset = self.filterset(params, self.queryset)
                 self.assertTrue(filterset.is_valid())
-                self.assertQuerysetEqualAndNotEmpty(filterset.qs, expected_queryset)
+                self.assertQuerysetEqualAndNotEmpty(filterset.qs.order_by("id"), expected_queryset.order_by("id"))
 
             with self.subTest("Assert invalid lookup"):
                 params = {"id__in": self.queryset.values_list("pk", flat=True)[:2]}
