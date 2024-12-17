@@ -172,7 +172,7 @@ data:
                       key: REDIS_PASSWORD
                       name: dev-env
               name: nautobot-job
-              image: local/nautobot-dev:local-py3.11
+              image: local/nautobot-dev:local-2.4-py3.12
               ports:
                 - containerPort: 8080
                   protocol: TCP
