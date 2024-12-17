@@ -6,6 +6,7 @@ import sys
 
 from django.conf import settings
 import structlog
+import yaml
 
 ConstanceConfigItem = namedtuple("ConstanceConfigItem", ["default", "help_text", "field_type"], defaults=[str])
 
@@ -185,3 +186,18 @@ def setup_structlog_logging(
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
+
+
+def _env_var_loader(loader, node):
+    """
+    pyyaml constructor to load environment variable data
+    """
+    env_var = loader.construct_scalar(node)
+    return os.getenv(env_var)
+
+
+def load_yaml_config(config_file):
+    yaml.SafeLoader.add_constructor("!env_var", _env_var_loader)
+
+    with open(config_file, "r") as file:
+        return yaml.load(file, Loader=yaml.SafeLoader)
