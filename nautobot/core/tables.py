@@ -145,7 +145,6 @@ class BaseTable(django_tables2.Table):
         else:
             if user is not None and not isinstance(user, AnonymousUser):
                 columns = user.get_config(f"tables.{self.__class__.__name__}.columns")
-        self.sequence = []
         if columns:
             for name, column in self.base_columns.items():
                 if name in columns and name not in self.exclude:
@@ -153,10 +152,6 @@ class BaseTable(django_tables2.Table):
                 else:
                     self.columns.hide(name)
             self.sequence = [c for c in columns if c in self.base_columns]
-        else:
-            for c in self.base_columns:
-                if c not in self.exclude:
-                    self.sequence.append(c)
 
         # Always include PK and actions columns, if defined on the table, as first and last columns respectively
         if pk:
@@ -278,7 +273,9 @@ class BaseTable(django_tables2.Table):
     @property
     def configurable_columns(self):
         selected_columns = [
-            (name, self.columns[name].verbose_name) for name in self.sequence if name not in ["pk", "actions"]
+            (name, column.verbose_name)
+            for name, column in self.columns.items()
+            if name in self.sequence and name not in ["pk", "actions"]
         ]
         available_columns = [
             (name, column.verbose_name)
@@ -289,7 +286,7 @@ class BaseTable(django_tables2.Table):
 
     @property
     def visible_columns(self):
-        return [name for name in self.sequence if self.columns[name].visible and name not in self.exclude]
+        return [name for name, column in self.columns.items() if column.visible and name not in self.exclude]
 
     @property
     def order_by(self):
