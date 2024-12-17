@@ -3240,7 +3240,9 @@ class InterfaceBulkEditForm(
             else:
                 self.fields["untagged_vlan"].widget.add_query_param("locations", "null")
                 if locations.count() > 1:
-                    self.fields["untagged_vlans"].widget.add_query_param("locations", list(locations.values_list("pk", flat=True)))
+                    self.fields["untagged_vlans"].widget.add_query_param(
+                        "locations", list(locations.values_list("pk", flat=True))
+                    )
 
         # Restrict parent/bridge/LAG interface assignment by device (or VC master)
         if device_count == 1:
