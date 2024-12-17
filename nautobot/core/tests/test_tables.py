@@ -1,9 +1,13 @@
 from django.test import TestCase
 
+from nautobot.circuits.models import Circuit
+from nautobot.circuits.tables import CircuitTable
 from nautobot.core.models.querysets import count_related
 from nautobot.dcim.models import Device, InventoryItem, Location, LocationType, Rack, RackGroup
 from nautobot.dcim.tables import InventoryItemTable, LocationTable, LocationTypeTable, RackGroupTable
 from nautobot.tenancy.tables import TenantGroupTable
+from nautobot.wireless.models import WirelessNetwork
+from nautobot.wireless.tables import WirelessNetworkTable
 
 
 class TableTestCase(TestCase):
@@ -63,3 +67,55 @@ class TableTestCase(TestCase):
         queryset = RackGroupTable.Meta.model.objects.annotate(rack_count=count_related(Rack, "rack_group")).all()
         self._validate_sorted_tree_queryset_same_with_table_queryset(queryset, RackGroupTable, "rack_count")
         self._validate_sorted_tree_queryset_same_with_table_queryset(queryset, RackGroupTable, "-rack_count")
+
+    def test_base_table_apis(self):
+        """
+        Test BaseTable APIs, specifically visible_columns and configurable_columns.
+        Assert that they gave the correct results.
+        """
+        wn_table = WirelessNetworkTable(WirelessNetwork.objects.all())
+        location_table = LocationTable(Location.objects.all())
+        circuit_table = CircuitTable(Circuit.objects.all())
+
+        # Wireless Network Table
+        for name, column in wn_table.columns.items():
+            expected_visible_columns = [
+                name for name, column in wn_table.columns.items() if column.visible and name not in wn_table.exclude
+            ]
+            expected_configurable_columns = [
+                (name, column.verbose_name)
+                for name, column in wn_table.columns.items()
+                if name not in ["pk", "actions"]
+            ]
+        self.assertEqual(wn_table.visible_columns, expected_visible_columns)
+        self.assertEqual(wn_table.configurable_columns, expected_configurable_columns)
+
+        # Location Table
+        for name, column in location_table.columns.items():
+            expected_visible_columns = [
+                name
+                for name, column in location_table.columns.items()
+                if column.visible and name not in wn_table.exclude
+            ]
+            expected_configurable_columns = [
+                (name, column.verbose_name)
+                for name, column in location_table.columns.items()
+                if name not in ["pk", "actions"]
+            ]
+        self.assertEqual(location_table.visible_columns, expected_visible_columns)
+        self.assertEqual(location_table.configurable_columns, expected_configurable_columns)
+
+        # Circuit Table
+        for name, column in circuit_table.columns.items():
+            expected_visible_columns = [
+                name
+                for name, column in circuit_table.columns.items()
+                if column.visible and name not in wn_table.exclude
+            ]
+            expected_configurable_columns = [
+                (name, column.verbose_name)
+                for name, column in circuit_table.columns.items()
+                if name not in ["pk", "actions"]
+            ]
+        self.assertEqual(circuit_table.visible_columns, expected_visible_columns)
+        self.assertEqual(circuit_table.configurable_columns, expected_configurable_columns)
