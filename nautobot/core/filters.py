@@ -618,9 +618,17 @@ class BaseFilterSet(django_filters.FilterSet):
     @staticmethod
     def _get_filter_lookup_dict(existing_filter):
         # Choose the lookup expression map based on the filter type
+
+        # These filter types support only negation
         if isinstance(
             existing_filter,
-            MultiValueUUIDFilter
+            (
+                django_filters.ModelChoiceFilter,
+                django_filters.ModelMultipleChoiceFilter,
+                MultiValueUUIDFilter,
+                TagFilter,
+                TreeNodeMultipleChoiceFilter,
+            ),
         ):
             lookup_map = constants.FILTER_NEGATION_LOOKUP_MAP
 
@@ -636,18 +644,6 @@ class BaseFilterSet(django_filters.FilterSet):
             ),
         ):
             lookup_map = constants.FILTER_NUMERIC_BASED_LOOKUP_MAP
-
-        # These filter types support only negation
-        elif isinstance(
-            existing_filter,
-            (
-                django_filters.ModelChoiceFilter,
-                django_filters.ModelMultipleChoiceFilter,
-                TagFilter,
-                TreeNodeMultipleChoiceFilter,
-            ),
-        ):
-            lookup_map = constants.FILTER_NEGATION_LOOKUP_MAP
 
         elif isinstance(
             existing_filter,
