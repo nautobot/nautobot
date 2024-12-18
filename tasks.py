@@ -487,7 +487,6 @@ def logs(context, service="", follow=False, tail=0):
     docker_compose(context, command, service=service)
 
 
-
 # ------------------------------------------------------------------------------
 # ACTIONS
 # ------------------------------------------------------------------------------
