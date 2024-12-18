@@ -73,49 +73,72 @@ class TableTestCase(TestCase):
         Test BaseTable APIs, specifically visible_columns and configurable_columns.
         Assert that they gave the correct results.
         """
-        wn_table = WirelessNetworkTable(WirelessNetwork.objects.all())
-        location_table = LocationTable(Location.objects.all())
-        circuit_table = CircuitTable(Circuit.objects.all())
-
         # Wireless Network Table
-        for name, column in wn_table.columns.items():
-            expected_visible_columns = [
-                name for name, column in wn_table.columns.items() if column.visible and name not in wn_table.exclude
-            ]
-            expected_configurable_columns = [
-                (name, column.verbose_name)
-                for name, column in wn_table.columns.items()
-                if name not in ["pk", "actions"]
-            ]
+        wn_table = WirelessNetworkTable(WirelessNetwork.objects.all(), exclude=["enabled", "hidden"])
+        wn_table.columns.hide("description")
+        expected_visible_columns = [
+            "name",
+            "ssid",
+            "mode",
+            "authentication",
+            "actions",
+        ]
+        expected_configurable_columns = [
+            ("name", "Name"),
+            ("ssid", "SSID"),
+            ("mode", "Mode"),
+            ("authentication", "Authentication"),
+            ("secret", "Secret"),
+            ("description", "Description"),
+            ("tags", "Tags"),
+            ("dynamic_group_count", "Dynamic Groups"),
+        ]
         self.assertEqual(wn_table.visible_columns, expected_visible_columns)
         self.assertEqual(wn_table.configurable_columns, expected_configurable_columns)
 
         # Location Table
-        for name, column in location_table.columns.items():
-            expected_visible_columns = [
-                name
-                for name, column in location_table.columns.items()
-                if column.visible and name not in wn_table.exclude
-            ]
-            expected_configurable_columns = [
-                (name, column.verbose_name)
-                for name, column in location_table.columns.items()
-                if name not in ["pk", "actions"]
-            ]
+        location_table = LocationTable(Location.objects.all(), exclude=["parent", "tenant"])
+        location_table.columns.hide("description")
+        location_table.columns.hide("tags")
+        expected_visible_columns = ["name", "status", "actions"]
+        expected_configurable_columns = [
+            ("name", "Name"),
+            ("status", "Status"),
+            ("location_type", "Location type"),
+            ("description", "Description"),
+            ("facility", "Facility"),
+            ("asn", "ASN"),
+            ("time_zone", "Time zone"),
+            ("physical_address", "Physical address"),
+            ("shipping_address", "Shipping address"),
+            ("latitude", "Latitude"),
+            ("longitude", "Longitude"),
+            ("contact_name", "Contact name"),
+            ("contact_phone", "Contact phone"),
+            ("contact_email", "Contact E-mail"),
+            ("tags", "Tags"),
+            ("dynamic_group_count", "Dynamic Groups"),
+            ("cf_example_app_auto_custom_field", "Example App Automatically Added Custom Field"),
+        ]
         self.assertEqual(location_table.visible_columns, expected_visible_columns)
         self.assertEqual(location_table.configurable_columns, expected_configurable_columns)
 
         # Circuit Table
-        for name, column in circuit_table.columns.items():
-            expected_visible_columns = [
-                name
-                for name, column in circuit_table.columns.items()
-                if column.visible and name not in wn_table.exclude
-            ]
-            expected_configurable_columns = [
-                (name, column.verbose_name)
-                for name, column in circuit_table.columns.items()
-                if name not in ["pk", "actions"]
-            ]
+        circuit_table = CircuitTable(Circuit.objects.all(), exclude=["provider", "circuit_termination_a"])
+        circuit_table.columns.hide("tags")
+        expected_visible_columns = ["cid", "status", "circuit_termination_z", "description", "example_app_provider_asn"]
+        expected_configurable_columns = [
+            ("cid", "ID"),
+            ("circuit_type", "Circuit type"),
+            ("status", "Status"),
+            ("tenant", "Tenant"),
+            ("circuit_termination_z", "Side Z"),
+            ("install_date", "Date installed"),
+            ("commit_rate", "Commit rate (Kbps)"),
+            ("description", "Description"),
+            ("tags", "Tags"),
+            ("example_app_provider_asn", "Provider ASN"),
+            ("dynamic_group_count", "Dynamic Groups"),
+        ]
         self.assertEqual(circuit_table.visible_columns, expected_visible_columns)
         self.assertEqual(circuit_table.configurable_columns, expected_configurable_columns)
