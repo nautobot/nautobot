@@ -1,6 +1,6 @@
 """Tasks for use with Invoke.
 
-(c) 2020-2021 Network To Code
+(c) 2020-2024 Network To Code
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -61,7 +61,7 @@ namespace = Collection("nautobot")
 namespace.configure(
     {
         "nautobot": {
-            "project_name": "nautobot",
+            "project_name": "nautobot",  # extended automatically with Nautobot major/minor ver, see docker_compose()
             "python_ver": "3.8",
             "local": False,
             "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
@@ -138,6 +138,11 @@ def print_command(command, env=None):
         print(f"{formatted_env}{formatted_command}")
 
 
+def get_nautobot_major_minor_version(context):
+    command = r"""grep '^version = ' pyproject.toml | sed -E 's/version = "([0-9]+\.[0-9]+).*"/\1/'"""
+    return context.run(command, hide=True).stdout.strip()
+
+
 def docker_compose(context, command, **kwargs):
     """Helper function for running a specific docker compose command with all appropriate parameters and environment.
 
@@ -146,9 +151,10 @@ def docker_compose(context, command, **kwargs):
         command (str): Command string to append to the "docker compose ..." command, such as "build", "up", etc.
         **kwargs: Passed through to the context.run() call.
     """
+    NAUTOBOT_VER = get_nautobot_major_minor_version(context)
     compose_command_tokens = [
         "docker compose",
-        f'--project-name "{context.nautobot.project_name}"',
+        f'--project-name "{context.nautobot.project_name}-{NAUTOBOT_VER.replace(".", "-")}"',
         f'--project-directory "{context.nautobot.compose_dir}"',
     ]
 
@@ -166,7 +172,7 @@ def docker_compose(context, command, **kwargs):
     print(f'Running docker compose command "{command}"')
     compose_command = " ".join(compose_command_tokens)
     env = kwargs.pop("env", {})
-    env.update({"PYTHON_VER": context.nautobot.python_ver})
+    env.update({"PYTHON_VER": context.nautobot.python_ver, "NAUTOBOT_VER": NAUTOBOT_VER})
     if "hide" not in kwargs:
         print_command(compose_command, env=env)
     return context.run(compose_command, env=env, **kwargs)
@@ -189,6 +195,40 @@ def run_command(context, command, **kwargs):
             compose_command = f"run --rm --entrypoint '{command}' nautobot"
 
         docker_compose(context, compose_command, pty=True)
+
+
+# ------------------------------------------------------------------------------
+# ENVIRONMENT
+# ------------------------------------------------------------------------------
+@task(
+    help={
+        "branch": "Branch name to switch to",
+        "create": "If specified, create the branch as a new branch",
+        "parent": "If specified with --create, use the given parent branch as baseline instead of the current branch",
+    }
+)
+def branch(context, *, branch=None, create=False, parent=None):  # pylint: disable=redefined-outer-name
+    """Switch to a different Git branch, creating it if requested."""
+    if not branch:
+        raise Exit("No branch specified, use --branch option")
+
+    if not context.nautobot.local:
+        # Stop current containers as the new branch may have a different project name
+        # TODO: could we detect whether the new branch has the same base branch as current and skip this if so?
+        stop(context)
+
+    if create:
+        if parent is not None:
+            command = f"git checkout '{parent}' && git pull"
+            print_command(command)
+            context.run(command, pty=True)
+        command = f"git checkout -b '{branch}'"
+        print_command(command)
+        context.run(command, pty=True)
+    else:
+        command = f"git checkout '{branch}'"
+        print_command(command)
+        context.run(command, pty=True)
 
 
 # ------------------------------------------------------------------------------
@@ -333,7 +373,7 @@ def get_dependency_version(dependency_name):
         "datestamp": "Datestamp used to tag the develop image.",
     }
 )
-def docker_push(context, branch, commit="", datestamp=""):
+def docker_push(context, branch, commit="", datestamp=""):  # pylint: disable=redefined-outer-name
     """Tags and pushes docker images to the appropriate repos, intended for release use only.
 
     Before running this command, you **must** be on the `main` branch and **must** have run
