@@ -52,6 +52,8 @@ class BaseTable(django_tables2.Table):
     ):
         """
         Instantiate a BaseTable.
+        Do not modify/set the `base_columns` attribute after BaseTable class is instantiated.
+        Do not modify/set the `base_columns` attribute after calling super().__init__() of BaseTable class.
 
         Args:
             *args (list, optional): Passed through to django_tables2.Table
@@ -64,9 +66,6 @@ class BaseTable(django_tables2.Table):
                 returns new data. Runs after all of the queryset auto-optimization performed by this class.
                 Used for example in IPAM views to inject "fake" records for "available" Prefixes, IPAddresses, or VLANs.
             **kwargs (dict, optional): Passed through to django_tables2.Table
-        Warning:
-            Do not modify/set the `base_columns` attribute after BaseTable class is instantiated.
-            Do not modify/set the `base_columns` attribute after calling super().__init__() of BaseTable class.
         """
         # Add custom field columns
         model = self._meta.model
