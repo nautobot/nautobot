@@ -124,6 +124,33 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
+## v2.3.14 (2024-12-18)
+
+### Added
+
+- [#6548](https://github.com/nautobot/nautobot/issues/6548) - Added logic to set the parent in the clean() method of the Prefix model, ensuring correct assignment during validation.
+
+### Changed
+
+- [#6518](https://github.com/nautobot/nautobot/issues/6518) - Added VRF's column to Prefixes and Child Prefixes table.
+- [#6548](https://github.com/nautobot/nautobot/issues/6548) - Changed the save method of the `Prefix` model to reparent subnets and IPs only when the `network`, `namespace`, or `prefix_length` fields are updated.
+
+### Fixed
+
+- [#6204](https://github.com/nautobot/nautobot/issues/6204) - Fixed out-of-memory errors when `LogsCleanup` system job resulted in cascade deletion of many related objects (such as `JobLogEntry` or `nautobot_ssot.SyncLogEntry` records).
+- [#6496](https://github.com/nautobot/nautobot/issues/6496) - Fixed `/ipam/prefixes/<UUID>/available-ips` to calculate IP's with IP's from Child Prefixes.
+- [#6496](https://github.com/nautobot/nautobot/issues/6496) - Fixed `Prefix.get_first_available_ip` method to not return IP taken by Child Prefixes.
+- [#6664](https://github.com/nautobot/nautobot/issues/6664) - Fixed `circuit_type` column not included correctly in CircuitTable default columns.
+
+### Documentation
+
+- [#6590](https://github.com/nautobot/nautobot/issues/6590) - Added an `ExampleEverythingJob` to the Example App and updated Job developer documentation to reference it as an example.
+
+### Housekeeping
+
+- [#6657](https://github.com/nautobot/nautobot/issues/6657) - Updated documentation dependency `mkdocs-material` to `~9.5.48`.
+- [#6659](https://github.com/nautobot/nautobot/issues/6659) - Enhanced development environment and associated `invoke` tasks to be Nautobot major/minor version aware, such that a different Docker compose `project-name` (and different local Docker image label) will be used for containers in a `develop`-based branch versus a `next`-based branch.
+
 ## v2.3.13 (2024-12-10)
 
 ### Security
