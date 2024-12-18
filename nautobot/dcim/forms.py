@@ -3183,9 +3183,6 @@ class InterfaceBulkEditForm(
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
-        query_params={
-            "locations": "null",
-        },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
@@ -3235,8 +3232,12 @@ class InterfaceBulkEditForm(
             # Limit VLAN choices by Location
             if locations.count() == 1:
                 location = locations.first()
-                self.fields["untagged_vlan"].widget.add_query_param("locations", location.pk)
+                # In the case of a single location, use the available_on_device query param to limit untagged VLAN choices
+                # to those available on the devices in that location and in the ancestors of the location.
+                self.fields["untagged_vlan"].widget.add_query_param("available_on_device", device.pk)
                 self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
+            else:
+                self.fields["tagged_vlans"].widget.add_query_param("locations", "null")
 
         # Restrict parent/bridge/LAG interface assignment by device (or VC master)
         if device_count == 1:
