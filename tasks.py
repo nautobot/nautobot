@@ -468,6 +468,25 @@ def vscode(context):
     context.run(command, env={"PYTHON_VER": context.nautobot.python_ver})
 
 
+@task(
+    help={
+        "service": "If specified, only display logs for this service (default: all)",
+        "follow": "Flag to follow logs (default: False)",
+        "tail": "Tail N number of lines (default: all)",
+    }
+)
+def logs(context, service="", follow=False, tail=0):
+    """View the logs of a docker compose service."""
+    command = "logs"
+
+    if follow:
+        command += " --follow"
+    if tail:
+        command += f" --tail={tail}"
+
+    docker_compose(context, command, service=service)
+
+
 # ------------------------------------------------------------------------------
 # ACTIONS
 # ------------------------------------------------------------------------------
