@@ -5,6 +5,8 @@ from nautobot.circuits.tables import CircuitTable
 from nautobot.core.models.querysets import count_related
 from nautobot.dcim.models import Device, InventoryItem, Location, LocationType, Rack, RackGroup
 from nautobot.dcim.tables import InventoryItemTable, LocationTable, LocationTypeTable, RackGroupTable
+from nautobot.extras.models import JobLogEntry
+from nautobot.extras.tables import JobLogEntryTable
 from nautobot.tenancy.tables import TenantGroupTable
 from nautobot.wireless.models import WirelessNetwork
 from nautobot.wireless.tables import WirelessNetworkTable
@@ -142,3 +144,15 @@ class TableTestCase(TestCase):
         ]
         self.assertEqual(circuit_table.visible_columns, expected_visible_columns)
         self.assertEqual(circuit_table.configurable_columns, expected_configurable_columns)
+
+        # Job Log Entry Table (Job Log Entry is not Dynamic Group associable)
+        job_log_entry_table = JobLogEntryTable(JobLogEntry.objects.all(), exclude=["created", "message"])
+        job_log_entry_table.columns.hide("log_level")
+        expected_visible_columns = ["grouping", "log_object"]
+        expected_configurable_columns = [
+            ("grouping", "Grouping"),
+            ("log_level", "Level"),
+            ("log_object", "Object"),
+        ]
+        self.assertEqual(job_log_entry_table.visible_columns, expected_visible_columns)
+        self.assertEqual(job_log_entry_table.configurable_columns, expected_configurable_columns)
