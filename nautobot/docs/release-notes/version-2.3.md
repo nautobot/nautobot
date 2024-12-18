@@ -128,18 +128,18 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 
 ### Added
 
-- [#6548](https://github.com/nautobot/nautobot/issues/6548) - Added logic to set the parent in the clean() method of the Prefix model, ensuring correct assignment during validation.
+- [#6548](https://github.com/nautobot/nautobot/issues/6548) - Added logic to set the `parent` in the `clean()` method of the Prefix model, ensuring correct assignment during validation.
 
 ### Changed
 
-- [#6518](https://github.com/nautobot/nautobot/issues/6518) - Added VRF's column to Prefixes and Child Prefixes table.
+- [#6518](https://github.com/nautobot/nautobot/issues/6518) - Added VRFs column to Prefixes and Child Prefixes tables.
 - [#6548](https://github.com/nautobot/nautobot/issues/6548) - Changed the save method of the `Prefix` model to reparent subnets and IPs only when the `network`, `namespace`, or `prefix_length` fields are updated.
 
 ### Fixed
 
 - [#6204](https://github.com/nautobot/nautobot/issues/6204) - Fixed out-of-memory errors when `LogsCleanup` system job resulted in cascade deletion of many related objects (such as `JobLogEntry` or `nautobot_ssot.SyncLogEntry` records).
-- [#6496](https://github.com/nautobot/nautobot/issues/6496) - Fixed `/ipam/prefixes/<UUID>/available-ips` to calculate IP's with IP's from Child Prefixes.
-- [#6496](https://github.com/nautobot/nautobot/issues/6496) - Fixed `Prefix.get_first_available_ip` method to not return IP taken by Child Prefixes.
+- [#6496](https://github.com/nautobot/nautobot/issues/6496) - Fixed `/ipam/prefixes/<UUID>/available-ips/` to correctly consider IPs under child Prefixes.
+- [#6496](https://github.com/nautobot/nautobot/issues/6496) - Fixed `Prefix.get_first_available_ip()` method to not return IP taken by child Prefixes.
 - [#6664](https://github.com/nautobot/nautobot/issues/6664) - Fixed `circuit_type` column not included correctly in CircuitTable default columns.
 
 ### Documentation
