@@ -124,7 +124,7 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
-## v2.3.14 (2024-12-18)
+## v2.3.14 (2024-12-19)
 
 ### Added
 
@@ -133,11 +133,13 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 ### Changed
 
 - [#6518](https://github.com/nautobot/nautobot/issues/6518) - Added VRFs column to Prefixes and Child Prefixes tables.
+- [#6531](https://github.com/nautobot/nautobot/issues/6531) - Restrict the `id` filter field to use to only the `__n` (negation) lookup filter.
 - [#6548](https://github.com/nautobot/nautobot/issues/6548) - Changed the save method of the `Prefix` model to reparent subnets and IPs only when the `network`, `namespace`, or `prefix_length` fields are updated.
 
 ### Fixed
 
 - [#6204](https://github.com/nautobot/nautobot/issues/6204) - Fixed out-of-memory errors when `LogsCleanup` system job resulted in cascade deletion of many related objects (such as `JobLogEntry` or `nautobot_ssot.SyncLogEntry` records).
+- [#6470](https://github.com/nautobot/nautobot/issues/6470) - Fixed untagged VLAN dropdown options mismatch in InterfaceEditForm and in InterfaceBulkEditForm.
 - [#6496](https://github.com/nautobot/nautobot/issues/6496) - Fixed `/ipam/prefixes/<UUID>/available-ips/` to correctly consider IPs under child Prefixes.
 - [#6496](https://github.com/nautobot/nautobot/issues/6496) - Fixed `Prefix.get_first_available_ip()` method to not return IP taken by child Prefixes.
 - [#6664](https://github.com/nautobot/nautobot/issues/6664) - Fixed `circuit_type` column not included correctly in CircuitTable default columns.
