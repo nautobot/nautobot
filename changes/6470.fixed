@@ -1,0 +1,1 @@
+Fixed untagged VLAN dropdown options mismatch in InterfaceEditForm and in InterfaceBulkEditForm.
