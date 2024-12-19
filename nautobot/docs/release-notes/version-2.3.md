@@ -138,11 +138,13 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 
 ### Fixed
 
+- [#4056](https://github.com/nautobot/nautobot/issues/4056) - Fixed filter of add_tags and remove_tags of bulkedit based on content type
 - [#6204](https://github.com/nautobot/nautobot/issues/6204) - Fixed out-of-memory errors when `LogsCleanup` system job resulted in cascade deletion of many related objects (such as `JobLogEntry` or `nautobot_ssot.SyncLogEntry` records).
 - [#6470](https://github.com/nautobot/nautobot/issues/6470) - Fixed untagged VLAN dropdown options mismatch in InterfaceEditForm and in InterfaceBulkEditForm.
 - [#6496](https://github.com/nautobot/nautobot/issues/6496) - Fixed `/ipam/prefixes/<UUID>/available-ips/` to correctly consider IPs under child Prefixes.
 - [#6496](https://github.com/nautobot/nautobot/issues/6496) - Fixed `Prefix.get_first_available_ip()` method to not return IP taken by child Prefixes.
 - [#6664](https://github.com/nautobot/nautobot/issues/6664) - Fixed `circuit_type` column not included correctly in CircuitTable default columns.
+- [#6678](https://github.com/nautobot/nautobot/issues/6678) - Fixed incorrect copy button behavior on global search page.
 
 ### Documentation
 
@@ -152,6 +154,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 
 - [#6657](https://github.com/nautobot/nautobot/issues/6657) - Updated documentation dependency `mkdocs-material` to `~9.5.48`.
 - [#6659](https://github.com/nautobot/nautobot/issues/6659) - Enhanced development environment and associated `invoke` tasks to be Nautobot major/minor version aware, such that a different Docker compose `project-name` (and different local Docker image label) will be used for containers in a `develop`-based branch versus a `next`-based branch.
+- [#6679](https://github.com/nautobot/nautobot/issues/6679) - Added `logs` task to `tasks.py` to view the logs of a docker compose service.
 
 ## v2.3.13 (2024-12-10)
 
