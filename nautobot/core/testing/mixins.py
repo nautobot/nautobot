@@ -155,6 +155,18 @@ class NautobotTestCaseMixin:
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ct)
 
+    def add_permission(self, name, **kwargs):
+        """
+        Create and assign permissions to the test user. Accepts permission names in the form <app>.<action>_<model>.
+        Additional arguments will be passed to the ObjectPermission constructor to allow creating more detailed permissions.
+        """
+
+        ct, action = permissions.resolve_permission_ct(name)
+        obj_perm = users_models.ObjectPermission(name=name, actions=[action], **kwargs)
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ct)
+
     #
     # Custom assertions
     #
