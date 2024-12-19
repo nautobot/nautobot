@@ -1,4 +1,6 @@
+import os
 import re
+import tempfile
 from unittest import mock, skipIf
 import urllib.parse
 
@@ -179,6 +181,53 @@ class HomeViewTestCase(TestCase):
             self.client.logout()
             response = self.client.get(reverse("login"))
         self.assertNotIn("Welcome to Nautobot!", response.content.decode(response.charset))
+
+
+class MediaViewTestCase(TestCase):
+    def test_media_unauthenticated(self):
+        """
+        Test that unauthenticated users are redirected to the login page
+        when attempting to access non-branded media files.
+        """
+        url = reverse("media", kwargs={"path": "foo.txt"})
+        self.client.logout()
+        response = self.client.get(url)
+
+        # Unauthenticated request should redirect to login page
+        self.assertRedirects(
+            response, expected_url=reverse("login") + "?next=/media/foo.txt", status_code=302, target_status_code=200
+        )
+
+    def test_branding_media_unauthenticated(self):
+        """
+        Test that unauthenticated users can access branded media files
+        listed in `settings.BRANDING_FILEPATHS`.
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with override_settings(MEDIA_ROOT=temp_dir, BRANDING_FILEPATHS={"logo": os.path.join(temp_dir, "foo.txt")}):
+                file_path = os.path.join(temp_dir, "foo.txt")
+                with open(file_path, "w") as f:
+                    f.write("Hello, world!")
+
+                url = reverse("media", kwargs={"path": "foo.txt"})
+                self.client.logout()
+                response = self.client.get(url)
+                self.assertHttpStatus(response, 200)
+
+    def test_media_authenticated(self):
+        """
+        Test that authenticated users can access regular media files
+        stored in the `MEDIA_ROOT`.
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with override_settings(MEDIA_ROOT=temp_dir):
+                file_path = os.path.join(temp_dir, "foo.txt")
+                with open(file_path, "w") as f:
+                    f.write("Hello, world!")
+
+                url = reverse("media", kwargs={"path": "foo.txt"})
+                response = self.client.get(url)
+                self.assertHttpStatus(response, 200)
 
 
 @override_settings(BRANDING_TITLE="Nautobot")
