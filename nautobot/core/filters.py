@@ -618,6 +618,7 @@ class BaseFilterSet(django_filters.FilterSet):
     @staticmethod
     def _get_filter_lookup_dict(existing_filter):
         # Choose the lookup expression map based on the filter type
+
         if isinstance(
             existing_filter,
             (
@@ -637,6 +638,7 @@ class BaseFilterSet(django_filters.FilterSet):
             (
                 django_filters.ModelChoiceFilter,
                 django_filters.ModelMultipleChoiceFilter,
+                MultiValueUUIDFilter,
                 TagFilter,
                 TreeNodeMultipleChoiceFilter,
             ),
