@@ -160,10 +160,12 @@ For users of Microsoft Visual Studio Code, several files are included to ease de
 
 #### PYTHON_VER Environment Variable
 
-The `PYTHON_VER` environment variable must be set in the `development/.env` file or the container build will fail. An example file exists and can be used as-is if you don't need to change the default version:
+The `PYTHON_VER` environment variable must be set in the `development/.env` file or the container build will fail.
+
+You can run `invoke` with the `vscode` target to generate this file and re-open the VSCode session under the workspace.
 
 ```bash
-cp development/.env.example development/.env
+invoke vscode
 ```
 
 ### Using Dev Containers
