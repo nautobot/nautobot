@@ -792,7 +792,7 @@ class DeviceFamilyFilterForm(NautobotFilterForm):
     tags = TagFilterField(model)
 
 
-class DeviceFamilyBulkEditForm(NautobotBulkEditForm, TagsBulkEditFormMixin):
+class DeviceFamilyBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceFamily.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(required=False)
 
