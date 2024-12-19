@@ -27,7 +27,6 @@ from prometheus_client.registry import Collector
 from nautobot.core.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
-from nautobot.core.views.generic import GenericView
 from nautobot.extras.models import GraphQLQuery, FileProxy
 from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
@@ -112,12 +111,31 @@ class HomeView(AccessMixin, TemplateView):
         return self.render_to_response(context)
 
 
-class MediaView(GenericView):
+class MediaView(AccessMixin, View):
     """
-    Wrap Django's serve() view to enforce LOGIN_REQUIRED for static media.
+    Serves static media files while enforcing login restrictions.
+
+    This view wraps Django's `serve()` function to ensure that access to
+    media files is restricted to authenticated users. Additionally, it
+    allows access to branded media files defined in
+    `settings.BRANDING_FILEPATHS`, even for unauthenticated users.
     """
 
     def get(self, request, path):
+        can_view = request.user.is_authenticated
+        with contextlib.suppress(FileNotFoundError):
+            for branding_filepath in settings.BRANDING_FILEPATHS.values():
+                if not branding_filepath:
+                    continue
+                branding_filepath = os.path.join(settings.MEDIA_ROOT, branding_filepath)
+                requested_path = os.path.join(settings.MEDIA_ROOT, path)
+                same_path = os.path.samefile(branding_filepath, requested_path)
+                if same_path:
+                    can_view = True
+                    break
+
+        if not can_view:
+            return self.handle_no_permission()
         return serve(request, path, document_root=settings.MEDIA_ROOT)
 
 
