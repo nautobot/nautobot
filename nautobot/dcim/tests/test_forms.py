@@ -1,8 +1,16 @@
 from django.test import TestCase
 
 from nautobot.core.testing.forms import FormTestCases
+from nautobot.core.testing.mixins import NautobotTestCaseMixin
 from nautobot.dcim.choices import DeviceFaceChoices, InterfaceModeChoices, InterfaceTypeChoices, RackWidthChoices
-from nautobot.dcim.forms import DeviceFilterForm, DeviceForm, InterfaceCreateForm, InterfaceForm, RackForm
+from nautobot.dcim.forms import (
+    DeviceFilterForm,
+    DeviceForm,
+    InterfaceBulkEditForm,
+    InterfaceCreateForm,
+    InterfaceForm,
+    RackForm,
+)
 from nautobot.dcim.models import (
     Device,
     DeviceType,
@@ -320,7 +328,7 @@ class RackTestCase(TestCase):
         self.assertTrue(form.is_valid())
 
 
-class InterfaceTestCase(TestCase):
+class InterfaceTestCase(NautobotTestCaseMixin, TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.device = Device.objects.first()
@@ -380,3 +388,44 @@ class InterfaceTestCase(TestCase):
         self.vlan.locations.clear()
         form = InterfaceForm(data=self.data, instance=self.interface)
         self.assertTrue(form.is_valid())
+
+    def test_untagged_vlans_dropdown_options_align_in_interface_edit_form_and_bulk_edit_form(self):
+        """
+        Assert that untagged_vlans field dropdown are populated correctly in InterfaceForm and InterfaceBulkEditForm,
+        and that the queryset is the same for both forms.
+        """
+        status = Status.objects.get_for_model(Interface).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        devices = Device.objects.all()[:3]
+        for device in devices:
+            device.location = location
+            device.save()
+        interfaces = (
+            Interface.objects.create(
+                device=devices[0],
+                name="Test Interface 1",
+                type=InterfaceTypeChoices.TYPE_2GFC_SFP,
+                status=status,
+            ),
+            Interface.objects.create(
+                device=devices[1],
+                name="Test Interface 2",
+                type=InterfaceTypeChoices.TYPE_LAG,
+                status=status,
+            ),
+            Interface.objects.create(
+                device=devices[2],
+                name="Test Interface 3",
+                type=InterfaceTypeChoices.TYPE_100ME_FIXED,
+                status=status,
+            ),
+        )
+        edit_form = InterfaceForm(data=self.data, instance=interfaces[0])
+        bulk_edit_form = InterfaceBulkEditForm(
+            model=Interface,
+            data={"pks": [interface.pk for interface in interfaces]},
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            edit_form.fields["untagged_vlan"].queryset,
+            bulk_edit_form.fields["untagged_vlan"].queryset,
+        )
