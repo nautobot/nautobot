@@ -110,36 +110,6 @@ You're now ready to proceed to the next steps.
 !!! hint
     You will always **push** changes to `origin` (your fork) and **pull** changes from `upstream` (official repo).
 
-### Creating a Branch
-
-Before you make any changes, always create a new branch. Again, for bug fixes and minor features, you'll want to create your branches from the `develop` branch, while for major new features, you'll branch from `next` instead.
-
-Before you ever create a new branch, always checkout the appropriate branch and make sure you you've got the latest changes from `upstream`:
-
-```no-highlight
-git checkout develop
-git pull upstream develop
-```
-
-!!! warning
-    If you do not do this, you run the risk of having merge conflicts in your branch, and that's never fun to deal with. Trust us on this one.
-
-Now that you've got the latest upstream changes, create your branch. Whether you're creating a branch off a fork or working against the Nautobot origin repo, you should follow this convention for naming your branch: `u/yourusername-0000-branch-summary`, where `0000` is the related GitHub issue number and `yourusername` is your GitHub username. For example:
-
-```no-highlight
-git checkout -b u/yourusername-1234-next-amazing-feature
-```
-
-If you do not have a relevant GitHub issue, please consider opening one to document the context behind your changes.
-
-#### Prototypes
-
-Sometimes code is written as a proof of concept or early implementation candidate but is not quite ready to be merged, or may be picked up by another author sometime in the future. In that case, the convention is to use the `prototype/` prefix to the branch name and not requiring the original authors username. In that scenario, using the example above, you would instead:
-
-```no-highlight
-git checkout -b prototype/1234-next-amazing-feature
-```
-
 ## Enabling Pre-Commit Hooks
 
 Nautobot ships with a [Git pre-commit hook](https://githooks.com/) script that automatically checks for style compliance and missing database migrations prior to committing changes. This helps avoid erroneous commits that result in CI test failures.
@@ -210,6 +180,7 @@ Example output:
 ```no-highlight
 Available tasks:
 
+  branch                 Switch to a different Git branch, creating it if requested.
   build                  Build Nautobot docker image.
   build-and-check-docs   Build docs for use within Nautobot.
   build-dependencies
@@ -226,23 +197,25 @@ Available tasks:
   hadolint               Check Dockerfile for hadolint compliance and other style issues.
   integration-test       Run Nautobot integration tests.
   loaddata               Load data from file.
+  logs                   View the logs of a docker compose service.
   makemigrations         Perform makemigrations operation in Django.
-  migration-test         Test database migration from a given dataset to latest Nautobot schema.
   markdownlint           Lint Markdown files.
   migrate                Perform migrate operation in Django.
+  migration-test         Test database migration from a given dataset to latest Nautobot schema.
   nbshell                Launch an interactive Nautobot shell.
   performance-test       Run Nautobot performance tests.
   post-upgrade           Performs Nautobot common post-upgrade operations using a single entrypoint.
   pylint                 Perform static analysis of Nautobot code.
   restart                Gracefully restart containers.
-  ruff                   Run ruff to perform code formatting and/or linting.
-  serve-docs             Runs local instance of mkdocs serve (ctrl-c to stop).
+  ruff                   Run ruff to perform code formatting and linting.
+  serve-docs             Runs local instance of mkdocs serve on port 8001 (ctrl-c to stop).
+  showmigrations         Perform showmigrations operation in Django.
   start                  Start Nautobot and its dependencies in detached mode.
   stop                   Stop Nautobot and its dependencies.
   tests                  Run all linters and unit tests.
   unittest               Run Nautobot unit tests.
   unittest-coverage      Report on code test coverage as measured by 'invoke unittest'.
-  version                Show the version of Nautobot Python and NPM packages or bump them when a valid bump rule is provided.
+  version                Show the version of Nautobot Python package or bump it when a valid bump rule is provided.
   vscode                 Launch Visual Studio Code with the appropriate Environment variables to run in a container.
   yamllint               Run yamllint to validate formatting applies to YAML standards.
 ```
@@ -254,14 +227,17 @@ Available tasks:
 
 A development environment can be easily started up from the root of the project using the following commands:
 
-* `invoke build` - Builds Nautobot docker images
+* `invoke branch` - Creates or switches to the appropriate Git branch
+* `invoke build` - Builds Nautobot docker images appropriate to the current Git branch
 * `invoke migrate` - Performs database migration operation in Django
 * `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and Celery Beat in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers
 
 Additional useful commands for the development environment:
 
-* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, NGINX, Celery, and Celery Beat (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
-* `invoke cli [-s servicename]` - Launch a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
+* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, NGINX, Celery, and Celery Beat (or a specific container/service, such as `invoke start -s redis`) to run in the background
+* `invoke logs [-s servicename]` - View the logs of the containers (or a specific container/service, such as `invoke logs -s nautobot`)
+* `invoke nbshell` - Launches a Nautobot Python shell inside the Nautobot container
+* `invoke cli [-s servicename]` - Launches a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
 * `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
 * `invoke createsuperuser` - Creates a superuser account for the Nautobot application
 
@@ -468,6 +444,43 @@ A newly created configuration includes sane defaults. If you need to customize t
 ## Working in your Development Environment
 
 Below are common commands for working your development environment.
+
+### Creating a Branch
+
+Before you make any changes, always create a new branch. Again, for bug fixes and minor features, you'll want to create your branches from the `develop` branch, while for major new features, you'll branch from `next` instead.
+
+In current versions of Nautobot, you can use the `invoke branch` command to create a new branch or switch to an existing branch. Whether you're creating a branch off a fork or working against the Nautobot origin repo, you should follow this convention for naming your branch: `u/yourusername-0000-branch-summary`, where `0000` is the related GitHub issue number and `yourusername` is your GitHub username. (If you do not have a relevant GitHub issue, please consider opening one to document the context behind your changes.)
+
+For example:
+
+```no-highlight
+invoke branch --create --branch u/yourusername-1234-some-bug-fix --parent develop
+```
+
+or:
+
+```no-highlight
+invoke branch --create --branch u/yourusername-1235-amazing-feature --parent next
+```
+
+!!! caution
+    We recommend using this Invoke command instead of directly calling `git checkout` or `git switch` because it automatically handles some other aspects of the development environment, in particular stopping the currently running Nautobot Docker containers, if any, before switching to a different branch.
+
+!!! tip
+    You can switch between any existing branches with simply `invoke branch --branch <name>`.
+
+!!! tip "Nautobot branches and the Docker compose workflow"
+    It's common for the Python dependencies and database schema to differ between major and minor Nautobot releases, and therefore between the primary branches of `main`, `develop`, `next`, and `ltm-1.6`. To account for this, the Docker workflow automatically detects which `major.minor` Nautobot version you're working with and changes the Docker Compose project name accordingly. What this means for you in practice is that when first switching between Nautobot releases, you may need to rerun `invoke build` once for each primary branch, and `invoke start`/`invoke debug` may take some time as it needs to create a new database and migrate its schema. However, in the future, switching between releases should be relatively smooth (just `invoke branch -b <name>` and then `invoke start`) rather than needing to rebuild the container and database every time you switch between `develop` and `next` as would likely be needed if the same Docker Compose project were used for both release trains.
+
+    Conversely, if you're using the virtual environment workflow, you may need to manually run `poetry install` whenever switching between primary branches, and may need to manually drop and restore the database schema as well. Be aware!
+
+#### Prototypes
+
+Sometimes code is written as a proof of concept or early implementation candidate but is not quite ready to be merged, or may be picked up by another author sometime in the future. In that case, the convention is to use the `prototype/` prefix to the branch name and not requiring the original authors username. In that scenario, using the example above, you would instead:
+
+```no-highlight
+invoke branch --create --branch prototype/1234-next-amazing-feature --parent next
+```
 
 ### Creating a Superuser
 

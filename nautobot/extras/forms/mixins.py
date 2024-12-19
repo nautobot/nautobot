@@ -842,8 +842,16 @@ class TagsBulkEditFormMixin(forms.Form):
         super().__init__(*args, **kwargs)
 
         # Add add/remove tags fields
-        self.fields["add_tags"] = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
-        self.fields["remove_tags"] = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+        self.fields["add_tags"] = DynamicModelMultipleChoiceField(
+            queryset=Tag.objects.all(),
+            query_params={"content_types": self.model._meta.label_lower},
+            required=False,
+        )
+        self.fields["remove_tags"] = DynamicModelMultipleChoiceField(
+            queryset=Tag.objects.all(),
+            query_params={"content_types": self.model._meta.label_lower},
+            required=False,
+        )
 
 
 # 2.2 TODO: Names below are only for backward compatibility with Nautobot 1.3 and earlier. Remove in 2.2
