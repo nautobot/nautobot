@@ -47,6 +47,7 @@ __all__ = (
     "Controller",
     "ControllerManagedDeviceGroup",
     "Device",
+    "DeviceFamily",
     "DeviceRedundancyGroup",
     "DeviceType",
     "Manufacturer",

@@ -1,0 +1,1 @@
+Added `logs` task to `tasks.py` to view the logs of a docker compose service.
