@@ -1224,7 +1224,6 @@ class CustomFieldModelFormMixinTestCase(TestCase):
 class CustomFieldTestCase(TestCase):
     def test_to_form_field_type_select(self):
         """Verify that `to_form_field` and `to_filter_form_field` return the correct field types for a select-type CustomField."""
-        # Assert `to_form_field` returns the correct form field
         custom_field = CustomField.objects.create(
             type=CustomFieldTypeChoices.TYPE_SELECT,
             label="Custom Field Select",
