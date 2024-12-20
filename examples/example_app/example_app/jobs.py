@@ -77,6 +77,9 @@ This is a Job that demonstrates as many Job features as it can.
         time_limit = 2000  # Default: None (follow global configuration)
         # Time in seconds before Celery will automatically attempt terminate the Job by killing the
         # Celery worker process.
+        is_singleton = False  # Default: False
+        # A Boolean that if set to `True` prevents the job from running twice simultaneously.
+        # Any duplicate job instances will error out with a singleton-specific error message.
 
     # Definition of input variables requested when running this Job
     should_fail = BooleanVar(description="Check this box to force this Job to fail")
@@ -220,6 +223,9 @@ This is a Job that demonstrates as many Job features as it can.
         self.logger.info(
             "This is an info message, with an associated database object",
             extra={"object": kwargs["location_type_input"]},
+        )
+        self.logger.success(
+            "You can use logger.success() to set the log level to `SUCCESS`.", extra={"grouping": "post_run"}
         )
         self.logger.warning(
             "You can specify a custom grouping for messages, but do so with consideration.",
