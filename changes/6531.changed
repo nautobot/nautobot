@@ -1,1 +1,0 @@
-Restrict the `id` filter field to use to only the `__n` (negation) lookup filter.

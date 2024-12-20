@@ -1,2 +1,0 @@
-Fixed `/ipam/prefixes/<UUID>/available-ips` to calculate IP's with IP's from Child Prefixes.
-Fixed `Prefix.get_first_available_ip` method to not return IP taken by Child Prefixes.
