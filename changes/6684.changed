@@ -1,0 +1,5 @@
+Changed the CSS for `info` buttons and labels to render as dark gray instead of as a very similar shade of blue to `primary` buttons and labels.
+Changed the CSS for `default` labels to render as transparent with blue text and outline, matching the rendering of `default` buttons.
+Changed the `add` navigation menu buttons to be styled as `primary` rather than `info`.
+Updated the "author" and "availability" text in App Marketplace data for clarity.
+Adjusted the layout and rendering of the App Marketplace and Installed Apps views based on stakeholder feedback.
