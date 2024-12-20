@@ -182,14 +182,14 @@ class ButtonActionColorChoices(ChoiceSet):
     Map standard button actions to Bootstrap color classes.
     """
 
-    ADD = "info"
+    ADD = "primary"
     CANCEL = "default"
     CLONE = "success"
     CONFIGURE = "default"
     CONNECT = "success"
     DEFAULT = "default"
     DELETE = "danger"
-    DISCONNECT = "info"
+    DISCONNECT = "danger"
     EDIT = "warning"
     EXPORT = "success"
     IMPORT = "primary"

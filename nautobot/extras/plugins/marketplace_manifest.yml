@@ -12,7 +12,7 @@
     users to model ASNs, ASN Ranges, Peer Group Templates, Routing Instances, Address Families, Peer Groups, Peer
     Group Address Families, Peerings, and Peer Endpoint Address Families.
   "package_name": "nautobot_bgp_models"
-  "author": "Network to Code"
+  "author": "Network to Code (NTC)"
   "display":
     "cloud": true
     "oss": true
@@ -36,7 +36,7 @@
     interfaces, racks, and much more. Individual Nautobot Apps also expose their own metrics. Exposing this data
     and visualizing it in a tool like Grafana will allow users to track growth, trends, capacity, and utilization.
   "package_name": "nautobot_capacity_metrics"
-  "author": "Network to Code"
+  "author": "Network to Code (NTC)"
   "display":
     "cloud": true
     "oss": true
@@ -62,7 +62,7 @@
     Arista CloudVision, IP Fabric, Cisco Meraki, Cisco ACI, Palo Panorama, Ansible AWX, with extensibility to add
     more tools and custom chat commands.
   "package_name": "nautobot_chatops"
-  "author": "Network to Code"
+  "author": "Network to Code (NTC)"
   "display":
     "cloud": true
     "oss": true
@@ -86,7 +86,7 @@
     Going one step further, users can then use the notification and device data to drive further automation such
     as draining a primary circuit and activiating a standby in preparation for the maintenance.
   "package_name": "nautobot_circuit_maintenance"
-  "author": "Network to Code"
+  "author": "Network to Code (NTC)"
   "display":
     "cloud": true
     "oss": true
@@ -109,7 +109,7 @@
     Expressions and min/mix rules ensuring corporate standards are enforced. It also supports advanced and complex
     business rule logic by using the Data Validation APIs (with code).
   "package_name": "nautobot_data_validation_engine"
-  "author": "Network to Code"
+  "author": "Network to Code (NTC)"
   "display":
     "cloud": true
     "oss": true
@@ -134,7 +134,7 @@
     Enterprise standards. Designs can be further tracked and versioned to better understand the lifecyle of a given
     design.
   "package_name": "nautobot_design_builder"
-  "author": "Network to Code"
+  "author": "Network to Code (NTC)"
   "display":
     "cloud": true
     "oss": true
@@ -156,7 +156,7 @@
     software versions, maintenance contract information, CVEs, and vulnerabilities. All of this helps to provide
     valuable life cycle planning including maintenance events and hardware events.
   "package_name": "nautobot_device_lifecycle_mgmt"
-  "author": "Network to Code"
+  "author": "Network to Code (NTC)"
   "display":
     "cloud": true
     "oss": true
@@ -178,7 +178,7 @@
     the device into Nautobot. The data discovered is extensible, but out of the box includes hostname, serial number,
     IPs, interfaces, and much more (based on OS type).
   "package_name": "nautobot_device_onboarding"
-  "author": "Network to Code"
+  "author": "Network to Code (NTC)"
   "display":
     "cloud": true
     "oss": true
@@ -199,7 +199,7 @@
     and Groups, Applications and Application Groups, Service Objects and Service Object Groups, User Objects and
     Groups, Zones, Policies and Rules, and NAT Policies.
   "package_name": "nautobot_firewall_models"
-  "author": "Network to Code"
+  "author": "Network to Code (NTC)"
   "display":
     "cloud": true
     "oss": true
@@ -221,7 +221,7 @@
     Provides data center management by providing the ability to create a gridded representation of the floor plan
     of a Location and indicate the relative location of each Nautobot Rack within that floor plan.
   "package_name": "nautobot_floor_plan"
-  "author": "Network to Code"
+  "author": "Network to Code (NTC)"
   "display":
     "cloud": true
     "oss": true
@@ -249,7 +249,7 @@
     Beyond compliance, Golden Config offers users the ability to perform remediation and general configuration management
     making any change required on the network.
   "package_name": "nautobot_golden_config"
-  "author": "Network to Code"
+  "author": "Network to Code (NTC)"
   "display":
     "cloud": true
     "oss": true
@@ -266,7 +266,7 @@
   "headline": "The easy button for migrating from NetBox to Nautobot."
   "description": "Automate the data migration from NetBox to Nautobot simplifying your path to network automation."
   "package_name": "nautobot_netbox_importer"
-  "author": "Network to Code"
+  "author": "Network to Code (NTC)"
   "display":
     "cloud": true
     "oss": true
@@ -289,7 +289,7 @@
     The Nautobot Nornir integration is intended to be a small shim layer between nornir-nautobot and other Jobs
     and Apps.  The primary abilities that it provides is a native Nornir ORM based inventory and a credential manager.
   "package_name": "nautobot_plugin_nornir"
-  "author": "Network to Code"
+  "author": "Network to Code (NTC)"
   "display":
     "cloud": true
     "oss": true
@@ -313,12 +313,12 @@
     It allows operators to upload software files, using Nautobot as a repository of validated images, and to track
     software image lifecycle integrated with Nautobot Device Lifecycle Management.
   "package_name": "nautobot_os_upgrades"
-  "author": "Network to Code"
+  "author": "Network to Code (NTC)"
   "display":
     "cloud": true
     "oss": true
     "enterprise": true
-  "availability": "Private"
+  "availability": "NTC License"
   "icon": >-
     data:image/png;base64,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
 - "name": "Operational Compliance"
@@ -335,12 +335,12 @@
     Compliance allows users to define validation rules and groups of rules to easily compare the output ensuring
     change rules are operating as expected.
   "package_name": "nautobot_operational_compliance"
-  "author": "Network to Code"
+  "author": "Network to Code (NTC)"
   "display":
     "cloud": true
     "oss": true
     "enterprise": true
-  "availability": "Private"
+  "availability": "NTC License"
   "icon": >-
     data:image/png;base64,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
 - "name": "Secrets Management"
@@ -356,7 +356,7 @@
     secrets management platforms without having to store secrets natively in Nautobot. Integrations include AWS
     Secrets Manager, HashiCorp Vault, Azure, Delinea Secret Server.
   "package_name": "nautobot_secrets_providers"
-  "author": "Network to Code"
+  "author": "Network to Code (NTC)"
   "display":
     "cloud": true
     "oss": true
@@ -381,7 +381,7 @@
     to serve as a true single source of truth (SSoT). Existing data integrations include ServiceNow, Cisco ACI,
     Infoblox, IP Fabric, and Arista CloudVision. It is extensible to add more commercial or custom database integrations.
   "package_name": "nautobot_ssot"
-  "author": "Network to Code"
+  "author": "Network to Code (NTC)"
   "display":
     "cloud": true
     "oss": true
@@ -400,7 +400,7 @@
     The Welcome Wizard is a getting started wizard for Nautobot to assist a new user with the necessary initial
     steps in adding data such as devices, devices types, platforms, locations, and more.
   "package_name": "welcome_wizard"
-  "author": "Network to Code"
+  "author": "Network to Code (NTC)"
   "display":
     "cloud": true
     "oss": true
