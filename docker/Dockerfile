@@ -79,18 +79,10 @@ FROM system-dependencies AS system-dev-dependencies
 # Install development/install-time OS dependencies
 # hadolint ignore=DL3008
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y build-essential libssl-dev pkg-config libldap-dev libsasl2-dev libmariadb-dev nodejs npm mariadb-client && \
+    apt-get install --no-install-recommends -y build-essential libssl-dev pkg-config libldap-dev libsasl2-dev libmariadb-dev mariadb-client && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/*
-
-# Ensure the npm install is cached, updated, and has a long timeout for slow connections
-# The Node.JS install above should install npm 9, but we pin it here just in case
-# npm 10 has shown issues with slow CI environments
-RUN --mount=type=cache,target="/root/.npm",sharing=locked \
-    npm config set fetch-retry-maxtimeout 300000 && \
-    npm install -g npm@9 && \
-    npm install -g markdownlint-cli@0.38.0
 
 ################################ Stage: system-dev-dependencies-$ARCH (intermediate build target)
 
@@ -188,8 +180,6 @@ RUN --mount=type=cache,target="/root/.cache",sharing=locked \
 ENV NAUTOBOT_INSTALLATION_METRICS_ENABLED=false
 
 COPY --chown=nautobot:nautobot development/nautobot_config.py /opt/nautobot/nautobot_config.py
-
-RUN rm -rf /source/*
 
 # Run Nautobot development server by default
 EXPOSE 8080

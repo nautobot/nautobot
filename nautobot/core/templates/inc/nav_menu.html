@@ -56,7 +56,7 @@
                                                                         {% endcomment %}
                                                                         {% url button_details.link as button_url %}
                                                                         {% if button_url %}
-                                                                            <a href="{{ button_url }}"
+                                                                            <a href="{{ button_url }}{{ button_details.querystring }}"
                                                                                data-button-weight="{{ button_details.weight }}"
                                                                                class="btn btn-xs btn-{{ button_details.button_class }}"
                                                                                title="{{ button_title }}">

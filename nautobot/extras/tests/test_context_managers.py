@@ -99,7 +99,10 @@ class WebRequestContextTestCase(TestCase):
             ],
         )
         mock_enqueue_webhooks.assert_has_calls(
-            [mock.call(oc_list[0], webhook_queryset=None), mock.call(oc_list[1], webhook_queryset=None)]
+            [
+                mock.call(oc_list[0], snapshots=oc_list[0].get_snapshots(), webhook_queryset=None),
+                mock.call(oc_list[1], snapshots=oc_list[1].get_snapshots(), webhook_queryset=None),
+            ]
         )
 
     def test_update_then_delete(self):

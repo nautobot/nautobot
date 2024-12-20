@@ -83,7 +83,9 @@ class InstalledAppsTable(tables.Table):
     @property
     def configurable_columns(self):
         selected_columns = [
-            (name, self.columns[name].verbose_name) for name in self.sequence if name not in ["pk", "actions"]
+            (name, column.verbose_name)
+            for name, column in self.columns.items()
+            if name in self.sequence and name not in ["pk", "actions"]
         ]
         available_columns = [
             (name, column.verbose_name)
@@ -94,7 +96,7 @@ class InstalledAppsTable(tables.Table):
 
     @property
     def visible_columns(self):
-        return [name for name in self.sequence if self.columns[name].visible]
+        return [name for name, column in self.columns.items() if column.visible]
 
     def render_package_name(self, value):
         return format_html(f"<code>{value}</code>")

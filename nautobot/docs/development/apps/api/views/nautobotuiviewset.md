@@ -25,6 +25,22 @@ class YourAppModelUIViewSet(NautobotUIViewSet):
     table_class = tables.YourAppModelTable
 ```
 
+## UI Component Framework
+
+The Nautobot UI Component Framework is a system for building user interfaces in Nautobot Apps.
+Each ViewSet defines how queries are handled, the layout of panels,
+and the organization of content.
+Panels are the building blocks of the UI and they contain specific types of content
+and can be placed in sections.
+The UI Component Framework uses a declarative method that lets developers create UI
+structures with Python objects instead of HTML templates.
+This method simplifies the process of creating consistent and maintainable user interfaces.
+The framework provides many pre-built panel types.
+
+| [Migration tutorial](../../migration/ui-component-framework/index.md)
+
+| [UI Component Framework documentation](../../../../development/core/ui-component-framework.md)
+
 ## Setting ViewSet Attributes
 
 **One caveat of using the NautobotUIViewSet is that the `queryset`, `serializer_class` and `table_class` attribute of the `YourAppModelUIViewSet` has to be set before most of the `NautobotUIViewSet` functionalities will become available.**
@@ -189,7 +205,7 @@ class YourAppModelUIViewSet(NautobotUIViewSet):
     @action(detail=True)
     def customview(self, request, *args, **kwargs):
         """Context passed to template for rendering.
-        
+
         Expected URL pattern will be `/plugins/yourapp/yourappmodel/<uuid>/customview/`
         """
         context = {

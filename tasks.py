@@ -388,7 +388,7 @@ def docker_push(context, branch, commit="", datestamp=""):  # pylint: disable=re
         f"{nautobot_version}-py{context.nautobot.python_ver}",
     ]
 
-    if context.nautobot.python_ver == "3.8":
+    if context.nautobot.python_ver == "3.12":
         docker_image_tags_main += ["stable", f"{nautobot_version}"]
     if branch == "main":
         docker_image_names = context.nautobot.docker_image_names_main
@@ -491,9 +491,12 @@ def logs(context, service="", follow=False, tail=0):
 # ACTIONS
 # ------------------------------------------------------------------------------
 @task
-def nbshell(context):
+def nbshell(context, quiet=False):
     """Launch an interactive Nautobot shell."""
     command = "nautobot-server nbshell"
+
+    if quiet:
+        command += " --quiet"
 
     run_command(context, command)
 
@@ -708,17 +711,13 @@ def hadolint(context):
 
 
 @task
-def markdownlint(context):
+def markdownlint(context, fix=False):
     """Lint Markdown files."""
-    if is_truthy(context.nautobot.local) and not context.run("command -v markdownlint", warn=True):
-        command = "npm exec -- markdownlint "
-    else:
-        command = "markdownlint "
-    command += (
-        "--ignore nautobot/project-static "
-        "--config .markdownlint.yml --rules scripts/use-relative-md-links.js "
-        "nautobot examples *.md"
-    )
+    if fix:
+        command = "pymarkdown fix --recurse nautobot examples *.md"
+        run_command(context, command)
+    # fix mode doesn't scan/report issues it can't fix, so always run scan even after fixing
+    command = "pymarkdown scan --recurse nautobot examples *.md"
     run_command(context, command)
 
 

@@ -27,6 +27,7 @@ from nautobot.apps.jobs import (
 )
 from nautobot.dcim.models import Device, Location, LocationType
 from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.jobs import get_task_logger
 from nautobot.extras.models import Status
 
 name = "Example App jobs"  # The "grouping" that will contain all Jobs defined in this file.
@@ -292,6 +293,10 @@ class ExampleDryRunJob(Job):
         except Exception:
             self.logger.error("%s failed. Database changes rolled back.", self.__name__)
             raise
+        self.logger.success("We can use the success log level to indicate success.")
+        # Ensure get_task_logger can also use success.
+        logger = get_task_logger(__name__)
+        logger.success("We can also use the success log level in get_task_logger.")
 
 
 class ExampleJob(Job):
@@ -468,6 +473,15 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
             self.logger.error("Unable to run Job Button for type %s.", type(obj).__name__, extra={"object": obj})
 
 
+class ExampleSingletonJob(Job):
+    class Meta:
+        name = "Example job, only one can run at any given time."
+        is_singleton = True
+
+    def run(self):
+        time.sleep(60)
+
+
 jobs = (
     ExampleEverythingJob,
     ExampleDryRunJob,
@@ -479,5 +493,6 @@ jobs = (
     ExampleJobHookReceiver,
     ExampleSimpleJobButtonReceiver,
     ExampleComplexJobButtonReceiver,
+    ExampleSingletonJob,
 )
 register_jobs(*jobs)

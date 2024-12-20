@@ -72,7 +72,7 @@ class LogsCleanup(Job):
 
     def run(self, *, cleanup_types, max_age=None):
         if max_age in (None, ""):
-            max_age = get_settings_or_config("CHANGELOG_RETENTION")
+            max_age = get_settings_or_config("CHANGELOG_RETENTION", fallback=90)
             if max_age == 0:
                 self.logger.warning(
                     "CHANGELOG_RETENTION setting is set to zero, disabling this Job. "

@@ -267,6 +267,11 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                                         let id_prefix = element_id.match(/id_form-[0-9]+-/i, "")[0];
                                         ref_field = $("#" + id_prefix + value.slice(1));
                                     }
+                                    // If the element is in a table row with a class containing "dynamic-formset"
+                                    // We need to find the reference field in the same row
+                                    else if ($(element).closest("tr") && $(element).closest("tr").attr("class") && $(element).closest("tr").attr("class").includes("dynamic-formset")){
+                                        ref_field = $(element).closest("tr").find("select[id*=" + value.slice(1) + "]");
+                                    }
                                     else {
                                         ref_field = $('#id_' + value.slice(1));
                                     }

@@ -237,8 +237,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (activeLink) {
         let previouslyClickedLink = document.querySelector('.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > a[href="' + activeLink + '"]');
         let currentLocation = window.location.pathname + window.location.search;
+        let previouslyClickedLinkNoSearch = previouslyClickedLink.getAttribute('href').split('?')[0];
 
-        if (previouslyClickedLink && currentLocation.includes(previouslyClickedLink.getAttribute('href'))) {
+        if (previouslyClickedLink && (currentLocation.includes(previouslyClickedLink.getAttribute('href')) || currentLocation.includes(previouslyClickedLinkNoSearch))) {
             previouslyClickedLink.parentElement.classList.add('active');
         }
         else {
