@@ -862,7 +862,9 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         )
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
-        self.add_permissions("ipam.add_ipaddress", constraints={"description__startswith": "This is the IP created for"})
+        self.add_permissions(
+            "ipam.add_ipaddress", constraints={"description__startswith": "This is the IP created for"}
+        )
 
         # Test invalid request
         data = {
@@ -913,7 +915,9 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         )
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
-        self.add_permissions("ipam.add_ipaddress", constraints={"description__startswith": "This is the IP created for"})
+        self.add_permissions(
+            "ipam.add_ipaddress", constraints={"description__startswith": "This is the IP created for"}
+        )
 
         # Test invalid request
         data = [
