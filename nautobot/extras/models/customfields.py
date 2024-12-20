@@ -578,7 +578,13 @@ class CustomField(
             )
 
     def to_form_field(
-        self, set_initial=True, enforce_required=True, for_csv_import=False, simple_json_filter=False, label=None, for_filter_form=False
+        self,
+        set_initial=True,
+        enforce_required=True,
+        for_csv_import=False,
+        simple_json_filter=False,
+        label=None,
+        for_filter_form=False,
     ):
         """
         Return a form field suitable for setting a CustomField's value for an object.
