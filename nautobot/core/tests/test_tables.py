@@ -128,7 +128,7 @@ class TableTestCase(TestCase):
         # Circuit Table
         circuit_table = CircuitTable(Circuit.objects.all(), exclude=["provider", "circuit_termination_a"])
         circuit_table.columns.hide("tags")
-        expected_visible_columns = ["cid", "status", "circuit_termination_z", "description", "example_app_provider_asn"]
+        expected_visible_columns = ["cid", "circuit_type", "status", "circuit_termination_z", "description", "example_app_provider_asn"]
         expected_configurable_columns = [
             ("cid", "ID"),
             ("circuit_type", "Circuit type"),
