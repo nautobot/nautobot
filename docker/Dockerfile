@@ -145,17 +145,15 @@ WORKDIR /source
 
 # Install (non-development) Python dependencies of Nautobot
 RUN --mount=type=cache,target="/root/.cache",sharing=locked \
-    if poetry install --no-root --only main --no-ansi --extras all && \
-        rm -rf /tmp/tmp*; then \
+    if poetry install --no-root --only main --no-ansi --extras all; then \
         echo "Parallel installation succeeded"; \
     else \
         echo "Parallel installation failed, retrying serially"; \
-        poetry config virtualenvs.create ${POETRY_VIRTUALENVS_CREATE} && \
-        poetry config installer.parallel false && \
-        poetry config installer.no-binary lxml,pyuwsgi,xmlsec && \
-        poetry install --no-root --only main --no-ansi --extras all && \
-        rm -rf /tmp/tmp*; \
+        poetry config installer.parallel false; \
+        poetry install --no-root --only main --no-ansi --extras all; \
     fi
+
+RUN rm -rf /tmp/tmp*
 
 # Verify that pyuwsgi was installed correctly, i.e. with SSL support
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
