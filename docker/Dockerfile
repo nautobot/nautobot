@@ -151,6 +151,9 @@ RUN --mount=type=cache,target="/root/.cache",sharing=locked \
         echo "Parallel installation failed, retrying serially"; \
         poetry config installer.parallel false; \
         poetry install --no-root --only main --no-ansi --extras all; \
+    else \
+        echo "Serial installation failed, exiting"; \
+        exit 1; \
     fi
 
 RUN rm -rf /tmp/tmp*
