@@ -96,6 +96,28 @@ class FilterTestCases:
             """Helper method to return q filter."""
             return self.filterset.declared_filters["q"].filter_predicates
 
+        def test_id(self):
+            """Verify that the filterset supports filtering by id with only lookup `__n`."""
+            with self.subTest("Assert `id`"):
+                params = {"id": list(self.queryset.values_list("pk", flat=True)[:2])}
+                expected_queryset = self.queryset.filter(id__in=params["id"])
+                filterset = self.filterset(params, self.queryset)
+                self.assertTrue(filterset.is_valid())
+                self.assertQuerysetEqualAndNotEmpty(filterset.qs.order_by("id"), expected_queryset.order_by("id"))
+
+            with self.subTest("Assert negate lookup"):
+                params = {"id__n": list(self.queryset.values_list("pk", flat=True)[:2])}
+                expected_queryset = self.queryset.exclude(id__in=params["id__n"])
+                filterset = self.filterset(params, self.queryset)
+                self.assertTrue(filterset.is_valid())
+                self.assertQuerysetEqualAndNotEmpty(filterset.qs.order_by("id"), expected_queryset.order_by("id"))
+
+            with self.subTest("Assert invalid lookup"):
+                params = {"id__in": list(self.queryset.values_list("pk", flat=True)[:2])}
+                filterset = self.filterset(params, self.queryset)
+                self.assertFalse(filterset.is_valid())
+                self.assertIn("Unknown filter field", filterset.errors.as_text())
+
         def test_invalid_filter(self):
             """Verify that the filterset reports as invalid when initialized with an unsupported filter parameter."""
             params = {"ice_cream_flavor": ["chocolate"]}

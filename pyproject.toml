@@ -194,7 +194,7 @@ mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see optional-settings.md and required-settings.md
 mkdocs-macros-plugin = "~1.0.5"
 # Material for mkdocs theme
-mkdocs-material = "~9.5.47"
+mkdocs-material = "~9.5.48"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections

@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.core.exceptions import PermissionDenied
+from django.db.models import CASCADE
 from django.db.models.signals import pre_delete
 from django.utils import timezone
 
@@ -48,6 +49,27 @@ class LogsCleanup(Job):
         description = "Delete ObjectChange and/or JobResult/JobLogEntry records older than a specified cutoff."
         has_sensitive_variables = False
 
+    def recursive_delete_with_cascade(self, queryset, deletion_summary):
+        """
+        Recursively deletes all related objects with CASCADE for a given queryset.
+
+        Args:
+            queryset (QuerySet): The queryset of objects to delete.
+            deletion_summary (dict): A dictionary to store the count of deleted objects for each model.
+        """
+        related_objects = queryset.model._meta.related_objects
+        queryset = queryset.only("id")
+
+        for related_object in related_objects:
+            if related_object.on_delete is CASCADE:
+                related_model = related_object.related_model
+                related_field_name = related_object.field.name
+                cascade_queryset = related_model.objects.filter(**{f"{related_field_name}__id__in": queryset})
+                self.recursive_delete_with_cascade(cascade_queryset, deletion_summary)
+        _, deleted_dict = queryset.delete()
+        deletion_summary.update(deleted_dict)
+        return deletion_summary
+
     def run(self, *, cleanup_types, max_age=None):
         if max_age in (None, ""):
             max_age = get_settings_or_config("CHANGELOG_RETENTION", fallback=90)
@@ -77,22 +99,36 @@ class LogsCleanup(Job):
 
             if CleanupTypes.JOB_RESULT in cleanup_types:
                 self.logger.info("Deleting JobResult records prior to %s", cutoff)
-                _, deleted_dict = JobResult.objects.restrict(self.user, "delete").filter(date_done__lt=cutoff).delete()
+                queryset = JobResult.objects.restrict(self.user, "delete").filter(date_done__lt=cutoff)
+                deletion_summary = {}
+                self.recursive_delete_with_cascade(queryset, deletion_summary)
                 result.setdefault("extras.JobResult", 0)
                 result.setdefault("extras.JobLogEntry", 0)
-                result.update(**deleted_dict)
-                self.logger.info(
-                    "Deleted %d JobResult records and their associated %d JobLogEntry records",
-                    result["extras.JobResult"],
-                    result["extras.JobLogEntry"],
-                )
+                result.update(deletion_summary)
+
+                for modelname, count in deletion_summary.items():
+                    self.logger.info(
+                        "As part of deleting %d JobResult records, also deleted %d related %s records",
+                        result["extras.JobResult"],
+                        count,
+                        modelname,
+                    )
 
             if CleanupTypes.OBJECT_CHANGE in cleanup_types:
                 self.logger.info("Deleting ObjectChange records prior to %s", cutoff)
-                deleted_count, _ = ObjectChange.objects.restrict(self.user, "delete").filter(time__lt=cutoff).delete()
-                self.logger.info("Deleted %d ObjectChange records", deleted_count)
-                result["extras.ObjectChange"] = deleted_count
+                queryset = ObjectChange.objects.restrict(self.user, "delete").filter(time__lt=cutoff)
+                deletion_summary = {}
+                self.recursive_delete_with_cascade(queryset, deletion_summary)
+                result.setdefault("extras.ObjectChange", 0)
+                result.update(deletion_summary)
 
+                for modelname, count in deletion_summary.items():
+                    self.logger.info(
+                        "As part of deleting %d ObjectChange records, also deleted %d related %s records",
+                        result["extras.ObjectChange"],
+                        count,
+                        modelname,
+                    )
             return result
         finally:
             # Be sure to clean up after ourselves!

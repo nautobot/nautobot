@@ -189,23 +189,25 @@ Available tasks:
   hadolint               Check Dockerfile for hadolint compliance and other style issues.
   integration-test       Run Nautobot integration tests.
   loaddata               Load data from file.
+  logs                   View the logs of a docker compose service.
   makemigrations         Perform makemigrations operation in Django.
-  migration-test         Test database migration from a given dataset to latest Nautobot schema.
   markdownlint           Lint Markdown files.
   migrate                Perform migrate operation in Django.
+  migration-test         Test database migration from a given dataset to latest Nautobot schema.
   nbshell                Launch an interactive Nautobot shell.
   performance-test       Run Nautobot performance tests.
   post-upgrade           Performs Nautobot common post-upgrade operations using a single entrypoint.
   pylint                 Perform static analysis of Nautobot code.
   restart                Gracefully restart containers.
-  ruff                   Run ruff to perform code formatting and/or linting.
-  serve-docs             Runs local instance of mkdocs serve (ctrl-c to stop).
+  ruff                   Run ruff to perform code formatting and linting.
+  serve-docs             Runs local instance of mkdocs serve on port 8001 (ctrl-c to stop).
+  showmigrations         Perform showmigrations operation in Django.
   start                  Start Nautobot and its dependencies in detached mode.
   stop                   Stop Nautobot and its dependencies.
   tests                  Run all linters and unit tests.
   unittest               Run Nautobot unit tests.
   unittest-coverage      Report on code test coverage as measured by 'invoke unittest'.
-  version                Show the version of Nautobot Python and NPM packages or bump them when a valid bump rule is provided.
+  version                Show the version of Nautobot Python package or bump it when a valid bump rule is provided.
   vscode                 Launch Visual Studio Code with the appropriate Environment variables to run in a container.
   yamllint               Run yamllint to validate formatting applies to YAML standards.
 ```
@@ -225,6 +227,7 @@ A development environment can be easily started up from the root of the project 
 Additional useful commands for the development environment:
 
 * `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, NGINX, Celery, and Celery Beat (or a specific container/service, such as `invoke start -s redis`) to run in the background
+* `invoke logs [-s servicename]` - View the logs of the containers (or a specific container/service, such as `invoke logs -s nautobot`)
 * `invoke nbshell` - Launches a Nautobot Python shell inside the Nautobot container
 * `invoke cli [-s servicename]` - Launches a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
 * `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`

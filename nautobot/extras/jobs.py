@@ -106,13 +106,15 @@ class BaseJob:
 
         - name (str)
         - description (str)
-        - hidden (bool)
-        - field_order (list)
         - approval_required (bool)
-        - soft_time_limit (int)
-        - time_limit (int)
+        - dryrun_default (bool)
+        - field_order (list)
         - has_sensitive_variables (bool)
+        - hidden (bool)
+        - soft_time_limit (int)
         - task_queues (list)
+        - template_name (str)
+        - time_limit (int)
         - is_singleton (bool)
         """
 
