@@ -144,18 +144,17 @@ COPY --chown=nautobot:nautobot examples /source/examples
 WORKDIR /source
 
 # Install (non-development) Python dependencies of Nautobot
-RUN if --mount=type=cache,target="/root/.cache",sharing=locked \
-    poetry install --no-root --only main --no-ansi --extras all && \
-    rm -rf /tmp/tmp*, then \
+RUN --mount=type=cache,target="/root/.cache",sharing=locked \
+    if poetry install --no-root --only main --no-ansi --extras all && \
+        rm -rf /tmp/tmp*; then \
         echo "Parallel installation succeeded"; \
     else \
         echo "Parallel installation failed, retrying serially"; \
         poetry config virtualenvs.create ${POETRY_VIRTUALENVS_CREATE} && \
         poetry config installer.parallel false && \
         poetry config installer.no-binary lxml,pyuwsgi,xmlsec && \
-        --mount=type=cache,target="/root/.cache",sharing=locked \
         poetry install --no-root --only main --no-ansi --extras all && \
-        rm -rf /tmp/tmp*
+        rm -rf /tmp/tmp*; \
     fi
 
 # Verify that pyuwsgi was installed correctly, i.e. with SSL support
