@@ -23,6 +23,7 @@ from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
 from django.views.generic import TemplateView, View
+from django.views.static import serve
 from graphene_django.views import GraphQLView
 from packaging import version
 from prometheus_client import (
@@ -130,6 +131,34 @@ class HomeView(AccessMixin, TemplateView):
                                 )
 
         return self.render_to_response(context)
+
+
+class MediaView(AccessMixin, View):
+    """
+    Serves static media files while enforcing login restrictions.
+
+    This view wraps Django's `serve()` function to ensure that access to
+    media files is restricted to authenticated users. Additionally, it
+    allows access to branded media files defined in
+    `settings.BRANDING_FILEPATHS`, even for unauthenticated users.
+    """
+
+    def get(self, request, path):
+        can_view = request.user.is_authenticated
+        with contextlib.suppress(FileNotFoundError):
+            for branding_filepath in settings.BRANDING_FILEPATHS.values():
+                if not branding_filepath:
+                    continue
+                branding_filepath = os.path.join(settings.MEDIA_ROOT, branding_filepath)
+                requested_path = os.path.join(settings.MEDIA_ROOT, path)
+                same_path = os.path.samefile(branding_filepath, requested_path)
+                if same_path:
+                    can_view = True
+                    break
+
+        if not can_view:
+            return self.handle_no_permission()
+        return serve(request, path, document_root=settings.MEDIA_ROOT)
 
 
 class WorkerStatusView(UserPassesTestMixin, TemplateView):
