@@ -1,0 +1,2 @@
+Added serial retry to Dockerfile poetry install if parallel install fails.
+Updated release and prerelease workflows to allow other container builds to finish after one fails.
