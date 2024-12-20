@@ -596,9 +596,76 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         response = self.client.get(url, **self.header)
         self.assertEqual(len(response.data), 6)  # 8 - 2 because prefix.type = network
 
+    def test_list_available_ips_calculate_child_ips(self):
+        """
+        Test retrieval of all available IP addresses when child IP's exists.
+        """
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        prefix = Prefix.objects.create(
+            prefix="192.0.3.0/29",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        Prefix.objects.create(
+            prefix="192.0.3.0/30",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        IPAddress.objects.create(
+            address="192.0.3.1/30",
+            status=ip_status,
+            namespace=self.namespace,
+        )
+
+        url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+
+        # Retrieve all available IPs
+        response = self.client.get(url, **self.header)
+        self.assertEqual(len(response.data), 7)  # 7 because prefix.type = pool got 8 IP's minus one children IP
+
+    def test_create_single_available_ip_calculate_child_ips(self):
+        """
+        Test creating a single IP when child IP's exists.
+        """
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        prefix = Prefix.objects.create(
+            prefix="192.0.4.0/31",
+            namespace=self.namespace,
+            type=choices.PrefixTypeChoices.TYPE_NETWORK,
+            status=self.status,
+        )
+        Prefix.objects.create(
+            prefix="192.0.4.0/32",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+        )
+        IPAddress.objects.create(
+            address="192.0.4.0/32",
+            status=ip_status,
+            namespace=self.namespace,
+        )
+        url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
+        self.add_permissions("ipam.view_prefix", "ipam.add_ipaddress", "extras.view_status")
+
+        data = {
+            "status": self.status.pk,
+        }
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(str(response.data["parent"]["url"]), self.absolute_api_url(prefix))
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertIn("detail", response.data)
+
     def test_create_single_available_ip(self):
         """
-        Test retrieval of the first available IP address within a parent prefix.
+        Test creating single IP will return 204 No content when pool is fully filled.
         """
         prefix = Prefix.objects.create(
             prefix="192.0.2.0/29",
