@@ -146,8 +146,8 @@ WORKDIR /source
 # Install (non-development) Python dependencies of Nautobot
 RUN --mount=type=cache,target="/root/.cache",sharing=locked \
     if poetry install --no-root --only main --no-ansi --extras all; then \
-        echo "Parallel installation succeeded"; \
-    else \
+        echo "Installation succeeded"; \
+    elif [ ${POETRY_INSTALLER_PARALLEL} == "true" ]; then \
         echo "Parallel installation failed, retrying serially"; \
         poetry config installer.parallel false; \
         poetry install --no-root --only main --no-ansi --extras all; \
