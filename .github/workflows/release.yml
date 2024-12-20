@@ -108,7 +108,7 @@ jobs:
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-            POETRY_INSTALLER_PARALLEL=true
+            POETRY_INSTALLER_PARALLEL=false
       - name: "Docker Dev Metadata"
         id: "dockerdevmeta"
         uses: "docker/metadata-action@v4"
@@ -140,7 +140,7 @@ jobs:
           context: "."
           build-args: |
             PYTHON_VER=${{ matrix.python-version }}
-            POETRY_INSTALLER_PARALLEL=true
+            POETRY_INSTALLER_PARALLEL=false
 
   slack-notify:
     needs:

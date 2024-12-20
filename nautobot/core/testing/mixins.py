@@ -144,13 +144,18 @@ class NautobotTestCaseMixin:
     # Permissions management
     #
 
-    def add_permissions(self, *names):
+    def add_permissions(self, *names, **kwargs):
         """
         Assign a set of permissions to the test user. Accepts permission names in the form <app>.<action>_<model>.
+        Additional keyword arguments will be passed to the ObjectPermission constructor to allow creating more detailed permissions.
+
+        Examples:
+            >>> add_permissions("ipam.add_vlangroup", "ipam.view_vlangroup")
+            >>> add_permissions("ipam.add_vlangroup", "ipam.view_vlangroup", constraints={"pk": "uuid-1234"})
         """
         for name in names:
             ct, action = permissions.resolve_permission_ct(name)
-            obj_perm = users_models.ObjectPermission(name=name, actions=[action])
+            obj_perm = users_models.ObjectPermission(name=name, actions=[action], **kwargs)
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ct)

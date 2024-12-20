@@ -124,6 +124,21 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
+## v2.3.15 (2024-12-20)
+
+### Changed
+
+- [#6583](https://github.com/nautobot/nautobot/issues/6583) - `available-vlans` API endpoint now require `ipam.view_vlan` permission to view available VLANs under VLAN Group.
+
+### Fixed
+
+- [#6583](https://github.com/nautobot/nautobot/issues/6583) - Fixed `available-vlans`, `available-ips`, `available-prefixes` API endpoints to check object-level constrained permissions.
+
+### Housekeeping
+
+- [#6583](https://github.com/nautobot/nautobot/issues/6583) - Added `NautobotTestCaseMixin.add_permission` method for easier creating a constraint permissions.
+- [#6693](https://github.com/nautobot/nautobot/issues/6693) - Changed `poetry install` in prerelease and release workflows from parallel mode to serial mode.
+
 ## v2.3.14 (2024-12-19)
 
 ### Added
