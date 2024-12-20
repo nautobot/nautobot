@@ -125,17 +125,17 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 <!-- towncrier release notes start -->
 ## v2.3.14 (2024-12-19)
 
-### Added
+### Added in v2.3.14
 
 - [#6548](https://github.com/nautobot/nautobot/issues/6548) - Added logic to set the `parent` in the `clean()` method of the Prefix model, ensuring correct assignment during validation.
 
-### Changed
+### Changed in v2.3.14
 
 - [#6518](https://github.com/nautobot/nautobot/issues/6518) - Added VRFs column to Prefixes and Child Prefixes tables.
 - [#6531](https://github.com/nautobot/nautobot/issues/6531) - Restrict the `id` filter field to use to only the `__n` (negation) lookup filter.
 - [#6548](https://github.com/nautobot/nautobot/issues/6548) - Changed the save method of the `Prefix` model to reparent subnets and IPs only when the `network`, `namespace`, or `prefix_length` fields are updated.
 
-### Fixed
+### Fixed in v2.3.14
 
 - [#4056](https://github.com/nautobot/nautobot/issues/4056) - Fixed filter of add_tags and remove_tags of bulkedit based on content type
 - [#6204](https://github.com/nautobot/nautobot/issues/6204) - Fixed out-of-memory errors when `LogsCleanup` system job resulted in cascade deletion of many related objects (such as `JobLogEntry` or `nautobot_ssot.SyncLogEntry` records).
@@ -145,11 +145,11 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 - [#6664](https://github.com/nautobot/nautobot/issues/6664) - Fixed `circuit_type` column not included correctly in CircuitTable default columns.
 - [#6678](https://github.com/nautobot/nautobot/issues/6678) - Fixed incorrect copy button behavior on global search page.
 
-### Documentation
+### Documentation in v2.3.14
 
 - [#6590](https://github.com/nautobot/nautobot/issues/6590) - Added an `ExampleEverythingJob` to the Example App and updated Job developer documentation to reference it as an example.
 
-### Housekeeping
+### Housekeeping in v2.3.14
 
 - [#6657](https://github.com/nautobot/nautobot/issues/6657) - Updated documentation dependency `mkdocs-material` to `~9.5.48`.
 - [#6659](https://github.com/nautobot/nautobot/issues/6659) - Enhanced development environment and associated `invoke` tasks to be Nautobot major/minor version aware, such that a different Docker compose `project-name` (and different local Docker image label) will be used for containers in a `develop`-based branch versus a `next`-based branch.
