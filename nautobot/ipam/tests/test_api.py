@@ -582,7 +582,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         )
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix")
-        self.add_permission(
+        self.add_permissions(
             "ipam.add_prefix", constraints={"description__startswith": "This is the Prefix created for"}
         )
 
@@ -639,7 +639,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         )
         url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix")
-        self.add_permission(
+        self.add_permissions(
             "ipam.add_prefix", constraints={"description__startswith": "This is the Prefix created for"}
         )
 
@@ -862,7 +862,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         )
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
-        self.add_permission("ipam.add_ipaddress", constraints={"description__startswith": "This is the IP created for"})
+        self.add_permissions("ipam.add_ipaddress", constraints={"description__startswith": "This is the IP created for"})
 
         # Test invalid request
         data = {
@@ -913,7 +913,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         )
         url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
         self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
-        self.add_permission("ipam.add_ipaddress", constraints={"description__startswith": "This is the IP created for"})
+        self.add_permissions("ipam.add_ipaddress", constraints={"description__startswith": "This is the IP created for"})
 
         # Test invalid request
         data = [
@@ -1485,7 +1485,7 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
             "ipam.view_vlangroup",
             "ipam.view_vlan",
         )
-        self.add_permission("ipam.add_vlan", constraints={"description__startswith": "This is the VLAN created for"})
+        self.add_permissions("ipam.add_vlan", constraints={"description__startswith": "This is the VLAN created for"})
 
         data = {"name": "VLAN_6", "status": self.default_status.pk, "vid": 6}
         invalid_data_list = [
@@ -1532,7 +1532,7 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
             "ipam.view_vlangroup",
             "ipam.view_vlan",
         )
-        self.add_permission("ipam.add_vlan", constraints={"description__startswith": "This is the VLAN created for"})
+        self.add_permissions("ipam.add_vlan", constraints={"description__startswith": "This is the VLAN created for"})
 
         # Test invalid request
         data = [

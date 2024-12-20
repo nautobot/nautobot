@@ -407,7 +407,7 @@ class VLANGroupViewSet(NautobotModelViewSet):
         )
 
     class AvailableVLANPermissions(TokenPermissions):
-        """As nautobot.core.api.authentication.TokenPermissions, but enforcing add_vlan permission."""
+        """As nautobot.core.api.authentication.TokenPermissions, but enforcing `add_vlan` and `view_vlan` permission."""
 
         perms_map = {
             "GET": ["ipam.view_vlangroup", "ipam.view_vlan"],
