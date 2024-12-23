@@ -64,6 +64,9 @@ class BaseTable(django_tables2.Table):
                 returns new data. Runs after all of the queryset auto-optimization performed by this class.
                 Used for example in IPAM views to inject "fake" records for "available" Prefixes, IPAddresses, or VLANs.
             **kwargs (dict, optional): Passed through to django_tables2.Table
+        Warning:
+            Do not modify/set the `base_columns` attribute after BaseTable class is instantiated.
+            Do not modify/set the `base_columns` attribute after calling super().__init__() of BaseTable class.
         """
         # Add custom field columns
         model = self._meta.model
@@ -273,7 +276,9 @@ class BaseTable(django_tables2.Table):
     @property
     def configurable_columns(self):
         selected_columns = [
-            (name, self.columns[name].verbose_name) for name in self.sequence if name not in ["pk", "actions"]
+            (name, column.verbose_name)
+            for name, column in self.columns.items()
+            if name in self.sequence and name not in ["pk", "actions"]
         ]
         available_columns = [
             (name, column.verbose_name)
@@ -284,7 +289,7 @@ class BaseTable(django_tables2.Table):
 
     @property
     def visible_columns(self):
-        return [name for name in self.sequence if self.columns[name].visible and name not in self.exclude]
+        return [name for name, column in self.columns.items() if column.visible and name not in self.exclude]
 
     @property
     def order_by(self):

@@ -1,4 +1,5 @@
 from unittest import skipIf
+from unittest.mock import patch
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -413,6 +414,39 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.child1 = Prefix.objects.create(prefix="101.102.0.0/26", status=self.status, namespace=self.namespace)
         self.child2 = Prefix.objects.create(prefix="101.102.0.64/26", status=self.status, namespace=self.namespace)
 
+    def test_parent_exists_after_model_clean(self):
+        prefix = Prefix(
+            prefix="101.102.0.2/26", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_CONTAINER
+        )
+        prefix.clean()
+        self.assertEqual(prefix.parent, self.child1)
+
+    def test_reparent_subnets_and_reparent_ips_call(self):
+        """Assert reparent_subnets and reparent_ips are only called if there is an update to either of network, namespace or prefix_length"""
+        prefix_ip = "101.102.0.0/28"
+        with self.subTest("Assert reparent_subnets"):
+            with patch.object(Prefix, "reparent_subnets", return_value=None) as mock_reparent_subnets:
+                Prefix.objects.create(prefix=prefix_ip, status=self.status, namespace=self.namespace)
+                mock_reparent_subnets.assert_called_once()
+
+            with patch.object(Prefix, "reparent_subnets", return_value=None) as mock_reparent_subnets:
+                prefix = Prefix.objects.get(prefix=prefix_ip)
+                prefix.description = "Sample Description"
+                prefix.save()
+                mock_reparent_subnets.assert_not_called()
+                prefix.delete()
+
+        with self.subTest("Assert reparent_ips"):
+            with patch.object(Prefix, "reparent_ips", return_value=None) as reparent_ips:
+                Prefix.objects.create(prefix=prefix_ip, status=self.status, namespace=self.namespace)
+                reparent_ips.assert_called_once()
+
+            with patch.object(Prefix, "reparent_ips", return_value=None) as reparent_ips:
+                prefix = Prefix.objects.get(prefix=prefix_ip)
+                prefix.description = "Sample Description"
+                prefix.save()
+                reparent_ips.assert_not_called()
+
     def test_location_queries(self):
         locations = Location.objects.all()[:4]
         for location in locations:
@@ -765,6 +799,13 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
 
         IPAddress.objects.create(address="10.0.0.4/24", status=self.status, namespace=self.namespace)
         self.assertEqual(parent_prefix.get_first_available_ip(), "10.0.0.5/24")
+
+    def test_get_first_available_ip_calculate_child_ips(self):
+        parent_prefix = Prefix.objects.create(prefix="10.0.3.0/29", status=self.status, namespace=self.namespace)
+        Prefix.objects.create(prefix="10.0.3.0/30", status=self.status, namespace=self.namespace)
+        IPAddress(address="10.0.3.1/30", status=self.status, namespace=self.namespace).save()
+
+        self.assertEqual(parent_prefix.get_first_available_ip(), "10.0.3.2/29")
 
     def test_get_utilization(self):
         # Container Prefix
