@@ -2,6 +2,8 @@
 
 This guide demonstrates how to set up Wireless Networks and Controllers to manage Wireless Access Points via a Controller in a Data Center. In this example, we use **Central Mode**, where traffic from the Access Points is tunneled through the Controller.
 
+![Central Mode Diagram](images/wireless/central-mode.png)
+
 ## Optional Preparation
 
 Before configuring Wireless Networks, you can optionally set up the following features to enrich the data:
@@ -25,7 +27,7 @@ Fill in the required fields for the Wireless Network:
 
 1. Enter the Wireless Network name.
 2. Enter the Wireless Network SSID.
-3. Select a Mode from the Dropdown (Central in this example).
+3. Select a Mode from the dropdown (Central in this example).
 4. Choose the Authentication type.
 5. Click **Create** or **Create and Add Another** to save.
 
