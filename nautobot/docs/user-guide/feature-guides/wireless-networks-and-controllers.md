@@ -1,6 +1,6 @@
 # Wireless Networks and Controllers
 
-This guide demonstrates how to set up Wireless Networks and Controllers to manage Wireless Access Points via a Controller in a Data Center. In this example, we use **Central Mode**, where traffic from the Access Points is tunneled through the Controller.
+This guide demonstrates how to set up Wireless Networks and Controllers to manage Wireless Access Points via a Controller in a Data Center. While Nautobot supports Wireless Networks managed in various modes, in this example we use **Central Mode**, where traffic from the Access Points is tunneled through the Controller.
 
 ![Central Mode Diagram](images/wireless/central-mode.png)
 
