@@ -796,7 +796,7 @@ class DeviceFamilyFilterForm(NautobotFilterForm):
     tags = TagFilterField(model)
 
 
-class DeviceFamilyBulkEditForm(NautobotBulkEditForm, TagsBulkEditFormMixin):
+class DeviceFamilyBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceFamily.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(required=False)
 
@@ -2127,6 +2127,8 @@ class DeviceBulkEditForm(
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(), required=False, query_params={"location": "$location"}
     )
+    cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), required=False)
+    comments = CommentField(widget=SmallTextarea, label="Comments")
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
     serial = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, label="Serial Number")
@@ -2150,6 +2152,8 @@ class DeviceBulkEditForm(
             "position",
             "face",
             "rack_group",
+            "cluster",
+            "comments",
             "secrets_group",
             "device_redundancy_group",
             "device_redundancy_group_priority",
@@ -3214,9 +3218,6 @@ class InterfaceBulkEditForm(
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
-        query_params={
-            "locations": "null",
-        },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
@@ -3266,8 +3267,12 @@ class InterfaceBulkEditForm(
             # Limit VLAN choices by Location
             if locations.count() == 1:
                 location = locations.first()
-                self.fields["untagged_vlan"].widget.add_query_param("locations", location.pk)
+                # In the case of a single location, use the available_on_device query param to limit untagged VLAN choices
+                # to those available on the devices in that location and in the ancestors of the location.
+                self.fields["untagged_vlan"].widget.add_query_param("available_on_device", device.pk)
                 self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
+            else:
+                self.fields["tagged_vlans"].widget.add_query_param("locations", "null")
 
         # Restrict parent/bridge/LAG interface assignment by device (or VC master)
         if device_count == 1:

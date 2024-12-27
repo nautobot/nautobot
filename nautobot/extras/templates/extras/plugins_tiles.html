@@ -9,12 +9,18 @@
     }
 
     .tile-header h2 {
+        margin-bottom: 5px;
         margin-top: 0;
     }
 
     .tile-actions-placeholder {
         height: 30px;
         margin-left: 3px;
+    }
+
+    .tile-description {
+        margin-top: 10px;
+        min-height: 72px;  /* allow room for three rows of text */
     }
 
     .tile-actions {
@@ -52,9 +58,9 @@
                     </div>
 
                     <h2>{{ row.record.name }}</h2>
-
-                    <p class="tile-description">{{ row.record.description }}</p>
                 </header>
+
+                <p class="tile-description">{{ row.record.description }}</p>
 
                 <footer class="tile-footer">
                     <div>Author: {{ row.record.author }}</div>

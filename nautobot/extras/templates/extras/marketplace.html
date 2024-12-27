@@ -6,6 +6,7 @@
 <style>
     .tile-header {
         display: block;
+        min-height: 85px;  /* allow room for two rows of tags */
     }
 
     .tile-header h2 {
@@ -21,6 +22,7 @@
 
     .tile-description {
         margin-top: 10px;
+        min-height: 72px;  /* allow room for three rows of text */
     }
 
     .tile-actions {
@@ -55,6 +57,16 @@
 {% endblock %}
 
 {% block content %}
+    <div class="row noprint">
+        <div class="col-md-12">
+            <ol class="breadcrumb">
+                {% block breadcrumbs %}
+                    <li><a href="{% url 'apps:apps_marketplace' %}">Apps Marketplace</a></li>
+                {% endblock breadcrumbs %}
+            </ol>
+        </div>
+    </div>
+
     <div class="pull-right noprint">
         <a class="btn btn-primary" href="{% url 'apps:apps_list' %}">See Installed Apps</a>
     </div>
@@ -84,6 +96,7 @@
 
                                 <h2>{{ app.name }}</h2>
 
+                                {% if app.installed %} <span class="label label-primary">Installed</span>{% endif %}
                                 {% for use_case in app.use_cases %}
                                     <label class="label label-default">{{ use_case }}</label>
                                 {% endfor %}
@@ -121,7 +134,10 @@
                                         <span aria-hidden="true">&times;</span>
                                     </button>
 
-                                    <h4 class="modal-title">{{ app.name }}</h4>
+                                    <h4 class="modal-title">
+                                        {{ app.name }}
+                                        {% if app.installed %}<span class="label label-primary">Installed</span>{% endif %}
+                                    </h4>
                                 </div>
 
                                 <div class="modal-body">
@@ -186,8 +202,8 @@
                                                 <p>
                                                     <strong>
                                                         This app is private. Reach out to
-                                                        <a href="https://networktocode.com/nautobot/" target="_blank">
-                                                            Nautobot Team
+                                                        <a href="https://networktocode.com/contact/" target="_blank">
+                                                            Network to Code
                                                         </a>
                                                         for more information.
                                                     </strong>

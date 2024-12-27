@@ -4,7 +4,6 @@ import logging
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist, FieldError
-from django.db import NotSupportedError
 from django.db.models import Prefetch
 from django.db.models.fields.related import ForeignKey, RelatedField
 from django.db.models.fields.reverse_related import ManyToOneRel
@@ -14,13 +13,15 @@ from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
 import django_tables2
-from django_tables2.data import TableQuerysetData
+from django_tables2.data import TableData, TableQuerysetData
+from django_tables2.rows import BoundRows
 from django_tables2.utils import Accessor, OrderBy, OrderByTuple
 from tree_queries.models import TreeNode
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
 from nautobot.core.utils.lookup import get_model_for_view_name, get_related_field_for_models, get_route_for_model
+from nautobot.core.utils.querysets import maybe_prefetch_related, maybe_select_related
 from nautobot.extras import choices, models
 
 logger = logging.getLogger(__name__)
@@ -46,8 +47,27 @@ class BaseTable(django_tables2.Table):
         user=None,
         hide_hierarchy_ui=False,
         order_by=None,
+        data_transform_callback=None,
         **kwargs,
     ):
+        """
+        Instantiate a BaseTable.
+
+        Args:
+            *args (list, optional): Passed through to django_tables2.Table
+            table_changes_pending (bool): TODO
+            saved_view (SavedView, optional): TODO
+            user (User, optional): TODO
+            hide_hierarchy_ui (bool): Whether to display or hide hierarchy indentation of nested objects.
+            order_by (list, optional): Field(s) to sort by
+            data_transform_callback (function, optional): A function that takes the given `data` as an input and
+                returns new data. Runs after all of the queryset auto-optimization performed by this class.
+                Used for example in IPAM views to inject "fake" records for "available" Prefixes, IPAddresses, or VLANs.
+            **kwargs (dict, optional): Passed through to django_tables2.Table
+        Warning:
+            Do not modify/set the `base_columns` attribute after BaseTable class is instantiated.
+            Do not modify/set the `base_columns` attribute after calling super().__init__() of BaseTable class.
+        """
         # Add custom field columns
         model = self._meta.model
 
@@ -89,6 +109,14 @@ class BaseTable(django_tables2.Table):
         # Init table
         super().__init__(*args, order_by=order_by, **kwargs)
 
+        if not isinstance(self.data, TableQuerysetData):
+            # LinkedCountColumns don't work properly if the data is a list of dicts instead of a queryset,
+            # as they rely on a `queryset.annotate()` call to gather the data.
+            self.exclude = [
+                *self.exclude,
+                *[column.name for column in self.columns if isinstance(column.column, LinkedCountColumn)],
+            ]
+
         # Don't show hierarchy if we're sorted
         if order_by is not None and hide_hierarchy_ui is None:
             hide_hierarchy_ui = True
@@ -122,7 +150,7 @@ class BaseTable(django_tables2.Table):
                 columns = user.get_config(f"tables.{self.__class__.__name__}.columns")
         if columns:
             for name, column in self.base_columns.items():
-                if name in columns:
+                if name in columns and name not in self.exclude:
                     self.columns.show(name)
                 else:
                     self.columns.hide(name)
@@ -161,7 +189,8 @@ class BaseTable(django_tables2.Table):
                         logger.error("Couldn't find model for %s", column.column.viewname)
                         continue
                     reverse_lookup = column.column.reverse_lookup or next(iter(column.column.url_params.keys()))
-                    count_fields.append((column.name, column_model, reverse_lookup))
+                    distinct = column.column.distinct
+                    count_fields.append((column.name, column_model, reverse_lookup, distinct))
                     try:
                         lookup = column.column.lookup or get_related_field_for_models(model, column_model).name
                         # For some reason get_related_field_for_models(Tag, DynamicGroup) gives a M2M with the name
@@ -173,7 +202,8 @@ class BaseTable(django_tables2.Table):
                     if lookup is not None:
                         # Also attempt to prefetch the first matching record for display - see LinkedCountColumn
                         prefetch_fields.append(
-                            Prefetch(lookup, column_model.objects.all()[:1], to_attr=f"{lookup}_list")
+                            # Use order_by() because we don't care about ordering here and it's potentially expensive
+                            Prefetch(lookup, column_model.objects.order_by()[:1], to_attr=f"{lookup}_list")
                         )
                     continue
 
@@ -209,75 +239,46 @@ class BaseTable(django_tables2.Table):
                     prefetch_fields.append("__".join(prefetch_path))
 
             if select_fields:
-                # Django doesn't allow .select_related() on a QuerySet that had .values()/.values_list() applied, or
-                # one that has had union()/intersection()/difference() applied.
-                # We can detect and avoid these cases the same way that Django itself does.
-                if queryset._fields is not None:
-                    logger.debug(
-                        "NOT applying select_related(%s) to %s QuerySet as it includes .values()/.values_list()",
-                        select_fields,
-                        model.__name__,
-                    )
-                elif queryset.query.combinator:
-                    logger.debug(
-                        "NOT applying select_related(%s) to %s QuerySet as it is a combinator query",
-                        select_fields,
-                        model.__name__,
-                    )
-                else:
-                    logger.debug("Applying .select_related(%s) to %s QuerySet", select_fields, model.__name__)
-                    # Belt and suspenders - we should have avoided any error cases above, but be safe anyway:
-                    try:
-                        queryset = queryset.select_related(*select_fields)
-                    except (TypeError, ValueError, NotSupportedError) as exc:
-                        logger.warning(
-                            "Unexpected error when trying to .select_related() on %s QuerySet: %s",
-                            model.__name__,
-                            exc,
-                        )
+                queryset = maybe_select_related(queryset, select_fields)
 
             if prefetch_fields:
-                if queryset.query.combinator:
-                    logger.debug(
-                        "NOT applying prefetch_related(%s) to %s QuerySet as it is a combinator query",
-                        prefetch_fields,
-                        model.__name__,
-                    )
-                else:
-                    logger.debug("Applying .prefetch_related(%s) to %s QuerySet", prefetch_fields, model.__name__)
-                    # Belt and suspenders - we should have avoided any error cases above, but be safe anyway:
-                    try:
-                        queryset = queryset.prefetch_related(*prefetch_fields)
-                    except (AttributeError, TypeError, ValueError, NotSupportedError) as exc:
-                        logger.warning(
-                            "Unexpected error when trying to .prefetch_related() on %s QuerySet: %s",
-                            model.__name__,
-                            exc,
-                        )
+                queryset = maybe_prefetch_related(queryset, prefetch_fields)
 
             if count_fields:
-                for column_name, column_model, lookup_name in count_fields:
+                for column_name, column_model, lookup_name, distinct in count_fields:
                     if hasattr(queryset.first(), column_name):
                         continue
                     try:
                         logger.debug(
-                            "Applying .annotate(%s=count_related(%s, %r) to %s QuerySet",
+                            "Applying .annotate(%s=count_related(%s, %r, distinct=%s) to %s QuerySet",
                             column_name,
                             column_model.__name__,
                             lookup_name,
+                            distinct,
                             model.__name__,
                         )
-                        queryset = queryset.annotate(**{column_name: count_related(column_model, lookup_name)})
+                        queryset = queryset.annotate(
+                            **{column_name: count_related(column_model, lookup_name, distinct=distinct)}
+                        )
                     except FieldError:
                         # No error message logged here as the above is *very much* best-effort
                         pass
 
             self.data.data = queryset
 
+        # TODO: it would be better if we could apply this transformation and the above queryset optimizations
+        #       **before** calling super().__init__(), but the current implementation works for now, though inelegant.
+        if data_transform_callback is not None:
+            self.data = TableData.from_data(data_transform_callback(self.data.data))
+            self.data.set_table(self)
+            self.rows = BoundRows(data=self.data, table=self, pinned_data=self.pinned_data)
+
     @property
     def configurable_columns(self):
         selected_columns = [
-            (name, self.columns[name].verbose_name) for name in self.sequence if name not in ["pk", "actions"]
+            (name, column.verbose_name)
+            for name, column in self.columns.items()
+            if name in self.sequence and name not in ["pk", "actions"]
         ]
         available_columns = [
             (name, column.verbose_name)
@@ -288,7 +289,7 @@ class BaseTable(django_tables2.Table):
 
     @property
     def visible_columns(self):
-        return [name for name in self.sequence if self.columns[name].visible]
+        return [name for name, column in self.columns.items() if column.visible and name not in self.exclude]
 
     @property
     def order_by(self):
@@ -490,6 +491,7 @@ class LinkedCountColumn(django_tables2.Column):
             TODO: this currently does *not* support nested lookups via `__`. That may be solvable in the future.
         reverse_lookup (str, optional): The reverse lookup parameter to use to derive the count.
             If not specified, the first key in `url_params` will be implicitly used as the `reverse_lookup` value.
+        distinct (bool, optional): Parameter passed through to `count_related()`.
         **kwargs (dict, optional): As the parent Column class.
 
     Examples:
@@ -514,21 +516,33 @@ class LinkedCountColumn(django_tables2.Column):
                 # We'd like to do the below but this module isn't currently smart enough to build the right Prefetch()
                 # for a nested lookup:
                 # lookup="circuit_terminations__circuit",
-                # For the count, .annotate(circuit_count=count_related(Circuit, "circuit_terminations__cloud_network"))
+                # For the count,
+                # .annotate(circuit_count=count_related(Circuit, "circuit_terminations__cloud_network", distinct=True))
                 reverse_lookup="circuit_terminations__cloud_network",
+                distinct=True,
                 verbose_name="Circuits",
             )
         ```
     """
 
     def __init__(
-        self, viewname, *args, view_kwargs=None, url_params=None, lookup=None, reverse_lookup=None, default=0, **kwargs
+        self,
+        viewname,
+        *args,
+        view_kwargs=None,
+        url_params=None,
+        lookup=None,
+        reverse_lookup=None,
+        distinct=False,
+        default=None,
+        **kwargs,
     ):
         self.viewname = viewname
         self.lookup = lookup
         self.view_kwargs = view_kwargs or {}
         self.url_params = url_params
         self.reverse_lookup = reverse_lookup or next(iter(url_params.keys()))
+        self.distinct = distinct
         self.model = get_model_for_view_name(self.viewname)
         super().__init__(*args, default=default, **kwargs)
 

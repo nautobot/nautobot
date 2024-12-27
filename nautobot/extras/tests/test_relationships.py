@@ -367,20 +367,24 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
         self.assertFalse(field.required)
         self.assertIsInstance(field, DynamicModelMultipleChoiceField)
         self.assertEqual(field.label, "My VLANs")
-        self.assertEqual(field.query_params, {})
+        self.assertEqual(field.query_params, {"exclude_m2m": "true"})
 
         field = self.m2m_1.to_form_field("destination")
         self.assertFalse(field.required)
         self.assertIsInstance(field, DynamicModelMultipleChoiceField)
         self.assertEqual(field.label, "My Racks")
         self.assertEqual(
-            field.query_params, {"location": [self.locations[0].name, self.locations[1].name, self.locations[2].name]}
+            field.query_params,
+            {
+                "location": [self.locations[0].name, self.locations[1].name, self.locations[2].name],
+                "exclude_m2m": "true",
+            },
         )
 
         field = self.m2ms_1.to_form_field("peer")
         self.assertFalse(field.required)
         self.assertIsInstance(field, DynamicModelMultipleChoiceField)
-        self.assertEqual(field.query_params, {})
+        self.assertEqual(field.query_params, {"exclude_m2m": "true"})
 
     def test_to_form_field_o2m(self):
         field = self.o2m_1.to_form_field("source")

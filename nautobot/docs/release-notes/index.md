@@ -1,6 +1,6 @@
 # Release Notes
 
-## [2.4 - November 2024](version-2.4.md)
+## [2.4 - December 2024](version-2.4.md)
 
 - Apps Marketplace Page and Installed Apps Page Tile View
 - Event Publication Framework
@@ -8,6 +8,7 @@
 - Job `success` Log Level
 - Kubernetes Job Execution and Job Queue Data Model
 - Per-User Time Zone Support
+- REST API `exclude_m2m` Support
 - Singleton Jobs
 - UI Component Framework
 - Virtual Device Context Data Models

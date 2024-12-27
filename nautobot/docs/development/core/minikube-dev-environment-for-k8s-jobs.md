@@ -84,9 +84,9 @@ You should see several yaml files with post-fixes like `*-deployment.yaml`, `*-s
 
 ### Build an up-to-date Nautobot Docker Image
 
-An up-to-date Nautobot local docker image named `local/nautobot-dev:local-py${PYTHON_VER}` is required before you start building your kubernetes deployments. The default `PYTHON_VER` is set to 3.11. If you have a different python version, for example 3.9, you will need to replace every occurrence of `local/nautobot-dev:local-py3.11` in `nautobot-deployment.yaml` and `nautobot-cm1-configmap.yaml` with `local/nautobot-dev:local-py3.9` to make sure that minikube pick up the correct local nautobot image in your docker environment.
+An up-to-date Nautobot local Docker image named `local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}` is required before you start building your kubernetes deployments. The default `NAUTOBOT_VER` is set to `2.4` and the default `PYTHON_VER` is set to `3.12`. If you have a different version for either variable, you will need to replace every occurrence of `local/nautobot-dev:local-2.4-py3.12` in all of the `development/kubernetes/*.yaml` files to make sure that `minikube` picks up the correct local Nautobot image from your Docker environment.
 
-Run the following command to point your terminal to use the docker daemon inside minikube. This will ensure that your up-to-date local image named `local/nautobot-final-dev:local-py${PYTHON_VER}` is used when you build your kubernetes deployments.
+Run the following command to point your terminal to use the docker daemon inside minikube. This will ensure that your up-to-date local image named `local/nautobot-final-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}` is used when you build your kubernetes deployments.
 
 ```bash
 eval $(minikube docker-env)

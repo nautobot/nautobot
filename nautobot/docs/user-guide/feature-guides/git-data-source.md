@@ -295,13 +295,13 @@ For more information for the Golden Configuration specific data sources, navigat
     - Config Contexts -> `config_contexts`.
 2. Synchronization Status Failures.
     - Validate branch is correct and exists in the remote repository.
-    ![Error Branch Doesn't Exist](./images/git-as-data-source/15-git-data-source.png)
+      ![Error Branch Doesn't Exist](./images/git-as-data-source/15-git-data-source.png)
     - Validate the remote url is correct and is the `http(s)` url.  `ssh` urls are not currently supported.
-    ![Error Remote URL Incorrect](./images/git-as-data-source/16-git-data-source.png)
+      ![Error Remote URL Incorrect](./images/git-as-data-source/16-git-data-source.png)
 3. Authentication Issues.
     - Check repository permissions.
     - Ensure the password is the Personal Access Token (PAT) for the username supplied.
     - Ensure the PAT permissions are setup properly.
-      - At a minimum the `repo` option should be checked or access.
+        - At a minimum the `repo` option should be checked or access.
 
     ![Error Authentication Issue](./images/git-as-data-source/17-git-data-source.png)
