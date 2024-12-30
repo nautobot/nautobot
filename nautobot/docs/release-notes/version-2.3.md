@@ -124,19 +124,28 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
-## v2.3.15 (2024-12-20)
+## v2.3.15 (2024-12-30)
+
+### Security
+
+- [#6695](https://github.com/nautobot/nautobot/issues/6695) - Updated dependency `Jinja2` to `~3.1.5` to address `CVE-2024-56201` and `CVE-2024-56326`.
 
 ### Changed
 
-- [#6583](https://github.com/nautobot/nautobot/issues/6583) - `available-vlans` API endpoint now require `ipam.view_vlan` permission to view available VLANs under VLAN Group.
+- [#6583](https://github.com/nautobot/nautobot/issues/6583) - Changed `available-vlans` API endpoint to additionally require `ipam.view_vlan` permission to view available VLANs under VLAN Group.
 
 ### Fixed
 
 - [#6583](https://github.com/nautobot/nautobot/issues/6583) - Fixed `available-vlans`, `available-ips`, `available-prefixes` API endpoints to check object-level constrained permissions.
 
+### Dependencies
+
+- [#6689](https://github.com/nautobot/nautobot/issues/6689) - Updated `nh3` dependency to `~0.2.20`.
+- [#6689](https://github.com/nautobot/nautobot/issues/6689) - Updated `django-tables2` dependency to `~2.7.4` in Python 3.9 and later, and pinned it to `==2.7.0` under Python 3.8.
+
 ### Housekeeping
 
-- [#6583](https://github.com/nautobot/nautobot/issues/6583) - Added `NautobotTestCaseMixin.add_permission` method for easier creating a constraint permissions.
+- [#6689](https://github.com/nautobot/nautobot/issues/6689) - Updated documentation dependency `mkdocs-material` to `~9.5.49`.
 - [#6693](https://github.com/nautobot/nautobot/issues/6693) - Changed `poetry install` in prerelease and release workflows from parallel mode to serial mode.
 
 ## v2.3.14 (2024-12-19)
