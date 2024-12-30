@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.3.14b1"
+version = "2.3.15b1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -73,7 +73,10 @@ django-storages = {version = "1.14.3", optional = true}
 # Structured logging for Django
 django-structlog = {version = "^8.1.0", extras = ["celery"]}
 # Advanced HTML tables
-django-tables2 = "~2.7.0"
+django-tables2 = [
+    {version = "2.7.0", python = "<3.9"},
+    {version = "~2.7.4", python = ">=3.9"},
+]
 # Tags
 django-taggit = "~5.0.0"
 # Represent time zones in Django
@@ -99,7 +102,7 @@ graphene-django = "~2.16.0"
 # NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
 graphene-django-optimizer = "~0.8.0"
 # Template rendering engine
-Jinja2 = "~3.1.4"
+Jinja2 = "~3.1.5"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
 jsonschema = "^4.7.0"
 # Messaging library for Python - dependency of Celery
@@ -120,7 +123,7 @@ netaddr = "~1.3.0"
 #       we permit a looser (^) version constraint here.
 netutils = "^1.6.0"
 # HTML sanitization
-nh3 = "~0.2.19"
+nh3 = "~0.2.20"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
@@ -196,7 +199,7 @@ mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see optional-settings.md and required-settings.md
 mkdocs-macros-plugin = "~1.0.5"
 # Material for mkdocs theme
-mkdocs-material = "~9.5.48"
+mkdocs-material = "~9.5.49"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
