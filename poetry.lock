@@ -1030,14 +1030,37 @@ commands = ["django-extensions (>=1.4.9)"]
 
 [[package]]
 name = "django-tables2"
-version = "2.7.3"
+version = "2.7.0"
 description = "Table/data-grid framework for Django"
 optional = false
 python-versions = "*"
 files = [
-    {file = "django_tables2-2.7.3-py2.py3-none-any.whl", hash = "sha256:8d4dffb82f00e0cd5f941b3502912aa13265e51f722961bb8f2c4cd15e7dfc07"},
-    {file = "django_tables2-2.7.3.tar.gz", hash = "sha256:363d6dabd5023c0de018e911490efbea27ff58713e6acb0bd3b4fffc0deead50"},
+    {file = "django-tables2-2.7.0.tar.gz", hash = "sha256:4113fcc575eb438a12e83a4d4ea01452e4800d970e8bdd0e4122ac171af1900d"},
+    {file = "django_tables2-2.7.0-py2.py3-none-any.whl", hash = "sha256:99e06d966ca8ac69fd74092eb45c79a280dd5ca0ccb81395d96261f62128e1af"},
 ]
+
+[package.dependencies]
+Django = ">=3.2"
+
+[package.extras]
+tablib = ["tablib"]
+
+[[package]]
+name = "django-tables2"
+version = "2.7.4"
+description = "Table/data-grid framework for Django"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "django_tables2-2.7.4-py3-none-any.whl", hash = "sha256:1f9373bdfea7f8ec5bef80542f58c1ca2eb19f86a8bec90936eccea6f1564347"},
+    {file = "django_tables2-2.7.4.tar.gz", hash = "sha256:25c22986d88aa5d911a0f0175bcdfbeaeab4f5fc086ac58b02a29daa8bc3e5a8"},
+]
+
+[package.dependencies]
+django = ">=4.2"
+
+[package.extras]
+tablib = ["tablib"]
 
 [[package]]
 name = "django-taggit"
@@ -4348,4 +4371,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.13"
-content-hash = "78faa5fdc48bddf10310d9b06691e800b110116d973bbc61193c8e02be1e47cd"
+content-hash = "19383d57392219fb8a3f08f318d445925e3834d3dc4ad92cf1019575a02d71ee"
