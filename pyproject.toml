@@ -73,7 +73,10 @@ django-storages = {version = "1.14.3", optional = true}
 # Structured logging for Django
 django-structlog = {version = "^8.1.0", extras = ["celery"]}
 # Advanced HTML tables
-django-tables2 = "~2.7.0"
+django-tables2 = [
+    {version = "2.7.0", python = "<3.9"},
+    {version = "~2.7.4", python = ">=3.9"},
+]
 # Tags
 django-taggit = "~5.0.0"
 # Represent time zones in Django
@@ -120,7 +123,7 @@ netaddr = "~1.3.0"
 #       we permit a looser (^) version constraint here.
 netutils = "^1.6.0"
 # HTML sanitization
-nh3 = "~0.2.19"
+nh3 = "~0.2.20"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
@@ -196,7 +199,7 @@ mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see optional-settings.md and required-settings.md
 mkdocs-macros-plugin = "~1.0.5"
 # Material for mkdocs theme
-mkdocs-material = "~9.5.48"
+mkdocs-material = "~9.5.49"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
