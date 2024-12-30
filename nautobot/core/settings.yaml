@@ -1480,7 +1480,7 @@ properties:
         Irrelevant if deployed behind a firewall.
     environment_variable: "NAUTOBOT_PUBLISH_ROBOTS_TXT"
     type: "boolean"
-    version_added: "2.3.13"
+    version_added: "2.3.15"
   RACK_ELEVATION_DEFAULT_UNIT_HEIGHT:
     default: 22
     description: >-
