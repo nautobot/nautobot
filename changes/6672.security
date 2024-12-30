@@ -1,0 +1,1 @@
+Added enforcement of user authentication when serving uploaded media files (GHSA-rh67-4c8j-hjjh).
