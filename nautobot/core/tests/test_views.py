@@ -230,13 +230,13 @@ class MediaViewTestCase(TestCase):
                 # Authenticated request succeeds
                 response = self.client.get(url)
                 self.assertHttpStatus(response, 200)
-                self.assertIn("Hello, world!", b''.join(response).decode(response.charset))
+                self.assertIn("Hello, world!", b"".join(response).decode(response.charset))
 
                 # Unauthenticated request also succeeds
                 self.client.logout()
                 response = self.client.get(url)
                 self.assertHttpStatus(response, 200)
-                self.assertIn("Hello, world!", b''.join(response).decode(response.charset))
+                self.assertIn("Hello, world!", b"".join(response).decode(response.charset))
 
     def test_media_authenticated(self):
         """
@@ -251,7 +251,7 @@ class MediaViewTestCase(TestCase):
                 url = reverse("media", kwargs={"path": "foo.txt"})
                 response = self.client.get(url)
                 self.assertHttpStatus(response, 200)
-                self.assertIn("Hello, world!", b''.join(response).decode(response.charset))
+                self.assertIn("Hello, world!", b"".join(response).decode(response.charset))
 
 
 @override_settings(BRANDING_TITLE="Nautobot")
