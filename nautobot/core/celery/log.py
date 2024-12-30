@@ -11,6 +11,10 @@ class NautobotDatabaseHandler(logging.Handler):
         if current_task is None:
             return
 
+        # Skip recording the log entry if it has been marked as such
+        if getattr(record, "skip_db_logging", False):
+            return
+
         from nautobot.extras.models.jobs import JobResult
 
         try:
@@ -22,10 +26,6 @@ class NautobotDatabaseHandler(logging.Handler):
                 # Both of these cases are very rare
                 # ValidationError - because the task_id might not a valid UUID
                 # JobResult.DoesNotExist - because we might not have a JobResult with that ID
-                return
-
-            # Skip recording the log entry if it has been marked as such
-            if getattr(record, "skip_db_logging", False):
                 return
 
             job_result.log(
