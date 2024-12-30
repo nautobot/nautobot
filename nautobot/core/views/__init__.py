@@ -508,10 +508,7 @@ class AboutView(AccessMixin, TemplateView):
 
         # Support contract state
         support_expiration_date = get_settings_or_config("NTC_SUPPORT_CONTRACT_EXPIRATION_DATE")
-        if support_expiration_date and support_expiration_date >= datetime.date.today():
-            support_contract_active = True
-        else:
-            support_contract_active = False
+        support_contract_active = support_expiration_date and support_expiration_date >= datetime.date.today()
 
         context = self.get_context_data()
         context.update(
