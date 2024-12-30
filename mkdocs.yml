@@ -401,6 +401,7 @@ nav:
           - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
           - Relationships: "user-guide/feature-guides/relationships.md"
           - Software Image Files and Versions: "user-guide/feature-guides/software-image-files-and-versions.md"
+          - Wireless Networks and Controllers: "user-guide/feature-guides/wireless-networks-and-controllers.md"
       - Core Data Model:
           - Overview:
               - Introduction: "user-guide/core-data-model/overview/introduction.md"
