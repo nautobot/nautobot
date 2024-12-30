@@ -2,6 +2,7 @@ import contextlib
 import logging
 import os
 import platform
+import posixpath
 import re
 import sys
 import time
@@ -135,30 +136,21 @@ class HomeView(AccessMixin, TemplateView):
 
 class MediaView(AccessMixin, View):
     """
-    Serves static media files while enforcing login restrictions.
+    Serves media files while enforcing login restrictions.
 
-    This view wraps Django's `serve()` function to ensure that access to
-    media files is restricted to authenticated users. Additionally, it
-    allows access to branded media files defined in
-    `settings.BRANDING_FILEPATHS`, even for unauthenticated users.
+    This view wraps Django's `serve()` function to ensure that access to media files (with the exception of
+    branding files defined in `settings.BRANDING_FILEPATHS`) is restricted to authenticated users.
     """
 
     def get(self, request, path):
-        can_view = request.user.is_authenticated
-        with contextlib.suppress(FileNotFoundError):
-            for branding_filepath in settings.BRANDING_FILEPATHS.values():
-                if not branding_filepath:
-                    continue
-                branding_filepath = os.path.join(settings.MEDIA_ROOT, branding_filepath)
-                requested_path = os.path.join(settings.MEDIA_ROOT, path)
-                same_path = os.path.samefile(branding_filepath, requested_path)
-                if same_path:
-                    can_view = True
-                    break
+        if request.user.is_authenticated:
+            return serve(request, path, document_root=settings.MEDIA_ROOT)
 
-        if not can_view:
-            return self.handle_no_permission()
-        return serve(request, path, document_root=settings.MEDIA_ROOT)
+        # Unauthenticated users can access BRANDING_FILEPATHS only
+        if posixpath.normpath(path).lstrip("/") in settings.BRANDING_FILEPATHS.values():
+            return serve(request, path, document_root=settings.MEDIA_ROOT)
+
+        return self.handle_no_permission()
 
 
 class WorkerStatusView(UserPassesTestMixin, TemplateView):

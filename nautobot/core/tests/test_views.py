@@ -186,38 +186,61 @@ class HomeViewTestCase(TestCase):
 class MediaViewTestCase(TestCase):
     def test_media_unauthenticated(self):
         """
-        Test that unauthenticated users are redirected to the login page
-        when attempting to access non-branded media files.
-        """
-        url = reverse("media", kwargs={"path": "foo.txt"})
-        self.client.logout()
-        response = self.client.get(url)
-
-        # Unauthenticated request should redirect to login page
-        self.assertRedirects(
-            response, expected_url=reverse("login") + "?next=/media/foo.txt", status_code=302, target_status_code=200
-        )
-
-    def test_branding_media_unauthenticated(self):
-        """
-        Test that unauthenticated users can access branded media files
-        listed in `settings.BRANDING_FILEPATHS`.
+        Test that unauthenticated users are redirected to login when accessing media files whether they exist or not.
         """
         with tempfile.TemporaryDirectory() as temp_dir:
-            with override_settings(MEDIA_ROOT=temp_dir, BRANDING_FILEPATHS={"logo": os.path.join(temp_dir, "foo.txt")}):
+            with override_settings(
+                MEDIA_ROOT=temp_dir,
+                BRANDING_FILEPATHS={"logo": os.path.join("branding", "logo.txt")},
+            ):
                 file_path = os.path.join(temp_dir, "foo.txt")
+                url = reverse("media", kwargs={"path": "foo.txt"})
+                self.client.logout()
+
+                # Unauthenticated request to nonexistent media file should redirect to login page
+                response = self.client.get(url)
+                self.assertRedirects(
+                    response, expected_url=f"{reverse('login')}?next={url}", status_code=302, target_status_code=200
+                )
+
+                # Unauthenticated request to existent media file should redirect to login page as well
+                with open(file_path, "w") as f:
+                    f.write("Hello, world!")
+                response = self.client.get(url)
+                self.assertRedirects(
+                    response, expected_url=f"{reverse('login')}?next={url}", status_code=302, target_status_code=200
+                )
+
+    def test_branding_media(self):
+        """
+        Test that users can access branding files listed in `settings.BRANDING_FILEPATHS` regardless of authentication.
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with override_settings(
+                MEDIA_ROOT=temp_dir,
+                BRANDING_FILEPATHS={"logo": os.path.join("branding", "logo.txt")},
+            ):
+                os.makedirs(os.path.join(temp_dir, "branding"))
+                file_path = os.path.join(temp_dir, "branding", "logo.txt")
                 with open(file_path, "w") as f:
                     f.write("Hello, world!")
 
-                url = reverse("media", kwargs={"path": "foo.txt"})
+                url = reverse("media", kwargs={"path": "branding/logo.txt"})
+
+                # Authenticated request succeeds
+                response = self.client.get(url)
+                self.assertHttpStatus(response, 200)
+                self.assertIn("Hello, world!", b''.join(response).decode(response.charset))
+
+                # Unauthenticated request also succeeds
                 self.client.logout()
                 response = self.client.get(url)
                 self.assertHttpStatus(response, 200)
+                self.assertIn("Hello, world!", b''.join(response).decode(response.charset))
 
     def test_media_authenticated(self):
         """
-        Test that authenticated users can access regular media files
-        stored in the `MEDIA_ROOT`.
+        Test that authenticated users can access regular media files stored in the `MEDIA_ROOT`.
         """
         with tempfile.TemporaryDirectory() as temp_dir:
             with override_settings(MEDIA_ROOT=temp_dir):
@@ -228,6 +251,7 @@ class MediaViewTestCase(TestCase):
                 url = reverse("media", kwargs={"path": "foo.txt"})
                 response = self.client.get(url)
                 self.assertHttpStatus(response, 200)
+                self.assertIn("Hello, world!", b''.join(response).decode(response.charset))
 
 
 @override_settings(BRANDING_TITLE="Nautobot")
