@@ -4,12 +4,13 @@ import warnings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.forms import ChoiceField, MultipleChoiceField
 from django.test import override_settings, TestCase
 
 from nautobot.dcim.forms import DeviceForm, LocationBulkEditForm, LocationForm
 import nautobot.dcim.models as dcim_models
 from nautobot.dcim.models import Device, Location, LocationType
-from nautobot.extras.choices import RelationshipTypeChoices
+from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.forms import (
     ConfigContextFilterForm,
     ConfigContextForm,
@@ -25,6 +26,7 @@ from nautobot.extras.forms import (
     WebhookForm,
 )
 from nautobot.extras.models import (
+    CustomField,
     Job,
     JobButton,
     JobHook,
@@ -1217,3 +1219,20 @@ class CustomFieldModelFormMixinTestCase(TestCase):
 
         custom_field_form = TestForm()
         self.assertIn("_custom_field_data", custom_field_form.fields)
+
+
+class CustomFieldTestCase(TestCase):
+    def test_to_form_field_type_select(self):
+        """Verify that `to_form_field` and `to_filter_form_field` return the correct field types for a select-type CustomField."""
+        custom_field = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+            label="Custom Field Select",
+        )
+        form = custom_field.to_filter_form_field()
+        self.assertIsInstance(form, MultipleChoiceField)
+
+        form = custom_field.to_form_field(for_filter_form=True)
+        self.assertIsInstance(form, MultipleChoiceField)
+
+        form = custom_field.to_form_field(for_filter_form=False)
+        self.assertIsInstance(form, ChoiceField)
