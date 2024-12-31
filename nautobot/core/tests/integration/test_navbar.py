@@ -4,7 +4,6 @@ from nautobot.core.testing.integration import SeleniumTestCase
 class NavBarTestCase(SeleniumTestCase):
     """Integration test the navigation menu."""
 
-    fixtures = ["user-data.json"]
     navbar = {
         "Organization": {
             "Locations": {
