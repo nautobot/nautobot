@@ -594,3 +594,32 @@ class ExampleViewWithCustomPermissionsTest(TestCase):
         self.user.save()
         response = self.client.get(url)
         self.assertBodyContains(response, "You are viewing a table of example models")
+
+
+class SearchRobotsTestCase(TestCase):
+    def test_robots_disallowed(self):
+        """
+        Test that the robots.txt file is accessible to all users and defaults to disallowing all bots.
+        """
+        url = reverse("robots_txt")
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "User-Agent: *")
+        self.assertBodyContains(response, "Disallow: /")
+
+        url = reverse("home")
+        response = self.client.get(url)
+        self.assertContains(response, '<meta name="robots" content="noindex, nofollow">', html=True)
+
+    @override_settings(PUBLISH_ROBOTS_TXT=False)
+    def test_robots_allowed(self):
+        """
+        Test that the robots.txt file is not published if PUBLISH_ROBOTS_TXT is set to False.
+        """
+        url = reverse("robots_txt")
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 404)
+
+        url = reverse("home")
+        response = self.client.get(url)
+        self.assertNotContains(response, '<meta name="robots" content="noindex, nofollow">', html=True)
