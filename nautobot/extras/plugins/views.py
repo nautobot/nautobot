@@ -29,12 +29,53 @@ def load_marketplace_data():
     return marketplace_data
 
 
-def get_app_headline(package_name, description, marketplace_data):
-    """If the given package_name is in the marketplace_data, use its headline there; else use the given description."""
+def override_app_data_with_marketplace_data(package_name, app_data, marketplace_data):
+    """If the given package_name is in the marketplace_data, update/replace the app_data with marketplace_data."""
     for marketplace_app in marketplace_data["apps"]:
-        if marketplace_app["package_name"] == package_name and marketplace_app["headline"]:
-            return marketplace_app["headline"]
-    return description
+        if marketplace_app["package_name"] != package_name:
+            continue
+        for key in "author", "description", "headline", "availability", "name":
+            if marketplace_app.get(key, None):
+                app_data[key] = marketplace_app[key]
+        break
+    return app_data
+
+
+def extract_app_data(app_config, marketplace_data):
+    if app_config.name not in settings.PLUGINS:
+        return None
+    try:
+        reverse(app_config.home_view_name)
+        home_url = app_config.home_view_name
+    except NoReverseMatch:
+        home_url = None
+    try:
+        reverse(app_config.config_view_name)
+        config_url = app_config.config_view_name
+    except NoReverseMatch:
+        config_url = None
+    try:
+        reverse(app_config.docs_view_name)
+        docs_url = app_config.docs_view_name
+    except NoReverseMatch:
+        docs_url = None
+    return override_app_data_with_marketplace_data(
+        app_config.name,
+        {
+            "name": app_config.verbose_name,
+            "package": app_config.name,
+            "app_label": app_config.label,
+            "author": app_config.author,
+            "author_email": app_config.author_email,
+            "description": app_config.description,
+            "headline": app_config.description,
+            "version": app_config.version,
+            "home_url": home_url,
+            "config_url": config_url,
+            "docs_url": docs_url,
+        },
+        marketplace_data,
+    )
 
 
 class InstalledAppsView(GenericView):
@@ -48,39 +89,9 @@ class InstalledAppsView(GenericView):
         marketplace_data = load_marketplace_data()
         app_configs = apps.get_app_configs()
         data = []
-        for app in app_configs:
-            if app.name in settings.PLUGINS:
-                try:
-                    reverse(app.home_view_name)
-                    home_url = app.home_view_name
-                except NoReverseMatch:
-                    home_url = None
-                try:
-                    reverse(app.config_view_name)
-                    config_url = app.config_view_name
-                except NoReverseMatch:
-                    config_url = None
-                try:
-                    reverse(app.docs_view_name)
-                    docs_url = app.docs_view_name
-                except NoReverseMatch:
-                    docs_url = None
-                data.append(
-                    {
-                        "name": app.verbose_name,
-                        "package_name": app.name,
-                        "app_label": app.label,
-                        "author": app.author,
-                        "author_email": app.author_email,
-                        "description": get_app_headline(app.name, app.description, marketplace_data),
-                        "version": app.version,
-                        "actions": {
-                            "home": home_url,
-                            "configure": config_url,
-                            "docs": docs_url,
-                        },
-                    }
-                )
+        for app_config in app_configs:
+            if app_data := extract_app_data(app_config, marketplace_data):
+                data.append(app_data)
         table = self.table(data, user=request.user)
 
         paginate = {
@@ -132,8 +143,8 @@ class InstalledAppDetailView(GenericView):
             request,
             "extras/plugin_detail.html",
             {
+                "app_data": extract_app_data(app_config, load_marketplace_data()),
                 "object": app_config,
-                "headline": get_app_headline(app_config.name, app_config.description, load_marketplace_data()),
             },
         )
 
@@ -148,36 +159,10 @@ class InstalledAppsAPIView(NautobotAPIVersionMixin, APIView):
     def get_view_name(self):
         return "Installed Apps"
 
-    @staticmethod
-    def _get_app_data(app_config, marketplace_data):
-        try:
-            home_url = reverse(app_config.home_view_name)
-        except NoReverseMatch:
-            home_url = None
-        try:
-            config_url = reverse(app_config.config_view_name)
-        except NoReverseMatch:
-            config_url = None
-        try:
-            docs_url = reverse(app_config.docs_view_name)
-        except NoReverseMatch:
-            docs_url = None
-        return {
-            "name": app_config.verbose_name,
-            "package": app_config.name,
-            "author": app_config.author,
-            "author_email": app_config.author_email,
-            "description": get_app_headline(app_config.name, app_config.headline, marketplace_data),
-            "version": app_config.version,
-            "home_url": home_url,
-            "config_url": config_url,
-            "docs_url": docs_url,
-        }
-
     @extend_schema(exclude=True)
     def get(self, request, format=None):  # pylint: disable=redefined-builtin
         marketplace_data = load_marketplace_data()
-        return Response([self._get_app_data(apps.get_app_config(app), marketplace_data) for app in settings.PLUGINS])
+        return Response([extract_app_data(apps.get_app_config(app), marketplace_data) for app in settings.PLUGINS])
 
 
 class AppsAPIRootView(AuthenticatedAPIRootView):
