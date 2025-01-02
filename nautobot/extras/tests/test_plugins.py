@@ -1,5 +1,6 @@
-from unittest import mock, skip, skipIf
+from unittest import mock, skip
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -21,7 +22,7 @@ from nautobot.extras.models import CustomField, Relationship, RelationshipAssoci
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
-from nautobot.extras.plugins.views import get_app_headline, load_marketplace_data
+from nautobot.extras.plugins.views import extract_app_data
 from nautobot.extras.registry import DatasourceContent, registry
 from nautobot.ipam.models import IPAddress, Namespace, Prefix
 from nautobot.tenancy.filters import TenantFilterSet
@@ -316,18 +317,60 @@ class AppListViewTest(TestCase):
         response_body = extract_page_body(response.content.decode(response.charset)).lower()
         self.assertIn("example app", response_body, msg=response_body)
 
-    def test_get_app_headline(self):
-        marketplace_data = load_marketplace_data()
-        # For apps in the marketplace, if they have a headline in the data, use that
-        for app in marketplace_data["apps"]:
-            headline = get_app_headline(app["package_name"], "Hello world!", marketplace_data)
-            if app["headline"]:
-                self.assertEqual(headline, app["headline"])
-            else:
-                self.assertEqual(headline, "Hello world!")
-        # If an app isn't in the marketplace, use the provided headline
-        headline = get_app_headline("no_such_app", "Hello world!", marketplace_data)
-        self.assertEqual(headline, "Hello world!")
+    def test_extract_app_data(self):
+        app_config = apps.get_app_config("example_app")
+        # Without a corresponding entry in marketplace_data
+        self.assertEqual(
+            extract_app_data(app_config, {"apps": []}),
+            {
+                "name": "Example Nautobot App",
+                "package": "example_app",
+                "app_label": "example_app",
+                "author": "Nautobot development team",
+                "author_email": "nautobot@example.com",
+                "headline": "For testing purposes only",
+                "description": "For testing purposes only",
+                "version": "1.0.0",
+                "home_url": "plugins:example_app:home",
+                "config_url": "plugins:example_app:config",
+                "docs_url": "plugins:example_app:docs",
+            },
+        )
+
+        # With a corresponding entry in marketplace_data
+        mock_marketplace_data = {
+            "apps": [
+                {
+                    "name": "Nautobot Example App",
+                    "use_cases": ["Example", "Development"],
+                    "requires": [],
+                    "docs": "https://example.com/docs/example_app/",
+                    "headline": "Demonstrate and test various parts of Nautobot App APIs and functionality.",
+                    "description": "An example of the kinds of things a Nautobot App can do, including ...",
+                    "package_name": "example_app",
+                    "author": "Network to Code (NTC)",
+                    "availability": "Open Source",
+                    "icon": "...",
+                },
+            ],
+        }
+        self.assertEqual(
+            extract_app_data(app_config, mock_marketplace_data),
+            {
+                "name": "Nautobot Example App",
+                "package": "example_app",
+                "app_label": "example_app",
+                "author": "Network to Code (NTC)",
+                "author_email": "nautobot@example.com",
+                "availability": "Open Source",
+                "headline": "Demonstrate and test various parts of Nautobot App APIs and functionality.",
+                "description": "An example of the kinds of things a Nautobot App can do, including ...",
+                "version": "1.0.0",
+                "home_url": "plugins:example_app:home",
+                "config_url": "plugins:example_app:config",
+                "docs_url": "plugins:example_app:docs",
+            },
+        )
 
 
 class PluginDetailViewTest(TestCase):
@@ -814,10 +857,6 @@ class TestAppCoreViewOverrides(TestCase):
         )
 
 
-@skipIf(
-    "example_plugin" not in settings.PLUGINS,
-    "example_plugin not in settings.PLUGINS",
-)
 class PluginTemplateExtensionsTest(TestCase):
     """
     Test that registered TemplateExtensions inject content as expected
@@ -837,19 +876,19 @@ class PluginTemplateExtensionsTest(TestCase):
     def test_detail_view_buttons(self):
         response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("LOCATION CONTENT - BUTTONS", response_body, msg=response_body)
+        self.assertIn("APP INJECTED LOCATION CONTENT - BUTTONS", response_body, msg=response_body)
 
     def test_detail_view_left_page(self):
         response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("LOCATION CONTENT - LEFT PAGE", response_body, msg=response_body)
+        self.assertIn("App Injected Content - Left", response_body, msg=response_body)
 
     def test_detail_view_right_page(self):
         response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("LOCATION CONTENT - RIGHT PAGE", response_body, msg=response_body)
+        self.assertIn("App Injected Content - Right", response_body, msg=response_body)
 
     def test_detail_view_full_width_page(self):
         response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("LOCATION CONTENT - FULL WIDTH PAGE", response_body, msg=response_body)
+        self.assertIn("App Injected Content - Full Width", response_body, msg=response_body)

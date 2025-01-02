@@ -2023,6 +2023,9 @@ def get_annotated_jobresult_queryset():
             debug_log_count=count_related(
                 JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_DEBUG}
             ),
+            success_log_count=count_related(
+                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_SUCCESS}
+            ),
             info_log_count=count_related(
                 JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_INFO}
             ),
