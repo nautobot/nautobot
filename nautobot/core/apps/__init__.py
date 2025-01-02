@@ -592,6 +592,7 @@ class NavMenuGroup(NavMenuBase, PermissionsMixin):
         elif not all(isinstance(item, NavMenuItem) for item in items):
             raise TypeError("All items defined in a group must be an instance of NavMenuItem")
         self.items = items
+        super().__init__(permissions=self.permissions)
 
 
 class NavMenuItem(NavMenuBase, PermissionsMixin):
@@ -788,7 +789,7 @@ class NavGrouping(NavMenuBase, PermissionsMixin):
     Items are each specified as a list of NavItem or NavGrouping instances.
     """
 
-    def __init__(self, name, items, weight=1000):
+    def __init__(self, name, items, weight=1000):  # pylint:disable=super-init-not-called  # this is dead code anyway
         self.name = name
         self.items = items
         self.weight = weight
@@ -824,7 +825,9 @@ class NavItem(NavMenuBase, PermissionsMixin):
     Links are specified as Django reverse URL strings.
     """
 
-    def __init__(self, name, link, *args, permissions=None, weight=1000, **kwargs):
+    def __init__(  # pylint:disable=super-init-not-called  # this is dead code anyway
+        self, name, link, *args, permissions=None, weight=1000, **kwargs
+    ):
         self.name = name
         self.link = link
         self.permissions = permissions or []
