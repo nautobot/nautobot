@@ -34,7 +34,7 @@ Refer to the [Wireless](../user-guide/core-data-model/wireless/index.md) documen
 
 #### Apps Marketplace Page and Installed Apps Page Tile View
 
-Nautobot v2.4 introduces the Apps Marketplace, containing information about available Nautobot Apps. In addition to that, the Installed Apps page has recieved an overhauled tile-view option, in-line with the Apps Marketplace.
+Nautobot v2.4 introduces the Apps Marketplace, containing information about available Nautobot Apps. In addition to that, the Installed Apps page has added a tile-view option, similar to the Apps Marketplace.
 
 #### Event Publication Framework
 
@@ -107,7 +107,7 @@ Additionally, the `DynamicModelChoiceField` and related form fields have been en
 
 Nautobot's new [UI Component Framework](../development/core/ui-component-framework.md) provides a set of Python APIs for defining parts of the Nautobot UI without needing, in many cases, to write custom HTML templates. In v2.4.0, the focus is primarily on the definition of object "detail" views as those were the most common cases where custom templates have been required in the past.
 
-[Adoption of this framework](../development/apps/migration/ui-component-framework/index.md) significantly reduces the amount of boilerplate needed to define an object detail view, drives increased self-consistency across views, and encourages code reuse. It also insulates Apps from the details of Nautobot's CSS and layout (Bootstrap 3 framework), smoothing the way for Nautobot to adopt a new UI changes in the future with minimal impact to compliant apps.
+[Adoption of this framework](../development/apps/migration/ui-component-framework/index.md) significantly reduces the amount of boilerplate needed to define an object detail view, drives increased self-consistency across views, and encourages code reuse. It also insulates Apps from the details of Nautobot's CSS and layout (Bootstrap 3 framework), smoothing the way for Nautobot to adopt UI changes in the future with minimal impact to compliant apps.
 
 App [template extensions](../development/apps/api/ui-extensions/object-views.md)--which are used to inject App content into Nautobot Core views--offer new implementation patterns using the UI Component Framework and it is highly recomended that App developers take this opportunity to adopt, as old methods have been deprecated in some cases (see below).
 
