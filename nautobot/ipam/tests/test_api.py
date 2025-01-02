@@ -2,6 +2,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 import json
 from random import shuffle
 from unittest import skip
+import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection
@@ -506,7 +507,8 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             url, {"prefix_length": "hello", "status": self.status.pk}, format="json", **self.header
         )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("prefix_length", response.data[0])
+        self.assertIn("prefix_length", response.data)
+        self.assertEqual(response.data["prefix_length"], "This field must be an integer.")
 
     def test_create_multiple_available_prefixes(self):
         """
@@ -1480,6 +1482,15 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
         self.assertIn("detail", response.data)
         self.assertEqual(
             f"Invalid VLAN Group requested: {some_other_vlan_group}. Only VLAN Group {self.vlan_group} is permitted.",
+            response.data["detail"],
+        )
+        invalid_id = uuid.uuid4()
+        data[0]["vlan_group"] = invalid_id  # Invalid UUID
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertIn("detail", response.data)
+        self.assertEqual(
+            f"VLAN Group with pk {invalid_id} does not exist.",
             response.data["detail"],
         )
 
