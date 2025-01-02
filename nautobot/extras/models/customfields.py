@@ -578,7 +578,13 @@ class CustomField(
             )
 
     def to_form_field(
-        self, set_initial=True, enforce_required=True, for_csv_import=False, simple_json_filter=False, label=None
+        self,
+        set_initial=True,
+        enforce_required=True,
+        for_csv_import=False,
+        simple_json_filter=False,
+        label=None,
+        for_filter_form=False,
     ):
         """
         Return a form field suitable for setting a CustomField's value for an object.
@@ -590,6 +596,7 @@ class CustomField(
                 this is *not* used for CSV imports since 2.0, but it *is* used for JSON/YAML import of DeviceTypes.
             simple_json_filter: Return a TextInput widget for JSON filtering instead of the default TextArea widget.
             label: Set the input label manually (if required); otherwise, defaults to field's __str__() implementation.
+            for_filter_form: If True return the relevant form field for filter form
         """
         initial = self.default if set_initial else None
         required = self.required if enforce_required else False
@@ -676,7 +683,7 @@ class CustomField(
             default_choice = self.custom_field_choices.filter(value=self.default).first()
 
             # Set the initial value to the first available choice (if any)
-            if self.type == CustomFieldTypeChoices.TYPE_SELECT:
+            if self.type == CustomFieldTypeChoices.TYPE_SELECT and not for_filter_form:
                 if not required or default_choice is None:
                     choices = add_blank_choice(choices)
                 field_class = CSVChoiceField if for_csv_import else forms.ChoiceField
@@ -704,16 +711,10 @@ class CustomField(
 
     def to_filter_form_field(self, lookup_expr="exact", *args, **kwargs):
         """Return a filter form field suitable for filtering a CustomField's value for an object."""
-        form_field = self.to_form_field(*args, **kwargs)
-        # We would handle type selection differently because:
-        # 1. We'd need to use StaticSelect2Multiple for lookup_type 'exact' because self.type `select` uses StaticSelect2 by default.
-        # 2. Remove the blank choice since StaticSelect2Multiple is always blank and interprets the blank choice as an extra option.
-        # 3. If lookup_type is not the same as exact, use MultiValueCharInput
+        form_field = self.to_form_field(*args, **kwargs, for_filter_form=True)
+        # We would handle type selection differently because: If lookup_type is not the same as exact, use MultiValueCharInput
         if self.type == CustomFieldTypeChoices.TYPE_SELECT:
-            if lookup_expr in ["exact", "contains"]:
-                choices = form_field.choices[1:]
-                form_field.widget = StaticSelect2Multiple(choices=choices)
-            else:
+            if lookup_expr not in ["exact", "contains"]:
                 form_field.widget = MultiValueCharInput()
         return form_field
 
