@@ -227,7 +227,8 @@ class PrefixViewSet(NautobotModelViewSet):
 
                 # Create the new Prefix(es)
                 serializer.is_valid(raise_exception=True)
-                serializer.save()
+                self.perform_create(serializer)
+
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         else:
@@ -318,7 +319,8 @@ class PrefixViewSet(NautobotModelViewSet):
 
                 # Create the new IP address(es)
                 serializer.is_valid(raise_exception=True)
-                serializer.save()
+                self.perform_create(serializer)
+
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         # Determine the maximum number of IPs to return
@@ -396,21 +398,20 @@ class VLANGroupViewSet(NautobotModelViewSet):
     serializer_class = serializers.VLANGroupSerializer
     filterset_class = filters.VLANGroupFilterSet
 
-    def restrict_queryset(self, request, *args, **kwargs):
-        """
-        Apply "view" permissions on the POST /available-vlans/ endpoint, otherwise as ModelViewSetMixin.
-        """
-        if request.user.is_authenticated and self.action == "available_vlans":
-            self.queryset = self.queryset.restrict(request.user, "view")
-        else:
-            super().restrict_queryset(request, *args, **kwargs)
+    @staticmethod
+    def vlan_group_queryset():
+        return (
+            VLANGroup.objects.select_related("location")
+            .prefetch_related("tags")
+            .annotate(vlan_count=count_related(VLAN, "vlan_group"))
+        )
 
     class AvailableVLANPermissions(TokenPermissions):
-        """As nautobot.core.api.authentication.TokenPermissions, but enforcing add_vlan permission."""
+        """As nautobot.core.api.authentication.TokenPermissions, but enforcing `add_vlan` and `view_vlan` permission."""
 
         perms_map = {
-            "GET": ["ipam.view_vlangroup"],
-            "POST": ["ipam.view_vlangroup", "ipam.add_vlan"],
+            "GET": ["ipam.view_vlangroup", "ipam.view_vlan"],
+            "POST": ["ipam.view_vlangroup", "ipam.view_vlan", "ipam.add_vlan"],
         }
 
     @extend_schema(methods=["get"], responses={200: ListSerializer(child=IntegerField())})
@@ -426,6 +427,7 @@ class VLANGroupViewSet(NautobotModelViewSet):
         methods=["get", "post"],
         permission_classes=[AvailableVLANPermissions],
         filterset_class=None,
+        queryset=VLAN.objects.all(),
     )
     def available_vlans(self, request, pk=None):
         """
@@ -433,7 +435,7 @@ class VLANGroupViewSet(NautobotModelViewSet):
         By default, the number of VIDs returned will be equivalent to PAGINATE_COUNT.
         An arbitrary limit (up to MAX_PAGE_SIZE, if set) may be passed, however results will not be paginated.
         """
-        vlan_group = get_object_or_404(self.queryset, pk=pk)
+        vlan_group = get_object_or_404(self.vlan_group_queryset().restrict(user=request.user), pk=pk)
 
         if request.method == "POST":
             with cache.lock(
@@ -509,7 +511,7 @@ class VLANGroupViewSet(NautobotModelViewSet):
 
                 # Create the new VLANs
                 serializer.is_valid(raise_exception=True)
-                serializer.save()
+                self.perform_create(serializer)
 
                 data = serializer.data
 

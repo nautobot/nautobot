@@ -571,6 +571,126 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.assertIn("prefixcf", response.data[0]["custom_fields"])
         self.assertEqual("value 1", response.data[0]["custom_fields"]["prefixcf"])
 
+    def test_create_available_prefixes_with_permissions_constraint(self):
+        # Prepare prefix and permissions
+        prefix = Prefix.objects.create(
+            prefix="10.2.3.0/24",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+            description="This is the Prefix created for whole network.",
+        )
+        url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
+        self.add_permissions("ipam.view_prefix")
+        self.add_permissions(
+            "ipam.add_prefix", constraints={"description__startswith": "This is the Prefix created for"}
+        )
+
+        # Test invalid request
+        data = {
+            "prefix_length": 26,
+            "status": self.status.pk,
+        }
+        invalid_data_list = [
+            data,
+            {**data, "description": ""},
+            {**data, "description": "Some description"},
+            {**data, "description": "Some description. This is the IP created for"},
+        ]
+
+        for invalid_data in invalid_data_list:
+            with self.subTest(case=invalid_data):
+                response = self.client.post(url, invalid_data, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+                self.assertIn("detail", response.data)
+                self.assertEqual(response.data["detail"], "You do not have permission to perform this action.")
+
+                # Verify that no prefixes were created (the entire prefix is still available)
+                response = self.client.get(url, **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                self.assertEqual(len(response.data), 1)
+                self.assertEqual(response.data[0]["prefix"], prefix.cidr_str)
+
+        # Test valid request
+        valid_data = {
+            "prefix_length": 26,
+            "status": self.status.pk,
+            "description": "This is the Prefix created for my local network",
+        }
+        response = self.client.post(url, valid_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["prefix"], "10.2.3.0/26")
+
+        # Verify that prefix is created
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        self.assertEqual(response.data[0]["prefix"], "10.2.3.64/26")
+        self.assertEqual(response.data[1]["prefix"], "10.2.3.128/25")
+
+    def test_create_multiple_available_prefixes_with_permissions_constraint(self):
+        # Prepare prefix and permissions
+        prefix = Prefix.objects.create(
+            prefix="10.2.3.0/24",
+            type=choices.PrefixTypeChoices.TYPE_POOL,
+            namespace=self.namespace,
+            status=self.status,
+            description="This is the Prefix created for whole network.",
+        )
+        url = reverse("ipam-api:prefix-available-prefixes", kwargs={"pk": prefix.pk})
+        self.add_permissions("ipam.view_prefix")
+        self.add_permissions(
+            "ipam.add_prefix", constraints={"description__startswith": "This is the Prefix created for"}
+        )
+
+        # Test invalid request
+        data = [
+            {
+                "prefix_length": 26,
+                "status": self.status.pk,
+                "description": "This is the Prefix created for my local network",
+            },
+            {
+                "prefix_length": 26,
+                "status": self.status.pk,
+            },
+        ]
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+        self.assertIn("detail", response.data)
+        self.assertEqual(response.data["detail"], "You do not have permission to perform this action.")
+
+        # Verify that no prefixes were created (the entire prefix is still available)
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["prefix"], prefix.cidr_str)
+
+        # Test valid request
+        data = [
+            {
+                "prefix_length": 26,
+                "status": self.status.pk,
+                "description": "This is the Prefix created for my local network",
+            },
+            {
+                "prefix_length": 26,
+                "status": self.status.pk,
+                "description": "This is the Prefix created for my guest house network",
+            },
+        ]
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(len(response.data), 2)
+        self.assertEqual(response.data[0]["prefix"], "10.2.3.0/26")
+        self.assertEqual(response.data[1]["prefix"], "10.2.3.64/26")
+
+        # Verify that prefixes were created
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["prefix"], "10.2.3.128/25")
+
     def test_list_available_ips(self):
         """
         Test retrieval of all available IP addresses within a parent prefix.
@@ -730,6 +850,116 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.assertIn("custom_fields", response.data[0])
         self.assertIn("ipcf", response.data[0]["custom_fields"])
         self.assertEqual("1", response.data[0]["custom_fields"]["ipcf"])
+
+    def test_create_available_ips_with_permissions_constraint(self):
+        # Prepare prefix and permissions
+        prefix = Prefix.objects.create(
+            prefix="192.168.0.0/30",
+            type=choices.PrefixTypeChoices.TYPE_NETWORK,
+            namespace=self.namespace,
+            status=self.status,
+            description="This is the Prefix created for whole network.",
+        )
+        url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        self.add_permissions(
+            "ipam.add_ipaddress", constraints={"description__startswith": "This is the IP created for"}
+        )
+
+        # Test invalid request
+        data = {
+            "status": self.status.pk,
+        }
+        invalid_data_list = [
+            data,
+            {**data, "description": ""},
+            {**data, "description": "Some description"},
+            {**data, "description": "Some description. This is the IP created for"},
+        ]
+
+        for invalid_data in invalid_data_list:
+            with self.subTest(case=invalid_data):
+                response = self.client.post(url, invalid_data, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+                self.assertIn("detail", response.data)
+                self.assertEqual(response.data["detail"], "You do not have permission to perform this action.")
+
+                # Verify that no IPs were created (the entire prefix pool is still available)
+                response = self.client.get(url, **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                self.assertEqual(len(response.data), 2)
+
+        # Test valid request
+        valid_data = {
+            "status": self.status.pk,
+            "description": "This is the IP created for my private laptop",
+        }
+        response = self.client.post(url, valid_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["address"], "192.168.0.1/30")
+
+        # Verify that IP is created
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["address"], "192.168.0.2/30")
+
+    def test_create_multiple_available_ips_with_permissions_constraint(self):
+        # Prepare prefix and permissions
+        prefix = Prefix.objects.create(
+            prefix="192.168.0.0/30",
+            type=choices.PrefixTypeChoices.TYPE_NETWORK,
+            namespace=self.namespace,
+            status=self.status,
+            description="This is a Prefix created for whole network.",
+        )
+        url = reverse("ipam-api:prefix-available-ips", kwargs={"pk": prefix.pk})
+        self.add_permissions("ipam.view_prefix", "ipam.view_ipaddress")
+        self.add_permissions(
+            "ipam.add_ipaddress", constraints={"description__startswith": "This is the IP created for"}
+        )
+
+        # Test invalid request
+        data = [
+            {
+                "status": self.status.pk,
+            },
+            {
+                "status": self.status.pk,
+                "description": "This is an IP created for my private laptop",
+            },
+        ]
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+        self.assertIn("detail", response.data)
+        self.assertEqual(response.data["detail"], "You do not have permission to perform this action.")
+
+        # Verify that no IPs were created (the entire prefix pool is still available)
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+
+        # Test valid request
+        valid_data = [
+            {
+                "status": self.status.pk,
+                "description": "This is the IP created for my private laptop",
+            },
+            {
+                "status": self.status.pk,
+                "description": "This is the IP created for my gaming laptop",
+            },
+        ]
+        response = self.client.post(url, valid_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(len(response.data), 2)
+        self.assertEqual(response.data[0]["address"], "192.168.0.1/30")
+        self.assertEqual(response.data[1]["address"], "192.168.0.2/30")
+
+        # Verify that IPs are created
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
 
 
 class PrefixLocationAssignmentTest(APIViewTestCases.APIViewTestCase):
@@ -1089,7 +1319,7 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
         Test retrieval of all available VLAN IDs within a VLANGroup.
         """
         url = reverse("ipam-api:vlangroup-available-vlans", kwargs={"pk": self.vlan_group.pk})
-        self.add_permissions("ipam.view_vlangroup")
+        self.add_permissions("ipam.view_vlangroup", "ipam.view_vlan")
 
         # Retrieve all available VLAN IDs
         response = self.client.get(url, **self.header)
@@ -1106,6 +1336,7 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
         url = reverse("ipam-api:vlangroup-available-vlans", kwargs={"pk": self.vlan_group.pk})
         self.add_permissions(
             "ipam.view_vlangroup",
+            "ipam.view_vlan",
             "ipam.add_vlan",
         )
 
@@ -1147,6 +1378,7 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
         url = reverse("ipam-api:vlangroup-available-vlans", kwargs={"pk": self.vlan_group.pk})
         self.add_permissions(
             "ipam.view_vlangroup",
+            "ipam.view_vlan",
             "ipam.add_vlan",
         )
 
@@ -1193,6 +1425,7 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
         url = reverse("ipam-api:vlangroup-available-vlans", kwargs={"pk": self.vlan_group.pk})
         self.add_permissions(
             "ipam.view_vlangroup",
+            "ipam.view_vlan",
             "ipam.add_vlan",
         )
 
@@ -1222,6 +1455,7 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
         url = reverse("ipam-api:vlangroup-available-vlans", kwargs={"pk": self.vlan_group.pk})
         self.add_permissions(
             "ipam.view_vlangroup",
+            "ipam.view_vlan",
             "ipam.add_vlan",
         )
 
@@ -1248,6 +1482,105 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
             f"Invalid VLAN Group requested: {some_other_vlan_group}. Only VLAN Group {self.vlan_group} is permitted.",
             response.data["detail"],
         )
+
+    def test_create_available_vlans_with_permissions_constraint(self):
+        url = reverse("ipam-api:vlangroup-available-vlans", kwargs={"pk": self.vlan_group.pk})
+        self.add_permissions(
+            "ipam.view_vlangroup",
+            "ipam.view_vlan",
+        )
+        self.add_permissions("ipam.add_vlan", constraints={"description__startswith": "This is the VLAN created for"})
+
+        data = {"name": "VLAN_6", "status": self.default_status.pk, "vid": 6}
+        invalid_data_list = [
+            data,
+            {**data, "description": ""},
+            {**data, "description": "Some description"},
+            {**data, "description": "Some description. This is the VLAN created for"},
+        ]
+
+        # Test invalid request
+        for invalid_data in invalid_data_list:
+            with self.subTest(case=invalid_data):
+                response = self.client.post(url, data, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+                self.assertIn("detail", response.data)
+                self.assertEqual(response.data["detail"], "You do not have permission to perform this action.")
+
+                # Verify that no VLANs were created (number of VLANs is the same as on the beginning of the test)
+                response = self.client.get(url, **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                self.assertEqual(len(response.data["results"]), len(self.unused_vids))
+
+        # Test valid request
+        valid_data = {
+            "name": "VLAN_6",
+            "status": self.default_status.pk,
+            "vid": 6,
+            "description": "This is the VLAN created for home automation.",
+        }
+        response = self.client.post(url, valid_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["results"]["name"], valid_data["name"])
+
+        # Verify that VLAN is created
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(
+            len(response.data["results"]), len(self.unused_vids) - 1
+        )  # initial unsued vids minus one created
+
+    def test_create_multiple_available_vlans_with_permissions_constraint(self):
+        url = reverse("ipam-api:vlangroup-available-vlans", kwargs={"pk": self.vlan_group.pk})
+        self.add_permissions(
+            "ipam.view_vlangroup",
+            "ipam.view_vlan",
+        )
+        self.add_permissions("ipam.add_vlan", constraints={"description__startswith": "This is the VLAN created for"})
+
+        # Test invalid request
+        data = [
+            {"name": "VLAN_6", "status": self.default_status.pk},
+            {"name": "VLAN_7", "status": self.default_status.pk},
+            {"name": "VLAN_8", "status": self.default_status.pk},
+        ]
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+        self.assertIn("detail", response.data)
+        self.assertEqual(response.data["detail"], "You do not have permission to perform this action.")
+
+        # Verify that no VLANs were created (number of VLANs is the same as on the beginning of the test)
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), len(self.unused_vids))
+
+        # Test valid request
+        valid_data = [
+            {
+                "name": "VLAN_6",
+                "status": self.default_status.pk,
+                "description": "This is the VLAN created for home automation.",
+            },
+            {
+                "name": "VLAN_7",
+                "status": self.default_status.pk,
+                "description": "This is the VLAN created for IP cameras.",
+            },
+            {"name": "VLAN_8", "status": self.default_status.pk, "description": "This is the VLAN created for guests."},
+        ]
+        response = self.client.post(url, valid_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(len(response.data["results"]), 3)
+        for i, vlan_data in enumerate(data):
+            self.assertEqual(response.data["results"][i]["name"], vlan_data["name"])
+
+        # Verify that VLANs are created
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(
+            len(response.data["results"]), len(self.unused_vids) - 3
+        )  # initial unsued vids minus three created
 
 
 class VLANTest(APIViewTestCases.APIViewTestCase):

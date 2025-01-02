@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.http import HttpResponse, HttpResponseNotFound
 from django.urls import include, path
 from django.views.generic import TemplateView
 from django.views.static import serve
@@ -71,6 +72,14 @@ urlpatterns = [
     # Templated css file
     path(
         "template.css", TemplateView.as_view(template_name="template.css", content_type="text/css"), name="template_css"
+    ),
+    # The response is conditional as opposed to wrapping the path() call in an if statement to be able to test the setting with current test setup
+    path(
+        "robots.txt",
+        lambda x: HttpResponse("User-Agent: *\nDisallow: /", content_type="text/plain")
+        if settings.PUBLISH_ROBOTS_TXT
+        else HttpResponseNotFound(),
+        name="robots_txt",
     ),
 ]
 

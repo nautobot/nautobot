@@ -11,8 +11,6 @@ from nautobot.extras.models import CustomField, CustomFieldChoice, Status
 class ListViewFilterTestCase(SeleniumTestCase):
     """Integration test for the list view filter ui."""
 
-    fixtures = ["user-data.json"]
-
     def setUp(self):
         super().setUp()
         self.login(self.user.username, self.password)

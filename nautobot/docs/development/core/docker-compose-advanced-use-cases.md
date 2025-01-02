@@ -158,45 +158,14 @@ For users of Microsoft Visual Studio Code, several files are included to ease de
 
 +/- 2.1.2
 
-#### ARM64 Build Argument
-
-Due to a bug in Dev Containers, when using VS Code to build your docker containers, docker cannot automatically determine the CPU architecture. To work around this bug, we have set a default value of `amd64` (x86_64). If you're running on another architecture like Apple Silicon or Raspberry Pi you will need to override this setting.
-
-!!! info
-    If you're unsure what architecture you're using you can run `uname -m` in a terminal. If this command outputs `x86_64` you're on an `amd64` architecture. If it outputs `aarch64` or `arm64`, you're on `arm64`. These are the only supported CPU architectures for VS Code Dev Containers.
-
-If running on an `arm64` architecture, create a `docker-compose.override.yml` file in the `development` directory with the following content:
-
-```yml title="development/docker-compose.override.yml"
----
-version: "3.9"
-services:
-  nautobot:
-    build:
-      args:
-        ARCH: arm64
-```
-
-Then add this file to the list of docker compose files in `.devcontainer/devcontainer.json`:
-
-```json title=".devcontainer/devcontainer.json"
-{
-    "name": "Nautobot Dev Container",
-    "dockerComposeFile": [
-        "../development/docker-compose.yml",
-        "../development/docker-compose.postgres.yml",
-        "../development/docker-compose.dev.yml",
-        "../development/docker-compose.override.yml"
-    ]
-    ...
-```
-
 #### PYTHON_VER Environment Variable
 
-The `PYTHON_VER` environment variable must be set in the `development/.env` file or the container build will fail. An example file exists and can be used as-is if you don't need to change the default version:
+The `PYTHON_VER` environment variable must be set in the `development/.env` file or the container build will fail.
+
+You can run `invoke` with the `vscode` target to generate this file and re-open the VSCode session under the workspace.
 
 ```bash
-cp development/.env.example development/.env
+invoke vscode
 ```
 
 ### Using Dev Containers
