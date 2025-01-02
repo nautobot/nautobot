@@ -22,7 +22,7 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
             return self.model(id=task_id)
 
     @transaction_retry(max_retries=2)
-    def store_result(  # pylint:disable=arguments-differ
+    def store_result(  # pylint:disable=arguments-differ  # Nautobot adds kwargs like job_model_id and scheduled_job_id
         self,
         *,
         task_id,
