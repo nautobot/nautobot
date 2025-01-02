@@ -270,8 +270,6 @@ good-names = """_,i,j,k,pk"""
 # TODO: re-enable and fix these as time permits
 disable = [
     "abstract-method",
-    "arguments-differ",
-    "arguments-renamed",
     "attribute-defined-outside-init",
     "broad-except",
     "consider-iterating-dictionary",

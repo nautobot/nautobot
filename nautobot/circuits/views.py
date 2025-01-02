@@ -79,11 +79,11 @@ class CircuitTerminationUIViewSet(
             obj.circuit = get_object_or_404(Circuit, pk=self.kwargs["circuit"])
         return obj
 
-    def get_return_url(self, request, obj=None):
+    def get_return_url(self, request, obj=None, default_return_url=None):
         if obj is not None and obj.present_in_database and obj.pk:
-            return super().get_return_url(request, obj=obj.circuit)
+            return super().get_return_url(request, obj=obj.circuit, default_return_url=default_return_url)
 
-        return super().get_return_url(request, obj=obj)
+        return super().get_return_url(request, obj=obj, default_return_url=default_return_url)
 
 
 class ProviderUIViewSet(NautobotUIViewSet):

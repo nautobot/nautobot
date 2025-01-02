@@ -24,7 +24,7 @@ class TestPass(Job):
             raise RuntimeError(f"Expected kwargs to be empty, but it was {kwargs!r}")
         logger.info("before_start() was called as expected")
 
-    def run(self):
+    def run(self):  # pylint: disable=arguments-differ
         """
         Job function.
         """

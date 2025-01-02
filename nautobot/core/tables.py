@@ -666,7 +666,7 @@ class ComputedFieldColumn(django_tables2.Column):
 
         super().__init__(*args, **kwargs)
 
-    def render(self, record):
+    def render(self, *, record):  # pylint: disable=arguments-differ
         return self.computedfield.render({"obj": record})
 
 

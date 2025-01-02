@@ -42,8 +42,8 @@ class CustomFieldsDataField(Field):
     def custom_field_keys(self):
         return CustomField.objects.keys_for_model(self.parent.Meta.model)
 
-    def to_representation(self, obj):
-        return {key: obj.get(key) for key in self.custom_field_keys}
+    def to_representation(self, value):
+        return {key: value.get(key) for key in self.custom_field_keys}
 
     def to_internal_value(self, data):
         """Support updates to individual fields on an existing instance without needing to provide the entire dict."""

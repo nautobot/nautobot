@@ -29,29 +29,29 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
             request_id=uuid.uuid4(),
         )
 
-    def populateDataBeforeMigration(self, apps):
+    def populateDataBeforeMigration(self, installed_apps):
         """Populate Aggregate data before migrating to Prefixes"""
 
-        self.aggregate = apps.get_model("ipam", "Aggregate")
+        self.aggregate = installed_apps.get_model("ipam", "Aggregate")
         # Workaround for django-taggit manager not working in migrations.
         # https://github.com/jazzband/django-taggit/issues/101
         # https://github.com/jazzband/django-taggit/issues/454
         self.aggregate.tags = TagsField()
-        self.computed_field = apps.get_model("extras", "computedfield")
-        self.content_type = apps.get_model("contenttypes", "ContentType")
-        self.custom_field = apps.get_model("extras", "customfield")
-        self.custom_link = apps.get_model("extras", "customlink")
-        self.dynamic_group = apps.get_model("extras", "DynamicGroup")
-        self.note = apps.get_model("extras", "note")
-        self.object_change = apps.get_model("extras", "objectchange")
-        self.object_permission = apps.get_model("users", "objectpermission")
-        self.prefix = apps.get_model("ipam", "prefix")
+        self.computed_field = installed_apps.get_model("extras", "computedfield")
+        self.content_type = installed_apps.get_model("contenttypes", "ContentType")
+        self.custom_field = installed_apps.get_model("extras", "customfield")
+        self.custom_link = installed_apps.get_model("extras", "customlink")
+        self.dynamic_group = installed_apps.get_model("extras", "DynamicGroup")
+        self.note = installed_apps.get_model("extras", "note")
+        self.object_change = installed_apps.get_model("extras", "objectchange")
+        self.object_permission = installed_apps.get_model("users", "objectpermission")
+        self.prefix = installed_apps.get_model("ipam", "prefix")
         self.prefix.tags = TagsField()
-        self.relationship = apps.get_model("extras", "relationship")
-        self.relationship_association = apps.get_model("extras", "relationshipassociation")
-        self.rir = apps.get_model("ipam", "RIR")
-        self.status = apps.get_model("extras", "status")
-        self.tag = apps.get_model("extras", "tag")
+        self.relationship = installed_apps.get_model("extras", "relationship")
+        self.relationship_association = installed_apps.get_model("extras", "relationshipassociation")
+        self.rir = installed_apps.get_model("ipam", "RIR")
+        self.status = installed_apps.get_model("extras", "status")
+        self.tag = installed_apps.get_model("extras", "tag")
 
         self.aggregate_ct = self.content_type.objects.get_for_model(self.aggregate)
         self.prefix_ct = self.content_type.objects.get_for_model(self.prefix)
