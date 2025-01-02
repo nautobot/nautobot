@@ -373,7 +373,7 @@ class APIRootView(AuthenticatedAPIRootView):
     name = "API Root"
 
     @extend_schema(exclude=True)
-    def get(self, request, format=None):  # pylint: disable=redefined-builtin
+    def get(self, request, *args, format=None, **kwargs):  # pylint: disable=redefined-builtin
         return Response(
             OrderedDict(
                 (
@@ -572,12 +572,13 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
     middleware = None
     root_value = None
 
-    def __init__(self, schema=None, executor=None, middleware=None, root_value=None, backend=None):
+    def __init__(self, schema=None, executor=None, middleware=None, root_value=None, backend=None, **kwargs):
         self.schema = schema
         self.executor = executor
         self.middleware = middleware
         self.root_value = root_value
         self.backend = backend
+        super().__init__(**kwargs)
 
     def get_root_value(self, request):
         return self.root_value

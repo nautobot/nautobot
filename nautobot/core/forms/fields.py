@@ -102,13 +102,13 @@ class CSVFileField(django_forms.FileField):
                 "in double quotes."
             )
 
-    def to_python(self, file):
+    def to_python(self, data):
         """For parity with CSVDataField, this returns the CSV text rather than an UploadedFile object."""
-        if file is None:
+        if data is None:
             return None
 
-        file = super().to_python(file)
-        return file.read().decode("utf-8-sig").strip()
+        data = super().to_python(data)
+        return data.read().decode("utf-8-sig").strip()
 
 
 class CSVChoiceField(django_forms.ChoiceField):
@@ -774,7 +774,7 @@ class MultiMatchModelMultipleChoiceField(DynamicModelChoiceMixin, django_filters
         self.natural_key = kwargs.setdefault("to_field_name", "slug")
         super().__init__(*args, **kwargs)
 
-    def _check_values(self, values):
+    def _check_values(self, values):  # pylint:disable=arguments-renamed
         """
         This method overloads the grandparent method in `django.forms.models.ModelMultipleChoiceField`,
         re-using some of that method's existing logic and adding support for coupling this field with

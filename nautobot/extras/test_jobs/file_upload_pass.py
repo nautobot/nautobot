@@ -13,7 +13,7 @@ class TestFileUploadPass(Job):
         description="File to upload",
     )
 
-    def run(self, file):
+    def run(self, file):  # pylint:disable=arguments-differ
         contents = str(file.read())
         logger.warning("File contents: %s", contents)
         logger.info("Job didn't crash!")

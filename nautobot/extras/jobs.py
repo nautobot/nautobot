@@ -1011,7 +1011,7 @@ class JobHookReceiver(Job):
 
     object_change = ObjectVar(model=ObjectChange)
 
-    def run(self, object_change):
+    def run(self, object_change):  # pylint: disable=arguments-differ
         """JobHookReceiver subclasses generally shouldn't need to override this method."""
         self.receive_job_hook(
             change=object_change,
@@ -1040,7 +1040,7 @@ class JobButtonReceiver(Job):
     object_pk = StringVar()
     object_model_name = StringVar()
 
-    def run(self, object_pk, object_model_name):
+    def run(self, object_pk, object_model_name):  # pylint: disable=arguments-differ
         """JobButtonReceiver subclasses generally shouldn't need to override this method."""
         model = get_model_from_name(object_model_name)
         obj = model.objects.get(pk=object_pk)

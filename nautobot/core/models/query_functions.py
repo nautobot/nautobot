@@ -69,7 +69,7 @@ class JSONSet(Func):
         }
         return c
 
-    def as_sql(self, compiler, connection, function=None, **extra_context):
+    def as_sql(self, compiler, connection, function=None, **extra_context):  # pylint:disable=arguments-differ
         """
         MySQL implementation based on https://github.com/django/django/pull/18489/files.
 
@@ -138,7 +138,7 @@ class JSONRemove(Func):
         self.path = path
         super().__init__(expression)
 
-    def as_sql(self, compiler, connection, function=None, **extra_context):
+    def as_sql(self, compiler, connection, function=None, **extra_context):  # pylint:disable=arguments-differ
         """
         MySQL implementation based on https://github.com/django/django/pull/18489/files.
 

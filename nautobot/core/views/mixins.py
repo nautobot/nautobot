@@ -780,7 +780,8 @@ class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
             return self.perform_destroy(request, **kwargs)
         return Response(context)
 
-    def perform_destroy(self, request, **kwargs):
+    # TODO: this conflicts with DRF's DestroyModelMixin.perform_destroy(self, instance) API
+    def perform_destroy(self, request, **kwargs):  # pylint:disable=arguments-renamed
         """
         Function to validate the ObjectDeleteConfirmationForm and to delete the object.
         """
@@ -992,7 +993,8 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Ed
         """
         return self.perform_bulk_destroy(request, **kwargs)
 
-    def perform_bulk_destroy(self, request, **kwargs):
+    # TODO: this conflicts with BulkDestroyModelMixin.perform_bulk_destroy(self, objects)
+    def perform_bulk_destroy(self, request, **kwargs):  # pylint:disable=arguments-renamed
         """
         request.POST "_delete": Function to render the user selection of objects in a table form/BulkDestroyConfirmationForm via Response that is passed to NautobotHTMLRenderer.
         request.POST "_confirm": Function to validate the table form/BulkDestroyConfirmationForm and to perform the action of bulk destroy. Render the form with errors if exceptions are raised.
