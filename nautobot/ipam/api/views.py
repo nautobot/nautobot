@@ -139,15 +139,15 @@ class PrefixViewSet(NautobotModelViewSet):
         )
         default_code = "precondition_failed"
 
-    def retrieve(self, request, pk=None):
+    def retrieve(self, request, *args, pk=None, **kwargs):
         try:
-            return super().retrieve(request, pk)
+            return super().retrieve(request, *args, pk=pk, **kwargs)
         except Location.MultipleObjectsReturned as e:
             raise self.LocationIncompatibleLegacyBehavior from e
 
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         try:
-            return super().list(request)
+            return super().list(request, *args, **kwargs)
         except Location.MultipleObjectsReturned as e:
             raise self.LocationIncompatibleLegacyBehavior from e
 
@@ -604,15 +604,15 @@ class VLANViewSet(NautobotModelViewSet):
             return serializers.VLANLegacySerializer
         return super().get_serializer_class()
 
-    def retrieve(self, request, pk=None):
+    def retrieve(self, request, *args, pk=None, **kwargs):
         try:
-            return super().retrieve(request, pk)
+            return super().retrieve(request, *args, pk=pk, **kwargs)
         except Location.MultipleObjectsReturned as e:
             raise self.LocationIncompatibleLegacyBehavior from e
 
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         try:
-            return super().list(request)
+            return super().list(request, *args, **kwargs)
         except Location.MultipleObjectsReturned as e:
             raise self.LocationIncompatibleLegacyBehavior from e
 

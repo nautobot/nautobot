@@ -14,7 +14,7 @@ class TestProfilingJob(Job):
 
     description = "Test profiling"
 
-    def run(self):
+    def run(self):  # pylint: disable=arguments-differ
         """
         Job function.
         """

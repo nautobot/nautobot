@@ -242,7 +242,7 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
         self.validator = validator
         self.data_field = data_field
 
-    def render(self, record):
+    def render(self, *, record):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         data = getattr(record, self.data_field)
         try:
             self.validator.validate(data)

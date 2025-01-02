@@ -4,7 +4,7 @@ from nautobot.apps.jobs import register_jobs
 
 
 class TestReallyPass(TestFail):
-    def run(self):
+    def run(self):  # pylint: disable=arguments-differ
         pass
 
 

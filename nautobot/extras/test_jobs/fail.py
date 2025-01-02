@@ -23,7 +23,7 @@ class TestFail(Job):
             raise RuntimeError(f"Expected kwargs to be empty, but it was {kwargs!r}")
         logger.info("before_start() was called as expected")
 
-    def run(self):
+    def run(self):  # pylint:disable=arguments-differ
         """
         Job function.
         """
@@ -71,7 +71,7 @@ class TestFailWithSanitization(Job):
 
     description = "Validate job failure sanitization"
 
-    def run(self):
+    def run(self):  # pylint:disable=arguments-differ
         logger.info("I'm a test job that fails and sanitizes the exception!")
         exc = RunJobTaskFailed(
             "fatal: could not read Password for 'https://abc123@github.com': terminal prompts disabled"

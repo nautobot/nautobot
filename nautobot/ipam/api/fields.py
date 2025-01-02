@@ -7,11 +7,11 @@ class IPFieldSerializer(serializers.CharField):
         """Convert internal (IPNetwork) representation to API (string) representation."""
         return str(value)
 
-    def to_internal_value(self, value):
+    def to_internal_value(self, data):
         """Convert API (string) representation to internal (IPNetwork) representation."""
         try:
-            return netaddr.IPNetwork(value)
+            return netaddr.IPNetwork(data)
         except netaddr.AddrFormatError:
-            raise serializers.ValidationError(f"Invalid IP address format: {value}")
+            raise serializers.ValidationError(f"Invalid IP address format: {data}")
         except (TypeError, ValueError) as e:
             raise serializers.ValidationError(e)
