@@ -465,6 +465,12 @@ def vscode(context):
     """Launch Visual Studio Code with the appropriate Environment variables to run in a container."""
     command = "code nautobot.code-workspace"
 
+    # Setup PYTHON
+    env_file_path = os.path.join(BASE_DIR, "development/.env")
+    if not os.path.exists(env_file_path):
+        with open(env_file_path, "w") as env_file_obj:
+            env_file_obj.write(f"PYTHON_VER={context.nautobot.python_ver}")
+
     context.run(command, env={"PYTHON_VER": context.nautobot.python_ver})
 
 

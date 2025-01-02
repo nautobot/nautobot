@@ -42,7 +42,7 @@
                 <header class="tile-header">
                     <img
                         alt="{{ row.record.name }}"
-                        src="{% if app_icons|get_item:row.record.package_name != None %}{{ app_icons|get_item:row.record.package_name }}{% else %}{% static 'img/nautobot_icon_192x192.png' %}{% endif %}"
+                        src="{% if app_icons|get_item:row.record.package != None %}{{ app_icons|get_item:row.record.package }}{% else %}{% static 'img/nautobot_icon_192x192.png' %}{% endif %}"
                         height="64"
                         width="64"
                     />
@@ -51,20 +51,25 @@
                        Occupy `.tile-actions` dedicated space with `.tile-actions-placeholder`. See comment above
                        `.tile-actions` element for detailed explanation of this solution and why it is required here.
                     -->
-                    <div
-                        aria-hidden="true"
-                        class="tile-actions-placeholder pull-right"
-                        style="width: calc(32px * {{ row.record.actions|length }} + 3px * {{ row.record.actions|length|add:-1 }})">
-                    </div>
+                    {% with actions_count=3 %}
+                        <div
+                            aria-hidden="true"
+                            class="tile-actions-placeholder pull-right"
+                            style="width: calc(32px * {{ actions_count }} + 3px * {{ actions_count|add:-1 }})">
+                        </div>
+                    {% endwith %}
 
                     <h2>{{ row.record.name }}</h2>
                 </header>
 
-                <p class="tile-description">{{ row.record.description }}</p>
+                <p class="tile-description">{{ row.record.headline }}</p>
 
                 <footer class="tile-footer">
-                    <div>Author: {{ row.record.author }}</div>
-                    <div>Version: {{ row.record.version }}</div>
+                    <div>By: {{ row.record.author }}</div>
+                    <div>
+                        <label class="label label-transparent">{{ row.record.availability }}</label>
+                        v{{ row.record.version }}
+                    </div>
                 </footer>
             </a>
 

@@ -910,10 +910,12 @@ class JobResultTable(BaseTable):
         """
         return format_html(
             """<label class="label label-default">{}</label>
+            <label class="label label-success">{}</label>
             <label class="label label-info">{}</label>
             <label class="label label-warning">{}</label>
             <label class="label label-danger">{}</label>""",
             record.debug_log_count,
+            record.success_log_count,
             record.info_log_count,
             record.warning_log_count,
             record.error_log_count,

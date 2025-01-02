@@ -96,7 +96,6 @@
 
                                 <h2>{{ app.name }}</h2>
 
-                                {% if app.installed %} <span class="label label-primary">Installed</span>{% endif %}
                                 {% for use_case in app.use_cases %}
                                     <label class="label label-default">{{ use_case }}</label>
                                 {% endfor %}
@@ -105,8 +104,11 @@
                             <p class="tile-description">{{ app.headline }}</p>
 
                             <footer class="tile-footer">
-                                <div>Author: {{ app.author }}</div>
-                                <div>Availability: {{ app.availability }}</div>
+                                <div>By: {{ app.author }}</div>
+                                <div>
+                                    {% if app.installed %}<label class="label label-success">Installed</label>{% endif %}
+                                    <label class="label label-transparent">{{ app.availability }}</label>
+                                </div>
                             </footer>
                         </a>
 
@@ -136,7 +138,7 @@
 
                                     <h4 class="modal-title">
                                         {{ app.name }}
-                                        {% if app.installed %}<span class="label label-primary">Installed</span>{% endif %}
+                                        {% if app.installed %}<label class="label label-success">Installed</label>{% endif %}
                                     </h4>
                                 </div>
 
@@ -151,11 +153,11 @@
                                             />
 
                                             <dl>
-                                                <dt class="text-muted text-uppercase">Author</dt>
+                                                <dt class="text-muted text-uppercase">By</dt>
                                                 <dd>{{ app.author }}</dd>
 
-                                                <dt class="text-muted text-uppercase">Availability</dt>
-                                                <dd>{{ app.availability }}</dd>
+                                                <dt class="text-muted text-uppercase">License</dt>
+                                                <dd><label class="label label-transparent">{{ app.availability }}</label></dd>
 
                                                 {% if app.requires|length > 0 %}
                                                     <dt class="text-muted text-uppercase">Requirements</dt>
@@ -198,12 +200,12 @@
                                                 </p>
                                             {% endif %}
 
-                                            {% if app.availability == "Private" %}
+                                            {% if app.availability == "NTC License" %}
                                                 <p>
                                                     <strong>
-                                                        This app is private. Reach out to
+                                                        This Nautobot App requires a license to use.
                                                         <a href="https://networktocode.com/contact/" target="_blank">
-                                                            Network to Code
+                                                            Reach out to Network to Code
                                                         </a>
                                                         for more information.
                                                     </strong>
