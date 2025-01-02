@@ -123,6 +123,38 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 <!-- towncrier release notes start -->
+## v2.3.15 (2025-01-02)
+
+### Security
+
+- [#6695](https://github.com/nautobot/nautobot/issues/6695) - Updated dependency `Jinja2` to `~3.1.5` to address `CVE-2024-56201` and `CVE-2024-56326`.
+
+### Added
+
+- [#6410](https://github.com/nautobot/nautobot/issues/6410) - Added `settings.PUBLISH_ROBOTS_TXT` configuration option, defaulting to `True`.
+
+### Changed
+
+- [#6583](https://github.com/nautobot/nautobot/issues/6583) - Changed `available-vlans` API endpoint to additionally require `ipam.view_vlan` permission to view available VLANs under VLAN Group.
+
+### Fixed
+
+- [#5545](https://github.com/nautobot/nautobot/issues/5545) - Fixed an issue in Dynamic Group Edit View where saving a valid choice in a Select-type CustomField triggered an error.
+- [#6583](https://github.com/nautobot/nautobot/issues/6583) - Fixed `available-vlans`, `available-ips`, `available-prefixes` API endpoints to check object-level constrained permissions.
+- [#6702](https://github.com/nautobot/nautobot/issues/6702) - Resolved issue with TagsBulkEditFormMixin missing self.model.
+
+### Dependencies
+
+- [#6689](https://github.com/nautobot/nautobot/issues/6689) - Updated `nh3` dependency to `~0.2.20`.
+- [#6689](https://github.com/nautobot/nautobot/issues/6689) - Updated `django-tables2` dependency to `~2.7.4` in Python 3.9 and later, and pinned it to `==2.7.0` under Python 3.8.
+
+### Housekeeping
+
+- [#6688](https://github.com/nautobot/nautobot/issues/6688) - Cleaned-up documentation, misc fixes for VSCode DevContainer workflow.
+- [#6689](https://github.com/nautobot/nautobot/issues/6689) - Updated documentation dependency `mkdocs-material` to `~9.5.49`.
+- [#6693](https://github.com/nautobot/nautobot/issues/6693) - Changed `poetry install` in prerelease and release workflows from parallel mode to serial mode.
+- [#6706](https://github.com/nautobot/nautobot/issues/6706) - Removed unnecessary `user-data.json` integration-test fixture file.
+
 ## v2.3.14 (2024-12-19)
 
 ### Added in v2.3.14
