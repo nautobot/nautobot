@@ -1,1 +1,0 @@
-Added `settings.PUBLISH_ROBOTS_TXT` configuration option, defaulting to `True`.
