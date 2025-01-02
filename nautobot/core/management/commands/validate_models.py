@@ -63,7 +63,7 @@ class Command(BaseCommand):
         for model in models:
             model_name = f"{model._meta.app_label}.{model.__name__}"
             # Most swap out for user_model
-            if model_name == "auth.User":
+            if model_name == "auth.User":  # pylint: disable=hard-coded-auth-user
                 model = get_user_model()
             # Skip models that aren't actually in the database
             if not model._meta.managed:
