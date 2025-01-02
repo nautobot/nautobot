@@ -480,7 +480,7 @@ class IPAddressQuerySet(TestCase):
 
     def test_get_or_create(self):
         # https://github.com/nautobot/nautobot/issues/6676
-        ip_obj, updated = IPAddress.objects.update_or_create(
+        ip_obj, created = IPAddress.objects.update_or_create(
             defaults={
                 "status": self.ipaddr_status,
             },
@@ -488,7 +488,7 @@ class IPAddressQuerySet(TestCase):
             mask_length="24",
             namespace=self.namespace,
         )
-        self.assertFalse(updated)
+        self.assertFalse(created)
         self.assertEqual(str(ip_obj.address), "10.0.0.1/24")
         self.assertEqual(ip_obj.parent.namespace, self.namespace)
 
