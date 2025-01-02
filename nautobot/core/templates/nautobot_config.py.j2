@@ -463,6 +463,16 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 #
 # NAPALM_ARGS = {}
 
+# Expiration date (YYYY-MM-DD) for an active Nautobot support contract with Network to Code.
+# Displayed in the About page.
+# if (
+#     "NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE" in os.environ
+#     and os.environ["NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"] != ""
+# ):
+#     NTC_SUPPORT_CONTRACT_EXPIRATION_DATE = datetime.date.fromisoformat(
+#         os.environ["NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"]
+#     )
+
 # Default number of objects to display per page of the UI and REST API. Default is 50
 #
 # if "NAUTOBOT_PAGINATE_COUNT" in os.environ and os.environ["NAUTOBOT_PAGINATE_COUNT"] != "":
