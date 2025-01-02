@@ -506,7 +506,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             url, {"prefix_length": "hello", "status": self.status.pk}, format="json", **self.header
         )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("prefix_length", response.data[0])
+        self.assertIn("prefix", response.data)
 
     def test_create_multiple_available_prefixes(self):
         """
