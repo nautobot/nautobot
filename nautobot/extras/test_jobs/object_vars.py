@@ -13,7 +13,7 @@ class TestObjectVars(Job):
     role = ObjectVar(model=Role)
     roles = MultiObjectVar(model=Role)
 
-    def run(self, role, roles):
+    def run(self, role, roles):  # pylint: disable=arguments-differ
         logger.info("Role: %s", role)
         logger.warning("Roles: %s", roles)
 

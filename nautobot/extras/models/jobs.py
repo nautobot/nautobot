@@ -234,13 +234,13 @@ class Job(PrimaryModel):
     def __str__(self):
         return self.name
 
-    def delete(self):
+    def delete(self, *args, **kwargs):
         if self.module_name.startswith("nautobot."):
             raise ProtectedError(
                 f"Unable to delete Job {self}. System Job cannot be deleted",
                 [],
             )
-        super().delete()
+        super().delete(*args, **kwargs)
 
     @property
     def job_class(self):
