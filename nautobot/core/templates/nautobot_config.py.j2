@@ -493,6 +493,9 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # if "NAUTOBOT_PREFER_IPV4" in os.environ and os.environ["NAUTOBOT_PREFER_IPV4"] != "":
 #     PREFER_IPV4 = is_truthy(os.environ["NAUTOBOT_PREFER_IPV4"])
 
+# Publish a simple "no-index" robots.txt for Nautobot?
+# PUBLISH_ROBOTS_TXT = is_truthy(os.getenv("NAUTOBOT_PUBLISH_ROBOTS_TXT", "True"))
+
 # Default height and width in pixels of a single rack unit in rendered rack elevations. Defaults are 22 and 230
 #
 # if (
