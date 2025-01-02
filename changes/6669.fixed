@@ -1,0 +1,1 @@
+Removed the need for `available-prefixes`, `available-ips`, and `available-vlans` API endpoints to run validation multiple times.
