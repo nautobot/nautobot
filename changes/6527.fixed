@@ -1,1 +1,1 @@
-Disabled sorting by the `Device` column in Console Connection List View, Power Connection List View, and Interface Connection List View.
+Disabled (unsupported) sorting by the `Device` column in Console Connections, Power Connections, and Interface Connections list views.
