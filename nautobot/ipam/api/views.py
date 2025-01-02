@@ -190,7 +190,10 @@ class PrefixViewSet(NautobotModelViewSet):
                     # If the prefix_length is not an integer, return a 400 using the
                     # serializer.is_valid(raise_exception=True) method call below
                     if not isinstance(requested_prefix["prefix_length"], int):
-                        break
+                        return Response(
+                            {"prefix_length": "This field must be an integer."},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
                     for available_prefix in available_prefixes.iter_cidrs():
                         if requested_prefix["prefix_length"] >= available_prefix.prefixlen:
                             allocated_prefix = f"{available_prefix.network}/{requested_prefix['prefix_length']}"
@@ -454,11 +457,15 @@ class VLANGroupViewSet(NautobotModelViewSet):
                     # Check requested `vlan_group`
                     if "vlan_group" in requested_vlan:
                         requested_vlan_group = None
-                        if "vlan_group" in requested_vlan:
-                            try:
-                                requested_vlan_group = VLANGroup.objects.get(pk=requested_vlan["vlan_group"])
-                            except VLANGroup.DoesNotExist:
-                                pass
+                        requested_vlan_group_pk = requested_vlan["vlan_group"]
+                        try:
+                            requested_vlan_group = VLANGroup.objects.get(pk=requested_vlan_group_pk)
+                        except VLANGroup.DoesNotExist:
+                            return Response(
+                                {"detail": f"VLAN Group with pk {requested_vlan_group_pk} does not exist."},
+                                status=status.HTTP_204_NO_CONTENT,
+                            )
+
                         if requested_vlan_group != vlan_group:
                             return Response(
                                 {
