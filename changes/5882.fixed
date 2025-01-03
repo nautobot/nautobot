@@ -1,0 +1,1 @@
+Fixed `PowerOutletTemplateTable` to use `power_port_template` instead of the incorrect field `power_port`.
