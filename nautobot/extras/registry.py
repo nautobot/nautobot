@@ -41,7 +41,7 @@ class DatasourceContent:
       weight (int): Defines the order in which datasources will be loaded.
     """
 
-    __slots__ = ["name", "content_identifier", "icon", "callback", "weight"]
+    __slots__ = ["callback", "content_identifier", "icon", "name", "weight"]
 
     def __init__(self, name, content_identifier, icon, callback, weight=1000):
         """Ensure datasource properties."""

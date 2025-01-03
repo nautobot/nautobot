@@ -58,7 +58,6 @@ __all__ = (
     "LocalContextModelFilterSetMixin",
     "MACAddressFilter",
     "MappedPredicatesFilterMixin",
-    "multivalue_field_factory",
     "MultiValueBigNumberFilter",
     "MultiValueCharFilter",
     "MultiValueDateFilter",
@@ -84,4 +83,5 @@ __all__ = (
     "TagFilter",
     "TenancyModelFilterSetMixin",
     "TreeNodeMultipleChoiceFilter",
+    "multivalue_field_factory",
 )

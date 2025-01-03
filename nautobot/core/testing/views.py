@@ -30,9 +30,9 @@ from nautobot.ipam.models import Prefix
 from nautobot.users import models as users_models
 
 __all__ = (
-    "TestCase",
     "ModelTestCase",
     "ModelViewTestCase",
+    "TestCase",
     "ViewTestCases",
 )
 

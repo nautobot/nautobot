@@ -14,13 +14,13 @@ from nautobot.tenancy.tables import TenantColumn
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 __all__ = (
-    "ClusterTable",
     "ClusterGroupTable",
+    "ClusterTable",
     "ClusterTypeTable",
+    "VMInterfaceTable",
     "VirtualMachineDetailTable",
     "VirtualMachineTable",
     "VirtualMachineVMInterfaceTable",
-    "VMInterfaceTable",
 )
 
 VMINTERFACE_BUTTONS = """

@@ -212,7 +212,7 @@ pylint-django = "~2.5.3"
 # Python implementation of markdownlint
 pymarkdownlnt = "~0.9.25"
 # Combination linter and code formatter
-ruff = "~0.5.7"
+ruff = "~0.8.5"
 # YAML linting
 yamllint = "~1.35.1"
 
@@ -366,6 +366,7 @@ select = [
     "F",  # pyflakes
     "I",  # isort
     "PIE",  # flake8-pie
+    "PLE",  # pylint errors
     "RUF",  # ruff itself
     "S",  # flake8-bandit
     "W",  # pycodestyle

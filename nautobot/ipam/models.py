@@ -27,18 +27,18 @@ from .querysets import IPAddressQuerySet, PrefixQuerySet, RIRQuerySet, VLANQuery
 from .validators import DNSValidator
 
 __all__ = (
+    "RIR",
+    "VLAN",
+    "VRF",
     "IPAddress",
     "IPAddressToInterface",
     "Namespace",
     "Prefix",
     "PrefixLocationAssignment",
-    "RIR",
     "RouteTarget",
     "Service",
-    "VLAN",
     "VLANGroup",
     "VLANLocationAssignment",
-    "VRF",
     "VRFDeviceAssignment",
     "VRFPrefixAssignment",
 )

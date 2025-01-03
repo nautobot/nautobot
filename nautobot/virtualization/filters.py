@@ -30,8 +30,8 @@ __all__ = (
     "ClusterFilterSet",
     "ClusterGroupFilterSet",
     "ClusterTypeFilterSet",
-    "VirtualMachineFilterSet",
     "VMInterfaceFilterSet",
+    "VirtualMachineFilterSet",
 )
 
 

@@ -6,11 +6,11 @@ from nautobot.core.graphql.utils import construct_resolver, get_filtering_args_f
 
 __all__ = (
     "BigInteger",
-    "construct_resolver",
     "ContentTypeType",
+    "OptimizedNautobotObjectType",
+    "construct_resolver",
     "execute_query",
     "execute_saved_query",
     "get_filtering_args_from_filterset",
-    "OptimizedNautobotObjectType",
     "str_to_var_name",
 )
