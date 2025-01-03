@@ -28,6 +28,8 @@ class FilterTestCases:
     class BaseFilterTestCase(views.TestCase):
         """Base class for testing of FilterSets."""
 
+        queryset: QuerySet
+
         def get_filterset_test_values(self, field_name, queryset=None):
             """Returns a list of distinct values from the requested queryset field to use in filterset tests.
 
@@ -69,7 +71,6 @@ class FilterTestCases:
     class FilterTestCase(BaseFilterTestCase):
         """Add common tests for all FilterSets."""
 
-        queryset: QuerySet
         filterset: type[FilterSet]
 
         # filter predicate fields that should be excluded from q test case

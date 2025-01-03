@@ -1279,7 +1279,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, EditAndDe
     queryset: QuerySet
     filterset: Optional[type[FilterSet]] = None
     table: type[Table]
-    form: type[Form]
+    form: Optional[type[Form]] = None
     template_name = "generic/object_bulk_delete.html"
 
     def get_required_permission(self):

@@ -917,9 +917,9 @@ class FrontPortTemplateFactory(ModularDeviceComponentTemplateFactory):
     @factory.lazy_attribute
     def rear_port_template(self):
         if self.module_type:
-            return factory.random.randgen.choice(self.module_type.rear_port_templates.all())
+            return factory.random.randgen.choice(self.module_type.rear_port_templates.all())  # pylint: disable=no-member
         else:
-            return factory.random.randgen.choice(self.device_type.rear_port_templates.all())
+            return factory.random.randgen.choice(self.device_type.rear_port_templates.all())  # pylint: disable=no-member
 
     @factory.lazy_attribute
     def rear_port_position(self):

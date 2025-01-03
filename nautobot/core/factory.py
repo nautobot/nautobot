@@ -33,10 +33,10 @@ class BaseModelFactory(DjangoModelFactory):
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
         """Override default DjangoModelFactory behavior to call validated_save() instead of just save()."""
-        if cls._meta.django_get_or_create:
+        if cls._meta.django_get_or_create:  # pylint: disable=no-member
             return cls._get_or_create(model_class, *args, **kwargs)
 
-        using = kwargs.pop("using", cls._meta.database)
+        using = kwargs.pop("using", cls._meta.database)  # pylint: disable=no-member
         obj = model_class(*args, **kwargs)
         try:
             obj.validated_save(using=using)
@@ -48,9 +48,9 @@ class BaseModelFactory(DjangoModelFactory):
     @classmethod
     def _get_or_create(cls, model_class, *args, **kwargs):
         """Simplified form of DjangoModelFactory._get_or_create() that also calls validated_save() if needed."""
-        using = kwargs.pop("using", cls._meta.database)
+        using = kwargs.pop("using", cls._meta.database)  # pylint: disable=no-member
         key_fields = {}
-        for field in cls._meta.django_get_or_create:
+        for field in cls._meta.django_get_or_create:  # pylint: disable=no-member
             if field not in kwargs:
                 raise FactoryError(f"no value provided for field {field}")
             key_fields[field] = kwargs.pop(field)

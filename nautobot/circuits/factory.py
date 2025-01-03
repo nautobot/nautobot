@@ -139,9 +139,11 @@ class CircuitTerminationFactory(PrimaryModelFactory):
             return None
         if self.has_cloud_network:
             return None
-        if ProviderNetwork.objects.filter(provider=self.circuit.provider).exists():
-            return faker.Faker().random_element(elements=ProviderNetwork.objects.filter(provider=self.circuit.provider))
-        return ProviderNetworkFactory(provider=self.circuit.provider)
+        if ProviderNetwork.objects.filter(provider=self.circuit.provider).exists():  # pylint: disable=no-member
+            return faker.Faker().random_element(
+                elements=ProviderNetwork.objects.filter(provider=self.circuit.provider)  # pylint: disable=no-member
+            )
+        return ProviderNetworkFactory(provider=self.circuit.provider)  # pylint: disable=no-member
 
     has_port_speed = NautobotBoolIterator()
     port_speed = factory.Maybe("has_port_speed", factory.Faker("pyint", max_value=100000000), None)
