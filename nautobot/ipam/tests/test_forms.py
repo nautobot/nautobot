@@ -1,5 +1,6 @@
 """Test IPAM forms."""
 
+from django.forms import Form
 from django.test import TestCase
 
 from nautobot.core.testing.forms import FormTestCases
@@ -10,9 +11,9 @@ from nautobot.ipam.models import IPAddress, Namespace, Prefix
 
 
 class BaseNetworkFormTest:
-    form_class = None
-    field_name = None
-    object_name = None
+    form_class: type[Form]
+    field_name: str
+    object_name: str
     extra_data = {}
 
     def setUp(self):

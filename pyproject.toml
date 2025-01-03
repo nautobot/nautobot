@@ -271,7 +271,6 @@ good-names = """_,i,j,k,pk"""
 disable = [
     # Errors
     "no-member",
-    "not-callable",
     # Warnings
     "abstract-method",
     "attribute-defined-outside-init",
