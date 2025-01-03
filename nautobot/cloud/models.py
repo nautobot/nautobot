@@ -109,7 +109,7 @@ class CloudResourceTypeMixin(models.Model):
         super().clean()
 
         # Copied from nautobot.extras.models.models.ConfigContextSchemaValidationMixin
-        schema = self.cloud_resource_type.config_schema
+        schema = self.cloud_resource_type.config_schema  # pylint: disable=no-member
         if schema:
             try:
                 Draft7Validator(schema, format_checker=Draft7Validator.FORMAT_CHECKER).validate(self.extra_config)

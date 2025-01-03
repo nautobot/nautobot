@@ -1078,11 +1078,11 @@ class JobFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_installed(self):
-        params = {"job_class_name": "TestPass", "installed": True}
+        params = {"job_class_name": "TestPassJob", "installed": True}
         self.assertTrue(self.filterset(params, self.queryset).qs.exists())
 
     def test_enabled(self):
-        params = {"job_class_name": "TestPass", "enabled": False}
+        params = {"job_class_name": "TestPassJob", "enabled": False}
         self.assertTrue(self.filterset(params, self.queryset).qs.exists())
 
     def test_dryrun_default(self):
@@ -1134,11 +1134,11 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
         jobs = Job.objects.all()[:3]
         cls.jobs = jobs
         user = User.objects.create(username="user1", is_active=True)
-        job_model = Job.objects.get_for_class_path("pass.TestPass")
+        job_model = Job.objects.get_for_class_path("pass.TestPassJob")
         scheduled_jobs = [
             ScheduledJob.objects.create(
                 name="test1",
-                task="pass.TestPass",
+                task="pass.TestPassJob",
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_IMMEDIATELY,
                 user=user,
@@ -1147,7 +1147,7 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
             ),
             ScheduledJob.objects.create(
                 name="test2",
-                task="pass.TestPass",
+                task="pass.TestPassJob",
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_DAILY,
                 user=user,
@@ -1157,7 +1157,7 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
             ),
             ScheduledJob.objects.create(
                 name="test3",
-                task="pass.TestPass",
+                task="pass.TestPassJob",
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_CUSTOM,
                 crontab="34 12 * * *",

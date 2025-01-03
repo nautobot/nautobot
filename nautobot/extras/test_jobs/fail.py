@@ -7,7 +7,7 @@ from nautobot.extras.jobs import get_task_logger, Job, RunJobTaskFailed
 logger = get_task_logger(__name__)
 
 
-class TestFail(Job):
+class TestFailJob(Job):
     """
     Job with fail result.
     """
@@ -15,7 +15,7 @@ class TestFail(Job):
     description = "Validate job import"
 
     def before_start(self, task_id, args, kwargs):
-        if task_id != self.request.id:
+        if task_id != self.request.id:  # pylint: disable=no-member
             raise RuntimeError(f"Expected task_id {task_id} to equal self.request.id {self.request.id}")
         if args:
             raise RuntimeError(f"Expected args to be empty, but it was {args!r}")
@@ -91,4 +91,4 @@ class TestFailWithSanitization(Job):
         raise exc
 
 
-register_jobs(TestFail, TestFailWithSanitization)
+register_jobs(TestFailJob, TestFailWithSanitization)

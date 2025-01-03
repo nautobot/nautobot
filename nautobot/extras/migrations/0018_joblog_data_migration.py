@@ -2,7 +2,6 @@ from collections import OrderedDict
 
 from django.db import migrations
 
-from nautobot.extras.choices import LogLevelChoices
 from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
     JOB_LOG_MAX_GROUPING_LENGTH,
@@ -123,14 +122,13 @@ def reverse_migrate_params(apps, schema_editor):
                 ]
             )
 
-            if entry.log_level != LogLevelChoices.LOG_DEFAULT:
-                job_result.data[entry.grouping].setdefault(entry.log_level, 0)
-                job_result.data[entry.grouping][entry.log_level] += 1
-                if "total" not in job_result.data:
-                    job_result.data["total"] = _data_grouping_struct()
-                    del job_result.data["total"]["log"]
-                job_result.data["total"].setdefault(entry.log_level, 0)
-                job_result.data["total"][entry.log_level] += 1
+            job_result.data[entry.grouping].setdefault(entry.log_level, 0)
+            job_result.data[entry.grouping][entry.log_level] += 1
+            if "total" not in job_result.data:
+                job_result.data["total"] = _data_grouping_struct()
+                del job_result.data["total"]["log"]
+            job_result.data["total"].setdefault(entry.log_level, 0)
+            job_result.data["total"][entry.log_level] += 1
 
             job_result.save()
 

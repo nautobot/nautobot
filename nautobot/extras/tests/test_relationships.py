@@ -1325,7 +1325,7 @@ class RelationshipTableTest(RelationshipBaseTest, TestCase):
             self.assertIsNotNone(relationship_column)
             self.assertIsInstance(relationship_column, RelationshipColumn)
 
-            rendered_value = bound_row.get_cell(internal_col_name)
+            rendered_value = bound_row.get_cell(internal_col_name)  # pylint: disable=no-member
             # Test if the expected value is in the rendered value.
             # Exact match is difficult because the order of rendering is unpredictable.
             for value in col_expected_value:

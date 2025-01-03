@@ -160,5 +160,4 @@ class RedisBackend(RedisHealthCheck):
         elif client_class == "django_redis.client.DefaultClient":
             self.check_redis(redis_url=location, **options.get("CONNECTION_POOL_KWARGS", {}))
         else:
-            if self.redis_url is None:
-                self.add_error(ServiceUnavailable(f"{client_class} is an unsupported CLIENT_CLASS!"))
+            self.add_error(ServiceUnavailable(f"{client_class} is an unsupported CLIENT_CLASS!"))

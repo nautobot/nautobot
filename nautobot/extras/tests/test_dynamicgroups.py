@@ -587,7 +587,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         """
         pfx_content_type = ContentType.objects.get_for_model(Prefix)
         group = DynamicGroup(name="pfx", content_type=pfx_content_type)
-        filterset = group.filterset_class()
+        filterset = group.filterset_class()  # pylint: disable=not-callable  # should not be None here!
         fields = group._map_filter_fields
 
         # We know that `within_include` does not have a `generate_query_{filter_method}` method.

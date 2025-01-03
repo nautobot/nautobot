@@ -207,7 +207,7 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
             # Annotation not available, so fall back to manually querying for the config context
             config_context_data = ConfigContext.objects.get_for_object(self).values_list("data", flat=True)
         else:
-            config_context_data = self.config_context_data or []
+            config_context_data = self.config_context_data or []  # pylint: disable=no-member
             config_context_data = [
                 c["data"] for c in sorted(config_context_data, key=lambda k: (k["weight"], k["name"]))
             ]
@@ -831,7 +831,7 @@ class Note(ChangeLoggedModel, BaseModel):
         unique_together = [["assigned_object_type", "assigned_object_id", "user_name", "created"]]
 
     def __str__(self):
-        return f"{self.assigned_object} - {self.created.isoformat() if self.created else None}"
+        return f"{self.assigned_object} - {self.created.isoformat() if self.created else None}"  # pylint: disable=no-member
 
     def save(self, *args, **kwargs):
         # Record the user's name as static strings

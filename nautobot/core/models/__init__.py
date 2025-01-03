@@ -270,7 +270,7 @@ class BaseModel(models.Model):
 
         if not natural_key_field_names:
             raise AttributeError(
-                f"Unable to identify an intrinsic natural-key definition for {cls.__name__}. "
+                f"Unable to identify an intrinsic natural-key definition for {cls.__name__}. "  # pylint: disable=no-member
                 "If there isn't at least one UniqueConstraint, unique_together, or field with unique=True, "
                 "you probably need to explicitly declare the 'natural_key_field_names' for this model, "
                 "or potentially override the default 'natural_key_field_lookups' implementation for this model."

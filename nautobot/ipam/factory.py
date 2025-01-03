@@ -238,9 +238,9 @@ class VLANFactory(PrimaryModelFactory):
                         lambda: Location.objects.filter(location_type__content_types__in=[vlan_ct]), minimum=0
                     )
                 )
-                if self.vlan_group and self.vlan_group.location:
+                if self.vlan_group and self.vlan_group.location:  # pylint: disable=no-member
                     # add the parent of the vlan group location to the vlan locations
-                    self.locations.add(self.vlan_group.location.ancestors(include_self=True)[0])
+                    self.locations.add(self.vlan_group.location.ancestors(include_self=True)[0])  # pylint: disable=no-member
 
 
 class VLANGetOrCreateFactory(VLANFactory):
@@ -363,7 +363,7 @@ class PrefixFactory(PrimaryModelFactory):
             return
 
         # Leaf prefixes are of size 1 but can't have children
-        if self.prefix.size == 1:
+        if self.prefix.size == 1:  # pylint: disable=no-member
             return
 
         # 50% chance to create children
@@ -388,7 +388,7 @@ class PrefixFactory(PrimaryModelFactory):
         max_count = int(kwargs.pop("max_count", 4))
         if max_count == 0:
             return
-        child_count = faker.Faker().pyint(min_value=1, max_value=min(max_count, self.prefix.size))
+        child_count = faker.Faker().pyint(min_value=1, max_value=min(max_count, self.prefix.size))  # pylint: disable=no-member
 
         # Propagate parent tenant to children if parent tenant is set
         if self.tenant is not None:
@@ -397,10 +397,10 @@ class PrefixFactory(PrimaryModelFactory):
         if child_factory == IPAddressFactory:
             # Create child ip addresses, preserving vrf and is_ipv6 from parent
             created = 0
-            for address in self.prefix.iter_hosts():
+            for address in self.prefix.iter_hosts():  # pylint: disable=no-member
                 if created == child_count:
                     break
-                addresses_available = self.prefix.size - child_count
+                addresses_available = self.prefix.size - child_count  # pylint: disable=no-member
                 children_remaining = child_count - created
                 # Randomly skip addresses if there's enough space left in the prefix
                 if faker.Faker().pybool() or addresses_available <= children_remaining:
@@ -419,7 +419,7 @@ class PrefixFactory(PrimaryModelFactory):
             )[0]
 
             # Create child prefixes, preserving is_ipv6 from parent
-            for count, address in enumerate(self.prefix.subnet(child_cidr)):
+            for count, address in enumerate(self.prefix.subnet(child_cidr)):  # pylint: disable=no-member
                 if count == child_count:
                     break
                 method(
