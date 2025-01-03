@@ -668,7 +668,7 @@ class BaseFilterSet(django_filters.FilterSet):
         the form `<field_name>__<lookup_expr>`
         """
         magic_filters = {}
-        if filter_field.method is not None or filter_field.lookup_expr not in ["exact", "in"]:
+        if filter_field.method is not None or filter_field.lookup_expr not in ["exact", "in", "iexact"]:
             return magic_filters
 
         # Choose the lookup expression map based on the filter type
