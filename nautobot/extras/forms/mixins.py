@@ -837,7 +837,7 @@ class StatusModelFilterFormMixin(forms.Form):
         self.order_fields(self.field_order)  # Reorder fields again
 
 
-class TagsBulkEditFormMixin(forms.Form):
+class TagsBulkEditFormMixin(BulkEditForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

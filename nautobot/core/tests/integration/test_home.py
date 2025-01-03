@@ -7,7 +7,6 @@ from nautobot.tenancy.models import Tenant
 class HomeTestCase(SeleniumTestCase):
     """Integration tests against the home page."""
 
-    fixtures = ["user-data.json"]  # bob/bob
     layout = {
         "Organization": {
             "Locations": {"model": Location, "permission": "dcim.view_location"},
