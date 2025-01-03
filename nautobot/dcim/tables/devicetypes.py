@@ -253,7 +253,7 @@ class PowerOutletTemplateTable(ComponentTemplateTable):
             "name",
             "label",
             "type",
-            "power_port",
+            "power_port_template",
             "feed_leg",
             "description",
             "actions",
