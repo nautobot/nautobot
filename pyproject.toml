@@ -269,9 +269,6 @@ good-names = """_,i,j,k,pk"""
 [tool.pylint.message_control]
 # TODO: re-enable and fix these as time permits
 disable = [
-    # Errors
-    "no-member",
-    "not-callable",
     # Warnings
     "abstract-method",
     "attribute-defined-outside-init",
@@ -339,6 +336,24 @@ disable = [
 notes = ["FIXME", "XXX"]
 
 [tool.pylint.typecheck]
+# Regex patterns describing dynamically defined attributes that cause false reports for "no-member" checker
+generated-members = [
+    ".*Factory\\..*",
+    ".*FactoryOptions\\..*",
+    ".*FilterSet\\._meta",
+    ".*FilterSet\\.base_filters",
+    ".*FilterSet\\.declared_filters",
+    ".*Job\\.request",
+    ".*LazyAttribute\\..*",  # factory attributes
+    ".*Maybe\\..*",  # factory attributes
+    ".*Serializer\\.Meta",
+    ".*Table\\._meta",
+    ".*Table\\.base_columns",
+    ".*Table\\.context",
+]
+extension-pkg-allow-list = [
+    "nh3",
+]
 # @patch changes the signature of a function it's applied to; don't raise "no-value-for-parameter" here
 signature-mutators = ["unittest.mock.patch"]
 

@@ -1,9 +1,12 @@
+from __future__ import annotations  # python 3.8
+
 from decimal import Decimal
 
 from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.db.models import Model
 from django.test import TestCase
 from django.test.utils import override_settings
 
@@ -76,7 +79,7 @@ class ModularDeviceComponentTestCaseMixin:
 
     # fields required to create instances of the model, with the exception of name, device_field and module_field
     modular_component_create_data = {}
-    model = None
+    model: type[Model]
     device_field = "device"  # field name for the parent device
     module_field = "module"  # field name for the parent module
 
