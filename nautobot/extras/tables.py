@@ -242,7 +242,7 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
         self.validator = validator
         self.data_field = data_field
 
-    def render(self, record):
+    def render(self, *, record):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         data = getattr(record, self.data_field)
         try:
             self.validator.validate(data)
@@ -626,13 +626,13 @@ class GitRepositoryTable(BaseTable):
         )
 
     def render_last_sync_time(self, record):
-        if record.name in self.context["job_results"]:
-            return self.context["job_results"][record.name].date_done
+        if record.name in self.context["job_results"]:  # pylint: disable=no-member
+            return self.context["job_results"][record.name].date_done  # pylint: disable=no-member
         return self.default
 
     def render_last_sync_user(self, record):
-        if record.name in self.context["job_results"]:
-            user = self.context["job_results"][record.name].user
+        if record.name in self.context["job_results"]:  # pylint: disable=no-member
+            user = self.context["job_results"][record.name].user  # pylint: disable=no-member
             return user
         return self.default
 

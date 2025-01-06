@@ -1,4 +1,7 @@
+from __future__ import annotations  # python 3.8
+
 import logging
+from typing import Optional
 
 from django.contrib import messages
 from django.contrib.auth.mixins import AccessMixin
@@ -22,6 +25,7 @@ from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic.edit import FormView
+from django_filters import FilterSet
 from drf_spectacular.utils import extend_schema
 from rest_framework import exceptions, mixins
 from rest_framework.decorators import action as drf_action
@@ -223,7 +227,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     # filterset and filter_params will be initialized in filter_queryset() in ObjectListViewMixin
     filter_params = None
     filterset = None
-    filterset_class = None
+    filterset_class: Optional[type[FilterSet]] = None
     filterset_form_class = None
     form_class = None
     create_form_class = None
@@ -473,7 +477,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
         params = request.GET.copy()
-        filter_params = get_filterable_params_from_filter_params(params, self.non_filter_params, self.filterset_class())
+        filter_params = get_filterable_params_from_filter_params(
+            params,
+            self.non_filter_params,
+            self.filterset_class(),  # pylint: disable=not-callable  # only called if filterset_class is not None
+        )
         if params.get("saved_view") and not filter_params and not params.get("all_filters_removed"):
             return SavedView.objects.get(pk=params.get("saved_view")).config.get("filter_params", {})
         return filter_params
@@ -628,8 +636,8 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
     """
 
     action_buttons = ("add", "import", "export")
-    filterset_class = None
-    filterset_form_class = None
+    filterset_class: Optional[type[FilterSet]] = None
+    filterset_form_class: Optional[type[Form]] = None
     hide_hierarchy_ui = False
     non_filter_params = (
         "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
@@ -780,7 +788,8 @@ class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
             return self.perform_destroy(request, **kwargs)
         return Response(context)
 
-    def perform_destroy(self, request, **kwargs):
+    # TODO: this conflicts with DRF's DestroyModelMixin.perform_destroy(self, instance) API
+    def perform_destroy(self, request, **kwargs):  # pylint:disable=arguments-renamed
         """
         Function to validate the ObjectDeleteConfirmationForm and to delete the object.
         """
@@ -934,7 +943,7 @@ class EditAndDeleteAllModelMixin:
             filterset_class = getattr(self, "filterset_class", None)
 
         if request.GET and filterset_class is not None:
-            queryset = filterset_class(request.GET, model.objects.all()).qs
+            queryset = filterset_class(request.GET, model.objects.all()).qs  # pylint: disable=not-callable
             # We take this approach because filterset.qs has already applied .distinct(),
             # and performing a .delete directly on a queryset with .distinct applied is not allowed.
             queryset = self.queryset.filter(pk__in=queryset)
@@ -958,8 +967,8 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Ed
     UI mixin to bulk destroy model instances.
     """
 
-    bulk_destroy_form_class = None
-    filterset_class = None
+    bulk_destroy_form_class: Optional[type[Form]] = None
+    filterset_class: Optional[type[FilterSet]] = None
 
     def _process_bulk_destroy_form(self, form):
         request = self.request
@@ -992,7 +1001,8 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Ed
         """
         return self.perform_bulk_destroy(request, **kwargs)
 
-    def perform_bulk_destroy(self, request, **kwargs):
+    # TODO: this conflicts with BulkDestroyModelMixin.perform_bulk_destroy(self, objects)
+    def perform_bulk_destroy(self, request, **kwargs):  # pylint:disable=arguments-renamed
         """
         request.POST "_delete": Function to render the user selection of objects in a table form/BulkDestroyConfirmationForm via Response that is passed to NautobotHTMLRenderer.
         request.POST "_confirm": Function to validate the table form/BulkDestroyConfirmationForm and to perform the action of bulk destroy. Render the form with errors if exceptions are raised.
@@ -1087,8 +1097,8 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Edit
     UI mixin to bulk update model instances.
     """
 
-    filterset_class = None
-    bulk_update_form_class = None
+    filterset_class: Optional[type[FilterSet]] = None
+    bulk_update_form_class: Optional[type[Form]] = None
 
     def _process_bulk_update_form(self, form):
         request = self.request

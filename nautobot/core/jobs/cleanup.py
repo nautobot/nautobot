@@ -70,7 +70,7 @@ class LogsCleanup(Job):
         deletion_summary.update(deleted_dict)
         return deletion_summary
 
-    def run(self, *, cleanup_types, max_age=None):
+    def run(self, *, cleanup_types, max_age=None):  # pylint: disable=arguments-differ
         if max_age in (None, ""):
             max_age = get_settings_or_config("CHANGELOG_RETENTION")
             if max_age == 0:

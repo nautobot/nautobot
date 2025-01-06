@@ -699,7 +699,7 @@ class RackReservationEditView(generic.ObjectEditView):
     model_form = forms.RackReservationForm
     template_name = "dcim/rackreservation_edit.html"
 
-    def alter_obj(self, obj, request, args, kwargs):
+    def alter_obj(self, obj, request, url_args, url_kwargs):
         if not obj.present_in_database:
             if "rack" in request.GET:
                 obj.rack = get_object_or_404(Rack, pk=request.GET.get("rack"))

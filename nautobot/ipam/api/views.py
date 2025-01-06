@@ -139,15 +139,15 @@ class PrefixViewSet(NautobotModelViewSet):
         )
         default_code = "precondition_failed"
 
-    def retrieve(self, request, pk=None):
+    def retrieve(self, request, *args, pk=None, **kwargs):
         try:
-            return super().retrieve(request, pk)
+            return super().retrieve(request, *args, pk=pk, **kwargs)
         except Location.MultipleObjectsReturned as e:
             raise self.LocationIncompatibleLegacyBehavior from e
 
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         try:
-            return super().list(request)
+            return super().list(request, *args, **kwargs)
         except Location.MultipleObjectsReturned as e:
             raise self.LocationIncompatibleLegacyBehavior from e
 
@@ -185,20 +185,15 @@ class PrefixViewSet(NautobotModelViewSet):
                 available_prefixes = prefix.get_available_prefixes()
 
                 # Validate Requested Prefixes' length
-                serializer = serializers.PrefixLengthSerializer(
-                    data=request.data if isinstance(request.data, list) else [request.data],
-                    many=True,
-                    context={
-                        "request": request,
-                        "prefix": prefix,
-                    },
-                )
-                serializer.is_valid(raise_exception=True)
-
-                requested_prefixes = serializer.validated_data
-                # Allocate prefixes to the requested objects based on availability within the parent
+                requested_prefixes = request.data if isinstance(request.data, list) else [request.data]
                 for requested_prefix in requested_prefixes:
-                    # Find the first available prefix equal to or larger than the requested size
+                    # If the prefix_length is not an integer, return a 400 using the
+                    # serializer.is_valid(raise_exception=True) method call below
+                    if not isinstance(requested_prefix["prefix_length"], int):
+                        return Response(
+                            {"prefix_length": "This field must be an integer."},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
                     for available_prefix in available_prefixes.iter_cidrs():
                         if requested_prefix["prefix_length"] >= available_prefix.prefixlen:
                             allocated_prefix = f"{available_prefix.network}/{requested_prefix['prefix_length']}"
@@ -210,11 +205,6 @@ class PrefixViewSet(NautobotModelViewSet):
                             {"detail": "Insufficient space is available to accommodate the requested prefix size(s)"},
                             status=status.HTTP_204_NO_CONTENT,
                         )
-
-                    # The serializer usage above has mapped "custom_fields" dict to "_custom_field_data".
-                    # We need to convert it back to "custom_fields" as we're going to deserialize it a second time below
-                    requested_prefix["custom_fields"] = requested_prefix.pop("_custom_field_data", {})
-
                     # Remove the allocated prefix from the list of available prefixes
                     available_prefixes.remove(allocated_prefix)
 
@@ -275,17 +265,7 @@ class PrefixViewSet(NautobotModelViewSet):
                 "nautobot.ipam.api.views.available_ips", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT
             ):
                 # Normalize to a list of objects
-                serializer = serializers.IPAllocationSerializer(
-                    data=request.data if isinstance(request.data, list) else [request.data],
-                    many=True,
-                    context={
-                        "request": request,
-                        "prefix": prefix,
-                    },
-                )
-                serializer.is_valid(raise_exception=True)
-
-                requested_ips = serializer.validated_data
+                requested_ips = request.data if isinstance(request.data, list) else [request.data]
 
                 # Determine if the requested number of IPs is available
                 available_ips = prefix.get_available_ips()
@@ -306,9 +286,6 @@ class PrefixViewSet(NautobotModelViewSet):
                 for requested_ip in requested_ips:
                     requested_ip["address"] = f"{next(available_ips)}/{prefix_length}"
                     requested_ip["namespace"] = prefix.namespace
-                    # The serializer usage above has mapped "custom_fields" dict to "_custom_field_data".
-                    # We need to convert it back to "custom_fields" as we're going to deserialize it a second time below
-                    requested_ip["custom_fields"] = requested_ip.pop("_custom_field_data", {})
 
                 # Initialize the serializer with a list or a single object depending on what was requested
                 context = {"request": request, "depth": 0}
@@ -442,16 +419,7 @@ class VLANGroupViewSet(NautobotModelViewSet):
                 "nautobot.ipam.api.views.available_vlans", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT
             ):
                 # Normalize to a list of objects
-                serializer = serializers.VLANAllocationSerializer(
-                    data=request.data if isinstance(request.data, list) else [request.data],
-                    many=True,
-                    context={
-                        "request": request,
-                        "vlan_group": vlan_group,
-                    },
-                )
-                serializer.is_valid(raise_exception=True)
-                requested_vlans = serializer.validated_data
+                requested_vlans = request.data if isinstance(request.data, list) else [request.data]
 
                 # Determine if the requested number of VLANs is available
                 available_vids = vlan_group.available_vids
@@ -487,19 +455,27 @@ class VLANGroupViewSet(NautobotModelViewSet):
                         requested_vlan["vid"] = next(_available_vids)
 
                     # Check requested `vlan_group`
-                    if "vlan_group" in requested_vlan and requested_vlan["vlan_group"] != vlan_group:
-                        return Response(
-                            {
-                                "detail": f"Invalid VLAN Group requested: {requested_vlan['vlan_group']}. "
-                                f"Only VLAN Group {vlan_group} is permitted."
-                            },
-                            status=status.HTTP_204_NO_CONTENT,
-                        )
+                    if "vlan_group" in requested_vlan:
+                        requested_vlan_group = None
+                        requested_vlan_group_pk = requested_vlan["vlan_group"]
+                        try:
+                            requested_vlan_group = VLANGroup.objects.get(pk=requested_vlan_group_pk)
+                        except VLANGroup.DoesNotExist:
+                            return Response(
+                                {"detail": f"VLAN Group with pk {requested_vlan_group_pk} does not exist."},
+                                status=status.HTTP_204_NO_CONTENT,
+                            )
+
+                        if requested_vlan_group != vlan_group:
+                            return Response(
+                                {
+                                    "detail": f"Invalid VLAN Group requested: {requested_vlan_group}. "
+                                    f"Only VLAN Group {vlan_group} is permitted."
+                                },
+                                status=status.HTTP_204_NO_CONTENT,
+                            )
                     else:
                         requested_vlan["vlan_group"] = vlan_group.pk
-
-                    # Rewrite custom field data
-                    requested_vlan["custom_fields"] = requested_vlan.pop("_custom_field_data", {})
 
                 # Initialize the serializer with a list or a single object depending on what was requested
                 context = {"request": request, "depth": 0}
@@ -604,15 +580,15 @@ class VLANViewSet(NautobotModelViewSet):
             return serializers.VLANLegacySerializer
         return super().get_serializer_class()
 
-    def retrieve(self, request, pk=None):
+    def retrieve(self, request, *args, pk=None, **kwargs):
         try:
-            return super().retrieve(request, pk)
+            return super().retrieve(request, *args, pk=pk, **kwargs)
         except Location.MultipleObjectsReturned as e:
             raise self.LocationIncompatibleLegacyBehavior from e
 
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         try:
-            return super().list(request)
+            return super().list(request, *args, **kwargs)
         except Location.MultipleObjectsReturned as e:
             raise self.LocationIncompatibleLegacyBehavior from e
 

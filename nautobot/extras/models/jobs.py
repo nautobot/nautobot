@@ -234,13 +234,13 @@ class Job(PrimaryModel):
     def __str__(self):
         return self.name
 
-    def delete(self):
+    def delete(self, *args, **kwargs):
         if self.module_name.startswith("nautobot."):
             raise ProtectedError(
                 f"Unable to delete Job {self}. System Job cannot be deleted",
                 [],
             )
-        super().delete()
+        super().delete(*args, **kwargs)
 
     @property
     def job_class(self):
@@ -610,7 +610,7 @@ class JobResult(BaseModel, CustomFieldModel):
             # Only add metrics if we have a related job model. If we are moving to a terminal state we should always
             # have a related job model, so this shouldn't be too tight of a restriction.
             if self.job_model:
-                duration = self.date_done - self.created
+                duration = self.date_done - self.date_created
                 JOB_RESULT_METRIC.labels(self.job_model.grouping, self.job_model.name, status).observe(
                     duration.total_seconds()
                 )
@@ -1180,7 +1180,7 @@ class ScheduledJob(BaseModel):
 
     def to_cron(self):
         tz = self.time_zone
-        t = self.start_time.astimezone(tz)
+        t = self.start_time.astimezone(tz)  # pylint: disable=no-member
         if self.interval == JobExecutionType.TYPE_HOURLY:
             return TzAwareCrontab(minute=t.minute, tz=tz)
         elif self.interval == JobExecutionType.TYPE_DAILY:

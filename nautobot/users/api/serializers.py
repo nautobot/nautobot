@@ -18,13 +18,13 @@ class UserSerializer(ValidatedModelSerializer):
         exclude = ["user_permissions"]
         extra_kwargs = {"password": {"write_only": True, "required": False, "allow_null": True}}
 
-    def validate(self, data):
+    def validate(self, attrs):
         """Handle omission of a password by setting it to the unusable None value."""
         mock_password = False
-        if "password" not in data and not self.partial:
-            data["password"] = make_password(None)
+        if "password" not in attrs and not self.partial:
+            attrs["password"] = make_password(None)
             mock_password = True
-        validated_data = super().validate(data)
+        validated_data = super().validate(attrs)
         if mock_password:
             validated_data["password"] = None
         return validated_data
