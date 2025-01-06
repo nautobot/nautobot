@@ -1,0 +1,2 @@
+Added an about page that displays Nautobot and support contract information.
+Added `NTC_SUPPORT_CONTRACT_EXPIRATION_DATE` configuration setting.

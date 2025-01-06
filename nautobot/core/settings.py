@@ -1,3 +1,4 @@
+import datetime
 import os
 import os.path
 import platform
@@ -162,6 +163,16 @@ NAPALM_ARGS = {}
 NAPALM_PASSWORD = os.getenv("NAUTOBOT_NAPALM_PASSWORD", "")
 NAPALM_TIMEOUT = int(os.getenv("NAUTOBOT_NAPALM_TIMEOUT", "30"))
 NAPALM_USERNAME = os.getenv("NAUTOBOT_NAPALM_USERNAME", "")
+
+# Expiration date (YYYY-MM-DD) for an active Nautobot support contract with Network to Code.
+# Displayed in the About page.
+if (
+    "NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE" in os.environ
+    and os.environ["NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"] != ""
+):
+    NTC_SUPPORT_CONTRACT_EXPIRATION_DATE = datetime.date.fromisoformat(
+        os.environ["NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"]
+    )
 
 # Default number of objects to display per page of the UI and REST API. Default is 50
 if "NAUTOBOT_PAGINATE_COUNT" in os.environ and os.environ["NAUTOBOT_PAGINATE_COUNT"] != "":
@@ -721,6 +732,13 @@ CONSTANCE_ADDITIONAL_FIELDS = {
             "required": False,
         },
     ],
+    "optional_date_field": [
+        "django.forms.DateField",
+        {
+            "widget": "nautobot.core.forms.widgets.DatePicker",
+            "required": False,
+        },
+    ],
 }
 
 CONSTANCE_CONFIG = {
@@ -806,6 +824,12 @@ CONSTANCE_CONFIG = {
         # Use custom field type defined above
         field_type="optional_json_field",
     ),
+    "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE": ConstanceConfigItem(
+        default="",
+        help_text="Expiration date for an active Nautobot support contract with Network to Code. "
+        "This value is displayed in the About page to provide additional support information.",
+        field_type="optional_date_field",
+    ),
     "PREFER_IPV4": ConstanceConfigItem(
         default=False,
         help_text="Whether to prefer IPv4 primary addresses over IPv6 primary addresses for devices.",
@@ -859,7 +883,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT",
     ],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["SUPPORT_MESSAGE"],
+    "User Interface": ["SUPPORT_MESSAGE", "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"],
     "Debugging": ["ALLOW_REQUEST_PROFILING"],
 }
 

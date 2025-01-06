@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load helpers %}
+{% load registry %}
+
+{% block header %}
+    {{ block.super }}
+    {% if new_release %}
+        {# new_release is set only if the current user is a superuser or staff member #}
+        <div class="alert alert-info text-center" role="alert">
+            <i class="mdi mdi-information-outline"></i>
+            A new release is available: <a href="{{ new_release.url }}">Nautobot v{{ new_release.version }}</a> |
+            <a href="https://docs.nautobot.com/projects/core/en/v{{ new_release.version }}/installation/upgrading/">Upgrade instructions</a>
+        </div>
+    {% endif %}
+{% endblock %}
+
+
+{% block content %}
+    <h1>About Nautobot</h1>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>About</strong>
+                </div>
+                <div class="panel-body">
+                    <a href="https://networktocode.com/nautobot/">Nautobot</a> is a product of <a href="https://networktocode.com/">Network to Code</a>. Nautobot is a Network Source of Truth and Network Automation Platform. Nautobot has an extensive ecosystem of solutions that can be installed to provide and power Network Automation feature sets. Please check the <a href="{% url 'apps:apps_marketplace' %}">App Marketplace</a> to learn more.
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Support</strong>
+                </div>
+                <table class="table table-hover panel-body attr-table">
+                    <tr>
+                        <td>Support Contract Status</td>
+                        <td>{{ support_contract_active | render_boolean }}</td>
+                    </tr>
+                    <tr>
+                        <td>Contract Expiry Date</td>
+                        <td>
+                            {% if support_contract_active %}
+                                {{ support_expiration_date | date }}
+                            {% elif support_expiration_date %}
+                                <span style="color: red;">{{ support_expiration_date | date }}</span>
+                            {% else %}
+                                &mdash;
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>
+                            {% if not support_expiration_date %}
+                                To inquire about Nautobot support with Network to Code, please email <a href="mailto:info@networktocode.com">info@networktocode.com</a>.
+                            {% else %}
+                                If there is any question on the status of your Nautobot support contract with Network to Code, please email <a href="mailto:info@networktocode.com">info@networktocode.com</a>.
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

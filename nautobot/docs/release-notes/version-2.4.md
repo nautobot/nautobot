@@ -9,6 +9,7 @@ This document describes all new features and changes in Nautobot 2.4.
 - Nautobot 2.4 [drops support for Python 3.8](#removed-python-38-support), so any existing Nautobot deployment using Python 3.8 will need upgrade to a newer Python version **before** upgrading to Nautobot v2.4 or later.
 - Administrators should familiarize themselves with the new [Event Publication Framework](#event-publication-framework) and the possibilities it enables for improved monitoring of Nautobot operations and integration with distributed automation platforms.
 - Administrators of Kubernetes-based Nautobot deployments should familiarize themselves with the new [capabilities](#kubernetes-job-execution-and-job-queue-data-model-experimental) that Nautobot v2.4 provides for Job execution in such environments and may wish to update their Nautobot configuration to take advantage of these capabilities. Please note that this feature set is considered Experimental in v2.4.0 and is subject to change in future releases.
+- Nautobot 2.4 includes an About page which is capable of displaying the status of Network to Code support contracts, dictated by the [`NTC_SUPPORT_CONTRACT_EXPIRATION_DATE`](../user-guide/administration/configuration/settings.md#ntc_support_contract_expiration_date) configuration setting.
 
 ### Job Authors & App Developers
 
