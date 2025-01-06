@@ -6,6 +6,8 @@ definitions:
     type: "string"
   callable:
     type: "string"
+  date:
+    type: "string"
   regex:
     type: "string"
   relative_path:
@@ -1491,6 +1493,17 @@ properties:
     is_constance_config: true
     type: "object"
     version_added: "1.6.0"
+  NTC_SUPPORT_CONTRACT_EXPIRATION_DATE:
+    "$ref": "#/definitions/date"
+    default: ""
+    description: >-
+      Expiration date for an active Nautobot support contract with Network to Code.
+      This value is displayed in the "About" page to provide additional support information.
+    details: >-
+      If specified as an environment variable, use ISO 8601 (`YYYY-MM-DD`) format.
+    environment_variable: "NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"
+    is_constance_config: true
+    version_added: "2.4.0"
   PAGINATE_COUNT:
     default: 50
     description: >-

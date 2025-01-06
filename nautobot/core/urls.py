@@ -5,6 +5,7 @@ from django.views.generic import TemplateView
 from django.views.static import serve
 
 from nautobot.core.views import (
+    AboutView,
     CustomGraphQLView,
     get_file_with_authorization,
     HomeView,
@@ -28,6 +29,7 @@ from .admin import admin_site
 urlpatterns = [
     # Base views
     path("", HomeView.as_view(), name="home"),
+    path("about/", AboutView.as_view(), name="about"),
     path("search/", SearchView.as_view(), name="search"),
     # Login/logout
     path("login/", LoginView.as_view(), name="login"),
