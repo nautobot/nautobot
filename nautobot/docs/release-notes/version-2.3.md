@@ -124,6 +124,21 @@ Various button groups in the "object list" and "object detail" views have been c
 As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the next long-term-support (LTS) version of Django. There are a number of changes in Django itself as a result of this upgrade; Nautobot App maintainers are urged to review the Django release-notes ([4.0](https://docs.djangoproject.com/en/4.2/releases/4.0/), [4.1](https://docs.djangoproject.com/en/4.2/releases/4.1/), [4.2](https://docs.djangoproject.com/en/4.2/releases/4.2/)), especially the relevant "Backwards incompatible changes" sections, to proactively identify any impact to their Apps.
 
 <!-- towncrier release notes start -->
+## v2.3.16 (2025-01-06)
+
+### Fixed
+
+- [#5805](https://github.com/nautobot/nautobot/issues/5805) - Enabled extended filter lookup expressions of the `serial` filter for Device, Rack, and InventoryItem.
+- [#5882](https://github.com/nautobot/nautobot/issues/5882) - Fixed `PowerOutletTemplateTable` to use `power_port_template` instead of the incorrect field `power_port`.
+- [#5882](https://github.com/nautobot/nautobot/issues/5882) - Fixed `FrontPortTemplateTable` to use `rear_port_template` instead of the incorrect field `rear_port`.
+- [#6527](https://github.com/nautobot/nautobot/issues/6527) - Disabled (unsupported) sorting by the `Device` column in Console Connections, Power Connections, and Interface Connections list views.
+- [#6669](https://github.com/nautobot/nautobot/issues/6669) - Removed the need for `available-prefixes`, `available-ips`, and `available-vlans` API endpoints to run validation multiple times.
+- [#6676](https://github.com/nautobot/nautobot/issues/6676) - Resolved issue with IPAddressQuerySet get_or_create method signature not matching the base method signature.
+
+### Housekeeping
+
+- [#6714](https://github.com/nautobot/nautobot/issues/6714) - Enabled and addressed pylint checkers `arguments-differ`, `arguments-renamed`, `exec-used`, `hard-coded-auth-user`, `super-init-not-called`.
+
 ## v2.3.15 (2025-01-02)
 
 ### Security
