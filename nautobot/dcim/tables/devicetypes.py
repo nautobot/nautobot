@@ -290,7 +290,7 @@ class FrontPortTemplateTable(ComponentTemplateTable):
             "name",
             "label",
             "type",
-            "rear_port",
+            "rear_port_template",
             "rear_port_position",
             "description",
             "actions",
