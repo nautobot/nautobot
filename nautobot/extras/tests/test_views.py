@@ -83,7 +83,7 @@ from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
-from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 
@@ -907,6 +907,22 @@ class DynamicGroupTestCase(
         instance = self._get_queryset().first()
         self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
         super().test_edit_object_with_constrained_permission()
+
+    def test_edit_object_with_content_type_ipam_prefix(self):
+        """Assert bug fix #6526: `Error when defining Dynamic Group of Prefixes using `present_in_vrf_id` filter`"""
+        content_type = ContentType.objects.get_for_model(Prefix)
+        instance = DynamicGroup.objects.create(name="DG Ipam|Prefix", content_type=content_type)
+        vrf_instance = VRF.objects.first()
+        self.form_data["content_type"] = content_type.pk
+        self.form_data.update(
+            {
+                "name": "DG Ipam|Prefix",
+                "filter-present_in_vrf_id": vrf_instance.id,
+            }
+        )
+        super().test_edit_object_with_permission(instance)
+        instance.refresh_from_db()
+        self.assertEqual(instance.filter["present_in_vrf_id"], str(vrf_instance.id))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_edit_saved_filter(self):
