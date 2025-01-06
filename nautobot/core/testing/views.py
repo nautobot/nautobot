@@ -1,3 +1,5 @@
+from __future__ import annotations  # python 3.8
+
 import contextlib
 import re
 from typing import Optional, Sequence

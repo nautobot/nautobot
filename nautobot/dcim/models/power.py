@@ -77,9 +77,9 @@ class PowerPanel(PrimaryModel):
                 and self.rack_group.location not in self.location.ancestors(include_self=True)  # pylint: disable=no-member
             ):
                 raise ValidationError(
-                    {
+                    {  # pylint: disable=no-member  # false positive on rack_group.location
                         "rack_group": f'Rack group "{self.rack_group}" belongs to a location '
-                        f'("{self.rack_group.location}") that does not contain "{self.location}".'  # pylint: disable=no-member
+                        f'("{self.rack_group.location}") that does not contain "{self.location}".'
                     }
                 )
 

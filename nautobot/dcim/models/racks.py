@@ -81,9 +81,9 @@ class RackGroup(TreeModel, OrganizationalModel):
             and self.parent.location not in self.location.ancestors(include_self=True)  # pylint: disable=no-member
         ):
             raise ValidationError(
-                {
+                {  # pylint: disable=no-member  # false positive on parent.location
                     "location": f'Location "{self.location}" is not descended from '
-                    f'parent rack group "{self.parent}" location "{self.parent.location}".'  # pylint: disable=no-member
+                    f'parent rack group "{self.parent}" location "{self.parent.location}".'
                 }
             )
 

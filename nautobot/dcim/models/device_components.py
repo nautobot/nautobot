@@ -713,16 +713,16 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
             if self.parent and self.parent_interface.parent != self.parent:  # pylint: disable=no-member
                 if getattr(self.parent, "virtual_chassis", None) is None:
                     raise ValidationError(
-                        {
+                        {  # pylint: disable=no-member  # false positive on parent_interface.parent
                             "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs "
-                            f"to a different device ({self.parent_interface.parent})."  # pylint: disable=no-member
+                            f"to a different device ({self.parent_interface.parent})."
                         }
                     )
                 elif self.parent_interface.parent.virtual_chassis != self.parent.virtual_chassis:  # pylint: disable=no-member
                     raise ValidationError(
-                        {
+                        {  # pylint: disable=no-member  # false positive on parent_interface.parent
                             "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs "
-                            f"to {self.parent_interface.parent}, which "  # pylint: disable=no-member
+                            f"to {self.parent_interface.parent}, which "
                             f"is not part of virtual chassis {self.parent.virtual_chassis}."
                         }
                     )
@@ -760,8 +760,9 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                     raise ValidationError(
                         {
                             "bridge": (
+                                # pylint: disable=no-member  # false positive on bridge.parent
                                 f"The selected bridge interface ({self.bridge}) belongs to a different device "
-                                f"({self.bridge.parent})."  # pylint: disable=no-member
+                                f"({self.bridge.parent})."
                             )
                         }
                     )

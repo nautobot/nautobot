@@ -1,5 +1,7 @@
 """Dynamic Groups Models."""
 
+from __future__ import annotations  # python 3.8
+
 import logging
 from typing import Optional
 
@@ -304,7 +306,8 @@ class DynamicGroup(PrimaryModel):
         # Since associated_object is a GenericForeignKey, we can't just do:
         #     return self.static_group_associations.values_list("associated_object", flat=True)
         return self.model.objects.filter(
-            pk__in=self.static_group_associations(manager="all_objects").values_list("associated_object_id", flat=True)  # pylint: disable=no-member
+            # pylint: disable=no-member  # false positive about self.static_group_associations
+            pk__in=self.static_group_associations(manager="all_objects").values_list("associated_object_id", flat=True)
         )
 
     @members.setter

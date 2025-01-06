@@ -1,3 +1,5 @@
+from __future__ import annotations  # python 3.8
+
 import random
 import string
 

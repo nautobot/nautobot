@@ -1,3 +1,5 @@
+from __future__ import annotations  # python 3.8
+
 from copy import deepcopy
 import logging
 import re
