@@ -338,14 +338,17 @@ notes = ["FIXME", "XXX"]
 [tool.pylint.typecheck]
 # Regex patterns describing dynamically defined attributes that cause false reports for "no-member" checker
 generated-members = [
-    ".*Serializer.Meta",
-    ".*FilterSet._meta",
-    ".*FilterSet.base_filters",
-    ".*FilterSet.declared_filters",
-    ".*Job.request",
-    ".*Table._meta",
-    ".*Table.base_columns",
-    ".*Table.context",
+    ".*Factory\\..*",
+    ".*FilterSet\\._meta",
+    ".*FilterSet\\.base_filters",
+    ".*FilterSet\\.declared_filters",
+    ".*Job\\.request",
+    ".*LazyAttribute\\..*",  # factory attributes
+    ".*Maybe\\..*",  # factory attributes
+    ".*Serializer\\.Meta",
+    ".*Table\\._meta",
+    ".*Table\\.base_columns",
+    ".*Table\\.context",
 ]
 extension-pkg-allow-list = [
     "nh3",

@@ -411,13 +411,13 @@ class ObjectChangeFactory(BaseModelFactory):
     @factory.lazy_attribute
     def user_name(self):
         if self.user:
-            return self.user.username  # pylint: disable=no-member
+            return self.user.username
         return faker.Faker().user_name()
 
     @factory.lazy_attribute
     def changed_object_id(self):
         if self.has_changed_object:
-            queryset = self.changed_object_type.model_class().objects.all()  # pylint: disable=no-member
+            queryset = self.changed_object_type.model_class().objects.all()
             if queryset.exists():
                 return factory.random.randgen.choice(queryset).pk
         return faker.Faker().uuid4()
@@ -426,7 +426,7 @@ class ObjectChangeFactory(BaseModelFactory):
     def related_object_id(self):
         if self.has_related_object_type:
             if self.has_related_object:
-                queryset = self.related_object_type.model_class().objects.all()  # pylint: disable=no-member
+                queryset = self.related_object_type.model_class().objects.all()
                 if queryset.exists():
                     return factory.random.randgen.choice(queryset).pk
             return faker.Faker().uuid4()
@@ -546,7 +546,7 @@ class StaticGroupAssociationFactory(OrganizationalModelFactory):
 
     @factory.lazy_attribute
     def associated_object_id(self):
-        queryset = self.associated_object_type.model_class().objects.all()  # pylint: disable=no-member
+        queryset = self.associated_object_type.model_class().objects.all()
         if queryset.exists():
             return factory.random.randgen.choice(queryset).pk
         return faker.Faker().uuid4()
