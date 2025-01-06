@@ -1,3 +1,5 @@
+from __future__ import annotations  # python 3.8
+
 from decimal import Decimal
 
 from constance.test import override_config
