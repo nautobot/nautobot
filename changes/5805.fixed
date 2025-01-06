@@ -1,0 +1,1 @@
+Enabled extended filter lookup expressions of the `serial` filter for Device, Rack, and InventoryItem.
