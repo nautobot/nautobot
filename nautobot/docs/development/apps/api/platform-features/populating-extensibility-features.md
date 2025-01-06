@@ -2,7 +2,7 @@
 
 In many cases, an app may wish to make use of Nautobot's various extensibility features, such as [custom fields](../../../../user-guide/platform-functionality/customfield.md) or [relationships](../../../../user-guide/platform-functionality/relationship.md). It can be useful for an app to automatically create a custom field definition or relationship definition as a consequence of being installed and activated, so that everyday usage of the app can rely upon these definitions to be present.
 
-Furthermore, sometimes apps might want to create a baseline of available data. This could, for example, be a baseline of circuit providers for an SSoT app that synchronizes circuit data.
+Furthermore, sometimes apps might want to create a baseline of available data. This could, for example, be a baseline of circuit providers for a [Single Source of Truth](https://docs.nautobot.com/projects/ssot/en/latest/) integration that synchronizes circuit data or creating new default [statuses](https://docs.nautobot.com/projects/core/en/stable/user-guide/platform-functionality/status/) and/or [roles](https://docs.nautobot.com/projects/core/en/stable/user-guide/platform-functionality/role/), or adding to the allowed content types for existing statuses and roles.
 
 ## Using A Signal Handler
 
@@ -81,10 +81,17 @@ While the signal handler approach works for most use cases, it does have its dow
 
 - Execution: Automatic
 - Implementation: Easy
+- Can be rerun as needed
+- Can be updated in-place in later App releases
+- Users are able to modity the created data like any other record
 
 **Con**:
 
 - Prevent Nautobot from starting when there are errors
+- Re-runs every time `nautobot-server migrate` or `nautobot-server post_upgrade` is run
+  - Must be idempotent, as such it mustn't introduce duplicate records or errors if run repeatedly
+  - May recreate or revert records that a user intentionally deleted or altered - if this is not desired it has to be accounted for and handled in the code
+- Impacts Nautobot startup and upgrade performance
 
 ### Django Data Migrations
 
@@ -92,12 +99,13 @@ While the signal handler approach works for most use cases, it does have its dow
 
 - Execution: Automatic
 - Provide a clean way to delete any associated objects when uninstalling the app
+- Runs exactly once (on `nautobot-server migrate` or `nautobot-server post_upgrade`), therefore, idempotence is not a concern, will not revert or recreated altered records
 
 **Con**:
 
 - Implementation: Medium
 - Prevent Nautobot from starting when there are errors
-- Immutable—if you add new objects, you need to add a new migration
+- Immutable - if you add new objects, you need to add a new migration
 - Can't easily be feature-toggled (if you include settings lookups in your migration and later change those settings, the migrations will _not_ run again)
 
 ### Django Fixtures
@@ -106,6 +114,7 @@ While the signal handler approach works for most use cases, it does have its dow
 
 - Have good support for usage in unit tests
 - Have good performance
+- Later modifications of created data are possible like any other record
 
 **Con**:
 
@@ -115,6 +124,8 @@ While the signal handler approach works for most use cases, it does have its dow
 
 ### Design Builder Jobs
 
+Another option to easily create data within Nautobot is the [Design Builder App](https://docs.nautobot.com/projects/design-builder/en/latest/).
+
 **Pro**:
 
 - Implementation: Easy
@@ -122,17 +133,23 @@ While the signal handler approach works for most use cases, it does have its dow
 **Con**:
 
 - Execution: Manual
+- The possibility of later user modifications to data must be accounted for and handled in code
 
 ### Creating Data In-Place Where Needed
 
-This approach means to, for example, use `Status.objects.create(...)` in the place when you need it, such as a job.
+This approach means to, for example, use `Status.objects.get_or_create(...)` in the place when you need it, such as a job.
 
 **Pro**:
 
 - Execution: Automatic
 - Implementation: Easy
+- Performance is among the best out of all the options as the least amount of overhead is involved
+- Later modifications may be straightforward if there are only a few places that need a given record
+- Unnecessary/unused records are not created automatically
 
 **Con**:
 
 - Data is not available in the DB/API/GUI until the process that uses it runs
 - Some care has to be taken to not duplicate information if multiple things depend on this data
+- Later modifications may be error-prone if a given record/set of attributes is created/referenced in many locations
+- User modifications to the data may result in side effects (renaming a status may result in a new status with the original name being recreated next time the code runs, etc.)
