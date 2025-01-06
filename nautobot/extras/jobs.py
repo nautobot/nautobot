@@ -68,15 +68,15 @@ User = get_user_model()
 
 
 __all__ = [
-    "Job",
     "BooleanVar",
     "ChoiceVar",
     "FileVar",
-    "IntegerVar",
     "IPAddressVar",
     "IPAddressWithMaskVar",
     "IPNetworkVar",
+    "IntegerVar",
     "JSONVar",
+    "Job",
     "MultiChoiceVar",
     "MultiObjectVar",
     "ObjectVar",
