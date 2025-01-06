@@ -129,6 +129,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 ### Fixed
 
 - [#5805](https://github.com/nautobot/nautobot/issues/5805) - Enabled extended filter lookup expressions of the `serial` filter for Device, Rack, and InventoryItem.
+- [#5831](https://github.com/nautobot/nautobot/issues/5831) - Fixed an issue where the error message for missing custom job templates incorrectly reported "extras/job.html" instead of the actual missing template name.
 - [#5882](https://github.com/nautobot/nautobot/issues/5882) - Fixed `PowerOutletTemplateTable` to use `power_port_template` instead of the incorrect field `power_port`.
 - [#5882](https://github.com/nautobot/nautobot/issues/5882) - Fixed `FrontPortTemplateTable` to use `rear_port_template` instead of the incorrect field `rear_port`.
 - [#6527](https://github.com/nautobot/nautobot/issues/6527) - Disabled (unsupported) sorting by the `Device` column in Console Connections, Power Connections, and Interface Connections list views.
@@ -138,6 +139,7 @@ As Django 3.2 has reached end-of-life, Nautobot 2.3 requires Django 4.2, the nex
 ### Housekeeping
 
 - [#6714](https://github.com/nautobot/nautobot/issues/6714) - Enabled and addressed pylint checkers `arguments-differ`, `arguments-renamed`, `exec-used`, `hard-coded-auth-user`, `super-init-not-called`.
+- [#6722](https://github.com/nautobot/nautobot/issues/6722) - Enabled pylint `not-callable` and `no-member` checkers and addressed issues reported thereby.
 
 ## v2.3.15 (2025-01-02)
 
