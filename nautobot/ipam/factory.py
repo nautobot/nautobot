@@ -410,7 +410,7 @@ class PrefixFactory(PrimaryModelFactory):
             # Calculate prefix length for child prefixes to allow them to fit in the parent prefix without creating duplicate prefix
             child_cidr = self.prefix_length + max(1, math.ceil(math.log(child_count, 2)))
             # Raise exception for invalid cidr length (>128 for ipv6, >32 for ipv4)
-            if child_cidr > 128 or self.ip_version == 4 and child_cidr > 32:
+            if child_cidr > 128 or (self.ip_version == 4 and child_cidr > 32):
                 raise ValueError(f"Unable to create {child_count} child prefixes in container prefix {self.cidr_str}.")
 
             weights = [1, 6, 3]  # prefer network and pool prefixes

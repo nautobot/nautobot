@@ -22,7 +22,6 @@ from nautobot.core.models import validators
 from nautobot.core.utils import data as data_utils, lookup
 
 __all__ = (
-    "CommentField",
     "CSVChoiceField",
     "CSVContentTypeField",
     "CSVDataField",
@@ -30,16 +29,17 @@ __all__ = (
     "CSVModelChoiceField",
     "CSVMultipleChoiceField",
     "CSVMultipleContentTypeField",
+    "CommentField",
     "DynamicModelChoiceField",
     "DynamicModelMultipleChoiceField",
     "ExpandableIPAddressField",
     "ExpandableNameField",
-    "JSONField",
     "JSONArrayFormField",
+    "JSONField",
     "LaxURLField",
     "MACAddressField",
-    "MultipleContentTypeField",
     "MultiMatchModelMultipleChoiceField",
+    "MultipleContentTypeField",
     "NumericArrayField",
     "SlugField",
     "TagFilterField",
