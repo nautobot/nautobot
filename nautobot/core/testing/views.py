@@ -1,3 +1,5 @@
+from __future__ import annotations  # python 3.8
+
 import contextlib
 import re
 from typing import Optional, Sequence
@@ -21,6 +23,7 @@ from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags import helpers
 from nautobot.core.testing import mixins, utils
 from nautobot.core.utils import lookup
+from nautobot.dcim.models.device_components import ComponentModel
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
 from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
 from nautobot.extras.models import CustomFieldModel, RelationshipModel
@@ -1528,6 +1531,8 @@ class ViewTestCases:
         maxDiff = None
         bulk_add_data = None
         """Used for bulk-add (distinct from bulk-create) view testing; self.bulk_create_data will be used if unset."""
+        selected_objects: list[ComponentModel]
+        selected_objects_parent_name: str
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_add_component(self):
