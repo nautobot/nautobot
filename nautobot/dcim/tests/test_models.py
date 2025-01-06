@@ -2201,7 +2201,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         virtual_interface_choices = self.interface_choices["Virtual interfaces"]
         self.assertIn(
             f"Cables cannot be terminated to {virtual_interface_choices[InterfaceTypeChoices.TYPE_VIRTUAL]} interfaces",
-            str(cm.exception)
+            str(cm.exception),
         )
 
     def test_cable_cannot_terminate_to_a_wireless_interface(self):
@@ -2223,7 +2223,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         wireless_interface_choices = self.interface_choices["Wireless"]
         self.assertIn(
             f"Cables cannot be terminated to {wireless_interface_choices[InterfaceTypeChoices.TYPE_80211A]} interfaces",
-            str(cm.exception)
+            str(cm.exception),
         )
 
     def test_create_cable_with_missing_status_connected(self):
