@@ -913,14 +913,22 @@ class DynamicGroupTestCase(
         content_type = ContentType.objects.get_for_model(Prefix)
         instance = DynamicGroup.objects.create(name="DG Ipam|Prefix", content_type=content_type)
         vrf_instance = VRF.objects.first()
-        self.form_data["content_type"] = content_type.pk
-        self.form_data.update(
+        data = self.form_data.copy()
+        data.update(
             {
                 "name": "DG Ipam|Prefix",
+                "content_type": content_type.pk,
                 "filter-present_in_vrf_id": vrf_instance.id,
+                "tenant": None,
+                "tags": [],
             }
         )
-        super().test_edit_object_with_permission(instance)
+        self.add_permissions("extras.change_dynamicgroup")
+        request = {
+            "path": self._get_url("edit", instance),
+            "data": post_data(data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
         instance.refresh_from_db()
         self.assertEqual(instance.filter["present_in_vrf_id"], str(vrf_instance.id))
 

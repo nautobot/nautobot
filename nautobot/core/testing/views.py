@@ -487,8 +487,8 @@ class ViewTestCases:
                 self.assertHttpStatus(self.client.post(**request), [403, 404])
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-        def test_edit_object_with_permission(self, instance=None):
-            instance = instance or self._get_queryset().first()
+        def test_edit_object_with_permission(self):
+            instance = self._get_queryset().first()
 
             # Assign model-level permission
             obj_perm = users_models.ObjectPermission(name="Test permission", actions=["change"])
