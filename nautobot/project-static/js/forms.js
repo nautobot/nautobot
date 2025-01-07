@@ -210,7 +210,7 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
     this_context = $(context);
     this_context.find('.nautobot-select2-api').each(function(){
         thisobj = $(this);
-        placeholder = thisobj.attr("data-null-option") || "---------";
+        placeholder = "---------";
         thisobj.select2({
             allowClear: true,
             placeholder: placeholder,
