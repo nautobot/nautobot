@@ -1,3 +1,4 @@
+# pylint: disable=no-member  # it doesn't recognize the class attributes assigned in common_test_data()
 import uuid
 
 from django.contrib.auth import get_user_model

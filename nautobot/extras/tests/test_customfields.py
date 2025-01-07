@@ -2240,7 +2240,7 @@ class CustomFieldTableTest(TestCase):
             self.assertIsNotNone(custom_column, internal_col_name)
             self.assertIsInstance(custom_column, CustomFieldColumn)
 
-            rendered_value = bound_row.get_cell(internal_col_name)
+            rendered_value = bound_row.get_cell(internal_col_name)  # pylint: disable=no-member
             self.assertEqual(rendered_value, col_expected_value)
 
 

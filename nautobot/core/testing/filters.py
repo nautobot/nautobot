@@ -1,12 +1,15 @@
+from __future__ import annotations  # python 3.8
+
 import random
 import string
 
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Count, Q
+from django.db.models import Count, Q, QuerySet
 from django.db.models.fields import CharField, TextField
 from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.test import tag
+from django_filters import FilterSet
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.filters import (
@@ -26,6 +29,8 @@ from nautobot.tenancy import models
 class FilterTestCases:
     class BaseFilterTestCase(views.TestCase):
         """Base class for testing of FilterSets."""
+
+        queryset: QuerySet
 
         def get_filterset_test_values(self, field_name, queryset=None):
             """Returns a list of distinct values from the requested queryset field to use in filterset tests.
@@ -68,8 +73,7 @@ class FilterTestCases:
     class FilterTestCase(BaseFilterTestCase):
         """Add common tests for all FilterSets."""
 
-        queryset = None
-        filterset = None
+        filterset: type[FilterSet]
 
         # filter predicate fields that should be excluded from q test case
         exclude_q_filter_predicates = []

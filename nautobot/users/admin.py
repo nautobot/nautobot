@@ -44,7 +44,7 @@ class ObjectPermissionInline(admin.TabularInline):
 
 
 class GroupObjectPermissionInline(ObjectPermissionInline):
-    model = AdminGroup.object_permissions.through
+    model = AdminGroup.object_permissions.through  # pylint: disable=no-member
 
 
 class UserObjectPermissionInline(ObjectPermissionInline):

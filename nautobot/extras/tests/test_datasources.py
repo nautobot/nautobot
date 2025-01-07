@@ -285,7 +285,8 @@ class GitTest(TransactionTestCase):
 
                 self.repo.secrets_group = secrets_group
                 self.repo.remote_url = "http://localhost/git.git"
-                self.repo.provided_contents.remove("extras.job")  # avoid failing due to lack of jobs module
+                # avoid failing due to lack of jobs module
+                self.repo.provided_contents.remove("extras.job")  # pylint: disable=no-member
                 self.repo.save()
 
                 self.mock_request.id = uuid.uuid4()

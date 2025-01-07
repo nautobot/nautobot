@@ -295,7 +295,7 @@ class BaseJob:
         - my_plugin.jobs.MyPluginJob - App-provided Job
         - git_repository.jobs.myjob.MyJob - GitRepository Job
         """
-        return f"{cls.__module__}.{cls.__name__}"
+        return f"{cls.__module__}.{cls.__name__}"  # pylint: disable=no-member
 
     @final
     @classproperty
@@ -332,7 +332,7 @@ class BaseJob:
     @final
     @classproperty
     def name(cls) -> str:  # pylint: disable=no-self-argument
-        return cls._get_meta_attr_and_assert_type("name", cls.__name__, expected_type=str)
+        return cls._get_meta_attr_and_assert_type("name", cls.__name__, expected_type=str)  # pylint: disable=no-member
 
     @final
     @classproperty
@@ -420,7 +420,7 @@ class BaseJob:
     @classproperty
     def registered_name(cls) -> str:  # pylint: disable=no-self-argument
         """Deprecated - use class_path classproperty instead."""
-        return f"{cls.__module__}.{cls.__name__}"
+        return f"{cls.__module__}.{cls.__name__}"  # pylint: disable=no-member
 
     @classmethod
     def _get_vars(cls):
