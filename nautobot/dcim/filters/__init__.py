@@ -7,6 +7,7 @@ from timezone_field import TimeZoneField
 from nautobot.core.filters import (
     BaseFilterSet,
     ContentTypeMultipleChoiceFilter,
+    MultipleChoiceFilterWithCustomValues,
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
     MultiValueUUIDFilter,
@@ -418,8 +419,8 @@ class RackFilterSet(
         to_field_name="name",
         label="Rack group (name or ID)",
     )
-    type = django_filters.MultipleChoiceFilter(choices=RackTypeChoices)
-    width = django_filters.MultipleChoiceFilter(choices=RackWidthChoices)
+    type = MultipleChoiceFilterWithCustomValues(choices=RackTypeChoices)
+    width = MultipleChoiceFilterWithCustomValues(choices=RackWidthChoices)
     serial = MultiValueCharFilter(lookup_expr="iexact", label="Serial Number")
     has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
@@ -971,7 +972,7 @@ class ConsolePortFilterSet(
     PathEndpointModelFilterSetMixin,
     BaseFilterSet,
 ):
-    type = django_filters.MultipleChoiceFilter(choices=ConsolePortTypeChoices, null_value=None)
+    type = MultipleChoiceFilterWithCustomValues(choices=ConsolePortTypeChoices, null_value=None)
 
     class Meta:
         model = ConsolePort
@@ -984,7 +985,7 @@ class ConsoleServerPortFilterSet(
     PathEndpointModelFilterSetMixin,
     BaseFilterSet,
 ):
-    type = django_filters.MultipleChoiceFilter(choices=ConsolePortTypeChoices, null_value=None)
+    type = MultipleChoiceFilterWithCustomValues(choices=ConsolePortTypeChoices, null_value=None)
 
     class Meta:
         model = ConsoleServerPort
@@ -997,7 +998,7 @@ class PowerPortFilterSet(
     PathEndpointModelFilterSetMixin,
     BaseFilterSet,
 ):
-    type = django_filters.MultipleChoiceFilter(choices=PowerPortTypeChoices, null_value=None)
+    type = MultipleChoiceFilterWithCustomValues(choices=PowerPortTypeChoices, null_value=None)
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_outlets = NaturalKeyOrPKMultipleChoiceFilter(
         prefers_id=True,
@@ -1022,7 +1023,7 @@ class PowerOutletFilterSet(
     PathEndpointModelFilterSetMixin,
     BaseFilterSet,
 ):
-    type = django_filters.MultipleChoiceFilter(choices=PowerOutletTypeChoices, null_value=None)
+    type = MultipleChoiceFilterWithCustomValues(choices=PowerOutletTypeChoices, null_value=None)
     power_port = django_filters.ModelMultipleChoiceFilter(
         queryset=PowerPort.objects.all(),
         label="Power port",
@@ -1138,7 +1139,7 @@ class InterfaceFilterSet(
     mac_address = MultiValueMACAddressFilter()
     vlan_id = django_filters.CharFilter(method="filter_vlan_id", label="Assigned VLAN")
     vlan = django_filters.NumberFilter(method="filter_vlan", label="Assigned VID")
-    type = django_filters.MultipleChoiceFilter(choices=InterfaceTypeChoices, null_value=None)
+    type = MultipleChoiceFilterWithCustomValues(choices=InterfaceTypeChoices, null_value=None)
     interface_redundancy_groups = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=InterfaceRedundancyGroup.objects.all(),
         to_field_name="name",
@@ -1417,7 +1418,7 @@ class VirtualChassisFilterSet(NautobotFilterSet):
 
 class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     q = SearchFilter(filter_predicates={"label": "icontains"})
-    type = django_filters.MultipleChoiceFilter(choices=CableTypeChoices)
+    type = MultipleChoiceFilterWithCustomValues(choices=CableTypeChoices)
     color = MultiValueCharFilter()
     device_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Device.objects.all(),

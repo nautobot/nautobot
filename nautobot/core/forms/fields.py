@@ -8,7 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
 from django.db.models import Q
-from django.forms.fields import BoundField, InvalidJSONInput, JSONField as _JSONField
+from django.forms.fields import BoundField, InvalidJSONInput, JSONField as _JSONField, MultipleChoiceField
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.html import format_html
@@ -38,12 +38,18 @@ __all__ = (
     "JSONArrayFormField",
     "LaxURLField",
     "MACAddressField",
+    "MultipleChoiceFieldWithAnyValue",
     "MultipleContentTypeField",
     "MultiMatchModelMultipleChoiceField",
     "NumericArrayField",
     "SlugField",
     "TagFilterField",
 )
+
+
+class MultipleChoiceFieldWithAnyValue(MultipleChoiceField):
+    def valid_value(self, value):
+        return True
 
 
 class CSVDataField(django_forms.CharField):

@@ -73,6 +73,10 @@ def multivalue_field_factory(field_class, widget=django_forms.SelectMultiple):
 #
 
 
+class MultipleChoiceFilterWithCustomValues(django_filters.MultipleChoiceFilter):
+    field_class = forms.MultipleChoiceFieldWithAnyValue
+
+
 class MultiValueCharFilter(django_filters.CharFilter, django_filters.MultipleChoiceFilter):
     field_class = forms.MultiValueCharField
 

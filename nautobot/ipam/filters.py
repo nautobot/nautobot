@@ -7,6 +7,7 @@ import netaddr
 
 from nautobot.cloud.models import CloudNetwork
 from nautobot.core.filters import (
+    MultipleChoiceFilterWithCustomValues,
     MultiValueCharFilter,
     MultiValueNumberFilter,
     MultiValueUUIDFilter,
@@ -254,7 +255,7 @@ class PrefixFilterSet(
         field_name="rir",
         label="Has RIR",
     )
-    type = django_filters.MultipleChoiceFilter(choices=choices.PrefixTypeChoices)
+    type = MultipleChoiceFilterWithCustomValues(choices=choices.PrefixTypeChoices)
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Namespace.objects.all(),
         to_field_name="name",
