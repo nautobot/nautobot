@@ -486,7 +486,7 @@ class IPAddressFilterSet(
             return queryset.none()
 
     def generate_query_filter_present_in_vrf(self, value):
-        if isinstance(value, str):
+        if isinstance(value, (str, uuid.UUID)):
             value = VRF.objects.get(pk=value)
 
         query = Q(parent__vrfs=value) | Q(parent__vrfs__export_targets__in=value.import_targets.all())
