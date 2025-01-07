@@ -1,0 +1,1 @@
+Fixed an AttributeError that occurred in the UI when editing a `DynamicGroup` with `ipam|prefix` as its content-type and changing the value of the "Present in VRF" field.
