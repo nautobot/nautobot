@@ -1,18 +1,14 @@
 # Release Notes
 
-## [2.4 - December 2024](version-2.4.md)
+## [2.4 - January 2025](version-2.4.md)
 
-- Apps Marketplace Page and Installed Apps Page Tile View
-- Event Publication Framework
-- Jinja2 Template Rendering REST API
-- Job `success` Log Level
-- Kubernetes Job Execution and Job Queue Data Model
-- Per-User Time Zone Support
-- REST API `exclude_m2m` Support
-- Singleton Jobs
-- UI Component Framework
 - Virtual Device Context Data Models
 - Wireless Data Models
+- Apps Marketplace Page
+- Event Publication Framework
+- Jinja2 Template Rendering REST API
+- Kubernetes Job Execution and Job Queue Data Model
+- UI Component Framework
 
 ## [2.3 - August 2024](version-2.3.md)
 

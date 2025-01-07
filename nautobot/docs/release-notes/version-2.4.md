@@ -6,70 +6,95 @@ This document describes all new features and changes in Nautobot 2.4.
 
 ### Administrators
 
-- Nautobot 2.4 [drops support for Python 3.8](#removed-python-38-support), so any existing Nautobot deployment using Python 3.8 will need to upgrade to a newer Python version **before** upgrading to Nautobot v2.4 or later.
-- Administrators should familiarize themselves with the new [Event Publication Framework](#event-publication-framework) and the possibilities it enables for improved monitoring of Nautobot operations.
-- Administrators of Kubernetes-based Nautobot deployments should familiarize themselves with the new [capabilities](#kubernetes-job-execution-and-job-queue-data-model) that Nautobot 2.4 provides for Job execution in such environments and may wish to update their Nautobot configuration to take advantage of these capabilities.
+- Nautobot 2.4 [drops support for Python 3.8](#removed-python-38-support), so any existing Nautobot deployment using Python 3.8 will need upgrade to a newer Python version **before** upgrading to Nautobot v2.4 or later.
+- Administrators should familiarize themselves with the new [Event Publication Framework](#event-publication-framework) and the possibilities it enables for improved monitoring of Nautobot operations and integration with distributed automation platforms.
+- Administrators of Kubernetes-based Nautobot deployments should familiarize themselves with the new [capabilities](#kubernetes-job-execution-and-job-queue-data-model-experimental) that Nautobot v2.4 provides for Job execution in such environments and may wish to update their Nautobot configuration to take advantage of these capabilities. Please note that this feature set is considered Experimental in v2.4.0 and is subject to change in future releases.
 - Nautobot 2.4 includes an About page which is capable of displaying the status of Network to Code support contracts, dictated by the [`NTC_SUPPORT_CONTRACT_EXPIRATION_DATE`](../user-guide/administration/configuration/settings.md#ntc_support_contract_expiration_date) configuration setting.
 
 ### Job Authors & App Developers
 
-- App developers should begin to adopt the [UI Component Framework](#ui-component-framework) introduced in Nautobot 2.4, as this will reduce the amount of boilerplate HTML/CSS content that they need to develop and maintain, and will insulate Apps from future CSS changes planned for Nautobot v3.
-- Additionally, App developers should familiarize themselves with the new [Event Publication Framework](#event-publication-framework) and the possibilities it enables for Apps to publish their own relevant events.
-- As a side benefit of adding [REST API `exclude_m2m` support](#rest-api-exclude_m2m-support), the Nautobot REST API `ViewSet` classes now attempt to intelligently apply `select_related()` and/or `prefetch_related()` optimizations to the `queryset` associated to a given REST API viewset. Apps defining their own REST API viewsets (and requiring Nautobot 2.4.0 or later) can typically remove most explicit calls to `select_related()` and `prefetch_related()`; furthermore, in order to benefit most from the `exclude_m2m=true` query parameter, apps in Nautobot 2.4.0 and later **should not** explicitly `prefetch_related()` many-to-many related fields any longer. (Explicit calls to `select_related()` and `prefetch_related()` may still be necessary and appropriate if your API serializer needs to perform nested lookups, as the automatic optimization here currently only understands directly related object lookups.)
-- Job authors should be aware of the ability to log [`success`](#job-success-log-level) messages in Nautobot v2.4 and later and should adopt this log level as appropriate.
-- Job authors should be aware of the introduction of [Job Queues](#kubernetes-job-execution-and-job-queue-data-model) as a general-purpose replacement for the Celery-specific `Job.task_queues` attribute, and if a Job specifies its preferred `task_queues`, should verify that the queue selected as its `default_job_queue` after the Nautobot upgrade is correct.
+- App developers should begin to adopt the [UI Component Framework](#ui-component-framework) introduced in Nautobot v2.4, as this will reduce the amount of boilerplate HTML/CSS content that they need to develop and maintain, and will help insulate Apps from future CSS and layout design changes planned for Nautobot v3.
+- Additionally, App developers should familiarize themselves with the new [Event Publication Framework](#event-publication-framework) and the possibilities it enables for Apps to publish their own relevant events to configured message brokers.
+- As a side benefit of adding [REST API `exclude_m2m` support](#rest-api-exclude_m2m-support), the Nautobot REST API `ViewSet` classes now attempt to intelligently apply `select_related()` and/or `prefetch_related()` optimizations to the `queryset` associated to a given REST API viewset. Apps defining their own REST API viewsets (and requiring Nautobot v2.4.0 or later) can typically remove most explicit calls to `select_related()` and `prefetch_related()`; furthermore, in order to benefit most from the `exclude_m2m=true` query parameter, apps in Nautobot v2.4.0 and later **should not** explicitly `prefetch_related()` many-to-many related fields any longer. (Explicit calls to `select_related()` and `prefetch_related()` may still be necessary and appropriate if your API serializer needs to perform nested lookups, as the automatic optimization here currently only understands directly related object lookups.)
+- Job authors should be aware of the ability to log [`success`](#job-success-log-level) messages in Nautobot v2.4.0 and later and should adopt this log level as appropriate.
+- Job authors should be aware of the introduction of [Job Queues](#kubernetes-job-execution-and-job-queue-data-model-experimental) as a general-purpose replacement for the Celery-specific `Job.task_queues` attribute, and if a Job specifies its preferred `task_queues`, should verify that the queue selected as its `default_job_queue` after the Nautobot upgrade is correct.
 
 ## Release Overview
 
 ### Added
 
+#### Virtual Device Context Data Models
+
+Nautobot 2.4 adds a [`VirtualDeviceContext`](../user-guide/core-data-model/dcim/virtualdevicecontext.md) data model to support modeling of logical partitions of physical network devices, such as Cisco Nexus Virtual Device Contexts, Juniper Logical Systems, Arista Multi-instance EOS, and so forth. Device Interfaces can be associated to Virtual Device Contexts via the new `InterfaceVDCAssignment` model as well.
+
+#### Wireless Data Models
+
+Nautobot 2.4 adds the data models [`WirelessNetwork`](../user-guide/core-data-model/wireless/wirelessnetwork.md), [`RadioProfile`](../user-guide/core-data-model/wireless/radioprofile.md), and [`SupportedDataRate`](../user-guide/core-data-model/wireless/supporteddatarate.md), enabling Nautobot to model campus wireless networks. In support of this functionality, the [`Controller`](../user-guide/core-data-model/dcim/controller.md) and [`ControllerManagedDeviceGroup`](../user-guide/core-data-model/dcim/controllermanageddevicegroup.md) models have been enhanced with additional capabilities as well.
+
+Refer to the [Wireless](../user-guide/core-data-model/wireless/index.md) documentation for more details.
+
 #### Apps Marketplace Page and Installed Apps Page Tile View
 
-Nautobot 2.4 introduces Apps Marketplace page containing information about available but not installed Nautobot Apps. In addition to that, Installed Apps page is getting a brand-new tile view as an alternative to already existing list view.
+Nautobot v2.4 introduces the Apps Marketplace, containing information about available Nautobot Apps. In addition to that, the Installed Apps page has added a tile-view option, similar to the Apps Marketplace.
 
 #### Event Publication Framework
 
-Nautobot now includes a general-purpose, extensible [event publication framework](../user-guide/platform-functionality/events.md) for publication of system event notifications to other systems such as Redis publish/subscribe, syslog, Kafka, and others. An abstract `EventBroker` API can be implemented and extended with system-specific functionality to enable publication of Nautobot events to any desired system.
+Nautobot now includes a general-purpose, extensible [event publication framework](../user-guide/platform-functionality/events.md) for publication of event notifications to other systems such as Redis publish/subscribe, Kafka, syslog, and others. An abstract `EventBroker` API can be implemented and extended with system-specific functionality to enable publication of Nautobot events to any desired message broker.
 
-As of Nautobot 2.4.0, Nautobot publishes events with the following topics:
+As of v2.4.0, Nautobot publishes events with the following topics:
 
+Data model manipulation:
 - `nautobot.create.<app>.<model>`
 - `nautobot.update.<app>.<model>`
 - `nautobot.delete.<app>.<model>`
+
+User interaction:
 - `nautobot.users.user.login`
 - `nautobot.users.user.logout`
 - `nautobot.users.user.change_password`
 - `nautobot.admin.user.change_password`
+
+Jobs:
 - `nautobot.jobs.job.started`
 - `nautobot.jobs.job.completed`
 - `nautobot.jobs.approval.approved`
 - `nautobot.jobs.approval.denied`
 
-Nautobot Apps can also make use of this framework to publish additional events specific to the App's functionality as desired.
+The payload of each topic is a data representaton of the corresponding event, such as the object created, or the Job that started execution. Events are published to configured event brokers, and may be filtered.
+
+Nautobot Apps can also make use of this framework to publish additional event topics, specific to the App's functionality as desired.
 
 #### Jinja2 Template Rendering Tool
 
-Nautobot 2.4 adds a new REST API endpoint `/api/core/render-jinja-template/` that can be called to [render a user-provided Jinja2 template](../user-guide/platform-functionality/rendering-jinja-templates.md) with user-provided context data and access to Nautobot's built-in Jinja2 tags and filters. This can be used by users and Apps such as [Nautobot Golden Config](https://docs.nautobot.com/projects/golden-config/en/latest/) to assist with the development and validation of Jinja2 template content. There is a UI at `/render-jinja-template/` that provides a form for entering template content and context data to render a template. This UI can also be accessed from a link in the footer of any Nautobot page.
+Nautobot v2.4 adds a new tool to render Jinja2 templates directly from the UI. Users may supply their own template body and context data to be rendered, with access to to Nautobot's built-in Jinja2 tags and filters. Additionally, a new REST API endpoint `/api/core/render-jinja-template/` has been added to achieve the same functionaly. This can be used by users and Apps such as [Nautobot Golden Config](https://docs.nautobot.com/projects/golden-config/en/latest/) to assist with the development and validation of Jinja2 template content. This functionality will be extended in the future to more easily access context aware data in Nautobot such as Devices and Config Contexts.
 
 #### Job `success` Log Level
 
-Jobs can now once again log `success` messages as a new logging level which will be appropriately labeled and colorized in Job Result views.
+Jobs can now log `success` messages as a new logging level which will be appropriately labeled and colorized in Job Result views.
 
 ```python
 self.logger.success("All data is valid.")
 ```
 
-#### Kubernetes Job Execution and Job Queue Data Model
+#### Kubernetes Job Execution and Job Queue Data Model (Experimental)
 
-When running in a Kubernetes (k8s) deployment, such as with Nautobot's [Helm chart](https://docs.nautobot.com/projects/helm-charts/en/stable/), Nautobot now supports an alternative method of running Nautobot Jobs - instead of (or in addition to) running one or more Celery Workers as long-lived persistent pods, Nautobot can dispatch Nautobot Jobs to be executed as short-lived [Kubernetes Job](https://kubernetes.io/docs/concepts/workloads/controllers/job/) task pods.
+*Please note that this functionality is considered Experimental in the v2.4.0 release and is subject to change in the future.*
 
-In support of this functionality, Nautobot now supports the definition of [`JobQueue` records](../user-guide/platform-functionality/jobs/jobqueue.md), which represent either a Celery task queue **or** a Kubernetes job queue. Nautobot Jobs can be associated to queues of either or both types, and the Job Queue selected when submitting a Job will dictate whether it is executed via Celery or via Kubernetes.
+When running in a Kubernetes (k8s) deployment, such as with Nautobot's [Helm chart](https://docs.nautobot.com/projects/helm-charts/en/stable/), Nautobot now supports an alternative method of running Nautobot Jobs - instead of (or in addition to) running one or more Celery Workers as long-lived persistent pods, Nautobot can dispatch Nautobot Jobs to be executed as short-lived [Kubernetes Job](https://kubernetes.io/docs/concepts/workloads/controllers/job/) pods.
+
+In support of this functionality, Nautobot now supports the definition of [`JobQueue` records](../user-guide/platform-functionality/jobs/jobqueue.md), which represent either a Celery task queue **or** a Kubernetes Job queue. Nautobot Jobs can be associated to queues of either or both types, and the Job Queue selected when submitting a Job will dictate whether it is executed via Celery or via Kubernetes.
+
+Nautobot Jobs support the same feature sets, regardless if they are executed on Celery Job queues or Kubernetes Job queues.
 
 Refer to the [Jobs documentation](../user-guide/platform-functionality/jobs/index.md) for more details.
 
+#### Singleton Jobs
+
+Job authors can now set their jobs to only allow a single concurrent execution across all workers, preventing mistakes where, e.g., data synchronization jobs accidentally run twice and create multiple instances of the same data. This functionality and the corresponding setting are documented in [the section on developing Jobs](../development/jobs/index.md).
+
 #### Per-user Time Zone Support
 
-Users can now configure their preferred display time zone via the User Preferences UI and Nautobot will display dates and times in the configured time zone for each user.
+Users can now configure their preferred display time zone via the User Preferences UI under their user profile and Nautobot will display dates and times in the configured time zone for each user.
 
 #### REST API `exclude_m2m` Support
 
@@ -79,19 +104,15 @@ A future Nautobot major release may change the REST API behavior to make `exclud
 
 Additionally, the `DynamicModelChoiceField` and related form fields have been enhanced to use `exclude_m2m=true` when querying the REST API to populate their options, which can in some cases significantly improve the responsiveness of these fields.
 
-#### Singleton Jobs
-
-Job authors can now set their jobs to only allow a single concurrent execution across all workers, preventing mistakes where, e.g., data synchronization jobs accidentally run twice and create multiple instances of the same data. This functionality and the corresponding setting are documented in [the section on developing Jobs](../development/jobs/index.md).
-
 #### UI Component Framework
 
-Nautobot's new [UI Component Framework](../development/core/ui-component-framework.md) provides a set of Python APIs for defining parts of the Nautobot UI without needing, in many cases, to write custom HTML templates. In this release of Nautobot, the focus is primarily on the definition of object "detail" views as those were the most common cases where custom templates have been required in the past.
+Nautobot's new [UI Component Framework](../development/core/ui-component-framework.md) provides a set of Python APIs for defining parts of the Nautobot UI without needing, in many cases, to write custom HTML templates. In v2.4.0, the focus is primarily on the definition of object "detail" views as those were the most common cases where custom templates have been required in the past.
 
-[Adoption of this framework](../development/apps/migration/ui-component-framework/index.md) significantly reduces the amount of boilerplate needed to define an object detail view, drives increased self-consistency across views, and encourages code reuse. It also insulates Apps from the details of Nautobot's CSS (Bootstrap 3 framework), smoothing the way for Nautobot to adopt a new CSS framework in the future with minimal impact to compliant apps.
+[Adoption of this framework](../development/apps/migration/ui-component-framework/index.md) significantly reduces the amount of boilerplate needed to define an object detail view, drives increased self-consistency across views, and encourages code reuse. It also insulates Apps from the details of Nautobot's CSS and layout (Bootstrap 3 framework), smoothing the way for Nautobot to adopt UI changes in the future with minimal impact to compliant apps.
 
-App [template extensions](../development/apps/api/ui-extensions/object-views.md) of Nautobot core views can also be reimplemented using the UI Component Framework and are recommended to do so.
+App [template extensions](../development/apps/api/ui-extensions/object-views.md)--which are used to inject App content into Nautobot Core views--offer new implementation patterns using the UI Component Framework and it is highly recomended that App developers take this opportunity to adopt, as old methods have been deprecated in some cases (see below).
 
-As of Nautobot 2.4.0, the following detail views have been migrated to use the UI Component Framework:
+As of Nautobot 2.4.0, the following detail views have been migrated to use the UI Component Framework, and any app template extensions targeting these models should adopt:
 
 - Circuit
 - Cluster Type
@@ -103,16 +124,6 @@ As of Nautobot 2.4.0, the following detail views have been migrated to use the U
 - Secret
 - Tenant
 - VRF
-
-#### Virtual Device Context Data Models
-
-Nautobot 2.4 adds a [`VirtualDeviceContext`](../user-guide/core-data-model/dcim/virtualdevicecontext.md) data model to support modeling of logical partitions of physical network devices, such as Cisco Nexus Virtual Device Contexts, Juniper Logical Systems, Arista Multi-instance EOS, and so forth. Device Interfaces can be associated to Virtual Device Contexts via the new `InterfaceVDCAssignment` model as well.
-
-#### Wireless Data Models
-
-Nautobot 2.4 adds the data models [`WirelessNetwork`](../user-guide/core-data-model/wireless/wirelessnetwork.md), [`RadioProfile`](../user-guide/core-data-model/wireless/radioprofile.md), and [`SupportedDataRate`](../user-guide/core-data-model/wireless/supporteddatarate.md), enabling Nautobot to model campus wireless networks. In support of this functionality, the [`Controller`](../user-guide/core-data-model/dcim/controller.md) and [`ControllerManagedDeviceGroup`](../user-guide/core-data-model/dcim/controllermanageddevicegroup.md) models have been enhanced with additional capabilities as well.
-
-Refer to the [Wireless](../user-guide/core-data-model/wireless/index.md) documentation for more details.
 
 ### Deprecated
 
@@ -134,7 +145,7 @@ With the introduction of the UI Component Framework (described [above](#ui-compo
 
 #### Removed Python 3.8 Support
 
-As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python 3.9.
+As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python 3.9. Note that existing installs using Python 3.8 will need to upgrade their Python version prior to initiating the Nautobot v2.4 upgrade.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 <!-- towncrier release notes start -->
