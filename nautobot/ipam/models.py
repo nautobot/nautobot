@@ -27,18 +27,18 @@ from .querysets import IPAddressQuerySet, PrefixQuerySet, RIRQuerySet, VLANQuery
 from .validators import DNSValidator
 
 __all__ = (
+    "RIR",
+    "VLAN",
+    "VRF",
     "IPAddress",
     "IPAddressToInterface",
     "Namespace",
     "Prefix",
     "PrefixLocationAssignment",
-    "RIR",
     "RouteTarget",
     "Service",
-    "VLAN",
     "VLANGroup",
     "VLANLocationAssignment",
-    "VRF",
     "VRFDeviceAssignment",
     "VRFPrefixAssignment",
 )
@@ -1408,7 +1408,6 @@ class VLANGroup(PrimaryModel):
 
     def clean(self):
         super().clean()
-
         # Validate location
         if self.location is not None:
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():

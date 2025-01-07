@@ -4,17 +4,16 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 
 ## Components
 
-<!-- markdownlint-disable no-inline-html -->
+<!-- pyml disable-num-lines 9 no-inline-html -->
 | Function           | Component                                                                                                                          |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
 | HTTP service       | :simple-nginx: NGINX                                                                                                               |
 | WSGI service       | :material-web: uWSGI or Gunicorn                                                                                                   |
-| Application        | :simple-django: Django <br> :material-language-python: Python 3.8 - 3.12 supported                                                 |
+| Application        | :simple-django: Django <br> :material-language-python: Python 3.9 - 3.12 supported                                                 |
 | Database           | :simple-postgresql: PostgreSQL 12+ or <br>  :simple-mysql: MySQL 8.0+                                                              |
 | Cache              | :simple-redis: Django/Redis                                                                                                        |
 | Task queuing       | :simple-redis: Redis / :simple-celery: Celery                                                                                      |
 | Live device access | [NAPALM](https://napalm.readthedocs.io/en/latest/) and [NAPALM Community Drivers](https://github.com/napalm-automation-community). |
-<!-- markdownlint-enable no-inline-html -->
 
 ## Application Diagram
 
@@ -49,6 +48,9 @@ See the [installation guide](../user-guide/administration/installation/index.md)
 +++ 2.3.0 "Python 3.12, Django 4"
     - Python 3.12 support was added.
     - Nautobot migrated from Django 3.2 to Django 4.2.
+
+--- 2.4.0 "Python 3.8"
+    Python 3.8 support was removed.
 
 ## Notices
 

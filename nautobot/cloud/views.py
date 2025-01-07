@@ -100,16 +100,6 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
 
         return context
 
-    def extra_post_save_action(self, obj, form):
-        if form.cleaned_data.get("add_prefixes", None):
-            obj.prefixes.add(*form.cleaned_data["add_prefixes"])
-        if form.cleaned_data.get("remove_prefixes", None):
-            obj.prefixes.remove(*form.cleaned_data["remove_prefixes"])
-        if form.cleaned_data.get("add_cloud_services", None):
-            obj.cloud_services.add(*form.cleaned_data["add_cloud_services"])
-        if form.cleaned_data.get("remove_cloud_services", None):
-            obj.cloud_services.remove(*form.cleaned_data["remove_cloud_services"])
-
 
 class CloudResourceTypeUIViewSet(NautobotUIViewSet):
     queryset = CloudResourceType.objects.all()
@@ -173,9 +163,3 @@ class CloudServiceUIViewSet(NautobotUIViewSet):
             )
 
         return context
-
-    def extra_post_save_action(self, obj, form):
-        if form.cleaned_data.get("add_cloud_networks", None):
-            obj.cloud_networks.add(*form.cleaned_data["add_cloud_networks"])
-        if form.cleaned_data.get("remove_cloud_networks", None):
-            obj.cloud_networks.remove(*form.cleaned_data["remove_cloud_networks"])

@@ -1,0 +1,36 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Job Queue</strong>
+            </div>
+
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Name</td>
+                    <td>
+                        {{ object.name }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Queue Type</td>
+                    <td>
+                        {{ object.get_queue_type_display }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Description</td>
+                    <td>
+                        {{ object.description|placeholder }}
+                    </td>
+                </tr>
+                {% include 'inc/tenant_table_row.html' %}
+            </table>
+        </div>
+{% endblock %}
+
+{% block content_full_width_page %}
+    {% include 'panel_table.html' with table=jobs_table heading='Assigned Jobs' %}
+{% endblock %}

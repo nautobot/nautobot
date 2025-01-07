@@ -1567,3 +1567,31 @@ class ModuleStatusChoices(ChoiceSet):
         (STATUS_INVENTORY, "Inventory"),
         (STATUS_DECOMMISSIONING, "Decommissioning"),
     )
+
+
+#
+# Virtual Device Context
+#
+
+
+class VirtualDeviceContextStatusChoices(ChoiceSet):
+    STATUS_OFFLINE = "offline"
+    STATUS_ACTIVE = "active"
+    STATUS_PLANNED = "planned"
+
+    CHOICES = (
+        (STATUS_OFFLINE, "Offline"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_PLANNED, "Planned"),
+    )
+
+
+#
+# Controllers
+#
+
+
+class ControllerCapabilitiesChoices(ChoiceSet):
+    WIRELESS = "wireless"
+
+    CHOICES = ((WIRELESS, "Wireless"),)
