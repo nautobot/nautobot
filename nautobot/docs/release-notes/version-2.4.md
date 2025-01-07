@@ -148,7 +148,74 @@ With the introduction of the UI Component Framework (described [above](#ui-compo
 As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python 3.9. Note that existing installs using Python 3.8 will need to upgrade their Python version prior to initiating the Nautobot v2.4 upgrade.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
+
 <!-- towncrier release notes start -->
+## v2.4.0 (2025-01-07)
+
+### Added in v2.4.0
+
+- [#1004](https://github.com/nautobot/nautobot/issues/1004) - Added singleton job functionality to limit specified jobs to one concurrent execution.
+- [#6353](https://github.com/nautobot/nautobot/issues/6353) - Added `Bulk Delete Objects` system Job.
+- [#6354](https://github.com/nautobot/nautobot/issues/6354) - Added "Bulk Edit Objects" system job.
+- [#6462](https://github.com/nautobot/nautobot/issues/6462) - Added tenant relationship to the `ControllerManagedDeviceGroup`
+- [#6462](https://github.com/nautobot/nautobot/issues/6462) - Added `tenant` and `description` fields to forms, filtersets and tables for `Controller` and `ControllerManagedDeviceGroup`
+- [#6556](https://github.com/nautobot/nautobot/issues/6556) - Added REST API support for an `?exclude_m2m=true` query parameter. Specifying this parameter prevents the API from retrieving and serializing many-to-many relations on the requested object(s) (for example, the list of all Prefixes associated with a given VRF), which can in some cases greatly improve the performance of the API and reduce memory and network overhead substantially.
+- [#6556](https://github.com/nautobot/nautobot/issues/6556) - Added automatic optimization of REST API querysets via appropriate `select_related` and `prefetch_related` calls.
+- [#6556](https://github.com/nautobot/nautobot/issues/6556) - Enhanced generic REST API test methods `ListObjectsViewTestCase.test_list_objects_depth_0` and `ListObjectsViewTestCase.test_list_objects_depth_1` to test the `?exclude_m2m=true` query parameter. This enhancement includes checks for missing related fields in the serialized data, which may result in new test failures being seen in Apps using this test class.
+- [#6556](https://github.com/nautobot/nautobot/issues/6556) - Enhanced generic REST API test method `UpdateObjectViewTestCase.test_update_object` to include an idempotency test in combination with the `?exclude_m2m=true` query parameter. This may result in new test failures being seen in Apps using this test class.
+- [#6597](https://github.com/nautobot/nautobot/issues/6597) - Added an about page that displays Nautobot and support contract information.
+- [#6597](https://github.com/nautobot/nautobot/issues/6597) - Added `NTC_SUPPORT_CONTRACT_EXPIRATION_DATE` configuration setting.
+- [#6684](https://github.com/nautobot/nautobot/issues/6684) - Added support for `label-transparent` CSS class.
+- [#6684](https://github.com/nautobot/nautobot/issues/6684) - Added "success" log entry counts to the Job Result table.
+
+### Changed in v2.4.0
+
+- [#6463](https://github.com/nautobot/nautobot/issues/6463) - Reorganized parts of the Device and VirtualMachine create/edit forms for consistency and clarity.
+- [#6529](https://github.com/nautobot/nautobot/issues/6529) - Added VRF's to the Prefixes API.
+- [#6556](https://github.com/nautobot/nautobot/issues/6556) - Changed `DynamicModelChoiceField`, `DynamicModelMultipleChoiceField`, and ``MultiMatchModelMultipleChoiceField` default behavior to include `?exclude_m2m=true` as a query parameter to the REST API, improving the typical performance of populating such fields with options.
+- [#6652](https://github.com/nautobot/nautobot/issues/6652) - Refined the App Marketplace and Installed Apps views based on stakeholder feedback.
+- [#6684](https://github.com/nautobot/nautobot/issues/6684) - Changed the `add` navigation menu buttons to be styled as `primary` (light blue) rather than `info` (darker blue).
+- [#6684](https://github.com/nautobot/nautobot/issues/6684) - Updated the "author" and "availability" text in App Marketplace data for clarity.
+- [#6684](https://github.com/nautobot/nautobot/issues/6684) - Adjusted the layout and rendering of the App Marketplace and Installed Apps views based on stakeholder feedback.
+
+### Removed in v2.4.0
+
+- [#6480](https://github.com/nautobot/nautobot/issues/6480) - Removed kubernetes-kind-related documentation.
+- [#6612](https://github.com/nautobot/nautobot/issues/6612) - Removed Node.js and `npm` from the development Docker images.
+
+### Fixed in v2.4.0
+
+- [#6462](https://github.com/nautobot/nautobot/issues/6462) - Fixed `JSONArrayFormField` error that field is required when default value is used.
+- [#6526](https://github.com/nautobot/nautobot/issues/6526) - Fixed an AttributeError that occurred in the UI when editing a `DynamicGroup` with `ipam|prefix` as its content-type and changing the value of the "Present in VRF" field.
+- [#6556](https://github.com/nautobot/nautobot/issues/6556) - Added missing `tags` field to `CircuitTermination`, `Contact`, `DeviceFamily`, `GitRepository`, `MetadataType`, `Team`, `VirtualDeviceContext` REST APIs.
+- [#6556](https://github.com/nautobot/nautobot/issues/6556) - Fixed incorrect field identification logic in REST API testing helper method `ListObjectsViewTestCase.get_depth_fields()`. This may result in new detection of latent issues in Apps by this test case.
+- [#6556](https://github.com/nautobot/nautobot/issues/6556) - Fixed incorrect test logic in REST API generic test case `UpdateObjectViewTestCase.test_update_object()`. This may result in new detection of latent issues in Apps by this test case.
+- [#6556](https://github.com/nautobot/nautobot/issues/6556) - Fixed `?depth` query parameter support in `Contact` and `Team` REST APIs.
+- [#6601](https://github.com/nautobot/nautobot/issues/6601) - Fixed whitespace in Jinja template renderer.
+- [#6602](https://github.com/nautobot/nautobot/issues/6602) - Fixed incorrect naming of `controller_managed_device_groups` filter on the RadioProfile and WirelessNetwork filtersets.
+- [#6629](https://github.com/nautobot/nautobot/issues/6629) - Fixed an `AttributeError` that could be raised if a `DynamicModelChoiceField` uses a non-standard `widget`.
+- [#6661](https://github.com/nautobot/nautobot/issues/6661) - Fixed the rendering of the dynamic group associable model list tables.
+- [#6663](https://github.com/nautobot/nautobot/issues/6663) - Fixed `test_cable_cannot_terminate_to_a_virtual_interface` and `test_cable_cannot_terminate_to_a_wireless_interface` tests so they fail properly.
+
+### Dependencies in v2.4.0
+
+- [#6424](https://github.com/nautobot/nautobot/issues/6424) - Updated `django-structlog` dependency to `^9.0.0`.
+
+### Documentation in v2.4.0
+
+- [#6480](https://github.com/nautobot/nautobot/issues/6480) - Added kubernetes-related job documentation.
+- [#6512](https://github.com/nautobot/nautobot/issues/6512) - Improved screenshots of UI Component Framework examples.
+- [#6512](https://github.com/nautobot/nautobot/issues/6512) - Added before/after example in Migration guide for UI Component Framework.
+- [#6639](https://github.com/nautobot/nautobot/issues/6639) - Added User Guide for Wireless Networks.
+- [#6654](https://github.com/nautobot/nautobot/issues/6654) - Improved REST API documentation about query parameters and filtering of fields.
+
+### Housekeeping in v2.4.0
+
+- [#6424](https://github.com/nautobot/nautobot/issues/6424) - Updated development dependencies `faker` to `>=33.1.0,<33.2.0` and `watchdog` to `~6.0.0`.
+- [#6612](https://github.com/nautobot/nautobot/issues/6612) - Replaced `markdownlint-cli` development dependency with Python package `pymarkdownlnt`.
+- [#6659](https://github.com/nautobot/nautobot/issues/6659) - Enhanced development environment and associated `invoke` tasks to be Nautobot major/minor version aware, such that a different Docker compose `project-name` (and different local Docker image label) will be used for containers in a `develop`-based branch versus a `next`-based branch.
+- [#6715](https://github.com/nautobot/nautobot/issues/6715) - Updated development dependency `ruff` to `~0.8.5` and addressed new rules added in that version.
+
 ## v2.4.0b1 (2024-11-25)
 
 ### Added in v2.4.0b1
