@@ -1,9 +1,13 @@
-[tool.poetry]
+[project]
 name = "example_app_with_view_override"
 version = "1.0.0"
 description = "Nautobot App for testing override_views feature."
-authors = ["Network to Code <opensource@networktocode.com>"]
-license = "Apache-2.0"
+authors = [
+    {name = "Network to Code", email = "opensource@networktocode.com"}
+]
+license = {text = "Apache-2.0"}
+
+[tool.poetry]
 packages = [
     {include = "example_app_with_view_override"}
 ]
