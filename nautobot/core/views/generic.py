@@ -79,7 +79,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
     """
 
     queryset: ClassVar[QuerySet]
-    template_name: Optional[ClassVar[str]] = None
+    template_name: ClassVar[Optional[str]] = None
     object_detail_content = None
 
     def get_required_permission(self):
