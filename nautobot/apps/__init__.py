@@ -6,6 +6,6 @@ from nautobot.extras.plugins import NautobotAppConfig
 
 __all__ = (
     "ConstanceConfigItem",
-    "nautobot_database_ready",
     "NautobotAppConfig",
+    "nautobot_database_ready",
 )

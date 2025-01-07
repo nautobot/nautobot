@@ -42,7 +42,6 @@ class NamespaceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = Namespace
         fields = "__all__"
-        list_display_fields = ["name", "description", "location"]
 
 
 #
@@ -54,7 +53,6 @@ class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = VRF
         fields = "__all__"
-        list_display_fields = ["name", "rd", "tenant", "description"]
         extra_kwargs = {"namespace": {"default": get_default_namespace}}
 
 
@@ -91,7 +89,6 @@ class RouteTargetSerializer(NautobotModelSerializer, TaggedModelSerializerMixin)
     class Meta:
         model = RouteTarget
         fields = "__all__"
-        list_display_fields = ["name", "tenant", "description"]
 
 
 #
@@ -105,12 +102,6 @@ class RIRSerializer(NautobotModelSerializer):
     class Meta:
         model = RIR
         fields = "__all__"
-        list_display_fields = [
-            "name",
-            "is_private",
-            "assigned_prefix_count",
-            "description",
-        ]
 
 
 #
@@ -124,7 +115,6 @@ class VLANGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = VLANGroup
         fields = "__all__"
-        list_display_fields = ["name", "location", "vlan_count", "description"]
 
 
 class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
@@ -139,20 +129,7 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
     class Meta:
         model = VLAN
-        # TODO(jathan): These were taken from VLANDetailTable and not VLANTable. Let's make sure
-        # these are correct.
         fields = "__all__"
-        list_display_fields = [
-            "vid",
-            "locations",
-            "vlan_group",
-            "name",
-            "prefixes",
-            "tenant",
-            "status",
-            "role",
-            "description",
-        ]
         validators = []
         extra_kwargs = {"locations": {"read_only": True}}
 
@@ -228,52 +205,21 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         write_only=True,
     )
 
+    def get_field_names(self, declared_fields, info):
+        """Add reverse M2M for VRF's to the fields for this serializer."""
+        field_names = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(field_names, "vrfs")
+        return field_names
+
     class Meta:
         model = Prefix
         fields = "__all__"
-        list_display_fields = [
-            "prefix",
-            "namespace",
-            "type",
-            "status",
-            "vrf",
-            "tenant",
-            "locations",
-            "vlan",
-            "role",
-            "description",
-        ]
         extra_kwargs = {
             "ip_version": {"read_only": True},
             "namespace": {"default": get_default_namespace},
             "prefix_length": {"read_only": True},
             "locations": {"read_only": True},
-        }
-
-        detail_view_config = {
-            "layout": [
-                {
-                    "Prefix": {
-                        "fields": [
-                            "prefix",
-                            "parent",
-                            "namespace",
-                            "type",
-                            "network",
-                            "broadcast",
-                            "prefix_length",
-                            "ip_version",
-                            "description",
-                            "role",
-                            "vlan",
-                            "locations",
-                            "tenant",
-                            "rir",
-                            "date_allocated",
-                        ]
-                    },
-                },
-            ],
+            "vrfs": {"read_only": True},
         }
 
 
@@ -374,47 +320,11 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = IPAddress
         fields = "__all__"
-        list_display_fields = [
-            "address",
-            "type",
-            "vrf",
-            "status",
-            "role",
-            "tenant",
-            "dns_name",
-            "description",
-        ]
         extra_kwargs = {
             "ip_version": {"read_only": True},
             "mask_length": {"read_only": True},
             "nat_outside_list": {"read_only": True},
             "parent": {"required": False},
-        }
-
-        detail_view_config = {
-            "layout": [
-                {
-                    "IP Address": {
-                        "fields": [
-                            # FixMe(timizuo): Missing in new-ui; resolve when working on #4355
-                            "namespace",
-                            "ip_version",
-                            "type",
-                            "role",
-                            "dns_name",
-                            "description",
-                        ]
-                    },
-                    "Operational Details": {
-                        "fields": [
-                            "tenant",
-                            "assigned",  # FixMe(timizuo) Missing in new-ui; resolve when working on #4355
-                            "nat_inside",
-                            "nat_outside_list",
-                        ]
-                    },
-                },
-            ],
         }
 
     def validate(self, attrs):
@@ -489,7 +399,9 @@ class VLANAllocationSerializer(NautobotModelSerializer, TaggedModelSerializerMix
     vid = serializers.IntegerField(required=False, min_value=constants.VLAN_VID_MIN, max_value=constants.VLAN_VID_MAX)
 
     def validate(self, attrs):
-        """Skip `ValidatedModel` validation.
+        """
+        Skip `ValidatedModel` validation.
+
         This allows to skip `vid` attribute of `VLAN` model, while validate name and status.
         """
         return attrs
@@ -559,11 +471,6 @@ class ServiceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "device": {"help_text": "Required if no virtual_machine is specified"},
             "virtual_machine": {"help_text": "Required if no device is specified"},
         }
-        # TODO(jathan): We need to account for the "parent" field from the `ServiceTable` which is
-        # an either/or column for `device` or `virtual_machine`. For now it's hard-coded to
-        # `device`.
-        # list_display_fields = ["name", "parent", "protocol", "ports", "description"]
-        list_display_fields = ["name", "device", "protocol", "ports", "description"]
 
     def validate(self, attrs):
         if attrs.get("device"):

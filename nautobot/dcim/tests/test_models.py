@@ -1,5 +1,3 @@
-from __future__ import annotations  # python 3.8
-
 from decimal import Decimal
 
 from constance.test import override_config
@@ -64,6 +62,7 @@ from nautobot.dcim.models import (
     RearPortTemplate,
     SoftwareImageFile,
     SoftwareVersion,
+    VirtualDeviceContext,
 )
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -1956,6 +1955,8 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        cls.interface_choices = {section[0]: dict(section[1]) for section in InterfaceTypeChoices.CHOICES}
+
         location = Location.objects.first()
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(
@@ -2184,19 +2185,45 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         """
         A cable cannot terminate to a virtual interface
         """
-        virtual_interface = Interface(device=self.device1, name="V1", type=InterfaceTypeChoices.TYPE_VIRTUAL)
+        self.cable.delete()
+        interface_status = Status.objects.get_for_model(Interface).first()
+        virtual_interface = Interface.objects.create(
+            device=self.device1,
+            name="V1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=interface_status,
+        )
         cable = Cable(termination_a=self.interface2, termination_b=virtual_interface)
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as cm:
             cable.clean()
+
+        virtual_interface_choices = self.interface_choices["Virtual interfaces"]
+        self.assertIn(
+            f"Cables cannot be terminated to {virtual_interface_choices[InterfaceTypeChoices.TYPE_VIRTUAL]} interfaces",
+            str(cm.exception),
+        )
 
     def test_cable_cannot_terminate_to_a_wireless_interface(self):
         """
         A cable cannot terminate to a wireless interface
         """
-        wireless_interface = Interface(device=self.device1, name="W1", type=InterfaceTypeChoices.TYPE_80211A)
+        self.cable.delete()
+        interface_status = Status.objects.get_for_model(Interface).first()
+        wireless_interface = Interface.objects.create(
+            device=self.device1,
+            name="W1",
+            type=InterfaceTypeChoices.TYPE_80211A,
+            status=interface_status,
+        )
         cable = Cable(termination_a=self.interface2, termination_b=wireless_interface)
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as cm:
             cable.clean()
+
+        wireless_interface_choices = self.interface_choices["Wireless"]
+        self.assertIn(
+            f"Cables cannot be terminated to {wireless_interface_choices[InterfaceTypeChoices.TYPE_80211A]} interfaces",
+            str(cm.exception),
+        )
 
     def test_create_cable_with_missing_status_connected(self):
         """Test for https://github.com/nautobot/nautobot/issues/2081"""
@@ -2363,6 +2390,30 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
             IPAddress.objects.create(
                 address=f"1.1.1.{last_octet}/32", status=ip_address_status, namespace=cls.namespace
             )
+
+    def test_vdcs_validation_logic(self):
+        """Assert Interface raises error when adding virtual_device_contexts that do not belong to same device as the Interface device."""
+        interface = Interface.objects.create(
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=self.device,
+            status=Status.objects.get_for_model(Interface).first(),
+            role=Role.objects.get_for_model(Interface).first(),
+        )
+        vdc = VirtualDeviceContext.objects.create(
+            name="Sample VDC",
+            device=Device.objects.exclude(pk=self.device.pk).first(),
+            identifier=100,
+            status=Status.objects.get_for_model(VirtualDeviceContext).first(),
+        )
+
+        with self.assertRaises(ValidationError) as err:
+            interface.virtual_device_contexts.add(vdc)
+        self.assertEqual(
+            err.exception.message_dict["virtual_device_contexts"][0],
+            f"Virtual Device Context with names {[vdc.name]} must all belong to the "
+            f"same device as the interface's device.",
+        )
 
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
         interface = Interface.objects.create(
@@ -3224,3 +3275,103 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
 
 class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
     model = ModuleType
+
+
+class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
+    model = VirtualDeviceContext
+
+    def test_assigning_primary_ip(self):
+        device = Device.objects.first()
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext).first()
+        vdc = VirtualDeviceContext(
+            device=device,
+            status=vdc_status,
+            identifier=100,
+            name="Test VDC 1",
+        )
+        vdc.validated_save()
+
+        ip_v4 = IPAddress.objects.filter(ip_version=4).first()
+        ip_v6 = IPAddress.objects.filter(ip_version=6).first()
+
+        vdc.primary_ip4 = ip_v6
+        with self.assertRaises(ValidationError) as err:
+            vdc.validated_save()
+        self.assertIn(
+            f"{ip_v6} is not an IPv4 address",
+            str(err.exception),
+        )
+
+        vdc.primary_ip4 = None
+        vdc.primary_ip6 = ip_v4
+        with self.assertRaises(ValidationError) as err:
+            vdc.validated_save()
+        self.assertIn(
+            f"{ip_v4} is not an IPv6 address",
+            str(err.exception),
+        )
+
+        namespace = Namespace.objects.create(name="test_name_space")
+        Prefix.objects.create(
+            prefix="10.1.1.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        vdc.primary_ip4 = IPAddress.objects.create(
+            address="10.1.1.1/24", namespace=namespace, status=Status.objects.get_for_model(IPAddress).first()
+        )
+        with self.assertRaises(ValidationError) as err:
+            vdc.validated_save()
+        self.assertIn(
+            f"{vdc.primary_ip4} is not part of an interface that belongs to this VDC's device.",
+            str(err.exception),
+        )
+
+        # TODO: Uncomment test case when VDC primary_ip interface validation is active
+        # interface = Interface.objects.create(
+        #     name="Int1", device=device, status=intf_status, role=intf_role, type=InterfaceTypeChoices.TYPE_100GE_CFP
+        # )
+        # intf_status = Status.objects.get_for_model(Interface).first()
+        # intf_role = Role.objects.get_for_model(Interface).first()
+        # vdc.primary_ip6 = ip_v6
+        # with self.assertRaises(ValidationError) as err:
+        #     vdc.validated_save()
+        # self.assertIn(
+        #     f"The specified IP address ({ip_v6}) is not assigned to this Virtual Device Context.",
+        #     str(err.exception),
+        # )
+        # interface.virtual_device_contexts.add(vdc)
+        # interface.add_ip_addresses([ip_v4, ip_v6])
+
+    def test_interfaces_validation_logic(self):
+        """Assert Virtual Device COntext raises error when adding interfaces that do not belong to same device as the VDC's device."""
+        device = Device.objects.first()
+        interface = Interface.objects.create(
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=device,
+            status=Status.objects.get_for_model(Interface).first(),
+            role=Role.objects.get_for_model(Interface).first(),
+        )
+        vdc = VirtualDeviceContext.objects.create(
+            name="Sample VDC",
+            device=Device.objects.exclude(pk=device.pk).first(),
+            identifier=99,  # factory creates identifiers starting from 100
+            status=Status.objects.get_for_model(VirtualDeviceContext).first(),
+        )
+
+        with self.assertRaises(ValidationError) as err:
+            vdc.interfaces.add(interface)
+        self.assertEqual(
+            err.exception.message_dict["interfaces"][0],
+            f"Interfaces with names {[interface.name]} must all belong to the "
+            f"same device as the Virtual Device Context's device.",
+        )
+
+    def test_modifying_vdc_device_not_allowed(self):
+        vdc = VirtualDeviceContext.objects.first()
+        old_device = vdc.device
+        new_device = Device.objects.exclude(pk=old_device.pk).first()
+        with self.assertRaises(ValidationError) as err:
+            vdc.device = new_device
+            vdc.validated_save()
+
+        self.assertIn("Virtual Device Context's device cannot be changed once created", str(err.exception))
