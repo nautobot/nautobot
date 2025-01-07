@@ -1955,6 +1955,8 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        cls.interface_choices = {section[0]: dict(section[1]) for section in InterfaceTypeChoices.CHOICES}
+
         location = Location.objects.first()
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(
@@ -2183,19 +2185,45 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         """
         A cable cannot terminate to a virtual interface
         """
-        virtual_interface = Interface(device=self.device1, name="V1", type=InterfaceTypeChoices.TYPE_VIRTUAL)
+        self.cable.delete()
+        interface_status = Status.objects.get_for_model(Interface).first()
+        virtual_interface = Interface.objects.create(
+            device=self.device1,
+            name="V1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=interface_status,
+        )
         cable = Cable(termination_a=self.interface2, termination_b=virtual_interface)
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as cm:
             cable.clean()
+
+        virtual_interface_choices = self.interface_choices["Virtual interfaces"]
+        self.assertIn(
+            f"Cables cannot be terminated to {virtual_interface_choices[InterfaceTypeChoices.TYPE_VIRTUAL]} interfaces",
+            str(cm.exception),
+        )
 
     def test_cable_cannot_terminate_to_a_wireless_interface(self):
         """
         A cable cannot terminate to a wireless interface
         """
-        wireless_interface = Interface(device=self.device1, name="W1", type=InterfaceTypeChoices.TYPE_80211A)
+        self.cable.delete()
+        interface_status = Status.objects.get_for_model(Interface).first()
+        wireless_interface = Interface.objects.create(
+            device=self.device1,
+            name="W1",
+            type=InterfaceTypeChoices.TYPE_80211A,
+            status=interface_status,
+        )
         cable = Cable(termination_a=self.interface2, termination_b=wireless_interface)
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as cm:
             cable.clean()
+
+        wireless_interface_choices = self.interface_choices["Wireless"]
+        self.assertIn(
+            f"Cables cannot be terminated to {wireless_interface_choices[InterfaceTypeChoices.TYPE_80211A]} interfaces",
+            str(cm.exception),
+        )
 
     def test_create_cable_with_missing_status_connected(self):
         """Test for https://github.com/nautobot/nautobot/issues/2081"""
