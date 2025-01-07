@@ -1,6 +1,7 @@
 from copy import deepcopy
 import logging
 import re
+from typing import ClassVar, Optional
 
 from django.conf import settings
 from django.contrib import messages
@@ -12,7 +13,7 @@ from django.core.exceptions import (
     ValidationError,
 )
 from django.db import IntegrityError, transaction
-from django.db.models import ProtectedError, Q
+from django.db.models import Model, ProtectedError, Q, QuerySet
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -21,7 +22,8 @@ from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
-from django_tables2 import RequestConfig
+from django_filters import FilterSet
+from django_tables2 import RequestConfig, Table
 
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
@@ -76,8 +78,8 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
     template_name: Name of the template to use
     """
 
-    queryset = None
-    template_name = None
+    queryset: ClassVar[QuerySet]
+    template_name: ClassVar[Optional[str]] = None
     object_detail_content = None
 
     def get_required_permission(self):
@@ -139,10 +141,10 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     non_filter_params: List of query parameters that are **not** used for queryset filtering
     """
 
-    queryset = None
-    filterset = None
-    filterset_form = None
-    table = None
+    queryset: QuerySet
+    filterset: Optional[type[FilterSet]] = None
+    filterset_form: Optional[type[Form]] = None
+    table: Optional[type[Table]] = None
     template_name = "generic/object_list.html"
     action_buttons = ("add", "import", "export")
     non_filter_params = (
@@ -159,7 +161,11 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
         params = request.GET.copy()
-        filter_params = get_filterable_params_from_filter_params(params, self.non_filter_params, self.filterset())
+        filter_params = get_filterable_params_from_filter_params(
+            params,
+            self.non_filter_params,
+            self.filterset(),  # pylint: disable=not-callable  # this fn is only called if filterset is not None
+        )
         if params.get("saved_view") and not filter_params and not params.get("all_filters_removed"):
             return SavedView.objects.get(pk=params.get("saved_view")).config.get("filter_params", {})
         return filter_params
@@ -233,9 +239,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             except ObjectDoesNotExist:
                 pass
 
-        if self.filterset:
+        if self.filterset is not None:
             filter_params = self.get_filter_params(request)
-            filterset = self.filterset(filter_params, self.queryset)
+            filterset = self.filterset(filter_params, self.queryset)  # pylint:disable=not-callable  # only if not None
             self.queryset = filterset.qs
             if not filterset.is_valid():
                 messages.error(
@@ -263,7 +269,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             else:
                 dynamic_filter_form = DynamicFilterFormSet(filterset=filterset)
 
-            if self.filterset_form:
+            if self.filterset_form is not None:
                 filter_form = self.filterset_form(filter_params, label_suffix="")
 
         # Check for export template rendering
@@ -323,14 +329,14 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 messages.error(request, f"Saved view {current_saved_view_pk} not found")
 
         # Construct the objects table
-        if self.table:
+        if self.table is not None:
             if self.request.GET.getlist("sort") or (
                 current_saved_view is not None and current_saved_view.config.get("sort_order")
             ):
                 hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
             table_changes_pending = self.request.GET.get("table_changes_pending", False)
 
-            table = self.table(
+            table = self.table(  # pylint: disable=not-callable  # we confirmed that self.table is not None
                 self.queryset,
                 table_changes_pending=table_changes_pending,
                 saved_view=current_saved_view,
@@ -407,8 +413,8 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     template_name: The name of the template
     """
 
-    queryset = None
-    model_form = None
+    queryset: QuerySet
+    model_form: type[Form]
     template_name = "generic/object_create.html"
 
     def get_required_permission(self):
@@ -550,7 +556,7 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     template_name: The name of the template
     """
 
-    queryset = None
+    queryset: QuerySet
     template_name = "generic/object_delete.html"
 
     def get_required_permission(self):
@@ -630,9 +636,9 @@ class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     template_name: The name of the template
     """
 
-    queryset = None
-    form = None
-    model_form = None
+    queryset: QuerySet
+    form: type[Form]
+    model_form: type[Form]
     pattern_target = ""
     template_name = None
 
@@ -739,8 +745,8 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     template_name: The name of the template
     """
 
-    queryset = None
-    model_form = None
+    queryset: QuerySet
+    model_form: type[Form]
     related_object_forms = {}
     template_name = "generic/object_import.html"
 
@@ -884,8 +890,8 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  #
     template_name: The name of the template
     """
 
-    queryset = None
-    table = None
+    queryset: QuerySet
+    table: type[Table]
     template_name = "generic/object_bulk_import.html"
 
     def __init__(self, *args, **kwargs):
@@ -990,10 +996,10 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAnd
     template_name: The name of the template
     """
 
-    queryset = None
-    filterset = None
-    table = None
-    form = None
+    queryset: QuerySet
+    filterset: Optional[type[FilterSet]] = None
+    table: type[Table]
+    form: type[Form]
     template_name = "generic/object_bulk_edit.html"
 
     def get_required_permission(self):
@@ -1078,7 +1084,7 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     An extendable view for renaming objects in bulk.
     """
 
-    queryset = None
+    queryset: QuerySet
     template_name = "generic/object_bulk_rename.html"
 
     def __init__(self, *args, **kwargs):
@@ -1184,10 +1190,10 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditA
     template_name: The name of the template
     """
 
-    queryset = None
-    filterset = None
-    table = None
-    form = None
+    queryset: QuerySet
+    filterset: Optional[type[FilterSet]] = None
+    table: type[Table]
+    form: Optional[type[Form]] = None
     template_name = "generic/object_bulk_delete.html"
 
     def get_required_permission(self):
@@ -1287,9 +1293,9 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
     Add one or more components (e.g. interfaces, console ports, etc.) to a Device or VirtualMachine.
     """
 
-    queryset = None
-    form = None
-    model_form = None
+    queryset: QuerySet
+    form: type[Form]
+    model_form: type[Form]
     template_name = "dcim/device_component_add.html"
 
     def get_required_permission(self):
@@ -1389,13 +1395,13 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
     Add one or more components (e.g. interfaces, console ports, etc.) to a set of Devices or VirtualMachines.
     """
 
-    parent_model = None
+    parent_model: type[Model]
     parent_field = None
-    form = None
-    queryset = None
-    model_form = None
-    filterset = None
-    table = None
+    form: type[Form]
+    queryset: QuerySet
+    model_form: type[Form]
+    filterset: Optional[type[FilterSet]] = None
+    table: type[Table]
     template_name = "generic/object_bulk_add_component.html"
 
     def get_required_permission(self):
@@ -1409,7 +1415,7 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
 
         # Are we editing *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all") and self.filterset is not None:
-            pk_list = [obj.pk for obj in self.filterset(request.GET, self.parent_model.objects.only("pk")).qs]
+            pk_list = [obj.pk for obj in self.filterset(request.GET, self.parent_model.objects.only("pk")).qs]  # pylint: disable=not-callable
         else:
             pk_list = request.POST.getlist("pk")
 

@@ -183,7 +183,7 @@ This is a Job that demonstrates as many Job features as it can.
         """
         self.logger.info("Before start! The provided kwargs are `%s`", kwargs)
 
-    def run(self, **kwargs):
+    def run(self, **kwargs):  # pylint:disable=arguments-differ
         """
         The main worker function of any Job.
 
@@ -284,7 +284,7 @@ class ExampleDryRunJob(Job):
         has_sensitive_variables = False
         description = "Example job to remove serial number on all devices, supports dryrun mode."
 
-    def run(self, dryrun):
+    def run(self, dryrun):  # pylint:disable=arguments-differ
         try:
             with transaction.atomic():
                 devices_with_serial = Device.objects.exclude(serial="")
@@ -297,7 +297,7 @@ class ExampleDryRunJob(Job):
                         device.serial = ""
                         device.save()
         except Exception:
-            self.logger.error("%s failed. Database changes rolled back.", self.__name__)
+            self.logger.error("%s failed. Database changes rolled back.", self.__class__.__name__)
             raise
         self.logger.success("We can use the success log level to indicate success.")
         # Ensure get_task_logger can also use success.
@@ -319,7 +319,7 @@ class ExampleJob(Job):
             *This is italicized*
         """
 
-    def run(self, some_json_data):
+    def run(self, some_json_data):  # pylint:disable=arguments-differ
         # some_json_data is passed to the run method as a Python object (e.g. dictionary)
         pass
 
@@ -352,7 +352,7 @@ class ExampleCustomFormJob(Job):
         name = "Custom form."
         has_sensitive_variables = False
 
-    def run(self, custom_job_data):
+    def run(self, custom_job_data):  # pylint:disable=arguments-differ
         """Run the job."""
         self.logger.debug("Data is %s", custom_job_data)
 
@@ -363,7 +363,7 @@ class ExampleHiddenJob(Job):
         name = "Example hidden job"
         description = "I should not show in the UI!"
 
-    def run(self):
+    def run(self):  # pylint:disable=arguments-differ
         pass
 
 
@@ -379,7 +379,7 @@ class ExampleLoggingJob(Job):
             "bulk",
         ]
 
-    def run(self, interval):
+    def run(self, interval):  # pylint:disable=arguments-differ
         self.logger.debug("Running for %s seconds.", interval)
         for step in range(1, interval + 1):
             time.sleep(1)
@@ -401,7 +401,7 @@ class ExampleFileInputOutputJob(Job):
         name = "Example File Input/Output job"
         description = "Takes a file as input and reverses its line order, creating a new file as output."
 
-    def run(self, input_file):
+    def run(self, input_file):  # pylint:disable=arguments-differ
         # Note that input_file is always opened in binary mode, so we need to decode it to a str
         text = input_file.read().decode("utf-8")
         output = "\n".join(reversed(text.split("\n")))
@@ -484,7 +484,7 @@ class ExampleSingletonJob(Job):
         name = "Example job, only one can run at any given time."
         is_singleton = True
 
-    def run(self):
+    def run(self, *args, **kwargs):
         time.sleep(60)
 
 

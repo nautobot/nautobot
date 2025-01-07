@@ -25,7 +25,7 @@ class NautobotScheduleEntry(ModelEntry):
     nautobot.extras.models.ScheduledJob model
     """
 
-    def __init__(self, model, app=None):
+    def __init__(self, model, app=None):  # pylint:disable=super-init-not-called  # we must copy-and-paste from super
         """Initialize the model entry."""
         # copy-paste from django_celery_beat.schedulers
         self.app = app or current_app._get_current_object()

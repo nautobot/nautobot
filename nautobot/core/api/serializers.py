@@ -531,27 +531,27 @@ class ValidatedModelSerializer(BaseModelSerializer):
     validation. (DRF does not do this by default; see https://github.com/encode/django-rest-framework/issues/3144)
     """
 
-    def validate(self, data):
+    def validate(self, attrs):
         # Remove custom fields data and tags (if any) prior to model validation
-        attrs = data.copy()
-        attrs.pop("custom_fields", None)
-        attrs.pop("relationships", None)
-        attrs.pop("tags", None)
+        local_attrs = attrs.copy()
+        local_attrs.pop("custom_fields", None)
+        local_attrs.pop("relationships", None)
+        local_attrs.pop("tags", None)
 
         # Skip ManyToManyFields
         for field in self.Meta.model._meta.get_fields():
             if isinstance(field, models.ManyToManyField):
-                attrs.pop(field.name, None)
+                local_attrs.pop(field.name, None)
 
         # Run clean() on an instance of the model
         if self.instance is None:
-            instance = self.Meta.model(**attrs)
+            instance = self.Meta.model(**local_attrs)
         else:
             instance = self.instance
-            for k, v in attrs.items():
+            for k, v in local_attrs.items():
                 setattr(instance, k, v)
         instance.full_clean()
-        return data
+        return attrs
 
 
 class WritableNestedSerializer(BaseModelSerializer):

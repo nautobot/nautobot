@@ -163,7 +163,7 @@ class JobTest(TestCase):
         self.assertTrue(job_model.supports_dryrun)
 
         module = "pass"
-        name = "TestPass"
+        name = "TestPassJob"
         job_class, job_model = get_job_class_and_model(module, name)
         self.assertFalse(job_class.supports_dryrun)
         self.assertFalse(job_model.supports_dryrun)
@@ -207,7 +207,7 @@ register_jobs(MyJob)
                     self.assertIsNotNone(get_job("my_jobs.MyJob"))
                     # Also make sure some representative previous JOBS_ROOT jobs aren't still around:
                     self.assertNotIn("dry_run.TestDryRun", jobs_data.keys())
-                    self.assertNotIn("pass.TestPass", jobs_data.keys())
+                    self.assertNotIn("pass.TestPassJob", jobs_data.keys())
 
                     # Create a second Job in the same module
                     with open(os.path.join(temp_dir, "my_jobs.py"), "a") as fd:
@@ -321,7 +321,7 @@ class JobTransactionTest(TransactionTestCase):
 
     def test_job_bulk_edit_default_queue_stays_default_after_one_field_update(self):
         self.add_permissions("extras.change_job", "extras.view_job")
-        job_class_to_test = "TestPass"
+        job_class_to_test = "TestPassJob"
         job_description = "default job queue test"
         job_to_test = Job.objects.get(job_class_name=job_class_to_test)
         queryset = Job.objects.filter(installed=True, hidden=False, job_class_name=job_class_to_test)
@@ -355,7 +355,7 @@ class JobTransactionTest(TransactionTestCase):
 
     def test_job_bulk_edit_preserve_job_queues_after_one_field_update(self):
         self.add_permissions("extras.change_job", "extras.view_job")
-        job_class_to_test = "TestPass"
+        job_class_to_test = "TestPassJob"
         job_description = "job queues test"
         job_to_test = Job.objects.get(job_class_name=job_class_to_test)
 
@@ -419,7 +419,7 @@ class JobTransactionTest(TransactionTestCase):
         Job test with pass result.
         """
         module = "pass"
-        name = "TestPass"
+        name = "TestPassJob"
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
         self.assertEqual(job_result.result, True)
@@ -453,7 +453,7 @@ class JobTransactionTest(TransactionTestCase):
         Job test with fail result.
         """
         module = "fail"
-        name = "TestFail"
+        name = "TestFailJob"
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
         logs = job_result.job_log_entries
@@ -688,7 +688,7 @@ class JobTransactionTest(TransactionTestCase):
         Job test to see if the latest_result property is indeed returning the most recent job result
         """
         module = "pass"
-        name = "TestPass"
+        name = "TestPassJob"
         job_result_1 = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result_1.status, JobResultStatusChoices.STATUS_SUCCESS)
         job_result_2 = create_job_result_and_run_job(module, name)
@@ -935,7 +935,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
     def test_runjob_nochange_successful(self):
         """Basic success-path test for Jobs that don't modify the Nautobot database."""
         module = "pass"
-        name = "TestPass"
+        name = "TestPassJob"
         _job_class, job_model = get_job_class_and_model(module, name)
 
         out, err = self.run_command("--local", "--no-color", "--username", self.user.username, job_model.class_path)
@@ -1033,7 +1033,7 @@ class JobButtonReceiverTest(TestCase):
     def test_is_job_button(self):
         with self.subTest(expected=False):
             module = "pass"
-            name = "TestPass"
+            name = "TestPassJob"
             _job_class, job_model = get_job_class_and_model(module, name)
             self.assertFalse(job_model.is_job_button_receiver)
 
@@ -1096,7 +1096,7 @@ class JobHookReceiverTest(TestCase):
     def test_is_job_hook(self):
         with self.subTest(expected=False):
             module = "pass"
-            name = "TestPass"
+            name = "TestPassJob"
             _job_class, job_model = get_job_class_and_model(module, name)
             self.assertFalse(job_model.is_job_hook_receiver)
 
@@ -1257,7 +1257,7 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
         for i in range(1, 7):
             models.ScheduledJob.objects.create(
                 name=f"test{i}",
-                task="pass.TestPass",
+                task="pass.TestPassJob",
                 interval=JobExecutionType.TYPE_FUTURE,
                 user=self.user,
                 start_time=timezone.now() - datetime.timedelta(days=i * 30),
@@ -1266,7 +1266,7 @@ class RemoveScheduledJobManagementCommandTestCase(TestCase):
 
         models.ScheduledJob.objects.create(
             name="test7",
-            task="pass.TestPass",
+            task="pass.TestPassJob",
             interval=JobExecutionType.TYPE_DAILY,
             user=self.user,
             start_time=timezone.now() - datetime.timedelta(days=180),
@@ -1294,7 +1294,7 @@ class ScheduledJobIntervalTestCase(TestCase):
         start_time = timezone.now() + datetime.timedelta(days=6)
         scheduled_job = models.ScheduledJob.objects.create(
             name="weekly_interval",
-            task="pass.TestPass",
+            task="pass.TestPassJob",
             interval=JobExecutionType.TYPE_WEEKLY,
             user=self.user,
             start_time=start_time,

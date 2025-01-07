@@ -444,7 +444,7 @@ class ChoiceFieldColumn(django_tables2.Column):
     choices. The CSS class is derived by calling .get_FOO_class() on the row record.
     """
 
-    def render(self, record, bound_column, value):  # pylint: disable=arguments-differ
+    def render(self, *, record, bound_column, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         if value:
             name = bound_column.name
             css_class = getattr(record, f"get_{name}_class")()
@@ -546,7 +546,7 @@ class LinkedCountColumn(django_tables2.Column):
         self.model = get_model_for_view_name(self.viewname)
         super().__init__(*args, default=default, **kwargs)
 
-    def render(self, bound_column, record, value):  # pylint: disable=arguments-differ
+    def render(self, *, bound_column, record, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         related_record = None
         try:
             lookup = self.lookup or get_related_field_for_models(bound_column._table._meta.model, self.model).name
@@ -630,7 +630,7 @@ class ComputedFieldColumn(django_tables2.Column):
 
         super().__init__(*args, **kwargs)
 
-    def render(self, record):
+    def render(self, *, record):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         return self.computedfield.render({"obj": record})
 
 
@@ -649,7 +649,7 @@ class CustomFieldColumn(django_tables2.Column):
 
         super().__init__(*args, **kwargs)
 
-    def render(self, record, bound_column, value):  # pylint: disable=arguments-differ
+    def render(self, *, record, bound_column, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         if self.customfield.type == choices.CustomFieldTypeChoices.TYPE_BOOLEAN:
             template = helpers.render_boolean(value)
         elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
@@ -680,7 +680,7 @@ class RelationshipColumn(django_tables2.Column):
         kwargs.setdefault("accessor", Accessor("associations"))
         super().__init__(orderable=False, *args, **kwargs)
 
-    def render(self, record, value):  # pylint: disable=arguments-differ
+    def render(self, *, record, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         # Filter the relationship associations by the relationship instance.
         # Since associations accessor returns all the relationship associations regardless of the relationship.
         value = [v for v in value if v.relationship == self.relationship]

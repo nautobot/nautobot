@@ -128,7 +128,9 @@ class BulkEditObjects(Job):
             self.logger.error(msg)
         raise RunJobTaskFailed("Bulk Edit not fully successful, see logs")
 
-    def run(self, *, content_type, form_data, edit_all=False, filter_query_params=None):
+    def run(  # pylint: disable=arguments-differ
+        self, *, content_type, form_data, edit_all=False, filter_query_params=None
+    ):
         if not self.user.has_perm(f"{content_type.app_label}.change_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to update %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have change permissions on the requested content-type")
@@ -183,7 +185,9 @@ class BulkDeleteObjects(Job):
         soft_time_limit = 1800
         time_limit = 2000
 
-    def run(self, *, content_type, pk_list=None, delete_all=False, filter_query_params=None):
+    def run(  # pylint: disable=arguments-differ
+        self, *, content_type, pk_list=None, delete_all=False, filter_query_params=None
+    ):
         if not self.user.has_perm(f"{content_type.app_label}.delete_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to delete %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have delete permissions on the requested content-type")

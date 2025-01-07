@@ -761,13 +761,13 @@ class JobViewSet(
 ):
     lookup_value_regex = r"[-0-9a-fA-F]+"
 
-    def perform_destroy(self, obj):
-        if obj.module_name.startswith("nautobot."):
+    def perform_destroy(self, instance):
+        if instance.module_name.startswith("nautobot."):
             raise ProtectedError(
-                f"Unable to delete Job {obj}. System Job cannot be deleted",
+                f"Unable to delete Job {instance}. System Job cannot be deleted",
                 [],
             )
-        super().perform_destroy(obj)
+        super().perform_destroy(instance)
 
 
 @extend_schema_view(

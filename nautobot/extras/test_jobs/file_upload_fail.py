@@ -21,7 +21,7 @@ class TestFileUploadFail(Job):
         description="File to upload",
     )
 
-    def run(self, file):
+    def run(self, file):  # pylint:disable=arguments-differ
         contents = str(file.read())
         logger.warning("File contents: %s", contents)
 

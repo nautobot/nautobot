@@ -668,7 +668,7 @@ class BaseFilterSet(django_filters.FilterSet):
         the form `<field_name>__<lookup_expr>`
         """
         magic_filters = {}
-        if filter_field.method is not None or filter_field.lookup_expr not in ["exact", "in"]:
+        if filter_field.method is not None or filter_field.lookup_expr not in ["exact", "in", "iexact"]:
             return magic_filters
 
         # Choose the lookup expression map based on the filter type
@@ -679,7 +679,7 @@ class BaseFilterSet(django_filters.FilterSet):
 
         # Get properties of the existing filter for later use
         field_name = filter_field.field_name
-        field = get_model_field(cls._meta.model, field_name)
+        field = get_model_field(cls._meta.model, field_name)  # pylint: disable=no-member
 
         # If there isn't a model field, return.
         if field is None:
@@ -696,7 +696,7 @@ class BaseFilterSet(django_filters.FilterSet):
             new_filter_name = f"{filter_name}__{lookup_name}"
 
             try:
-                if filter_name in cls.declared_filters and lookup_expr not in {"isnull"}:
+                if filter_name in cls.declared_filters and lookup_expr not in {"isnull"}:  # pylint: disable=no-member
                     # The filter field has been explicitly defined on the filterset class so we must manually
                     # create the new filter with the same type because there is no guarantee the defined type
                     # is the same as the default type for the field. This does not apply if the filter
@@ -727,7 +727,10 @@ class BaseFilterSet(django_filters.FilterSet):
             # If the base filter_field has a custom label, django_filters won't adjust it for the new_filter lookup,
             # so we have to do it.
             if filter_field.label and filter_field.label != label_for_filter(
-                cls.Meta.model, filter_field.field_name, filter_field.lookup_expr, filter_field.exclude
+                cls._meta.model,  # pylint: disable=no-member
+                filter_field.field_name,
+                filter_field.lookup_expr,
+                filter_field.exclude,
             ):
                 # Lightly adjusted from label_for_filter() implementation:
                 verbose_expression = ["exclude", filter_field.label] if new_filter.exclude else [filter_field.label]
@@ -750,22 +753,22 @@ class BaseFilterSet(django_filters.FilterSet):
         if not isinstance(new_filter_field, django_filters.Filter):
             raise TypeError(f"Tried to add filter ({new_filter_name}) which is not an instance of Django Filter")
 
-        if new_filter_name in cls.base_filters:
+        if new_filter_name in cls.base_filters:  # pylint: disable=no-member
             raise AttributeError(
                 f"There was a conflict with filter `{new_filter_name}`, the custom filter was ignored."
             )
 
-        cls.base_filters[new_filter_name] = new_filter_field
+        cls.base_filters[new_filter_name] = new_filter_field  # pylint: disable=no-member
         # django-filters has no concept of "abstract" filtersets, so we have to fake it
-        if cls._meta.model is not None:
-            cls.base_filters.update(
+        if cls._meta.model is not None:  # pylint: disable=no-member
+            cls.base_filters.update(  # pylint: disable=no-member
                 cls._generate_lookup_expression_filters(filter_name=new_filter_name, filter_field=new_filter_field)
             )
 
     @classmethod
     def get_fields(cls):
         fields = super().get_fields()
-        if "id" not in fields and (cls._meta.exclude is None or "id" not in cls._meta.exclude):
+        if "id" not in fields and (cls._meta.exclude is None or "id" not in cls._meta.exclude):  # pylint: disable=no-member
             # Add "id" as the first key in the `fields` dict
             fields = {"id": [django_filters.conf.settings.DEFAULT_LOOKUP_EXPR], **fields}
         return fields
@@ -782,7 +785,7 @@ class BaseFilterSet(django_filters.FilterSet):
             if filter_name.startswith("_"):
                 del filters[filter_name]
 
-        if getattr(cls._meta.model, "is_contact_associable_model", False):
+        if getattr(cls._meta.model, "is_contact_associable_model", False):  # pylint: disable=no-member
             # Add "contacts" and "teams" filters
             from nautobot.extras.models import Contact, Team
 
@@ -802,13 +805,13 @@ class BaseFilterSet(django_filters.FilterSet):
                     label="Teams (name or ID)",
                 )
 
-        if "dynamic_groups" not in filters and getattr(cls._meta.model, "is_dynamic_group_associable_model", False):
-            if not hasattr(cls._meta.model, "static_group_association_set"):
+        if "dynamic_groups" not in filters and getattr(cls._meta.model, "is_dynamic_group_associable_model", False):  # pylint: disable=no-member
+            if not hasattr(cls._meta.model, "static_group_association_set"):  # pylint: disable=no-member
                 logger.warning(
                     "Model %s has 'is_dynamic_group_associable_model = True' but lacks "
                     "a 'static_group_association_set' attribute. Perhaps this is due to it inheriting from "
                     "the deprecated DynamicGroupMixin class instead of the preferred DynamicGroupsModelMixin?",
-                    cls._meta.model,
+                    cls._meta.model,  # pylint: disable=no-member
                 )
             else:
                 # Add "dynamic_groups" field as the last key
@@ -818,14 +821,14 @@ class BaseFilterSet(django_filters.FilterSet):
                     queryset=DynamicGroup.objects.all(),
                     field_name="static_group_association_set__dynamic_group",
                     to_field_name="name",
-                    query_params={"content_type": cls._meta.model._meta.label_lower},
+                    query_params={"content_type": cls._meta.model._meta.label_lower},  # pylint: disable=no-member
                     label="Dynamic groups (name or ID)",
                 )
 
         # django-filters has no concept of "abstract" filtersets, so we have to fake it
-        if cls._meta.model is not None:
+        if cls._meta.model is not None:  # pylint: disable=no-member
             if "tags" in filters and isinstance(filters["tags"], TagFilter):
-                filters["tags"].extra["query_params"] = {"content_types": [cls._meta.model._meta.label_lower]}
+                filters["tags"].extra["query_params"] = {"content_types": [cls._meta.model._meta.label_lower]}  # pylint: disable=no-member
 
             new_filters = {}
             for existing_filter_name, existing_filter in filters.items():

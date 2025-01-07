@@ -7,7 +7,7 @@ from nautobot.extras.jobs import get_task_logger, Job, RunJobTaskFailed
 logger = get_task_logger(__name__)
 
 
-class TestFail(Job):
+class TestFailJob(Job):
     """
     Job with fail result.
     """
@@ -15,7 +15,7 @@ class TestFail(Job):
     description = "Validate job import"
 
     def before_start(self, task_id, args, kwargs):
-        if task_id != self.request.id:
+        if task_id != self.request.id:  # pylint: disable=no-member
             raise RuntimeError(f"Expected task_id {task_id} to equal self.request.id {self.request.id}")
         if args:
             raise RuntimeError(f"Expected args to be empty, but it was {args!r}")
@@ -23,7 +23,7 @@ class TestFail(Job):
             raise RuntimeError(f"Expected kwargs to be empty, but it was {kwargs!r}")
         logger.info("before_start() was called as expected")
 
-    def run(self):
+    def run(self):  # pylint:disable=arguments-differ
         """
         Job function.
         """
@@ -71,7 +71,7 @@ class TestFailWithSanitization(Job):
 
     description = "Validate job failure sanitization"
 
-    def run(self):
+    def run(self):  # pylint:disable=arguments-differ
         logger.info("I'm a test job that fails and sanitizes the exception!")
         exc = RunJobTaskFailed(
             "fatal: could not read Password for 'https://abc123@github.com': terminal prompts disabled"
@@ -91,4 +91,4 @@ class TestFailWithSanitization(Job):
         raise exc
 
 
-register_jobs(TestFail, TestFailWithSanitization)
+register_jobs(TestFailJob, TestFailWithSanitization)

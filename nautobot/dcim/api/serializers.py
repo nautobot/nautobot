@@ -247,15 +247,15 @@ class LocationSerializer(
         # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
         validators = []
 
-    def validate(self, data):
+    def validate(self, attrs):
         # Validate uniqueness of (parent, name) since we omitted the automatically created validator from Meta.
-        if data.get("parent") and data.get("name"):
+        if attrs.get("parent") and attrs.get("name"):
             validator = UniqueTogetherValidator(queryset=Location.objects.all(), fields=("parent", "name"))
-            validator(data, self)
+            validator(attrs, self)
 
-        super().validate(data)
+        super().validate(attrs)
 
-        return data
+        return attrs
 
 
 #
@@ -285,20 +285,20 @@ class RackSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         # This prevents facility_id and rack_group from being interpreted as required fields.
         validators = []
 
-    def validate(self, data):
+    def validate(self, attrs):
         # Validate uniqueness of (rack_group, name) since we omitted the automatically-created validator above.
-        if data.get("rack_group", None):
+        if attrs.get("rack_group", None):
             validator = UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("rack_group", "name"))
-            validator(data, self)
+            validator(attrs, self)
         # Validate uniqueness of (rack_group, facility_id) since we omitted the automatically-created validator above.
-        if data.get("facility_id", None) and data.get("rack_group", None):
+        if attrs.get("facility_id", None) and attrs.get("rack_group", None):
             validator = UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("rack_group", "facility_id"))
-            validator(data, self)
+            validator(attrs, self)
 
         # Enforce model validation
-        super().validate(data)
+        super().validate(attrs)
 
-        return data
+        return attrs
 
 
 class RackUnitSerializer(serializers.Serializer):
@@ -534,14 +534,6 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             "vc_priority": {"label": "Virtual chassis priority"},
         }
 
-    def get_additional_detail_view_tabs(self):
-        """Add "Virtual Chassis" as a separate detail tab."""
-        tabs = super().get_additional_detail_view_tabs()
-        tabs["Virtual Chassis"] = [
-            {"Virtual Chassis": {"fields": ["virtual_chassis", "vc_position", "vc_priority"]}},
-        ]
-        return tabs
-
     def get_field_names(self, declared_fields, info):
         """
         Add a couple of special fields to the serializer.
@@ -558,20 +550,20 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     def get_config_context(self, obj):
         return obj.get_config_context()
 
-    def validate(self, data):
+    def validate(self, attrs):
         # Validate uniqueness of (rack, position, face) since we omitted the automatically-created validator from Meta.
-        if data.get("rack") and data.get("position") and data.get("face"):
+        if attrs.get("rack") and attrs.get("position") and attrs.get("face"):
             validator = UniqueTogetherValidator(
                 queryset=Device.objects.all(),
                 fields=("rack", "position", "face"),
                 message=f"The position and face is already occupied on this rack. {UniqueTogetherValidator.message}",
             )
-            validator(data, self)
+            validator(attrs, self)
 
         # Enforce model validation
-        super().validate(data)
+        super().validate(attrs)
 
-        return data
+        return attrs
 
 
 class DeviceNAPALMSerializer(serializers.Serializer):
@@ -644,22 +636,22 @@ class PowerPortSerializer(
 
 
 class InterfaceCommonSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
-    def validate(self, data):
+    def validate(self, attrs):
         # Validate many-to-many VLAN assignments
-        mode = data.get("mode", getattr(self.instance, "mode", None))
+        mode = attrs.get("mode", getattr(self.instance, "mode", None))
 
         if mode != InterfaceModeChoices.MODE_TAGGED:
-            if data.get("tagged_vlans"):
+            if attrs.get("tagged_vlans"):
                 raise serializers.ValidationError(
                     {
                         "tagged_vlans": f"Mode must be set to {InterfaceModeChoices.MODE_TAGGED} when specifying tagged_vlans"
                     }
                 )
 
-            if data.get("tagged_vlans") != [] and self.instance and self.instance.tagged_vlans.exists():
+            if attrs.get("tagged_vlans") != [] and self.instance and self.instance.tagged_vlans.exists():
                 raise serializers.ValidationError({"tagged_vlans": f"Clear tagged_vlans to set mode to {mode}"})
 
-        return super().validate(data)
+        return super().validate(attrs)
 
 
 class InterfaceSerializer(
@@ -760,18 +752,18 @@ class InventoryItemSerializer(TaggedModelSerializerMixin, TreeModelSerializerMix
         # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
         validators = []
 
-    def validate(self, data):
+    def validate(self, attrs):
         # Validate uniqueness of (device, parent, name) since we omitted the automatically created validator from Meta.
-        if data.get("device") and data.get("parent") and data.get("name"):
+        if attrs.get("device") and attrs.get("parent") and attrs.get("name"):
             validator = UniqueTogetherValidator(
                 queryset=InventoryItem.objects.all(),
                 fields=("device", "parent", "name"),
             )
-            validator(data, self)
+            validator(attrs, self)
 
-        super().validate(data)
+        super().validate(attrs)
 
-        return data
+        return attrs
 
 
 #
@@ -1018,21 +1010,21 @@ class ModuleBaySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         fields = "__all__"
         validators = []
 
-    def validate(self, data):
+    def validate(self, attrs):
         """Validate device and module field constraints for module bay."""
-        if data.get("parent_device") and data.get("parent_module"):
+        if attrs.get("parent_device") and attrs.get("parent_module"):
             raise serializers.ValidationError("Only one of parent_device or parent_module must be set")
-        if data.get("parent_device"):
+        if attrs.get("parent_device"):
             validator = UniqueTogetherValidator(
                 queryset=self.Meta.model.objects.all(), fields=("parent_device", "name")
             )
-            validator(data, self)
-        if data.get("parent_module"):
+            validator(attrs, self)
+        if attrs.get("parent_module"):
             validator = UniqueTogetherValidator(
                 queryset=self.Meta.model.objects.all(), fields=("parent_module", "name")
             )
-            validator(data, self)
-        return super().validate(data)
+            validator(attrs, self)
+        return super().validate(attrs)
 
 
 class ModuleBayTemplateSerializer(NautobotModelSerializer):
@@ -1041,17 +1033,17 @@ class ModuleBayTemplateSerializer(NautobotModelSerializer):
         fields = "__all__"
         validators = []
 
-    def validate(self, data):
+    def validate(self, attrs):
         """Validate device_type and module_type field constraints for module bay template."""
-        if data.get("device_type") and data.get("module_type"):
+        if attrs.get("device_type") and attrs.get("module_type"):
             raise serializers.ValidationError("Only one of device_type or module_type must be set")
-        if data.get("device_type"):
+        if attrs.get("device_type"):
             validator = UniqueTogetherValidator(queryset=self.Meta.model.objects.all(), fields=("device_type", "name"))
-            validator(data, self)
-        if data.get("module_type"):
+            validator(attrs, self)
+        if attrs.get("module_type"):
             validator = UniqueTogetherValidator(queryset=self.Meta.model.objects.all(), fields=("module_type", "name"))
-            validator(data, self)
-        return super().validate(data)
+            validator(attrs, self)
+        return super().validate(attrs)
 
 
 class ModuleSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
@@ -1061,17 +1053,17 @@ class ModuleSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 
         validators = []
 
-    def validate(self, data):
+    def validate(self, attrs):
         """Validate asset_Tag, serial, parent_module_bay and location field constraints for module."""
-        if data.get("parent_module_bay") and data.get("location"):
+        if attrs.get("parent_module_bay") and attrs.get("location"):
             raise serializers.ValidationError("Only one of parent_module_bay or location must be set")
-        if data.get("serial"):
+        if attrs.get("serial"):
             validator = UniqueTogetherValidator(queryset=Module.objects.all(), fields=("module_type", "serial"))
-            validator(data, self)
-        if data.get("asset_tag"):
+            validator(attrs, self)
+        if attrs.get("asset_tag"):
             validator = UniqueValidator(queryset=Module.objects.all())
-            validator(data["asset_tag"], self.fields["asset_tag"])
-        return super().validate(data)
+            validator(attrs["asset_tag"], self.fields["asset_tag"])
+        return super().validate(attrs)
 
 
 class ModuleTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
@@ -1085,11 +1077,11 @@ class VirtualDeviceContextSerializer(TaggedModelSerializerMixin, NautobotModelSe
         model = VirtualDeviceContext
         fields = "__all__"
 
-    def validate(self, data):
+    def validate(self, attrs):
         """Validate device cannot be changed for VirtualDeviceContext."""
-        if data.get("device") and self.instance and self.instance.device != data.get("device"):
+        if attrs.get("device") and self.instance and self.instance.device != attrs.get("device"):
             raise serializers.ValidationError("Changing the device of a VirtualDeviceContext is not allowed.")
-        return super().validate(data)
+        return super().validate(attrs)
 
 
 class InterfaceVDCAssignmentSerializer(ValidatedModelSerializer):

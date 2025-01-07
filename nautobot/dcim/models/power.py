@@ -73,11 +73,11 @@ class PowerPanel(PrimaryModel):
         if self.rack_group:
             if (
                 self.location is not None
-                and self.rack_group.location is not None
-                and self.rack_group.location not in self.location.ancestors(include_self=True)
+                and self.rack_group.location is not None  # pylint: disable=no-member
+                and self.rack_group.location not in self.location.ancestors(include_self=True)  # pylint: disable=no-member
             ):
                 raise ValidationError(
-                    {
+                    {  # pylint: disable=no-member  # false positive on rack_group.location
                         "rack_group": f'Rack group "{self.rack_group}" belongs to a location '
                         f'("{self.rack_group.location}") that does not contain "{self.location}".'
                     }
@@ -151,9 +151,10 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
         super().clean()
 
         # Rack must belong to same Location as PowerPanel
-        if self.rack and self.rack.location != self.power_panel.location:
+        if self.rack and self.rack.location != self.power_panel.location:  # pylint: disable=no-member
             raise ValidationError(
-                f"Rack {self.rack} ({self.rack.location}) and power panel {self.power_panel} ({self.power_panel.location}) are in different locations"
+                f"Rack {self.rack} ({self.rack.location}) and "  # pylint: disable=no-member
+                f"power panel {self.power_panel} ({self.power_panel.location}) are in different locations"
             )
 
         # AC voltage cannot be negative

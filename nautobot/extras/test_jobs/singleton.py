@@ -9,7 +9,7 @@ class TestSingletonJob(Job):
         name = "Example Singleton Job"
         is_singleton = True
 
-    def run(self):
+    def run(self, *args, **kwargs):
         time.sleep(1)
 
 
