@@ -138,7 +138,7 @@ class ModularComponentModel(ComponentModel):
     @property
     def parent(self):
         """Device that this component belongs to, walking up module inheritance if necessary."""
-        return self.module.device if self.module else self.device
+        return self.module.device if self.module else self.device  # pylint: disable=no-member
 
     def render_name_template(self, save=False):
         """
@@ -161,9 +161,9 @@ class ModularComponentModel(ComponentModel):
 
             The deeply nested interface would be named "A{module.parent}" after calling this method.
         """
-        if self.module and self.module.parent_module_bay and "{module" in self.name:
+        if self.module and self.module.parent_module_bay and "{module" in self.name:  # pylint: disable=no-member
             name = ""
-            module_bay = self.module.parent_module_bay
+            module_bay = self.module.parent_module_bay  # pylint: disable=no-member
             positions = []
             while module_bay is not None:
                 position = getattr(module_bay, "position", None)
@@ -291,11 +291,11 @@ class PathEndpoint(models.Model):
             return []
 
         # Construct the complete path
-        path = [self, *self._path.get_path()]
+        path = [self, *self._path.get_path()]  # pylint: disable=no-member
         while (len(path) + 1) % 3:
             # Pad to ensure we have complete three-tuples (e.g. for paths that end at a RearPort)
             path.append(None)
-        path.append(self._path.destination)
+        path.append(self._path.destination)  # pylint: disable=no-member
 
         # Return the path as a list of three-tuples (A termination, cable, B termination)
         return list(zip(*[iter(path)] * 3))
@@ -555,7 +555,7 @@ class BaseInterface(RelationshipModel):
 
     def clean(self):
         # Remove untagged VLAN assignment for non-802.1Q interfaces
-        if not self.mode and self.untagged_vlan is not None:
+        if not self.mode and self.untagged_vlan is not None:  # pylint: disable=no-member  # Intf/VMIntf both have untagged_vlan
             raise ValidationError({"untagged_vlan": "Mode must be set when specifying untagged_vlan"})
 
     def save(self, *args, **kwargs):
@@ -569,8 +569,8 @@ class BaseInterface(RelationshipModel):
             self.status = status
 
         # Only "tagged" interfaces may have tagged VLANs assigned. ("tagged all" implies all VLANs are assigned.)
-        if self.present_in_database and self.mode != InterfaceModeChoices.MODE_TAGGED:
-            self.tagged_vlans.clear()
+        if self.present_in_database and self.mode != InterfaceModeChoices.MODE_TAGGED:  # pylint: disable=no-member
+            self.tagged_vlans.clear()  # pylint: disable=no-member  # Intf/VMIntf both have tagged_vlans
 
         return super().save(*args, **kwargs)
 
@@ -710,18 +710,19 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                 )
 
             # An interface's parent must belong to the same device or virtual chassis
-            if self.parent and self.parent_interface.parent != self.parent:
+            if self.parent and self.parent_interface.parent != self.parent:  # pylint: disable=no-member
                 if getattr(self.parent, "virtual_chassis", None) is None:
                     raise ValidationError(
-                        {
-                            "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to a different device "
-                            f"({self.parent_interface.parent})."
+                        {  # pylint: disable=no-member  # false positive on parent_interface.parent
+                            "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs "
+                            f"to a different device ({self.parent_interface.parent})."
                         }
                     )
-                elif self.parent_interface.parent.virtual_chassis != self.parent.virtual_chassis:
+                elif self.parent_interface.parent.virtual_chassis != self.parent.virtual_chassis:  # pylint: disable=no-member
                     raise ValidationError(
-                        {
-                            "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to {self.parent_interface.parent}, which "
+                        {  # pylint: disable=no-member  # false positive on parent_interface.parent
+                            "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs "
+                            f"to {self.parent_interface.parent}, which "
                             f"is not part of virtual chassis {self.parent.virtual_chassis}."
                         }
                     )
@@ -754,21 +755,22 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                 raise ValidationError({"bridge": "An interface cannot be bridged to itself."})
 
             # A bridged interface belong to the same device or virtual chassis
-            if self.parent and self.bridge.parent != self.parent:
+            if self.parent and self.bridge.parent != self.parent:  # pylint: disable=no-member
                 if getattr(self.parent, "virtual_chassis", None) is None:
                     raise ValidationError(
                         {
                             "bridge": (
+                                # pylint: disable=no-member  # false positive on bridge.parent
                                 f"The selected bridge interface ({self.bridge}) belongs to a different device "
                                 f"({self.bridge.parent})."
                             )
                         }
                     )
-                elif self.bridge.parent.virtual_chassis_id != self.parent.virtual_chassis_id:
+                elif self.bridge.parent.virtual_chassis_id != self.parent.virtual_chassis_id:  # pylint: disable=no-member
                     raise ValidationError(
                         {
                             "bridge": (
-                                f"The selected bridge interface ({self.bridge}) belongs to {self.bridge.parent}, which "
+                                f"The selected bridge interface ({self.bridge}) belongs to {self.bridge.parent}, which "  # pylint: disable=no-member
                                 f"is not part of virtual chassis {self.parent.virtual_chassis}."
                             )
                         }
@@ -1084,8 +1086,8 @@ class DeviceBay(ComponentModel):
         super().clean()
 
         # Validate that the parent Device can have DeviceBays
-        if not self.device.device_type.is_parent_device:
-            raise ValidationError(f"This type of device ({self.device.device_type}) does not support device bays.")
+        if not self.device.device_type.is_parent_device:  # pylint: disable=no-member
+            raise ValidationError(f"This type of device ({self.device.device_type}) does not support device bays.")  # pylint: disable=no-member
 
         # Cannot install a device into itself, obviously
         if self.device == self.installed_device:
