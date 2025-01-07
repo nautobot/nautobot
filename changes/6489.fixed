@@ -1,0 +1,1 @@
+Fixed case-insensitivity issue with APi and GraphQL when filtering by `MultipleChoiceFilter` with no-choice value.
