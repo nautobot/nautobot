@@ -27,6 +27,12 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
+                        link="plugins:example_app:examplemodel_list",
+                        name="Example Models filtered",
+                        permissions=["example_app.view_examplemodel"],
+                        query_params={"number": "100"},
+                    ),
+                    NavMenuItem(
                         link="plugins:example_app:anotherexamplemodel_list",
                         name="Another Example Models",
                         permissions=["example_app.view_anotherexamplemodel"],

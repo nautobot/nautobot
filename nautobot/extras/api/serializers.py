@@ -19,7 +19,6 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
 )
 from nautobot.core.api.exceptions import SerializerNotFound
-from nautobot.core.api.fields import NautobotHyperlinkedRelatedField
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
     get_nested_serializer_depth,
@@ -66,6 +65,8 @@ from nautobot.extras.models import (
     JobButton,
     JobHook,
     JobLogEntry,
+    JobQueue,
+    JobQueueAssignment,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -134,12 +135,12 @@ class ConfigContextSerializer(ValidatedModelSerializer, TaggedModelSerializerMix
     owner = serializers.SerializerMethodField(read_only=True)
 
     # Conditional enablement of dynamic groups filtering
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
+    @property
+    def fields(self):
+        fields = super().fields
         if not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
-            # In the case of a nested serializer, we won't have a `dynamic_groups` field at all.
-            self.fields.pop("dynamic_groups", None)
+            fields.pop("dynamic_groups", None)
+        return fields
 
     class Meta:
         model = ConfigContext
@@ -198,10 +199,7 @@ class ConfigContextSchemaSerializer(NautobotModelSerializer):
 #
 
 
-class ContactSerializer(NautobotModelSerializer):
-    # needed since this is the reverse side of the M2M field.
-    teams = NautobotHyperlinkedRelatedField(queryset=Team.objects.all(), many=True, required=False)
-
+class ContactSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = Contact
         fields = "__all__"
@@ -210,7 +208,14 @@ class ContactSerializer(NautobotModelSerializer):
         extra_kwargs = {
             "email": {"default": ""},
             "phone": {"default": ""},
+            "teams": {"required": False},
         }
+
+    def get_field_names(self, declared_fields, info):
+        """Add reverse M2M for teams to the fields for this serializer."""
+        field_names = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(field_names, "teams")
+        return field_names
 
     def validate(self, attrs):
         local_attrs = attrs.copy()
@@ -432,7 +437,7 @@ class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelS
 #
 
 
-class ExternalIntegrationSerializer(NautobotModelSerializer):
+class ExternalIntegrationSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = ExternalIntegration
         fields = "__all__"
@@ -454,7 +459,7 @@ class FileProxySerializer(BaseModelSerializer):
 #
 
 
-class GitRepositorySerializer(NautobotModelSerializer):
+class GitRepositorySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     """Git repositories defined as a data source."""
 
     provided_contents = MultipleChoiceJSONField(
@@ -535,6 +540,10 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
 
 class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    # task_queues and task_queues_override are added to maintain backward compatibility with versions pre v2.4.
+    task_queues = serializers.JSONField(read_only=True, required=False)
+    task_queues_override = serializers.BooleanField(read_only=True, required=False)
+
     class Meta:
         model = Job
         fields = "__all__"
@@ -557,6 +566,18 @@ class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                 raise serializers.ValidationError(errors)
 
         return super().validate(attrs)
+
+
+class JobQueueSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    class Meta:
+        model = JobQueue
+        fields = "__all__"
+
+
+class JobQueueAssignmentSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = JobQueueAssignment
+        fields = "__all__"
 
 
 class JobVariableSerializer(serializers.Serializer):
@@ -583,6 +604,8 @@ class JobVariableSerializer(serializers.Serializer):
 
 class ScheduledJobSerializer(BaseModelSerializer):
     # start_time = serializers.DateTimeField(format=None, required=False)
+    # queue is added to maintain backward compatibility with versions pre v2.4.
+    queue = serializers.CharField(read_only=True, required=False)
     time_zone = TimeZoneSerializerField(required=False)
 
     class Meta:
@@ -733,6 +756,7 @@ class JobInputSerializer(serializers.Serializer):
     data = serializers.JSONField(required=False, default=dict)
     schedule = JobCreationSerializer(required=False)
     task_queue = serializers.CharField(required=False, allow_blank=True)
+    job_queue = serializers.CharField(required=False, allow_blank=True)
 
 
 class JobMultiPartInputSerializer(serializers.Serializer):
@@ -743,6 +767,7 @@ class JobMultiPartInputSerializer(serializers.Serializer):
     _schedule_interval = ChoiceField(choices=JobExecutionType, required=False)
     _schedule_crontab = serializers.CharField(required=False, allow_blank=True)
     _task_queue = serializers.CharField(required=False, allow_blank=True)
+    _job_queue = serializers.CharField(required=False, allow_blank=True)
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
@@ -798,7 +823,7 @@ class JobButtonSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 #
 
 
-class MetadataTypeSerializer(NautobotModelSerializer):
+class MetadataTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     content_types = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
         many=True,
@@ -862,7 +887,6 @@ class NoteSerializer(BaseModelSerializer):
     class Meta:
         model = Note
         fields = "__all__"
-        list_display_fields = ["note", "assigned_object_type", "assigned_object_id", "user"]
 
     @extend_schema_field(
         PolymorphicProxySerializer(
@@ -902,7 +926,6 @@ class ObjectChangeSerializer(BaseModelSerializer):
     class Meta:
         model = ObjectChange
         fields = "__all__"
-        list_display_fields = ["changed_object_id", "related_object_id", "related_object_type", "user"]
 
     @extend_schema_field(
         PolymorphicProxySerializer(
@@ -1076,9 +1099,7 @@ class TagSerializer(NautobotModelSerializer):
 #
 
 
-class TeamSerializer(NautobotModelSerializer):
-    contacts = NautobotHyperlinkedRelatedField(queryset=Contact.objects.all(), many=True, required=False)
-
+class TeamSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = Team
         fields = "__all__"

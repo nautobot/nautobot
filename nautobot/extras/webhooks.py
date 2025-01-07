@@ -6,12 +6,13 @@ from nautobot.extras.registry import registry
 from nautobot.extras.tasks import process_webhook
 
 
-def enqueue_webhooks(object_change, webhook_queryset=None):
+def enqueue_webhooks(object_change, snapshots=None, webhook_queryset=None):
     """
     Find Webhook(s) assigned to this instance + action and enqueue them to be processed.
 
     Args:
         object_change (ObjectChange): The change that may trigger Webhooks to be sent.
+        snapshots (list): The before/after data snapshots corresponding to the object_change.
         webhook_queryset (QuerySet): Previously retrieved set of Webhooks to potentially send.
 
     Returns:
@@ -34,6 +35,8 @@ def enqueue_webhooks(object_change, webhook_queryset=None):
         webhook_queryset = Webhook.objects.filter(content_types=content_type, enabled=True, **{action_flag: True})
 
     if webhook_queryset:  # not .exists() as we *want* to populate the queryset cache
+        if snapshots is None:
+            snapshots = object_change.get_snapshots()
         # fall back to object_data if object_data_v2 is not available
         serialized_data = object_change.object_data_v2
         if serialized_data is None:
@@ -49,7 +52,7 @@ def enqueue_webhooks(object_change, webhook_queryset=None):
                 str(timezone.now()),
                 object_change.user_name,
                 object_change.request_id,
-                object_change.get_snapshots(),
+                snapshots,
             ]
             process_webhook.apply_async(args=args)
 

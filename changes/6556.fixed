@@ -1,0 +1,4 @@
+Added missing `tags` field to `CircuitTermination`, `Contact`, `DeviceFamily`, `GitRepository`, `MetadataType`, `Team`, `VirtualDeviceContext` REST APIs.
+Fixed incorrect field identification logic in REST API testing helper method `ListObjectsViewTestCase.get_depth_fields()`. This may result in new detection of latent issues in Apps by this test case.
+Fixed incorrect test logic in REST API generic test case `UpdateObjectViewTestCase.test_update_object()`. This may result in new detection of latent issues in Apps by this test case.
+Fixed `?depth` query parameter support in `Contact` and `Team` REST APIs.

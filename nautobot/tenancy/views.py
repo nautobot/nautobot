@@ -1,9 +1,11 @@
 from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
+from nautobot.core.ui.choices import SectionChoices
+from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, StatsPanel
 from nautobot.core.views import generic
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.dcim.models import Device, Location, Rack, RackReservation
+from nautobot.dcim.models import Controller, ControllerManagedDeviceGroup, Device, Location, Rack, RackReservation
 from nautobot.extras.models import DynamicGroup
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
 from nautobot.virtualization.models import Cluster, VirtualMachine
@@ -78,29 +80,38 @@ class TenantListView(generic.ObjectListView):
 
 class TenantView(generic.ObjectView):
     queryset = Tenant.objects.select_related("tenant_group")
-
-    def get_extra_context(self, request, instance):
-        stats = {
-            "circuit_count": Circuit.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "cluster_count": Cluster.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "device_count": Device.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "ipaddress_count": IPAddress.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            # TODO: Should we include child locations of the filtered locations in the location_count below?
-            "location_count": Location.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "prefix_count": Prefix.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "rack_count": Rack.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "rackreservation_count": RackReservation.objects.restrict(request.user, "view")
-            .filter(tenant=instance)
-            .count(),
-            "dynamicgroup_count": DynamicGroup.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "virtualmachine_count": VirtualMachine.objects.restrict(request.user, "view")
-            .filter(tenant=instance)
-            .count(),
-            "vlan_count": VLAN.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "vrf_count": VRF.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-        }
-
-        return {"stats": stats, **super().get_extra_context(request, instance)}
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            StatsPanel(
+                label="Stats",
+                filter_name="tenant",
+                related_models=[
+                    Circuit,
+                    Cluster,
+                    Controller,
+                    ControllerManagedDeviceGroup,
+                    Device,
+                    DynamicGroup,
+                    IPAddress,
+                    # TODO: Should we include child locations of the filtered locations in the location_count below?
+                    Location,
+                    Prefix,
+                    Rack,
+                    RackReservation,
+                    VirtualMachine,
+                    VLAN,
+                    VRF,
+                ],
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+            ),
+        )
+    )
 
 
 class TenantEditView(generic.ObjectEditView):

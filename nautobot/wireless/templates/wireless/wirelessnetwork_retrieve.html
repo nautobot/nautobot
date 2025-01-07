@@ -1,0 +1,56 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Wireless Network</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Name</td>
+                <td>
+                    {{ object.name }}
+                </td>
+            </tr>
+            <tr>
+                <td>Description</td>
+                <td>{{ object.description|placeholder }}</td>
+            </tr>
+            <tr>
+                <td>SSID</td>
+                <td>{{ object.ssid }}</td>
+            </tr>
+            <tr>
+                <td>Mode</td>
+                <td>{{ object.mode }}</td>
+            </tr>
+            <tr>
+                <td>Enabled</td>
+                <td>{{ object.enabled }}</td>
+            </tr>
+            <tr>
+                <td>Authentication</td>
+                <td>{{ object.authentication }}</td>
+            </tr>
+            <tr>
+                <td>Secrets Group</td>
+                <td>{{ object.secrets_group|hyperlinked_object }}</td>
+            </tr>
+            <tr>
+                <td>Hidden</td>
+                <td>{{ object.hidden }}</td>
+            </tr>
+            {% include 'inc/tenant_table_row.html' %}
+        </table>
+    </div>
+{% endblock content_left_page %}
+
+{% block content_full_width_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Controller Managed Device Groups</strong>
+        </div>
+        {% include 'inc/table.html' with table=controller_managed_device_groups_table %}
+    </div>
+{% endblock content_full_width_page %}

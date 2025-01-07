@@ -61,7 +61,7 @@ class Contact(ContactTeamSharedBase):
 class Team(ContactTeamSharedBase):
     """A group of Contacts, usable interchangeably with a single Contact in most cases."""
 
-    contacts = models.ManyToManyField(to=Contact, related_name="teams")
+    contacts = models.ManyToManyField(to=Contact, related_name="teams", blank=True)
 
     class Meta(ContactTeamSharedBase.Meta):
         abstract = False
