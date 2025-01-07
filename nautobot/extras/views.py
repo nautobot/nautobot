@@ -1337,7 +1337,9 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     get_template(job_class.template_name)
                     template_name = job_class.template_name
                 except TemplateDoesNotExist as err:
-                    messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
+                    messages.error(
+                        request, f'Unable to render requested custom job template "{job_class.template_name}": {err}'
+                    )
         except RuntimeError as err:
             messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
             return redirect("extras:job_list")
@@ -1447,7 +1449,9 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                 get_template(job_class.template_name)
                 template_name = job_class.template_name
             except TemplateDoesNotExist as err:
-                messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
+                messages.error(
+                    request, f'Unable to render requested custom job template "{job_class.template_name}": {err}'
+                )
 
         return render(
             request,

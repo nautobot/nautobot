@@ -1651,6 +1651,8 @@ class ComponentTemplateImportForm(BootstrapMixin, CustomFieldModelCSVForm):
     netbox-community/devicetype-library repository.
     """
 
+    Meta: type  # to be defined by concrete subclasses
+
     def __init__(self, data=None, *args, **kwargs):
         super().__init__(data, *args, **kwargs)
 

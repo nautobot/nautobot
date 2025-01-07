@@ -1,0 +1,1 @@
+Enabled pylint `not-callable` and `no-member` checkers and addressed issues reported thereby.

@@ -114,12 +114,12 @@ class TreeModel(TreeNode):
             if self.parent_id is not None:
                 parent_display_str = cache.get(cache_key.replace(str(self.id), str(self.parent_id)), "")
                 if not parent_display_str:
-                    parent_display_str = self.parent.display
+                    parent_display_str = self.parent.display  # pylint: disable=no-member
                 display_str = parent_display_str + " → "
         except self.DoesNotExist:
             # Expected to occur at times during bulk-delete operations
             pass
-        display_str += self.name
+        display_str += self.name  # pylint: disable=no-member  # we checked with hasattr() above
         cache.set(cache_key, display_str, 5)
         return display_str
 
