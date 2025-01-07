@@ -119,6 +119,7 @@ class NavMenuGroup(NavMenuBase, PermissionsMixin):
         elif not all(isinstance(item, NavMenuItem) for item in items):
             raise TypeError("All items defined in a group must be an instance of NavMenuItem")
         self.items = items
+        super().__init__(permissions=self.permissions)
 
 
 class NavMenuItem(NavMenuBase, PermissionsMixin):

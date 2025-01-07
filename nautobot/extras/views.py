@@ -1062,10 +1062,10 @@ class GitRepositoryEditView(generic.ObjectEditView):
         obj.user = request.user
         return super().alter_obj(obj, request, url_args, url_kwargs)
 
-    def get_return_url(self, request, obj):
+    def get_return_url(self, request, obj=None, default_return_url=None):
         if request.method == "POST":
             return reverse("extras:gitrepository_result", kwargs={"pk": obj.pk})
-        return super().get_return_url(request, obj)
+        return super().get_return_url(request, obj=obj, default_return_url=default_return_url)
 
 
 class GitRepositoryDeleteView(generic.ObjectDeleteView):
@@ -1213,27 +1213,27 @@ class ImageAttachmentEditView(generic.ObjectEditView):
             return get_object_or_404(self.queryset, pk=kwargs["pk"])
         return self.queryset.model()
 
-    def alter_obj(self, imageattachment, request, args, kwargs):
-        if not imageattachment.present_in_database:
+    def alter_obj(self, obj, request, url_args, url_kwargs):
+        if not obj.present_in_database:
             # Assign the parent object based on URL kwargs
-            model = kwargs.get("model")
-            if "object_id" in kwargs:
-                imageattachment.parent = get_object_or_404(model, pk=kwargs["object_id"])
-            elif "slug" in kwargs:
-                imageattachment.parent = get_object_or_404(model, slug=kwargs["slug"])
+            model = url_kwargs.get("model")
+            if "object_id" in url_kwargs:
+                obj.parent = get_object_or_404(model, pk=url_kwargs["object_id"])
+            elif "slug" in url_kwargs:
+                obj.parent = get_object_or_404(model, slug=url_kwargs["slug"])
             else:
                 raise RuntimeError("Neither object_id nor slug were provided?")
-        return imageattachment
+        return obj
 
-    def get_return_url(self, request, imageattachment):
-        return imageattachment.parent.get_absolute_url()
+    def get_return_url(self, request, obj=None, default_return_url=None):
+        return obj.parent.get_absolute_url()
 
 
 class ImageAttachmentDeleteView(generic.ObjectDeleteView):
     queryset = ImageAttachment.objects.all()
 
-    def get_return_url(self, request, imageattachment):
-        return imageattachment.parent.get_absolute_url()
+    def get_return_url(self, request, obj=None, default_return_url=None):
+        return obj.parent.get_absolute_url()
 
 
 #
@@ -1347,7 +1347,9 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     get_template(job_class.template_name)
                     template_name = job_class.template_name
                 except TemplateDoesNotExist as err:
-                    messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
+                    messages.error(
+                        request, f'Unable to render requested custom job template "{job_class.template_name}": {err}'
+                    )
         except RuntimeError as err:
             messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
             return redirect("extras:job_list")
@@ -1473,7 +1475,9 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                 get_template(job_class.template_name)
                 template_name = job_class.template_name
             except TemplateDoesNotExist as err:
-                messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
+                messages.error(
+                    request, f'Unable to render requested custom job template "{job_class.template_name}": {err}'
+                )
 
         return render(
             request,

@@ -9,7 +9,7 @@ class FileOutputJob(Job):
         name = "File Output job"
         description = "Creates a text file as output."
 
-    def run(self, lines):
+    def run(self, lines):  # pylint:disable=arguments-differ
         self.create_file("output.txt", "Hello World!\n" * lines)
 
 

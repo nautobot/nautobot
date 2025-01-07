@@ -398,7 +398,7 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         """
         return super().order_by("host")
 
-    def get_or_create(self, **kwargs):
+    def get_or_create(self, defaults=None, **kwargs):
         from nautobot.ipam.models import get_default_namespace, Prefix
 
         parent = kwargs.get("parent")
@@ -421,7 +421,7 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
                 raise ValidationError(f"{cidr} does not appear to be an IPv4 or IPv6 network.") from err
             parent = Prefix.objects.filter(namespace=namespace).get_closest_parent(cidr=cidr, include_self=True)
             kwargs["parent"] = parent
-        return super().get_or_create(**kwargs)
+        return super().get_or_create(defaults=defaults, **kwargs)
 
     def string_search(self, search):
         """
