@@ -1,2 +1,0 @@
-Fixed `PowerOutletTemplateTable` to use `power_port_template` instead of the incorrect field `power_port`.
-Fixed `FrontPortTemplateTable` to use `rear_port_template` instead of the incorrect field `rear_port`.
