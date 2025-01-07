@@ -321,7 +321,7 @@ class JobTransactionTest(TransactionTestCase):
 
     def test_job_bulk_edit_default_queue_stays_default_after_one_field_update(self):
         self.add_permissions("extras.change_job", "extras.view_job")
-        job_class_to_test = "TestPass"
+        job_class_to_test = "TestPassJob"
         job_description = "default job queue test"
         job_to_test = Job.objects.get(job_class_name=job_class_to_test)
         queryset = Job.objects.filter(installed=True, hidden=False, job_class_name=job_class_to_test)
@@ -355,7 +355,7 @@ class JobTransactionTest(TransactionTestCase):
 
     def test_job_bulk_edit_preserve_job_queues_after_one_field_update(self):
         self.add_permissions("extras.change_job", "extras.view_job")
-        job_class_to_test = "TestPass"
+        job_class_to_test = "TestPassJob"
         job_description = "job queues test"
         job_to_test = Job.objects.get(job_class_name=job_class_to_test)
 
