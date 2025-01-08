@@ -1,0 +1,1 @@
+Added the ability to perform a shallow copy of a GitRepository instance and optionally checkout a different branch.

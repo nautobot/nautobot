@@ -167,3 +167,56 @@ class GitRepository(PrimaryModel):
         if dry_run:
             return enqueue_git_repository_diff_origin_and_local(self, user)
         return enqueue_pull_git_repository_and_refresh_data(self, user)
+
+    def clone(self, branch=None, head=None):
+        """
+        Perform a shallow clone of the Git repository.
+
+        Args:
+            branch (str): The branch to checkout. If not set, the GitRepository.branch will be used.
+            head (str): Optional Git commit hash to check out instead of pulling branch latest.
+
+        Returns:
+            GitRepository
+        """
+        import copy
+        import uuid
+
+        # import tempfile
+        from nautobot.core.utils.git import GitRepo
+        from nautobot.extras.datasources.git import get_repo_from_url_to_path_and_from_branch
+
+        # tempfile.mkdtemp(dir=self.filesystem_path + "_clone")
+
+        # Shallow copy a GitRepository object with a unique name and slug
+        cloned_git_repo = copy.copy(self)
+        cloned_git_repo.pk = None
+        generated_uuid = uuid.uuid4()
+
+        cloned_git_repo.name = f"{self.name} ({generated_uuid})"
+        cloned_git_repo.slug = f"{self.slug}_{generated_uuid}"
+
+        if branch is None and head is None:
+            branch = cloned_git_repo.branch
+            head = cloned_git_repo.current_head
+        elif branch is not None:
+            cloned_git_repo.branch = branch
+            if head is not None:
+                cloned_git_repo.current_head = head
+        else:
+            cloned_git_repo.save()
+            cloned_git_repo.delete()
+            raise ValueError("You must provide a branch to checkout a specific commit hash.")
+
+        cloned_git_repo.save()
+
+        # Optionally checkout to a different branch and commit hash
+        from_url, to_path, _ = get_repo_from_url_to_path_and_from_branch(cloned_git_repo)
+        try:
+            repo_helper = GitRepo(to_path, from_url)
+            head, changed = repo_helper.checkout(branch, head)
+        except Exception:
+            cloned_git_repo.delete()
+            raise
+
+        return cloned_git_repo
