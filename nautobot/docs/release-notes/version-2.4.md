@@ -151,7 +151,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
-## v2.4.0 (2025-01-07)
+## v2.4.0 (2025-01-08)
 
 ### Added in v2.4.0
 
