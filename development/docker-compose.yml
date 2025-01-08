@@ -79,7 +79,7 @@ services:
     env_file:
       - ./dev.env
   selenium:
-    image: selenium/standalone-firefox:4.22
+    image: selenium/standalone-firefox:4.27
     ports:
         - "4444:4444"
         - "15900:5900"
