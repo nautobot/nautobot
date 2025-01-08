@@ -648,19 +648,18 @@ class Prefix(PrimaryModel):
         return None
 
     def clean(self):
-        if self.prefix:
-            # self.parent depends on self.prefix having a value
-            self.parent = self.get_parent()
-        super().clean()
-
-    def save(self, *args, **kwargs):
-        if isinstance(self.prefix, netaddr.IPNetwork):
+        if self.prefix is not None:  # missing network/prefix_length will be caught by super().clean()
             # Clear host bits from prefix
             # This also has the subtle side effect of calling self._deconstruct_prefix(),
             # which will (re)set the broadcast and ip_version values of this instance to their correct values.
             self.prefix = self.prefix.cidr
 
-        self.parent = self.get_parent()
+            self.parent = self.get_parent()
+
+        super().clean()
+
+    def save(self, *args, **kwargs):
+        self.clean()
 
         # Validate that creation of this prefix does not create an invalid parent/child relationship
         # 3.0 TODO: uncomment this to enforce this constraint
