@@ -181,6 +181,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Fixed in v2.4.0
 
+- [#6461](https://github.com/nautobot/nautobot/issues/6461) - Fixed inconsistent rendering of DynamicModelChoiceField throughout the UI.
 - [#6462](https://github.com/nautobot/nautobot/issues/6462) - Fixed `JSONArrayFormField` error that field is required when default value is used.
 - [#6526](https://github.com/nautobot/nautobot/issues/6526) - Fixed an AttributeError that occurred in the UI when editing a `DynamicGroup` with `ipam|prefix` as its content-type and changing the value of the "Present in VRF" field.
 - [#6556](https://github.com/nautobot/nautobot/issues/6556) - Added missing `tags` field to `CircuitTermination`, `Contact`, `DeviceFamily`, `GitRepository`, `MetadataType`, `Team`, `VirtualDeviceContext` REST APIs.
@@ -192,6 +193,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6629](https://github.com/nautobot/nautobot/issues/6629) - Fixed an `AttributeError` that could be raised if a `DynamicModelChoiceField` uses a non-standard `widget`.
 - [#6661](https://github.com/nautobot/nautobot/issues/6661) - Fixed the rendering of the dynamic group associable model list tables.
 - [#6663](https://github.com/nautobot/nautobot/issues/6663) - Fixed `test_cable_cannot_terminate_to_a_virtual_interface` and `test_cable_cannot_terminate_to_a_wireless_interface` tests so they fail properly.
+- [#6738](https://github.com/nautobot/nautobot/issues/6738) - Fixed an exception when cleaning a Prefix that was defined by specifying `network` and `prefix_length`.
 
 ### Dependencies in v2.4.0
 
