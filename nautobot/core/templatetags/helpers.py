@@ -1050,12 +1050,13 @@ def versioned_static(file_path):
 
 
 @register.simple_tag
-def tree_hierarchy_ui_representation(tree_depth, hide_hierarchy_ui):
+def tree_hierarchy_ui_representation(tree_depth, hide_hierarchy_ui, base_depth=0):
     """Generates a visual representation of a tree record hierarchy using dots.
 
     Args:
         tree_depth (range): A range representing the depth of the tree nodes.
         hide_hierarchy_ui (bool): Indicates whether to hide the hierarchy UI.
+        base_depth (int, optional): Starting depth (number of dots to skip rendering).
 
     Returns:
         str: A string containing dots (representing hierarchy levels) if `hide_hierarchy_ui` is False,
@@ -1063,6 +1064,8 @@ def tree_hierarchy_ui_representation(tree_depth, hide_hierarchy_ui):
     """
     if hide_hierarchy_ui or tree_depth == 0:
         return ""
+    if isinstance(base_depth, int):  # may be an empty string
+        tree_depth = tree_depth[base_depth:]
     ui_representation = " ".join(['<i class="mdi mdi-circle-small"></i>' for _ in tree_depth])
     return mark_safe(ui_representation)  # noqa: S308 # suspicious-mark-safe-usage, OK here since its just the `i` tag
 
