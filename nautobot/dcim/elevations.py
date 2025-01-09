@@ -244,12 +244,20 @@ class RackElevationGraphicalOutput:
         writer = csv.DictWriter(buf, fieldnames=["unit", "name"])
         writer.writeheader()
 
-        for unit, device in enumerate(rack_positions):
-            if unit is None:
-                writer.writerow({"unit": unit+1, "name": ""})
+        if self.rack.desc_units:
+            position_iterator = range(self.rack.u_height)
+        else:
+            position_iterator = range(self.rack.u_height-1,0,-1)
+
+        for position in position_iterator:
+            this_position = rack_positions[position]
+            if this_position["device"] is not None:
+                writer.writerow({
+                    "unit": this_position["name"],
+                    "name": this_position["device"].name,
+                })
             else:
-                writer.writerow(
-                    {"unit": unit+1, "name": device['device'].name})
+                writer.writerow({"unit": this_position["name"], "name": ""})
 
         # Be kind, rewind
         buf.seek(0)
