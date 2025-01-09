@@ -283,7 +283,7 @@ See also the [GraphQL feature guide](../feature-guides/graphql.md).
 GraphQL queries can be used to reduce the complexity of performing multiple API calls while also correlating results by empowering the user to create their own query that provides the user exactly what they want and nothing that they don't, in a single API call.
 
 ```no-highlight
-▶ tree config_contexts
+▶ tree graphql_queries
 graphql_queries
 ├── query1.gql
 ├── query2.gql
