@@ -973,9 +973,9 @@ def update_git_graphql_queries(repository_record, job_result):
 
                 graphql_query, created = GraphQLQuery.objects.get_or_create(
                     name=query_name,
-                    query=query_content,
                     owner_content_type=git_repository_content_type,
                     owner_object_id=repository_record.pk,
+                    defaults={"query": query_content},
                 )
                 modified = False
 
