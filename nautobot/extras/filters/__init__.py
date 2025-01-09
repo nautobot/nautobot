@@ -14,7 +14,7 @@ from nautobot.core.filters import (
     BaseFilterSet,
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
-    MultipleChoiceFilterWithCustomValues,
+    MultiValueChoiceFilter,
     MultiValueUUIDFilter,
     NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
@@ -930,7 +930,7 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         queryset=ScheduledJob.objects.all(),
         label="Scheduled Job (name or ID)",
     )
-    status = MultipleChoiceFilterWithCustomValues(choices=JobResultStatusChoices, null_value=None)
+    status = MultiValueChoiceFilter(choices=JobResultStatusChoices, null_value=None)
 
     class Meta:
         model = JobResult
@@ -1249,7 +1249,7 @@ class SecretFilterSet(
     )
     # TODO(Glenn): dynamic choices needed. The issue being that secrets providers are Python
     # classes, not database models.
-    # provider = MultipleChoiceFilterWithCustomValues(choices=..., null_value=None)
+    # provider = MultiValueChoiceFilter(choices=..., null_value=None)
 
     class Meta:
         model = Secret
@@ -1298,8 +1298,8 @@ class SecretsGroupAssociationFilterSet(BaseFilterSet):
         label="Secret (ID or name)",
         to_field_name="name",
     )
-    access_type = MultipleChoiceFilterWithCustomValues(choices=SecretsGroupAccessTypeChoices)
-    secret_type = MultipleChoiceFilterWithCustomValues(choices=SecretsGroupSecretTypeChoices)
+    access_type = MultiValueChoiceFilter(choices=SecretsGroupAccessTypeChoices)
+    secret_type = MultiValueChoiceFilter(choices=SecretsGroupSecretTypeChoices)
 
     class Meta:
         model = SecretsGroupAssociation

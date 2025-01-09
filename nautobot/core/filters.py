@@ -73,12 +73,14 @@ def multivalue_field_factory(field_class, widget=django_forms.SelectMultiple):
 #
 
 
-class MultipleChoiceFilterWithCustomValues(django_filters.MultipleChoiceFilter):
-    field_class = forms.MultipleChoiceFieldWithAnyValue
-
-
 class MultiValueCharFilter(django_filters.CharFilter, django_filters.MultipleChoiceFilter):
     field_class = forms.MultiValueCharField
+
+
+class MultiValueChoiceFilter(django_filters.MultipleChoiceFilter):
+    # Use standard `filter_for_field` in `_generate_lookup_expression_filters`
+    # instead of copying the same class as original filter.
+    use_filter_for_field_for_lookups = True
 
 
 class MultiValueDateFilter(django_filters.DateFilter, django_filters.MultipleChoiceFilter):
@@ -700,7 +702,13 @@ class BaseFilterSet(django_filters.FilterSet):
             new_filter_name = f"{filter_name}__{lookup_name}"
 
             try:
-                if filter_name in cls.declared_filters and lookup_expr not in {"isnull"}:  # pylint: disable=no-member
+                if getattr(filter_field, "use_filter_for_field_for_lookups", None):
+                    # For some cases like `MultiValueChoiceFilter(django_filters.MultipleChoiceFilter)`
+                    # we want to have choices field with no lookups and standard char field for lookups filtering.
+                    # To be safe for now, we explicitly set `use_filter_for_field_for_lookups` flag when we need this
+                    # instead of removing next `elif` from lines 711-725.
+                    new_filter = cls.filter_for_field(field, field_name, lookup_expr)
+                elif filter_name in cls.declared_filters and lookup_expr not in {"isnull"}:  # pylint: disable=no-member
                     # The filter field has been explicitly defined on the filterset class so we must manually
                     # create the new filter with the same type because there is no guarantee the defined type
                     # is the same as the default type for the field. This does not apply if the filter
