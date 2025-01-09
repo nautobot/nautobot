@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Literal, Union
 import csv
 import io
@@ -239,31 +240,76 @@ class RackElevationGraphicalOutput:
         raise ValueError("Unknown format")
 
     def render_csv(self, face: Literal["front", "rear"]) -> str:
-        # Prepare an empty rack representation
-        rack_positions = [None for x in range(0, self.rack.u_height)]
+        @dataclass
+        class DeviceCSVRepresentation():
+            name: str | None
+            unit: str
+            is_full_depth: bool | None
 
-        # Fill with used rack units
-        for unit in self.rack.get_rack_units(face=face, expand_devices=True):
-            rack_positions[unit["id"]-1] = unit
+        def _get_face_data(face: Literal["front", "rear"]) -> list[DeviceCSVRepresentation]:
+            # Prepare an empty rack representation
+            rack_positions = [None for x in range(0, self.rack.u_height)]
+
+            # Fill with used rack units
+            for unit in self.rack.get_rack_units(face=face, expand_devices=True):
+                try:
+                    rack_positions[unit["id"] - 1] = DeviceCSVRepresentation(
+                        name=unit["device"].name,
+                        unit=unit["name"],
+                        is_full_depth=unit["device"].device_type.is_full_depth,
+                    )
+                except AttributeError:
+                    rack_positions[unit["id"] - 1] = DeviceCSVRepresentation(
+                        name=None,
+                        unit=unit["name"],
+                        is_full_depth=False
+                    )
+
+            return rack_positions
+
+        def _output_face_to_csv(buffer: io.StringIO, rack_positions: list[DeviceCSVRepresentation], ru_prefix: str = ""):
+            if self.rack.desc_units:
+                position_iterator = range(self.rack.u_height)
+            else:
+                position_iterator = range(self.rack.u_height-1,0,-1)
+
+            for position in position_iterator:
+                this_position = rack_positions[position]
+                if this_position.name is not None:
+                    writer.writerow({
+                        "unit": ru_prefix+this_position.unit,
+                        "name": this_position.name,
+                    })
+                else:
+                    writer.writerow({
+                        "unit": ru_prefix+this_position.unit,
+                        "name": "",
+                    })
+
+        front_faces = _get_face_data("front")
+        rear_faces = _get_face_data("rear")
+
+        for front, rear in zip(front_faces, rear_faces):
+            if front.is_full_depth:
+                rear=DeviceCSVRepresentation(
+                    name=f"{front.name} (Rear)",
+                    is_full_depth=front.is_full_depth,
+                    unit=front.unit,
+                )
+            elif rear.is_full_depth:
+                front = DeviceCSVRepresentation(
+                    name=f"{rear.name} (Rear)",
+                    is_full_depth=rear.is_full_depth,
+                    unit=rear.unit,
+                )
+
 
         buf = io.StringIO()
         writer = csv.DictWriter(buf, fieldnames=["unit", "name"])
         writer.writeheader()
 
-        if self.rack.desc_units:
-            position_iterator = range(self.rack.u_height)
-        else:
-            position_iterator = range(self.rack.u_height-1,0,-1)
-
-        for position in position_iterator:
-            this_position = rack_positions[position]
-            if this_position["device"] is not None:
-                writer.writerow({
-                    "unit": this_position["name"],
-                    "name": this_position["device"].name,
-                })
-            else:
-                writer.writerow({"unit": this_position["name"], "name": ""})
+        _output_face_to_csv(buf, front_faces, "Front")
+        _output_face_to_csv(buf, rear_faces, "Rear")
 
         # Be kind, rewind
         buf.seek(0)
