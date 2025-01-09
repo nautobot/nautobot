@@ -24,6 +24,7 @@ from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.views import ModelViewSet
 from nautobot.core.models.querysets import count_related
 from nautobot.dcim import filters
+from nautobot.dcim.choices import RackElevationDetailRenderChoices
 from nautobot.dcim.models import (
     Cable,
     CablePath,
@@ -205,21 +206,7 @@ class RackViewSet(NautobotModelViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        if data["render"] == "svg":
-            # Render and return the elevation as an SVG drawing with the correct content type
-            drawing = rack.get_elevation_svg(
-                face=data["face"],
-                user=request.user,
-                unit_width=data["unit_width"],
-                unit_height=data["unit_height"],
-                legend_width=data["legend_width"],
-                include_images=data["include_images"],
-                base_url=request.build_absolute_uri("/"),
-                display_fullname=data["display_fullname"],
-            )
-            return HttpResponse(drawing.tostring(), content_type="image/svg+xml")
-
-        else:
+        if data["render"] == RackElevationDetailRenderChoices.RENDER_JSON:
             # Return a JSON representation of the rack units in the elevation
             elevation = rack.get_rack_units(
                 face=data["face"],
@@ -239,6 +226,24 @@ class RackViewSet(NautobotModelViewSet):
             if page is not None:
                 rack_units = serializers.RackUnitSerializer(page, many=True, context={"request": request})
                 return self.get_paginated_response(rack_units.data)
+
+        # Render and return the elevation as an SVG drawing with the correct content type
+        drawing = rack.get_elevation(
+            fileformat=data["render"],
+            face=data["face"],
+            user=request.user,
+            unit_width=data["unit_width"],
+            unit_height=data["unit_height"],
+            legend_width=data["legend_width"],
+            include_images=data["include_images"],
+            base_url=request.build_absolute_uri("/"),
+            display_fullname=data["display_fullname"],
+        )
+
+        if data["render"] == RackElevationDetailRenderChoices.RENDER_SVG:
+            return HttpResponse(drawing.tostring(), content_type="image/svg+xml")
+        elif data["render"] == RackElevationDetailRenderChoices.RENDER_CSV:
+            return HttpResponse(drawing, content_type="text/csv")
 
         return None
 

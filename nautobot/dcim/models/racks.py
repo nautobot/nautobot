@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Literal
 
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
@@ -365,8 +365,9 @@ class Rack(PrimaryModel):
                 reserved_units[u] = r
         return reserved_units
 
-    def get_elevation_svg(
+    def get_elevation(
         self,
+        fileformat: Literal["svg", "csv"],
         face=DeviceFaceChoices.FACE_FRONT,
         user=None,
         unit_width=None,
@@ -400,7 +401,7 @@ class Rack(PrimaryModel):
             self, user=user, include_images=include_images, base_url=base_url, display_fullname=display_fullname
         )
 
-        return elevation.render("svg", face, unit_width, unit_height, legend_width)
+        return elevation.render(fileformat, face, unit_width, unit_height, legend_width)
 
     def get_0u_devices(self):
         return self.devices.filter(position=0)
