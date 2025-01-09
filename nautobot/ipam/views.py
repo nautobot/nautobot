@@ -437,7 +437,6 @@ class PrefixPrefixesView(generic.ObjectView):
 
         prefix_table = tables.PrefixDetailTable(
             child_prefixes,
-            hide_hierarchy_ui=True,
             exclude=["namespace"],
             data_transform_callback=data_transform_callback,
         )
@@ -461,6 +460,7 @@ class PrefixPrefixesView(generic.ObjectView):
 
         return {
             "first_available_prefix": instance.get_first_available_prefix(),
+            "base_tree_depth": instance.ancestors().count(),
             "prefix_table": prefix_table,
             "permissions": permissions,
             "bulk_querystring": bulk_querystring,
@@ -696,7 +696,8 @@ class IPAddressListView(generic.ObjectListView):
             except ObjectDoesNotExist:
                 pass
 
-        if table_columns and "assigned_count" in table_columns:
+        # column name is "assigned", not "assigned_count", and it's shown by default if there is no table config
+        if (table_columns and "assigned" in table_columns) or not table_columns:
             queryset = queryset.annotate(
                 assigned_count=count_related(Interface, "ip_addresses") + count_related(VMInterface, "ip_addresses"),
             )

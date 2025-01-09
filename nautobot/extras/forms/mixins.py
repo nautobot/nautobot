@@ -673,7 +673,7 @@ class RelationshipModelFormMixin(forms.ModelForm):
             for peer_id in target_peer_ids:
                 relationship = self.fields[field_name].model
                 if not relationship.symmetric:
-                    association = RelationshipAssociation(
+                    association = RelationshipAssociation(  # pylint: disable=repeated-keyword
                         relationship=relationship,
                         **{
                             f"{side}_type": self.obj_type,
