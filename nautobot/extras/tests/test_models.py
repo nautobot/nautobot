@@ -17,6 +17,7 @@ from django.test import override_settings
 from django.test.utils import isolate_apps
 from django.utils.timezone import get_default_timezone, now
 from django_celery_beat.tzcrontab import TzAwareCrontab
+from git import GitCommandError
 from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
 import time_machine
 
@@ -1071,6 +1072,36 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
         """Confirm that a bare hostname (no domain name) can be used for a remote URL."""
         self.repo.remote_url = "http://some-private-host/example.git"
         self.repo.validated_save()
+
+    def test_clone_and_discard_clone_functions(self):
+        """Confirm that the clone() and discard_clone() methods work as expected."""
+        self.repo.remote_url = "https://github.com/nautobot/nautobot.git"
+
+        with self.subTest("Clone a repository with no path argument provided"):
+            path = self.repo.clone()
+            # assert that the temporary directory was created in the expected location i.e. /tmp/
+            default_dir = "tmp"
+            self.assertIn(default_dir, path)
+            self.assertTrue(os.path.exists(path))
+            # assert that the temporary directory was discarded
+            self.assertTrue(self.repo.discard_clone(path))
+            self.assertFalse(os.path.exists(path))
+
+        with self.subTest("Clone a repository with a path argument provided"):
+            specified_path = "/source/nautobot/"
+            path = self.repo.clone(path=specified_path)
+            # assert that the temporary directory was created in the expected location i.e. /tmp/
+            self.assertIn(specified_path, path)
+            self.assertTrue(os.path.exists(path))
+            # pass in a path that doesn't exist
+            self.assertFalse(self.repo.discard_clone(path + "/nonexistent"))
+            # pass in a valid path and assert that the temporary directory was discarded
+            self.assertTrue(self.repo.discard_clone(path))
+            self.assertFalse(os.path.exists(path))
+
+        with self.subTest("Assert GitCommandError is raised when an invalid commit hash is provided"):
+            with self.assertRaises(GitCommandError):
+                self.repo.clone(head="1234")
 
 
 class JobModelTest(ModelTestCases.BaseModelTestCase):

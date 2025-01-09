@@ -1,7 +1,10 @@
 """Models for representing external data sources."""
 
 from importlib.util import find_spec
+import logging
 import os
+import shutil
+import tempfile
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -12,7 +15,10 @@ from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import AutoSlugField, LaxURLField, slugify_dashes_to_underscores
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.validators import EnhancedURLValidator
+from nautobot.core.utils.git import GitRepo
 from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features
+
+logger = logging.getLogger(__name__)
 
 
 @extras_features(
@@ -168,55 +174,50 @@ class GitRepository(PrimaryModel):
             return enqueue_git_repository_diff_origin_and_local(self, user)
         return enqueue_pull_git_repository_and_refresh_data(self, user)
 
-    def clone(self, branch=None, head=None):
+    def clone(self, path=None, branch=None, head=None):
         """
-        Perform a shallow clone of the Git repository.
+        Perform a shallow clone of the Git repository in a temporary directory.
 
         Args:
-            branch (str): The branch to checkout. If not set, the GitRepository.branch will be used.
+            path (str): Optional The absolute path to clone the repository to. If not specified, the directory will be created in the /tmp directory.
+            branch (str): Optional The branch to checkout. If not set, the GitRepository.branch will be used.
             head (str): Optional Git commit hash to check out instead of pulling branch latest.
 
         Returns:
-            GitRepository
+            Return the absolute path of the cloned repo if clone was successful
         """
-        import copy
-        import uuid
 
-        # import tempfile
-        from nautobot.core.utils.git import GitRepo
-        from nautobot.extras.datasources.git import get_repo_from_url_to_path_and_from_branch
+        absolute_path_name = tempfile.mkdtemp(dir=path)
 
-        # tempfile.mkdtemp(dir=self.filesystem_path + "_clone")
+        if not branch:
+            branch = self.branch
 
-        # Shallow copy a GitRepository object with a unique name and slug
-        cloned_git_repo = copy.copy(self)
-        cloned_git_repo.pk = None
-        generated_uuid = uuid.uuid4()
-
-        cloned_git_repo.name = f"{self.name} ({generated_uuid})"
-        cloned_git_repo.slug = f"{self.slug}_{generated_uuid}"
-
-        if branch is None and head is None:
-            branch = cloned_git_repo.branch
-            head = cloned_git_repo.current_head
-        elif branch is not None:
-            cloned_git_repo.branch = branch
-            if head is not None:
-                cloned_git_repo.current_head = head
-        else:
-            cloned_git_repo.save()
-            cloned_git_repo.delete()
-            raise ValueError("You must provide a branch to checkout a specific commit hash.")
-
-        cloned_git_repo.save()
-
-        # Optionally checkout to a different branch and commit hash
-        from_url, to_path, _ = get_repo_from_url_to_path_and_from_branch(cloned_git_repo)
         try:
-            repo_helper = GitRepo(to_path, from_url)
-            head, changed = repo_helper.checkout(branch, head)
-        except Exception:
-            cloned_git_repo.delete()
-            raise
+            repo_helper = GitRepo(absolute_path_name, self.remote_url)
+            head, _ = repo_helper.checkout(branch, head)
+        except Exception as e:
+            # Log the exception and raise
+            shutil.rmtree(absolute_path_name)
+            logger.error(f"Failed to clone repository {self.name} to {absolute_path_name}: {e}")
+            raise e
 
-        return cloned_git_repo
+        logger.info(f"Cloned repository {self.name} to {absolute_path_name}")
+        return absolute_path_name
+
+    def discard_clone(self, path):
+        """
+        Delete the shallow copy of the Git repository stored in the specified path.
+
+        Args:
+            path (str): The absolute path the repository was cloned to.
+
+        Returns:
+            Returns True if the deletion was successful, False otherwise.
+        """
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+            logger.info(f"Deleted repository {self.name} copy at {path} successfully")
+            return True
+
+        logger.error(f"Failed to delete repository {self.name} copy at {path}: Directory does not exist")
+        return False
