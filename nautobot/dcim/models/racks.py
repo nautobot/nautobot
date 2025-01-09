@@ -1,3 +1,5 @@
+from typing import Union
+
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
@@ -258,7 +260,7 @@ class Rack(PrimaryModel):
         face=DeviceFaceChoices.FACE_FRONT,
         exclude=None,
         expand_devices=True,
-    ):
+    ) -> list[dict[str, Union[None, int, str]]]:
         """
         Return a list of rack units as dictionaries. Example: {'device': None, 'face': 0, 'id': 48, 'name': 'U48'}
         Each key 'device' is either a Device or None. By default, multi-U devices are repeated for each U they occupy.
