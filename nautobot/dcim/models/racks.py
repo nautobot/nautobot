@@ -15,7 +15,7 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
-from nautobot.dcim.elevations import RackElevationSVG
+from nautobot.dcim.elevations import RackElevationGraphicalOutput
 from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
 
@@ -393,12 +393,12 @@ class Rack(PrimaryModel):
         if unit_width is None:
             unit_width = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH", fallback=230)
         if unit_height is None:
-            unit_height = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", fallback=22)
-        elevation = RackElevationSVG(
+            unit_height = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_HEIGHT")
+        elevation = RackElevationGraphicalOutput(
             self, user=user, include_images=include_images, base_url=base_url, display_fullname=display_fullname
         )
 
-        return elevation.render(face, unit_width, unit_height, legend_width)
+        return elevation.render("svg", face, unit_width, unit_height, legend_width)
 
     def get_0u_devices(self):
         return self.devices.filter(position=0)
