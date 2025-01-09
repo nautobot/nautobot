@@ -292,17 +292,9 @@ class RackElevationGraphicalOutput:
 
         for front, rear in zip(front_faces, rear_faces):
             if front.is_full_depth:
-                rear=DeviceCSVRepresentation(
-                    name=f"{front.name} (Rear)",
-                    is_full_depth=front.is_full_depth,
-                    unit=front.unit,
-                )
+                rear.name = f"{front.name} (Rear)"
             elif rear.is_full_depth:
-                front = DeviceCSVRepresentation(
-                    name=f"{rear.name} (Rear)",
-                    is_full_depth=rear.is_full_depth,
-                    unit=rear.unit,
-                )
+                front.name = f"{rear.name} (Rear)"
 
 
         buf = io.StringIO()
