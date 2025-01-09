@@ -151,7 +151,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
-## v2.4.0 (2025-01-08)
+## v2.4.0 (2025-01-10)
 
 ### Added in v2.4.0
 
@@ -168,6 +168,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6597](https://github.com/nautobot/nautobot/issues/6597) - Added `NTC_SUPPORT_CONTRACT_EXPIRATION_DATE` configuration setting.
 - [#6684](https://github.com/nautobot/nautobot/issues/6684) - Added support for `label-transparent` CSS class.
 - [#6684](https://github.com/nautobot/nautobot/issues/6684) - Added "success" log entry counts to the Job Result table.
+- [#6751](https://github.com/nautobot/nautobot/issues/6751) - Added NetObs and Load Balancer to Apps Marketplace.
 
 ### Changed in v2.4.0
 
@@ -194,6 +195,9 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6661](https://github.com/nautobot/nautobot/issues/6661) - Fixed the rendering of the dynamic group associable model list tables.
 - [#6663](https://github.com/nautobot/nautobot/issues/6663) - Fixed `test_cable_cannot_terminate_to_a_virtual_interface` and `test_cable_cannot_terminate_to_a_wireless_interface` tests so they fail properly.
 - [#6738](https://github.com/nautobot/nautobot/issues/6738) - Fixed an exception when cleaning a Prefix that was defined by specifying `network` and `prefix_length`.
+- [#6743](https://github.com/nautobot/nautobot/issues/6743) - Fixed incorrect rendering of the "Assigned" column in the IPAddress list view.
+- [#6745](https://github.com/nautobot/nautobot/issues/6745) - Restored indentation of child prefixes in Prefix detail view.
+- [#6745](https://github.com/nautobot/nautobot/issues/6745) - Improved logic for generation of "available" child prefixes in Prefix detail view.
 
 ### Dependencies in v2.4.0
 
@@ -201,6 +205,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Documentation in v2.4.0
 
+- [#6436](https://github.com/nautobot/nautobot/issues/6436) - Clarified NGINX user in installation documentation.
 - [#6480](https://github.com/nautobot/nautobot/issues/6480) - Added kubernetes-related job documentation and removed kubernetes-kind-related documentation.
 - [#6512](https://github.com/nautobot/nautobot/issues/6512) - Improved screenshots of UI Component Framework examples.
 - [#6512](https://github.com/nautobot/nautobot/issues/6512) - Added before/after example in Migration guide for UI Component Framework.
@@ -213,6 +218,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6612](https://github.com/nautobot/nautobot/issues/6612) - Replaced `markdownlint-cli` development dependency with Python package `pymarkdownlnt` and removed Node.js and `npm` from the development Docker images.
 - [#6659](https://github.com/nautobot/nautobot/issues/6659) - Enhanced development environment and associated `invoke` tasks to be Nautobot major/minor version aware, such that a different Docker compose `project-name` (and different local Docker image label) will be used for containers in a `develop`-based branch versus a `next`-based branch.
 - [#6715](https://github.com/nautobot/nautobot/issues/6715) - Updated development dependency `ruff` to `~0.8.5` and addressed new rules added in that version.
+- [#6742](https://github.com/nautobot/nautobot/issues/6742) - Updated various development dependencies to the latest versions available as of January 7.
 
 ## v2.4.0b1 (2024-11-25)
 
