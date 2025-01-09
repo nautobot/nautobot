@@ -278,7 +278,7 @@ config_context_schemas
 
 ### GraphQL Queries
 
-Detailed information on |[Graphql queries](../feature-guides/graphql.md)|.
+See also the [GraphQL feature guide](../feature-guides/graphql.md).
 
 GraphQL queries can be used to reduce the complexity of performing multiple API calls while also correlating results by empowering the user to create their own query that provides the user exactly what they want and nothing that they don't, in a single API call.
 
