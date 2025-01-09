@@ -224,7 +224,14 @@ class RackElevationGraphicalOutput:
 
         return elevation
 
-    def render(self, fileformat: Literal["svg", "csv"], face: Literal["front", "back"], unit_width: int, unit_height: int, legend_width: int) -> Union[svgwrite.Drawing, str]:
+    def render(
+        self,
+        fileformat: Literal["svg", "csv"],
+        face: Literal["front", "back"],
+        unit_width: int,
+        unit_height: int,
+        legend_width: int,
+    ) -> Union[svgwrite.Drawing, str]:
         if fileformat == "svg":
             return self.render_svg(face, unit_width, unit_height, legend_width)
         elif fileformat == "csv":
