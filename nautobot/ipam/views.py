@@ -696,7 +696,8 @@ class IPAddressListView(generic.ObjectListView):
             except ObjectDoesNotExist:
                 pass
 
-        if table_columns and "assigned_count" in table_columns:
+        # column name is "assigned", not "assigned_count", and it's shown by default if there is no table config
+        if (table_columns and "assigned" in table_columns) or not table_columns:
             queryset = queryset.annotate(
                 assigned_count=count_related(Interface, "ip_addresses") + count_related(VMInterface, "ip_addresses"),
             )
