@@ -1,4 +1,6 @@
-from typing import Literal
+from typing import Literal, Union
+import csv
+import io
 from django.conf import settings
 from django.urls import reverse
 from django.utils.http import urlencode
@@ -221,9 +223,36 @@ class RackElevationGraphicalOutput:
 
         return elevation
 
-    def render(self, fileformat: Literal["svg", "csv"], face: Literal["front", "back"], unit_width: int, unit_height: int, legend_width: int) -> svgwrite.Drawing | :
+    def render(self, fileformat: Literal["svg", "csv"], face: Literal["front", "back"], unit_width: int, unit_height: int, legend_width: int) -> Union[svgwrite.Drawing, str]:
         if fileformat == "svg":
             return self.render_svg(face, unit_width, unit_height, legend_width)
+        elif fileformat == "csv":
+            return self.render_csv(face)
+
+        raise ValueError("Unknown format")
+
+    def render_csv(self, face: Literal["front", "rear"]) -> str:
+        # Prepare an empty rack representation
+        rack_positions = [None for x in range(0, self.rack.u_height)]
+
+        # Fill with used rack units
+        for unit in self.rack.get_rack_units(face=face, expand_devices=True):
+            rack_positions[unit["id"]-1] = unit
+
+        buf = io.StringIO()
+        writer = csv.DictWriter(buf, fieldnames=["unit", "name"])
+        writer.writeheader()
+
+        for unit, device in enumerate(rack_positions):
+            if unit is None:
+                writer.writerow({"unit": unit+1, "name": ""})
+            else:
+                writer.writerow(
+                    {"unit": unit+1, "name": device['device'].name})
+
+        # Be kind, rewind
+        buf.seek(0)
+        return buf.read()
 
     def render_svg(self, face, unit_width, unit_height, legend_width):
         """
