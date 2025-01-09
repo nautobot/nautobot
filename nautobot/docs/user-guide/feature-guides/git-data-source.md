@@ -16,6 +16,7 @@ The feature uses the concept of a `provides` field to map a repository to a use 
 |[Jobs](../platform-functionality/jobs/index.md)|Jobs are a way for users to execute custom logic on demand from within the Nautobot UI. Jobs can interact directly with Nautobot data to accomplish various data creation, modification, and validation tasks.|
 |[Config Contexts](../core-data-model/extras/configcontext.md)|Config contexts can be used to provide additional data that you can't natively store in Nautobot.|
 |[Config Context Schemas](../core-data-model/extras/configcontextschema.md)|Schemas enforce data validation on config contexts.|
+|[Graphql queries](../feature-guides/graphql.md)|iGraphQL reduces the complexity of performing multiple API calls|
 
 ### Examples of Apps Defining Additional Providers
 
@@ -273,6 +274,19 @@ Config context schemas are used to enforce data validation on config contexts. T
 config_context_schemas
 ├── schema_1.yaml
 ├── schema_2.json
+```
+
+### GraphQL Queries
+
+Detailed information on |[Graphql queries](../feature-guides/graphql.md)|.
+
+GraphQL queries can be used to reduce the complexity of performing multiple API calls while also correlating results by empowering the user to create their own query that provides the user exactly what they want and nothing that they don't, in a single API call.
+
+```no-highlight
+▶ tree config_contexts
+graphql_queries
+├── query1.gql
+├── query2.gql
 ```
 
 ## Additional Git Data Sources
