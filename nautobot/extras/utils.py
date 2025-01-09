@@ -1,5 +1,6 @@
 import collections
 import contextlib
+import copy
 import hashlib
 import hmac
 import logging
@@ -15,13 +16,15 @@ from django.db import transaction
 from django.db.models import Q
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
+import kubernetes.client
 import redis.exceptions
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
-from nautobot.extras.choices import DynamicGroupTypeChoices, ObjectChangeActionChoices
+from nautobot.core.utils.data import is_uuid
+from nautobot.extras.choices import DynamicGroupTypeChoices, JobQueueTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import (
     CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL,
     EXTRAS_FEATURES,
@@ -396,12 +399,65 @@ def get_celery_queues():
 
 def get_worker_count(request=None, queue=None):
     """
-    Return a count of the active Celery workers in a specified queue. Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
+    Return a count of the active Celery workers in a specified queue (Could be a JobQueue instance, instance pk or instance name).
+    Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
     """
+    from nautobot.extras.models import JobQueue
+
     celery_queues = get_celery_queues()
-    if not queue:
+    if isinstance(queue, str):
+        if is_uuid(queue):
+            try:
+                # check if the string passed in is a valid UUID
+                queue = JobQueue.objects.get(pk=queue).name
+            except JobQueue.DoesNotExist:
+                return 0
+        else:
+            return celery_queues.get(queue, 0)
+    elif isinstance(queue, JobQueue):
+        queue = queue.name
+    else:
         queue = settings.CELERY_TASK_DEFAULT_QUEUE
+
     return celery_queues.get(queue, 0)
+
+
+def get_job_queue_worker_count(request=None, job_queue=None):
+    """
+    Return a count of the active Celery workers in a specified queue. Defaults to the `CELERY_TASK_DEFAULT_QUEUE` setting.
+    Same as get_worker_count() method above, but job_queue is an actual JobQueue model instance.
+    """
+    # TODO currently this method is only retrieve celery specific queues and their respective worker counts
+    # Refactor it to support retrieving kubernetes queues as well.
+    celery_queues = get_celery_queues()
+    if not job_queue:
+        queue = settings.CELERY_TASK_DEFAULT_QUEUE
+    else:
+        queue = job_queue.name
+    return celery_queues.get(queue, 0)
+
+
+def get_job_queue(job_queue):
+    """
+    Search for a JobQueue instance based on the str job_queue.
+    If no existing Job Queue not found, return None
+    """
+    from nautobot.extras.models import JobQueue
+
+    queue = None
+    if is_uuid(job_queue):
+        try:
+            # check if the string passed in is a valid UUID
+            queue = JobQueue.objects.get(pk=job_queue)
+        except JobQueue.DoesNotExist:
+            queue = None
+    else:
+        try:
+            # check if the string passed in is a valid name
+            queue = JobQueue.objects.get(name=job_queue)
+        except JobQueue.DoesNotExist:
+            queue = None
+    return queue
 
 
 def task_queues_as_choices(task_queues):
@@ -424,13 +480,17 @@ def task_queues_as_choices(task_queues):
     return choices
 
 
-def refresh_job_model_from_job_class(job_model_class, job_class):
+def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class=None):
     """
     Create or update a job_model record based on the metadata of the provided job_class.
 
-    Note that job_model_class is a parameter (rather than doing a "from nautobot.extras.models import Job") because
+    Note that `job_model_class` and `job_queue_class` are parameters rather than local imports because
     this function may be called from various initialization processes (such as the "nautobot_database_ready" signal)
     and in that case we need to not import models ourselves.
+
+    The `job_queue_class` parameter really should be required, but for some reason we decided to make this function
+    part of the `nautobot.apps.utils` API surface and so we need it to stay backwards-compatible with Apps that might
+    be calling the two-argument form of this function.
     """
     from nautobot.extras.jobs import (
         JobButtonReceiver,
@@ -502,6 +562,10 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
 
     try:
         with transaction.atomic():
+            default_job_queue, _ = job_queue_class.objects.get_or_create(
+                name=job_class.task_queues[0] if job_class.task_queues else settings.CELERY_TASK_DEFAULT_QUEUE,
+                defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY},
+            )
             job_model, created = job_model_class.objects.get_or_create(
                 module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
                 job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
@@ -514,6 +578,8 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
                     "supports_dryrun": job_class.supports_dryrun,
                     "installed": True,
                     "enabled": False,
+                    "default_job_queue": default_job_queue,
+                    "is_singleton": job_class.is_singleton,
                 },
             )
 
@@ -529,6 +595,19 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
                 if not getattr(job_model, f"{field_name}_override", False):
                     # It was inherited and not overridden
                     setattr(job_model, field_name, getattr(job_class, field_name))
+
+            # Special case for backward compatibility
+            # Note that the `job_model.task_queues` setter does NOT auto-create Celery JobQueue records;
+            # this is a special case where we DO want to do so.
+            if job_queue_class is not None and not job_model.job_queues_override:
+                job_queues = []
+                task_queues = job_class.task_queues or [settings.CELERY_TASK_DEFAULT_QUEUE]
+                for task_queue in task_queues:
+                    job_queue, _ = job_queue_class.objects.get_or_create(
+                        name=task_queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+                    )
+                    job_queues.append(job_queue)
+                job_model.job_queues.set(job_queues)
 
             if not created:
                 # Mark it as installed regardless
@@ -556,6 +635,42 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
     )
 
     return (job_model, created)
+
+
+def run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs):
+    """
+    Pass the job to a kubernetes pod and execute it there.
+    """
+    pod_name = settings.KUBERNETES_JOB_POD_NAME
+    pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
+    pod_manifest = copy.deepcopy(settings.KUBERNETES_JOB_MANIFEST)
+    pod_ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
+    pod_token = settings.KUBERNETES_TOKEN_PATH
+
+    configuration = kubernetes.client.Configuration()
+    configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
+    configuration.ssl_ca_cert = pod_ssl_ca_cert
+    with open(pod_token, "r") as token_file:
+        token = token_file.read().strip()
+    # configure API Key authorization: BearerToken
+    configuration.api_key_prefix["authorization"] = "Bearer"
+    configuration.api_key["authorization"] = token
+    with kubernetes.client.ApiClient(configuration) as api_client:
+        api_instance = kubernetes.client.BatchV1Api(api_client)
+
+    job_result.task_kwargs = job_kwargs
+    job_result.save()
+    pod_manifest["metadata"]["name"] = "nautobot-job-" + str(job_result.pk)
+    pod_manifest["spec"]["template"]["spec"]["containers"][0]["command"] = [
+        "nautobot-server",
+        "runjob_with_job_result",
+        f"{job_result.pk}",
+    ]
+    job_result.log(f"Creating job pod {pod_name} in namespace {pod_namespace}")
+    api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
+    job_result.log(f"Reading job pod {pod_name} in namespace {pod_namespace}")
+    api_instance.read_namespaced_job(name="nautobot-job-" + str(job_result.pk), namespace=pod_namespace)
+    return job_result
 
 
 def remove_prefix_from_cf_key(field_name):

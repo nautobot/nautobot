@@ -142,7 +142,7 @@ class NautobotTestRunner(DiscoverRunner):
                             # branches/releases of Nautobot in separate files.
                             hexdigest = hashlib.shake_128(
                                 ",".join(
-                                    sorted(f"{m.app}.{m.name}" for m in MigrationRecorder.Migration.objects.all())
+                                    sorted(f"{m.app}.{m.name}" for m in MigrationRecorder.Migration.objects.all())  # pylint: disable=no-member
                                 ).encode("utf-8")
                             ).hexdigest(10)
                             command += ["--fixture-file", f"development/factory_dump.{hexdigest}.json"]
@@ -158,8 +158,8 @@ class NautobotTestRunner(DiscoverRunner):
                                     verbosity=self.verbosity,
                                     keepdb=self.keepdb
                                     # Extra checks added for Nautobot:
-                                    and self.reusedb
-                                    and not settings.TEST_USE_FACTORIES,  # w/ factory data, clones can't be reused
+                                    and not settings.TEST_USE_FACTORIES
+                                    and self.reusedb,
                                 )
 
                 # Configure all other connections as mirrors of the first one

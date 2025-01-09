@@ -21,6 +21,7 @@ import yaml
 
 from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
+from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
@@ -120,6 +121,26 @@ def placeholder(value):
 
 @library.filter()
 @register.filter()
+def pre_tag(value):
+    """Render a value within `<pre></pre>` tags to enable formatting.
+
+    Args:
+        value (any): Input value, can be any variable.
+
+    Returns:
+        (str): Value wrapped in `<pre></pre>` tags.
+
+    Example:
+        >>> pre_tag("")
+        '<pre></pre>'
+        >>> pre_tag("hello")
+        '<pre>hello</pre>'
+    """
+    return format_html("<pre>{}</pre>", value)
+
+
+@library.filter()
+@register.filter()
 def add_html_id(element_str, id_str):
     """Add an HTML `id="..."` attribute to the given HTML element string.
 
@@ -202,6 +223,29 @@ def render_json(value, syntax_highlight=True, pretty_print=False):
 
     Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a
     `<code class="language-json>` HTML tag to flag it for syntax highlighting by highlight.js.
+
+    Args:
+        value (any): Input value, can be any variable.
+        syntax_highlight (bool): Whether to highlight the JSON syntax or not.
+        pretty_print (bool): Wraps rendered and highlighted JSON in <pre> tag for better code display.
+
+    Returns:
+        (str): HTML
+            '<code class="language-json">{"json_key": "json_value"}</code>' if only syntax_highlight is True
+            - or -
+            '<pre><code class="language-json">{"json_key": "json_value"}</code></pre>' if both syntax_highlight and pretty_print are True
+            - or -
+            '{"json_key": "json_value"}' if only pretty_print is True (both syntax_highlight and pretty_print must be True for pretty print)
+
+    Examples:
+        >>> render_json({"key": "value"})
+        '<code class="language-json">{"key": "value"}</code>'
+        >>> render_json({"key": "value"}, syntax_highlight=False)
+        '{"key": "value"}'
+        >>> render_json({"key": "value"}, pretty_print=True)
+        '<pre><code class="language-json">{"key": "value"}</code></pre>'
+        >>> render_json({"key": "value"}, syntax_highlight=False, pretty_print=True)
+        '{"key": "value"}'
     """
     rendered_json = json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
     if syntax_highlight:
@@ -616,6 +660,57 @@ def render_uptime(seconds):
     )
 
 
+@library.filter()
+@register.filter()
+def dbm(value):
+    """Display value as dBm."""
+    return f"{value} dBm" if value else placeholder(value)
+
+
+@library.filter()
+@register.filter()
+def hyperlinked_field(value, hyperlink=None):
+    """Render a value as a hyperlink."""
+    if not value:
+        return placeholder(value)
+    hyperlink = hyperlink or value
+    return format_html('<a href="{}">{}</a>', hyperlink, value)
+
+
+@library.filter()
+@register.filter()
+def render_content_types(value):
+    """Render sorted by model and app_label ContentTypes value"""
+    if not value.exists():
+        return HTML_NONE
+    output = format_html("<ul>")
+    sorted_value = value.order_by("app_label", "model")
+    for content_type in sorted_value:
+        output += format_html("<li>{content_type}</li>", content_type=content_type)
+    output += format_html("</ul>")
+
+    return output
+
+
+@library.filter()
+@register.filter()
+def render_ancestor_hierarchy(value):
+    """Renders a nested HTML list representing the hierarchy of ancestors for a given object."""
+    result = format_html('<ul class="tree-hierarchy">')
+    append_to_result = format_html("</ul>")
+    for ancestor in value.ancestors():
+        nestable_tag = format_html('<span title="nestable">↺</span>' if getattr(ancestor, "nestable", False) else "")
+        result += format_html(
+            "<li>{value} {nestable_tag}<ul>", value=hyperlinked_object(ancestor, "name"), nestable_tag=nestable_tag
+        )
+        append_to_result += format_html("</ul></li>")
+    nestable_tag = format_html('<span title="nestable">↺</span>' if getattr(value, "nestable", False) else "")
+    result += format_html("<li><strong>{value} {nestable_tag}</strong></li>", value=value, nestable_tag=nestable_tag)
+    result += append_to_result
+
+    return result
+
+
 #
 # Tags
 #
@@ -645,15 +740,15 @@ def querystring(request, **kwargs):
 
 
 @register.simple_tag()
-def table_config_button(table, table_name=None, extra_classes=""):
+def table_config_button(table, table_name=None, extra_classes="", disabled=False):
     if table_name is None:
         table_name = table.__class__.__name__
     html_template = (
         '<button type="button" class="btn btn-default {}'
-        '" data-toggle="modal" data-target="#{}_config" title="Configure table">'
+        '" data-toggle="modal" data-target="#{}_config" {} title="Configure table">'
         '<i class="mdi mdi-cog"></i> Configure</button>'
     )
-    return format_html(html_template, extra_classes, table_name)
+    return format_html(html_template, extra_classes, table_name, 'disabled="disabled"' if disabled else "")
 
 
 @register.simple_tag()
@@ -852,11 +947,11 @@ def saved_view_modal(
     elif current_saved_view is not None and not per_page:
         # no changes made, display current saved view pagination count
         param_dict["per_page"] = current_saved_view.config.get(
-            "pagination_count", config.get_settings_or_config("PAGINATE_COUNT")
+            "pagination_count", config.get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
         )
     else:
         # display default pagination count
-        param_dict["per_page"] = config.get_settings_or_config("PAGINATE_COUNT")
+        param_dict["per_page"] = config.get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
 
     if sort_order:
         # user made changes to saved view sort order
@@ -955,12 +1050,13 @@ def versioned_static(file_path):
 
 
 @register.simple_tag
-def tree_hierarchy_ui_representation(tree_depth, hide_hierarchy_ui):
+def tree_hierarchy_ui_representation(tree_depth, hide_hierarchy_ui, base_depth=0):
     """Generates a visual representation of a tree record hierarchy using dots.
 
     Args:
         tree_depth (range): A range representing the depth of the tree nodes.
         hide_hierarchy_ui (bool): Indicates whether to hide the hierarchy UI.
+        base_depth (int, optional): Starting depth (number of dots to skip rendering).
 
     Returns:
         str: A string containing dots (representing hierarchy levels) if `hide_hierarchy_ui` is False,
@@ -968,6 +1064,8 @@ def tree_hierarchy_ui_representation(tree_depth, hide_hierarchy_ui):
     """
     if hide_hierarchy_ui or tree_depth == 0:
         return ""
+    if isinstance(base_depth, int):  # may be an empty string
+        tree_depth = tree_depth[base_depth:]
     ui_representation = " ".join(['<i class="mdi mdi-circle-small"></i>' for _ in tree_depth])
     return mark_safe(ui_representation)  # noqa: S308 # suspicious-mark-safe-usage, OK here since its just the `i` tag
 

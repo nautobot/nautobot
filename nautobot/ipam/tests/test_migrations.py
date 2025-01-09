@@ -29,29 +29,29 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
             request_id=uuid.uuid4(),
         )
 
-    def populateDataBeforeMigration(self, apps):
+    def populateDataBeforeMigration(self, installed_apps):
         """Populate Aggregate data before migrating to Prefixes"""
 
-        self.aggregate = apps.get_model("ipam", "Aggregate")
+        self.aggregate = installed_apps.get_model("ipam", "Aggregate")
         # Workaround for django-taggit manager not working in migrations.
         # https://github.com/jazzband/django-taggit/issues/101
         # https://github.com/jazzband/django-taggit/issues/454
         self.aggregate.tags = TagsField()
-        self.computed_field = apps.get_model("extras", "computedfield")
-        self.content_type = apps.get_model("contenttypes", "ContentType")
-        self.custom_field = apps.get_model("extras", "customfield")
-        self.custom_link = apps.get_model("extras", "customlink")
-        self.dynamic_group = apps.get_model("extras", "DynamicGroup")
-        self.note = apps.get_model("extras", "note")
-        self.object_change = apps.get_model("extras", "objectchange")
-        self.object_permission = apps.get_model("users", "objectpermission")
-        self.prefix = apps.get_model("ipam", "prefix")
+        self.computed_field = installed_apps.get_model("extras", "computedfield")
+        self.content_type = installed_apps.get_model("contenttypes", "ContentType")
+        self.custom_field = installed_apps.get_model("extras", "customfield")
+        self.custom_link = installed_apps.get_model("extras", "customlink")
+        self.dynamic_group = installed_apps.get_model("extras", "DynamicGroup")
+        self.note = installed_apps.get_model("extras", "note")
+        self.object_change = installed_apps.get_model("extras", "objectchange")
+        self.object_permission = installed_apps.get_model("users", "objectpermission")
+        self.prefix = installed_apps.get_model("ipam", "prefix")
         self.prefix.tags = TagsField()
-        self.relationship = apps.get_model("extras", "relationship")
-        self.relationship_association = apps.get_model("extras", "relationshipassociation")
-        self.rir = apps.get_model("ipam", "RIR")
-        self.status = apps.get_model("extras", "status")
-        self.tag = apps.get_model("extras", "tag")
+        self.relationship = installed_apps.get_model("extras", "relationship")
+        self.relationship_association = installed_apps.get_model("extras", "relationshipassociation")
+        self.rir = installed_apps.get_model("ipam", "RIR")
+        self.status = installed_apps.get_model("extras", "status")
+        self.tag = installed_apps.get_model("extras", "tag")
 
         self.aggregate_ct = self.content_type.objects.get_for_model(self.aggregate)
         self.prefix_ct = self.content_type.objects.get_for_model(self.prefix)
@@ -114,8 +114,8 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
         self.aggregate1.tags.add("AggregateTagA", "AggregateTagB")
         self.aggregate2.tags.add("AggregateTagA")
         self.aggregate3.tags.add("AggregateTagB")
-        self.aggregate5.tags.add("AggregateTagA", "AggregateTagB")
-        self.aggregate6.tags.add("AggregateTagB")
+        self.aggregate5.tags.add("AggregateTagA", "AggregateTagB")  # pylint: disable=no-member
+        self.aggregate6.tags.add("AggregateTagB")  # pylint: disable=no-member
 
         # notes
         self.note.objects.create(
@@ -141,7 +141,7 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
         self.note.objects.create(
             note="Aggregate5 test note",
             assigned_object_type=self.aggregate_ct,
-            assigned_object_id=self.aggregate5.id,
+            assigned_object_id=self.aggregate5.id,  # pylint: disable=no-member
         )
 
         # object permissions
@@ -157,8 +157,8 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
         # object changes
         self._create_objectchange(self.prefix1, "Pre-migration object change for prefix1")
         self._create_objectchange(self.prefix4, "Pre-migration object change for prefix4")
-        self._create_objectchange(self.prefix5, "Pre-migration object change for prefix5")
-        self._create_objectchange(self.aggregate5, "Pre-migration object change for aggregate5")
+        self._create_objectchange(self.prefix5, "Pre-migration object change for prefix5")  # pylint: disable=no-member
+        self._create_objectchange(self.aggregate5, "Pre-migration object change for aggregate5")  # pylint: disable=no-member
 
         # custom fields
         prefix_cf1 = self.custom_field.objects.create(name="prefixcf1")
@@ -179,24 +179,24 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
 
         self.aggregate3._custom_field_data["aggregatecf1"] = "testdata aggregatecf1 aggregate3"
 
-        self.prefix5._custom_field_data["prefixcf1"] = "testdata prefixcf1 prefix5"
-        self.prefix5._custom_field_data["prefixaggregatecf1"] = "testdata prefixaggregatecf1 prefix5"
+        self.prefix5._custom_field_data["prefixcf1"] = "testdata prefixcf1 prefix5"  # pylint: disable=no-member
+        self.prefix5._custom_field_data["prefixaggregatecf1"] = "testdata prefixaggregatecf1 prefix5"  # pylint: disable=no-member
 
-        self.aggregate5._custom_field_data["prefixaggregatecf1"] = "testdata prefixaggregatecf1 aggregate5"
-        self.aggregate5._custom_field_data["aggregatecf1"] = "testdata aggregatecf1 aggregate5"
+        self.aggregate5._custom_field_data["prefixaggregatecf1"] = "testdata prefixaggregatecf1 aggregate5"  # pylint: disable=no-member
+        self.aggregate5._custom_field_data["aggregatecf1"] = "testdata aggregatecf1 aggregate5"  # pylint: disable=no-member
 
-        self.aggregate6._custom_field_data["prefixaggregatecf1"] = "testdata prefixaggregatecf1 aggregate6"
+        self.aggregate6._custom_field_data["prefixaggregatecf1"] = "testdata prefixaggregatecf1 aggregate6"  # pylint: disable=no-member
 
         self.prefix1.save()
         self.prefix2.save()
         self.prefix3.save()
         self.prefix4.save()
-        self.prefix5.save()
+        self.prefix5.save()  # pylint: disable=no-member
         self.aggregate1.save()
         self.aggregate2.save()
         self.aggregate3.save()
-        self.aggregate5.save()
-        self.aggregate6.save()
+        self.aggregate5.save()  # pylint: disable=no-member
+        self.aggregate6.save()  # pylint: disable=no-member
 
     @skipIf(
         connection.vendor != "postgresql",
@@ -390,7 +390,7 @@ class AggregateToPrefixMigrationTestCase(NautobotDataMigrationTest):
                 2,
             )
 
-        for prefix in (self.prefix2, self.prefix3, self.prefix5):
+        for prefix in (self.prefix2, self.prefix3, self.prefix5):  # pylint: disable=no-member
             self.assertEqual(
                 self.object_change.objects.filter(changed_object_id=prefix.id).count(),
                 1,

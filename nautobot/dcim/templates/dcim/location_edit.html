@@ -15,13 +15,7 @@
             {% render_field form.description %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Tenancy</strong></div>
-        <div class="panel-body">
-            {% render_field form.tenant_group %}
-            {% render_field form.tenant %}
-        </div>
-    </div>
+    {% include 'inc/tenancy_form_panel.html' %}
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Contact Info</strong></div>
         <div class="panel-body">

@@ -34,7 +34,7 @@ from nautobot.extras.utils import remove_prefix_from_cf_key
 logger = logging.getLogger(__name__)
 
 
-__all__ = (
+__all__ = (  # noqa:RUF022
     "ContactTeamModelFilterFormMixin",
     "CustomFieldModelBulkEditFormMixin",
     "CustomFieldModelFilterFormMixin",
@@ -673,7 +673,7 @@ class RelationshipModelFormMixin(forms.ModelForm):
             for peer_id in target_peer_ids:
                 relationship = self.fields[field_name].model
                 if not relationship.symmetric:
-                    association = RelationshipAssociation(
+                    association = RelationshipAssociation(  # pylint: disable=repeated-keyword
                         relationship=relationship,
                         **{
                             f"{side}_type": self.obj_type,
@@ -837,13 +837,21 @@ class StatusModelFilterFormMixin(forms.Form):
         self.order_fields(self.field_order)  # Reorder fields again
 
 
-class TagsBulkEditFormMixin(forms.Form):
+class TagsBulkEditFormMixin(BulkEditForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Add add/remove tags fields
-        self.fields["add_tags"] = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
-        self.fields["remove_tags"] = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
+        self.fields["add_tags"] = DynamicModelMultipleChoiceField(
+            queryset=Tag.objects.all(),
+            query_params={"content_types": self.model._meta.label_lower},
+            required=False,
+        )
+        self.fields["remove_tags"] = DynamicModelMultipleChoiceField(
+            queryset=Tag.objects.all(),
+            query_params={"content_types": self.model._meta.label_lower},
+            required=False,
+        )
 
 
 # 2.2 TODO: Names below are only for backward compatibility with Nautobot 1.3 and earlier. Remove in 2.2

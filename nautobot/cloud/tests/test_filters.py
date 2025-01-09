@@ -5,12 +5,13 @@ from nautobot.core.testing import FilterTestCases
 from nautobot.extras.models import SecretsGroup
 
 
-class CloudAccountTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class CloudAccountTestCase(FilterTestCases.FilterTestCase):
     queryset = models.CloudAccount.objects.all()
     filterset = filters.CloudAccountFilterSet
     generic_filter_tests = [
         ("account_number",),
         ("description",),
+        ("name",),
         ("provider", "provider__id"),
         ("provider", "provider__name"),
         ("secrets_group", "secrets_group__id"),
@@ -31,7 +32,7 @@ class CloudAccountTestCase(FilterTestCases.NameOnlyFilterTestCase):
             cls.cloud_accounts[i].validated_save()
 
 
-class CloudResourceTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class CloudResourceTypeTestCase(FilterTestCases.FilterTestCase):
     queryset = models.CloudResourceType.objects.all()
     filterset = filters.CloudResourceTypeFilterSet
     generic_filter_tests = [
@@ -50,7 +51,7 @@ class CloudResourceTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
         )
 
 
-class CloudNetworkTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class CloudNetworkTestCase(FilterTestCases.FilterTestCase):
     queryset = models.CloudNetwork.objects.all()
     filterset = filters.CloudNetworkFilterSet
     generic_filter_tests = [
@@ -110,7 +111,7 @@ class CloudServiceNetworkAssignmentTestCase(FilterTestCases.FilterTestCase):
     ]
 
 
-class CloudServiceTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class CloudServiceTestCase(FilterTestCases.FilterTestCase):
     queryset = models.CloudService.objects.all()
     filterset = filters.CloudServiceFilterSet
     generic_filter_tests = [

@@ -8,7 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
 from django.db.models import Q
-from django.forms.fields import BoundField, InvalidJSONInput, JSONField as _JSONField
+from django.forms.fields import BoundField, CallableChoiceIterator, InvalidJSONInput, JSONField as _JSONField
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.html import format_html
@@ -22,7 +22,6 @@ from nautobot.core.models import validators
 from nautobot.core.utils import data as data_utils, lookup
 
 __all__ = (
-    "CommentField",
     "CSVChoiceField",
     "CSVContentTypeField",
     "CSVDataField",
@@ -30,16 +29,17 @@ __all__ = (
     "CSVModelChoiceField",
     "CSVMultipleChoiceField",
     "CSVMultipleContentTypeField",
+    "CommentField",
     "DynamicModelChoiceField",
     "DynamicModelMultipleChoiceField",
     "ExpandableIPAddressField",
     "ExpandableNameField",
-    "JSONField",
     "JSONArrayFormField",
+    "JSONField",
     "LaxURLField",
     "MACAddressField",
-    "MultipleContentTypeField",
     "MultiMatchModelMultipleChoiceField",
+    "MultipleContentTypeField",
     "NumericArrayField",
     "SlugField",
     "TagFilterField",
@@ -102,13 +102,13 @@ class CSVFileField(django_forms.FileField):
                 "in double quotes."
             )
 
-    def to_python(self, file):
+    def to_python(self, data):
         """For parity with CSVDataField, this returns the CSV text rather than an UploadedFile object."""
-        if file is None:
+        if data is None:
             return None
 
-        file = super().to_python(file)
-        return file.read().decode("utf-8-sig").strip()
+        data = super().to_python(data)
+        return data.read().decode("utf-8-sig").strip()
 
 
 class CSVChoiceField(django_forms.ChoiceField):
@@ -504,6 +504,8 @@ class DynamicModelChoiceMixin:
     ):
         self.display_field = display_field
         self.query_params = query_params or {}
+        # Default to "exclude_m2m=true" for improved performance, if not otherwise specified
+        self.query_params.setdefault("exclude_m2m", "true")
         self.initial_params = initial_params or {}
         self.null_option = null_option
         self.disabled_indicator = disabled_indicator
@@ -536,9 +538,10 @@ class DynamicModelChoiceMixin:
         # Toggle depth
         attrs["data-depth"] = self.depth
 
-        # Attach any static query parameters
-        for key, value in self.query_params.items():
-            widget.add_query_param(key, value)
+        # Attach any static query parameters if supported
+        if isinstance(widget, widgets.APISelect) or hasattr(widget, "add_query_param"):
+            for key, value in self.query_params.items():
+                widget.add_query_param(key, value)
 
         return attrs
 
@@ -660,10 +663,28 @@ class JSONArrayFormField(django_forms.JSONField):
     and each Array element is validated by `base_field` validators.
     """
 
-    def __init__(self, base_field, *, delimiter=",", **kwargs):
+    def __init__(self, base_field, *, choices=None, delimiter=",", **kwargs):
+        self.has_choices = False
+        if choices:
+            self.choices = choices
+            self.widget = widgets.StaticSelect2Multiple(choices=choices)
+            self.has_choices = True
         self.base_field = base_field
         self.delimiter = delimiter
         super().__init__(**kwargs)
+
+    # TODO: change this when we upgrade to Django 5, it uses a getter/setter for choices
+    def _get_choices(self):
+        return getattr(self, "_choices", None)
+
+    def _set_choices(self, value):
+        if callable(value):
+            value = CallableChoiceIterator(value)
+        else:
+            value = list(value)
+        self._choices = self.widget.choices = value
+
+    choices = property(_get_choices, _set_choices)
 
     def clean(self, value):
         """
@@ -677,9 +698,20 @@ class JSONArrayFormField(django_forms.JSONField):
         """
         Return a string of this value.
         """
-        if isinstance(value, list):
+        if self.has_choices:
+            if isinstance(value, list):
+                return value
+            return [value]
+        elif isinstance(value, list):
             return self.delimiter.join(str(self.base_field.prepare_value(v)) for v in value)
         return value
+
+    def bound_data(self, data, initial):
+        if data is None:
+            return None
+        if isinstance(data, list):
+            data = json.dumps(data)
+        return super().bound_data(data, initial)
 
     def to_python(self, value):
         """
@@ -718,8 +750,24 @@ class JSONArrayFormField(django_forms.JSONField):
                 self.base_field.validate(item)
             except ValidationError as error:
                 errors.append(error)
+            if self.has_choices and not self.valid_value(item):
+                errors.append(ValidationError(f"{item} is not a valid choice"))
         if errors:
             raise ValidationError(errors)
+
+    def valid_value(self, value):
+        """Check to see if the provided value is a valid choice."""
+        text_value = str(value)
+        for k, v in self.choices:
+            if isinstance(v, (list, tuple)):
+                # This is an optgroup, so look inside the group for options
+                for k2, _ in v:
+                    if value == k2 or text_value == str(k2):
+                        return True
+            else:
+                if value == k or text_value == str(k):
+                    return True
+        return False
 
     def run_validators(self, value):
         """
@@ -774,7 +822,7 @@ class MultiMatchModelMultipleChoiceField(DynamicModelChoiceMixin, django_filters
         self.natural_key = kwargs.setdefault("to_field_name", "slug")
         super().__init__(*args, **kwargs)
 
-    def _check_values(self, values):
+    def _check_values(self, values):  # pylint:disable=arguments-renamed
         """
         This method overloads the grandparent method in `django.forms.models.ModelMultipleChoiceField`,
         re-using some of that method's existing logic and adding support for coupling this field with

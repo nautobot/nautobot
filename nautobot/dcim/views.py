@@ -6,7 +6,7 @@ import uuid
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import IntegrityError, transaction
 from django.db.models import F, Prefetch
@@ -16,6 +16,7 @@ from django.forms import (
     MultipleHiddenInput,
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
+from django.urls import reverse
 from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
 from django.utils.html import format_html
@@ -29,14 +30,17 @@ from rest_framework.response import Response
 from nautobot.circuits.models import Circuit
 from nautobot.cloud.models import CloudAccount
 from nautobot.cloud.tables import CloudAccountTable
+from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import has_perms
+from nautobot.core.ui import object_detail
+from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
-from nautobot.core.views import generic
+from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
     ObjectBulkDestroyViewMixin,
@@ -59,6 +63,16 @@ from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, 
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
 from nautobot.virtualization.models import VirtualMachine
+from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
+from nautobot.wireless.models import (
+    ControllerManagedDeviceGroupRadioProfileAssignment,
+    ControllerManagedDeviceGroupWirelessNetworkAssignment,
+)
+from nautobot.wireless.tables import (
+    ControllerManagedDeviceGroupRadioProfileAssignmentTable,
+    ControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
+    RadioProfileTable,
+)
 
 from . import filters, forms, tables
 from .api import serializers
@@ -109,6 +123,7 @@ from .models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 
 logger = logging.getLogger(__name__)
@@ -198,60 +213,45 @@ class BaseDeviceComponentTemplatesBulkRenameView(generic.BulkRenameView):
 #
 
 
-class LocationTypeListView(generic.ObjectListView):
+class LocationTypeUIViewSet(
+    view_mixins.ObjectDetailViewMixin,
+    view_mixins.ObjectListViewMixin,
+    view_mixins.ObjectEditViewMixin,
+    view_mixins.ObjectDestroyViewMixin,
+    view_mixins.ObjectBulkDestroyViewMixin,
+    view_mixins.ObjectBulkCreateViewMixin,  # 3.0 TODO: remove this mixin as it's no longer used
+    view_mixins.ObjectChangeLogViewMixin,
+    view_mixins.ObjectNotesViewMixin,
+):
     queryset = LocationType.objects.all()
-    filterset = filters.LocationTypeFilterSet
-    filterset_form = forms.LocationTypeFilterForm
-    table = tables.LocationTypeTable
+    filterset_class = filters.LocationTypeFilterSet
+    filterset_form_class = forms.LocationTypeFilterForm
+    table_class = tables.LocationTypeTable
+    form_class = forms.LocationTypeForm
+    serializer_class = serializers.LocationSerializer
 
-
-class LocationTypeView(generic.ObjectView):
-    queryset = LocationType.objects.all()
-
-    def get_extra_context(self, request, instance):
-        children = LocationType.objects.restrict(request.user, "view").filter(parent=instance).select_related("parent")
-        locations = (
-            Location.objects.restrict(request.user, "view")
-            .filter(location_type=instance)
-            .select_related("parent", "location_type")
-        )
-
-        children_table = tables.LocationTypeTable(children)
-        locations_table = tables.LocationTable(locations)
-        locations_table.columns.hide("location_type")
-
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(children_table)
-        RequestConfig(request, paginate).configure(locations_table)
-
-        return {
-            "children_table": children_table,
-            "locations_table": locations_table,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class LocationTypeEditView(generic.ObjectEditView):
-    queryset = LocationType.objects.all()
-    model_form = forms.LocationTypeForm
-
-
-class LocationTypeDeleteView(generic.ObjectDeleteView):
-    queryset = LocationType.objects.all()
-
-
-class LocationTypeBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = LocationType.objects.all()
-    table = tables.LocationTypeTable
-
-
-class LocationTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = LocationType.objects.all()
-    filterset = filters.LocationTypeFilterSet
-    table = tables.LocationTypeTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                table_class=tables.LocationTypeTable,
+                table_filter="parent",
+                table_title="Child Location Type(s)",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                table_class=tables.LocationTable,
+                table_title="Location(s) of this Type",
+                table_filter="location_type",
+                exclude_columns=["location_type"],
+            ),
+        ),
+    )
 
 
 #
@@ -264,7 +264,6 @@ class LocationListView(generic.ObjectListView):
     filterset = filters.LocationFilterSet
     filterset_form = forms.LocationFilterForm
     table = tables.LocationTable
-    use_new_ui = True
 
 
 class LocationView(generic.ObjectView):
@@ -273,7 +272,6 @@ class LocationView(generic.ObjectView):
     # automatically issue a second query (similar to behavior for
     # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
     queryset = Location.objects.without_tree_fields().all()
-    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         related_locations = (
@@ -699,7 +697,7 @@ class RackReservationEditView(generic.ObjectEditView):
     model_form = forms.RackReservationForm
     template_name = "dcim/rackreservation_edit.html"
 
-    def alter_obj(self, obj, request, args, kwargs):
+    def alter_obj(self, obj, request, url_args, url_kwargs):
         if not obj.present_in_database:
             if "rack" in request.GET:
                 obj.rack = get_object_or_404(Rack, pk=request.GET.get("rack"))
@@ -812,12 +810,10 @@ class DeviceTypeListView(generic.ObjectListView):
     filterset_form = forms.DeviceTypeFilterForm
     table = tables.DeviceTypeTable
     template_name = "dcim/devicetype_list.html"
-    use_new_ui = True
 
 
 class DeviceTypeView(generic.ObjectView):
     queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_image_files")
-    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         instance_count = Device.objects.restrict(request.user).filter(device_type=instance).count()
@@ -1755,7 +1751,6 @@ class DeviceListView(generic.ObjectListView):
     filterset_form = forms.DeviceFilterForm
     table = tables.DeviceTable
     template_name = "dcim/device_list.html"
-    use_new_ui = True
 
 
 class DeviceView(generic.ObjectView):
@@ -1770,7 +1765,149 @@ class DeviceView(generic.ObjectView):
         "software_version",
         "status",
     )
-    use_new_ui = True
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        extra_buttons=(
+            object_detail.DropdownButton(
+                weight=100,
+                color=ButtonColorChoices.BLUE,
+                label="Add Components",
+                icon="mdi-plus-thick",
+                required_permissions=["dcim.change_device"],
+                children=(
+                    object_detail.Button(
+                        weight=100,
+                        link_name="dcim:device_consoleports_add",
+                        label="Console Ports",
+                        icon="mdi-console",
+                        required_permissions=["dcim.add_consoleport"],
+                    ),
+                    object_detail.Button(
+                        weight=200,
+                        link_name="dcim:device_consoleserverports_add",
+                        label="Console Server Ports",
+                        icon="mdi-console-network-outline",
+                        required_permissions=["dcim.add_consoleserverport"],
+                    ),
+                    object_detail.Button(
+                        weight=300,
+                        link_name="dcim:device_powerports_add",
+                        label="Power Ports",
+                        icon="mdi-power-plug-outline",
+                        required_permissions=["dcim.add_powerport"],
+                    ),
+                    object_detail.Button(
+                        weight=400,
+                        link_name="dcim:device_poweroutlets_add",
+                        label="Power Outlets",
+                        icon="mdi-power-socket",
+                        required_permissions=["dcim.add_poweroutlet"],
+                    ),
+                    object_detail.Button(
+                        weight=500,
+                        link_name="dcim:device_interfaces_add",
+                        label="Interfaces",
+                        icon="mdi-ethernet",
+                        required_permissions=["dcim.add_interface"],
+                    ),
+                    object_detail.Button(
+                        weight=600,
+                        link_name="dcim:device_frontports_add",
+                        label="Front Ports",
+                        icon="mdi-square-rounded-outline",
+                        required_permissions=["dcim.add_frontport"],
+                    ),
+                    object_detail.Button(
+                        weight=700,
+                        link_name="dcim:device_rearports_add",
+                        label="Rear Ports",
+                        icon="mdi-square-rounded-outline",
+                        required_permissions=["dcim.add_rearport"],
+                    ),
+                    object_detail.Button(
+                        weight=800,
+                        link_name="dcim:device_devicebays_add",
+                        label="Device Bays",
+                        icon="mdi-circle-outline",
+                        required_permissions=["dcim.add_devicebay"],
+                    ),
+                    object_detail.Button(
+                        weight=900,
+                        link_name="dcim:device_modulebays_add",
+                        label="Module Bays",
+                        icon="mdi-tray",
+                        required_permissions=["dcim.add_modulebay"],
+                    ),
+                    object_detail.Button(
+                        weight=1000,
+                        link_name="dcim:device_inventoryitems_add",
+                        label="Inventory Items",
+                        icon="mdi-invoice-list-outline",
+                        required_permissions=["dcim.add_inventoryitem"],
+                    ),
+                ),
+            ),
+        ),
+        panels=(),  # not yet ported over due to complexity of this template
+        # TODO
+        #     ObjectFieldsPanel(
+        #         weight=100,
+        #         section=SectionChoices.LEFT_HALF,
+        #         fields=["location", "rack", "position", "face", "tenant", "device_type", "serial", "asset_tag"],
+        #         # TODO add device_type.device_family, device_type.u_height,
+        #     ),
+        #     TODO: Virtual Chassis panel
+        #     ObjectFieldsPanel(
+        #         weight=110,
+        #         section=SectionChoices.LEFT_HALF,
+        #         label="Virtual Chassis",
+        #     ),
+        #     ObjectFieldsPanel(
+        #         weight=120,
+        #         section=SectionChoices.LEFT_HALF,
+        #         label="Management",
+        #         fields=["role", "platform", "status", "primary_ip4", "primary_ip6", "secrets_group", "device_redundancy_group", "controller_managed_device_group", "software_version"],
+        #     ),
+        #     TODO: power utilization panel
+        #     ObjectsTablePanel(
+        #       weight=100,
+        #       section=SectionChoices.RIGHT_HALF,
+        #       table_title="Power Utilization",
+        #       table_class=???,
+        #       table_filter="device",
+        #     ),
+        #     ObjectsTablePanel(
+        #         weight=100,
+        #         section=SectionChoices.RIGHT_HALF,
+        #         table_title="Assigned VRFs",
+        #         table_class=VRFDeviceAssignmentTable,
+        #         table_filter="device",
+        #         exclude_columns=["virtual_machine", "device"],
+        #     ),
+        #     TODO: services panel
+        #     ObjectsTablePanel(
+        #         weight=200,
+        #         section=SectionChoices.RIGHT_HALF,
+        #         table_class=???,
+        #         table_filter="device",
+        #     ),
+        #     TODO: images panel
+        #     ObjectsTablePanel(
+        #         weight=300,
+        #         section=SectionChoices.RIGHT_HALF,
+        #         table_class=???,
+        #         table_filter="device",
+        #     ),
+        #     ObjectsTablePanel(
+        #         weight=100,
+        #         section=SectionChoices.FULL_WIDTH,
+        #         table_class=tables.VirtualDeviceContextTable,
+        #         table_filter="device",
+        #         select_related_fields=["tenant", "primary_ip4", "primary_ip6"],
+        #         exclude_columns=["device"],
+        #     ),
+        # ),
+    )
 
     def get_extra_context(self, request, instance):
         # VirtualChassis members
@@ -1805,7 +1942,22 @@ class DeviceView(generic.ObjectView):
         modulebay_count = instance.module_bays.count()
         module_count = instance.module_bays.filter(installed_module__isnull=False).count()
 
+        vdcs = instance.virtual_device_contexts.restrict(request.user).select_related(
+            "tenant", "primary_ip4", "primary_ip6"
+        )
+        vdcs_table = tables.VirtualDeviceContextTable(vdcs, orderable=False, exclude=("device",))
+        vdc_url = reverse("dcim:virtualdevicecontext_add")
+        return_url = instance.get_absolute_url()
+        vdcs_table_add_url = f"{vdc_url}?device={instance.id}&return_url={return_url}"
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(vdcs_table)
+
         return {
+            **super().get_extra_context(request, instance),
             "services": services,
             "software_version_images": software_version_images,
             "vc_members": vc_members,
@@ -1813,6 +1965,8 @@ class DeviceView(generic.ObjectView):
             "active_tab": "device",
             "modulebay_count": modulebay_count,
             "module_count": f"{module_count}/{modulebay_count}",
+            "vdcs_table": vdcs_table,
+            "vdcs_table_add_url": vdcs_table_add_url,
         }
 
 
@@ -2137,6 +2291,42 @@ class DeviceBulkDeleteView(generic.BulkDeleteView):
     queryset = Device.objects.select_related("tenant", "location", "rack", "role", "device_type__manufacturer")
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
+
+
+class DeviceWirelessView(generic.ObjectView):
+    queryset = Device.objects.all()
+    template_name = "dcim/device/wireless.html"
+
+    def get_extra_context(self, request, instance):
+        controller_managed_device_group = instance.controller_managed_device_group
+        wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
+            controller_managed_device_group=controller_managed_device_group
+        ).select_related("wireless_network", "controller_managed_device_group", "vlan")
+        wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
+            data=wireless_networks, user=request.user, orderable=False
+        )
+        wireless_networks_table.columns.hide("controller_managed_device_group")
+        wireless_networks_table.columns.hide("controller")
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(wireless_networks_table)
+
+        radio_profiles = ControllerManagedDeviceGroupRadioProfileAssignment.objects.filter(
+            controller_managed_device_group=controller_managed_device_group
+        ).select_related("radio_profile", "controller_managed_device_group")
+        radio_profiles_table = ControllerManagedDeviceGroupRadioProfileAssignmentTable(
+            data=radio_profiles, user=request.user, orderable=False
+        )
+        radio_profiles_table.columns.hide("controller_managed_device_group")
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(radio_profiles_table)
+
+        return {
+            "wireless_networks_table": wireless_networks_table,
+            "radio_profiles_table": radio_profiles_table,
+            "active_tab": "wireless",
+        }
 
 
 #
@@ -2873,6 +3063,13 @@ class InterfaceView(generic.ObjectView):
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
 
         redundancy_table = self._get_interface_redundancy_groups_table(request, instance)
+        virtual_device_contexts_table = tables.VirtualDeviceContextTable(
+            instance.virtual_device_contexts.restrict(request.user, "view").select_related(
+                "device", "tenant", "primary_ip4", "primary_ip6"
+            ),
+            orderable=False,
+            exclude=("device",),
+        )
 
         return {
             "ipaddress_table": ipaddress_table,
@@ -2881,6 +3078,7 @@ class InterfaceView(generic.ObjectView):
             "module_breadcrumb_url": "dcim:module_interfaces",
             "child_interfaces_table": child_interfaces_tables,
             "redundancy_table": redundancy_table,
+            "virtual_device_contexts_table": virtual_device_contexts_table,
             **super().get_extra_context(request, instance),
         }
 
@@ -4195,6 +4393,9 @@ class ControllerUIViewSet(NautobotUIViewSet):
         if self.action == "retrieve" and instance:
             devices = Device.objects.restrict(request.user).filter(controller_managed_device_group__controller=instance)
             devices_table = tables.DeviceTable(devices)
+            devices_table.columns.show("controller_managed_device_group")
+            devices_table.columns.show("capabilities")
+            devices_table.sequence = ("name", "controller_managed_device_group", "capabilities", "...")
 
             paginate = {
                 "paginator_class": EnhancedPaginator,
@@ -4205,6 +4406,35 @@ class ControllerUIViewSet(NautobotUIViewSet):
             context["devices_table"] = devices_table
 
         return context
+
+    @action(detail=True, url_path="wireless-networks", url_name="wirelessnetworks", methods=["get"])
+    def wirelessnetworks(self, request, *args, **kwargs):
+        instance = self.get_object()
+        controller_managed_device_groups = instance.controller_managed_device_groups.restrict(
+            request.user, "view"
+        ).values_list("pk", flat=True)
+        wireless_networks = ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
+            controller_managed_device_group__in=list(controller_managed_device_groups)
+        ).select_related("wireless_network")
+        wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(
+            data=wireless_networks, user=request.user, orderable=False
+        )
+        wireless_networks_table.columns.hide("controller")
+
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(wireless_networks_table)
+
+        return Response(
+            {
+                "wireless_networks_table": wireless_networks_table,
+                "active_tab": "wireless-networks",
+            }
+        )
+
+    def get_action(self):
+        "Treat Wireless Networks as the same detail view for permission purposes."
+        return "view" if self.action == "wirelessnetworks" else super().get_action()
 
 
 class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
@@ -4232,4 +4462,69 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
 
             context["devices_table"] = devices_table
 
+            # Wireless Networks
+            wireless_networks = instance.wireless_network_assignments.restrict(request.user, "view")
+            wireless_networks_table = ControllerManagedDeviceGroupWirelessNetworkAssignmentTable(wireless_networks)
+            wireless_networks_table.columns.hide("controller_managed_device_group")
+            wireless_networks_table.columns.hide("controller")
+            RequestConfig(
+                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            ).configure(wireless_networks_table)
+            context["wireless_networks_table"] = wireless_networks_table
+            context["wireless_networks_count"] = wireless_networks.count()
+
+            # Radio Profiles
+            radio_profiles = instance.radio_profiles.restrict(request.user, "view")
+            radio_profiles_table = RadioProfileTable(radio_profiles)
+            RequestConfig(
+                request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            ).configure(radio_profiles_table)
+            context["radio_profiles_table"] = radio_profiles_table
+            context["radio_profiles_count"] = radio_profiles.count()
+
+        if self.action in ["create", "update"]:
+            context["wireless_networks"] = ControllerManagedDeviceGroupWirelessNetworkFormSet(
+                instance=instance,
+                data=request.POST if request.method == "POST" else None,
+            )
+
         return context
+
+    def form_save(self, form, **kwargs):
+        obj = super().form_save(form, **kwargs)
+
+        ctx = self.get_extra_context(self.request, obj)
+        wireless_networks = ctx.get("wireless_networks")
+        if wireless_networks.is_valid():
+            wireless_networks.save()
+        else:
+            raise ValidationError(wireless_networks.errors)
+
+        return obj
+
+
+#
+# Virtual Device Context
+#
+
+
+class VirtualDeviceContextUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.VirtualDeviceContextFilterSet
+    filterset_form_class = forms.VirtualDeviceContextFilterForm
+    form_class = forms.VirtualDeviceContextForm
+    bulk_update_form_class = forms.VirtualDeviceContextBulkEditForm
+    queryset = VirtualDeviceContext.objects.all()
+    serializer_class = serializers.VirtualDeviceContextSerializer
+    table_class = tables.VirtualDeviceContextTable
+
+    def get_extra_context(self, request, instance):
+        if self.action == "retrieve":
+            interfaces_table = tables.InterfaceTable(
+                instance.interfaces.restrict(request.user, "view"), orderable=False, exclude=("device",)
+            )
+
+            return {
+                "interfaces_table": interfaces_table,
+                **super().get_extra_context(request, instance),
+            }
+        return super().get_extra_context(request, instance)

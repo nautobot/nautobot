@@ -8,6 +8,7 @@
         <div class="panel-body">
             {% render_field form.name %}
             {% render_field form.role %}
+            {% render_field form.status %}
         </div>
     </div>
     <div class="panel panel-default">
@@ -26,7 +27,6 @@
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Management</strong></div>
         <div class="panel-body">
-            {% render_field form.status %}
             {% render_field form.platform %}
             {% render_field form.primary_ip4 %}
             {% render_field form.primary_ip6 %}
@@ -53,13 +53,7 @@
             {% render_field form.disk %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Tenancy</strong></div>
-        <div class="panel-body">
-            {% render_field form.tenant_group %}
-            {% render_field form.tenant %}
-        </div>
-    </div>
+    {% include 'inc/tenancy_form_panel.html' %}
     {% include 'inc/extras_features_edit_form_fields.html' %}
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Local Config Context Data</strong></div>

@@ -27,18 +27,18 @@ from .querysets import IPAddressQuerySet, PrefixQuerySet, RIRQuerySet, VLANQuery
 from .validators import DNSValidator
 
 __all__ = (
+    "RIR",
+    "VLAN",
+    "VRF",
     "IPAddress",
     "IPAddressToInterface",
     "Namespace",
     "Prefix",
     "PrefixLocationAssignment",
-    "RIR",
     "RouteTarget",
     "Service",
-    "VLAN",
     "VLANGroup",
     "VLANLocationAssignment",
-    "VRF",
     "VRFDeviceAssignment",
     "VRFPrefixAssignment",
 )
@@ -531,7 +531,31 @@ class Prefix(PrimaryModel):
         prefix = kwargs.pop("prefix", None)
         self._location = kwargs.pop("location", None)
         super().__init__(*args, **kwargs)
+
+        # Initialize cached fields
+        self._parent = None
+        self._network = None
+        self._prefix_length = None
+        self._namespace_id = None
+
         self._deconstruct_prefix(prefix)
+
+    @staticmethod
+    def _extract_field_value(field_name, field_names, values):
+        for current_field, field_value in zip(field_names, values):
+            if field_name == current_field:
+                return field_value
+        return None
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        # These cached values are used to detect changes during save,
+        # avoiding unnecessary re-parenting of subnets and IPs if these fields have not been updated.
+        instance._network = cls._extract_field_value("network", field_names, values)
+        instance._prefix_length = cls._extract_field_value("prefix_length", field_names, values)
+        instance._namespace_id = cls._extract_field_value("namespace_id", field_names, values)
+        return instance
 
     def __str__(self):
         return str(self.prefix)
@@ -612,18 +636,30 @@ class Prefix(PrimaryModel):
             protected_objects.update(parent=self.parent)
             return super().delete(*args, **kwargs)
 
-    def save(self, *args, **kwargs):
-        if isinstance(self.prefix, netaddr.IPNetwork):
+    def get_parent(self):
+        # Determine if a parent exists and set it to the closest ancestor by `prefix_length`.
+        if self._parent is not None:
+            return self._parent
+
+        if supernets := self.supernets():
+            parent = max(supernets, key=operator.attrgetter("prefix_length"))
+            self._parent = parent
+            return parent
+        return None
+
+    def clean(self):
+        if self.prefix is not None:  # missing network/prefix_length will be caught by super().clean()
             # Clear host bits from prefix
             # This also has the subtle side effect of calling self._deconstruct_prefix(),
             # which will (re)set the broadcast and ip_version values of this instance to their correct values.
             self.prefix = self.prefix.cidr
 
-        # Determine if a parent exists and set it to the closest ancestor by `prefix_length`.
-        supernets = self.supernets()
-        if supernets:
-            parent = max(supernets, key=operator.attrgetter("prefix_length"))
-            self.parent = parent
+            self.parent = self.get_parent()
+
+        super().clean()
+
+    def save(self, *args, **kwargs):
+        self.clean()
 
         # Validate that creation of this prefix does not create an invalid parent/child relationship
         # 3.0 TODO: uncomment this to enforce this constraint
@@ -655,15 +691,26 @@ class Prefix(PrimaryModel):
         #     )
         #     raise ValidationError({"__all__": err_msg})
 
+        # cache the value of present_in_database; because after `super().save()`
+        # `self.present_in_database` would always return True`
+        present_in_database = self.present_in_database
+
         with transaction.atomic():
             super().save(*args, **kwargs)
             if self._location is not None:
                 self.location = self._location
 
-        # Determine the subnets and reparent them to this prefix.
-        self.reparent_subnets()
-        # Determine the child IPs and reparent them to this prefix.
-        self.reparent_ips()
+        # Only reparent subnets and ips if any of these fields has been updated.
+        if (
+            not present_in_database
+            or self._network != self.network
+            or self._namespace_id != self.namespace_id
+            or self._prefix_length != self.prefix_length
+        ):
+            # Determine the subnets and reparent them to this prefix.
+            self.reparent_subnets()
+            # Determine the child IPs and reparent them to this prefix.
+            self.reparent_ips()
 
     @property
     def cidr_str(self):
@@ -739,6 +786,7 @@ class Prefix(PrimaryModel):
         Returns:
             QuerySet
         """
+
         query = Prefix.objects.all()
 
         if for_update:
@@ -750,13 +798,15 @@ class Prefix(PrimaryModel):
         if not include_self:
             query = query.exclude(id=self.id)
 
-        return query.filter(
+        supernets = query.filter(
             ip_version=self.ip_version,
             prefix_length__lte=self.prefix_length,
             network__lte=self.network,
             broadcast__gte=self.broadcast,
             namespace=self.namespace,
         )
+
+        return supernets
 
     def subnets(self, direct=False, include_self=False, for_update=False):
         """
@@ -867,7 +917,7 @@ class Prefix(PrimaryModel):
         Return all available IPs within this prefix as an IPSet.
         """
         prefix = netaddr.IPSet(self.prefix)
-        child_ips = netaddr.IPSet([ip.address.ip for ip in self.ip_addresses.all()])
+        child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_all_ips()])
         available_ips = prefix - child_ips
 
         # IPv6, pool, or IPv4 /31-32 sets are fully usable
@@ -1357,7 +1407,6 @@ class VLANGroup(PrimaryModel):
 
     def clean(self):
         super().clean()
-
         # Validate location
         if self.location is not None:
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():

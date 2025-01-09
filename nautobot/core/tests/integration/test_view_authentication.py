@@ -14,7 +14,7 @@ class AuthenticationEnforcedTestCase(TestCase):
 
     def test_all_views_require_authentication(self):
         self.client.logout()
-        url_patterns = get_url_patterns()
+        url_patterns = get_url_patterns(ignore_redirects=True)
 
         for url_pattern in url_patterns:
             with self.subTest(url_pattern=url_pattern):
@@ -31,6 +31,7 @@ class AuthenticationEnforcedTestCase(TestCase):
                     "/health/",
                     "/login/",
                     "/media-failure/",
+                    "/robots.txt",
                     "/template.css",
                 ]:
                     self.assertHttpStatus(response, 200, msg=url)

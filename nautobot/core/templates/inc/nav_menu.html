@@ -56,7 +56,7 @@
                                                                         {% endcomment %}
                                                                         {% url button_details.link as button_url %}
                                                                         {% if button_url %}
-                                                                            <a href="{{ button_url }}"
+                                                                            <a href="{{ button_url }}{{ button_details.querystring }}"
                                                                                data-button-weight="{{ button_details.weight }}"
                                                                                class="btn btn-xs btn-{{ button_details.button_class }}"
                                                                                title="{{ button_title }}">
@@ -93,6 +93,7 @@
                             <span class="mdi mdi-chevron-down"></span>
                         </a>
                         <ul class="collapse nav-dropdown-menu" id="adminDropdown">
+                            <li><a href="{% url 'about' %}"><i class="mdi mdi-information"></i> About</a></li>
                             <li><a href="{% url 'user:profile' %}"><i class="mdi mdi-account-box"></i> Profile</a></li>
                             {% if request.user.is_staff %}
                                 <li><a href="{% url 'worker_status' %}"><i class="mdi mdi-server-network"></i> Worker Status</a></li>
