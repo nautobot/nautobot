@@ -1,3 +1,4 @@
+from typing import Literal
 from django.conf import settings
 from django.urls import reverse
 from django.utils.http import urlencode
@@ -9,9 +10,9 @@ from .choices import DeviceFaceChoices
 from .constants import RACK_ELEVATION_BORDER_WIDTH
 
 
-class RackElevationSVG:
+class RackElevationGraphicalOutput:
     """
-    Use this class to render a rack elevation as an SVG image.
+    Use this class to render a rack elevation to a graphical representation
 
     :param rack: A Nautobot Rack instance
     :param user: User instance. If specified, only devices viewable by this user will be fully displayed.
@@ -72,7 +73,7 @@ class RackElevationSVG:
         drawing.defs.add(new_filter)
 
     @staticmethod
-    def _setup_drawing(width, height):
+    def _setup_drawing(width, height) -> svgwrite.Drawing:
         drawing = svgwrite.Drawing(size=(width, height))
 
         # add the stylesheet
@@ -80,11 +81,14 @@ class RackElevationSVG:
             drawing.defs.add(drawing.style(css_file.read()))
 
         # add gradients
-        RackElevationSVG._add_gradient(drawing, "reserved", "#c7c7ff")
-        RackElevationSVG._add_gradient(drawing, "occupied", "#d7d7d7")
-        RackElevationSVG._add_gradient(drawing, "blocked", "#ffc0c0")
-        RackElevationSVG._add_gradient(drawing, "blocked_partial", "#a0a0a0", angle=-45)
-        RackElevationSVG._add_filters(drawing)
+        RackElevationGraphicalOutput._add_gradient(drawing, "reserved", "#c7c7ff")
+        RackElevationGraphicalOutput._add_gradient(
+            drawing, "occupied", "#d7d7d7")
+        RackElevationGraphicalOutput._add_gradient(
+            drawing, "blocked", "#ffc0c0")
+        RackElevationGraphicalOutput._add_gradient(
+            drawing, "blocked_partial", "#a0a0a0", angle=-45)
+        RackElevationGraphicalOutput._add_filters(drawing)
 
         return drawing
 
@@ -217,7 +221,11 @@ class RackElevationSVG:
 
         return elevation
 
-    def render(self, face, unit_width, unit_height, legend_width):
+    def render(self, fileformat: Literal["svg", "csv"], face: Literal["front", "back"], unit_width: int, unit_height: int, legend_width: int) -> svgwrite.Drawing | :
+        if fileformat == "svg":
+            return self.render_svg(face, unit_width, unit_height, legend_width)
+
+    def render_svg(self, face, unit_width, unit_height, legend_width):
         """
         Return an SVG document representing a rack elevation.
         """
