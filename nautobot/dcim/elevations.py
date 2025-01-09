@@ -10,8 +10,6 @@ from nautobot.core.utils.config import get_settings_or_config
 
 from .choices import DeviceFaceChoices
 from .constants import RACK_ELEVATION_BORDER_WIDTH
-from .models.racks import Rack
-
 
 class RackElevationGraphicalOutput:
     """
@@ -23,9 +21,9 @@ class RackElevationGraphicalOutput:
     :param base_url: Base URL for links within the SVG document. If none, links will be relative.
     """
 
-    rack: Rack
+    rack: "Rack"
 
-    def __init__(self, rack: Rack, user=None, include_images=True, base_url=None, display_fullname=True):
+    def __init__(self, rack: "Rack", user=None, include_images=True, base_url=None, display_fullname=True):
         self.rack = rack
         self.include_images = include_images
         self.display_fullname = display_fullname
