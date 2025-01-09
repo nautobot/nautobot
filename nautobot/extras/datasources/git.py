@@ -958,55 +958,61 @@ def update_git_graphql_queries(repository_record, job_result):
     git_repository_content_type = ContentType.objects.get_for_model(GitRepository)
     graphql_queries = []
 
-    for file in os.listdir(graphql_query_path):
-        file_path = os.path.join(graphql_query_path, file)
-        if not os.path.isfile(file_path):
-            continue
+    if os.path.isdir(graphql_query_path):
+        for file in os.listdir(graphql_query_path):
+            file_path = os.path.join(graphql_query_path, file)
+            if not os.path.isfile(file_path):
+                continue
 
-        try:
-            with open(file_path, "r") as fd:
-                query_content = fd.read().strip()
+            # Remove `.gql` extension from the name if it exists
+            query_name = file.rsplit(".gql", 1)[0] if file.endswith(".gql") else file
 
-            graphql_query, created = GraphQLQuery.objects.get_or_create(
-                name=file,
-                query= query_content,
-                owner_content_type=git_repository_content_type,
-                owner_object_id=repository_record.pk,
-            )
-            modified = False
+            try:
+                with open(file_path, "r") as fd:
+                    query_content = fd.read().strip()
 
-            # Check and update the query content
-            if graphql_query.query != query_content:
-                graphql_query.query = query_content
-                modified = True
+                graphql_query, created = GraphQLQuery.objects.get_or_create(
+                    name=query_name,
+                    query=query_content,
+                    owner_content_type=git_repository_content_type,
+                    owner_object_id=repository_record.pk,
+                )
+                modified = False
 
-            # Associate the query with the repository (if needed)
-            owner_content_type = ContentType.objects.get_for_model(repository_record)
-            if graphql_query.owner_content_type != owner_content_type:
-                graphql_query.owner_content_type = owner_content_type
-                graphql_query.owner_object_id = repository_record.pk
-                modified = True
+                # Check and update the query content
+                if graphql_query.query != query_content:
+                    graphql_query.query = query_content
+                    modified = True
 
-            if modified:
-                graphql_query.save()
+                # Associate the query with the repository (if needed)
+                owner_content_type = ContentType.objects.get_for_model(repository_record)
+                if graphql_query.owner_content_type != owner_content_type:
+                    graphql_query.owner_content_type = owner_content_type
+                    graphql_query.owner_object_id = repository_record.pk
+                    modified = True
 
-            graphql_queries.append(file)
+                if modified:
+                    graphql_query.save()
 
-            # Log success
-            if created:
-                msg = f"Successfully created GraphQL query: {file}"
-            elif modified:
-                msg = f"Successfully refreshed GraphQL query: {file}"
-            else:
-                msg = f"No changes to GraphQL query: {file}"
-            logger.info(msg)
-            job_result.log(msg, obj=graphql_query, level_choice=LogLevelChoices.LOG_INFO, grouping="graphql queries")
+                graphql_queries.append(query_name)
 
-        except Exception as exc:
-            # Log the error but continue processing other files
-            error_msg = f"Error processing GraphQL query file '{file}': {exc}"
-            logger.error(error_msg)
-            job_result.log(error_msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="graphql queries")
+                # Log success
+                if created:
+                    msg = f"Successfully created GraphQL query: {query_name}"
+                elif modified:
+                    msg = f"Successfully refreshed GraphQL query: {query_name}"
+                else:
+                    msg = f"No changes to GraphQL query: {query_name}"
+                logger.info(msg)
+                job_result.log(
+                    msg, obj=graphql_query, level_choice=LogLevelChoices.LOG_INFO, grouping="graphql queries"
+                )
+
+            except Exception as exc:
+                # Log the error but continue processing other files
+                error_msg = f"Error processing GraphQL query file '{file}': {exc}"
+                logger.error(error_msg)
+                job_result.log(error_msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="graphql queries")
 
     # Delete any queries not in the preserved list
     delete_git_graphql_queries(repository_record, job_result, preserve=graphql_queries)
