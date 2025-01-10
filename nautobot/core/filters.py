@@ -13,6 +13,7 @@ from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, label_for_filter, resolve_field, verbose_lookup_expr
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
+import timezone_field
 
 from nautobot.core import constants, forms
 from nautobot.core.forms import widgets
@@ -75,12 +76,6 @@ def multivalue_field_factory(field_class, widget=django_forms.SelectMultiple):
 
 class MultiValueCharFilter(django_filters.CharFilter, django_filters.MultipleChoiceFilter):
     field_class = forms.MultiValueCharField
-
-
-class MultiValueChoiceFilter(django_filters.MultipleChoiceFilter):
-    # Use standard `filter_for_field` in `_generate_lookup_expression_filters`
-    # instead of copying the same class as original filter.
-    use_filter_for_field_for_lookups = True
 
 
 class MultiValueDateFilter(django_filters.DateFilter, django_filters.MultipleChoiceFilter):
@@ -618,8 +613,11 @@ class BaseFilterSet(django_filters.FilterSet):
             models.UUIDField: {"filter_class": MultiValueUUIDFilter},
             core_fields.MACAddressCharField: {"filter_class": MultiValueMACAddressFilter},
             core_fields.TagsField: {"filter_class": TagFilter},
+            timezone_field.TimeZoneField: {"filter_class": MultiValueCharFilter},
         }
     )
+
+    USE_FILTER_FOR_FIELDS_FOR_LOOKUPS_FIELDS = [django_filters.MultipleChoiceFilter]
 
     @staticmethod
     def _get_filter_lookup_dict(existing_filter):
@@ -668,6 +666,10 @@ class BaseFilterSet(django_filters.FilterSet):
         return lookup_map
 
     @classmethod
+    def _should_use_filter_for_field(cls, filter_field):
+        return type(filter_field) in cls.USE_FILTER_FOR_FIELDS_FOR_LOOKUPS_FIELDS
+
+    @classmethod
     def _generate_lookup_expression_filters(cls, filter_name, filter_field):
         """
         For specific filter types, new filters are created based on defined lookup expressions in
@@ -702,11 +704,12 @@ class BaseFilterSet(django_filters.FilterSet):
             new_filter_name = f"{filter_name}__{lookup_name}"
 
             try:
-                if getattr(filter_field, "use_filter_for_field_for_lookups", None):
+                if cls._should_use_filter_for_field(filter_field):
                     # For some cases like `MultiValueChoiceFilter(django_filters.MultipleChoiceFilter)`
                     # we want to have choices field with no lookups and standard char field for lookups filtering.
-                    # To be safe for now, we explicitly set `use_filter_for_field_for_lookups` flag when we need this
+                    # To be safe for now, we explicitly set on what classes we want to use this
                     # instead of removing next `elif` from lines 711-725.
+                    resolve_field(field, lookup_expr)  # ScheduledJobFilterSet
                     new_filter = cls.filter_for_field(field, field_name, lookup_expr)
                 elif filter_name in cls.declared_filters and lookup_expr not in {"isnull"}:  # pylint: disable=no-member
                     # The filter field has been explicitly defined on the filterset class so we must manually
@@ -863,6 +866,7 @@ class BaseFilterSet(django_filters.FilterSet):
         """
         if lookup_type == "exact" and getattr(field, "choices", None):
             return django_filters.MultipleChoiceFilter, {"choices": field.choices}
+
         return super().filter_for_lookup(field, lookup_type)
 
     def __init__(self, data=None, queryset=None, *, request=None, prefix=None):
