@@ -1,4 +1,5 @@
 import logging
+from typing import Callable, Iterable
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -6,7 +7,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
-from timezone_field.rest_framework import TimeZoneSerializerField
+from timezone_field.rest_framework import TimeZoneSerializerField  # type: ignore
 
 from nautobot.core.api import (
     BaseModelSerializer,
@@ -204,7 +205,7 @@ class ContactSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         model = Contact
         fields = "__all__"
         # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
-        validators = []
+        validators: Iterable[Callable] = []
         extra_kwargs = {
             "email": {"default": ""},
             "phone": {"default": ""},
@@ -232,7 +233,7 @@ class ContactAssociationSerializer(NautobotModelSerializer):
     class Meta:
         model = ContactAssociation
         fields = "__all__"
-        validators = []
+        validators: Iterable[Callable] = []
         extra_kwargs = {
             "contact": {"required": False},
             "team": {"required": False},
@@ -275,7 +276,7 @@ class ContactAssociationSerializer(NautobotModelSerializer):
 
 
 class ContentTypeSerializer(BaseModelSerializer):
-    id = serializers.IntegerField(read_only=True)
+    id = serializers.IntegerField(read_only=True)  # type: ignore[assignment]  # intentionally overriding UUIDField!
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:contenttype-detail")
     display = serializers.SerializerMethodField()
 
@@ -300,7 +301,7 @@ class CustomFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     )
     type = ChoiceField(choices=CustomFieldTypeChoices)
     filter_logic = ChoiceField(choices=CustomFieldFilterLogicChoices, required=False)
-    label = serializers.CharField(max_length=50, required=True)
+    label = serializers.CharField(max_length=50, required=True)  # type: ignore[assignment]  # conflict with Field.label  # TODO?
 
     class Meta:
         model = CustomField
@@ -363,7 +364,7 @@ class UserSavedViewAssociationSerializer(ValidatedModelSerializer):
     class Meta:
         model = UserSavedViewAssociation
         fields = "__all__"
-        validators = []
+        validators: Iterable[Callable] = []
 
 
 class StaticGroupAssociationSerializer(NautobotModelSerializer):
@@ -491,7 +492,7 @@ class GraphQLQueryInputSerializer(serializers.Serializer):
 
 
 class GraphQLQueryOutputSerializer(serializers.Serializer):
-    data = serializers.DictField(default={})
+    data = serializers.DictField(default={})  # type: ignore[assignment]  # Conflict with Serializer.data  # TODO?
 
 
 #
@@ -585,10 +586,10 @@ class JobVariableSerializer(serializers.Serializer):
 
     name = serializers.CharField(read_only=True)
     type = serializers.CharField(read_only=True)
-    label = serializers.CharField(read_only=True, required=False)
-    help_text = serializers.CharField(read_only=True, required=False)
+    label = serializers.CharField(read_only=True, required=False)  # type: ignore[assignment]  # conflict with Field.label  # TODO?
+    help_text = serializers.CharField(read_only=True, required=False)  # type: ignore[assignment]  # conflict with Field.help_text  # TODO?
     default = serializers.JSONField(read_only=True, required=False)
-    required = serializers.BooleanField(read_only=True, required=False)
+    required = serializers.BooleanField(read_only=True, required=False)  # type: ignore[assignment]  # conflict with Field.required  # TODO?
     min_length = serializers.IntegerField(read_only=True, required=False)
     max_length = serializers.IntegerField(read_only=True, required=False)
     min_value = serializers.IntegerField(read_only=True, required=False)
@@ -753,7 +754,7 @@ class JobCreationSerializer(BaseModelSerializer):
 
 
 class JobInputSerializer(serializers.Serializer):
-    data = serializers.JSONField(required=False, default=dict)
+    data = serializers.JSONField(required=False, default=dict)  # type: ignore[assignment]  # conflict with Serializer.data  # TODO?
     schedule = JobCreationSerializer(required=False)
     task_queue = serializers.CharField(required=False, allow_blank=True)
     job_queue = serializers.CharField(required=False, allow_blank=True)
@@ -1109,7 +1110,7 @@ class TeamSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             "phone": {"default": ""},
         }
         # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
-        validators = []
+        validators: Iterable[Callable] = []
 
     def validate(self, attrs):
         validator = UniqueTogetherValidator(queryset=Team.objects.all(), fields=("name", "phone", "email"))

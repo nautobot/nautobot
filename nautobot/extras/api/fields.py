@@ -1,4 +1,4 @@
-from django.forms.fields import CallableChoiceIterator
+from django.forms.fields import CallableChoiceIterator  # type: ignore[attr-defined]
 from rest_framework import serializers
 
 
