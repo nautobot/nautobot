@@ -865,7 +865,7 @@ class BaseFilterSet(django_filters.FilterSet):
         Note: Any CharField or IntegerField with choices set is a ChoiceField.
         """
         if lookup_type == "exact" and getattr(field, "choices", None):
-            return django_filters.MultipleChoiceFilter, {"choices": field.choices}
+            return django_filters.MultipleChoiceFilter, {"choices": ((str(v), n) for v, n in field.choices)}
 
         return super().filter_for_lookup(field, lookup_type)
 
