@@ -3,10 +3,10 @@ import itertools
 
 from django.core.exceptions import ValidationError
 from django.db.models import Model
-import factory
-from factory.django import DjangoModelFactory
-from factory.errors import FactoryError
-import factory.random
+import factory  # type: ignore
+from factory.django import DjangoModelFactory  # type: ignore
+from factory.errors import FactoryError  # type: ignore
+import factory.random  # type: ignore
 from faker.providers import BaseProvider
 
 from nautobot.core import constants
