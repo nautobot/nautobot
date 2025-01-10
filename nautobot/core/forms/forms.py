@@ -201,7 +201,7 @@ class PrefixFieldMixin(forms.ModelForm):
     ModelForm mixin for IPNetwork based models.
     """
 
-    prefix = formfields.IPNetworkFormField()
+    prefix = formfields.IPNetworkFormField()  # type: ignore[assignment]  # conflict with BaseForm.prefix  # TODO?
 
     def __init__(self, *args, **kwargs):
         instance = kwargs.get("instance")
@@ -229,7 +229,7 @@ class ImportForm(BootstrapMixin, forms.Form):
     Generic form for creating an object from JSON/YAML data
     """
 
-    data = forms.CharField(
+    data = forms.CharField(  # type: ignore[assignment]  # conflict with BaseForm.data  # TODO?
         widget=forms.Textarea,
         help_text="Enter object data in JSON or YAML format. Note: Only a single object/document is supported.",
         label="",

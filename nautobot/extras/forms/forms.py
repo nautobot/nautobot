@@ -1,7 +1,8 @@
 import inspect
 import logging
+from typing import Iterable
 
-from celery import chain
+from celery import chain  # type: ignore[import-untyped]
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -9,7 +10,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db.models.fields import TextField
-from django.forms import inlineformset_factory, ModelMultipleChoiceField, MultipleHiddenInput
+from django.forms import BaseInlineFormSet, inlineformset_factory, ModelMultipleChoiceField, MultipleHiddenInput
 from django.urls.base import reverse
 from django.utils.timezone import get_current_timezone_name
 
@@ -268,7 +269,7 @@ class ComputedFieldFilterForm(BootstrapMixin, forms.Form):
 class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
     locations = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), required=False)
     roles = DynamicModelMultipleChoiceField(
-        queryset=Role.objects.get_for_models([Device, VirtualMachine]),
+        queryset=Role.objects.get_for_models([Device, VirtualMachine]),  # type: ignore[attr-defined]
         query_params={"content_types": [Device._meta.label_lower, VirtualMachine._meta.label_lower]},
         required=False,
     )
@@ -292,7 +293,7 @@ class ConfigContextForm(BootstrapMixin, NoteModelFormMixin, forms.ModelForm):
         if not settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
             self.fields.pop("dynamic_groups")
 
-    data = JSONField(label="")
+    data = JSONField(label="")  # type: ignore[assignment]  # conflict with BaseForm.data  # TODO?
 
     class Meta:
         model = ConfigContext
@@ -336,7 +337,9 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), to_field_name="name", required=False)
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     role = DynamicModelMultipleChoiceField(
-        queryset=Role.objects.get_for_models([Device, VirtualMachine]), to_field_name="name", required=False
+        queryset=Role.objects.get_for_models([Device, VirtualMachine]),  # type: ignore[attr-defined]
+        to_field_name="name",
+        required=False,
     )
     type = DynamicModelMultipleChoiceField(queryset=DeviceType.objects.all(), to_field_name="model", required=False)
     platform = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), to_field_name="name", required=False)
@@ -402,7 +405,7 @@ class ConfigContextSchemaFilterForm(BootstrapMixin, forms.Form):
 # CustomFieldChoice inline formset for use with providing dynamic rows when creating/editing choices
 # for `CustomField` objects in UI views. Fields/exclude must be set but since we're using all the
 # fields we're just setting `exclude=()` here.
-CustomFieldChoiceFormSet = inlineformset_factory(
+CustomFieldChoiceFormSet: type[BaseInlineFormSet] = inlineformset_factory(
     parent_model=CustomField,
     model=CustomFieldChoice,
     exclude=(),
@@ -619,7 +622,7 @@ class DynamicGroupMembershipFormSetForm(forms.ModelForm):
 
 # Inline formset for use with providing dynamic rows when creating/editing memberships of child
 # DynamicGroups to a parent DynamicGroup.
-BaseDynamicGroupMembershipFormSet = inlineformset_factory(
+BaseDynamicGroupMembershipFormSet: type[BaseInlineFormSet] = inlineformset_factory(
     parent_model=DynamicGroup,
     model=DynamicGroupMembership,
     form=DynamicGroupMembershipFormSetForm,
@@ -632,7 +635,7 @@ BaseDynamicGroupMembershipFormSet = inlineformset_factory(
 )
 
 
-class DynamicGroupMembershipFormSet(BaseDynamicGroupMembershipFormSet):
+class DynamicGroupMembershipFormSet(BaseDynamicGroupMembershipFormSet):  # type: ignore[valid-type,misc]  # https://github.com/python/mypy/issues/2477
     """
     Inline formset for use with providing dynamic rows when creating/editing memberships of child
     groups to a parent DynamicGroup.
@@ -689,7 +692,7 @@ class DynamicGroupBulkAssignForm(BootstrapMixin, BulkEditForm):
         )
 
     class Meta:
-        nullable_fields = []
+        nullable_fields: Iterable[str] = []
 
     def clean(self):
         data = super().clean()
@@ -955,7 +958,7 @@ class GitRepositoryFilterForm(BootstrapMixin, forms.Form):
 
 
 class GraphQLQueryForm(BootstrapMixin, forms.ModelForm):
-    query = TextField()
+    query: TextField = TextField()
 
     class Meta:
         model = GraphQLQuery
@@ -1584,7 +1587,7 @@ class JobButtonFilterForm(BootstrapMixin, forms.Form):
 # MetadataChoice inline formset for use with providing dynamic rows when creating/editing choices
 # for `MetadataType` objects in UI views. Fields/exclude must be set but since we're using all the
 # fields we're just setting `exclude=()` here.
-MetadataChoiceFormSet = inlineformset_factory(
+MetadataChoiceFormSet: type[BaseInlineFormSet] = inlineformset_factory(
     parent_model=MetadataType,
     model=MetadataChoice,
     exclude=(),
@@ -1633,7 +1636,7 @@ class MetadataTypeFilterForm(NautobotFilterForm):
 
 
 class MetadataTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
-    pk = forms.ModelMultipleChoiceField(queryset=MetadataType.objects.all(), widget=forms.MultipleHiddenInput)
+    pk: forms.ModelMultipleChoiceField = forms.ModelMultipleChoiceField(queryset=MetadataType.objects.all(), widget=forms.MultipleHiddenInput)
     description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
 
     class Meta:
@@ -1947,7 +1950,7 @@ class SecretFilterForm(NautobotFilterForm):
 
 
 # Inline formset for use with providing dynamic rows when creating/editing assignments of Secrets to SecretsGroups.
-SecretsGroupAssociationFormSet = inlineformset_factory(
+SecretsGroupAssociationFormSet: type[BaseInlineFormSet] = inlineformset_factory(
     parent_model=SecretsGroup,
     model=SecretsGroupAssociation,
     fields=("access_type", "secret_type", "secret"),
@@ -2011,7 +2014,7 @@ class StatusBulkEditForm(NautobotBulkEditForm):
     content_types = MultipleContentTypeField(feature="statuses", required=False, label="Content Type(s)")
 
     class Meta:
-        nullable_fields = []
+        nullable_fields: Iterable[str] = []
 
 
 #
@@ -2020,7 +2023,7 @@ class StatusBulkEditForm(NautobotBulkEditForm):
 
 
 class TagForm(NautobotModelForm):
-    content_types = ModelMultipleChoiceField(
+    content_types: ModelMultipleChoiceField = ModelMultipleChoiceField(
         label="Content Type(s)",
         queryset=TaggableClassesQuery().as_queryset(),
     )

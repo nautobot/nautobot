@@ -11,12 +11,12 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
-from django.core.validators import ValidationError
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
-import kubernetes.client
+import kubernetes.client  # type: ignore[import-untyped]
 import redis.exceptions
 
 from nautobot.core.choices import ColorChoices

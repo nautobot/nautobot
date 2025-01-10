@@ -1,5 +1,6 @@
 import json
 import re
+from typing import ClassVar
 
 from django import forms as django_forms
 from django.apps import apps
@@ -8,13 +9,19 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
 from django.db.models import Q
-from django.forms.fields import BoundField, CallableChoiceIterator, InvalidJSONInput, JSONField as _JSONField
+from django.forms.boundfield import BoundField
+from django.forms.fields import (  # type: ignore[attr-defined]  # CallableChoiceIterator isn't public API
+    CallableChoiceIterator,
+    InvalidJSONInput,
+    JSONField as _JSONField,
+)
+from django.forms.models import ModelChoiceIterator
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.html import format_html
-import django_filters
-from netaddr import EUI
-from netaddr.core import AddrFormatError
+import django_filters  # type: ignore[import-untyped]
+from netaddr import EUI  # type: ignore[import-untyped]
+from netaddr.core import AddrFormatError  # type: ignore[import-untyped]
 
 from nautobot.core import choices as core_choices, forms
 from nautobot.core.forms import widgets
@@ -489,7 +496,7 @@ class DynamicModelChoiceMixin:
 
     filter = django_filters.ModelChoiceFilter  # 2.0 TODO(Glenn): can we rename this? pylint: disable=redefined-builtin
     widget = widgets.APISelect
-    iterator = widgets.MinimalModelChoiceIterator
+    iterator: ClassVar[type[ModelChoiceIterator]] = widgets.MinimalModelChoiceIterator
 
     def __init__(
         self,
