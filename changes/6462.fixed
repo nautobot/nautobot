@@ -1,1 +1,0 @@
-Fixed `JSONArrayFormField` error that field is required when default value is used.

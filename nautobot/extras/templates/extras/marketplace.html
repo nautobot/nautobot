@@ -189,7 +189,7 @@
                                         <div>
                                             <h5>{{ app.headline }}</h5>
 
-                                            <p>{{ app.description }}</p>
+                                            <p>{{ app.description|render_markdown }}</p>
 
                                             {% if app.docs|default:None != None %}
                                                 <p>
