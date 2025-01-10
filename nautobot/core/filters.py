@@ -1,5 +1,6 @@
 from copy import deepcopy
 import logging
+from typing import Optional
 import uuid
 
 from django import forms as django_forms
@@ -8,9 +9,9 @@ from django.db import models
 from django.forms.utils import ErrorDict, ErrorList
 from django.utils.encoding import force_str
 from django.utils.text import capfirst
-import django_filters
-from django_filters.constants import EMPTY_VALUES
-from django_filters.utils import get_model_field, label_for_filter, resolve_field, verbose_lookup_expr
+import django_filters  # type: ignore[import-untyped]
+from django_filters.constants import EMPTY_VALUES  # type: ignore[import-untyped]
+from django_filters.utils import get_model_field, label_for_filter, resolve_field, verbose_lookup_expr  # type: ignore[import-untyped]
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 
@@ -340,7 +341,7 @@ class MappedPredicatesFilterMixin:
     """
 
     # Optional label for the form element generated for this filter
-    label = None
+    label: Optional[str] = None
 
     # Filter predicates that will always be included if not otherwise specified.
     default_filter_predicates = {"id": "iexact"}

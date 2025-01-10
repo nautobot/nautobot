@@ -1,12 +1,13 @@
 from difflib import get_close_matches
+from typing import Iterable
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-import django_filters
+import django_filters  # type: ignore[import-untyped]
 from drf_spectacular.utils import extend_schema_field
-from timezone_field import TimeZoneField
+from timezone_field import TimeZoneField  # type: ignore[import-untyped]
 
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
@@ -1008,7 +1009,7 @@ class JobLogEntryFilterSet(BaseFilterSet):
 
     class Meta:
         model = JobLogEntry
-        exclude = []
+        exclude: Iterable[str] = []
 
 
 class ScheduledJobFilterSet(BaseFilterSet):

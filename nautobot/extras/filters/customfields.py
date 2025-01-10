@@ -1,6 +1,6 @@
 from django.db.models import Q
 from django.forms import IntegerField
-import django_filters
+import django_filters  # type: ignore[import-untyped]
 
 from nautobot.core.filters import (
     MultiValueCharFilter,

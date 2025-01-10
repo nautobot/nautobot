@@ -1,8 +1,8 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model, Q
-import django_filters
-from django_filters.constants import EMPTY_VALUES
-from django_filters.utils import verbose_lookup_expr
+import django_filters  # type: ignore[import-untyped]
+from django_filters.constants import EMPTY_VALUES  # type: ignore[import-untyped]
+from django_filters.utils import verbose_lookup_expr  # type: ignore[import-untyped]
 
 from nautobot.core.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
