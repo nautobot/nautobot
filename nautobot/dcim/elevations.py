@@ -1,7 +1,8 @@
-from dataclasses import dataclass
-from typing import Literal, Union
 import csv
+from dataclasses import dataclass
 import io
+from typing import Literal, Union
+
 from django.conf import settings
 from django.urls import reverse
 from django.utils.http import urlencode

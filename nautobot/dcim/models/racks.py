@@ -1,4 +1,4 @@
-from typing import Union, Literal
+from typing import Literal, Union
 
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
