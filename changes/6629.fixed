@@ -1,1 +1,0 @@
-Fixed an `AttributeError` that could be raised if a `DynamicModelChoiceField` uses a non-standard `widget`.
