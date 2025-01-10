@@ -1636,7 +1636,9 @@ class MetadataTypeFilterForm(NautobotFilterForm):
 
 
 class MetadataTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
-    pk: forms.ModelMultipleChoiceField = forms.ModelMultipleChoiceField(queryset=MetadataType.objects.all(), widget=forms.MultipleHiddenInput)
+    pk: forms.ModelMultipleChoiceField = forms.ModelMultipleChoiceField(
+        queryset=MetadataType.objects.all(), widget=forms.MultipleHiddenInput
+    )
     description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
 
     class Meta:

@@ -11,7 +11,12 @@ from django.utils.encoding import force_str
 from django.utils.text import capfirst
 import django_filters  # type: ignore[import-untyped]
 from django_filters.constants import EMPTY_VALUES  # type: ignore[import-untyped]
-from django_filters.utils import get_model_field, label_for_filter, resolve_field, verbose_lookup_expr  # type: ignore[import-untyped]
+from django_filters.utils import (  # type: ignore[import-untyped]
+    get_model_field,
+    label_for_filter,
+    resolve_field,
+    verbose_lookup_expr,
+)
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 

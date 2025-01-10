@@ -6,7 +6,12 @@ from pathlib import Path
 import sys
 
 from celery import current_app  # type: ignore[import-untyped]
-from celery.beat import _evaluate_entry_args, _evaluate_entry_kwargs, reraise, SchedulingError  # type: ignore[import-untyped]
+from celery.beat import (  # type: ignore[import-untyped]
+    _evaluate_entry_args,
+    _evaluate_entry_kwargs,
+    reraise,
+    SchedulingError,
+)
 from celery.result import AsyncResult  # type: ignore[import-untyped]
 from django.conf import settings
 from django_celery_beat.schedulers import DatabaseScheduler, ModelEntry  # type: ignore[import-untyped]

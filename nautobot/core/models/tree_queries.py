@@ -2,7 +2,10 @@ from django.core.cache import cache
 from django.db.models import Case, When
 from django.db.models.signals import post_delete, post_save
 from tree_queries.models import TreeNode  # type: ignore[import-untyped]
-from tree_queries.query import TreeManager as TreeManager_, TreeQuerySet as TreeQuerySet_  # type: ignore[import-untyped]
+from tree_queries.query import (  # type: ignore[import-untyped]
+    TreeManager as TreeManager_,
+    TreeQuerySet as TreeQuerySet_,
+)
 
 from nautobot.core.models import BaseManager, querysets
 from nautobot.core.signals import invalidate_max_depth_cache

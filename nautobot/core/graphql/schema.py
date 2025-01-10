@@ -534,7 +534,7 @@ def generate_query_mixin() -> type:
     for schema_type in registry["plugin_graphql_types"]:
         model = schema_type._meta.model
         if model is None:
-            logger.warning("Unable to load schema type \"%s\" as it doesn't have an associated `model`", schema_type)
+            logger.warning('Unable to load schema type "%s" as it doesn\'t have an associated `model`', schema_type)
             continue
         type_identifier = f"{model._meta.app_label}.{model._meta.model_name}"
 
