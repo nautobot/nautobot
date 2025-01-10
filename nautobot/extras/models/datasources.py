@@ -187,6 +187,9 @@ class GitRepository(PrimaryModel):
             Return the absolute path of the cloned repo if clone was successful
         """
 
+        if branch and head:
+            raise ValueError("Cannot specify both branch and head")
+
         try:
             path_name = tempfile.mkdtemp(dir=path)
         except PermissionError as e:
@@ -200,8 +203,13 @@ class GitRepository(PrimaryModel):
             repo_helper = GitRepo(path_name, self.remote_url)
             head, _ = repo_helper.checkout(branch, head)
         except Exception as e:
-            # Log the exception and raise
-            shutil.rmtree(path_name)
+            # Cleanup the temporary directory if the clone fails
+            try:
+                shutil.rmtree(path_name)
+            except OSError as os_error:
+                # log error if the cleanup fails
+                logger.error(f"Failed to cleanup temporary directory at {path_name}: {os_error}")
+
             logger.error(f"Failed to clone repository {self.name} to {path_name}: {e}")
             raise e
 
