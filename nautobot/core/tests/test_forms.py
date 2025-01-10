@@ -806,6 +806,7 @@ class DynamicFilterFormTest(TestCase):
                     "data-depth": 0,
                     "data-multiple": 1,
                     "data-query-param-content_types": '["dcim.location"]',
+                    "data-query-param-exclude_m2m": '["true"]',
                     "display-field": "display",
                     "value-field": "name",
                 },

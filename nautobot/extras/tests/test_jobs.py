@@ -12,6 +12,7 @@ from constance.test import override_config
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -30,12 +31,15 @@ from nautobot.dcim.models import Device, Location, LocationType
 from nautobot.extras import models
 from nautobot.extras.choices import (
     JobExecutionType,
+    JobQueueTypeChoices,
     JobResultStatusChoices,
     LogLevelChoices,
     ObjectChangeEventContextChoices,
 )
 from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
 from nautobot.extras.jobs import get_job, get_jobs
+from nautobot.extras.models import Job, JobQueue
+from nautobot.extras.models.jobs import JobLogEntry
 
 
 class JobTest(TestCase):
@@ -71,7 +75,7 @@ class JobTest(TestCase):
         name = "TestFieldOrder"
         job_class = get_job(f"{module}.{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_task_queue", "_profile"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_job_queue", "_profile"])
 
     def test_no_field_order(self):
         """
@@ -81,7 +85,7 @@ class JobTest(TestCase):
         name = "TestNoFieldOrder"
         job_class = get_job(f"{module}.{name}")
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_task_queue", "_profile"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_job_queue", "_profile"])
 
     def test_no_field_order_inherited_variable(self):
         """
@@ -93,7 +97,7 @@ class JobTest(TestCase):
         form = job_class().as_form()
         self.assertSequenceEqual(
             list(form.fields.keys()),
-            ["testvar1", "b_testvar2", "a_testvar3", "_task_queue", "_profile"],
+            ["testvar1", "b_testvar2", "a_testvar3", "_job_queue", "_profile"],
         )
 
     def test_dryrun_default(self):
@@ -115,47 +119,36 @@ class JobTest(TestCase):
         form = job_class().as_form()
         self.assertEqual(form.fields["dryrun"].initial, job_model.dryrun_default)
 
-    @mock.patch("nautobot.extras.utils.get_celery_queues")
-    def test_job_class_task_queues(self, mock_get_celery_queues):
+    def test_job_task_queues_setter(self):
+        """Test the task_queues property setter on Job."""
+        module = "dry_run"
+        name = "TestDryRun"
+        _, job_model = get_job_class_and_model(module, name)
+
+        invalid_queue = "Invalid job Queue"
+        with self.assertRaises(ValidationError) as cm:
+            job_model.task_queues = [invalid_queue]
+            job_model.validated_save()
+        self.assertIn(f"Job Queue {invalid_queue} does not exist in the database.", str(cm.exception))
+
+    def test_job_class_job_queues(self):
         """
         Test job form with custom task queues defined on the job class
         """
         module = "task_queues"
         name = "TestWorkerQueues"
-        mock_get_celery_queues.return_value = {"celery": 4, "irrelevant": 5}
-        job_class, _ = get_job_class_and_model(module, name)
-        form = job_class().as_form()
-        self.assertInHTML(
-            """<tr><th><label for="id__task_queue">Task queue:</label></th>
-            <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
-            <option value="celery">celery (4 workers)</option>
-            <option value="nonexistent">nonexistent (0 workers)</option></select><br>
-            <span class="helptext">The task queue to route this job to</span>
-            <input type="hidden" name="_profile" value="False" id="id__profile"></td></tr>""",
-            form.as_table(),
-        )
-
-    @mock.patch("nautobot.extras.utils.get_celery_queues")
-    def test_job_class_task_queues_override(self, mock_get_celery_queues):
-        """
-        Test job form with custom task queues defined on the job class and overridden on the model
-        """
-        module = "task_queues"
-        name = "TestWorkerQueues"
-        mock_get_celery_queues.return_value = {"default": 1, "irrelevant": 5}
         job_class, job_model = get_job_class_and_model(module, name)
-        job_model.task_queues = ["default", "priority"]
-        job_model.task_queues_override = True
-        job_model.save()
+        jq_1, _ = models.JobQueue.objects.get_or_create(
+            name="celery", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+        )
+        jq_2, _ = models.JobQueue.objects.get_or_create(
+            name="irrelevant", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
+        )
+        job_model.job_queues.set([jq_1, jq_2])
         form = job_class().as_form()
-        self.assertInHTML(
-            """<tr><th><label for="id__task_queue">Task queue:</label></th>
-            <td><select name="_task_queue" class="form-control" placeholder="Task queue" id="id__task_queue">
-            <option value="default">default (1 worker)</option>
-            <option value="priority">priority (0 workers)</option>
-            </select><br><span class="helptext">The task queue to route this job to</span>
-            <input type="hidden" name="_profile" value="False" id="id__profile"></td></tr>""",
-            form.as_table(),
+        self.assertQuerySetEqual(
+            form.fields["_job_queue"].queryset,
+            models.JobQueue.objects.filter(jobs=job_model),
         )
 
     def test_supports_dryrun(self):
@@ -200,13 +193,15 @@ class JobTest(TestCase):
                 with override_settings(JOBS_ROOT=temp_dir):
                     # Create a new Job and make sure it's discovered correctly
                     with open(os.path.join(temp_dir, "my_jobs.py"), "w") as fd:
-                        fd.write("""\
+                        fd.write(
+                            """\
 from nautobot.apps.jobs import Job, register_jobs
 class MyJob(Job):
     def run(self):
         pass
 register_jobs(MyJob)
-""")
+"""
+                        )
                     jobs_data = get_jobs(reload=True)
                     self.assertIn("my_jobs.MyJob", jobs_data.keys())
                     self.assertIsNotNone(get_job("my_jobs.MyJob"))
@@ -216,11 +211,13 @@ register_jobs(MyJob)
 
                     # Create a second Job in the same module
                     with open(os.path.join(temp_dir, "my_jobs.py"), "a") as fd:
-                        fd.write("""
+                        fd.write(
+                            """
 class MyOtherJob(MyJob):
     pass
 register_jobs(MyOtherJob)
-""")
+"""
+                        )
                     jobs_data = get_jobs(reload=True)
                     self.assertIn("my_jobs.MyJob", jobs_data.keys())
                     self.assertIsNotNone(get_job("my_jobs.MyJob"))
@@ -229,14 +226,16 @@ register_jobs(MyOtherJob)
 
                     # Create a third Job in another module
                     with open(os.path.join(temp_dir, "their_jobs.py"), "w") as fd:
-                        fd.write("""
+                        fd.write(
+                            """
 from nautobot.apps.jobs import Job, register_jobs
 
 class MyJob(Job):
     def run(self):
         pass
 register_jobs(MyJob)
-""")
+"""
+                        )
                     jobs_data = get_jobs(reload=True)
                     self.assertIn("my_jobs.MyJob", jobs_data.keys())
                     self.assertIsNotNone(get_job("my_jobs.MyJob"))
@@ -258,14 +257,16 @@ register_jobs(MyJob)
 
                     # Create a module with an inauspicious name
                     with open(os.path.join(temp_dir, "traceback.py"), "w") as fd:
-                        fd.write("""
+                        fd.write(
+                            """
 from nautobot.apps.jobs import Job, register_jobs
 
 class BadJob(Job):
     def run(self):
         raise RuntimeError("You ran a bad job!")
 register_jobs(BadJob)
-""")
+"""
+                        )
                     jobs_data = get_jobs(reload=True)
                     self.assertIn("my_jobs.MyJob", jobs_data.keys())
                     self.assertIsNotNone(get_job("my_jobs.MyJob"))
@@ -296,6 +297,105 @@ class JobTransactionTest(TransactionTestCase):
         self.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
         self.request.id = uuid.uuid4()
         self.request.user = self.user
+
+    def test_bulk_delete_system_jobs_fail(self):
+        system_job_queryset = Job.objects.filter(module_name__startswith="nautobot.")
+        pk_list = [str(pk) for pk in system_job_queryset.values_list("pk", flat=True)[:3]]
+        initial_count = Job.objects.all().count()
+        self.add_permissions("extras.delete_job")
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            content_type=ContentType.objects.get_for_model(Job).id,
+            delete_all=False,
+            filter_query_params={},
+            pk_list=pk_list,
+            username=self.user.username,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertIn(
+            f"Unable to delete Job {system_job_queryset.first()}. System Job cannot be deleted", error_log.message
+        )
+        self.assertEqual(initial_count, Job.objects.all().count())
+
+    def test_job_bulk_edit_default_queue_stays_default_after_one_field_update(self):
+        self.add_permissions("extras.change_job", "extras.view_job")
+        job_class_to_test = "TestPassJob"
+        job_description = "default job queue test"
+        job_to_test = Job.objects.get(job_class_name=job_class_to_test)
+        queryset = Job.objects.filter(installed=True, hidden=False, job_class_name=job_class_to_test)
+        default_job_queue = job_to_test.default_job_queue
+        pk_list = list(queryset.values_list("pk", flat=True))
+
+        job_ct = ContentType.objects.get_for_model(Job)
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=job_ct.id,
+            edit_all=False,
+            filter_query_params={},
+            form_data={
+                "pk": pk_list,
+                "description": job_description,
+            },
+            username=self.user.username,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(Job.objects.filter(description=job_description).count(), queryset.count())
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        )
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
+        )
+        instance = Job.objects.get(job_class_name=job_class_to_test)
+        self.assertEqual(instance.description, job_description)
+        self.assertEqual(instance.default_job_queue, default_job_queue)
+
+    def test_job_bulk_edit_preserve_job_queues_after_one_field_update(self):
+        self.add_permissions("extras.change_job", "extras.view_job")
+        job_class_to_test = "TestPassJob"
+        job_description = "job queues test"
+        job_to_test = Job.objects.get(job_class_name=job_class_to_test)
+
+        # Simulate 3 job queues set
+        job_queues = JobQueue.objects.all()[:3]
+        job_to_test.job_queues.set(job_queues)
+        job_to_test.job_queues.add(job_to_test.default_job_queue)
+        job_to_test.job_queues_override = True
+        job_to_test.save()
+
+        expected_job_queues = list(job_to_test.job_queues.values_list("pk", flat=True))
+
+        queryset = Job.objects.filter(installed=True, hidden=False, job_class_name=job_class_to_test)
+        pk_list = list(queryset.values_list("pk", flat=True))
+
+        job_ct = ContentType.objects.get_for_model(Job)
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=job_ct.id,
+            edit_all=False,
+            filter_query_params={},
+            form_data={
+                "pk": pk_list,
+                "description": job_description,
+            },
+            username=self.user.username,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(Job.objects.filter(description=job_description).count(), queryset.count())
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        )
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
+        )
+
+        instance = Job.objects.get(job_class_name=job_class_to_test)
+        self.assertEqual(instance.description, job_description)
+        self.assertQuerySetEqual(instance.job_queues.all(), JobQueue.objects.filter(pk__in=expected_job_queues))
 
     def test_job_hard_time_limit_less_than_soft_time_limit(self):
         """
@@ -615,6 +715,38 @@ class JobTransactionTest(TransactionTestCase):
         self.assertTrue(profiling_result.exists())
         profiling_result.unlink()
 
+    def test_job_singleton(self):
+        module = "singleton"
+        name = "TestSingletonJob"
+
+        job_class, _ = get_job_class_and_model(module, name, "local")
+        self.assertTrue(job_class.is_singleton)
+        cache.set(job_class.singleton_cache_key, 1)
+        failed_job_result = create_job_result_and_run_job(module, name)
+
+        self.assertEqual(
+            failed_job_result.status, JobResultStatusChoices.STATUS_FAILURE, msg="Duplicate singleton job didn't error."
+        )
+        self.assertIsNone(cache.get(job_class.singleton_cache_key, None))
+
+    def test_job_ignore_singleton(self):
+        module = "singleton"
+        name = "TestSingletonJob"
+
+        job_class, _ = get_job_class_and_model(module, name, "local")
+        self.assertTrue(job_class.is_singleton)
+        cache.set(job_class.singleton_cache_key, 1)
+        passed_job_result = create_job_result_and_run_job(
+            module, name, celery_kwargs={"nautobot_job_ignore_singleton_lock": True}
+        )
+
+        self.assertEqual(
+            passed_job_result.status,
+            JobResultStatusChoices.STATUS_SUCCESS,
+            msg="Duplicate singleton job didn't succeed with nautobot_job_ignore_singleton_lock=True.",
+        )
+        self.assertIsNone(cache.get(job_class.singleton_cache_key, None))
+
     @mock.patch("nautobot.extras.context_managers.enqueue_webhooks")
     def test_job_fires_webhooks(self, mock_enqueue_webhooks):
         module = "atomic_transaction"
@@ -890,9 +1022,7 @@ class JobButtonReceiverTest(TestCase):
         name = "TestJobButtonReceiverSimple"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
-        self.assertSequenceEqual(
-            list(form.fields.keys()), ["object_pk", "object_model_name", "_task_queue", "_profile"]
-        )
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_pk", "object_model_name", "_job_queue", "_profile"])
 
     def test_hidden(self):
         module = "job_button_receiver"
@@ -955,7 +1085,7 @@ class JobHookReceiverTest(TestCase):
         name = "TestJobHookReceiverLog"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class().as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_task_queue", "_profile"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_job_queue", "_profile"])
 
     def test_hidden(self):
         module = "job_hook_receiver"
@@ -1090,7 +1220,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
             ("info", "action: create"),
             ("info", f"jobresult.user: {self.user.username}"),
             ("info", "Test Job Hook Location 1"),
-            ("info", "Job completed"),
+            ("success", "Job completed"),
         ]
         log_messages = models.JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")
         self.assertSequenceEqual(log_messages, expected_log_messages)
@@ -1116,7 +1246,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
             ("info", "action: update"),
             ("info", f"jobresult.user: {self.user.username}"),
             ("info", "Test Job Hook Location 1"),
-            ("info", "Job completed"),
+            ("success", "Job completed"),
         ]
         log_messages = models.JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")
         self.assertSequenceEqual(log_messages, expected_log_messages)

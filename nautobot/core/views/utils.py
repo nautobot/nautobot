@@ -98,6 +98,17 @@ def csv_format(data):
     return ",".join(csv)
 
 
+def get_obj_from_context(context, key=None):
+    """From the given context, return the `object` that is in the context.
+
+    If a key is specified, return the value for that key.
+    Otherwise return the value for either of the keys `"obj"` or `"object"` as default behavior.
+    """
+    if key is not None:
+        return context.get(key)
+    return context.get("obj") or context.get("object")
+
+
 def get_csv_form_fields_from_serializer_class(serializer_class):
     """From the given serializer class, build a list of field dicts suitable for rendering in the CSV import form."""
     serializer = serializer_class(context={"request": None, "depth": 0})

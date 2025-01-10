@@ -1,11 +1,15 @@
+import graphene
+
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.extras.filters import (
     ContactAssociationFilterSet,
     DynamicGroupFilterSet,
+    JobFilterSet,
+    ScheduledJobFilterSet,
     StatusFilterSet,
     TagFilterSet,
 )
-from nautobot.extras.models import ContactAssociation, DynamicGroup, Status, Tag
+from nautobot.extras.models import ContactAssociation, DynamicGroup, Job, ScheduledJob, Status, Tag
 
 
 class ContactAssociationType(OptimizedNautobotObjectType):
@@ -22,6 +26,26 @@ class DynamicGroupType(OptimizedNautobotObjectType):
     class Meta:
         model = DynamicGroup
         filterset_class = DynamicGroupFilterSet
+
+
+class JobType(OptimizedNautobotObjectType):
+    """Graphql Type Object for Job model."""
+
+    class Meta:
+        model = Job
+        filterset_class = JobFilterSet
+
+    task_queues = graphene.List(graphene.String)
+
+
+class ScheduledJobType(OptimizedNautobotObjectType):
+    """Graphql Type Object for Job model."""
+
+    class Meta:
+        model = ScheduledJob
+        filterset_class = ScheduledJobFilterSet
+
+    queue = graphene.String
 
 
 class StatusType(OptimizedNautobotObjectType):

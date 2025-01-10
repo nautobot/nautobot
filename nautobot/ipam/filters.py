@@ -1,4 +1,5 @@
 import contextlib
+import uuid
 
 from django.core.exceptions import ValidationError
 from django.db.models import Q
@@ -323,7 +324,7 @@ class PrefixFilterSet(
         return prefixes_queryset
 
     def generate_query_filter_present_in_vrf(self, value):
-        if isinstance(value, str):
+        if isinstance(value, (str, uuid.UUID)):
             value = VRF.objects.get(pk=value)
 
         query = Q(vrfs=value) | Q(vrfs__export_targets__in=value.import_targets.all())
@@ -485,7 +486,7 @@ class IPAddressFilterSet(
             return queryset.none()
 
     def generate_query_filter_present_in_vrf(self, value):
-        if isinstance(value, str):
+        if isinstance(value, (str, uuid.UUID)):
             value = VRF.objects.get(pk=value)
 
         query = Q(parent__vrfs=value) | Q(parent__vrfs__export_targets__in=value.import_targets.all())

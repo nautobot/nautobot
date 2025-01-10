@@ -74,7 +74,7 @@ jobs:
       - name: "Run unittest"
         run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   tests-mysql:
-    name: "Unit tests (MySQL and Python 3.8)"
+    name: "Unit tests (MySQL and Python 3.9)"
     runs-on: "ubuntu-22.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -106,11 +106,11 @@ jobs:
         with:
           poetry-install-options: "--extras mysql"
           poetry-version: "1.8.2"
-          python-version: "3.8"
+          python-version: "3.9"
       - name: "Run unittest"
         run: "poetry run invoke unittest --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   migration-tests-mysql:
-    name: "Run migrations against test dataset (MySQL and Python 3.8)"
+    name: "Run migrations against test dataset (MySQL and Python 3.9)"
     runs-on: "ubuntu-20.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_mysql.tar.gz"
@@ -140,7 +140,7 @@ jobs:
         with:
           poetry-install-options: "--extras mysql"
           poetry-version: "1.8.2"
-          python-version: "3.8"
+          python-version: "3.9"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
   migration-tests-postgres:
@@ -196,7 +196,7 @@ jobs:
         ports:
           - "6379:6379"
       selenium:
-        image: "selenium/standalone-firefox:4.22"
+        image: "selenium/standalone-firefox:4.27"
         ports:
           - "4444:4444"
     steps:
@@ -227,7 +227,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.8", "3.9", "3.10", "3.11", "3.12" ]
+        python-version: [ "3.9", "3.10", "3.11", "3.12" ]
     steps:
       - name: "Configuration"
         id: "config"

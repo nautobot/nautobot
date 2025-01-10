@@ -1,0 +1,14 @@
+{% if body_content_table_list_url and more_queryset_count > 0 %}
+    <a href="{{ body_content_table_list_url }}">
+        <span class="mdi mdi-dots-horizontal" aria-hidden="true"></span> View {{ more_queryset_count }} more {{ body_content_table_verbose_name_plural }}
+    </a>
+{% endif %}
+
+{% if body_content_table_add_url %}
+    <div class="pull-right">
+        <a href="{{ body_content_table_add_url }}" class="btn btn-xs btn-primary">
+            <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add {{ body_content_table_verbose_name }}
+        </a>
+    </div>
+    <div class="clearfix"></div>
+{% endif %}

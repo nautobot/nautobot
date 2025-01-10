@@ -21,12 +21,6 @@
             {% render_field model_form.description %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Tenancy</strong></div>
-        <div class="panel-body">
-            {% render_field model_form.tenant_group %}
-            {% render_field model_form.tenant %}
-        </div>
-    </div>
+    {% include 'inc/tenancy_form_panel.html' %}
     {% include 'inc/extras_features_edit_form_fields.html' with form=model_form %}
 {% endblock %}

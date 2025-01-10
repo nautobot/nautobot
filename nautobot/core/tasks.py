@@ -49,7 +49,7 @@ def get_releases(pre_releases=False):
     cache.set(
         "nautobot.core.releases.get_latest_release",
         max(releases),
-        config.get_settings_or_config("RELEASE_CHECK_TIMEOUT"),
+        config.get_settings_or_config("RELEASE_CHECK_TIMEOUT", fallback=24 * 3600),
     )
 
     # Since this is a Celery task, we can't return Version objects as they are not JSON serializable.
