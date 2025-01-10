@@ -272,12 +272,12 @@ exclude = [
 ]
 plugins = [
     # TODO: not immediately compatible with our dynamic DJANGO_SETTINGS_MODULE
-    # "mypy_django_plugin.main",
+    "mypy_django_plugin.main",
     "mypy_drf_plugin.main",
 ]
 
 # TODO: not immediately compatible with our dynamic DJANGO_SETTINGS_MODULE
-# [tool.django-stubs]
+[tool.django-stubs]
 # django_settings_module = "nautobot_config"
 
 [tool.pylint.master]
