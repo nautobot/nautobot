@@ -1074,8 +1074,8 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
         self.repo.remote_url = "http://some-private-host/example.git"
         self.repo.validated_save()
 
-    def test_clone_and_discard_clone_functions(self):
-        """Confirm that the clone() and discard_clone() methods work as expected."""
+    def test_clone_context_manager(self):
+        """Confirm that the clone() context manager methods work as expected."""
         self.tempdir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
         create_and_populate_git_repository(self.tempdir.name)
 
@@ -1089,49 +1089,42 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
             provided_contents=[entry.content_identifier for entry in get_datasource_contents("extras.gitrepository")],
         )
         self.repo.save()
-
+        specified_path = tempfile.mkdtemp()
         with self.subTest("Clone a repository with no path argument provided"):
-            path = self.repo.clone()
-            # assert that the temporary directory was created in the expected location i.e. /tmp/
-            self.assertTrue(path.startswith(tempfile.gettempdir()))
-            self.assertTrue(os.path.exists(path))
-            # assert that the temporary directory was discarded
-            self.assertTrue(self.repo.discard_clone(path))
+            with self.repo.clone() as path:
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(tempfile.gettempdir()))
+                self.assertTrue(os.path.exists(path))
             self.assertFalse(os.path.exists(path))
 
         with self.subTest("Clone a repository with a path argument provided"):
-            specified_path = tempfile.mkdtemp()
-            path = self.repo.clone(path=specified_path)
-            # assert that the temporary directory was created in the expected location i.e. /tmp/
-            self.assertTrue(path.startswith(specified_path))
-            self.assertTrue(os.path.exists(path))
-            # pass in a path that doesn't exist
-            self.assertFalse(self.repo.discard_clone(path + "/nonexistent"))
-            # pass in a valid path and assert that the temporary directory was discarded
-            self.assertTrue(self.repo.discard_clone(path))
+            with self.repo.clone(path=specified_path) as path:
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+            # Temp directory is cleaned up after the context manager exits
             self.assertFalse(os.path.exists(path))
 
         with self.subTest("Clone a repository with the branch argument provided"):
-            path = self.repo.clone(path=specified_path, branch="empty-repo")
-            # assert that the temporary directory was created in the expected location i.e. /tmp/
-            self.assertTrue(path.startswith(specified_path))
-            self.assertTrue(os.path.exists(path))
-            # pass in a valid path and assert that the temporary directory was discarded
-            self.assertTrue(self.repo.discard_clone(path))
+            with self.repo.clone(path=specified_path, branch="empty-repo") as path:
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+            # Temp directory is cleaned up after the context manager exits
             self.assertFalse(os.path.exists(path))
 
         with self.subTest("Clone a repository with the head argument provided"):
-            path = self.repo.clone(path=specified_path, head=self.repo.current_head)
-            # assert that the temporary directory was created in the expected location i.e. /tmp/
-            self.assertTrue(path.startswith(specified_path))
-            self.assertTrue(os.path.exists(path))
-            # pass in a valid path and assert that the temporary directory was discarded
-            self.assertTrue(self.repo.discard_clone(path))
+            with self.repo.clone(path=specified_path, head=self.repo.current_head) as path:
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+            # Temp directory is cleaned up after the context manager exits
             self.assertFalse(os.path.exists(path))
 
         with self.subTest("Assert RuntimeError is raised when an invalid commit hash is provided"):
             with self.assertRaises(RuntimeError):
-                self.repo.clone(head="1234")
+                with self.repo.clone(path=specified_path, head="1234") as path:
+                    pass
 
 
 class JobModelTest(ModelTestCases.BaseModelTestCase):

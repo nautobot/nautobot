@@ -1,5 +1,6 @@
 """Models for representing external data sources."""
 
+from contextlib import contextmanager
 from importlib.util import find_spec
 import logging
 import os
@@ -174,6 +175,7 @@ class GitRepository(PrimaryModel):
             return enqueue_git_repository_diff_origin_and_local(self, user)
         return enqueue_pull_git_repository_and_refresh_data(self, user)
 
+    @contextmanager
     def clone(self, path=None, branch=None, head=None):
         """
         Perform a shallow clone of the Git repository in a temporary directory.
@@ -187,49 +189,39 @@ class GitRepository(PrimaryModel):
             Return the absolute path of the cloned repo if clone was successful
         """
 
-        if branch and head:
-            raise ValueError("Cannot specify both branch and head")
-
         try:
-            path_name = tempfile.mkdtemp(dir=path)
-        except PermissionError as e:
-            logger.error(f"Failed to create temporary directory at {path}: {e}")
-            raise e
+            if branch and head:
+                raise ValueError("Cannot specify both branch and head")
 
-        if not branch:
-            branch = self.branch
+            try:
+                path_name = tempfile.mkdtemp(dir=path)
+            except PermissionError as e:
+                logger.error(f"Failed to create temporary directory at {path}: {e}")
+                raise e
 
-        try:
-            repo_helper = GitRepo(path_name, self.remote_url)
-            head, _ = repo_helper.checkout(branch, head)
-        except Exception as e:
+            if not branch:
+                branch = self.branch
+
+            try:
+                repo_helper = GitRepo(path_name, self.remote_url)
+                head, _ = repo_helper.checkout(branch, head)
+            except Exception as e:
+                # Cleanup the temporary directory if the clone fails
+                try:
+                    shutil.rmtree(path_name)
+                except OSError as os_error:
+                    # log error if the cleanup fails
+                    logger.error(f"Failed to cleanup temporary directory at {path_name}: {os_error}")
+
+                logger.error(f"Failed to clone repository {self.name} to {path_name}: {e}")
+                raise e
+
+            logger.info(f"Cloned repository {self.name} to {path_name}")
+            yield path_name
+        finally:
             # Cleanup the temporary directory if the clone fails
             try:
                 shutil.rmtree(path_name)
             except OSError as os_error:
                 # log error if the cleanup fails
                 logger.error(f"Failed to cleanup temporary directory at {path_name}: {os_error}")
-
-            logger.error(f"Failed to clone repository {self.name} to {path_name}: {e}")
-            raise e
-
-        logger.info(f"Cloned repository {self.name} to {path_name}")
-        return path_name
-
-    def discard_clone(self, path):
-        """
-        Delete the shallow copy of the Git repository stored in the specified path.
-
-        Args:
-            path (str): The absolute path the repository was cloned to.
-
-        Returns:
-            Returns True if the deletion was successful, False otherwise.
-        """
-        if os.path.isdir(path):
-            shutil.rmtree(path)
-            logger.info(f"Deleted repository {self.name} copy at {path} successfully")
-            return True
-
-        logger.error(f"Failed to delete repository {self.name} copy at {path}: Directory does not exist")
-        return False
