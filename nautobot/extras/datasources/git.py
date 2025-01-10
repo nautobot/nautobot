@@ -984,13 +984,6 @@ def update_git_graphql_queries(repository_record, job_result):
                     graphql_query.query = query_content
                     modified = True
 
-                # Associate the query with the repository (if needed)
-                owner_content_type = ContentType.objects.get_for_model(repository_record)
-                if graphql_query.owner_content_type != owner_content_type:
-                    graphql_query.owner_content_type = owner_content_type
-                    graphql_query.owner_object_id = repository_record.pk
-                    modified = True
-
                 if modified:
                     graphql_query.save()
 

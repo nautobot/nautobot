@@ -359,8 +359,8 @@ class GitTest(TransactionTestCase):
                 self.assert_export_template_vlan_exists("template.j2")
 
                 # Make sure Graphgl queries were loaded
-                self.assert_graphql_query_exists("device_names.gql")
-                self.assert_graphql_query_exists("device_interfaces.gql")
+                self.assert_graphql_query_exists("device_names")
+                self.assert_graphql_query_exists("device_interfaces")
 
                 # Make sure Jobs were successfully loaded from file and registered as JobModels
                 self.assert_job_exists(name="MyJob")
@@ -476,10 +476,6 @@ class GitTest(TransactionTestCase):
                     warning_logs.get(
                         grouping="export templates",
                         message__contains="Skipping `dcim.nosuchmodel` as it isn't a known content type",
-                    )
-                    warning_logs.get(
-                        grouping="export templates",
-                        message__contains="Skipping `nosuchapp.device` as it isn't a known content type",
                     )
                     warning_logs.get(
                         grouping="export templates",
@@ -654,8 +650,8 @@ class GitTest(TransactionTestCase):
                 self.assert_export_template_device("template.j2")
                 self.assert_export_template_html_exist("template2.html")
                 self.assert_export_template_vlan_exists("template.j2")
-                self.assert_graphql_query_exists(name="device_names.gql")
-                self.assert_graphql_query_exists(name="device_interfaces.gql")
+                self.assert_graphql_query_exists(name="device_names")
+                self.assert_graphql_query_exists(name="device_interfaces")
                 self.assert_job_exists(name="MyJob")
                 self.assert_job_exists(name="MyJobButtonReceiver")
                 self.assert_job_exists(name="MyJobHookReceiver")
@@ -695,8 +691,8 @@ class GitTest(TransactionTestCase):
                     self.assert_export_template_device("template.j2")
                     self.assert_export_template_html_exist("template2.html")
                     self.assert_export_template_vlan_exists("template.j2")
-                    self.assert_graphql_query_exists("device_names.gql")
-                    self.assert_graphql_query_exists("device_interfaces.gql")
+                    self.assert_graphql_query_exists("device_names")
+                    self.assert_graphql_query_exists("device_interfaces")
                     self.assert_job_exists(name="MyJob")
                     self.assert_job_exists(name="MyJobButtonReceiver")
                     self.assert_job_exists(name="MyJobHookReceiver")
@@ -751,6 +747,7 @@ class GitTest(TransactionTestCase):
                 self.assertFalse(ConfigContextSchema.objects.filter(owner_object_id=self.repo.pk).exists())
                 self.assertFalse(ConfigContext.objects.filter(owner_object_id=self.repo.pk).exists())
                 self.assertFalse(ExportTemplate.objects.filter(owner_object_id=self.repo.pk).exists())
+                self.assertFalse(GraphQLQuery.objects.filter(owner_object_id=self.repo.pk).exists())
                 self.assertFalse(Job.objects.filter(module_name__startswith=self.repo.slug).exists())
 
     # TODO: test dry-run against a branch name
