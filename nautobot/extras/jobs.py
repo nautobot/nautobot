@@ -12,9 +12,9 @@ from textwrap import dedent
 from typing import final
 import warnings
 
-from billiard.einfo import ExceptionInfo
-from celery.utils.log import get_task_logger
-from db_file_storage.form_widgets import DBClearableFileInput
+from billiard.einfo import ExceptionInfo  # type: ignore[import-untyped]
+from celery.utils.log import get_task_logger  # type: ignore[import-untyped]
+from db_file_storage.form_widgets import DBClearableFileInput  # type: ignore[import-untyped]
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -27,7 +27,7 @@ from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
 from django.utils.functional import classproperty
-import netaddr
+import netaddr  # type: ignore[import-untyped]
 import yaml
 
 from nautobot.core.celery import import_jobs, nautobot_task
@@ -337,7 +337,7 @@ class BaseJob:
         - my_plugin.jobs.MyPluginJob - App-provided Job
         - git_repository.jobs.myjob.MyJob - GitRepository Job
         """
-        return f"{cls.__module__}.{cls.__name__}"  # pylint: disable=no-member
+        return f"{cls.__module__}.{cls.__name__}"  # type: ignore[attr-defined]  # pylint: disable=no-member
 
     @final
     @classproperty
@@ -374,7 +374,11 @@ class BaseJob:
     @final
     @classproperty
     def name(cls) -> str:  # pylint: disable=no-self-argument
-        return cls._get_meta_attr_and_assert_type("name", cls.__name__, expected_type=str)  # pylint: disable=no-member
+        return cls._get_meta_attr_and_assert_type(
+            "name",
+            cls.__name__,  # type: ignore[attr-defined] # pylint: disable=no-member
+            expected_type=str,
+        )
 
     @final
     @classproperty
@@ -468,7 +472,7 @@ class BaseJob:
     @classproperty
     def registered_name(cls) -> str:  # pylint: disable=no-self-argument
         """Deprecated - use class_path classproperty instead."""
-        return f"{cls.__module__}.{cls.__name__}"  # pylint: disable=no-member
+        return f"{cls.__module__}.{cls.__name__}"  # type: ignore[attr-defined]  # pylint: disable=no-member
 
     @classmethod
     def _get_vars(cls):
@@ -826,7 +830,7 @@ class ScriptVariable:
     Base model for script variables
     """
 
-    form_field = forms.CharField
+    form_field: type[forms.Field] = forms.CharField
 
     def __init__(self, label="", description="", default=None, required=True, widget=None):
         # Initialize field attributes
@@ -983,7 +987,7 @@ class ObjectVar(ScriptVariable):
         null_option (str): The label to use as a "null" selection option
     """
 
-    form_field = DynamicModelChoiceField
+    form_field: type[forms.Field] = DynamicModelChoiceField
 
     def __init__(
         self,

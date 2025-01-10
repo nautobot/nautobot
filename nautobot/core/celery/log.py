@@ -1,6 +1,6 @@
 import logging
 
-from celery import current_task
+from celery import current_task  # type: ignore[import-untyped]
 from django.core.exceptions import ValidationError
 
 

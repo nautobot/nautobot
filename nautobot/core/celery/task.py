@@ -1,10 +1,10 @@
-from billiard.einfo import ExceptionInfo, ExceptionWithTraceback
-from celery import states, Task
-from celery.exceptions import Retry
-from celery.result import EagerResult
-from celery.utils.functional import maybe_list
-from celery.utils.nodenames import gethostname
-from kombu.utils.uuid import uuid
+from billiard.einfo import ExceptionInfo, ExceptionWithTraceback  # type: ignore[import-untyped]
+from celery import states, Task  # type: ignore[import-untyped]
+from celery.exceptions import Retry  # type: ignore[import-untyped]
+from celery.result import EagerResult  # type: ignore[import-untyped]
+from celery.utils.functional import maybe_list  # type: ignore[import-untyped]
+from celery.utils.nodenames import gethostname  # type: ignore[import-untyped]
+from kombu.utils.uuid import uuid  # type: ignore[import-untyped]
 
 
 class NautobotTask(Task):
@@ -26,7 +26,7 @@ class NautobotTask(Task):
     ):
         """Fix celery's Task.apply() method to propagate options to the task result just like apply_async does."""
         # trace imports Task, so need to import inline.
-        from celery.app.trace import build_tracer
+        from celery.app.trace import build_tracer  # type: ignore[import-untyped]
 
         app = self._get_app()
         args = args or ()

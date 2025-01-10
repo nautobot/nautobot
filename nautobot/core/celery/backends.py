@@ -1,4 +1,4 @@
-from django_celery_results.backends import DatabaseBackend
+from django_celery_results.backends import DatabaseBackend  # type: ignore[import-untyped]
 
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.constants import JOB_RESULT_CUSTOM_CELERY_KWARGS

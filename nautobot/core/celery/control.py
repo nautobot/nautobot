@@ -2,7 +2,7 @@ import logging
 import os
 import shutil
 
-from celery.worker.control import control_command
+from celery.worker.control import control_command  # type: ignore[import-untyped]
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
