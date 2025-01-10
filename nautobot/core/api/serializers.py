@@ -22,7 +22,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.fields import CreateOnlyDefault
 from rest_framework.reverse import reverse
 from rest_framework.serializers import SerializerMethodField
-from rest_framework.utils.model_meta import _get_to_field, RelationInfo
+from rest_framework.utils.model_meta import _get_to_field, RelationInfo  # type: ignore[attr-defined]
 
 from nautobot.core import constants
 from nautobot.core.api.fields import LaxURLField, NautobotHyperlinkedRelatedField, ObjectTypeField
@@ -136,7 +136,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
     serializer_related_field = NautobotHyperlinkedRelatedField
 
-    id = serializers.UUIDField(read_only=False, default=serializers.CreateOnlyDefault(uuid.uuid4))
+    id = serializers.UUIDField(read_only=False, default=serializers.CreateOnlyDefault(uuid.uuid4))  # type: ignore[arg-type]
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
     object_type = ObjectTypeField()
     # composite_key = serializers.SerializerMethodField()  # TODO: Revisit if we reintroduce composite keys
@@ -889,6 +889,6 @@ class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract
     """Serializer for RenderJinjaView."""
 
     template_code = serializers.CharField(required=True)
-    context = serializers.DictField(default=dict)
+    context = serializers.DictField(default=dict)  # type: ignore[assignment]
     rendered_template = serializers.CharField(read_only=True)
     rendered_template_lines = serializers.ListField(read_only=True, child=serializers.CharField())

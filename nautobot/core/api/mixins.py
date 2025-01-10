@@ -85,7 +85,7 @@ class WritableSerializerMixin:
             ) from e
         return {"pk": pk}
 
-    def get_object(self, data, queryset):
+    def _get_object(self, data, queryset):
         """
         Retrieve an unique object based on a dictionary of data attributes and raise errors accordingly if the object is not found.
         """
@@ -110,5 +110,5 @@ class WritableSerializerMixin:
         else:
             queryset = self.Meta.model.objects
         if isinstance(data, list):
-            return [self.get_object(data=entry, queryset=queryset) for entry in data]
-        return self.get_object(data=data, queryset=queryset)
+            return [self._get_object(data=entry, queryset=queryset) for entry in data]
+        return self._get_object(data=data, queryset=queryset)

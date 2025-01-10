@@ -212,7 +212,7 @@ class NautobotAutoSchema(AutoSchema):
         return response_serializers
 
     # Cache of existing dynamically-defined WritableFooSerializer classes.
-    writable_serializers = {}
+    writable_serializers: dict[str, serializers.Serializer] = {}
 
     def get_writable_class(self, serializer, bulk=False):
         """

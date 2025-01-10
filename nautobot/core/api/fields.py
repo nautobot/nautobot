@@ -9,7 +9,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import URLField
 from rest_framework.relations import PrimaryKeyRelatedField, RelatedField
-from timezone_field.rest_framework import TimeZoneSerializerField as TimeZoneSerializerField_
+from timezone_field.rest_framework import TimeZoneSerializerField as TimeZoneSerializerField_  # type: ignore
 
 from nautobot.core.api.mixins import WritableSerializerMixin
 from nautobot.core.models.utils import deconstruct_composite_key

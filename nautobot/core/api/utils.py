@@ -2,6 +2,7 @@ from collections import namedtuple
 import logging
 import platform
 import sys
+from typing import Iterable, Optional
 
 from django.apps import apps
 from django.conf import settings
@@ -10,7 +11,7 @@ from django.urls import reverse
 from rest_framework import serializers, status
 from rest_framework.utils import formatting
 from rest_framework.utils.field_mapping import get_nested_relation_kwargs
-from rest_framework.utils.model_meta import _get_to_field, RelationInfo
+from rest_framework.utils.model_meta import _get_to_field, RelationInfo  # type: ignore[attr-defined]
 
 from nautobot.core.api import exceptions
 
@@ -61,14 +62,16 @@ def dynamic_import(name):
 
 
 # namedtuple accepts versions(list of API versions) and serializer(Related Serializer for versions).
-SerializerForAPIVersions = namedtuple("SerializersVersions", ("versions", "serializer"))
+SerializerForAPIVersions = namedtuple("SerializerForAPIVersions", ("versions", "serializer"))
 
 
-def get_api_version_serializer(serializer_choices, api_version):
+def get_api_version_serializer(
+    serializer_choices: Iterable[SerializerForAPIVersions], api_version: str
+) -> Optional[serializers.Serializer]:
     """Returns the serializer of an api_version
 
     Args:
-        serializer_choices (tuple): list of SerializerVersions
+        serializer_choices (tuple): list of SerializerForAPIVersions
         api_version (str): Request API version
 
     Returns:
@@ -250,7 +253,7 @@ def get_nested_serializer_depth(serializer):
     return depth
 
 
-NESTED_SERIALIZER_CACHE = {}
+NESTED_SERIALIZER_CACHE: dict[str, serializers.Serializer] = {}
 
 
 def nested_serializer_factory(relation_info, nested_depth):

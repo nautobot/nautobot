@@ -19,8 +19,8 @@ from drf_spectacular.plumbing import get_relative_url, set_query_parameters
 from drf_spectacular.renderers import OpenApiJsonRenderer
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularRedocView, SpectacularSwaggerView
-from graphene_django.settings import graphene_settings
-from graphene_django.views import GraphQLView, HttpError, instantiate_middleware
+from graphene_django.settings import graphene_settings  # type: ignore
+from graphene_django.views import GraphQLView, HttpError, instantiate_middleware  # type: ignore
 from graphql import get_default_backend
 from graphql.execution import ExecutionResult
 from graphql.execution.middleware import MiddlewareManager

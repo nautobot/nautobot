@@ -1,16 +1,18 @@
-from constance.admin import Config, ConstanceAdmin, ConstanceForm
+from constance.admin import Config, ConstanceAdmin, ConstanceForm  # type: ignore
 from django.contrib.admin import ModelAdmin, site as admin_site
 from django.db import models
-from django_celery_beat import admin  # noqa: F401  # unused-import -- but this import installs the beat admin
-from django_celery_beat.models import (
+
+# F401 unused-import -- but this import installs the beat admin
+from django_celery_beat import admin  # type: ignore  # noqa: F401
+from django_celery_beat.models import (  # type: ignore
     ClockedSchedule,
     CrontabSchedule,
     IntervalSchedule,
     PeriodicTask,
     SolarSchedule,
 )
-from social_django.models import Association, Nonce, UserSocialAuth
-from taggit.models import Tag
+from social_django.models import Association, Nonce, UserSocialAuth  # type: ignore
+from taggit.models import Tag  # type: ignore
 
 from nautobot.core.forms import BootstrapMixin
 import nautobot.core.forms.widgets as widgets
