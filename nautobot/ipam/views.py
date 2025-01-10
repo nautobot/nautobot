@@ -437,7 +437,6 @@ class PrefixPrefixesView(generic.ObjectView):
 
         prefix_table = tables.PrefixDetailTable(
             child_prefixes,
-            hide_hierarchy_ui=True,
             exclude=["namespace"],
             data_transform_callback=data_transform_callback,
         )
@@ -461,6 +460,7 @@ class PrefixPrefixesView(generic.ObjectView):
 
         return {
             "first_available_prefix": instance.get_first_available_prefix(),
+            "base_tree_depth": instance.ancestors().count(),
             "prefix_table": prefix_table,
             "permissions": permissions,
             "bulk_querystring": bulk_querystring,
