@@ -34,7 +34,7 @@ from nautobot.extras.utils import remove_prefix_from_cf_key
 logger = logging.getLogger(__name__)
 
 
-__all__ = (
+__all__ = (  # noqa:RUF022
     "ContactTeamModelFilterFormMixin",
     "CustomFieldModelBulkEditFormMixin",
     "CustomFieldModelFilterFormMixin",
@@ -673,7 +673,7 @@ class RelationshipModelFormMixin(forms.ModelForm):
             for peer_id in target_peer_ids:
                 relationship = self.fields[field_name].model
                 if not relationship.symmetric:
-                    association = RelationshipAssociation(
+                    association = RelationshipAssociation(  # pylint: disable=repeated-keyword
                         relationship=relationship,
                         **{
                             f"{side}_type": self.obj_type,

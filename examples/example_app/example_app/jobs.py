@@ -27,6 +27,7 @@ from nautobot.apps.jobs import (
 )
 from nautobot.dcim.models import Device, Location, LocationType
 from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.jobs import get_task_logger
 from nautobot.extras.models import Status
 
 name = "Example App jobs"  # The "grouping" that will contain all Jobs defined in this file.
@@ -76,6 +77,9 @@ This is a Job that demonstrates as many Job features as it can.
         time_limit = 2000  # Default: None (follow global configuration)
         # Time in seconds before Celery will automatically attempt terminate the Job by killing the
         # Celery worker process.
+        is_singleton = False  # Default: False
+        # A Boolean that if set to `True` prevents the job from running twice simultaneously.
+        # Any duplicate job instances will error out with a singleton-specific error message.
 
     # Definition of input variables requested when running this Job
     should_fail = BooleanVar(description="Check this box to force this Job to fail")
@@ -220,6 +224,9 @@ This is a Job that demonstrates as many Job features as it can.
             "This is an info message, with an associated database object",
             extra={"object": kwargs["location_type_input"]},
         )
+        self.logger.success(
+            "You can use logger.success() to set the log level to `SUCCESS`.", extra={"grouping": "post_run"}
+        )
         self.logger.warning(
             "You can specify a custom grouping for messages, but do so with consideration.",
             extra={"grouping": "warning messages"},
@@ -292,6 +299,10 @@ class ExampleDryRunJob(Job):
         except Exception:
             self.logger.error("%s failed. Database changes rolled back.", self.__class__.__name__)
             raise
+        self.logger.success("We can use the success log level to indicate success.")
+        # Ensure get_task_logger can also use success.
+        logger = get_task_logger(__name__)
+        logger.success("We can also use the success log level in get_task_logger.")
 
 
 class ExampleJob(Job):
@@ -468,6 +479,15 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
             self.logger.error("Unable to run Job Button for type %s.", type(obj).__name__, extra={"object": obj})
 
 
+class ExampleSingletonJob(Job):
+    class Meta:
+        name = "Example job, only one can run at any given time."
+        is_singleton = True
+
+    def run(self, *args, **kwargs):
+        time.sleep(60)
+
+
 jobs = (
     ExampleEverythingJob,
     ExampleDryRunJob,
@@ -479,5 +499,6 @@ jobs = (
     ExampleJobHookReceiver,
     ExampleSimpleJobButtonReceiver,
     ExampleComplexJobButtonReceiver,
+    ExampleSingletonJob,
 )
 register_jobs(*jobs)

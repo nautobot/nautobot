@@ -42,6 +42,7 @@ from nautobot.dcim.models import (
     Interface,
     InterfaceRedundancyGroup,
     InterfaceTemplate,
+    InterfaceVDCAssignment,
     InventoryItem,
     Location,
     LocationType,
@@ -65,6 +66,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
+    VirtualDeviceContext,
 )
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
@@ -686,9 +688,10 @@ class RackTest(APIViewTestCases.APIViewTestCase):
             status=statuses[0],
         )
         # Place a device in Rack 4
-        device = Device.objects.filter(
-            location=populated_rack.location, rack__isnull=True, device_type__u_height__gt=0
-        ).first()
+        device = Device.objects.filter(location=populated_rack.location, rack__isnull=True).first()
+        # Ensure the device height is non-zero, choosing 1 for simplicity
+        device.device_type.u_height = 1
+        device.device_type.save()
         device.rack = populated_rack
         device.face = "front"
         device.position = 10
@@ -879,61 +882,6 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.get("Content-Type"), "image/svg+xml")
         self.assertIn(b'<text class="unit" x="15.0" y="915.0">01</text>', response.content)
-
-    def test_detail_view_schema(self):
-        url = self._get_detail_url(self._get_queryset().first())
-        response = self.client.options(url, **self.header)
-        detail_view_schema = response.data["view_options"]["retrieve"]
-
-        expected_schema = {
-            "tabs": {
-                "Rack": [
-                    {
-                        "Rack": {"fields": ["name", "location", "rack_group"]},
-                        "Other Fields": {
-                            "fields": [
-                                "asset_tag",
-                                "desc_units",
-                                "device_count",
-                                "facility_id",
-                                "outer_depth",
-                                "outer_unit",
-                                "outer_width",
-                                "power_feed_count",
-                                "role",
-                                "serial",
-                                "tenant",
-                                "type",
-                                "u_height",
-                                "width",
-                            ]
-                        },
-                    },
-                    {
-                        "Comments": {"fields": ["comments"]},
-                        "Tags": {"fields": ["tags"]},
-                    },
-                ],
-                "Advanced": [
-                    {
-                        "Object Details": {
-                            "fields": [
-                                "id",
-                                "url",
-                                "object_type",
-                                "created",
-                                "last_updated",
-                                "natural_slug",
-                            ]
-                        }
-                    },
-                ],
-            }
-        }
-
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.maxDiff = None
-        self.assertEqual(expected_schema, detail_view_schema)
 
 
 class RackReservationTest(APIViewTestCases.APIViewTestCase):
@@ -1521,11 +1469,24 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             SecretsGroup.objects.create(name="Secrets Group 2"),
         )
 
-        device_type = DeviceType.objects.filter(software_image_files__isnull=False).first()
+        device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
 
-        software_version = SoftwareVersion.objects.filter(software_image_files__device_types=device_type).first()
-        software_image_files = SoftwareImageFile.objects.exclude(software_version=software_version)[:2]
+        software_version = SoftwareVersion.objects.first()
+        software_image_files = (
+            SoftwareImageFile.objects.create(
+                status=Status.objects.get_for_model(SoftwareImageFile).first(),
+                software_version=software_version,
+                image_file_name="test_software_image_file_1.bin",
+            ),
+            SoftwareImageFile.objects.create(
+                status=Status.objects.get_for_model(SoftwareImageFile).last(),
+                software_version=software_version,
+                image_file_name="test_software_image_file_2.bin",
+            ),
+        )
+        for software_image_file in software_image_files:
+            software_image_file.device_types.add(device_type)
 
         Device.objects.create(
             device_type=device_type,
@@ -2088,7 +2049,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
         cls.create_data = [
             {
                 "device": cls.devices[0].pk,
-                "name": "Interface 8",
+                "name": "Test Interface 8",
                 "type": "1000base-t",
                 "status": interface_status.pk,
                 "role": intf_role.pk,
@@ -2099,7 +2060,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             },
             {
                 "device": cls.devices[0].pk,
-                "name": "Interface 9",
+                "name": "Test Interface 9",
                 "type": "1000base-t",
                 "status": interface_status.pk,
                 "role": intf_role.pk,
@@ -2111,7 +2072,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             },
             {
                 "device": cls.devices[0].pk,
-                "name": "Interface 10",
+                "name": "Test Interface 10",
                 "type": "virtual",
                 "status": interface_status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
@@ -3397,6 +3358,7 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
                 "status": statuses[0].pk,
                 "role": roles[0].pk,
                 "location": locations[0].pk,
+                "capabilities": [],
             },
             {
                 "name": "Controller 2",
@@ -3404,6 +3366,7 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
                 "status": statuses[1].pk,
                 "role": roles[1].pk,
                 "location": locations[1].pk,
+                "capabilities": [],
             },
             {
                 "name": "Controller 3",
@@ -3411,6 +3374,7 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
                 "status": statuses[2].pk,
                 "role": roles[2].pk,
                 "location": locations[2].pk,
+                "capabilities": ["wireless"],
             },
         ]
         cls.bulk_update_data = {
@@ -3432,16 +3396,19 @@ class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
                 "name": "ControllerManagedDeviceGroup 1",
                 "controller": controllers[0].pk,
                 "weight": 100,
+                "capabilities": [],
             },
             {
                 "name": "ControllerManagedDeviceGroup 2",
                 "controller": controllers[1].pk,
                 "weight": 150,
+                "capabilities": [],
             },
             {
                 "name": "ControllerManagedDeviceGroup 3",
                 "controller": controllers[2].pk,
                 "weight": 200,
+                "capabilities": ["wireless"],
             },
         ]
         # changing controller is error-prone since a child group must have the same controller as its parent
@@ -3451,3 +3418,160 @@ class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
         cls.bulk_update_data = {
             "weight": 300,
         }
+
+
+class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
+    model = VirtualDeviceContext
+
+    @classmethod
+    def setUpTestData(cls):
+        devices = Device.objects.all()
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext)[0]
+        vdc_role = Role.objects.first()
+        vdc_role.content_types.add(ContentType.objects.get_for_model(VirtualDeviceContext))
+        tenants = Tenant.objects.all()
+
+        cls.create_data = [
+            {
+                "name": "Virtual Device Context 1",
+                "device": devices[0].pk,
+                "identifier": 100,
+                "status": vdc_status.pk,
+                "role": vdc_role.pk,
+            },
+            {
+                "name": "Virtual Device Context 2",
+                "device": devices[1].pk,
+                "identifier": 200,
+                "status": vdc_status.pk,
+                "tenant": tenants[1].pk,
+            },
+            {
+                "name": "Virtual Device Context 3",
+                "identifier": 300,
+                "device": devices[2].pk,
+                "status": vdc_status.pk,
+                "tenant": tenants[2].pk,
+                "role": vdc_role.pk,
+            },
+        ]
+        cls.update_data = {
+            "tenant": tenants[3].pk,
+            "role": vdc_role.pk,
+        }
+        cls.bulk_update_data = {
+            "tenant": tenants[4].pk,
+        }
+
+    def test_patching_primary_ip_success(self):
+        """
+        Validate we can set primary_ip on a Virtual Device Context using a PATCH.
+        """
+        # Add object-level permission
+        self.add_permissions("dcim.change_virtualdevicecontext")
+        vdc = VirtualDeviceContext.objects.first()
+        device = vdc.device
+        intf_status = Status.objects.get_for_model(Interface).first()
+        intf_role = Role.objects.get_for_model(Interface).first()
+        interface = Interface.objects.create(
+            name="Int1",
+            device=device,
+            status=intf_status,
+            role=intf_role,
+            type=InterfaceTypeChoices.TYPE_100GE_CFP,
+        )
+        ip_v4 = IPAddress.objects.filter(ip_version=4).first()
+        ip_v6 = IPAddress.objects.filter(ip_version=6).first()
+        interface.virtual_device_contexts.add(vdc)
+        interface.add_ip_addresses([ip_v4, ip_v6])
+
+        with self.subTest("Patch Primary ip4"):
+            patch_data = {"primary_ip4": ip_v4.pk}
+
+            response = self.client.patch(self._get_detail_url(vdc), patch_data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            vdc.refresh_from_db()
+            self.assertEqual(vdc.primary_ip4, ip_v4)
+
+        with self.subTest("Patch Primary ip6"):
+            patch_data = {"primary_ip6": ip_v6.pk}
+
+            response = self.client.patch(self._get_detail_url(vdc), patch_data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            vdc.refresh_from_db()
+            self.assertEqual(vdc.primary_ip6, ip_v6)
+
+    def test_changing_device_on_vdc_raise_validation_error(self):
+        """
+        Validate that changing device on the virutal device context is not allowed.
+        """
+        self.add_permissions("dcim.change_virtualdevicecontext")
+        vdc = VirtualDeviceContext.objects.first()
+        old_device = vdc.device
+        new_device = Device.objects.exclude(pk=old_device.pk).first()
+        patch_data = {"device": new_device.pk}
+        response = self.client.patch(self._get_detail_url(vdc), patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(
+            "Changing the device of a VirtualDeviceContext is not allowed.", response.data["non_field_errors"][0]
+        )
+
+
+class InterfaceVDCAssignmentTestCase(APIViewTestCases.APIViewTestCase):
+    model = InterfaceVDCAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        device = Device.objects.first()
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext)[0]
+        interface_status = Status.objects.get_for_model(Interface)[0]
+        interfaces = [
+            Interface.objects.create(
+                device=device,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                name=f"Interface 00{idx}",
+                status=interface_status,
+            )
+            for idx in range(3)
+        ]
+        vdcs = [
+            VirtualDeviceContext.objects.create(
+                device=device,
+                status=vdc_status,
+                identifier=200 + idx,
+                name=f"Test VDC {idx}",
+            )
+            for idx in range(3)
+        ]
+        # Create some deletable objects
+        InterfaceVDCAssignment.objects.create(
+            virtual_device_context=vdcs[0],
+            interface=interfaces[1],
+        )
+        InterfaceVDCAssignment.objects.create(
+            virtual_device_context=vdcs[0],
+            interface=interfaces[2],
+        )
+        InterfaceVDCAssignment.objects.create(
+            virtual_device_context=vdcs[1],
+            interface=interfaces[2],
+        )
+
+        cls.create_data = [
+            {
+                "virtual_device_context": vdcs[0].pk,
+                "interface": interfaces[0].pk,
+            },
+            {
+                "virtual_device_context": vdcs[1].pk,
+                "interface": interfaces[1].pk,
+            },
+            {
+                "virtual_device_context": vdcs[2].pk,
+                "interface": interfaces[2].pk,
+            },
+        ]
+
+    def test_docs(self):
+        """Skip: InterfaceVDCAssignment has no docs yet"""
+        # TODO(timizuo): Add docs for Interface VDC Assignment
