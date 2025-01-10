@@ -17,7 +17,6 @@ from django.test import override_settings
 from django.test.utils import isolate_apps
 from django.utils.timezone import get_default_timezone, now
 from django_celery_beat.tzcrontab import TzAwareCrontab
-from git import GitCommandError
 from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
 import time_machine
 
@@ -49,6 +48,7 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
+from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
     ComputedField,
@@ -84,6 +84,7 @@ from nautobot.extras.models import (
 from nautobot.extras.models.statuses import StatusModel
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
+from nautobot.extras.tests.git_helper import create_and_populate_git_repository
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import (
@@ -1075,23 +1076,34 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
 
     def test_clone_and_discard_clone_functions(self):
         """Confirm that the clone() and discard_clone() methods work as expected."""
-        self.repo.remote_url = "https://github.com/nautobot/nautobot.git"
+        self.tempdir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
+        create_and_populate_git_repository(self.tempdir.name)
+
+        self.repo_slug = "new_git_repo"
+        self.repo = GitRepository(
+            name="New Git Repository",
+            slug=self.repo_slug,
+            remote_url="file://" + self.tempdir.name,  # file:// URLs aren't permitted normally, but very useful here!
+            branch="empty-repo",
+            # Provide everything we know we can provide
+            provided_contents=[entry.content_identifier for entry in get_datasource_contents("extras.gitrepository")],
+        )
+        self.repo.save()
 
         with self.subTest("Clone a repository with no path argument provided"):
             path = self.repo.clone()
             # assert that the temporary directory was created in the expected location i.e. /tmp/
-            default_dir = "tmp"
-            self.assertIn(default_dir, path)
+            self.assertTrue(path.startswith(tempfile.gettempdir()))
             self.assertTrue(os.path.exists(path))
             # assert that the temporary directory was discarded
             self.assertTrue(self.repo.discard_clone(path))
             self.assertFalse(os.path.exists(path))
 
         with self.subTest("Clone a repository with a path argument provided"):
-            specified_path = "/source/nautobot/"
+            specified_path = tempfile.mkdtemp()
             path = self.repo.clone(path=specified_path)
             # assert that the temporary directory was created in the expected location i.e. /tmp/
-            self.assertIn(specified_path, path)
+            self.assertTrue(path.startswith(specified_path))
             self.assertTrue(os.path.exists(path))
             # pass in a path that doesn't exist
             self.assertFalse(self.repo.discard_clone(path + "/nonexistent"))
@@ -1099,8 +1111,26 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
             self.assertTrue(self.repo.discard_clone(path))
             self.assertFalse(os.path.exists(path))
 
-        with self.subTest("Assert GitCommandError is raised when an invalid commit hash is provided"):
-            with self.assertRaises(GitCommandError):
+        with self.subTest("Clone a repository with the branch argument provided"):
+            path = self.repo.clone(path=specified_path, branch="empty-repo")
+            # assert that the temporary directory was created in the expected location i.e. /tmp/
+            self.assertTrue(path.startswith(specified_path))
+            self.assertTrue(os.path.exists(path))
+            # pass in a valid path and assert that the temporary directory was discarded
+            self.assertTrue(self.repo.discard_clone(path))
+            self.assertFalse(os.path.exists(path))
+
+        with self.subTest("Clone a repository with the head argument provided"):
+            path = self.repo.clone(path=specified_path, head=self.repo.current_head)
+            # assert that the temporary directory was created in the expected location i.e. /tmp/
+            self.assertTrue(path.startswith(specified_path))
+            self.assertTrue(os.path.exists(path))
+            # pass in a valid path and assert that the temporary directory was discarded
+            self.assertTrue(self.repo.discard_clone(path))
+            self.assertFalse(os.path.exists(path))
+
+        with self.subTest("Assert RuntimeError is raised when an invalid commit hash is provided"):
+            with self.assertRaises(RuntimeError):
                 self.repo.clone(head="1234")
 
 
