@@ -1,3 +1,6 @@
+from typing import Any, Iterable, Union
+
+
 class ChoiceSetMeta(type):
     """
     Metaclass for ChoiceSet
@@ -34,7 +37,7 @@ class ChoiceSet(metaclass=ChoiceSetMeta):
         ```
     """
 
-    CHOICES = []
+    CHOICES: Iterable[Union[tuple[Any, str], tuple[str, tuple[Any, str]]]] = []
 
     @classmethod
     def values(cls):

@@ -1,4 +1,6 @@
-from celery import states
+from typing import Iterable
+
+from celery import states  # type: ignore[import-untyped]
 
 from nautobot.core.choices import ChoiceSet
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
@@ -87,7 +89,7 @@ class CustomFieldTypeChoices(ChoiceSet):
     TYPE_JSON = "json"
     TYPE_MARKDOWN = "markdown"
 
-    CHOICES = (
+    CHOICES: Iterable[tuple[str, str]] = (
         (TYPE_TEXT, "Text"),
         (TYPE_INTEGER, "Integer"),
         (TYPE_BOOLEAN, "Boolean (true/false)"),
@@ -100,7 +102,7 @@ class CustomFieldTypeChoices(ChoiceSet):
     )
 
     # Types that support validation_minimum/validation_maximum
-    MIN_MAX_TYPES = (
+    MIN_MAX_TYPES: Iterable[str] = (
         TYPE_TEXT,
         TYPE_INTEGER,
         TYPE_URL,
