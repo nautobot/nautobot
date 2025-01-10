@@ -43,9 +43,11 @@ UTILIZATION_GRAPH = """
 """
 
 
+# record: the Prefix being rendered in this row
+# object: the base ancestor Prefix, in the case of PrefixDetailTable, else None
 PREFIX_COPY_LINK = """
 {% load helpers %}
-{% tree_hierarchy_ui_representation record.ancestors.count|as_range table.hide_hierarchy_ui%}
+{% tree_hierarchy_ui_representation record.ancestors.count|as_range table.hide_hierarchy_ui base_tree_depth|default:0 %}
 <span class="hover_copy">
   <a href="\
 {% if record.present_in_database %}\

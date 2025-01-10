@@ -158,8 +158,8 @@ class NautobotTestRunner(DiscoverRunner):
                                     verbosity=self.verbosity,
                                     keepdb=self.keepdb
                                     # Extra checks added for Nautobot:
-                                    and self.reusedb
-                                    and not settings.TEST_USE_FACTORIES,  # w/ factory data, clones can't be reused
+                                    and not settings.TEST_USE_FACTORIES
+                                    and self.reusedb,
                                 )
 
                 # Configure all other connections as mirrors of the first one

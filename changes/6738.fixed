@@ -1,0 +1,1 @@
+Fixed an exception when cleaning a Prefix that was defined by specifying `network` and `prefix_length`.

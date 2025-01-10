@@ -1,7 +1,5 @@
 """Dynamic Groups Models."""
 
-from __future__ import annotations  # python 3.8
-
 import logging
 from typing import Optional
 

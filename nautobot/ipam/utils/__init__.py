@@ -1,3 +1,5 @@
+from collections.abc import Iterable
+
 from django.core.exceptions import ValidationError
 import netaddr
 
@@ -5,19 +7,23 @@ from nautobot.core.forms.utils import compress_range
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import RelationshipAssociation
 from nautobot.ipam.choices import PrefixTypeChoices
-from nautobot.ipam.models import Prefix, VLAN
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.ipam.querysets import IPAddressQuerySet
 from nautobot.virtualization.models import VMInterface
 
 
-def add_available_prefixes(parent, prefix_list):
+def add_available_prefixes(parent: netaddr.IPNetwork, namespace: Namespace, prefix_list: Iterable[Prefix]):
     """
     Create fake Prefix objects for all unallocated space within a prefix.
     """
 
     # Find all unallocated space
-    available_prefixes = netaddr.IPSet(parent) ^ netaddr.IPSet([p.prefix for p in prefix_list])
-    available_prefixes = [Prefix(prefix=p, status=None) for p in available_prefixes.iter_cidrs()]
+    available_prefixes = netaddr.IPSet(parent) ^ netaddr.IPSet(
+        [p.prefix for p in prefix_list if p.type != PrefixTypeChoices.TYPE_CONTAINER or not p.descendants().exists()]
+    )
+    available_prefixes = [
+        Prefix(prefix=p, namespace=namespace, type=None, status=None) for p in available_prefixes.iter_cidrs()
+    ]
 
     # Concatenate and sort complete list of children
     prefix_list = list(prefix_list) + available_prefixes
@@ -26,14 +32,14 @@ def add_available_prefixes(parent, prefix_list):
     return prefix_list
 
 
-def get_add_available_prefixes_callback(show_available, parent):
+def get_add_available_prefixes_callback(show_available: bool, parent: Prefix):
     """Conditionally provide a callback for add_available_prefixes()."""
     if show_available:
-        return lambda prefixes: add_available_prefixes(parent.prefix, prefixes)
+        return lambda prefixes: add_available_prefixes(parent.prefix, parent.namespace, prefixes)
     return lambda prefixes: prefixes
 
 
-def add_available_ipaddresses(prefix, ipaddress_list, is_pool=False):
+def add_available_ipaddresses(prefix: netaddr.IPNetwork, ipaddress_list: Iterable[IPAddress], is_pool: bool = False):
     """
     Annotate ranges of available IP addresses within a given prefix. If is_pool is True, the first and last IP will be
     considered usable (regardless of mask length).
@@ -89,7 +95,7 @@ def add_available_ipaddresses(prefix, ipaddress_list, is_pool=False):
     return output
 
 
-def get_add_available_ipaddresses_callback(show_available, parent):
+def get_add_available_ipaddresses_callback(show_available: bool, parent: Prefix):
     """Conditionally provide a callback for add_available_ipaddresses()."""
     if show_available:
         return lambda ip_addresses: add_available_ipaddresses(
@@ -98,7 +104,7 @@ def get_add_available_ipaddresses_callback(show_available, parent):
     return lambda ip_addresses: ip_addresses
 
 
-def add_available_vlans(vlan_group, vlans):
+def add_available_vlans(vlan_group: VLANGroup, vlans: list[VLAN]):
     """
     Create fake records for all gaps between used VLANs
     """
@@ -116,7 +122,7 @@ def add_available_vlans(vlan_group, vlans):
     return vlans
 
 
-def get_add_available_vlans_callback(show_available, vlan_group):
+def get_add_available_vlans_callback(show_available: bool, vlan_group: VLANGroup):
     """Conditionally provide a callback for add_available_vlans()."""
     if show_available:
         return lambda vlans: add_available_vlans(vlan_group=vlan_group, vlans=vlans)

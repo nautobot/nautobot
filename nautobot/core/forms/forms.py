@@ -1,8 +1,11 @@
+import contextlib
 import json
 import logging
 import re
 
 from django import forms
+from django.core.exceptions import FieldDoesNotExist
+from django.db.models.fields.related import ManyToManyField
 from django.forms import formset_factory
 from django.urls import reverse
 import yaml
@@ -15,8 +18,8 @@ __all__ = (
     "BootstrapMixin",
     "BulkEditForm",
     "BulkRenameForm",
-    "ConfirmationForm",
     "CSVModelForm",
+    "ConfirmationForm",
     "DynamicFilterForm",
     "ImportForm",
     "PrefixFieldMixin",
@@ -124,7 +127,35 @@ class BulkEditForm(forms.Form):
 
         if edit_all:
             self.fields["pk"].required = False
-            self.fields["_all"] = forms.BooleanField(widget=forms.HiddenInput(), required=True, initial=True)
+            self.fields["_all"] = forms.BooleanField(widget=forms.HiddenInput(), required=False, initial=True)
+
+    def _save_m2m_fields(self, obj):
+        """Save M2M fields"""
+        from nautobot.core.models.fields import TagsField  # Avoid circular dependency
+
+        m2m_field_names = []
+        # Handle M2M Save
+        for key in self.cleaned_data.keys():
+            if key.startswith(("add_", "remove_")):
+                field_name = key.lstrip("add_")
+                if field_name in m2m_field_names:
+                    continue
+                with contextlib.suppress(FieldDoesNotExist):
+                    field = obj._meta.get_field(field_name)
+                    is_m2m_field = isinstance(field, (ManyToManyField, TagsField))
+                    if is_m2m_field:
+                        m2m_field_names.append(field_name)
+
+        for field_name in m2m_field_names:
+            m2m_field = getattr(obj, field_name)
+            if self.cleaned_data.get(f"add_{field_name}", None):
+                m2m_field.add(*self.cleaned_data[f"add_{field_name}"])
+            if self.cleaned_data.get(f"remove_{field_name}", None):
+                m2m_field.remove(*self.cleaned_data[f"remove_{field_name}"])
+
+    def post_save(self, obj):
+        """Post save action"""
+        self._save_m2m_fields(obj)
 
 
 class BulkRenameForm(forms.Form):

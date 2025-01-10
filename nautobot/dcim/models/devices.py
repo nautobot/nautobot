@@ -9,16 +9,17 @@ from django.db import models
 from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
 from django.utils.functional import cached_property, classproperty
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 import yaml
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, RestrictedQuerySet
-from nautobot.core.models.fields import NaturalOrderingField
+from nautobot.core.models.fields import JSONArrayField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import (
+    ControllerCapabilitiesChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     SoftwareImageFileHashingAlgorithmChoices,
@@ -50,9 +51,11 @@ __all__ = (
     "DeviceFamily",
     "DeviceRedundancyGroup",
     "DeviceType",
+    "InterfaceVDCAssignment",
     "Manufacturer",
     "Platform",
     "VirtualChassis",
+    "VirtualDeviceContext",
 )
 
 
@@ -821,6 +824,7 @@ class Device(PrimaryModel, ConfigContextModel):
 
         # If any software image file is specified, validate that
         # each of the software image files belongs to the device's device type or is a default image
+        # TODO: this is incorrect as we cannot validate a ManyToMany during clean() - nautobot/nautobot#6344
         for image_file in self.software_image_files.all():
             if not image_file.default_image and self.device_type not in image_file.device_types.all():
                 raise ValidationError(
@@ -1365,6 +1369,12 @@ class Controller(PrimaryModel):
         null=True,
     )
     role = RoleField(blank=True, null=True)
+    capabilities = JSONArrayField(
+        base_field=models.CharField(choices=ControllerCapabilitiesChoices),
+        blank=True,
+        null=True,
+        help_text="List of capabilities supported by the controller, these capabilities are used to enhance views in Nautobot.",
+    )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -1416,6 +1426,11 @@ class Controller(PrimaryModel):
                     {"location": f'Devices may not associate to locations of type "{self.location.location_type}".'}
                 )
 
+    def get_capabilities_display(self):
+        if not self.capabilities:
+            return format_html('<span class="text-muted">&mdash;</span>')
+        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in self.capabilities))
+
 
 @extras_features(
     "custom_links",
@@ -1435,6 +1450,7 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
         unique=True,
         help_text="Name of the controller device group",
     )
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     weight = models.PositiveIntegerField(
         default=1000,
         help_text="Weight of the controller device group, used to sort the groups within its parent group",
@@ -1446,6 +1462,33 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
         blank=False,
         null=False,
         help_text="Controller that manages the devices in this group",
+    )
+    radio_profiles = models.ManyToManyField(
+        to="wireless.RadioProfile",
+        related_name="controller_managed_device_groups",
+        through="wireless.ControllerManagedDeviceGroupRadioProfileAssignment",
+        through_fields=("controller_managed_device_group", "radio_profile"),
+        blank=True,
+    )
+    wireless_networks = models.ManyToManyField(
+        to="wireless.WirelessNetwork",
+        related_name="controller_managed_device_groups",
+        through="wireless.ControllerManagedDeviceGroupWirelessNetworkAssignment",
+        through_fields=("controller_managed_device_group", "wireless_network"),
+        blank=True,
+    )
+    capabilities = JSONArrayField(
+        base_field=models.CharField(choices=ControllerCapabilitiesChoices),
+        blank=True,
+        null=True,
+        help_text="List of capabilities supported by the controller device group, these capabilities are used to enhance views in Nautobot.",
+    )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="controller_managed_device_groups",
+        blank=True,
+        null=True,
     )
 
     class Meta:
@@ -1470,6 +1513,11 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
             raise ValidationError(
                 {"controller": "Controller device group must have the same controller as the parent group."}
             )
+
+    def get_capabilities_display(self):
+        if not self.capabilities:
+            return format_html('<span class="text-muted">&mdash;</span>')
+        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in self.capabilities))
 
 
 #
@@ -1839,3 +1887,133 @@ class Module(PrimaryModel):
         Return the set of child Modules installed in ModuleBays within this Module.
         """
         return Module.objects.filter(parent_module_bay__parent_module=self)
+
+
+#
+# Virtual Device Contexts
+#
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "statuses",
+    "webhooks",
+)
+class VirtualDeviceContext(PrimaryModel):
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    device = models.ForeignKey("dcim.Device", on_delete=models.CASCADE, related_name="virtual_device_contexts")
+    identifier = models.PositiveSmallIntegerField(
+        help_text="Unique identifier provided by the platform being virtualized (Example: Nexus VDC Identifier)",
+        blank=True,
+        null=True,
+    )
+    status = StatusField(blank=False, null=False)
+    role = RoleField(blank=True, null=True)
+    primary_ip4 = models.ForeignKey(
+        to="ipam.IPAddress",
+        on_delete=models.SET_NULL,
+        related_name="ip4_vdcs",
+        blank=True,
+        null=True,
+        verbose_name="Primary IPv4",
+    )
+    primary_ip6 = models.ForeignKey(
+        to="ipam.IPAddress",
+        on_delete=models.SET_NULL,
+        related_name="ip6_vdcs",
+        blank=True,
+        null=True,
+        verbose_name="Primary IPv6",
+    )
+    tenant = models.ForeignKey(
+        "tenancy.Tenant", on_delete=models.CASCADE, related_name="virtual_device_contexts", blank=True, null=True
+    )
+    interfaces = models.ManyToManyField(
+        blank=True,
+        related_name="virtual_device_contexts",
+        to="dcim.Interface",
+        through="dcim.InterfaceVDCAssignment",
+    )
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+
+    class Meta:
+        ordering = ("name",)
+        unique_together = (("device", "identifier"), ("device", "name"))
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def primary_ip(self):
+        if get_settings_or_config("PREFER_IPV4") and self.primary_ip4:
+            return self.primary_ip4
+        elif self.primary_ip6:
+            return self.primary_ip6
+        elif self.primary_ip4:
+            return self.primary_ip4
+        else:
+            return None
+
+    def validate_primary_ips(self):
+        for field in ["primary_ip4", "primary_ip6"]:
+            ip = getattr(self, field)
+            if ip is not None:
+                if field == "primary_ip4" and ip.ip_version != 4:
+                    raise ValidationError({f"{field}": f"{ip} is not an IPv4 address."})
+                if field == "primary_ip6" and ip.ip_version != 6:
+                    raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
+                if not ip.interfaces.filter(device=self.device).exists():
+                    raise ValidationError(
+                        {f"{field}": f"{ip} is not part of an interface that belongs to this VDC's device."}
+                    )
+                # Note: The validation for primary IPs `validate_primary_ips` is commented out due to the order in which Django processes form validation with
+                # Many-to-Many (M2M) fields. During form saving, Django creates the instance first before assigning the M2M fields (in this case, interfaces).
+                # As a result, the primary_ips fields could fail validation at this point because the interfaces are not yet linked to the instance,
+                # leading to validation errors.
+                # interfaces = self.interfaces.all()
+                # if IPAddressToInterface.objects.filter(ip_address=ip, interface__in=interfaces).exists():
+                #     pass
+                # elif (
+                #     ip.nat_inside is None
+                #     or not IPAddressToInterface.objects.filter(
+                #         ip_address=ip.nat_inside, interface__in=interfaces
+                #     ).exists()
+                # ):
+                #     raise ValidationError(
+                #         {f"{field}": f"The specified IP address ({ip}) is not assigned to this Virtual Device Context."}
+                #     )
+
+    def clean(self):
+        super().clean()
+        self.validate_primary_ips()
+
+        # Validate that device is not being modified
+        if self.present_in_database:
+            vdc = VirtualDeviceContext.objects.get(id=self.id)
+            if vdc.device != self.device:
+                raise ValidationError({"device": "Virtual Device Context's device cannot be changed once created"})
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+)
+class InterfaceVDCAssignment(BaseModel):
+    virtual_device_context = models.ForeignKey(
+        VirtualDeviceContext, on_delete=models.CASCADE, related_name="interface_assignments"
+    )
+    interface = models.ForeignKey(
+        Interface, on_delete=models.CASCADE, related_name="virtual_device_context_assignments"
+    )
+
+    class Meta:
+        unique_together = ["virtual_device_context", "interface"]
+        ordering = ["virtual_device_context", "interface"]
+
+    def __str__(self):
+        return f"{self.virtual_device_context}: {self.interface}"
