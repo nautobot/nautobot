@@ -57,7 +57,7 @@ class BranchDoesNotExist(Exception):
 
 
 class GitRepo:
-    def __init__(self, path, url, clone_initially=True):
+    def __init__(self, path, url, clone_initially=True, shallow=False):
         """
         Ensure that we have a clone of the given remote Git repository URL at the given local directory path.
 
@@ -73,7 +73,10 @@ class GitRepo:
         elif clone_initially:
             # Don't log `url` as it may include authentication details.
             logger.debug("Cloning git repository to %s...", path)
-            self.repo = Repo.clone_from(url, to_path=path, env=GIT_ENVIRONMENT)
+            if not shallow:
+                self.repo = Repo.clone_from(url, to_path=path, env=GIT_ENVIRONMENT)
+            else:
+                self.repo = Repo.clone_from(url, to_path=path, env=GIT_ENVIRONMENT, depth=1)
         else:
             self.repo = Repo.init(path)
             self.repo.create_remote("origin", url=url)

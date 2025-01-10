@@ -176,14 +176,15 @@ class GitRepository(PrimaryModel):
         return enqueue_pull_git_repository_and_refresh_data(self, user)
 
     @contextmanager
-    def clone(self, path=None, branch=None, head=None):
+    def clone(self, path=None, branch=None, head=None, shallow=True):
         """
-        Perform a shallow clone of the Git repository in a temporary directory.
+        Perform a (shallow) clone of the Git repository in a temporary directory.
 
         Args:
             path (str, optional): The absolute directory path to clone into. If not specified, `tempfile.gettempdir()` will be used.
-            branch (str): Optional The branch to checkout. If not set, the GitRepository.branch will be used.
-            head (str): Optional Git commit hash to check out instead of pulling branch latest.
+            branch (str, optional): The branch to checkout. If not set, the GitRepository.branch will be used.
+            head (str, optional): Git commit hash to check out instead of pulling branch latest.
+            shallow (bool, optional): If set, perform a shallow clone.
 
         Returns:
             Return the absolute path of the cloned repo if clone was successful
@@ -203,7 +204,7 @@ class GitRepository(PrimaryModel):
                 branch = self.branch
 
             try:
-                repo_helper = GitRepo(path_name, self.remote_url)
+                repo_helper = GitRepo(path_name, self.remote_url, shallow=shallow)
                 head, _ = repo_helper.checkout(branch, head)
             except Exception as e:
                 # Cleanup the temporary directory if the clone fails

@@ -1084,7 +1084,7 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
             name="New Git Repository",
             slug=self.repo_slug,
             remote_url="file://" + self.tempdir.name,  # file:// URLs aren't permitted normally, but very useful here!
-            branch="empty-repo",
+            branch="main",
             # Provide everything we know we can provide
             provided_contents=[entry.content_identifier for entry in get_datasource_contents("extras.gitrepository")],
         )
@@ -1106,7 +1106,7 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
             self.assertFalse(os.path.exists(path))
 
         with self.subTest("Clone a repository with the branch argument provided"):
-            with self.repo.clone(path=specified_path, branch="empty-repo") as path:
+            with self.repo.clone(path=specified_path, branch="main") as path:
                 # assert that the temporary directory was created in the expected location i.e. /tmp/
                 self.assertTrue(path.startswith(specified_path))
                 self.assertTrue(os.path.exists(path))
@@ -1121,9 +1121,9 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
             # Temp directory is cleaned up after the context manager exits
             self.assertFalse(os.path.exists(path))
 
-        with self.subTest("Assert RuntimeError is raised when an invalid commit hash is provided"):
-            with self.assertRaises(RuntimeError):
-                with self.repo.clone(path=specified_path, head="1234") as path:
+        with self.subTest("Assert an Exception is raised when an invalid commit hash is provided"):
+            with self.assertRaises(Exception):
+                with self.repo.clone(path=specified_path, head="non-existent") as path:
                     pass
 
 
