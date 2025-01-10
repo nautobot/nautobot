@@ -232,6 +232,24 @@ tblib = "~3.0.0"
 # Time travel for testing, used in ScheduledJob tests etc.
 time-machine = "~2.16.0"
 
+
+[tool.poetry.group.typing.dependencies]
+# Unofficial type stubs for Django itself
+django-stubs = {version = "^5.1.1", extras = ["compatible-mypy"]}
+# Unofficial type stubs for rest_framework
+djangorestframework-stubs = {version = "^3.15.2", extras = ["compatible-mypy"]}
+# Type checking and validation
+mypy = "~1.13"
+# More type stubs
+types-colorama = "^0.4.15.20240311"
+types-jsonschema = "^4.23.0.20241208"
+types-markdown = "^3.7.0.20241204"
+types-psycopg2 = "^2.9.21.20241019"
+types-pygments = "^2.19.0.20250107"
+types-pyopenssl = "^24.1.0.20240722"
+types-requests = "^2.32.0.20241016"
+types-six = "^1.17.0.20241205"
+
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
 
@@ -247,6 +265,20 @@ omit = [
     "nautobot/core/testing/*.py",
     "nautobot/extras/test_jobs/*.py",
 ]
+
+[tool.mypy]
+exclude = [
+    "nautobot/extras/tests/git_data/02-invalid-files/",
+]
+plugins = [
+    # TODO: not immediately compatible with our dynamic DJANGO_SETTINGS_MODULE
+    # "mypy_django_plugin.main",
+    "mypy_drf_plugin.main",
+]
+
+# TODO: not immediately compatible with our dynamic DJANGO_SETTINGS_MODULE
+# [tool.django-stubs]
+# django_settings_module = "nautobot_config"
 
 [tool.pylint.master]
 load-plugins = "pylint_django"

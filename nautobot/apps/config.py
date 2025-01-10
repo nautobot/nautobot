@@ -3,7 +3,7 @@
 import contextlib
 import logging
 
-from constance import config
+from constance import config  # type: ignore
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import OperationalError, ProgrammingError

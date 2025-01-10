@@ -1,7 +1,7 @@
 from django.contrib.auth.models import AnonymousUser
 from django.urls import reverse
 from django.utils.html import format_html
-import django_tables2 as tables
+import django_tables2 as tables  # type: ignore
 
 
 class InstalledAppsTable(tables.Table):

@@ -2,6 +2,7 @@ from collections import OrderedDict
 import logging
 import os
 import platform
+from typing import Optional
 
 from django import __version__ as DJANGO_VERSION, forms
 from django.apps import apps
@@ -407,8 +408,8 @@ class AuthenticatedAPIRootView(NautobotAPIVersionMixin, routers.APIRootView):
 
     permission_classes = [IsAuthenticated]
 
-    name = None
-    description = None
+    name: Optional[str] = None
+    description: Optional[str] = None
 
 
 class APIRootView(AuthenticatedAPIRootView):

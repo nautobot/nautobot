@@ -19,7 +19,6 @@ from nautobot.core.views import (
 )
 from nautobot.extras.plugins.urls import (
     apps_patterns,
-    plugin_admin_patterns,
     plugin_patterns,
 )
 from nautobot.users.views import LoginView, LogoutView
@@ -59,7 +58,6 @@ urlpatterns = [
     # Apps
     path("apps/", include((apps_patterns, "apps"))),
     path("plugins/", include((plugin_patterns, "plugins"))),
-    path("admin/plugins/", include(plugin_admin_patterns)),
     # Social auth/SSO
     path("", include("social_django.urls", namespace="social")),
     # django-health-check

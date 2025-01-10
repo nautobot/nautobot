@@ -3,6 +3,7 @@ from functools import partial
 from importlib import import_module
 import inspect
 from logging import getLogger
+from typing import Any, Iterable, Optional, TYPE_CHECKING
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -23,6 +24,15 @@ from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import import_object
 from nautobot.extras.registry import register_datasource_contents, registry
 from nautobot.extras.secrets import register_secrets_provider
+
+if TYPE_CHECKING:
+    from django.db.models import Model, QuerySet
+    from django.forms import Field
+    from django_filters import Filter  # type: ignore
+    from django_tables2 import Column  # type: ignore
+
+    from nautobot.core.settings_funcs import ConstanceConfigItem
+    from nautobot.core.ui.object_detail import Button, Panel, Tab
 
 logger = getLogger(__name__)
 
@@ -45,58 +55,58 @@ class NautobotAppConfig(NautobotConfig):
     Subclass of Django's built-in AppConfig class, to be used for Nautobot plugins.
     """
 
-    default = True
+    default: bool = True
 
     # Plugin metadata
-    author = ""
-    author_email = ""
-    description = ""
-    version = ""
+    author: str = ""
+    author_email: str = ""
+    description: str = ""
+    version: str = ""
 
     # Root URL path under /plugins. If not set, the plugin's label will be used.
-    base_url = None
+    base_url: Optional[str] = None
 
     # Minimum/maximum compatible versions of Nautobot
-    min_version = None
-    max_version = None
+    min_version: Optional[str] = None
+    max_version: Optional[str] = None
 
     # Default configuration parameters
-    default_settings = {}
+    default_settings: dict[str, Any] = {}
 
     # Mandatory configuration parameters
-    required_settings = []
+    required_settings: Iterable[str] = []
 
     # Middleware classes provided by the plugin
-    middleware = []
+    middleware: Iterable[str] = []
 
     # Extra installed apps provided or required by the plugin. These will be registered
     # along with the plugin.
-    installed_apps = []
+    installed_apps: Iterable[str] = []
 
     # Default constance configuration parameters
-    constance_config = {}
+    constance_config: dict[str, "ConstanceConfigItem"] = {}
 
     # URL reverse lookup names, a la "plugins:myplugin:home", "plugins:myplugin:configure", "plugins:myplugin:docs"
-    home_view_name = None
-    config_view_name = None
-    docs_view_name = None
+    home_view_name: Optional[str] = None
+    config_view_name: Optional[str] = None
+    docs_view_name: Optional[str] = None
 
     # Default integration paths. Plugin authors can override these to customize the paths to
     # integrated components.
-    banner_function = "banner.banner"
-    custom_validators = "custom_validators.custom_validators"
-    datasource_contents = "datasources.datasource_contents"
-    filter_extensions = "filter_extensions.filter_extensions"
-    graphql_types = "graphql.types.graphql_types"
-    homepage_layout = "homepage.layout"
-    jinja_filters = "jinja_filters"
-    jobs = "jobs.jobs"
-    metrics = "metrics.metrics"
-    menu_items = "navigation.menu_items"
-    secrets_providers = "secrets.secrets_providers"
-    table_extensions = "table_extensions.table_extensions"
-    template_extensions = "template_content.template_extensions"
-    override_views = "views.override_views"
+    banner_function: str = "banner.banner"
+    custom_validators: str = "custom_validators.custom_validators"
+    datasource_contents: str = "datasources.datasource_contents"
+    filter_extensions: str = "filter_extensions.filter_extensions"
+    graphql_types: str = "graphql.types.graphql_types"
+    homepage_layout: str = "homepage.layout"
+    jinja_filters: str = "jinja_filters"
+    jobs: str = "jobs.jobs"
+    metrics: str = "metrics.metrics"
+    menu_items: str = "navigation.menu_items"
+    secrets_providers: str = "secrets.secrets_providers"
+    table_extensions: str = "table_extensions.table_extensions"
+    template_extensions: str = "template_content.template_extensions"
+    override_views: str = "views.override_views"
 
     def ready(self):
         """Callback after plugin app is loaded."""
@@ -295,13 +305,13 @@ class TemplateExtension:
     It should be set as a string in the form `<app_label>.<model_name>`.
     """
 
-    model: str = None
+    model: str
     """The model (as a string in the form `<app_label>.<model>`) that this TemplateExtension subclass applies to."""
-    object_detail_buttons = None
+    object_detail_buttons: Optional[Iterable["Button"]] = None
     """List of Button instances to add to the specified model's detail view."""
-    object_detail_tabs = None
+    object_detail_tabs: Optional[Iterable["Tab"]] = None
     """List of Tab instances to add to the specified model's detail view."""
-    object_detail_panels = None
+    object_detail_panels: Optional[Iterable["Panel"]] = None
     """List of Panel instances to add to the specified model's detail view."""
 
     def __init__(self, context):
@@ -458,7 +468,7 @@ def register_graphql_types(class_list):
     Register a list of DjangoObjectType classes
     """
     # Validation
-    from graphene_django import DjangoObjectType
+    from graphene_django import DjangoObjectType  # type: ignore
 
     for item in class_list:
         if not inspect.isclass(item):
@@ -484,11 +494,11 @@ def register_metrics(function_list):
 class FilterExtension:
     """Class that may be returned by a registered Filter Extension function."""
 
-    model = None
+    model: type["Model"]
 
-    filterset_fields = {}
+    filterset_fields: dict[str, "Filter"] = {}
 
-    filterform_fields = {}
+    filterform_fields: dict[str, "Field"] = {}
 
 
 @class_deprecated_in_favor_of(FilterExtension)
@@ -553,14 +563,14 @@ class TableExtension:
         - remove_from_default_columns = ("tenant",)
     """
 
-    model = None
-    suffix = None
-    table_columns = {}
-    add_to_default_columns = ()
-    remove_from_default_columns = ()
+    model: type["Model"]
+    suffix: Optional[str] = None
+    table_columns: dict[str, "Column"] = {}
+    add_to_default_columns: Iterable[str] = ()
+    remove_from_default_columns: Iterable[str] = ()
 
     @classmethod
-    def alter_queryset(cls, queryset):
+    def alter_queryset(cls, queryset: "QuerySet") -> "QuerySet":
         """Alter the View class QuerySet.
 
         This is a good place to add `prefetch_related` to the view queryset.
@@ -570,28 +580,28 @@ class TableExtension:
         return queryset
 
     @classmethod
-    def _get_table_columns_registrations(cls):
-        """Return a list of register labels fro each column."""
+    def _get_table_columns_registrations(cls) -> list[str]:
+        """Return a list of register labels for each column."""
         if not cls.table_columns:
             return []
         return [f"{cls.model} -> {column_name}" for column_name in cls.table_columns]
 
     @classmethod
-    def _get_add_to_default_columns_registrations(cls):
+    def _get_add_to_default_columns_registrations(cls) -> list[str]:
         """Return a list of register labels for each column added to defaults."""
         if not cls.add_to_default_columns:
             return []
         return [f"{cls.model} -> {cls.add_to_default_columns}"]
 
     @classmethod
-    def _get_remove_from_default_columns_registrations(cls):
+    def _get_remove_from_default_columns_registrations(cls) -> list[str]:
         """Return a list of register labels for each column removed from defaults."""
         if not cls.remove_from_default_columns:
             return []
         return [f"{cls.model} -> {cls.remove_from_default_columns}"]
 
 
-def get_table_extension_features(table_extensions):
+def get_table_extension_features(table_extensions) -> dict[str, list[str]]:
     """Return a dictionary of TableExtension features for the App detail view."""
     return {
         "columns": [
@@ -612,7 +622,7 @@ def get_table_extension_features(table_extensions):
     }
 
 
-def register_table_extensions(table_extensions, app_name):
+def register_table_extensions(table_extensions: Iterable[TableExtension], app_name: str):
     """Register a list of TableExtension classes."""
     for table_extension in table_extensions:
         _validate_is_subclass_of_table_extension(table_extension)
@@ -621,7 +631,7 @@ def register_table_extensions(table_extensions, app_name):
         _alter_table_view_queryset(table_extension, app_name)
 
 
-def _add_columns_into_model_table(table_extension, app_name):
+def _add_columns_into_model_table(table_extension: TableExtension, app_name: str):
     """Inject each new column into the Model Table."""
     from nautobot.core.utils.lookup import get_table_for_model
 

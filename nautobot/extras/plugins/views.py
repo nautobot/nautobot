@@ -6,7 +6,7 @@ from django.conf import settings
 from django.http import Http404
 from django.shortcuts import render
 from django.urls.exceptions import NoReverseMatch
-from django_tables2 import RequestConfig
+from django_tables2 import RequestConfig  # type: ignore
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework.response import Response
