@@ -5,10 +5,11 @@ from datetime import timedelta
 import json
 import logging
 import signal
+from typing import ClassVar
 
-from billiard.exceptions import SoftTimeLimitExceeded
-from celery.exceptions import NotRegistered
-from celery.utils.log import get_logger, LoggingProxy
+from billiard.exceptions import SoftTimeLimitExceeded  # type: ignore[import-untyped]
+from celery.exceptions import NotRegistered  # type: ignore[import-untyped]
+from celery.utils.log import get_logger, LoggingProxy  # type: ignore[import-untyped]
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -17,10 +18,10 @@ from django.db import models, transaction
 from django.db.models import ProtectedError, signals
 from django.utils import timezone
 from django.utils.functional import cached_property
-from django_celery_beat.clockedschedule import clocked
-from django_celery_beat.tzcrontab import TzAwareCrontab
+from django_celery_beat.clockedschedule import clocked  # type: ignore[import-untyped]
+from django_celery_beat.tzcrontab import TzAwareCrontab  # type: ignore[import-untyped]
 from prometheus_client import Histogram
-from timezone_field import TimeZoneField
+from timezone_field import TimeZoneField  # type: ignore[import-untyped]
 
 from nautobot.core.celery import (
     app,
@@ -244,7 +245,7 @@ class Job(PrimaryModel):
         default=False,
         help_text="If set, the configured value will remain even if the underlying Job source code changes",
     )
-    objects = BaseManager.from_queryset(JobQuerySet)()
+    objects: ClassVar = BaseManager.from_queryset(JobQuerySet)()
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
 
@@ -420,7 +421,7 @@ class JobHook(OrganizationalModel):
         related_name="job_hooks",
         verbose_name="Object types",
         # 2.0 TODO: standardize verbose name for ContentType fields
-        limit_choices_to=ChangeLoggedModelsQuery,
+        limit_choices_to=ChangeLoggedModelsQuery,  # type: ignore[arg-type]
         help_text="The object(s) to which this job hook applies.",
     )
     enabled = models.BooleanField(default=True)
@@ -669,7 +670,7 @@ class JobResult(BaseModel, CustomFieldModel):
     meta = models.JSONField(null=True, default=None, editable=False)
     scheduled_job = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
 
-    objects = JobResultManager()
+    objects: ClassVar = JobResultManager()
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
 
@@ -1193,7 +1194,7 @@ class ScheduledJob(BaseModel):
         help_text="Cronjob syntax string for custom scheduling",
     )
 
-    objects = BaseManager.from_queryset(ScheduledJobExtendedQuerySet)()
+    objects: ClassVar = BaseManager.from_queryset(ScheduledJobExtendedQuerySet)()
     no_changes = False
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/job-scheduling-and-approvals.html"

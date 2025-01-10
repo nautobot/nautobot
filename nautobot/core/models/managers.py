@@ -1,7 +1,7 @@
 import logging
 
 from django.db.models import Manager
-from taggit.managers import _TaggableManager
+from taggit.managers import _TaggableManager  # type: ignore[import-untyped]
 
 logger = logging.getLogger(__name__)
 

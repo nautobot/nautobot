@@ -1,8 +1,8 @@
 from django.core.cache import cache
 from django.db.models import Case, When
 from django.db.models.signals import post_delete, post_save
-from tree_queries.models import TreeNode
-from tree_queries.query import TreeManager as TreeManager_, TreeQuerySet as TreeQuerySet_
+from tree_queries.models import TreeNode  # type: ignore[import-untyped]
+from tree_queries.query import TreeManager as TreeManager_, TreeQuerySet as TreeQuerySet_  # type: ignore[import-untyped]
 
 from nautobot.core.models import BaseManager, querysets
 from nautobot.core.signals import invalidate_max_depth_cache
@@ -62,7 +62,7 @@ class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
         return 0
 
 
-class TreeManager(TreeManager_, BaseManager.from_queryset(TreeQuerySet)):
+class TreeManager(TreeManager_, BaseManager.from_queryset(TreeQuerySet)):  # type: ignore[misc]
     """
     Extend django-tree-queries' TreeManager to incorporate RestrictedQuerySet.
     """

@@ -1,7 +1,7 @@
 """Dynamic Groups Models."""
 
 import logging
-from typing import Optional
+from typing import ClassVar, Optional
 
 from django import forms
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -11,7 +11,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.db.models.signals import pre_delete
 from django.utils.functional import cached_property
-import django_filters
+import django_filters  # type: ignore[import-untyped]
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
@@ -74,7 +74,7 @@ class DynamicGroup(PrimaryModel):
         related_name="parents",
     )
 
-    objects = BaseManager.from_queryset(DynamicGroupQuerySet)()
+    objects: ClassVar = BaseManager.from_queryset(DynamicGroupQuerySet)()
     is_dynamic_group_associable_model = False
 
     clone_fields = ["content_type", "group_type", "filter", "tenant"]
@@ -425,7 +425,7 @@ class DynamicGroup(PrimaryModel):
         return f"nautobot.extras.dynamicgroup.{self.id}.members_cached"
 
     @property
-    @method_deprecated_in_favor_of(members.fget)
+    @method_deprecated_in_favor_of(members.fget)  # type: ignore[attr-defined]
     def members_cached(self):
         """Deprecated  - use `members()` instead."""
         return self.members
@@ -1065,7 +1065,7 @@ class DynamicGroupMembership(BaseModel):
     operator = models.CharField(choices=DynamicGroupOperatorChoices.CHOICES, max_length=12)
     weight = models.PositiveSmallIntegerField()
 
-    objects = BaseManager.from_queryset(DynamicGroupMembershipQuerySet)()
+    objects: ClassVar = BaseManager.from_queryset(DynamicGroupMembershipQuerySet)()
 
     documentation_static_path = "docs/user-guide/platform-functionality/dynamicgroup.html"
     is_metadata_associable_model = False
@@ -1153,7 +1153,7 @@ class DynamicGroupMembership(BaseModel):
         return super().save(*args, **kwargs)
 
 
-class StaticGroupAssociationManager(BaseManager.from_queryset(RestrictedQuerySet)):
+class StaticGroupAssociationManager(BaseManager.from_queryset(RestrictedQuerySet)):  # type: ignore[misc]
     use_in_migrations = True
 
 
@@ -1185,7 +1185,7 @@ class StaticGroupAssociation(OrganizationalModel):
     associated_object_id = models.UUIDField(db_index=True)
     associated_object = GenericForeignKey(ct_field="associated_object_type", fk_field="associated_object_id")
 
-    objects = StaticGroupAssociationDefaultManager()
+    objects: ClassVar = StaticGroupAssociationDefaultManager()
     all_objects = StaticGroupAssociationManager()
 
     is_contact_associable_model = False

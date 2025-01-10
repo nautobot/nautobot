@@ -6,9 +6,9 @@ from django.core.validators import MaxLengthValidator, RegexValidator
 from django.db import models
 from django.forms import TextInput
 from django.utils.text import slugify
-from django_extensions.db.fields import AutoSlugField as _AutoSlugField
-from netaddr import AddrFormatError, EUI, mac_unix_expanded
-from taggit.managers import TaggableManager
+from django_extensions.db.fields import AutoSlugField as _AutoSlugField  # type: ignore[import-untyped]
+from netaddr import AddrFormatError, EUI, mac_unix_expanded  # type: ignore[import-untyped]
+from taggit.managers import TaggableManager  # type: ignore[import-untyped]
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import fields, widgets

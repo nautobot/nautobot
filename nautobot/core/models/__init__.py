@@ -1,3 +1,4 @@
+from typing import Union
 import uuid
 
 from django.conf import settings
@@ -45,7 +46,7 @@ class BaseModel(models.Model):
     can be used for the same purpose in most cases.
     """
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True, editable=False)
+    id: models.UUIDField = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True, editable=False)
 
     objects = BaseManager.from_queryset(RestrictedQuerySet)()
     is_contact_associable_model = False  # ContactMixin overrides this to default True
@@ -141,12 +142,12 @@ class BaseModel(models.Model):
         """
         vals = []
         for lookups in [lookup.split("__") for lookup in self.natural_key_field_lookups]:
-            val = self
+            val: Union[models.Model, str, None] = self
             for lookup in lookups:
                 val = getattr(val, lookup)
                 if val is None:
                     break
-            if not is_protected_type(val):
+            if not is_protected_type(val):  # TODO: why this check?
                 val = str(val)
             vals.append(val)
         # Strip trailing Nones from vals

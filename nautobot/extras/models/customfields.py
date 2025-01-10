@@ -3,13 +3,14 @@ from datetime import date, datetime
 import json
 import logging
 import re
+from typing import ClassVar
 
 from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.core.validators import RegexValidator, ValidationError
+from django.core.validators import RegexValidator
 from django.db import models, transaction
 from django.forms.widgets import TextInput
 from django.utils.html import format_html
@@ -45,7 +46,7 @@ from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features,
 logger = logging.getLogger(__name__)
 
 
-class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
+class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):  # type: ignore[misc]
     use_in_migrations = True
 
     def get_for_model(self, model):
@@ -61,7 +62,7 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             cache.set(cache_key, queryset)
         return queryset
 
-    get_for_model.cache_key_prefix = "nautobot.extras.computedfield.get_for_model"
+    get_for_model.cache_key_prefix = "nautobot.extras.computedfield.get_for_model"  # type: ignore[attr-defined]
 
 
 @extras_features("graphql")
@@ -109,7 +110,7 @@ class ComputedField(
         'It will appear in the "Advanced" tab instead.',
     )
 
-    objects = ComputedFieldManager()
+    objects: ClassVar = ComputedFieldManager()
 
     clone_fields = ["content_type", "description", "template", "fallback_value", "weight"]
     natural_key_field_names = ["key"]
@@ -365,7 +366,7 @@ class CustomFieldModel(models.Model):
         return computed_fields_dict
 
 
-class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
+class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):  # type: ignore[misc]
     use_in_migrations = True
 
     def get_for_model(self, model, exclude_filter_disabled=False):
@@ -389,7 +390,7 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             cache.set(cache_key, queryset)
         return queryset
 
-    get_for_model.cache_key_prefix = "nautobot.extras.customfield.get_for_model"
+    get_for_model.cache_key_prefix = "nautobot.extras.customfield.get_for_model"  # type: ignore[attr-defined]
 
     def keys_for_model(self, model):
         """Return list of all keys for CustomFields assigned to the given model."""
@@ -401,7 +402,7 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             cache.set(cache_key, keys)
         return keys
 
-    keys_for_model.cache_key_prefix = "nautobot.extras.customfield.keys_for_model"
+    keys_for_model.cache_key_prefix = "nautobot.extras.customfield.keys_for_model"  # type: ignore[attr-defined]
 
 
 @extras_features("webhooks")
@@ -498,7 +499,7 @@ class CustomField(
         'It will appear in the "Advanced" tab instead.',
     )
 
-    objects = CustomFieldManager()
+    objects: ClassVar = CustomFieldManager()
 
     clone_fields = [
         "content_types",
