@@ -1,9 +1,9 @@
-import graphene
-from graphene_django.types import ObjectType
+import graphene  # type: ignore[import-untyped]
+from graphene_django.types import ObjectType  # type: ignore[import-untyped]
 
 from .schema import generate_query_mixin
 
-DynamicGraphQL = generate_query_mixin()
+DynamicGraphQL: type = generate_query_mixin()
 
 
 class Query(ObjectType, DynamicGraphQL):

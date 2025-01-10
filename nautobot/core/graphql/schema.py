@@ -2,15 +2,16 @@
 
 from collections import OrderedDict
 import logging
+from typing import Any
 
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
-from django.core.validators import ValidationError
+from django.core.exceptions import ValidationError
 from django.db.models import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel, OneToOneRel
-import graphene
-from graphene.types import generic
+import graphene  # type: ignore[import-untyped]
+from graphene.types import generic  # type: ignore[import-untyped]
 
 from nautobot.circuits.graphql.types import CircuitTerminationType
 from nautobot.core.graphql.generators import (
@@ -459,12 +460,12 @@ def extend_schema_type_relationships(schema_type, model):
     return schema_type
 
 
-def generate_query_mixin():
+def generate_query_mixin() -> type:
     """Generates and returns a class definition representing a GraphQL schema."""
 
     logger.info("Beginning generation of Nautobot GraphQL schema")
 
-    class_attrs = {}
+    class_attrs: dict[str, Any] = {}
 
     def already_present(model):
         """Check if a model and its resolvers are staged to added to the Mixin."""
@@ -516,6 +517,15 @@ def generate_query_mixin():
                 # Skip models that have been added statically
                 continue
 
+            if model is None:
+                logger.warning(
+                    'Unable to generate a schema type for the model "%s.%s" in GraphQL, '
+                    "as this model class couldn't be located.",
+                    app_name,
+                    model_name,
+                )
+                continue
+
             schema_type = generate_schema_type(app_name=app_name, model=model)
             registry["graphql_types"][type_identifier] = schema_type
 
@@ -523,6 +533,9 @@ def generate_query_mixin():
     # After checking for conflict
     for schema_type in registry["plugin_graphql_types"]:
         model = schema_type._meta.model
+        if model is None:
+            logger.warning("Unable to load schema type \"%s\" as it doesn't have an associated `model`", schema_type)
+            continue
         type_identifier = f"{model._meta.app_label}.{model._meta.model_name}"
 
         if type_identifier in registry["graphql_types"]:

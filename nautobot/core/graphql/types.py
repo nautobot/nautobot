@@ -1,8 +1,8 @@
 import datetime
 
 from django.contrib.contenttypes.models import ContentType
-import graphene
-import graphene_django_optimizer as gql_optimizer
+import graphene  # type: ignore[import-untyped]
+import graphene_django_optimizer as gql_optimizer  # type: ignore[import-untyped]
 from graphql import GraphQLError
 
 

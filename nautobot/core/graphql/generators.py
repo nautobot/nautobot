@@ -2,8 +2,9 @@
 
 import logging
 
-import graphene
-import graphene_django_optimizer as gql_optimizer
+from django.db.models import Model
+import graphene  # type: ignore[import-untyped]
+import graphene_django_optimizer as gql_optimizer  # type: ignore[import-untyped]
 from graphql import GraphQLError
 
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
@@ -205,7 +206,7 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
     return resolve_relationship
 
 
-def generate_schema_type(app_name: str, model: object) -> OptimizedNautobotObjectType:
+def generate_schema_type(app_name: str, model: type[Model]) -> type[OptimizedNautobotObjectType]:
     """
     Take a Django model and generate a Graphene Type class definition.
 
@@ -241,7 +242,11 @@ def generate_schema_type(app_name: str, model: object) -> OptimizedNautobotObjec
 
     main_attrs["Meta"] = type("Meta", (object,), meta_attrs)
 
-    schema_type = type(f"{model.__name__}Type", (OptimizedNautobotObjectType,), main_attrs)
+    schema_type: type[OptimizedNautobotObjectType] = type(
+        f"{model.__name__}Type",
+        (OptimizedNautobotObjectType,),
+        main_attrs,
+    )
     return schema_type
 
 

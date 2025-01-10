@@ -1,6 +1,6 @@
 from django.test.client import RequestFactory
-from graphene.types import Scalar
-from graphene_django.settings import graphene_settings
+from graphene.types import Scalar  # type: ignore[import-untyped]
+from graphene_django.settings import graphene_settings  # type: ignore[import-untyped]
 from graphql import get_default_backend
 from graphql.language import ast
 

@@ -1,7 +1,7 @@
 import logging
 
-from django_filters.filters import BooleanFilter, MultipleChoiceFilter, NumberFilter
-import graphene
+from django_filters.filters import BooleanFilter, MultipleChoiceFilter, NumberFilter  # type: ignore[import-untyped]
+import graphene  # type: ignore[import-untyped]
 
 from nautobot.core.filters import (
     MultiValueBigNumberFilter,
