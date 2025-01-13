@@ -1,10 +1,10 @@
-from billiard.einfo import ExceptionInfo, ExceptionWithTraceback  # type: ignore[import-untyped]
-from celery import states, Task  # type: ignore[import-untyped]
-from celery.exceptions import Retry  # type: ignore[import-untyped]
-from celery.result import EagerResult  # type: ignore[import-untyped]
-from celery.utils.functional import maybe_list  # type: ignore[import-untyped]
-from celery.utils.nodenames import gethostname  # type: ignore[import-untyped]
-from kombu.utils.uuid import uuid  # type: ignore[import-untyped]
+from billiard.einfo import ExceptionInfo, ExceptionWithTraceback  # type: ignore[attr-defined]
+from celery import states, Task
+from celery.exceptions import Retry
+from celery.result import EagerResult
+from celery.utils.functional import maybe_list  # type: ignore[import-untyped]  # missing in celery-types at present
+from celery.utils.nodenames import gethostname  # type: ignore[import-untyped]  # missing in celery-types at present
+from kombu.utils.uuid import uuid
 
 
 class NautobotTask(Task):

@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.http import QueryDict
 from django.test import TestCase
 from django.urls import reverse
-from netaddr import IPNetwork  # type: ignore[import-untyped]
+from netaddr import IPNetwork
 
 from nautobot.core import filters, forms, testing
 from nautobot.core.utils import requests

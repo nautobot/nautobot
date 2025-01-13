@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.test.utils import override_settings
 from django.urls import reverse
-from netaddr import IPNetwork  # type: ignore[import-untyped]
+from netaddr import IPNetwork
 
 from nautobot.core.settings_funcs import sso_auth_enabled
 from nautobot.core.testing import NautobotTestClient, TestCase

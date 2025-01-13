@@ -4,14 +4,14 @@ import os
 from pathlib import Path
 import shutil
 
-from celery import Celery, shared_task, signals  # type: ignore[import-untyped]
-from celery.app.log import TaskFormatter  # type: ignore[import-untyped]
-from celery.utils.log import get_logger  # type: ignore[import-untyped]
+from celery import Celery, shared_task, signals
+from celery.app.log import TaskFormatter  # type: ignore[attr-defined]
+from celery.utils.log import get_logger
 from django.conf import settings
 from django.db.utils import OperationalError, ProgrammingError
 from django.utils.functional import SimpleLazyObject
 from django.utils.module_loading import import_string
-from kombu.serialization import register  # type: ignore[import-untyped]
+from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 
 from nautobot import add_success_logger

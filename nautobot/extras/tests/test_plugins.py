@@ -8,7 +8,7 @@ from django.template import engines
 from django.test import override_settings
 from django.urls import NoReverseMatch, reverse
 import django_tables2 as tables  # type: ignore[import-untyped]
-import netaddr  # type: ignore[import-untyped]
+import netaddr
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.testing import APIViewTestCases, disable_warnings, extract_page_body, TestCase, ViewTestCases

@@ -12,8 +12,8 @@ from textwrap import dedent
 from typing import final
 import warnings
 
-from billiard.einfo import ExceptionInfo  # type: ignore[import-untyped]
-from celery.utils.log import get_task_logger  # type: ignore[import-untyped]
+from billiard.einfo import ExceptionInfo
+from celery.utils.log import get_task_logger
 from db_file_storage.form_widgets import DBClearableFileInput  # type: ignore[import-untyped]
 from django import forms
 from django.conf import settings
@@ -27,7 +27,7 @@ from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
 from django.utils.functional import classproperty
-import netaddr  # type: ignore[import-untyped]
+import netaddr
 import yaml
 
 from nautobot.core.celery import import_jobs, nautobot_task

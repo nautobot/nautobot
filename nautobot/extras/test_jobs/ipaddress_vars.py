@@ -1,6 +1,6 @@
 import json
 
-import netaddr  # type: ignore[import-untyped]
+import netaddr
 
 from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import get_task_logger, IPAddressVar, IPAddressWithMaskVar, Job

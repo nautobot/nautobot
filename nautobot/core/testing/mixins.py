@@ -13,7 +13,7 @@ from django.forms.models import model_to_dict
 from django.test import Client
 from django.test.testcases import assert_and_parse_html
 from django.test.utils import CaptureQueriesContext
-from netaddr import IPNetwork  # type: ignore[import-untyped]
+from netaddr import IPNetwork
 from rest_framework.test import APIClient, APIRequestFactory
 
 from nautobot.core.models import fields as core_fields

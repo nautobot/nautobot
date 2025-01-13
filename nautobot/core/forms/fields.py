@@ -20,8 +20,8 @@ from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.html import format_html
 import django_filters  # type: ignore[import-untyped]
-from netaddr import EUI  # type: ignore[import-untyped]
-from netaddr.core import AddrFormatError  # type: ignore[import-untyped]
+from netaddr import EUI
+from netaddr.core import AddrFormatError
 
 from nautobot.core import choices as core_choices, forms
 from nautobot.core.forms import widgets

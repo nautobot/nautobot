@@ -1,4 +1,4 @@
-from billiard.einfo import ExceptionInfo  # type: ignore[import-untyped]
+from billiard.einfo import ExceptionInfo
 
 from nautobot.core.celery import register_jobs
 from nautobot.extras.choices import JobResultStatusChoices

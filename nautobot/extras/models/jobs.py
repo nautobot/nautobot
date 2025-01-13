@@ -7,9 +7,9 @@ import logging
 import signal
 from typing import ClassVar
 
-from billiard.exceptions import SoftTimeLimitExceeded  # type: ignore[import-untyped]
-from celery.exceptions import NotRegistered  # type: ignore[import-untyped]
-from celery.utils.log import get_logger, LoggingProxy  # type: ignore[import-untyped]
+from billiard.exceptions import SoftTimeLimitExceeded
+from celery.exceptions import NotRegistered
+from celery.utils.log import get_logger, LoggingProxy
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
