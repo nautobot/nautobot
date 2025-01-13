@@ -367,11 +367,6 @@ class CoreConfig(NautobotConfig):
 
         super().ready()
 
-        # Register jobs last after everything else has been done.
-        from nautobot.core.celery import import_jobs
-
-        import_jobs(import_from_git=False)
-
 
 class NautobotConstanceConfig(ConstanceConfig):
     """Override "Constance" app name to "Configuration"."""

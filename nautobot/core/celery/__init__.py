@@ -44,7 +44,7 @@ app.autodiscover_tasks()
 
 
 @signals.import_modules.connect
-def import_jobs(sender=None, import_from_git=True, **kwargs):
+def import_jobs(sender=None, **kwargs):
     """
     Import system Jobs into Nautobot as well as Jobs from JOBS_ROOT and GIT_ROOT.
 
@@ -54,14 +54,13 @@ def import_jobs(sender=None, import_from_git=True, **kwargs):
 
     _import_jobs_from_jobs_root()
 
-    if import_from_git:
-        try:
-            _import_jobs_from_git_repositories()
-        except (
-            OperationalError,  # Database not present, as may be the case when running pylint-nautobot
-            ProgrammingError,  # Database not ready yet, as may be the case on initial startup and migration
-        ):
-            pass
+    try:
+        _import_jobs_from_git_repositories()
+    except (
+        OperationalError,  # Database not present, as may be the case when running pylint-nautobot
+        ProgrammingError,  # Database not ready yet, as may be the case on initial startup and migration
+    ):
+        pass
 
 
 def _import_jobs_from_jobs_root():
