@@ -7,7 +7,7 @@ import re
 import sys
 import time
 
-from db_file_storage.views import get_file
+from db_file_storage.views import get_file  # type: ignore[import-untyped]
 from django.apps import apps
 from django.conf import settings
 from django.contrib import messages
@@ -24,7 +24,7 @@ from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
 from django.views.generic import TemplateView, View
-from graphene_django.views import GraphQLView
+from graphene_django.views import GraphQLView  # type: ignore[import-untyped]
 from packaging import version
 from prometheus_client import (
     CollectorRegistry,

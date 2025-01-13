@@ -1,6 +1,6 @@
-from django_filters.rest_framework.backends import DjangoFilterBackend  # type: ignore
+from django_filters.rest_framework.backends import DjangoFilterBackend  # type: ignore[import-untyped]
 from rest_framework.filters import OrderingFilter
-from tree_queries.models import TreeNode  # type: ignore
+from tree_queries.models import TreeNode  # type: ignore[import-untyped]
 
 from nautobot.core.api.constants import NON_FILTER_QUERY_PARAMS
 

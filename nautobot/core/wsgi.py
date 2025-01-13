@@ -20,7 +20,7 @@ nautobot.setup()
 # will first call `get_internal_wsgi_application` which does not have `uwsgi` module loaded
 # already. Therefore, `settings.WEBSERVER_WARMUP` to `False` for this code to be loaded.
 try:
-    import uwsgidecorators
+    import uwsgidecorators  # type: ignore[import-untyped]
 
     @uwsgidecorators.postfork
     def fix_uwsgi():

@@ -5,8 +5,8 @@ import os
 import shutil
 import traceback
 
-from db_file_storage.model_utils import delete_file
-from db_file_storage.storage import DatabaseFileStorage
+from db_file_storage.model_utils import delete_file  # type: ignore[import-untyped]
+from db_file_storage.storage import DatabaseFileStorage  # type: ignore[import-untyped]
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -16,7 +16,7 @@ from django.db import transaction
 from django.db.models.signals import m2m_changed, post_delete, post_migrate, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
-from django_prometheus.models import model_deletes, model_inserts, model_updates
+from django_prometheus.models import model_deletes, model_inserts, model_updates  # type: ignore[import-untyped]
 import redis.exceptions
 
 from nautobot.core.celery import app, import_jobs

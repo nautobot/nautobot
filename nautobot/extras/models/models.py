@@ -1,8 +1,8 @@
 from collections import OrderedDict
 import json
 
-from db_file_storage.model_utils import delete_file, delete_file_if_needed
-from db_file_storage.storage import DatabaseFileStorage
+from db_file_storage.model_utils import delete_file, delete_file_if_needed  # type: ignore[import-untyped]
+from db_file_storage.storage import DatabaseFileStorage  # type: ignore[import-untyped]
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -13,7 +13,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.http import HttpResponse
-from graphene_django.settings import graphene_settings
+from graphene_django.settings import graphene_settings  # type: ignore[import-untyped]
 from graphql import get_default_backend
 from graphql.error import GraphQLSyntaxError
 from graphql.language.ast import OperationDefinition
@@ -786,7 +786,7 @@ class ImageAttachment(BaseModel):
         expected_exceptions = [OSError]
 
         try:
-            from botocore.exceptions import ClientError
+            from botocore.exceptions import ClientError  # type: ignore[import-not-found]
 
             expected_exceptions.append(ClientError)
         except ImportError:

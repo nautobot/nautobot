@@ -6,7 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.template import engines, loader
 from django.urls import resolve
-from django_tables2 import RequestConfig
+from django_tables2 import RequestConfig  # type: ignore[import-untyped]
 from rest_framework import renderers
 
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT

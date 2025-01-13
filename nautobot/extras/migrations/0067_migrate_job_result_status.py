@@ -1,4 +1,4 @@
-from celery import states
+from celery import states  # type: ignore[import-untyped]
 from django.db import migrations
 
 LEGACY_TO_NEW_JOB_RESULT_STATUS_MAPPING = [

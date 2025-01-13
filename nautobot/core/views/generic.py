@@ -1,7 +1,7 @@
 from copy import deepcopy
 import logging
 import re
-from typing import ClassVar, Optional
+from typing import ClassVar, Iterable, Optional
 
 from django.conf import settings
 from django.contrib import messages
@@ -22,8 +22,8 @@ from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
-from django_filters import FilterSet
-from django_tables2 import RequestConfig, Table
+from django_filters import FilterSet  # type: ignore[import-untyped]
+from django_tables2 import RequestConfig, Table  # type: ignore[import-untyped]
 
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
@@ -41,6 +41,7 @@ from nautobot.core.forms import (
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
+from nautobot.core.ui.object_detail import ObjectDetailContent
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
@@ -80,7 +81,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
 
     queryset: ClassVar[QuerySet]
     template_name: ClassVar[Optional[str]] = None
-    object_detail_content = None
+    object_detail_content: ClassVar[Optional[ObjectDetailContent]] = None
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -141,13 +142,13 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     non_filter_params: List of query parameters that are **not** used for queryset filtering
     """
 
-    queryset: QuerySet
-    filterset: Optional[type[FilterSet]] = None
-    filterset_form: Optional[type[Form]] = None
-    table: Optional[type[Table]] = None
+    queryset: ClassVar[QuerySet]
+    filterset: ClassVar[Optional[type[FilterSet]]] = None
+    filterset_form: ClassVar[Optional[type[Form]]] = None
+    table: ClassVar[Optional[type[Table]]] = None
     template_name = "generic/object_list.html"
-    action_buttons = ("add", "import", "export")
-    non_filter_params = (
+    action_buttons: ClassVar[Iterable[str]] = ("add", "import", "export")
+    non_filter_params: ClassVar[Iterable[str]] = (
         "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
@@ -413,8 +414,8 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     template_name: The name of the template
     """
 
-    queryset: QuerySet
-    model_form: type[Form]
+    queryset: ClassVar[QuerySet]
+    model_form: ClassVar[type[Form]]
     template_name = "generic/object_create.html"
 
     def get_required_permission(self):
@@ -556,7 +557,7 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     template_name: The name of the template
     """
 
-    queryset: QuerySet
+    queryset: ClassVar[QuerySet]
     template_name = "generic/object_delete.html"
 
     def get_required_permission(self):
@@ -636,9 +637,9 @@ class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     template_name: The name of the template
     """
 
-    queryset: QuerySet
-    form: type[Form]
-    model_form: type[Form]
+    queryset: ClassVar[QuerySet]
+    form: ClassVar[type[Form]]
+    model_form: ClassVar[type[Form]]
     pattern_target = ""
     template_name = None
 
@@ -745,9 +746,9 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     template_name: The name of the template
     """
 
-    queryset: QuerySet
-    model_form: type[Form]
-    related_object_forms = {}
+    queryset: ClassVar[QuerySet]
+    model_form: ClassVar[type[Form]]
+    related_object_forms: ClassVar[dict[str, type[Form]]] = {}
     template_name = "generic/object_import.html"
 
     def get_required_permission(self):
@@ -890,8 +891,8 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  #
     template_name: The name of the template
     """
 
-    queryset: QuerySet
-    table: type[Table]
+    queryset: ClassVar[QuerySet]
+    table: ClassVar[type[Table]]
     template_name = "generic/object_bulk_import.html"
 
     def __init__(self, *args, **kwargs):
@@ -996,10 +997,10 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAnd
     template_name: The name of the template
     """
 
-    queryset: QuerySet
-    filterset: Optional[type[FilterSet]] = None
-    table: type[Table]
-    form: type[Form]
+    queryset: ClassVar[QuerySet]
+    filterset: ClassVar[Optional[type[FilterSet]]] = None
+    table: ClassVar[type[Table]]
+    form: ClassVar[type[Form]]
     template_name = "generic/object_bulk_edit.html"
 
     def get_required_permission(self):
@@ -1084,7 +1085,7 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     An extendable view for renaming objects in bulk.
     """
 
-    queryset: QuerySet
+    queryset: ClassVar[QuerySet]
     template_name = "generic/object_bulk_rename.html"
 
     def __init__(self, *args, **kwargs):
@@ -1190,10 +1191,10 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditA
     template_name: The name of the template
     """
 
-    queryset: QuerySet
-    filterset: Optional[type[FilterSet]] = None
-    table: type[Table]
-    form: Optional[type[Form]] = None
+    queryset: ClassVar[QuerySet]
+    filterset: ClassVar[Optional[type[FilterSet]]] = None
+    table: ClassVar[type[Table]]
+    form: ClassVar[Optional[type[Form]]] = None
     template_name = "generic/object_bulk_delete.html"
 
     def get_required_permission(self):
@@ -1293,9 +1294,9 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
     Add one or more components (e.g. interfaces, console ports, etc.) to a Device or VirtualMachine.
     """
 
-    queryset: QuerySet
-    form: type[Form]
-    model_form: type[Form]
+    queryset: ClassVar[QuerySet]
+    form: ClassVar[type[Form]]
+    model_form: ClassVar[type[Form]]
     template_name = "dcim/device_component_add.html"
 
     def get_required_permission(self):
@@ -1395,13 +1396,13 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
     Add one or more components (e.g. interfaces, console ports, etc.) to a set of Devices or VirtualMachines.
     """
 
-    parent_model: type[Model]
-    parent_field = None
-    form: type[Form]
-    queryset: QuerySet
-    model_form: type[Form]
-    filterset: Optional[type[FilterSet]] = None
-    table: type[Table]
+    parent_model: ClassVar[type[Model]]
+    parent_field: ClassVar[str]
+    form: ClassVar[type[Form]]
+    queryset: ClassVar[QuerySet]
+    model_form: ClassVar[type[Form]]
+    filterset: ClassVar[Optional[type[FilterSet]]] = None
+    table: ClassVar[type[Table]]
     template_name = "generic/object_bulk_add_component.html"
 
     def get_required_permission(self):

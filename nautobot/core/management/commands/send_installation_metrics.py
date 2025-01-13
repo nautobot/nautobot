@@ -3,7 +3,7 @@ import json
 import platform
 import uuid
 
-from constance import config
+from constance import config  # type: ignore[import-untyped]
 from django.apps import apps
 from django.conf import settings
 from django.core.management.base import BaseCommand

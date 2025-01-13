@@ -1,6 +1,6 @@
 """Test cases for nautobot.core.config module."""
 
-from constance.test import override_config
+from constance.test import override_config  # type: ignore[import-untyped]
 from django.test import override_settings, TestCase
 
 from nautobot.apps import config as app_config

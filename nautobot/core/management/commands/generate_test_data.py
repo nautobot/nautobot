@@ -60,7 +60,7 @@ class Command(BaseCommand):
 
     def _generate_factory_data(self, seed, db_name, print_hashes=False):
         try:
-            import factory.random
+            import factory.random  # type: ignore[import-untyped]
 
             from nautobot.circuits.factory import (
                 CircuitFactory,

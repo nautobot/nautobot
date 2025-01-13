@@ -958,7 +958,7 @@ class GitRepositoryFilterForm(BootstrapMixin, forms.Form):
 
 
 class GraphQLQueryForm(BootstrapMixin, forms.ModelForm):
-    query: TextField = TextField()
+    query = TextField()
 
     class Meta:
         model = GraphQLQuery
@@ -1636,9 +1636,7 @@ class MetadataTypeFilterForm(NautobotFilterForm):
 
 
 class MetadataTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
-    pk: forms.ModelMultipleChoiceField = forms.ModelMultipleChoiceField(
-        queryset=MetadataType.objects.all(), widget=forms.MultipleHiddenInput
-    )
+    pk = forms.ModelMultipleChoiceField(queryset=MetadataType.objects.all(), widget=forms.MultipleHiddenInput)
     description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
 
     class Meta:
@@ -2025,7 +2023,7 @@ class StatusBulkEditForm(NautobotBulkEditForm):
 
 
 class TagForm(NautobotModelForm):
-    content_types: ModelMultipleChoiceField = ModelMultipleChoiceField(
+    content_types = ModelMultipleChoiceField(
         label="Content Type(s)",
         queryset=TaggableClassesQuery().as_queryset(),
     )

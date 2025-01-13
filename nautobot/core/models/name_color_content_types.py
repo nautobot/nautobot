@@ -30,13 +30,13 @@ class NameColorContentTypesModel(
     shared amongst models that requires these fields: name, color, content_types and description.
     """
 
-    content_types: models.ManyToManyField = models.ManyToManyField(
+    content_types = models.ManyToManyField(
         to=ContentType,
         help_text="The content type(s) to which this model applies.",
     )
-    name: models.CharField = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     color = ColorField(default=ColorChoices.COLOR_GREY)
-    description: models.CharField = models.CharField(
+    description = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
     )

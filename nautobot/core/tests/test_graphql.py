@@ -12,9 +12,9 @@ from django.db.models import Q
 from django.test import override_settings, TestCase
 from django.test.client import RequestFactory
 from django.urls import reverse
-import graphene.types
-from graphene_django.registry import get_global_registry
-from graphene_django.settings import graphene_settings
+import graphene.types  # type: ignore[import-untyped]
+from graphene_django.registry import get_global_registry  # type: ignore[import-untyped]
+from graphene_django.settings import graphene_settings  # type: ignore[import-untyped]
 from graphql import get_default_backend, GraphQLError
 from graphql.error.located_error import GraphQLLocatedError
 from rest_framework import status

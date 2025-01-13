@@ -90,7 +90,7 @@ urlpatterns = [
 
 if settings.DEBUG:
     try:
-        import debug_toolbar
+        import debug_toolbar  # type: ignore[import-untyped]
 
         urlpatterns += [
             path("__debug__/", include(debug_toolbar.urls)),

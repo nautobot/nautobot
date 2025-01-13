@@ -1,4 +1,4 @@
-from django.db.models import QuerySet
+from django.db.models import Model, QuerySet
 from django.test import tag, TestCase
 
 from nautobot.core.templatetags.helpers import get_docs_url
@@ -11,7 +11,7 @@ class ModelTestCases:
     class BaseModelTestCase(NautobotTestCaseMixin, TestCase):
         """Base class for generic model tests."""
 
-        model = None
+        model: type[Model]
 
         def test_natural_key_symmetry(self):
             """Check that `natural_key()` and `get_by_natural_key()` work reciprocally."""

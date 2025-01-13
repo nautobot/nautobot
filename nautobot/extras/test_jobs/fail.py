@@ -1,4 +1,4 @@
-from billiard.einfo import ExceptionInfo
+from billiard.einfo import ExceptionInfo  # type: ignore[import-untyped]
 
 from nautobot.core.celery import register_jobs
 from nautobot.extras.choices import JobResultStatusChoices
@@ -12,7 +12,8 @@ class TestFailJob(Job):
     Job with fail result.
     """
 
-    description = "Validate job import"
+    class Meta:
+        description = "Validate job import"
 
     def before_start(self, task_id, args, kwargs):
         if task_id != self.request.id:  # pylint: disable=no-member
@@ -69,7 +70,8 @@ class TestFailWithSanitization(Job):
     This raises an exception that appears to have a password in it.
     """
 
-    description = "Validate job failure sanitization"
+    class Meta:
+        description = "Validate job failure sanitization"
 
     def run(self):  # pylint:disable=arguments-differ
         logger.info("I'm a test job that fails and sanitizes the exception!")

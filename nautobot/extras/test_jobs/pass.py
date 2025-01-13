@@ -10,9 +10,8 @@ class TestPassJob(Job):
     Job with pass result.
     """
 
-    description = "Validate job import"
-
     class Meta:
+        description = "Validate job import"
         has_sensitive_variables = False
 
     def before_start(self, task_id, args, kwargs):

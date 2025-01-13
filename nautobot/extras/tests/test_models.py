@@ -16,7 +16,7 @@ from django.db.utils import IntegrityError
 from django.test import override_settings
 from django.test.utils import isolate_apps
 from django.utils.timezone import get_default_timezone, now
-from django_celery_beat.tzcrontab import TzAwareCrontab
+from django_celery_beat.tzcrontab import TzAwareCrontab  # type: ignore[import-untyped]
 from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
 import time_machine
 

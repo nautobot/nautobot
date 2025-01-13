@@ -1,4 +1,4 @@
-from db_file_storage.form_widgets import DBAdminClearableFileInput
+from db_file_storage.form_widgets import DBAdminClearableFileInput  # type: ignore[import-untyped]
 from django import forms
 from django.contrib import admin
 

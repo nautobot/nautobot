@@ -6,7 +6,7 @@ from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.functional import classproperty
 from selenium.webdriver.common.keys import Keys
-from splinter.browser import Browser
+from splinter.browser import Browser  # type: ignore[import-untyped]
 
 from nautobot.core import testing
 

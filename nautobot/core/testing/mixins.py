@@ -1,4 +1,5 @@
 import json
+from typing import Iterable, Optional
 import warnings
 
 from django.apps import apps
@@ -9,9 +10,10 @@ from django.core.exceptions import FieldDoesNotExist
 from django.db import connections, DEFAULT_DB_ALIAS
 from django.db.models import JSONField, ManyToManyField, ManyToManyRel
 from django.forms.models import model_to_dict
+from django.test import Client
 from django.test.testcases import assert_and_parse_html
 from django.test.utils import CaptureQueriesContext
-from netaddr import IPNetwork
+from netaddr import IPNetwork  # type: ignore[import-untyped]
 from rest_framework.test import APIClient, APIRequestFactory
 
 from nautobot.core.models import fields as core_fields
@@ -45,9 +47,9 @@ class NautobotTestClient(APIClient):
 class NautobotTestCaseMixin:
     """Base class for all Nautobot-specific unit tests."""
 
-    user_permissions = ()
-    client_class = NautobotTestClient
-    maxDiff = None
+    user_permissions: Iterable[str] = ()
+    client_class: type[Client] = NautobotTestClient
+    maxDiff: Optional[int] = None  # type: ignore[misc]
 
     def setUpNautobot(self, client=True, populate_status=False):
         """Setup shared testuser, statuses and client."""

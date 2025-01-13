@@ -8,7 +8,7 @@ import tempfile
 from unittest import mock
 import uuid
 
-from constance.test import override_config
+from constance.test import override_config  # type: ignore[import-untyped]
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -287,7 +287,7 @@ class JobTransactionTest(TransactionTestCase):
     Test job features that require a transaction test case.
     """
 
-    databases = ("default", "job_logs")
+    databases = {"default", "job_logs"}
     maxDiff = None
 
     def setUp(self):
@@ -765,7 +765,7 @@ class JobTransactionTest(TransactionTestCase):
 class JobFileUploadTest(TransactionTestCase):
     """Test a job that uploads/deletes files."""
 
-    databases = ("default", "job_logs")
+    databases = {"default", "job_logs"}
 
     def setUp(self):
         super().setUp()
@@ -849,7 +849,7 @@ class JobFileUploadTest(TransactionTestCase):
 class JobFileOutputTest(TransactionTestCase):
     """Test a job that outputs files."""
 
-    databases = ("default", "job_logs")
+    databases = {"default", "job_logs"}
 
     @override_settings(
         MEDIA_ROOT=tempfile.gettempdir(),
@@ -979,7 +979,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
 class JobLocationCustomFieldTest(TransactionTestCase):
     """Test a job that creates a location and a custom field."""
 
-    databases = ("default", "job_logs")
+    databases = {"default", "job_logs"}
 
     def setUp(self):
         super().setUp()

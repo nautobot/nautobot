@@ -37,7 +37,7 @@ class ChoiceSet(metaclass=ChoiceSetMeta):
         ```
     """
 
-    CHOICES: Iterable[Union[tuple[Any, str], tuple[str, tuple[Any, str]]]] = []
+    CHOICES: Iterable[Union[tuple[Any, str], tuple[str, Iterable[tuple[Any, str]]]]] = []
 
     @classmethod
     def values(cls):

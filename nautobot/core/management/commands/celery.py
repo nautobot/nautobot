@@ -1,6 +1,6 @@
 import sys
 
-from celery.bin.celery import celery as celery_main
+from celery.bin.celery import celery as celery_main  # type: ignore[import-untyped]
 from django.core.management.base import BaseCommand
 
 

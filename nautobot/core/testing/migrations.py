@@ -1,3 +1,4 @@
+from typing import Iterable
 from unittest import skip
 
 from django.apps import apps
@@ -13,8 +14,8 @@ class NautobotDataMigrationTest(TestCase):
     def app(self):
         return apps.get_containing_app_config(type(self).__module__).name
 
-    migrate_from = None
-    migrate_to = None
+    migrate_from: Iterable[tuple[str, str]]
+    migrate_to: Iterable[tuple[str, str]]
 
     def setUp(self):
         # Remove factory data beforehand

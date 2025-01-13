@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 import logging
+from typing import Any, Iterable
 
 from django.utils.http import urlencode
 
@@ -40,7 +41,7 @@ class NavMenuTab(NavMenuBase, PermissionsMixin):
     """
 
     permissions = []
-    groups = []
+    groups: Iterable["NavMenuGroup"] = []
 
     @property
     def initial_dict(self) -> dict:
@@ -86,7 +87,7 @@ class NavMenuGroup(NavMenuBase, PermissionsMixin):
     """
 
     permissions = []
-    items = []
+    items: Iterable["NavMenuItem"] = []
 
     @property
     def initial_dict(self) -> dict:
@@ -153,9 +154,9 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
         )
 
     permissions = []
-    buttons = []
-    args = []
-    kwargs = {}
+    buttons: Iterable["NavMenuButton"] = []
+    args: list[Any] = []
+    kwargs: dict[str, Any] = {}
 
     def __init__(
         self, link, name, args=None, kwargs=None, query_params=None, permissions=None, buttons=(), weight=1000

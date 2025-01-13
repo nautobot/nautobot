@@ -5,6 +5,7 @@ import platform
 import re
 import sys
 import tempfile
+from typing import Any, Iterable, Optional
 
 from django.contrib.messages import constants as messages
 import django.forms
@@ -102,7 +103,7 @@ if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_
     DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
 
 # Event Brokers
-EVENT_BROKERS = {}
+EVENT_BROKERS: dict[str, Any] = {}
 
 # Exclude potentially sensitive models from wildcard view exemption. These may still be exempted
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
@@ -113,7 +114,7 @@ EXEMPT_EXCLUDE_MODELS = (
 )
 
 # Models to exempt from the enforcement of view permissions
-EXEMPT_VIEW_PERMISSIONS = []
+EXEMPT_VIEW_PERMISSIONS: Iterable[str] = []
 
 # The file path to a directory where cloned Git repositories will be located
 GIT_ROOT = os.getenv("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/"))
@@ -159,7 +160,7 @@ if "NAUTOBOT_METRICS_DISABLED_APPS" in os.environ and os.environ["NAUTOBOT_METRI
     METRICS_DISABLED_APPS = os.getenv("NAUTOBOT_METRICS_DISABLED_APPS", "").split(_CONFIG_SETTING_SEPARATOR)
 
 # Napalm
-NAPALM_ARGS = {}
+NAPALM_ARGS: dict[str, Any] = {}
 NAPALM_PASSWORD = os.getenv("NAUTOBOT_NAPALM_PASSWORD", "")
 NAPALM_TIMEOUT = int(os.getenv("NAUTOBOT_NAPALM_TIMEOUT", "30"))
 NAPALM_USERNAME = os.getenv("NAUTOBOT_NAPALM_USERNAME", "")
@@ -184,8 +185,8 @@ if "NAUTOBOT_PER_PAGE_DEFAULTS" in os.environ and os.environ["NAUTOBOT_PER_PAGE_
     PER_PAGE_DEFAULTS = [int(val) for val in os.environ["NAUTOBOT_PER_PAGE_DEFAULTS"].split(_CONFIG_SETTING_SEPARATOR)]
 
 # Plugins
-PLUGINS = []
-PLUGINS_CONFIG = {}
+PLUGINS: Iterable[str] = []
+PLUGINS_CONFIG: dict[str, Any] = {}
 
 # Prefer IPv6 addresses or IPv4 addresses in selecting a device's primary IP address? Default False
 if "NAUTOBOT_PREFER_IPV4" in os.environ and os.environ["NAUTOBOT_PREFER_IPV4"] != "":
@@ -221,8 +222,8 @@ if "NAUTOBOT_RELEASE_CHECK_URL" in os.environ and os.environ["NAUTOBOT_RELEASE_C
     RELEASE_CHECK_URL = os.environ["NAUTOBOT_RELEASE_CHECK_URL"]
 
 # Global 3rd-party authentication settings
-EXTERNAL_AUTH_DEFAULT_GROUPS = []
-EXTERNAL_AUTH_DEFAULT_PERMISSIONS = {}
+EXTERNAL_AUTH_DEFAULT_GROUPS: Iterable[str] = []
+EXTERNAL_AUTH_DEFAULT_PERMISSIONS: dict[str, Any] = {}
 
 # Remote auth backend settings
 REMOTE_AUTH_AUTO_CREATE_USER = False
@@ -270,8 +271,8 @@ SANITIZER_PATTERNS = [
 ]
 
 # Storage
-STORAGE_BACKEND = None
-STORAGE_CONFIG = {}
+STORAGE_BACKEND: Optional[str] = None
+STORAGE_CONFIG: dict[Any, Any] = {}
 
 # Custom message to display on 4xx and 5xx error pages. Markdown and HTML are supported.
 # Default message directs the user to #nautobot on NTC's Slack community.
@@ -899,10 +900,10 @@ CORS_ALLOW_ALL_ORIGINS = is_truthy(os.getenv("NAUTOBOT_CORS_ALLOW_ALL_ORIGINS", 
 
 # A list of strings representing regexes that match Origins that are authorized to make cross-site
 # HTTP requests. Defaults to [].
-CORS_ALLOWED_ORIGIN_REGEXES = []
+CORS_ALLOWED_ORIGIN_REGEXES: Iterable[str] = []
 
 # A list of origins that are authorized to make cross-site HTTP requests. Defaults to [].
-CORS_ALLOWED_ORIGINS = []
+CORS_ALLOWED_ORIGINS: Iterable[str] = []
 
 #
 # GraphQL
@@ -1160,7 +1161,7 @@ SILKY_INTERCEPT_FUNC = silk_request_logging_intercept_logic
 KUBERNETES_DEFAULT_SERVICE_ADDRESS = os.getenv("NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS", "")
 
 # A dictionary that stores the kubernetes pod manifest used to create a job pod in the kubernetes cluster
-KUBERNETES_JOB_MANIFEST = {}
+KUBERNETES_JOB_MANIFEST: dict[str, Any] = {}
 
 # Name of the kubernetes pod created in the kubernetes cluster
 KUBERNETES_JOB_POD_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAME", "")

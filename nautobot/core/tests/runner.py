@@ -2,7 +2,7 @@ import copy
 import hashlib
 
 try:
-    from coverage import Coverage
+    from coverage import Coverage  # type: ignore[import-untyped]
 
     has_coverage = True
 except ImportError:
@@ -12,8 +12,12 @@ from django.conf import settings
 from django.core.management import call_command
 from django.db import connections
 from django.db.migrations.recorder import MigrationRecorder
-from django.test.runner import _init_worker, DiscoverRunner, ParallelTestSuite
-from django.test.utils import get_unique_databases_and_mirrors, NullTimeKeeper, override_settings
+from django.test.runner import _init_worker, DiscoverRunner, ParallelTestSuite  # type: ignore[attr-defined]
+from django.test.utils import (  # type: ignore[attr-defined]
+    get_unique_databases_and_mirrors,
+    NullTimeKeeper,
+    override_settings,
+)
 import yaml
 
 from nautobot.core.celery import app, setup_nautobot_job_logging
@@ -54,7 +58,7 @@ class NautobotTestRunner(DiscoverRunner):
 
     parallel_test_suite = NautobotParallelTestSuite
 
-    exclude_tags = ["integration"]
+    exclude_tags = {"integration"}
 
     @classmethod
     def add_arguments(cls, parser):
@@ -206,7 +210,7 @@ class NautobotTestRunner(DiscoverRunner):
 
 # Use django_slowtests only when GENERATE_PERFORMANCE_REPORT flag is set to true
 try:
-    from django_slowtests.testrunner import DiscoverSlowestTestsRunner
+    from django_slowtests.testrunner import DiscoverSlowestTestsRunner  # type: ignore[import-untyped]
 
     print("Using NautobotPerformanceTestRunner to run tests ...")
 

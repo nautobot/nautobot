@@ -1,6 +1,6 @@
 import csv
 from io import StringIO
-from typing import Optional, Sequence, Union
+from typing import Any, Iterable, Optional, Sequence, Union
 
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -11,6 +11,7 @@ from django.test import override_settings, tag
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils.text import slugify
+from django_filters import FilterSet  # type: ignore[import-untyped]
 from rest_framework import serializers, status
 from rest_framework.relations import ManyRelatedField
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
@@ -71,7 +72,7 @@ class APITestCase(views.ModelTestCase):
         viewname = lookup.get_route_for_model(self.model, "list", api=True)
         return reverse(viewname)
 
-    VERBOTEN_STRINGS = (
+    VERBOTEN_STRINGS: Iterable[str] = (
         "password",
         # https://docs.djangoproject.com/en/3.2/topics/auth/passwords/#included-hashers
         "argon2",
@@ -233,8 +234,8 @@ class APIViewTestCases:
             self.assertHttpStatus(response, status.HTTP_200_OK)
 
     class ListObjectsViewTestCase(APITestCase):
-        choices_fields = None
-        filterset = None
+        choices_fields: Optional[list[str]] = None
+        filterset: Optional[FilterSet] = None
 
         def get_filterset(self):
             return self.filterset or lookup.get_filterset_for_model(self.model)
@@ -663,8 +664,8 @@ class APIViewTestCases:
             # TODO what other generic tests should we run on the data?
 
     class CreateObjectViewTestCase(APITestCase):
-        create_data = []
-        validation_excluded_fields = []
+        create_data: list[dict[str, Any]] = []
+        validation_excluded_fields: Iterable[str] = []
         slug_source: Optional[Union[str, Sequence[str]]] = None
         slugify_function = staticmethod(slugify)
 
@@ -836,10 +837,10 @@ class APIViewTestCases:
                     self.check_expected_slug(self._get_queryset().get(pk=obj["id"]))
 
     class UpdateObjectViewTestCase(APITestCase):
-        update_data = {}
+        update_data: dict[str, Any] = {}
         bulk_update_data: Optional[dict] = None
-        validation_excluded_fields = []
-        choices_fields = None
+        validation_excluded_fields: Iterable[str] = []
+        choices_fields: Optional[list[str]] = None
 
         def test_update_object_without_permission(self):
             """

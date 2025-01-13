@@ -8,7 +8,7 @@ from django.db.models.fields import CharField, TextField
 from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.test import tag
-from django_filters import FilterSet
+from django_filters import FilterSet  # type: ignore[import-untyped]
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.filters import (
@@ -76,7 +76,7 @@ class FilterTestCases:
         filterset: ClassVar[type[FilterSet]]
 
         # filter predicate fields that should be excluded from q test case
-        exclude_q_filter_predicates = []
+        exclude_q_filter_predicates: ClassVar[Iterable[str]] = []
 
         # list of filters to be tested by `test_filters_generic`
         # list of iterables with filter name and optional field name

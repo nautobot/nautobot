@@ -1,5 +1,5 @@
 import logging
-from typing import ClassVar, Optional
+from typing import ClassVar, Iterable, Optional
 
 from django.contrib import messages
 from django.contrib.auth.mixins import AccessMixin
@@ -12,7 +12,7 @@ from django.core.exceptions import (
     ValidationError,
 )
 from django.db import transaction
-from django.db.models import ManyToManyField, ProtectedError, Q
+from django.db.models import ManyToManyField, ProtectedError, Q, QuerySet
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -23,12 +23,14 @@ from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic.edit import FormView
-from django_filters import FilterSet
+from django_filters import FilterSet  # type: ignore[import-untyped]
+from django_tables2 import Table  # type: ignore[import-untyped]
 from drf_spectacular.utils import extend_schema
 from rest_framework import exceptions, mixins
 from rest_framework.decorators import action as drf_action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
+from rest_framework.serializers import Serializer
 from rest_framework.viewsets import GenericViewSet
 
 from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
@@ -40,6 +42,7 @@ from nautobot.core.forms import (
     restrict_form_fields,
 )
 from nautobot.core.jobs import BulkDeleteObjects, BulkEditObjects
+from nautobot.core.ui.object_detail import ObjectDetailContent
 from nautobot.core.utils import lookup, permissions
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params, normalize_querydict
 from nautobot.core.views.renderers import NautobotHTMLRenderer
@@ -80,7 +83,7 @@ class ContentTypePermissionRequiredMixin(AccessMixin):
                             derived from the object type
     """
 
-    additional_permissions = []
+    additional_permissions: Iterable[str] = []
 
     def get_required_permission(self):
         """
@@ -134,7 +137,8 @@ class ObjectPermissionRequiredMixin(AccessMixin):
                             derived from the object type
     """
 
-    additional_permissions = []
+    additional_permissions: ClassVar[Iterable[str]] = []
+    queryset: ClassVar[QuerySet]
 
     def get_required_permission(self):
         """
@@ -226,16 +230,16 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     # filterset and filter_params will be initialized in filter_queryset() in ObjectListViewMixin
     filter_params = None
     filterset = None
-    filterset_class: Optional[type[FilterSet]] = None
-    filterset_form_class = None
-    form_class = None
+    filterset_class: ClassVar[Optional[type[FilterSet]]] = None
+    filterset_form_class: ClassVar[Optional[type[Form]]] = None
+    form_class: ClassVar[Optional[type[Form]]] = None
     create_form_class = None
     update_form_class = None
     parser_classes = [FormParser, MultiPartParser]
-    queryset = None
+    queryset: ClassVar[QuerySet]
     # serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
-    serializer_class = None
-    table_class = None
+    serializer_class: ClassVar[Optional[type[Serializer]]] = None
+    table_class: ClassVar[Optional[type[Table]]] = None
     notes_form_class = NoteForm
     permission_classes = []
 
@@ -621,7 +625,7 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
     UI mixin to retrieve a model instance.
     """
 
-    object_detail_content = None
+    object_detail_content: ClassVar[Optional[ObjectDetailContent]] = None
 
     def retrieve(self, request, *args, **kwargs):
         """
@@ -635,11 +639,11 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
     UI mixin to list a model queryset
     """
 
-    action_buttons = ("add", "import", "export")
-    filterset_class: Optional[type[FilterSet]] = None
-    filterset_form_class: Optional[type[Form]] = None
-    hide_hierarchy_ui = False
-    non_filter_params = (
+    action_buttons: ClassVar[Iterable[str]] = ("add", "import", "export")
+    filterset_class: ClassVar[Optional[type[FilterSet]]] = None
+    filterset_form_class: ClassVar[Optional[type[Form]]] = None
+    hide_hierarchy_ui: ClassVar[bool] = False
+    non_filter_params: ClassVar[Iterable[str]] = (
         "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
@@ -1009,8 +1013,8 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
     UI mixin to bulk destroy model instances.
     """
 
-    bulk_destroy_form_class: Optional[type[Form]] = None
-    filterset_class: Optional[type[FilterSet]] = None
+    bulk_destroy_form_class: ClassVar[Optional[type[Form]]] = None
+    filterset_class: ClassVar[Optional[type[FilterSet]]] = None
 
     def _process_bulk_destroy_form(self, form):
         request = self.request

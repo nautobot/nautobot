@@ -4,7 +4,7 @@ import tempfile
 from unittest import mock
 import uuid
 
-from celery.exceptions import NotRegistered
+from celery.exceptions import NotRegistered  # type: ignore[import-untyped]
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -52,7 +52,7 @@ class GitTest(TransactionTestCase):
     This is a TransactionTestCase because it involves JobResult logging.
     """
 
-    databases = ("default", "job_logs")
+    databases = {"default", "job_logs"}
 
     def setUp(self):
         super().setUp()

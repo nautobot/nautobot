@@ -1,4 +1,6 @@
-from django.urls import path
+from typing import Union
+
+from django.urls import path, URLPattern, URLResolver
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras import views
@@ -38,7 +40,7 @@ router.register("secrets", views.SecretUIViewSet)
 router.register("static-group-associations", views.StaticGroupAssociationUIViewSet)
 router.register("teams", views.TeamUIViewSet)
 
-urlpatterns = [
+urlpatterns: list[Union[URLPattern, URLResolver]] = [
     # Change logging
     path("object-changes/", views.ObjectChangeListView.as_view(), name="objectchange_list"),
     path("object-changes/<uuid:pk>/", views.ObjectChangeView.as_view(), name="objectchange"),

@@ -1,8 +1,9 @@
 from collections import OrderedDict
 import logging
 import os
+from typing import Iterable
 
-from constance.apps import ConstanceConfig
+from constance.apps import ConstanceConfig  # type: ignore[import-untyped]
 from django.apps import AppConfig, apps as global_apps
 from django.db.models import BigIntegerField, BinaryField, JSONField
 from django.db.models.signals import post_migrate
@@ -10,7 +11,7 @@ from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.http import urlencode
 from django.utils.module_loading import import_string
-from graphene.types import generic, String
+from graphene.types import generic, String  # type: ignore[import-untyped]
 
 from nautobot.core.signals import nautobot_database_ready
 from nautobot.core.ui.base import PermissionsMixin  # noqa: F401
@@ -52,9 +53,7 @@ class NautobotConfig(AppConfig):
     default = False  # abstract base class, all subclasses must set this to True
     homepage_layout = "homepage.layout"
     menu_tabs = "navigation.menu_items"
-    # New UI Navigation
-    navigation = "navigation.navigation"
-    searchable_models = []  # models included in global search; list of ["modelname", "modelname", "modelname"...]
+    searchable_models: Iterable[str] = []  # models to global search; list of ["modelname", "modelname", "modelname"...]
 
     def ready(self):
         """
@@ -327,14 +326,14 @@ class CoreConfig(NautobotConfig):
 
     def ready(self):
         # Register netutils jinja2 filters in django_jinja
-        from django_jinja import library
+        from django_jinja import library  # type: ignore[import-untyped]
         from netutils.utils import jinja2_convenience_function
 
         for name, func in jinja2_convenience_function().items():
             # Register in django_jinja
             library.filter(name=name, fn=func)
 
-        from graphene_django.converter import convert_django_field
+        from graphene_django.converter import convert_django_field  # type: ignore[import-untyped]
 
         from nautobot.core.graphql import BigInteger
 

@@ -36,7 +36,7 @@ class ExportObjectListTest(TransactionTestCase):
     Test the ExportObjectList system job.
     """
 
-    databases = ("default", "job_logs")
+    databases = {"default", "job_logs"}
 
     def test_export_without_permission(self):
         """Job should enforce user permissions on the content-type being asked for export."""
@@ -134,7 +134,7 @@ class ExportObjectListTest(TransactionTestCase):
 
 
 class ImportObjectsTestCase(TransactionTestCase):
-    databases = ("default", "job_logs")
+    databases = {"default", "job_logs"}
 
     csv_data = "\n".join(
         [
@@ -431,7 +431,7 @@ class LogsCleanupTestCase(TransactionTestCase):
     Test the LogsCleanup system job.
     """
 
-    databases = ("default", "job_logs")
+    databases = {"default", "job_logs"}
 
     def setUp(self):
         super().setUp()

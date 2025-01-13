@@ -1732,7 +1732,7 @@ class RequiredRelationshipTestMixin:
 
 
 class RelationshipJobTestCase(RequiredRelationshipTestMixin, TransactionTestCase):
-    databases = ("default", "job_logs")
+    databases = {"default", "job_logs"}
 
     def create_job(self, pk_list, **extra_form_data):
         """"""

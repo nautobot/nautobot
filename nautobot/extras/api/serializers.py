@@ -7,7 +7,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
-from timezone_field.rest_framework import TimeZoneSerializerField  # type: ignore
+from timezone_field.rest_framework import TimeZoneSerializerField  # type: ignore[import-untyped]
 
 from nautobot.core.api import (
     BaseModelSerializer,

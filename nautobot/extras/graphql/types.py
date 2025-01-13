@@ -1,4 +1,4 @@
-import graphene
+import graphene  # type: ignore[import-untyped]
 
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.extras.filters import (

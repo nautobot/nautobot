@@ -14,6 +14,7 @@ limitations under the License.
 
 import os
 import re
+from shlex import quote
 
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit
@@ -198,7 +199,7 @@ def run_command(context, command, service="nautobot", **kwargs):
         if service in results.stdout:
             compose_command = f"exec {'--user=root ' if root else ''}{service} {command}"
         else:
-            compose_command = f"run {'--user=root ' if root else ''}--rm --entrypoint '{command}' {service}"
+            compose_command = f"run {'--user=root ' if root else ''}--rm --entrypoint {quote(command)} {service}"
 
         return docker_compose(context, compose_command, pty=True, **kwargs)
 
@@ -496,15 +497,23 @@ def logs(context, service="", follow=False, tail=0):
 # ------------------------------------------------------------------------------
 # ACTIONS
 # ------------------------------------------------------------------------------
-@task
-def nbshell(context, quiet=False):
+@task(
+    help={
+        "quiet": "Suppress printing of loaded modules at startup",
+        "command": "Run the given command instead of providing an interactive shell",
+    },
+)
+def nbshell(context, quiet=False, command=None):
     """Launch an interactive Nautobot shell."""
-    command = "nautobot-server nbshell"
+    cmd = "nautobot-server nbshell"
 
     if quiet:
-        command += " --quiet"
+        cmd += " --quiet"
 
-    run_command(context, command)
+    if command:
+        cmd += f" --command '{command}'"
+
+    run_command(context, cmd)
 
 
 @task(
@@ -635,6 +644,26 @@ def build_example_app_docs(context):
 # ------------------------------------------------------------------------------
 # TESTS
 # ------------------------------------------------------------------------------
+
+
+@task(
+    help={
+        "package": "Module to inspect",
+    },
+)
+def mypy(context, package="nautobot"):
+    """Perform type checking of Nautobot code."""
+    python_command = "; ".join(
+        [
+            "from mypy import api",
+            f'result = api.run(["-p", "{package}"])',
+            "print(result[0])",
+            "import sys",
+            "sys.exit(result[2])",
+        ]
+    )
+
+    nbshell(context, quiet=True, command=python_command)
 
 
 @task(

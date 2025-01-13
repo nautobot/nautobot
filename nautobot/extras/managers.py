@@ -1,6 +1,6 @@
-from celery import states
+from celery import states  # type: ignore[import-untyped]
 from django.utils import timezone
-from django_celery_results.managers import TaskResultManager, transaction_retry
+from django_celery_results.managers import TaskResultManager, transaction_retry  # type: ignore[import-untyped]
 
 from nautobot.core.models import BaseManager
 from nautobot.core.models.querysets import RestrictedQuerySet

@@ -1,6 +1,7 @@
 """Base classes and utilities for defining the Nautobot home page."""
 
 from abc import ABC, abstractmethod
+from typing import Iterable, Optional, Union
 
 from .base import PermissionsMixin
 
@@ -22,7 +23,7 @@ class HomePageBase(ABC):
 class HomePagePanel(HomePageBase, PermissionsMixin):
     """Defines properties that can be used for a panel."""
 
-    items = None
+    items: Optional[Iterable[Union["HomePageGroup", "HomePageItem"]]] = None
     template_path = None
 
     @property
@@ -73,7 +74,7 @@ class HomePagePanel(HomePageBase, PermissionsMixin):
 class HomePageGroup(HomePageBase, PermissionsMixin):
     """Defines properties that can be used for a panel group."""
 
-    items = []
+    items: Iterable["HomePageItem"] = []
 
     @property
     def initial_dict(self):
@@ -112,7 +113,6 @@ class HomePageGroup(HomePageBase, PermissionsMixin):
 class HomePageItem(HomePageBase, PermissionsMixin):
     """Defines properties that can be used for a panel item."""
 
-    items = []
     template_path = None
 
     @property

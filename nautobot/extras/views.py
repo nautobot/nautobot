@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 from urllib.parse import parse_qs
 
 from django.contrib import messages
@@ -18,7 +19,7 @@ from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_current_timezone
 from django.views.generic import View
-from django_tables2 import RequestConfig
+from django_tables2 import RequestConfig  # type: ignore[import-untyped]
 from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -903,7 +904,7 @@ class ObjectDynamicGroupsView(generic.GenericView):
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
     """
 
-    base_template = None
+    base_template: Optional[str] = None
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -2188,7 +2189,7 @@ class ObjectChangeLogView(generic.GenericView):
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
     """
 
-    base_template = None
+    base_template: Optional[str] = None
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -2322,7 +2323,7 @@ class ObjectNotesView(generic.GenericView):
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
     """
 
-    base_template = None
+    base_template: Optional[str] = None
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed

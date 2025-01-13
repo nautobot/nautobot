@@ -16,7 +16,7 @@ from django.template.loader import render_to_string
 from django.templatetags.l10n import localize
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
-from django_tables2 import RequestConfig
+from django_tables2 import RequestConfig  # type: ignore[import-untyped]
 
 from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.models.tree_queries import TreeModel
@@ -131,7 +131,7 @@ class Component:
         """
         self.weight = weight
 
-    def should_render(self, context: dict):
+    def should_render(self, context: Context):
         """
         Check whether this component should be rendered at all.
 
@@ -568,7 +568,9 @@ class DataTablePanel(Panel):
             return self.columns
         if self.context_columns_key:
             return context.get(self.context_columns_key)
-        return list(context.get(self.context_data_key)[0].keys())
+        if data := context.get(self.context_data_key):
+            return list(data[0].keys())
+        return []
 
     def get_column_headers(self, context: Context):
         if self.column_headers:
@@ -750,6 +752,8 @@ class ObjectsTablePanel(Panel):
         request = context["request"]
         if self.context_table_key:
             body_content_table = context.get(self.context_table_key)
+            if body_content_table is None:
+                raise RuntimeError(f'Table not present in context under key "{self.context_table_key}"')
         else:
             body_content_table_class = self.table_class
             body_content_table_model = body_content_table_class.Meta.model
@@ -1185,7 +1189,7 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
         if not data:
             return format_html('<tr><td colspan="2">{}</td></tr>', placeholder(data))
 
-        result = format_html("")
+        result: str = format_html("")
         counter = 0
         for grouping, entry in data.items():
             counter += 1

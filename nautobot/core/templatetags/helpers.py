@@ -15,7 +15,7 @@ from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify as django_slugify
-from django_jinja import library
+from django_jinja import library  # type: ignore[import-untyped]
 from markdown import markdown
 import yaml
 

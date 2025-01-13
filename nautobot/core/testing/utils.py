@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.db.models import Q
 from django.db.models.deletion import PROTECT
-from tree_queries.models import TreeNodeForeignKey
+from tree_queries.models import TreeNodeForeignKey  # type: ignore[import-untyped]
 
 # Use the proper swappable User model
 User = get_user_model()

@@ -3,16 +3,16 @@ from django.contrib.admin import ModelAdmin, site as admin_site
 from django.db import models
 
 # F401 unused-import -- but this import installs the beat admin
-from django_celery_beat import admin  # type: ignore  # noqa: F401
-from django_celery_beat.models import (  # type: ignore
+from django_celery_beat import admin  # type: ignore[import-untyped]  # noqa: F401
+from django_celery_beat.models import (  # type: ignore[import-untyped]
     ClockedSchedule,
     CrontabSchedule,
     IntervalSchedule,
     PeriodicTask,
     SolarSchedule,
 )
-from social_django.models import Association, Nonce, UserSocialAuth  # type: ignore
-from taggit.models import Tag  # type: ignore
+from social_django.models import Association, Nonce, UserSocialAuth  # type: ignore[import-untyped]
+from taggit.models import Tag  # type: ignore[import-untyped]
 
 from nautobot.core.forms import BootstrapMixin
 import nautobot.core.forms.widgets as widgets

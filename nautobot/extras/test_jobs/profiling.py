@@ -12,7 +12,8 @@ class TestProfilingJob(Job):
     Job to have profiling tested.
     """
 
-    description = "Test profiling"
+    class Meta:
+        description = "Test profiling"
 
     def run(self):  # pylint: disable=arguments-differ
         """

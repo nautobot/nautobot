@@ -1,14 +1,15 @@
 import datetime
+from typing import Iterable
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import models as django_models
-from django.shortcuts import reverse
 from django.test import TestCase
 from django.test.utils import isolate_apps
-import django_filters
-from tree_queries.models import TreeNodeForeignKey
+from django.urls import reverse
+import django_filters  # type: ignore[import-untyped]
+from tree_queries.models import TreeNodeForeignKey  # type: ignore[import-untyped]
 
 from nautobot.circuits.filters import CircuitFilterSet
 from nautobot.circuits.models import Circuit, CircuitType, Provider
@@ -29,7 +30,7 @@ class TreeNodeMultipleChoiceFilterTest(TestCase):
 
         class Meta:
             model = dcim_models.Location
-            fields = []
+            fields: Iterable[str] = []
 
     def setUp(self):
         super().setUp()
@@ -250,7 +251,7 @@ class NaturalKeyOrPKMultipleChoiceFilterTest(TestCase, testing.NautobotTestCaseM
 
         class Meta:
             model = dcim_models.Location
-            fields = []
+            fields: Iterable[str] = []
 
     queryset = dcim_models.Location.objects.all()
     filterset = LocationFilterSet

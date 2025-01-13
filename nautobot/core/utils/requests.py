@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.http import QueryDict
-import django_filters
+import django_filters  # type: ignore[import-untyped]
 
 from nautobot.core import exceptions
 from nautobot.core.utils.filtering import get_filterset_field

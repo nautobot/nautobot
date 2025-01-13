@@ -120,7 +120,7 @@ class TransactionTestCase(NautobotTestCaseMixin, _TransactionTestCase):
     """
 
     # 'job_logs' is a proxy connection to the same (default) database that's used exclusively for Job logging
-    databases = ("default", "job_logs")
+    databases = {"default", "job_logs"}
 
     def setUp(self):
         """Provide a clean, post-migration state before each test case.

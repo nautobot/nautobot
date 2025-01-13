@@ -5,7 +5,7 @@ import uuid
 import django.core.serializers.json
 from django.db import migrations, models
 import django.db.models.deletion
-import taggit.managers
+import taggit.managers  # type: ignore[import-untyped]
 
 import nautobot.core.models.fields
 

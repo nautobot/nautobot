@@ -101,7 +101,7 @@ def _preprocess_settings(settings, config_path):
         # django-storages
         if settings.STORAGE_BACKEND.startswith("storages."):
             try:
-                import storages.utils
+                import storages.utils  # type: ignore[import-untyped]
             except ModuleNotFoundError as e:
                 if getattr(e, "name") == "storages":
                     raise ImproperlyConfigured(

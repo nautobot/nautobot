@@ -1,4 +1,4 @@
-from constance.test import override_config
+from constance.test import override_config  # type: ignore[import-untyped]
 from django.conf import settings
 from django.templatetags.static import static
 from django.test import override_settings, TestCase

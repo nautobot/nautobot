@@ -46,7 +46,7 @@ class BaseModel(models.Model):
     can be used for the same purpose in most cases.
     """
 
-    id: models.UUIDField = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True, editable=False)
 
     objects = BaseManager.from_queryset(RestrictedQuerySet)()
     is_contact_associable_model = False  # ContactMixin overrides this to default True

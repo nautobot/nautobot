@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.utils.html import format_html, format_html_join
-import django_tables2 as tables
-from django_tables2.utils import Accessor
+import django_tables2 as tables  # type: ignore[import-untyped]
+from django_tables2.utils import Accessor  # type: ignore[import-untyped]
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
 from nautobot.core.tables import (
@@ -359,7 +359,7 @@ class DynamicGroupTable(BaseTable):
 
     class Meta(BaseTable.Meta):  # pylint: disable=too-few-public-methods
         model = DynamicGroup
-        fields = (
+        fields = [
             "pk",
             "name",
             "description",
@@ -369,7 +369,7 @@ class DynamicGroupTable(BaseTable):
             "tenant",
             "tags",
             "actions",
-        )
+        ]
         default_columns = (
             "pk",
             "name",

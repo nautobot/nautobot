@@ -1,7 +1,7 @@
 from django import get_version
 from django.apps import apps
 from django.conf import settings
-from django_extensions.management.commands.shell_plus import Command as _Command
+from django_extensions.management.commands.shell_plus import Command as _Command  # type: ignore[import-untyped]
 
 from nautobot import __version__
 

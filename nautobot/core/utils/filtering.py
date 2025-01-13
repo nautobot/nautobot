@@ -1,14 +1,14 @@
 import re
 
 from django import forms
-from django_filters import (
+from django_filters import (  # type: ignore[import-untyped]
     BooleanFilter,
     ChoiceFilter,
     ModelMultipleChoiceFilter,
     MultipleChoiceFilter,
     NumberFilter,
 )
-from django_filters.utils import verbose_lookup_expr
+from django_filters.utils import verbose_lookup_expr  # type: ignore[import-untyped]
 
 from nautobot.core import exceptions
 from nautobot.core.utils.lookup import get_filterset_for_model

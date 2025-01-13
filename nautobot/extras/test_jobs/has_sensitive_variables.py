@@ -9,9 +9,8 @@ class TestHasSensitiveVariables(Job):
     Job with JobResult Sensitive Variables censored.
     """
 
-    description = "Job with has_sensitive_variables set to True"
-
     class Meta:
+        description = "Job with has_sensitive_variables set to True"
         has_sensitive_variables = True
 
     def run(self, *args, **kwargs):

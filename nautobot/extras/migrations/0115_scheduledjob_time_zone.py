@@ -2,7 +2,7 @@
 
 from django.db import migrations
 from django.utils import timezone
-import timezone_field.fields
+import timezone_field.fields  # type: ignore[import-untyped]
 
 
 class Migration(migrations.Migration):

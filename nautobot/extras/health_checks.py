@@ -6,8 +6,8 @@ from urllib.parse import urlparse
 from django.conf import settings
 from django.db import connection, connections, DatabaseError, DEFAULT_DB_ALIAS, IntegrityError
 from django.db.migrations.executor import MigrationExecutor
-from health_check.backends import BaseHealthCheckBackend
-from health_check.exceptions import ServiceReturnedUnexpectedResult, ServiceUnavailable
+from health_check.backends import BaseHealthCheckBackend  # type: ignore[import-untyped]
+from health_check.exceptions import ServiceReturnedUnexpectedResult, ServiceUnavailable  # type: ignore[import-untyped]
 from prometheus_client import Gauge
 from redis import exceptions, from_url
 from redis.client import Redis

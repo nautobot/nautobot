@@ -1,6 +1,6 @@
 """Test the nautobot.core.utils.paginator module."""
 
-from constance.test import override_config
+from constance.test import override_config  # type: ignore[import-untyped]
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import override_settings, RequestFactory

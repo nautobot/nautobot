@@ -5,8 +5,8 @@ import os
 from unittest import skip
 import uuid
 
-from constance import config
-from constance.test import override_config
+from constance import config  # type: ignore[import-untyped]
+from constance.test import override_config  # type: ignore[import-untyped]
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType

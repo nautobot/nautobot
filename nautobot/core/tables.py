@@ -1,5 +1,6 @@
 import contextlib
 import logging
+from typing import Any, Iterable
 
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -12,11 +13,11 @@ from django.utils.html import escape, format_html, format_html_join
 from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
-import django_tables2
-from django_tables2.data import TableData, TableQuerysetData
-from django_tables2.rows import BoundRows
-from django_tables2.utils import Accessor, OrderBy, OrderByTuple
-from tree_queries.models import TreeNode
+import django_tables2  # type: ignore[import-untyped]
+from django_tables2.data import TableData, TableQuerysetData  # type: ignore[import-untyped]
+from django_tables2.rows import BoundRows  # type: ignore[import-untyped]
+from django_tables2.utils import Accessor, OrderBy, OrderByTuple  # type: ignore[import-untyped]
+from tree_queries.models import TreeNode  # type: ignore[import-untyped]
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
@@ -640,7 +641,7 @@ class CustomFieldColumn(django_tables2.Column):
     """
 
     # Add [] to empty_values so when there is no choice populated for multiselect_cf i.e. [], "—" is returned automatically.
-    empty_values = (None, "", [])
+    empty_values: Iterable[Any] = (None, "", [])
 
     def __init__(self, customfield, *args, **kwargs):
         self.customfield = customfield
@@ -670,7 +671,7 @@ class RelationshipColumn(django_tables2.Column):
     """
 
     # Add [] to empty_values so when there is no relationship associations i.e. [], "—" is returned automatically.
-    empty_values = (None, "", [])
+    empty_values: Iterable[Any] = (None, "", [])
 
     def __init__(self, relationship, side, *args, **kwargs):
         self.relationship = relationship

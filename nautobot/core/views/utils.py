@@ -7,7 +7,7 @@ from django.core.exceptions import FieldError, ValidationError
 from django.db.models import ForeignKey
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
-from django_tables2 import RequestConfig
+from django_tables2 import RequestConfig  # type: ignore[import-untyped]
 from rest_framework import exceptions, serializers
 
 from nautobot.core.api.fields import ChoiceField, ContentTypeField, TimeZoneSerializerField

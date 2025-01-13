@@ -1,6 +1,6 @@
 import contextlib
 import re
-from typing import Optional, Sequence
+from typing import Any, Optional, Sequence
 from unittest import skipIf
 import uuid
 
@@ -9,12 +9,14 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import URLValidator
+from django.db.models import Model
 from django.test import override_settings, tag, TestCase as _TestCase
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape
 from django.utils.http import urlencode
 from django.utils.text import slugify
-from tree_queries.models import TreeNode
+from django_filters import FilterSet  # type: ignore[import-untyped]
+from tree_queries.models import TreeNode  # type: ignore[import-untyped]
 
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
@@ -53,7 +55,7 @@ class ModelTestCase(TestCase):
     Parent class for TestCases which deal with models.
     """
 
-    model = None
+    model: type[Model]
     # Optional, list of Relationships populated in setUpTestData for testing with this model
     # Be sure to also create RelationshipAssociations using these Relationships!
     relationships: Optional[Sequence[extras_models.Relationship]] = None
@@ -79,7 +81,7 @@ class ModelViewTestCase(ModelTestCase):
     Base TestCase for model views. Subclass to test individual views.
     """
 
-    reverse_url_attribute = None
+    reverse_url_attribute: Optional[str] = None
     """
     Name of instance field to pass as a kwarg when looking up URLs for creating/editing/deleting a model instance.
 
@@ -298,8 +300,8 @@ class ViewTestCases:
         :form_data: Data to be used when creating a new object.
         """
 
-        form_data = {}
-        slug_source = None
+        form_data: dict[str, Any] = {}
+        slug_source: Optional[str] = None
         slugify_function = staticmethod(slugify)
         slug_test_object = ""
 
@@ -437,8 +439,8 @@ class ViewTestCases:
         :form_data: Fall back to this data if update_data is not provided, for backward compatibility.
         """
 
-        form_data = {}
-        update_data = {}
+        form_data: dict[str, Any] = {}
+        update_data: dict[str, Any] = {}
 
         def test_edit_object_without_permission(self):
             instance = self._get_queryset().first()
@@ -684,7 +686,7 @@ class ViewTestCases:
         Retrieve multiple instances.
         """
 
-        filterset = None
+        filterset: Optional[FilterSet] = None
         filter_on_field = "name"
         sort_on_field = "tags"
 
@@ -931,7 +933,7 @@ class ViewTestCases:
         """
 
         bulk_create_count = 3
-        bulk_create_data = {}
+        bulk_create_data: dict[str, Any] = {}
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_create_multiple_objects_without_permission(self):
@@ -1015,7 +1017,7 @@ class ViewTestCases:
                          from that used for initial object creation within setUpTestData().
         """
 
-        bulk_edit_data = {}
+        bulk_edit_data: dict[str, Any] = {}
 
         def validate_object_data_after_bulk_edit(self, pk_list):
             for instance in self._get_queryset().filter(pk__in=pk_list):

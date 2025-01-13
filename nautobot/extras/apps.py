@@ -1,8 +1,8 @@
 import logging
 
 from django.db.utils import ProgrammingError
-import graphene
-from health_check.plugins import plugin_dir
+import graphene  # type: ignore[import-untyped]
+from health_check.plugins import plugin_dir  # type: ignore[import-untyped]
 
 from nautobot.core.apps import NautobotConfig
 from nautobot.core.signals import nautobot_database_ready
@@ -28,7 +28,7 @@ class ExtrasConfig(NautobotConfig):
 
         nautobot_database_ready.connect(refresh_job_models, sender=self)
 
-        from graphene_django.converter import convert_django_field
+        from graphene_django.converter import convert_django_field  # type: ignore[import-untyped]
 
         from nautobot.core.models.fields import TagsField
 

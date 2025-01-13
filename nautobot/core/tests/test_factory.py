@@ -1,6 +1,6 @@
 import itertools
 
-import factory as factoryboy
+import factory as factoryboy  # type: ignore[import-untyped]
 
 from nautobot.core import constants, factory, testing
 

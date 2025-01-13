@@ -7,9 +7,8 @@ class TestWorkerQueues(Job):
     Job with custom task queues.
     """
 
-    description = "Custom task queues"
-
     class Meta:
+        description = "Custom task queues"
         has_sensitive_variables = False
         task_queues = [
             "celery",
