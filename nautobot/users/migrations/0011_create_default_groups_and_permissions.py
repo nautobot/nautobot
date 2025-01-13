@@ -1,6 +1,7 @@
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.db import migrations
+from django.core.exceptions import ObjectDoesNotExist
 
 from nautobot.users.models import ObjectPermission
 
@@ -36,11 +37,29 @@ def add_default_groups(apps, schema_editor):
 
 
 def remove_default_groups(apps, schema_editor):
-    read_only, _ = Group.objects.get_or_create(name="Default: Global Read Only")
-    admin, _ = Group.objects.get_or_create(name="Default: Global Read/Write")
+    try:
+        read_only = Group.objects.get(name="Default: Global Read Only")
+        read_only.delete()
+    except ObjectDoesNotExist:
+        pass
 
-    read_only.delete()
-    admin.delete()
+    try:
+        admin = Group.objects.get(name="Default: Global Read/Write")
+        admin.delete()
+    except ObjectDoesNotExist:
+        pass
+
+    try:
+        read_only = ObjectPermission.objects.get(name="Default: Global Read Only")
+        read_only.delete()
+    except ObjectDoesNotExist:
+        pass
+
+    try:
+        admin = ObjectPermission.objects.get_or_create(name="Default: Global Read/Write")
+        admin.delete()
+    except ObjectDoesNotExist:
+        pass
 
 
 class Migration(migrations.Migration):
