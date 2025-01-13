@@ -20,7 +20,7 @@ def add_default_groups(apps, schema_editor):
 
     rw_obj_permission, created = ObjectPermission.objects.get_or_create(
         name="Default: Global Read/Write",
-        actions=["read", "view", "modify", "delete"],
+        actions=["view", "add", "change", "delete"],
     )
 
     if not created:
