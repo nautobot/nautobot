@@ -1091,14 +1091,14 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
         self.repo.save()
         specified_path = tempfile.mkdtemp()
         with self.subTest("Clone a repository with no path argument provided"):
-            with self.repo.clone() as path:
+            with self.repo.clone_to_directory() as path:
                 # assert that the temporary directory was created in the expected location i.e. /tmp/
                 self.assertTrue(path.startswith(tempfile.gettempdir()))
                 self.assertTrue(os.path.exists(path))
             self.assertFalse(os.path.exists(path))
 
         with self.subTest("Clone a repository with a path argument provided"):
-            with self.repo.clone(path=specified_path) as path:
+            with self.repo.clone_to_directory(path=specified_path) as path:
                 # assert that the temporary directory was created in the expected location i.e. /tmp/
                 self.assertTrue(path.startswith(specified_path))
                 self.assertTrue(os.path.exists(path))
@@ -1106,7 +1106,7 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
             self.assertFalse(os.path.exists(path))
 
         with self.subTest("Clone a repository with the branch argument provided"):
-            with self.repo.clone(path=specified_path, branch="main") as path:
+            with self.repo.clone_to_directory(path=specified_path, branch="main") as path:
                 # assert that the temporary directory was created in the expected location i.e. /tmp/
                 self.assertTrue(path.startswith(specified_path))
                 self.assertTrue(os.path.exists(path))
@@ -1114,7 +1114,7 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
             self.assertFalse(os.path.exists(path))
 
         with self.subTest("Clone a repository with the head argument provided"):
-            with self.repo.clone(path=specified_path, head=self.repo.current_head) as path:
+            with self.repo.clone_to_directory(path=specified_path, head=self.repo.current_head) as path:
                 # assert that the temporary directory was created in the expected location i.e. /tmp/
                 self.assertTrue(path.startswith(specified_path))
                 self.assertTrue(os.path.exists(path))
@@ -1123,7 +1123,7 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
 
         with self.subTest("Assert an Exception is raised when an invalid commit hash is provided"):
             with self.assertRaises(Exception):
-                with self.repo.clone(path=specified_path, head="non-existent") as path:
+                with self.repo.clone_to_directory(path=specified_path, head="non-existent") as path:
                     pass
 
 

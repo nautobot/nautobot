@@ -176,7 +176,7 @@ class GitRepository(PrimaryModel):
         return enqueue_pull_git_repository_and_refresh_data(self, user)
 
     @contextmanager
-    def clone(self, path=None, branch=None, head=None, shallow=True):
+    def clone_to_directory(self, path=None, branch=None, head=None, shallow=True):
         """
         Perform a (shallow) clone of the Git repository in a temporary directory.
 
