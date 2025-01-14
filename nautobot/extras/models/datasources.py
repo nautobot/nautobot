@@ -176,15 +176,15 @@ class GitRepository(PrimaryModel):
         return enqueue_pull_git_repository_and_refresh_data(self, user)
 
     @contextmanager
-    def clone_to_directory(self, path=None, branch=None, head=None, shallow=True):
+    def clone_to_directory_context(self, path=None, branch=None, head=None, depth=0):
         """
-        Perform a (shallow) clone of the Git repository in a temporary directory.
+        Context manager to perform a (shallow) clone of the Git repository in a temporary directory.
 
         Args:
             path (str, optional): The absolute directory path to clone into. If not specified, `tempfile.gettempdir()` will be used.
             branch (str, optional): The branch to checkout. If not set, the GitRepository.branch will be used.
             head (str, optional): Git commit hash to check out instead of pulling branch latest.
-            shallow (bool, optional): If True, perform a shallow clone. Defaults to True.
+            depth (int, optional): The depth of the clone. If set to 0, a full clone will be performed.
 
         Returns:
             Returns the absolute path of the cloned repo if clone was successful, otherwise returns None.
@@ -204,16 +204,9 @@ class GitRepository(PrimaryModel):
                 branch = self.branch
 
             try:
-                repo_helper = GitRepo(path_name, self.remote_url, shallow=shallow)
+                repo_helper = GitRepo(path_name, self.remote_url, depth=depth)
                 head, _ = repo_helper.checkout(branch, head)
             except Exception as e:
-                # Cleanup the temporary directory if the clone fails
-                try:
-                    shutil.rmtree(path_name)
-                except OSError as os_error:
-                    # log error if the cleanup fails
-                    logger.error(f"Failed to cleanup temporary directory at {path_name}: {os_error}")
-
                 logger.error(f"Failed to clone repository {self.name} to {path_name}: {e}")
                 raise e
 
@@ -226,3 +219,53 @@ class GitRepository(PrimaryModel):
             except OSError as os_error:
                 # log error if the cleanup fails
                 logger.error(f"Failed to cleanup temporary directory at {path_name}: {os_error}")
+
+    def clone_to_directory(self, path=None, branch=None, head=None, depth=0):
+        """
+        Perform a (shallow) clone of the Git repository in a temporary directory.
+
+        Args:
+            path (str, optional): The absolute directory path to clone into. If not specified, `tempfile.gettempdir()` will be used.
+            branch (str, optional): The branch to checkout. If not set, the GitRepository.branch will be used.
+            head (str, optional): Git commit hash to check out instead of pulling branch latest.
+            depth (int, optional): The depth of the clone. If set to 0, a full clone will be performed.
+
+        Returns:
+            Returns the absolute path of the cloned repo if clone was successful, otherwise returns None.
+        """
+
+        if branch and head:
+            raise ValueError("Cannot specify both branch and head")
+
+        try:
+            path_name = tempfile.mkdtemp(dir=path, prefix=self.slug)
+        except PermissionError as e:
+            logger.error(f"Failed to create temporary directory at {path}: {e}")
+            raise e
+
+        if not branch:
+            branch = self.branch
+
+        try:
+            repo_helper = GitRepo(path_name, self.remote_url, depth=depth)
+            head, _ = repo_helper.checkout(branch, head)
+        except Exception as e:
+            logger.error(f"Failed to clone repository {self.name} to {path_name}: {e}")
+            raise e
+
+        logger.info(f"Cloned repository {self.name} to {path_name}")
+        return path_name
+
+    def cleanup_cloned_directory(self, path):
+        """
+        Cleanup the cloned directory.
+
+        Args:
+            path (str): The absolute directory path to cleanup.
+        """
+
+        try:
+            shutil.rmtree(path)
+        except OSError as os_error:
+            # log error if the cleanup fails
+            logger.error(f"Failed to cleanup temporary directory at {path}: {os_error}")
