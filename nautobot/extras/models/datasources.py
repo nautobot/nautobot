@@ -187,7 +187,7 @@ class GitRepository(PrimaryModel):
             shallow (bool, optional): If True, perform a shallow clone. Defaults to True.
 
         Returns:
-            Return the absolute path of the cloned repo if clone was successful
+            Returns the absolute path of the cloned repo if clone was successful, otherwise returns None.
         """
 
         try:
