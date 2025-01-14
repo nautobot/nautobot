@@ -195,7 +195,7 @@ class GitRepository(PrimaryModel):
                 raise ValueError("Cannot specify both branch and head")
 
             try:
-                path_name = tempfile.mkdtemp(dir=path)
+                path_name = tempfile.mkdtemp(dir=path, prefix=self.slug)
             except PermissionError as e:
                 logger.error(f"Failed to create temporary directory at {path}: {e}")
                 raise e
