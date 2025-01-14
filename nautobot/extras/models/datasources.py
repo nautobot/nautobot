@@ -184,7 +184,7 @@ class GitRepository(PrimaryModel):
             path (str, optional): The absolute directory path to clone into. If not specified, `tempfile.gettempdir()` will be used.
             branch (str, optional): The branch to checkout. If not set, the GitRepository.branch will be used.
             head (str, optional): Git commit hash to check out instead of pulling branch latest.
-            shallow (bool, optional): If set, perform a shallow clone.
+            shallow (bool, optional): If True, perform a shallow clone. Defaults to True.
 
         Returns:
             Return the absolute path of the cloned repo if clone was successful
