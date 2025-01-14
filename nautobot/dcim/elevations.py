@@ -86,12 +86,9 @@ class RackElevationGraphicalOutput:
 
         # add gradients
         RackElevationGraphicalOutput._add_gradient(drawing, "reserved", "#c7c7ff")
-        RackElevationGraphicalOutput._add_gradient(
-            drawing, "occupied", "#d7d7d7")
-        RackElevationGraphicalOutput._add_gradient(
-            drawing, "blocked", "#ffc0c0")
-        RackElevationGraphicalOutput._add_gradient(
-            drawing, "blocked_partial", "#a0a0a0", angle=-45)
+        RackElevationGraphicalOutput._add_gradient(drawing, "occupied", "#d7d7d7")
+        RackElevationGraphicalOutput._add_gradient(drawing, "blocked", "#ffc0c0")
+        RackElevationGraphicalOutput._add_gradient(drawing, "blocked_partial", "#a0a0a0", angle=-45)
         RackElevationGraphicalOutput._add_filters(drawing)
 
         return drawing
@@ -242,7 +239,7 @@ class RackElevationGraphicalOutput:
 
     def render_csv(self, face: Literal["front", "rear"]) -> str:
         @dataclass
-        class DeviceCSVRepresentation():
+        class DeviceCSVRepresentation:
             name: str | None
             unit: str
             is_full_depth: bool | None
@@ -261,31 +258,35 @@ class RackElevationGraphicalOutput:
                     )
                 except AttributeError:
                     rack_positions[unit["id"] - 1] = DeviceCSVRepresentation(
-                        name=None,
-                        unit=unit["name"],
-                        is_full_depth=False
+                        name=None, unit=unit["name"], is_full_depth=False
                     )
 
             return rack_positions
 
-        def _output_face_to_csv(buffer: io.StringIO, rack_positions: list[DeviceCSVRepresentation], ru_prefix: str = ""):
+        def _output_face_to_csv(
+            buffer: io.StringIO, rack_positions: list[DeviceCSVRepresentation], ru_prefix: str = ""
+        ):
             if self.rack.desc_units:
                 position_iterator = range(self.rack.u_height)
             else:
-                position_iterator = range(self.rack.u_height-1,0,-1)
+                position_iterator = range(self.rack.u_height - 1, 0, -1)
 
             for position in position_iterator:
                 this_position = rack_positions[position]
                 if this_position.name is not None:
-                    writer.writerow({
-                        "unit": ru_prefix+this_position.unit,
-                        "name": this_position.name,
-                    })
+                    writer.writerow(
+                        {
+                            "unit": ru_prefix + this_position.unit,
+                            "name": this_position.name,
+                        }
+                    )
                 else:
-                    writer.writerow({
-                        "unit": ru_prefix+this_position.unit,
-                        "name": "",
-                    })
+                    writer.writerow(
+                        {
+                            "unit": ru_prefix + this_position.unit,
+                            "name": "",
+                        }
+                    )
 
         front_faces = _get_face_data("front")
         rear_faces = _get_face_data("rear")
@@ -295,7 +296,6 @@ class RackElevationGraphicalOutput:
                 rear.name = f"{front.name} (Rear)"
             elif rear.is_full_depth:
                 front.name = f"{rear.name} (Rear)"
-
 
         buf = io.StringIO()
         writer = csv.DictWriter(buf, fieldnames=["unit", "name"])
