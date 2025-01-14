@@ -557,7 +557,7 @@ class LinkedCountColumn(django_tables2.Column):
                 related_record = related_records[0]
         url = reverse(self.viewname, kwargs=self.view_kwargs)
         if self.url_params:
-            url += "?" + urlencode({k: getattr(record, v) for k, v in self.url_params.items()})
+            url += "?" + urlencode({k: (getattr(record, v) or "") for k, v in self.url_params.items()})
         if value > 1:
             return format_html('<a href="{}" class="badge">{}</a>', url, value)
         if related_record is not None:
