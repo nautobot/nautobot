@@ -1,1 +1,1 @@
-Disable Import Jobs from Git Repository at startup as this can either be done using the post_upgrade command or from the UI.
+Removed unnecessary `import_jobs()` call during system startup.
