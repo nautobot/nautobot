@@ -50,7 +50,7 @@ class BulkEditObjects(Job):
                 raise RunJobTaskFailed(f"Filter query provided but {model} do not have a filterset.")
 
             if edit_all:
-                if filterset_cls and filter_query_params:
+                if filter_query_params:
                     queryset = filterset_cls(filter_query_params).qs.restrict(self.user, "change")
                 else:
                     queryset = model.objects.restrict(self.user, "change")

@@ -1164,7 +1164,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
             for field in form.fields
             if field not in form_custom_fields + form_relationships + ["pk"] + ["object_note"]
         ]
-        nullified_fields = request.POST.getlist("_nullify")
+        nullified_fields = request.POST.getlist("_nullify") or []
         with deferred_change_logging_for_bulk_operation():
             updated_objects = []
             edit_all = self.request.POST.get("_all")
