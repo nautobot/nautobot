@@ -788,6 +788,8 @@ class BulkDeleteTestCase(TransactionTestCase):
         self.status_ct = ContentType.objects.get_for_model(Status)
         self.role_ct = ContentType.objects.get_for_model(Role)
         self.device_ct = ContentType.objects.get_for_model(Device)
+        for x in range(10):
+            Status.objects.create(name=f"Example Status {x}")
 
     def _common_no_error_test_assertion(self, model, job_result, **filter_params):
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
@@ -857,9 +859,6 @@ class BulkDeleteTestCase(TransactionTestCase):
 
     def test_bulk_delete_filter_all(self):
         self.add_permissions("extras.delete_status")
-        for x in range(10):
-            Status.objects.create(name=f"Example Status {x}")
-
         status_to_ignore = Status.objects.create(name="Ignore Example Status")
         job_result = create_job_result_and_run_job(
             "nautobot.core.jobs.bulk_actions",
@@ -873,24 +872,20 @@ class BulkDeleteTestCase(TransactionTestCase):
         self.assertTrue(Status.objects.filter(name=status_to_ignore.name).exists())
 
     def test_bulk_delete_passing_both_pk_list_and_delete_all(self):
+        """
+        delete_all should override pk_list if both are passed.
+        """
         self.add_permissions("extras.delete_status")
-        status_count = Status.objects.all().count()
         job_result = create_job_result_and_run_job(
             "nautobot.core.jobs.bulk_actions",
             "BulkDeleteObjects",
-            content_type=self.status_ct.id,
+            content_type=self.status_ct.pk,
             delete_all=True,
             filter_query_params={"name__isw": "Example Status"},
             pk_list=[str(Status.objects.first().pk)],
             username=self.user.username,
         )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
-        job_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
-        self.assertEqual(
-            job_log.message,
-            "You can either delete objs within `pk_list` provided or `delete_all` with `filter_query_params` if needed.",
-        )
-        self.assertEqual(status_count, Status.objects.all().count())
+        self._common_no_error_test_assertion(Role, job_result, name__istartswith="Example Status")
 
     def test_bulk_delete_with_pk(self):
         self.add_permissions("extras.delete_role")

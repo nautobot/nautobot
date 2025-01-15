@@ -219,21 +219,22 @@ class BulkDeleteObjects(Job):
 
         filterset_cls = get_filterset_for_model(model)
 
-        if filter_query_params and not filterset_cls:
-            self.logger.error(f"Filterset not found for `{model}`")
-            raise RunJobTaskFailed(f"Filter query provided but `{model}` do not have a filterset.")
+        if filter_query_params:
+            if not filterset_cls:
+                self.logger.error(f"Filterset not found for `{model}`")
+                raise RunJobTaskFailed(f"Filter query provided but `{model}` do not have a filterset.")
 
-        # Discarding non-filter query params
-        new_filter_query_params = {}
+            # Discarding non-filter query params
+            new_filter_query_params = {}
 
-        for key, value in filter_query_params.items():
-            try:
-                get_filterset_field(filterset_cls, key)
-                new_filter_query_params[key] = value
-            except exceptions.FilterSetFieldNotFound:
-                self.logger.warning(f"Query parameter `{key}` not found in `{filterset_cls}`, discarding it")
+            for key, value in filter_query_params.items():
+                try:
+                    get_filterset_field(filterset_cls(), key)
+                    new_filter_query_params[key] = value
+                except exceptions.FilterSetFieldNotFound:
+                    self.logger.warning(f"Query parameter `{key}` not found in `{filterset_cls}`, discarding it")
 
-        filter_query_params = new_filter_query_params
+            filter_query_params = new_filter_query_params
 
         if delete_all:
             # Case for selecting all objects to delete
@@ -269,7 +270,7 @@ class BulkDeleteObjects(Job):
         try:
             self.logger.info(f"Deleting {queryset.count()} {verbose_name_plural}...")
             _, deleted_info = bulk_delete_with_bulk_change_logging(queryset)
-            deleted_count = deleted_info[model._meta.label]
+            deleted_count = deleted_info.get(model._meta.label, 0)
         except ProtectedError as err:
             # TODO this error message needs to be cleaner, ideally using a variant of handle_protectederror
             self.logger.error(f"Caught ProtectedError while attempting to delete objects: `{err}`")
