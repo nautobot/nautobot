@@ -13,7 +13,7 @@ from django_celery_beat.schedulers import DatabaseScheduler, ModelEntry
 from kombu.utils.json import loads
 
 from nautobot.extras.choices import JobQueueTypeChoices
-from nautobot.extras.models import JobResult, ScheduledJob, ScheduledJobs, JobQueue
+from nautobot.extras.models import JobQueue, JobResult, ScheduledJob, ScheduledJobs
 from nautobot.extras.utils import run_kubernetes_job_and_return_job_result
 
 logger = logging.getLogger(__name__)
@@ -128,7 +128,10 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
                 scheduled_job = entry.model
                 job_queue = scheduled_job.job_queue
                 if job_queue is None:
-                    job_queue, _ = JobQueue.objects.get_or_create(name=settings.CELERY_TASK_DEFAULT_QUEUE, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY})
+                    job_queue, _ = JobQueue.objects.get_or_create(
+                        name=settings.CELERY_TASK_DEFAULT_QUEUE,
+                        defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY},
+                    )
                 # Distinguish between Celery and Kubernetes job queues
                 if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
                     job_result = JobResult.objects.create(
