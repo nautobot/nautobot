@@ -244,7 +244,7 @@ class BulkDeleteObjects(Job):
             deleted_count = deleted_info[model._meta.label]
         except ProtectedError as err:
             # TODO this error message needs to be cleaner, ideally using a variant of handle_protectederror
-            self.logger.error(f"Caught ProtectedError while attempting to delete objects: {err}")
+            self.logger.error(f"Caught ProtectedError while attempting to delete objects: `{err}`")
             raise RunJobTaskFailed("Caught ProtectedError while attempting to delete objects")
         msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
         self.logger.info(msg)
