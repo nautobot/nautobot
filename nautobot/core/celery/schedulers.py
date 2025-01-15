@@ -13,7 +13,7 @@ from django_celery_beat.schedulers import DatabaseScheduler, ModelEntry
 from kombu.utils.json import loads
 
 from nautobot.extras.choices import JobQueueTypeChoices
-from nautobot.extras.models import JobQueue, JobResult, ScheduledJob, ScheduledJobs
+from nautobot.extras.models import JobResult, ScheduledJob, ScheduledJobs
 from nautobot.extras.utils import run_kubernetes_job_and_return_job_result
 
 logger = logging.getLogger(__name__)
