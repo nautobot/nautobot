@@ -7,7 +7,9 @@ from django.core.exceptions import (
 )
 from django.db.models import ManyToManyField, ProtectedError
 
+from nautobot.core import exceptions
 from nautobot.core.forms.utils import restrict_form_fields
+from nautobot.core.utils.filtering import get_filterset_field
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.jobs import (
@@ -46,8 +48,22 @@ class BulkEditObjects(Job):
             filterset_cls = get_filterset_for_model(model)
 
             if filter_query_params and not filterset_cls:
-                self.logger.error(f"Filterset not found for {model}")
-                raise RunJobTaskFailed(f"Filter query provided but {model} do not have a filterset.")
+                self.logger.error(f"Filterset not found for `{model}`")
+                raise RunJobTaskFailed(f"Filter query provided but `{model}` do not have a filterset.")
+
+            # Discarding non-filter query params
+            new_filter_query_params = {}
+
+            for key, value in filter_query_params.items():
+                try:
+                    get_filterset_field(filterset_cls, key)
+                    new_filter_query_params[key] = value
+                except exceptions.FilterSetFieldNotFound:
+                    self.logger.warning(
+                        f"Query parameter `{key}` not found in filterset for `{filterset_cls}`, discarding it"
+                    )
+
+            filter_query_params = new_filter_query_params
 
             if edit_all:
                 if filter_query_params:
@@ -204,8 +220,20 @@ class BulkDeleteObjects(Job):
         filterset_cls = get_filterset_for_model(model)
 
         if filter_query_params and not filterset_cls:
-            self.logger.error(f"Filterset not found for {model}")
-            raise RunJobTaskFailed(f"Filter query provided but {model} do not have a filterset.")
+            self.logger.error(f"Filterset not found for `{model}`")
+            raise RunJobTaskFailed(f"Filter query provided but `{model}` do not have a filterset.")
+
+        # Discarding non-filter query params
+        new_filter_query_params = {}
+
+        for key, value in filter_query_params.items():
+            try:
+                get_filterset_field(filterset_cls, key)
+                new_filter_query_params[key] = value
+            except exceptions.FilterSetFieldNotFound:
+                self.logger.warning(f"Query parameter `{key}` not found in `{filterset_cls}`, discarding it")
+
+        filter_query_params = new_filter_query_params
 
         if delete_all:
             # Case for selecting all objects to delete
