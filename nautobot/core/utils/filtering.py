@@ -76,8 +76,7 @@ def get_all_lookup_expr_for_field(model, field_name):
 
 
 def get_filterset_field(filterset, field_name):
-    filters = getattr(filterset, "filters", getattr(filterset, "declared_filters", {}))
-    field = filters.get(field_name)
+    field = filterset.filters.get(field_name)
     if field is None:
         raise exceptions.FilterSetFieldNotFound(f"{field_name} is not a valid {type(filterset).__name__} field")
     return field

@@ -48,8 +48,10 @@ class BulkEditObjects(Job):
             filterset_cls = get_filterset_for_model(model)
 
             if filter_query_params and not filterset_cls:
-                self.logger.error(f"Filterset not found for `{model}`")
-                raise RunJobTaskFailed(f"Filter query provided but `{model}` do not have a filterset.")
+                self.logger.error(f"Filterset not found for {model._meta.verbose_name}")
+                raise RunJobTaskFailed(
+                    f"Filter query provided but {model._meta.verbose_name} does not have a filterset."
+                )
 
             # Discarding non-filter query params
             new_filter_query_params = {}
@@ -221,8 +223,10 @@ class BulkDeleteObjects(Job):
 
         if filter_query_params:
             if not filterset_cls:
-                self.logger.error(f"Filterset not found for `{model}`")
-                raise RunJobTaskFailed(f"Filter query provided but `{model}` do not have a filterset.")
+                self.logger.error(f"Filterset not found for {model._meta.verbose_name}")
+                raise RunJobTaskFailed(
+                    f"Filter query provided but {model._meta.verbose_name} does not have a filterset."
+                )
 
             # Discarding non-filter query params
             new_filter_query_params = {}
@@ -237,7 +241,7 @@ class BulkDeleteObjects(Job):
             filter_query_params = new_filter_query_params
 
         if delete_all:
-            # Case for selecting all objects to delete
+            # Case for selecting all objects (or all filtered objects) to delete
             if filter_query_params:
                 # If there is filter query params, we need to apply it to the queryset
                 queryset = filterset_cls(filter_query_params).qs.restrict(self.user, "delete")
