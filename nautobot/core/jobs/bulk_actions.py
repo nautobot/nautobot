@@ -47,25 +47,26 @@ class BulkEditObjects(Job):
             updated_objects_pk = []
             filterset_cls = get_filterset_for_model(model)
 
-            if filter_query_params and not filterset_cls:
-                self.logger.error(f"Filterset not found for {model._meta.verbose_name}")
-                raise RunJobTaskFailed(
-                    f"Filter query provided but {model._meta.verbose_name} does not have a filterset."
-                )
-
-            # Discarding non-filter query params
-            new_filter_query_params = {}
-
-            for key, value in filter_query_params.items():
-                try:
-                    get_filterset_field(filterset_cls(), key)
-                    new_filter_query_params[key] = value
-                except exceptions.FilterSetFieldNotFound:
-                    self.logger.warning(
-                        f"Query parameter `{key}` not found in filterset for `{filterset_cls}`, discarding it"
+            if filter_query_params:
+                if not filterset_cls:
+                    self.logger.error(f"Filterset not found for {model._meta.verbose_name}")
+                    raise RunJobTaskFailed(
+                        f"Filter query provided but {model._meta.verbose_name} does not have a filterset."
                     )
 
-            filter_query_params = new_filter_query_params
+                    # Discarding non-filter query params
+                    new_filter_query_params = {}
+
+                    for key, value in filter_query_params.items():
+                        try:
+                            get_filterset_field(filterset_cls(), key)
+                            new_filter_query_params[key] = value
+                        except exceptions.FilterSetFieldNotFound:
+                            self.logger.warning(
+                                f"Query parameter `{key}` not found in filterset for `{filterset_cls}`, discarding it"
+                            )
+
+                    filter_query_params = new_filter_query_params
 
             if edit_all:
                 if filter_query_params:
