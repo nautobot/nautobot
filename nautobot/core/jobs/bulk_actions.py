@@ -56,7 +56,7 @@ class BulkEditObjects(Job):
 
             for key, value in filter_query_params.items():
                 try:
-                    get_filterset_field(filterset_cls, key)
+                    get_filterset_field(filterset_cls(), key)
                     new_filter_query_params[key] = value
                 except exceptions.FilterSetFieldNotFound:
                     self.logger.warning(
