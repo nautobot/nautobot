@@ -40,7 +40,7 @@ from nautobot.core.forms import (
     restrict_form_fields,
 )
 from nautobot.core.jobs import BulkDeleteObjects, BulkEditObjects
-from nautobot.core.utils import lookup, permissions
+from nautobot.core.utils import filtering, lookup, permissions
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params, normalize_querydict
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utils import (
@@ -957,7 +957,19 @@ class BulkEditAndBulkDeleteModelMixin:
         if filterset_class := lookup.get_filterset_for_model(model):
             filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
         else:
-            filter_query_params = None
+            filter_query_params = {}
+
+        # Discarding non-filter query params
+        new_filter_query_params = {}
+
+        for key, value in filter_query_params.items():
+            try:
+                filtering.get_filterset_field(filterset_class(), key)
+                new_filter_query_params[key] = value
+            except exceptions.FilterSetFieldNotFound:
+                self.logger.warning(f"Query parameter `{key}` not found in `{filterset_class}`, discarding it")
+
+        filter_query_params = new_filter_query_params
 
         job_form = BulkDeleteObjects.as_form(
             data={
@@ -984,7 +996,20 @@ class BulkEditAndBulkDeleteModelMixin:
         if filterset_class := lookup.get_filterset_for_model(model):
             filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
         else:
-            filter_query_params = None
+            filter_query_params = {}
+
+        # Discarding non-filter query params
+        new_filter_query_params = {}
+
+        for key, value in filter_query_params.items():
+            try:
+                filtering.get_filterset_field(filterset_class(), key)
+                new_filter_query_params[key] = value
+            except exceptions.FilterSetFieldNotFound:
+                self.logger.warning(f"Query parameter `{key}` not found in `{filterset_class}`, discarding it")
+
+        filter_query_params = new_filter_query_params
+
         job_form = BulkEditObjects.as_form(
             data={
                 "form_data": form_data,
