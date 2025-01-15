@@ -31,8 +31,8 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.core import exceptions as core_exceptions
+from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.core.forms import (
     BootstrapMixin,
     ConfirmationForm,
