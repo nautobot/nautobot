@@ -543,21 +543,25 @@ class BaseJob:
                 help_text="Allow this singleton job to run even when another instance is already running",
             )
 
-        job_model = JobModel.objects.get_for_class_path(cls.class_path)
-        dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else cls.dryrun_default
-        job_queue_queryset = JobQueue.objects.filter(jobs=job_model)
-        job_queue_params = {"jobs": [job_model.pk]}
+        try:
+            job_model = JobModel.objects.get_for_class_path(cls.class_path)
+            job_queue_queryset = JobQueue.objects.filter(jobs=job_model)
+            job_queue_params = {"jobs": [job_model.pk]}
 
-        # Initialize job_queue choices
-        form.fields["_job_queue"] = DynamicModelChoiceField(
-            queryset=job_queue_queryset,
-            query_params=job_queue_params,
-            required=False,
-            help_text="The job queue to route this job to",
-            label="Job queue",
-        )
-        # Populate the job queue field on the JobRun Form
-        form.fields["_job_queue"].initial = job_model.default_job_queue.pk
+            # Initialize job_queue choices
+            form.fields["_job_queue"] = DynamicModelChoiceField(
+                queryset=job_queue_queryset,
+                query_params=job_queue_params,
+                required=False,
+                help_text="The job queue to route this job to",
+                label="Job queue",
+            )
+            # Populate the job queue field on the JobRun Form
+            form.fields["_job_queue"].initial = job_model.default_job_queue.pk
+
+        except JobModel.DoesNotExist:
+            logger.error("No Job instance found in the database corresponding to %s", cls.class_path)
+        dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else cls.dryrun_default
 
         if cls.supports_dryrun and (not initial or "dryrun" not in initial):
             # Set initial "dryrun" checkbox state based on the Meta parameter
