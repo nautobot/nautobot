@@ -244,9 +244,9 @@ class RackElevationGraphicalOutput:
     def render_csv(self, face: Literal["front", "rear"]) -> str:
         @dataclass
         class DeviceCSVRepresentation:
-            name: str | None
+            name: Optional[int]
             unit: str
-            is_full_depth: bool | None
+            is_full_depth: Optional[int]
 
         def _get_face_data(face: Literal["front", "rear"]) -> list[DeviceCSVRepresentation]:
             # Prepare an empty rack representation
