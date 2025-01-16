@@ -108,17 +108,17 @@ def _render_job_button_for_obj(job_button, obj, context, content_type):
     # Disable buttons if the user doesn't have permission to run the underlying Job.
     has_run_perm = Job.objects.check_perms(context["user"], instance=job_button.job, action="run")
     try:
-        job_queues = list(job_button.job.job_queues.all().values_list("name", flat=True))
+        job_queues = job_button.job.job_queues.all()
         _job_queue = job_queues[0]
     except IndexError:
-        _job_queue = settings.CELERY_TASK_DEFAULT_QUEUE
+        _job_queue = JobQueue.objects.get(name=settings.CELERY_TASK_DEFAULT_QUEUE)
     hidden_inputs = format_html(
         HIDDEN_INPUTS,
         csrf_token=context["csrf_token"],
         object_pk=obj.pk,
         object_model_name=f"{content_type.app_label}.{content_type.model}",
         redirect_path=context["request"].path,
-        job_queue=_job_queue,
+        job_queue=_job_queue.pk,
     )
     template_args = {
         "button_id": job_button.pk,
