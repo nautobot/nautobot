@@ -965,6 +965,26 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
 
+    def test_prefix_type_filter(self):
+        url = reverse("ipam-api:prefix-list")
+        self.add_permissions("ipam.view_prefix")
+
+        test_cases = {
+            "ic": "WOR",
+            "isw": "NET",
+            "iew": "WORK",
+            "ie": "NETWORK",
+        }
+
+        for type_filter_lookup, type_filter_value in test_cases.items():
+            with self.subTest(render_as=type_filter_lookup):
+                response = self.client.get(f"{url}?type__{type_filter_lookup}={type_filter_value}", **self.header)
+
+                # Assert that the prefixes returned match the type filter
+                self.assertEqual(response.status_code, 200)
+                for result in response.data["results"]:
+                    self.assertEqual(result["type"]["value"], "network")
+
 
 class PrefixLocationAssignmentTest(APIViewTestCases.APIViewTestCase):
     model = PrefixLocationAssignment
