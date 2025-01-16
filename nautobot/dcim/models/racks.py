@@ -378,8 +378,9 @@ class Rack(PrimaryModel):
         display_fullname=True,
     ):
         """
-        Return an SVG of the rack elevation
+        Return an SVG or a CSV of the rack elevation
 
+        :param fileformat: Choice between "csv" and "svg"
         :param face: Enum of [front, rear] representing the desired side of the rack elevation to render
         :param user: User instance to be used for evaluating device view permissions. If None, all devices
             will be included.
