@@ -634,7 +634,7 @@ class BulkEditTestCase(TransactionTestCase):
             JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
         )
 
-    def test_bulk_edit_without_permission(self):
+    def test_bulk_edit_objects_without_permission(self):
         statuses = [Status.objects.create(name=f"Sample Status {x}") for x in range(3)]
         pk_list = [str(status.id) for status in statuses]
         job_result = create_job_result_and_run_job(
@@ -702,6 +702,9 @@ class BulkEditTestCase(TransactionTestCase):
         self._common_no_error_test_assertion(Role, job_result, 2, pk__in=pk_list, color="aa1409")
 
     def test_bulk_edit_objects_select_all(self):
+        """
+        Bulk edit all Role instances.
+        """
         self.add_permissions("extras.change_role", "extras.view_role")
         job_result = create_job_result_and_run_job(
             "nautobot.core.jobs.bulk_actions",
@@ -715,6 +718,9 @@ class BulkEditTestCase(TransactionTestCase):
         self._common_no_error_test_assertion(Role, job_result, Role.objects.all().count(), color="aa1409")
 
     def test_bulk_edit_select_some(self):
+        """
+        Bulk edit selected Namespace instances.
+        """
         self.add_permissions("ipam.change_namespace", "ipam.view_namespace", "extras.change_tag", "extras.view_tag")
         namespaces = [Namespace.objects.create(name=f"Sample Namespace {x}") for x in range(5)]
         for namespace in namespaces:
@@ -754,6 +760,9 @@ class BulkEditTestCase(TransactionTestCase):
             self.assertTrue(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[3:]]).exists())
 
     def test_bulk_edit_objects_filter_all(self):
+        """
+        Bulk edit all of the filtered Status instances.
+        """
         self.add_permissions("extras.change_status", "extras.view_status")
         # By default Active and Available are some of the example of Status that starts with A
         statuses = Status.objects.filter(name__istartswith="A")
@@ -777,6 +786,9 @@ class BulkEditTestCase(TransactionTestCase):
         self.assertNotEqual(status_to_ignore.color, "aa1409")
 
     def test_bulk_edit_objects_filter_some(self):
+        """
+        Bulk edit some of the filtered Status instances.
+        """
         self.add_permissions("extras.change_status", "extras.view_status")
         # By default Active and Available are some of the example of Status that starts with A
         statuses = Status.objects.filter(name__istartswith="A")
@@ -798,6 +810,9 @@ class BulkEditTestCase(TransactionTestCase):
         self.assertNotEqual(status_to_ignore.color, "aa1409")
 
     def test_bulk_edit_objects_passing_in_both_pk_list_and_edit_all(self):
+        """
+        edit_all should override pk if both are passed.
+        """
         self.add_permissions("extras.change_status", "extras.view_status")
         # By default Active and Available are some of the example of Status that starts with A
         statuses = Status.objects.filter(name__istartswith="A")
@@ -872,7 +887,7 @@ class BulkDeleteTestCase(TransactionTestCase):
             JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
         )
 
-    def test_bulk_delete_without_permission(self):
+    def test_bulk_delete_objects_without_permission(self):
         statuses_to_delete = [str(status) for status in Status.objects.all().values_list("pk", flat=True)[:2]]
         job_result = create_job_result_and_run_job(
             "nautobot.core.jobs.bulk_actions",
