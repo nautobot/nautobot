@@ -1078,6 +1078,7 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
     def test_clone_to_directory_context_manager(self):
         """Confirm that the clone_to_directory_context() context manager method works as expected."""
         try:
+            specified_path = tempfile.mkdtemp()
             self.tempdir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
             create_and_populate_git_repository(self.tempdir.name)
             self.repo_slug = "new_git_repo"
@@ -1093,7 +1094,6 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
                 ],
             )
             self.repo.save()
-            specified_path = tempfile.mkdtemp()
             with self.subTest("Clone a repository with no path argument provided"):
                 with self.repo.clone_to_directory_context() as path:
                     # assert that the temporary directory was created in the expected location i.e. /tmp/
@@ -1165,6 +1165,7 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
     def test_clone_to_directory_helper_methods(self):
         """Confirm that the clone_to_directory()/cleanup_cloned_directory() methods work as expected."""
         try:
+            specified_path = tempfile.mkdtemp()
             self.tempdir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
             create_and_populate_git_repository(self.tempdir.name)
             self.repo_slug = "new_git_repo"
@@ -1180,8 +1181,6 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
                 ],
             )
             self.repo.save()
-            specified_path = tempfile.mkdtemp()
-
             with self.subTest("Clone a repository with no path argument provided"):
                 path = self.repo.clone_to_directory()
                 # assert that the temporary directory was created in the expected location i.e. /tmp/

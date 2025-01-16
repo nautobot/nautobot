@@ -78,7 +78,7 @@ class GitRepo:
             if not depth:
                 self.repo = Repo.clone_from(url, to_path=path, env=GIT_ENVIRONMENT, branch=branch)
             else:
-                self.repo = Repo.clone_from(url, to_path=path, env=GIT_ENVIRONMENT, branch=branch, depth=1)
+                self.repo = Repo.clone_from(url, to_path=path, env=GIT_ENVIRONMENT, branch=branch, depth=depth)
         else:
             self.repo = Repo.init(path)
             self.repo.create_remote("origin", url=url)
