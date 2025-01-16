@@ -984,8 +984,7 @@ def update_git_graphql_queries(repository_record, job_result):
                     graphql_query.query = query_content
                     try:
                         # Validate and save the query
-                        graphql_query.full_clean()
-                        graphql_query.save()
+                        graphql_query.validated_save()
                         msg = (
                             f"Successfully created GraphQL query: {query_name}"
                             if created
