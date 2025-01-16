@@ -978,19 +978,17 @@ def update_git_graphql_queries(repository_record, job_result):
                     defaults={"query": query_content},
                 )
                 modified = graphql_query.query != query_content
-
+                graphql_queries.append(query_name)
                 # Only attempt to update if the content has changed
                 if modified:
-                    graphql_query.query = query_content
                     try:
-                        # Validate and save the query
+                        graphql_query.query = query_content
                         graphql_query.validated_save()
                         msg = (
                             f"Successfully created GraphQL query: {query_name}"
                             if created
                             else f"Successfully updated GraphQL query: {query_name}"
                         )
-                        graphql_queries.append(query_name)
                         logger.info(msg)
                         job_result.log(
                             msg, obj=graphql_query, level_choice=LogLevelChoices.LOG_INFO, grouping="graphql queries"
@@ -1003,10 +1001,9 @@ def update_git_graphql_queries(repository_record, job_result):
                         )
                         logger.error(error_msg)
                         job_result.log(error_msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="graphql queries")
-                        graphql_queries.append(query_name)  # Preserve the existing query despite the error
+                        continue
                 else:
                     msg = f"No changes to GraphQL query: {query_name}"
-                    graphql_queries.append(query_name)  # Add to preserved list
                     logger.info(msg)
                     job_result.log(
                         msg, obj=graphql_query, level_choice=LogLevelChoices.LOG_INFO, grouping="graphql queries"
