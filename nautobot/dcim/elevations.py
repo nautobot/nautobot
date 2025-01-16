@@ -1,7 +1,8 @@
-from dataclasses import dataclass
-from typing import Literal, Union
 import csv
+from dataclasses import dataclass
 import io
+from typing import Literal, Optional, Union
+
 from django.conf import settings
 from django.urls import reverse
 from django.utils.http import urlencode
@@ -223,14 +224,18 @@ class RackElevationGraphicalOutput:
 
     def render(
         self,
-        fileformat: Literal["svg", "csv"],
         face: Literal["front", "back"],
-        unit_width: int,
-        unit_height: int,
-        legend_width: int,
+        unit_width: Optional[int] = None,
+        unit_height: Optional[int] = None,
+        legend_width: Optional[int] = None,
+        fileformat: Literal["svg", "csv"] = "svg"
     ) -> Union[svgwrite.Drawing, str]:
         if fileformat == "svg":
+            if any(x is None for x in [unit_height, unit_width, legend_width]):
+                raise ValueError("Missing required parameters for svg export")
+
             return self.render_svg(face, unit_width, unit_height, legend_width)
+
         elif fileformat == "csv":
             return self.render_csv(face)
 
