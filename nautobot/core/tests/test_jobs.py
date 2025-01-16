@@ -8,6 +8,7 @@ from django.core.files.base import ContentFile
 from django.utils import timezone
 import yaml
 
+from nautobot.circuits.models import Circuit
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
@@ -654,83 +655,6 @@ class BulkEditTestCase(TransactionTestCase):
             status.refresh_from_db()
             self.assertNotEqual(status.color, "aa1409")
 
-    def test_bulk_edit_all(self):
-        self.add_permissions("extras.change_role", "extras.view_role")
-        job_result = create_job_result_and_run_job(
-            "nautobot.core.jobs.bulk_actions",
-            "BulkEditObjects",
-            content_type=self.role_ct.id,
-            edit_all=True,
-            filter_query_params={},
-            form_data={"color": "aa1409"},
-            username=self.user.username,
-        )
-        self._common_no_error_test_assertion(Role, job_result, Role.objects.all().count(), color="aa1409")
-
-    def test_bulk_edit_filter_all(self):
-        self.add_permissions("extras.change_status", "extras.view_status")
-        # By default Active and Available are some of the example of Status that starts with A
-        statuses = Status.objects.filter(name__istartswith="A")
-        status_to_ignore = Status.objects.create(name="Ignore Example Status")
-        self.assertNotEqual(statuses.count(), 0)
-        job_result = create_job_result_and_run_job(
-            "nautobot.core.jobs.bulk_actions",
-            "BulkEditObjects",
-            content_type=self.status_ct.id,
-            edit_all=True,
-            filter_query_params={"name__isw": "A"},
-            # pk ignored if edit_all is True
-            form_data={
-                "pk": [str(statuses[0].pk)],
-                "color": "aa1409",
-                "_all": "True",
-            },
-            username=self.user.username,
-        )
-        self._common_no_error_test_assertion(
-            Status, job_result, statuses.count(), name__istartswith="A", color="aa1409"
-        )
-        self.assertNotEqual(status_to_ignore.color, "aa1409")
-
-    def test_bulk_edit_with_pk(self):
-        self.add_permissions("ipam.change_namespace", "ipam.view_namespace", "extras.change_tag", "extras.view_tag")
-        namespaces = [Namespace.objects.create(name=f"Sample Namespace {x}") for x in range(5)]
-        for namespace in namespaces:
-            namespace.tags.set(self.tags[3:])
-        pk_list = [str(status.id) for status in namespaces[:3]]
-
-        job_result = create_job_result_and_run_job(
-            "nautobot.core.jobs.bulk_actions",
-            "BulkEditObjects",
-            content_type=self.namespace_ct.id,
-            edit_all=False,
-            filter_query_params={},
-            form_data={
-                "pk": pk_list,
-                "description": "Example description for bulk edit",
-                "add_tags": [str(tag.id) for tag in self.tags[:3]],
-                "remove_tags": [str(tag.id) for tag in self.tags[3:]],
-            },
-            username=self.user.username,
-        )
-
-        self._common_no_error_test_assertion(
-            Namespace,
-            job_result,
-            3,
-            description="Example description for bulk edit",
-        )
-
-        # Assert Namespaces withing pk_list updated tags
-        for namespace in namespaces[:3]:
-            self.assertTrue(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[:3]]).exists())
-            self.assertFalse(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[3:]]).exists())
-
-        # Assert Namespaces not withing pk_list tags did not get updated
-        for namespace in namespaces[3:]:
-            self.assertFalse(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[:3]]).exists())
-            self.assertTrue(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[3:]]).exists())
-
     def test_bulk_edit_objects_with_constrained_permission(self):
         roles_to_update = [
             Role.objects.create(name="Example Role 1"),
@@ -777,17 +701,137 @@ class BulkEditTestCase(TransactionTestCase):
         )
         self._common_no_error_test_assertion(Role, job_result, 2, pk__in=pk_list, color="aa1409")
 
+    def test_bulk_edit_objects_select_all(self):
+        self.add_permissions("extras.change_role", "extras.view_role")
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=self.role_ct.id,
+            edit_all=True,
+            filter_query_params={},
+            form_data={"color": "aa1409"},
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(Role, job_result, Role.objects.all().count(), color="aa1409")
+
+    def test_bulk_edit_select_some(self):
+        self.add_permissions("ipam.change_namespace", "ipam.view_namespace", "extras.change_tag", "extras.view_tag")
+        namespaces = [Namespace.objects.create(name=f"Sample Namespace {x}") for x in range(5)]
+        for namespace in namespaces:
+            namespace.tags.set(self.tags[3:])
+        pk_list = [str(status.id) for status in namespaces[:3]]
+
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=self.namespace_ct.id,
+            edit_all=False,
+            filter_query_params={},
+            form_data={
+                "pk": pk_list,
+                "description": "Example description for bulk edit",
+                "add_tags": [str(tag.id) for tag in self.tags[:3]],
+                "remove_tags": [str(tag.id) for tag in self.tags[3:]],
+            },
+            username=self.user.username,
+        )
+
+        self._common_no_error_test_assertion(
+            Namespace,
+            job_result,
+            3,
+            description="Example description for bulk edit",
+        )
+
+        # Assert Namespaces withing pk_list updated tags
+        for namespace in namespaces[:3]:
+            self.assertTrue(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[:3]]).exists())
+            self.assertFalse(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[3:]]).exists())
+
+        # Assert Namespaces not withing pk_list tags did not get updated
+        for namespace in namespaces[3:]:
+            self.assertFalse(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[:3]]).exists())
+            self.assertTrue(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[3:]]).exists())
+
+    def test_bulk_edit_objects_filter_all(self):
+        self.add_permissions("extras.change_status", "extras.view_status")
+        # By default Active and Available are some of the example of Status that starts with A
+        statuses = Status.objects.filter(name__istartswith="A")
+        status_to_ignore = Status.objects.create(name="Ignore Example Status")
+        self.assertNotEqual(statuses.count(), 0)
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=self.status_ct.id,
+            edit_all=True,
+            filter_query_params={"name__isw": "A"},
+            form_data={
+                "color": "aa1409",
+                "_all": "True",
+            },
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(
+            Status, job_result, statuses.count(), name__istartswith="A", color="aa1409"
+        )
+        self.assertNotEqual(status_to_ignore.color, "aa1409")
+
+    def test_bulk_edit_objects_filter_some(self):
+        self.add_permissions("extras.change_status", "extras.view_status")
+        # By default Active and Available are some of the example of Status that starts with A
+        statuses = Status.objects.filter(name__istartswith="A")
+        status_to_ignore = Status.objects.create(name="Ignore Example Status")
+        self.assertNotEqual(statuses.count(), 0)
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=self.status_ct.id,
+            edit_all=False,
+            filter_query_params={"name__isw": "A"},
+            form_data={
+                "pk": [str(statuses[0].pk)],
+                "color": "aa1409",
+            },
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(Status, job_result, 1, name__istartswith="A", color="aa1409")
+        self.assertNotEqual(status_to_ignore.color, "aa1409")
+
+    def test_bulk_edit_objects_passing_in_both_pk_list_and_edit_all(self):
+        self.add_permissions("extras.change_status", "extras.view_status")
+        # By default Active and Available are some of the example of Status that starts with A
+        statuses = Status.objects.filter(name__istartswith="A")
+        status_to_ignore = Status.objects.create(name="Ignore Example Status")
+        self.assertNotEqual(statuses.count(), 0)
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=self.status_ct.id,
+            edit_all=True,
+            filter_query_params={"name__isw": "A"},
+            # pk ignored if edit_all is True
+            form_data={
+                "pk": [str(statuses[0].pk)],
+                "color": "aa1409",
+                "_all": "True",
+            },
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(
+            Status, job_result, statuses.count(), name__istartswith="A", color="aa1409"
+        )
+        self.assertNotEqual(status_to_ignore.color, "aa1409")
+
 
 class BulkDeleteTestCase(TransactionTestCase):
     """
-    Test the BulkDelete system job.
+    Test the BulkDeleteObjects system job.
     """
 
     def setUp(self):
         super().setUp()
         self.status_ct = ContentType.objects.get_for_model(Status)
         self.role_ct = ContentType.objects.get_for_model(Role)
-        self.device_ct = ContentType.objects.get_for_model(Device)
         for x in range(10):
             Status.objects.create(name=f"Example Status {x}")
 
@@ -840,54 +884,29 @@ class BulkDeleteTestCase(TransactionTestCase):
         )
         self.assertEqual(Status.objects.filter(pk__in=statuses_to_delete).count(), len(statuses_to_delete))
 
-    def test_bulk_delete_all(self):
-        self.add_permissions("extras.delete_objectmetadata")
-
-        # Assert ObjectMetadata is not empty
-        self.assertNotEqual(ObjectMetadata.objects.all().count(), 0)
+    def test_bulk_delete_objects_select_all(self):
+        """
+        Delete all Circuits objects.
+        """
+        self.add_permissions("circuits.delete_circuit")
+        # Assert Circuit is not empty
+        self.assertNotEqual(Circuit.objects.all().count(), 0)
 
         job_result = create_job_result_and_run_job(
             "nautobot.core.jobs.bulk_actions",
             "BulkDeleteObjects",
-            content_type=ContentType.objects.get_for_model(ObjectMetadata).id,
+            content_type=ContentType.objects.get_for_model(Circuit).id,
             delete_all=True,
             filter_query_params={},
             pk_list=[],
             username=self.user.username,
         )
-        self._common_no_error_test_assertion(ObjectMetadata, job_result)
+        self._common_no_error_test_assertion(Circuit, job_result)
 
-    def test_bulk_delete_filter_all(self):
-        self.add_permissions("extras.delete_status")
-        status_to_ignore = Status.objects.create(name="Ignore Example Status")
-        job_result = create_job_result_and_run_job(
-            "nautobot.core.jobs.bulk_actions",
-            "BulkDeleteObjects",
-            content_type=self.status_ct.id,
-            delete_all=True,
-            filter_query_params={"name__isw": "Example Status"},
-            username=self.user.username,
-        )
-        self._common_no_error_test_assertion(Status, job_result, name__istartswith="Example Status")
-        self.assertTrue(Status.objects.filter(name=status_to_ignore.name).exists())
-
-    def test_bulk_delete_passing_both_pk_list_and_delete_all(self):
+    def test_bulk_delete_objects_select_some(self):
         """
-        delete_all should override pk_list if both are passed.
+        Delete some of the Role objects with no filter queries applied.
         """
-        self.add_permissions("extras.delete_status")
-        job_result = create_job_result_and_run_job(
-            "nautobot.core.jobs.bulk_actions",
-            "BulkDeleteObjects",
-            content_type=self.status_ct.pk,
-            delete_all=True,
-            filter_query_params={"name__isw": "Example Status"},
-            pk_list=[str(Status.objects.first().pk)],
-            username=self.user.username,
-        )
-        self._common_no_error_test_assertion(Role, job_result, name__istartswith="Example Status")
-
-    def test_bulk_delete_with_pk(self):
         self.add_permissions("extras.delete_role")
         roles_to_delete = [Role.objects.create(name=f"Example Role {x}") for x in range(3)]
         roles_to_ignore = Role.objects.create(name="Ignore Example Role")
@@ -903,3 +922,56 @@ class BulkDeleteTestCase(TransactionTestCase):
         )
         self._common_no_error_test_assertion(Role, job_result, pk__in=roles_pks)
         self.assertTrue(Role.objects.filter(name=roles_to_ignore.name).exists())
+
+    def test_bulk_delete_objects_filter_all(self):
+        """
+        Delete all of the Status objects that start with "Example Status".
+        """
+        self.add_permissions("extras.delete_status")
+        status_to_ignore = Status.objects.create(name="Ignore Example Status")
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            content_type=self.status_ct.id,
+            delete_all=True,
+            filter_query_params={"name__isw": "Example Status"},
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(Status, job_result, name__istartswith="Example Status")
+        self.assertTrue(Status.objects.filter(name=status_to_ignore.name).exists())
+
+    def test_bulk_delete_objects_filter_some(self):
+        """
+        Delete some of the Role objects that start with "Example Status".
+        """
+        self.add_permissions("extras.delete_role")
+        roles_to_delete = [Role.objects.create(name=f"Example Role {x}") for x in range(3)]
+        roles_to_ignore = Role.objects.create(name="Ignore Example Role")
+        roles_pks = [str(role.pk) for role in roles_to_delete]
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            content_type=self.role_ct.id,
+            delete_all=False,
+            filter_query_params={"name__isw": "Example Status"},
+            pk_list=roles_pks,
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(Role, job_result, pk__in=roles_pks)
+        self.assertTrue(Role.objects.filter(name=roles_to_ignore.name).exists())
+
+    def test_bulk_delete_objects_passing_both_pk_list_and_delete_all(self):
+        """
+        delete_all should override pk_list if both are passed.
+        """
+        self.add_permissions("extras.delete_status")
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            content_type=self.status_ct.pk,
+            delete_all=True,
+            filter_query_params={"name__isw": "Example Status"},
+            pk_list=[str(Status.objects.first().pk)],
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(Role, job_result, name__istartswith="Example Status")
