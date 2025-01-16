@@ -404,7 +404,8 @@ class Rack(PrimaryModel):
 
         return elevation.render(fileformat, face, unit_width, unit_height, legend_width)
 
-    def get_elevation_svg(self,
+    def get_elevation_svg(
+        self,
         face=DeviceFaceChoices.FACE_FRONT,
         user=None,
         unit_width=None,
@@ -414,7 +415,9 @@ class Rack(PrimaryModel):
         base_url=None,
         display_fullname=True,
     ):
-        return self.get_elevation(face, user, unit_width, unit_height, legend_width, include_images, base_url, display_fullname)
+        return self.get_elevation(
+            face, user, unit_width, unit_height, legend_width, include_images, base_url, display_fullname
+        )
 
     def get_0u_devices(self):
         return self.devices.filter(position=0)
