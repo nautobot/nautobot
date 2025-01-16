@@ -977,29 +977,41 @@ def update_git_graphql_queries(repository_record, job_result):
                     owner_object_id=repository_record.pk,
                     defaults={"query": query_content},
                 )
-                modified = False
+                modified = graphql_query.query != query_content
 
-                # Check and update the query content
-                if graphql_query.query != query_content:
-                    graphql_query.query = query_content
-                    modified = True
-
+                # Only attempt to update if the content has changed
                 if modified:
-                    graphql_query.save()
-
-                graphql_queries.append(query_name)
-
-                # Log success
-                if created:
-                    msg = f"Successfully created GraphQL query: {query_name}"
-                elif modified:
-                    msg = f"Successfully refreshed GraphQL query: {query_name}"
+                    graphql_query.query = query_content
+                    try:
+                        # Validate and save the query
+                        graphql_query.full_clean()
+                        graphql_query.save()
+                        msg = (
+                            f"Successfully created GraphQL query: {query_name}"
+                            if created
+                            else f"Successfully updated GraphQL query: {query_name}"
+                        )
+                        graphql_queries.append(query_name)
+                        logger.info(msg)
+                        job_result.log(
+                            msg, obj=graphql_query, level_choice=LogLevelChoices.LOG_INFO, grouping="graphql queries"
+                        )
+                    except Exception as exc:
+                        # Log validation error and retain the existing query
+                        error_msg = (
+                            f"Invalid GraphQL syntax for query '{query_name}'. "
+                            f"Retaining the existing query. Error: {exc}"
+                        )
+                        logger.error(error_msg)
+                        job_result.log(error_msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="graphql queries")
+                        graphql_queries.append(query_name)  # Preserve the existing query despite the error
                 else:
                     msg = f"No changes to GraphQL query: {query_name}"
-                logger.info(msg)
-                job_result.log(
-                    msg, obj=graphql_query, level_choice=LogLevelChoices.LOG_INFO, grouping="graphql queries"
-                )
+                    graphql_queries.append(query_name)  # Add to preserved list
+                    logger.info(msg)
+                    job_result.log(
+                        msg, obj=graphql_query, level_choice=LogLevelChoices.LOG_INFO, grouping="graphql queries"
+                    )
 
             except Exception as exc:
                 # Check if a query with the same name already exists
@@ -1031,10 +1043,15 @@ def delete_git_graphql_queries(repository_record, job_result, preserve=None):
         owner_object_id=repository_record.pk,
     ):
         if graphql_query.name not in preserve:
-            graphql_query.delete()
-            msg = f"Deleted GraphQL query: {graphql_query.name}"
-            logger.warning(msg)
-            job_result.log(msg, level_choice=LogLevelChoices.LOG_WARNING, grouping="graphql queries")
+            try:
+                graphql_query.delete()
+                msg = f"Deleted GraphQL query: {graphql_query.name}"
+                logger.warning(msg)
+                job_result.log(msg, level_choice=LogLevelChoices.LOG_WARNING, grouping="graphql queries")
+            except Exception as exc:
+                error_msg = f"Unable to delete '{graphql_query.name}': {exc}"
+                logger.error(error_msg)
+                job_result.log(error_msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="graphql queries")
 
 
 # Register built-in callbacks for data types potentially provided by a GitRepository
