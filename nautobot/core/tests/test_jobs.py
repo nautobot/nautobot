@@ -8,7 +8,7 @@ from django.core.files.base import ContentFile
 from django.utils import timezone
 import yaml
 
-from nautobot.circuits.models import Circuit
+from nautobot.circuits.models import Circuit, Provider, CircuitType
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
@@ -834,6 +834,33 @@ class BulkDeleteTestCase(TransactionTestCase):
         self.role_ct = ContentType.objects.get_for_model(Role)
         for x in range(10):
             Status.objects.create(name=f"Example Status {x}")
+
+        statuses = Status.objects.get_for_model(Circuit)
+        circuit_type = CircuitType.objects.create(
+            name="Example Circuit Type",
+        )
+        provider = Provider.objects.create(
+            name="Example Provider",
+        )
+
+        Circuit.objects.create(
+            cid="Circuit 1",
+            provider=provider,
+            circuit_type=circuit_type,
+            status=statuses[0],
+        )
+        Circuit.objects.create(
+            cid="Circuit 2",
+            provider=provider,
+            circuit_type=circuit_type,
+            status=statuses[0],
+        )
+        Circuit.objects.create(
+            cid="Circuit 3",
+            provider=provider,
+            circuit_type=circuit_type,
+            status=statuses[0],
+        )
 
     def _common_no_error_test_assertion(self, model, job_result, **filter_params):
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
