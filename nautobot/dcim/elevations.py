@@ -1,7 +1,7 @@
 import csv
 from dataclasses import dataclass
 import io
-from typing import Literal, Optional, Union
+from typing import Literal, Optional
 
 from django.conf import settings
 from django.urls import reverse
@@ -222,25 +222,6 @@ class RackElevationGraphicalOutput:
 
         return elevation
 
-    def render(
-        self,
-        face: Literal["front", "back"],
-        unit_width: Optional[int] = None,
-        unit_height: Optional[int] = None,
-        legend_width: Optional[int] = None,
-        fileformat: Literal["svg", "csv"] = "svg"
-    ) -> Union[svgwrite.Drawing, str]:
-        if fileformat == "svg":
-            if any(x is None for x in [unit_height, unit_width, legend_width]):
-                raise ValueError("Missing required parameters for svg export")
-
-            return self.render_svg(face, unit_width, unit_height, legend_width)
-
-        elif fileformat == "csv":
-            return self.render_csv(face)
-
-        raise ValueError("Unknown format")
-
     def render_csv(self, face: Literal["front", "rear"]) -> str:
         @dataclass
         class DeviceCSVRepresentation:
@@ -405,3 +386,16 @@ class RackElevationGraphicalOutput:
         drawing.add(frame)
 
         return drawing
+
+
+class RackElevationSVG(RackElevationGraphicalOutput):
+    "Shim for retrocompatibility with old class name"
+
+    def render(
+        self,
+        face: Literal["front", "back"],
+        unit_width: int,
+        unit_height: int,
+        legend_width: int,
+    ) -> svgwrite.Drawing:
+        return self.render_svg(face, unit_width, unit_height, legend_width)
