@@ -1,1 +1,1 @@
-Fixed bug with Job query where Job doesn't have a class_path. Reverts try/except removal in #6154.
+Fixed an exception when trying to render a Job class to a form when no corresponding Job database record exists.
