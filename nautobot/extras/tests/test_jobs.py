@@ -37,7 +37,7 @@ from nautobot.extras.choices import (
     ObjectChangeEventContextChoices,
 )
 from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
-from nautobot.extras.jobs import get_job, get_jobs
+from nautobot.extras.jobs import BaseJob, get_job, get_jobs
 from nautobot.extras.models import Job, JobQueue
 from nautobot.extras.models.jobs import JobLogEntry
 
@@ -47,6 +47,11 @@ class JobTest(TestCase):
     Test job features that don't require a transaction test case.
     """
 
+    def test_as_form_no_job_model(self):
+        """Job.as_form() test with no corresponding job_model (https://github.com/nautobot/nautobot/issues/6773)."""
+        form = BaseJob.as_form()
+        self.assertSequenceEqual(list(form.fields.keys()), ["_job_queue", "_profile"])
+
     def test_field_default(self):
         """
         Job test with field that is a default value that is falsey.
@@ -55,7 +60,7 @@ class JobTest(TestCase):
         module = "field_default"
         name = "TestFieldDefault"
         job_class = get_job(f"{module}.{name}")
-        form = job_class().as_form()
+        form = job_class.as_form()
 
         self.assertInHTML(
             """<tr><th><label for="id_var_int">Var int:</label></th><td>
@@ -74,7 +79,7 @@ class JobTest(TestCase):
         module = "field_order"
         name = "TestFieldOrder"
         job_class = get_job(f"{module}.{name}")
-        form = job_class().as_form()
+        form = job_class.as_form()
         self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_job_queue", "_profile"])
 
     def test_no_field_order(self):
@@ -84,7 +89,7 @@ class JobTest(TestCase):
         module = "no_field_order"
         name = "TestNoFieldOrder"
         job_class = get_job(f"{module}.{name}")
-        form = job_class().as_form()
+        form = job_class.as_form()
         self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_job_queue", "_profile"])
 
     def test_no_field_order_inherited_variable(self):
@@ -94,7 +99,7 @@ class JobTest(TestCase):
         module = "no_field_order"
         name = "TestDefaultFieldOrderWithInheritance"
         job_class = get_job(f"{module}.{name}")
-        form = job_class().as_form()
+        form = job_class.as_form()
         self.assertSequenceEqual(
             list(form.fields.keys()),
             ["testvar1", "b_testvar2", "a_testvar3", "_job_queue", "_profile"],
@@ -109,14 +114,14 @@ class JobTest(TestCase):
         # not overridden on job model, initial form field value should match job class
         job_model.dryrun_default_override = False
         job_model.save()
-        form = job_class().as_form()
+        form = job_class.as_form()
         self.assertEqual(form.fields["dryrun"].initial, job_class.dryrun_default)
 
         # overridden on job model, initial form field value should match job model
         job_model.dryrun_default_override = True
         job_model.dryrun_default = not job_class.dryrun_default
         job_model.save()
-        form = job_class().as_form()
+        form = job_class.as_form()
         self.assertEqual(form.fields["dryrun"].initial, job_model.dryrun_default)
 
     def test_job_task_queues_setter(self):
@@ -145,7 +150,7 @@ class JobTest(TestCase):
             name="irrelevant", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
         )
         job_model.job_queues.set([jq_1, jq_2])
-        form = job_class().as_form()
+        form = job_class.as_form()
         self.assertQuerySetEqual(
             form.fields["_job_queue"].queryset,
             models.JobQueue.objects.filter(jobs=job_model),
@@ -576,7 +581,7 @@ class JobTransactionTest(TransactionTestCase):
             "ipv6_with_mask": "2001:db8::1/64",
             "ipv6_network": "2001:db8::/64",
         }
-        form = job_class().as_form(form_data)
+        form = job_class.as_form(form_data)
         self.assertTrue(form.is_valid())
 
         # Prepare the job data
@@ -786,7 +791,7 @@ class JobFileUploadTest(TransactionTestCase):
 
         # Serialize the file to FileProxy
         data = {"file": self.test_file}
-        form = job_class().as_form(files=data)
+        form = job_class.as_form(files=data)
         self.assertTrue(form.is_valid())
         serialized_data = job_class.serialize_data(form.cleaned_data)
 
@@ -816,7 +821,7 @@ class JobFileUploadTest(TransactionTestCase):
 
         # Serialize the file to FileProxy
         data = {"file": self.test_file}
-        form = job_class().as_form(files=data)
+        form = job_class.as_form(files=data)
         self.assertTrue(form.is_valid())
         serialized_data = job_class.serialize_data(form.cleaned_data)
 
@@ -1021,7 +1026,7 @@ class JobButtonReceiverTest(TestCase):
         module = "job_button_receiver"
         name = "TestJobButtonReceiverSimple"
         job_class, _job_model = get_job_class_and_model(module, name)
-        form = job_class().as_form()
+        form = job_class.as_form()
         self.assertSequenceEqual(list(form.fields.keys()), ["object_pk", "object_model_name", "_job_queue", "_profile"])
 
     def test_hidden(self):
@@ -1084,7 +1089,7 @@ class JobHookReceiverTest(TestCase):
         module = "job_hook_receiver"
         name = "TestJobHookReceiverLog"
         job_class, _job_model = get_job_class_and_model(module, name)
-        form = job_class().as_form()
+        form = job_class.as_form()
         self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_job_queue", "_profile"])
 
     def test_hidden(self):
