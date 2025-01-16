@@ -968,7 +968,7 @@ class BulkEditAndBulkDeleteModelMixin:
                 filtering.get_filterset_field(filterset_class(), key)
                 new_filter_query_params[key] = value
             except core_exceptions.FilterSetFieldNotFound:
-                self.logger.warning(f"Query parameter `{key}` not found in `{filterset_class}`, discarding it")
+                self.logger.debug(f"Query parameter `{key}` not found in `{filterset_class}`, discarding it")
 
         filter_query_params = new_filter_query_params
 
@@ -1007,7 +1007,7 @@ class BulkEditAndBulkDeleteModelMixin:
                 filtering.get_filterset_field(filterset_class(), key)
                 new_filter_query_params[key] = value
             except core_exceptions.FilterSetFieldNotFound:
-                self.logger.warning(f"Query parameter `{key}` not found in `{filterset_class}`, discarding it")
+                self.logger.debug(f"Query parameter `{key}` not found in `{filterset_class}`, discarding it")
 
         filter_query_params = new_filter_query_params
 

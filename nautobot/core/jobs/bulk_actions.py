@@ -62,7 +62,7 @@ class BulkEditObjects(Job):
                         get_filterset_field(filterset_cls(), key)
                         new_filter_query_params[key] = value
                     except exceptions.FilterSetFieldNotFound:
-                        self.logger.warning(
+                        self.logger.debug(
                             f"Query parameter `{key}` not found in filterset for `{filterset_cls}`, discarding it"
                         )
 
@@ -237,7 +237,7 @@ class BulkDeleteObjects(Job):
                     get_filterset_field(filterset_cls(), key)
                     new_filter_query_params[key] = value
                 except exceptions.FilterSetFieldNotFound:
-                    self.logger.warning(f"Query parameter `{key}` not found in `{filterset_cls}`, discarding it")
+                    self.logger.debug(f"Query parameter `{key}` not found in `{filterset_cls}`, discarding it")
 
             filter_query_params = new_filter_query_params
 
