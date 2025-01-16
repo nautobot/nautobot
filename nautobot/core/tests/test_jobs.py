@@ -8,7 +8,7 @@ from django.core.files.base import ContentFile
 from django.utils import timezone
 import yaml
 
-from nautobot.circuits.models import Circuit, Provider, CircuitType
+from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
