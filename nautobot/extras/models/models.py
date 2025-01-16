@@ -684,7 +684,7 @@ class GraphQLQuery(
     owner_content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
-        limit_choices_to=FeatureQuery("grapql_query_owners"),
+        limit_choices_to=FeatureQuery("graphql_query_owners"),
         default=None,
         null=True,
         blank=True,

@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 blank=True,
                 default=None,
-                limit_choices_to=nautobot.extras.utils.FeatureQuery("grapql_query_owners"),
+                limit_choices_to=nautobot.extras.utils.FeatureQuery("graphql_query_owners"),
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
                 related_name="graphql_queries",

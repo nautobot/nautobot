@@ -1002,8 +1002,17 @@ def update_git_graphql_queries(repository_record, job_result):
                 )
 
             except Exception as exc:
-                # Log the error but continue processing other files
-                error_msg = f"Error processing GraphQL query file '{file}': {exc}"
+                # Check if a query with the same name already exists
+                existing_query = GraphQLQuery.objects.filter(name=query_name).first()
+                if existing_query and existing_query.owner_object_id != repository_record.pk:
+                    error_msg = (
+                        f"GraphQL query '{query_name}' already exists "
+                        f"Please rename the query in the repository and try again."
+                    )
+                else:
+                    error_msg = f"Error processing GraphQL query file '{file}': {exc}"
+
+                # Log the error
                 logger.error(error_msg)
                 job_result.log(error_msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="graphql queries")
 
