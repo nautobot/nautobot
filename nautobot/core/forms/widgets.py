@@ -13,6 +13,7 @@ __all__ = (
     "APISelect",
     "APISelectMultiple",
     "BulkEditNullBooleanSelect",
+    "ClearableFileInput",
     "ColorSelect",
     "ContentTypeSelect",
     "DatePicker",
@@ -256,3 +257,10 @@ class MultiValueCharInput(StaticSelect2Multiple):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.attrs["class"] = "nautobot-select2-multi-value-char"
+
+
+class ClearableFileInput(forms.ClearableFileInput):
+    template_name = "widgets/clearable_file.html"
+
+    class Media:
+        js = ["bootstrap-filestyle-1.2.3/bootstrap-filestyle.min.js"]

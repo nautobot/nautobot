@@ -30,3 +30,8 @@
         </div>
     </div>
 {% endblock %}
+
+{% block javascript %}
+    {{ block.super }}
+    {{ form.media }}
+{% endblock %}
