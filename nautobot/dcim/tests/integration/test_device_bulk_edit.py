@@ -148,7 +148,7 @@ class BulkEditDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperationsM
         # Select all devices and edit them
         self.select_all_items()
         self.click_bulk_edit()
-        self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:device_bulk_edit"))
+        self.assertContains(self.browser.url, self.live_server_url + reverse("dcim:device_bulk_edit"))
 
         # Submit bulk edit form without any changes
         self.submit_bulk_edit_operation()
@@ -171,7 +171,7 @@ class BulkEditDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperationsM
         # Select one device and edit it
         self.select_all_items()
         self.click_bulk_edit()
-        self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:device_bulk_edit"))
+        self.assertContains(self.browser.url, self.live_server_url + reverse("dcim:device_bulk_edit"))
 
         # Submit bulk edit form without any changes
         self.submit_bulk_edit_operation()

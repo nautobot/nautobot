@@ -126,7 +126,7 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperation
         self._go_to_devices_list()
 
         # Select one device and delete it
-        self.select_one()
+        self.select_one_item()
         self.click_bulk_delete()
         self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').click()
 
