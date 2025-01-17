@@ -236,19 +236,15 @@ class RackElevationGraphicalOutput:
 
             # Fill with used rack units
             for unit in self.rack.get_rack_units(face=face, expand_devices=True):
-                if unit['device'] is None:
-                    rack_positions[unit["id"] - 1] = DeviceCSVRepresentation(
-                        name="",
-                        unit=unit["name"],
-                        device=None
-                    )
+                if unit["device"] is None:
+                    rack_positions[unit["id"] - 1] = DeviceCSVRepresentation(name="", unit=unit["name"], device=None)
 
                 else:
                     rack_positions[unit["id"] - 1] = DeviceCSVRepresentation(
-                            name=unit["device"].name,
-                            unit=unit["name"],
-                            device=unit["device"],
-                        )
+                        name=unit["device"].name,
+                        unit=unit["name"],
+                        device=unit["device"],
+                    )
 
             return rack_positions
 
