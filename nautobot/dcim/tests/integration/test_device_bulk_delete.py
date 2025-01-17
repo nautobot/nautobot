@@ -85,7 +85,7 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase):
         self.click_edit_form_create_button()
 
     def tearDown(self):
-        # self.logout()
+        self.logout()
         super().tearDown()
 
     def _go_to_devices_list(self):
