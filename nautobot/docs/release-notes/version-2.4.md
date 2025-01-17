@@ -160,7 +160,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 ### Fixed in v2.4.1
 
 - [#6427](https://github.com/nautobot/nautobot/issues/6427) - Fixed a bug which allowed several wireless interface types to accept cables.
-- [#6489](https://github.com/nautobot/nautobot/issues/6489) - Fixed partial-match filters (such as "__ic" and "__isw") on fields that have restricted choices (Prefix.type, Interface.type, etc.) so that partial values are no longer rejected.
+- [#6489](https://github.com/nautobot/nautobot/issues/6489) - Fixed partial-match filters (such as `__ic` and `__isw`) on fields that have restricted choices (`Prefix.type`, `Interface.type`, etc.) so that partial values are no longer rejected.
 - [#6763](https://github.com/nautobot/nautobot/issues/6763) - Fixed the issue where the Wireless Network detail view fails to render when any record in the Controller Managed Device Groups table is missing a VLAN.
 - [#6773](https://github.com/nautobot/nautobot/issues/6773) - Fixed an exception when trying to render a Job class to a form when no corresponding Job database record exists.
 - [#6779](https://github.com/nautobot/nautobot/issues/6779) - Fixed Object Bulk Delete and Object Bulk Edit functionalities.
