@@ -3,7 +3,7 @@ from django.urls import reverse
 from nautobot.core.testing.integration import BulkOperationsMixin, ObjectsListMixin, SeleniumTestCase
 
 
-class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperationsMixin):
+class BulkEditDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperationsMixin):
     """
     Test devices bulk delete.
     """
@@ -90,56 +90,52 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperation
         self.click_navbar_entry("Devices", "Devices")
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:device_list"))
 
-    def test_bulk_delete_require_selection(self):
+    def test_bulk_edit_require_selection(self):
         self._go_to_devices_list()
 
         # Click "delete selected" without selecting anything
         self.click_bulk_delete()
 
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:device_list"))
-        self.assertTrue(self.browser.is_text_present("No devices were selected for deletion.", wait_time=5))
+        self.assertTrue(self.browser.is_text_present("No devices were selected.", wait_time=5))
 
-    def test_bulk_delete_all_devices(self):
+    def test_bulk_edit_all_devices(self):
         # Create device for test
         self._create_device("Test Device Integration Test 1")
         self._create_device("Test Device Integration Test 2")
         self._go_to_devices_list()
 
-        # Select all devices and delete them
+        # Select all devices and edit them
         self.select_all_items()
-        self.click_bulk_delete()
-        self.confirm_bulk_delete_operation()
+        self.click_bulk_edit()
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:device_bulk_edit"))
+
+        # Submit bulk edit form without any changes
+        self.submit_bulk_edit_operation()
 
         # Verify job output
-        self.assertIsBulkDeleteJob()
-        job_status = self.wait_for_job_result()
+        self.assertIsBulkEditJob()
+        self.assertJobStatusIsCompleted()
 
-        self.assertEqual(job_status, "Completed")
-
-        self._go_to_devices_list()
-        self.assertEqual(self.objects_list_visible_items, 0)
-
-    def test_bulk_delete_one_device(self):
+    def test_bulk_edit_one_device(self):
         # Create device for test
         self._create_device("Test Device Integration Test 1")
         self._create_device("Test Device Integration Test 2")
         self._go_to_devices_list()
 
-        # Select one device and delete it
-        self.select_one()
-        self.click_bulk_delete()
-        self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').click()
+        # Select one device and edit it
+        self.select_one_item()
+        self.click_bulk_edit()
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:device_bulk_edit"))
+
+        # Submit bulk edit form without any changes
+        self.submit_bulk_edit_operation()
 
         # Verify job output
-        self.assertIsBulkDeleteJob()
-        job_status = self.wait_for_job_result()
+        self.assertIsBulkEditJob()
+        self.assertJobStatusIsCompleted()
 
-        self.assertEqual(job_status, "Completed")
-
-        self._go_to_devices_list()
-        self.assertEqual(self.objects_list_visible_items, 1)
-
-    def test_bulk_delete_all_filtered_devices(self):
+    def test_bulk_edit_all_filtered_devices(self):
         # Create device for test
         self._create_device("Test Device Integration Test 1")
         self._create_device("Test Device Integration Test 2")
@@ -149,21 +145,19 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperation
         # Filter devices
         self.apply_filter("location", "Test Location 2")
 
-        # Select all devices and delete them
+        # Select all devices and edit them
         self.select_all_items()
-        self.click_bulk_delete()
-        self.confirm_bulk_delete_operation()
+        self.click_bulk_edit()
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:device_bulk_edit"))
+
+        # Submit bulk edit form without any changes
+        self.submit_bulk_edit_operation()
 
         # Verify job output
-        self.assertIsBulkDeleteJob()
-        job_status = self.wait_for_job_result()
+        self.assertIsBulkEditJob()
+        self.assertJobStatusIsCompleted()
 
-        self.assertEqual(job_status, "Completed")
-
-        self._go_to_devices_list()
-        self.assertEqual(self.objects_list_visible_items, 2)
-
-    def test_bulk_delete_one_filtered_devices(self):
+    def test_bulk_edit_one_filtered_devices(self):
         # Create device for test
         self._create_device("Test Device Integration Test 1")
         self._create_device("Test Device Integration Test 2")
@@ -174,16 +168,14 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperation
         # Filter devices
         self.apply_filter("location", "Test Location 2")
 
-        # Select one device and delete it
-        self.select_one_item()
-        self.click_bulk_delete()
-        self.confirm_bulk_delete_operation()
+        # Select one device and edit it
+        self.select_all_items()
+        self.click_bulk_edit()
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:device_bulk_edit"))
+
+        # Submit bulk edit form without any changes
+        self.submit_bulk_edit_operation()
 
         # Verify job output
-        self.assertIsBulkDeleteJob()
-        job_status = self.wait_for_job_result()
-
-        self.assertEqual(job_status, "Completed")
-
-        self._go_to_devices_list()
-        self.assertEqual(self.objects_list_visible_items, 3)
+        self.assertIsBulkEditJob()
+        self.assertJobStatusIsCompleted()

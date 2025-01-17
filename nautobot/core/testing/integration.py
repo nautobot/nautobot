@@ -51,10 +51,18 @@ class ObjectsListMixin:
         except ElementDoesNotExist:
             return 0
 
+    def apply_filter(self, field, value):
+        self.browser.find_by_xpath('//*[@id="id__filterbtn"]').click()
+        self.fill_filters_select2_field(field, value)
+        self.browser.find_by_xpath('//*[@id="default-filter"]//button[@type="submit"]').click()
+
 
 class BulkOperationsMixin:
     def confirm_bulk_delete_operation(self):
         self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').click()
+
+    def submit_bulk_edit_operation(self):
+        self.browser.find_by_xpath("//button[@name='_apply']", wait_time=5).click()
 
     def wait_for_job_result(self):
         end_statuses = ["Completed", "Failed"]
@@ -70,6 +78,13 @@ class BulkOperationsMixin:
 
     def assertIsBulkDeleteJob(self):
         self.verify_job_description("Bulk delete objects.")
+
+    def assertIsBulkEditJob(self):
+        self.verify_job_description("Bulk edit objects.")
+
+    def assertJobStatusIsCompleted(self):
+        job_status = self.wait_for_job_result()
+        self.assertEqual(job_status, "Completed")
 
 
 # In CI, sometimes the FQDN of SELENIUM_HOST gets used, other times it seems to be just the hostname?
