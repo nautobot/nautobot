@@ -1209,7 +1209,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
                         # This form field is used to modify a field rather than set its value directly
                         model_field = None
                     # Handle nullification
-                    if name in form.nullable_fields and name in nullified_fields:
+                    if name in form.nullable_fields and nullified_fields and name in nullified_fields:
                         if isinstance(model_field, ManyToManyField):
                             getattr(obj, name).set([])
                         else:
@@ -1223,7 +1223,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
                         setattr(obj, name, form.cleaned_data[name])
                 # Update custom fields
                 for field_name in form_custom_fields:
-                    if field_name in form.nullable_fields and field_name in nullified_fields:
+                    if field_name in form.nullable_fields and nullified_fields and field_name in nullified_fields:
                         obj.cf[remove_prefix_from_cf_key(field_name)] = None
                     elif form.cleaned_data.get(field_name) not in (None, "", []):
                         obj.cf[remove_prefix_from_cf_key(field_name)] = form.cleaned_data[field_name]
