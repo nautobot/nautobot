@@ -1,0 +1,1 @@
+Fixed Device factory to ensure that it only selects SoftwareImageFiles that are permitted for a given Device.
