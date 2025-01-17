@@ -6,7 +6,9 @@ from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.functional import classproperty
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.wait import WebDriverWait
 from splinter.browser import Browser
+from splinter.exceptions import ElementDoesNotExist
 
 from nautobot.core import testing
 
@@ -18,6 +20,56 @@ SELENIUM_HOST = os.getenv("NAUTOBOT_SELENIUM_HOST", "host.docker.internal")
 
 # Default login URL
 LOGIN_URL = reverse(settings.LOGIN_URL)
+
+
+class ObjectsListMixin:
+    """
+    Helper class for easier testing and navigating on standard Nautobot objects list page.
+    """
+
+    def select_all_items(self):
+        self.browser.find_by_xpath('//*[@id="object_list_form"]//input[@class="toggle"]').click()
+
+    def select_one_item(self):
+        self.browser.find_by_xpath('//*[@id="object_list_form"]//input[@name="pk"]').click()
+
+    def click_bulk_delete(self):
+        self.browser.find_by_xpath(
+            '//*[@id="object_list_form"]//button[@type="submit"]/following-sibling::button[1]'
+        ).click()
+        self.browser.find_by_xpath('//*[@id="object_list_form"]//button[@name="_delete"]').click()
+
+    def click_bulk_edit(self):
+        self.browser.find_by_xpath('//*[@id="object_list_form"]//button[@type="submit"]').click()
+
+    @property
+    def objects_list_visible_items(self):
+        objects_table_container = self.browser.find_by_xpath('//*[@id="object_list_form"]/div[1]/div')
+        try:
+            objects_table = objects_table_container.find_by_tag("tbody")
+            return len(objects_table.find_by_tag("tr"))
+        except ElementDoesNotExist:
+            return 0
+
+
+class BulkOperationsMixin:
+    def confirm_bulk_delete_operation(self):
+        self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').click()
+
+    def wait_for_job_result(self):
+        end_statuses = ["Completed", "Failed"]
+        WebDriverWait(self.browser, 30).until(
+            lambda driver: driver.find_by_id("pending-result-label").text in end_statuses
+        )
+
+        return self.browser.find_by_id("pending-result-label").text
+
+    def verify_job_description(self, expected_job_description):
+        job_description = self.browser.find_by_xpath('//td[text()="Job Description"]/following-sibling::td[1]').text
+        self.assertEqual(job_description, expected_job_description)
+
+    def assertIsBulkDeleteJob(self):
+        self.verify_job_description("Bulk delete objects.")
 
 
 # In CI, sometimes the FQDN of SELENIUM_HOST gets used, other times it seems to be just the hostname?

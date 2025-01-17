@@ -1,11 +1,9 @@
 from django.urls import reverse
-from selenium.webdriver.support.wait import WebDriverWait
-from splinter.exceptions import ElementDoesNotExist
 
-from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.core.testing.integration import BulkOperationsMixin, ObjectsListMixin, SeleniumTestCase
 
 
-class BulkDeleteDeviceTestCase(SeleniumTestCase):
+class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperationsMixin):
     """
     Test devices bulk delete.
     """
@@ -92,45 +90,11 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase):
         self.click_navbar_entry("Devices", "Devices")
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:device_list"))
 
-    def _select_all(self):
-        self.browser.find_by_xpath('//*[@id="object_list_form"]//input[@class="toggle"]').click()
-
-    def _select_one(self):
-        self.browser.find_by_xpath('//*[@id="object_list_form"]//input[@name="pk"]').click()
-
-    def _click_delete_and_confirm(self):
-        self.browser.find_by_xpath(
-            '//*[@id="object_list_form"]//button[@type="submit"]/following-sibling::button[1]'
-        ).click()
-        self.browser.find_by_xpath('//*[@id="object_list_form"]//button[@name="_delete"]').click()
-        self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').click()
-
-    def _wait_for_job_results(self):
-        end_statuses = ["Completed", "Failed"]
-        WebDriverWait(self.browser, 30).until(
-            lambda driver: driver.find_by_id("pending-result-label").text in end_statuses
-        )
-
-    def _verify_job_description(self, expected_job_description):
-        job_description = self.browser.find_by_xpath('//td[text()="Job Description"]/following-sibling::td[1]').text
-        self.assertEqual(job_description, expected_job_description)
-
-    def _get_objects_table_count(self):
-        objects_table_container = self.browser.find_by_xpath('//*[@id="object_list_form"]/div[1]/div')
-        try:
-            objects_table = objects_table_container.find_by_tag("tbody")
-            return len(objects_table.find_by_tag("tr"))
-        except ElementDoesNotExist:
-            return 0
-
     def test_bulk_delete_require_selection(self):
         self._go_to_devices_list()
 
         # Click "delete selected" without selecting anything
-        self.browser.find_by_xpath(
-            '//*[@id="object_list_form"]//button[@type="submit"]/following-sibling::button[1]'
-        ).click()
-        self.browser.find_by_xpath('//*[@id="object_list_form"]//button[@name="_delete"]').click()
+        self.click_bulk_delete()
 
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:device_list"))
         self.assertTrue(self.browser.is_text_present("No devices were selected for deletion.", wait_time=5))
@@ -142,19 +106,18 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase):
         self._go_to_devices_list()
 
         # Select all devices and delete them
-        self._select_all()
-        self._click_delete_and_confirm()
+        self.select_all_items()
+        self.click_bulk_delete()
+        self.confirm_bulk_delete_operation()
 
         # Verify job output
-        self._verify_job_description("Bulk delete objects.")
-        self._wait_for_job_results()
+        self.assertIsBulkDeleteJob()
+        job_status = self.wait_for_job_result()
 
-        job_status = self.browser.find_by_id("pending-result-label").text
         self.assertEqual(job_status, "Completed")
 
         self._go_to_devices_list()
-        objects_count = self._get_objects_table_count()
-        self.assertEqual(objects_count, 0)
+        self.assertEqual(self.objects_list_visible_items, 0)
 
     def test_bulk_delete_one_device(self):
         # Create device for test
@@ -163,19 +126,18 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase):
         self._go_to_devices_list()
 
         # Select one device and delete it
-        self._select_one()
-        self._click_delete_and_confirm()
+        self.select_one()
+        self.click_bulk_delete()
+        self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').click()
 
         # Verify job output
-        self._verify_job_description("Bulk delete objects.")
-        self._wait_for_job_results()
+        self.assertIsBulkDeleteJob()
+        job_status = self.wait_for_job_result()
 
-        job_status = self.browser.find_by_id("pending-result-label").text
         self.assertEqual(job_status, "Completed")
 
         self._go_to_devices_list()
-        objects_count = self._get_objects_table_count()
-        self.assertEqual(objects_count, 1)
+        self.assertEqual(self.objects_list_visible_items, 1)
 
     def test_bulk_delete_all_filtered_devices(self):
         # Create device for test
@@ -190,19 +152,18 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase):
         self.browser.find_by_xpath('//*[@id="default-filter"]//button[@type="submit"]').click()
 
         # Select all devices and delete them
-        self._select_all()
-        self._click_delete_and_confirm()
+        self.select_all_items()
+        self.click_bulk_delete()
+        self.confirm_bulk_delete_operation()
 
         # Verify job output
-        self._verify_job_description("Bulk delete objects.")
-        self._wait_for_job_results()
+        self.assertIsBulkDeleteJob()
+        job_status = self.wait_for_job_result()
 
-        job_status = self.browser.find_by_id("pending-result-label").text
         self.assertEqual(job_status, "Completed")
 
         self._go_to_devices_list()
-        objects_count = self._get_objects_table_count()
-        self.assertEqual(objects_count, 2)
+        self.assertEqual(self.objects_list_visible_items, 2)
 
     def test_bulk_delete_one_filtered_devices(self):
         # Create device for test
@@ -218,16 +179,15 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase):
         self.browser.find_by_xpath('//*[@id="default-filter"]//button[@type="submit"]').click()
 
         # Select all devices and delete them
-        self._select_one()
-        self._click_delete_and_confirm()
+        self.select_one_item()
+        self.click_bulk_delete()
+        self.confirm_bulk_delete_operation()
 
         # Verify job output
-        self._verify_job_description("Bulk delete objects.")
-        self._wait_for_job_results()
+        self.assertIsBulkDeleteJob()
+        job_status = self.wait_for_job_result()
 
-        job_status = self.browser.find_by_id("pending-result-label").text
         self.assertEqual(job_status, "Completed")
 
         self._go_to_devices_list()
-        objects_count = self._get_objects_table_count()
-        self.assertEqual(objects_count, 3)
+        self.assertEqual(self.objects_list_visible_items, 3)
