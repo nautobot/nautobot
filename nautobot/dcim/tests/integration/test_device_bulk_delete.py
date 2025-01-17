@@ -118,8 +118,8 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase):
     def _get_objects_table_count(self):
         objects_table_container = self.browser.find_by_xpath('//*[@id="object_list_form"]/div[1]/div')
         try:
-            objects_table = objects_table_container.find_by_tag('tbody')
-            return len(objects_table.find_by_tag('tr'))
+            objects_table = objects_table_container.find_by_tag("tbody")
+            return len(objects_table.find_by_tag("tr"))
         except ElementDoesNotExist:
             return 0
 
