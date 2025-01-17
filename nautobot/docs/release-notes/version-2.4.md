@@ -160,7 +160,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 ### Fixed in v2.4.1
 
 - [#6427](https://github.com/nautobot/nautobot/issues/6427) - Fixed a bug which allowed several wireless interface types to accept cables.
-- [#6489](https://github.com/nautobot/nautobot/issues/6489) - Fixed partial-match filters (such as "__ic" and "__isw") on fields that have restricted choices (Prefix.type, Interface.type, etc.) so that partial values are no longer rejected.
+- [#6489](https://github.com/nautobot/nautobot/issues/6489) - Fixed partial-match filters (such as `__ic` and `__isw`) on fields that have restricted choices (`Prefix.type`, `Interface.type`, etc.) so that partial values are no longer rejected.
 - [#6763](https://github.com/nautobot/nautobot/issues/6763) - Fixed the issue where the Wireless Network detail view fails to render when any record in the Controller Managed Device Groups table is missing a VLAN.
 - [#6770](https://github.com/nautobot/nautobot/issues/6770) - Fixed JobButtons to now trigger jobs on click
 - [#6773](https://github.com/nautobot/nautobot/issues/6773) - Fixed an exception when trying to render a Job class to a form when no corresponding Job database record exists.
@@ -168,9 +168,9 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6783](https://github.com/nautobot/nautobot/issues/6783) - Fixed `NautobotDataBaseScheduler` unable to run Scheduled Jobs without job queues assigned.
 - [#6792](https://github.com/nautobot/nautobot/issues/6792) - Fixed `natural_key_field_lookups` for proxy models.
 
-### Documentation in v2.4.1
+### Housekeeping in v2.4.1
 
-- [#6768](https://github.com/nautobot/nautobot/issues/6768) - Fixed link to changelog fragment documentation
+- [#6768](https://github.com/nautobot/nautobot/issues/6768) - Fixed link to changelog fragment documentation.
 
 ### Housekeeping in v2.4.1
 
