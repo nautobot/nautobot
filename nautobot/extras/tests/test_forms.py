@@ -910,6 +910,19 @@ class RelationshipModelBulkEditFormMixinTestCase(TestCase):
         ras = RelationshipAssociation.objects.filter(relationship=self.rel_mtom_s)
         self.assertEqual(1, ras.count())
 
+    def test_form_save_relationship_with_nullified_fields_is_none(self):
+        """Test save_relationships with nullified_fields=None."""
+        form = LocationBulkEditForm(
+            model=dcim_models.Location,
+            data={
+                "pks": [self.locations[0].pk],
+                "add_cr_multiplexing__destination": [ipaddress.pk for ipaddress in self.ipaddresses],
+                "add_cr_peer_locations__peer": [self.locations[1].pk],
+            },
+        )
+        form.is_valid()
+        form.save_relationships(instance=self.locations[0], nullified_fields=None)
+
     def test_location_form_remove_mtom(self):
         """Test removal of relationship-associations for many-to-many relationships."""
         RelationshipAssociation.objects.create(
