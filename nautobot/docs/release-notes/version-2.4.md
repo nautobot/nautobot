@@ -167,9 +167,9 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6783](https://github.com/nautobot/nautobot/issues/6783) - Fixed `NautobotDataBaseScheduler` unable to run Scheduled Jobs without job queues assigned.
 - [#6792](https://github.com/nautobot/nautobot/issues/6792) - Fixed `natural_key_field_lookups` for proxy models.
 
-### Documentation in v2.4.1
+### Housekeeping in v2.4.1
 
-- [#6768](https://github.com/nautobot/nautobot/issues/6768) - Fixed link to changelog fragment documentation
+- [#6768](https://github.com/nautobot/nautobot/issues/6768) - Fixed link to changelog fragment documentation.
 
 ## v2.4.0 (2025-01-10)
 
