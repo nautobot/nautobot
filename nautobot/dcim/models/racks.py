@@ -412,6 +412,8 @@ class Rack(PrimaryModel):
             return elevation.render_csv(face)
         elif fileformat == RackElevationDetailRenderChoices.RENDER_SVG:
             return elevation.render_svg(face, unit_width, unit_height, legend_width)
+        else:
+            raise ValueError("fileformat must be either 'csv' or 'svg")
 
     def get_elevation_svg(
         self,
