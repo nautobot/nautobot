@@ -15,7 +15,13 @@ from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import UtilizationData
-from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
+from nautobot.dcim.choices import (
+    DeviceFaceChoices,
+    RackDimensionUnitChoices,
+    RackElevationDetailRenderChoices,
+    RackTypeChoices,
+    RackWidthChoices,
+)
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
 from nautobot.dcim.elevations import RackElevationGraphicalOutput
 from nautobot.extras.models import RoleField, StatusField
@@ -367,7 +373,7 @@ class Rack(PrimaryModel):
 
     def get_elevation(
         self,
-        fileformat: Literal["svg", "csv"],
+        fileformat: Literal[RackElevationDetailRenderChoices.RENDER_CSV, RackElevationDetailRenderChoices.RENDER_SVG],
         face=DeviceFaceChoices.FACE_FRONT,
         user=None,
         unit_width=None,
@@ -402,7 +408,10 @@ class Rack(PrimaryModel):
             self, user=user, include_images=include_images, base_url=base_url, display_fullname=display_fullname
         )
 
-        return elevation.render(fileformat, face, unit_width, unit_height, legend_width)
+        if fileformat == RackElevationDetailRenderChoices.RENDER_CSV:
+            return elevation.render_csv(face)
+        elif fileformat == RackElevationDetailRenderChoices.RENDER_SVG:
+            return elevation.render_svg(face, unit_width, unit_height, legend_width)
 
     def get_elevation_svg(
         self,
