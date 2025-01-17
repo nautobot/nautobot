@@ -28,7 +28,7 @@ from nautobot.extras.models import (
     Tag,
 )
 from nautobot.extras.models.metadata import ObjectMetadata
-from nautobot.ipam.models import Namespace, Prefix
+from nautobot.ipam.models import IPAddress, Namespace, Prefix
 from nautobot.users.models import ObjectPermission
 
 
@@ -620,6 +620,7 @@ class BulkEditTestCase(TransactionTestCase):
         self.status_ct = ContentType.objects.get_for_model(Status)
         self.namespace_ct = ContentType.objects.get_for_model(Namespace)
         self.role_ct = ContentType.objects.get_for_model(Role)
+        self.ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
         self.tags = [Tag.objects.create(name=f"Example Tag {x}") for x in range(5)]
         for tag in self.tags:
             tag.content_types.add(self.namespace_ct)
@@ -836,6 +837,53 @@ class BulkEditTestCase(TransactionTestCase):
             Status, job_result, statuses.count(), name__istartswith="A", color="aa1409"
         )
         self.assertNotEqual(status_to_ignore.color, "aa1409")
+
+    def test_bulk_edit_objects_updating_the_same_field_as_the_filter_param(self):
+        """
+        Test bulk edit where the filter query param and the field to update are the same.
+        e.g.
+        form_data = {"status": "Test Deprecated"}
+        filter_params = {"status": "Test Active"}
+        """
+        self.add_permissions("ipam.change_ipaddress", "extras.view_status")
+        # By default Active and Available are some of the example of Status that starts with A
+        active_status = Status.objects.create(name="Test Active")
+        deprecated_status = Status.objects.create(name="Test Deprecated")
+        active_status.content_types.add(self.ipaddress_ct)
+        deprecated_status.content_types.add(self.ipaddress_ct)
+        IPAddress.objects.all().update(status=active_status)
+        self.assertEqual(IPAddress.objects.all().count(), IPAddress.objects.filter(status=active_status).count())
+
+        # Update all IPAddresses with status=active_status to deprecated_statuses with no filters
+        create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=self.ipaddress_ct.id,
+            edit_all=True,
+            # pk ignored if edit_all is True
+            form_data={
+                "status": str(deprecated_status.pk),
+                "_all": "True",
+            },
+            username=self.user.username,
+        )
+        self.assertEqual(IPAddress.objects.all().count(), IPAddress.objects.filter(status=deprecated_status).count())
+        # Update all IPAddresses with status=active_status to deprecated_statuses with status filter applied
+        create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=self.ipaddress_ct.id,
+            edit_all=True,
+            filter_query_params={"status": "Test Deprecated"},
+            # pk ignored if edit_all is True
+            form_data={
+                "status": str(active_status.pk),
+                "per_page": 1,
+                "_all": "True",
+            },
+            username=self.user.username,
+        )
+        self.assertEqual(IPAddress.objects.all().count(), IPAddress.objects.filter(status=active_status).count())
 
 
 class BulkDeleteTestCase(TransactionTestCase):

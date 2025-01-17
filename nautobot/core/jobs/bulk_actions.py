@@ -44,6 +44,7 @@ class BulkEditObjects(Job):
 
     def _update_objects(self, model, form, filter_query_params, edit_all, nullified_fields):
         with deferred_change_logging_for_bulk_operation():
+            base_queryset = model.objects.restrict(self.user, "change")
             updated_objects_pk = []
             filterset_cls = get_filterset_for_model(model)
 
@@ -130,7 +131,7 @@ class BulkEditObjects(Job):
                     form.save_note(instance=obj, user=self.user)
             total_updated_objs = len(updated_objects_pk)
             # Enforce object-level permissions
-            if queryset.filter(pk__in=updated_objects_pk).count() != total_updated_objs:
+            if base_queryset.filter(pk__in=updated_objects_pk).count() != total_updated_objs:
                 raise ObjectDoesNotExist
             return total_updated_objs
 
