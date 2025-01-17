@@ -675,7 +675,7 @@ class BulkEditTestCase(TransactionTestCase):
             "BulkEditObjects",
             content_type=self.role_ct.id,
             edit_all=False,
-            filter_query_params={},
+            filter_query_params={"per_page": 2},
             form_data={"pk": pk_list, "color": "aa1409"},
             username=self.user.username,
         )
@@ -695,7 +695,7 @@ class BulkEditTestCase(TransactionTestCase):
             "BulkEditObjects",
             content_type=self.role_ct.id,
             edit_all=False,
-            filter_query_params={},
+            filter_query_params={"sort": "name"},
             form_data={"pk": pk_list, "color": "aa1409"},
             username=self.user.username,
         )
@@ -799,7 +799,7 @@ class BulkEditTestCase(TransactionTestCase):
             "BulkEditObjects",
             content_type=self.status_ct.id,
             edit_all=False,
-            filter_query_params={"name__isw": "A"},
+            filter_query_params={"name__isw": "A", "sort": "name"},
             form_data={
                 "pk": [str(statuses[0].pk)],
                 "color": "aa1409",
@@ -939,7 +939,7 @@ class BulkDeleteTestCase(TransactionTestCase):
             "BulkDeleteObjects",
             content_type=ContentType.objects.get_for_model(Circuit).id,
             delete_all=True,
-            filter_query_params={},
+            filter_query_params={"per_page": 10},
             pk_list=[],
             username=self.user.username,
         )
@@ -976,7 +976,7 @@ class BulkDeleteTestCase(TransactionTestCase):
             "BulkDeleteObjects",
             content_type=self.status_ct.id,
             delete_all=True,
-            filter_query_params={"name__isw": "Example Status"},
+            filter_query_params={"name__isw": "Example Status", "sort": "name"},
             username=self.user.username,
         )
         self._common_no_error_test_assertion(Status, job_result, name__istartswith="Example Status")
@@ -1012,7 +1012,7 @@ class BulkDeleteTestCase(TransactionTestCase):
             "BulkDeleteObjects",
             content_type=self.status_ct.pk,
             delete_all=True,
-            filter_query_params={"name__isw": "Example Status"},
+            filter_query_params={"name__isw": "Example Status", "sort": "name"},
             pk_list=[str(Status.objects.first().pk)],
             username=self.user.username,
         )

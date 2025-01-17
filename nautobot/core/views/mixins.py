@@ -926,6 +926,8 @@ class BulkEditAndBulkDeleteModelMixin:
     UI mixin to bulk destroy and bulk edit all model instances.
     """
 
+    logger = logging.getLogger(__name__)
+
     def _get_bulk_edit_delete_all_queryset(self, request):
         """
         Retrieve the queryset of model instances to be bulk-deleted or bulk-deleted, filtered based on request parameters.
