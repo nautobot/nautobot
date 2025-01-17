@@ -201,7 +201,12 @@ class DeviceFactory(PrimaryModelFactory):
         if extracted:
             self.software_image_files.set(extracted)
         else:
-            self.software_image_files.set(get_random_instances(SoftwareImageFile))
+            self.software_image_files.set(
+                get_random_instances(
+                    SoftwareImageFile.objects.filter(default_image=True)
+                    | SoftwareImageFile.objects.filter(device_types=self.device_type)
+                )
+            )
 
     # TODO to be done after these model factories are done.
     # has_cluster = NautobotBoolIterator()
