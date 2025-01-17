@@ -93,8 +93,8 @@ class BulkEditDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperationsM
     def test_bulk_edit_require_selection(self):
         self._go_to_devices_list()
 
-        # Click "delete selected" without selecting anything
-        self.click_bulk_delete()
+        # Click "edit selected" without selecting anything
+        self.click_bulk_edit()
 
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:device_list"))
         self.assertTrue(self.browser.is_text_present("No devices were selected.", wait_time=5))
@@ -148,7 +148,7 @@ class BulkEditDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperationsM
         # Select all devices and edit them
         self.select_all_items()
         self.click_bulk_edit()
-        self.assertContains(self.browser.url, self.live_server_url + reverse("dcim:device_bulk_edit"))
+        self.assertIn(self.live_server_url + reverse("dcim:device_bulk_edit"), self.browser.url)
 
         # Submit bulk edit form without any changes
         self.submit_bulk_edit_operation()
@@ -171,7 +171,7 @@ class BulkEditDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperationsM
         # Select one device and edit it
         self.select_all_items()
         self.click_bulk_edit()
-        self.assertContains(self.browser.url, self.live_server_url + reverse("dcim:device_bulk_edit"))
+        self.assertIn(self.live_server_url + reverse("dcim:device_bulk_edit"), self.browser.url)
 
         # Submit bulk edit form without any changes
         self.submit_bulk_edit_operation()
