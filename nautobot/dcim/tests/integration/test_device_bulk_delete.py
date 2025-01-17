@@ -1,5 +1,6 @@
 from django.urls import reverse
 from selenium.webdriver.support.wait import WebDriverWait
+from splinter.exceptions import ElementDoesNotExist
 
 from nautobot.core.testing.integration import SeleniumTestCase
 
@@ -84,7 +85,7 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase):
         self.click_edit_form_create_button()
 
     def tearDown(self):
-        self.logout()
+        # self.logout()
         super().tearDown()
 
     def _go_to_devices_list(self):
@@ -107,12 +108,20 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase):
     def _wait_for_job_results(self):
         end_statuses = ["Completed", "Failed"]
         WebDriverWait(self.browser, 30).until(
-            lambda driver: driver.find_by_xpath("//*[@id='pending-result-label']").text in end_statuses
+            lambda driver: driver.find_by_id("pending-result-label").text in end_statuses
         )
 
     def _verify_job_description(self, expected_job_description):
-        job_descritpion = self.browser.find_by_xpath('//td[text()="Job Description"]/following-sibling::td[1]').text
-        self.assertEqual(job_descritpion, expected_job_description)
+        job_description = self.browser.find_by_xpath('//td[text()="Job Description"]/following-sibling::td[1]').text
+        self.assertEqual(job_description, expected_job_description)
+
+    def _get_objects_table_count(self):
+        objects_table_container = self.browser.find_by_xpath('//*[@id="object_list_form"]/div[1]/div')
+        try:
+            objects_table = objects_table_container.find_by_tag('tbody')
+            return len(objects_table.find_by_tag('tr'))
+        except ElementDoesNotExist:
+            return 0
 
     def test_bulk_delete_require_selection(self):
         self._go_to_devices_list()
@@ -140,8 +149,12 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase):
         self._verify_job_description("Bulk delete objects.")
         self._wait_for_job_results()
 
-        job_status = self.browser.find_by_xpath("//*[@id='pending-result-label']").text
+        job_status = self.browser.find_by_id("pending-result-label").text
         self.assertEqual(job_status, "Completed")
+
+        self._go_to_devices_list()
+        objects_count = self._get_objects_table_count()
+        self.assertEqual(objects_count, 0)
 
     def test_bulk_delete_one_device(self):
         # Create device for test
@@ -157,8 +170,12 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase):
         self._verify_job_description("Bulk delete objects.")
         self._wait_for_job_results()
 
-        job_status = self.browser.find_by_xpath("//*[@id='pending-result-label']").text
+        job_status = self.browser.find_by_id("pending-result-label").text
         self.assertEqual(job_status, "Completed")
+
+        self._go_to_devices_list()
+        objects_count = self._get_objects_table_count()
+        self.assertEqual(objects_count, 1)
 
     def test_bulk_delete_all_filtered_devices(self):
         # Create device for test
@@ -180,8 +197,12 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase):
         self._verify_job_description("Bulk delete objects.")
         self._wait_for_job_results()
 
-        job_status = self.browser.find_by_xpath("//*[@id='pending-result-label']").text
+        job_status = self.browser.find_by_id("pending-result-label").text
         self.assertEqual(job_status, "Completed")
+
+        self._go_to_devices_list()
+        objects_count = self._get_objects_table_count()
+        self.assertEqual(objects_count, 2)
 
     def test_bulk_delete_one_filtered_devices(self):
         # Create device for test
@@ -204,5 +225,9 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase):
         self._verify_job_description("Bulk delete objects.")
         self._wait_for_job_results()
 
-        job_status = self.browser.find_by_xpath("//*[@id='pending-result-label']").text
+        job_status = self.browser.find_by_id("pending-result-label").text
         self.assertEqual(job_status, "Completed")
+
+        self._go_to_devices_list()
+        objects_count = self._get_objects_table_count()
+        self.assertEqual(objects_count, 3)
