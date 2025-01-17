@@ -12,6 +12,7 @@ from nautobot.core.utils.config import get_settings_or_config
 
 from .choices import DeviceFaceChoices
 from .constants import RACK_ELEVATION_BORDER_WIDTH
+from .models import Device
 
 
 class RackElevationGraphicalOutput:
@@ -227,7 +228,7 @@ class RackElevationGraphicalOutput:
         class DeviceCSVRepresentation:
             name: Optional[int]
             unit: str
-            is_full_depth: Optional[int]
+            device: "Device"
 
         def _get_face_data(face: Literal["front", "rear"]) -> list[DeviceCSVRepresentation]:
             # Prepare an empty rack representation
@@ -235,16 +236,19 @@ class RackElevationGraphicalOutput:
 
             # Fill with used rack units
             for unit in self.rack.get_rack_units(face=face, expand_devices=True):
-                try:
+                if unit['device'] is None:
                     rack_positions[unit["id"] - 1] = DeviceCSVRepresentation(
-                        name=unit["device"].name,
+                        name="",
                         unit=unit["name"],
-                        is_full_depth=unit["device"].device_type.is_full_depth,
+                        device=None
                     )
-                except AttributeError:
+
+                else:
                     rack_positions[unit["id"] - 1] = DeviceCSVRepresentation(
-                        name=None, unit=unit["name"], is_full_depth=False
-                    )
+                            name=unit["device"].name,
+                            unit=unit["name"],
+                            device=unit["device"],
+                        )
 
             return rack_positions
 
@@ -277,10 +281,10 @@ class RackElevationGraphicalOutput:
         rear_faces = _get_face_data("rear")
 
         for front, rear in zip(front_faces, rear_faces):
-            if front.is_full_depth:
-                rear.name = f"{front.name} (Rear)"
-            elif rear.is_full_depth:
-                front.name = f"{rear.name} (Rear)"
+            if front.device is not None and front.device.face == "rear" and front.device.device_type.is_full_depth:
+                front.name = f"{front.name} (Rear)"
+            elif rear.device is not None and rear.device.face == "front" and rear.device.device_type.is_full_depth:
+                rear.name = f"{rear.name} (Rear)"
 
         buf = io.StringIO()
         writer = csv.DictWriter(buf, fieldnames=["unit", "name"])
