@@ -8,6 +8,7 @@ from tree_queries.models import TreeNode
 
 from nautobot.core.testing import utils, ViewTestCases
 from nautobot.core.utils import lookup
+from nautobot.dcim.models import Controller, ControllerManagedDeviceGroup
 from nautobot.extras import choices as extras_choices
 from nautobot.extras.models import SecretsGroup, Tag
 from nautobot.users import models as users_models
@@ -20,7 +21,7 @@ class WirelessNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        WirelessNetwork.objects.create(
+        cls.wireless_network = WirelessNetwork.objects.create(
             name="Deletable Wireless Network 1",
             mode=choices.WirelessNetworkModeChoices.STANDALONE,
             authentication=choices.WirelessNetworkAuthenticationChoices.WPA2_PERSONAL,
@@ -71,6 +72,26 @@ class WirelessNetworkTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "ssid": "New SSID",
             "description": "New description",
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_with_controled_manged_device_group_vlan_set_to_none(self):
+        """Assert bug report #6763 (Wireless Network tab fails to render under Controller View) has been resolved"""
+        instance = self.wireless_network
+
+        controller = Controller.objects.first()
+        cmdg = ControllerManagedDeviceGroup.objects.create(
+            name="Test ControllerManagedDeviceGroup",
+            controller=controller,
+        )
+        cmdg.wireless_networks.add(instance)
+
+        self.add_permissions(
+            "wireless.view_wirelessnetwork", "wireless.view_controllermanageddevicegroupwirelessnetworkassignment"
+        )
+
+        # Try GET with model-level permission
+        response = self.client.get(instance.get_absolute_url())
+        self.assertInHTML("Test ControllerManagedDeviceGroup", response.content.decode(response.charset))
 
 
 class SupportedDataRateTestCase(ViewTestCases.PrimaryObjectViewTestCase):
