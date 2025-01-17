@@ -171,9 +171,6 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 ### Housekeeping in v2.4.1
 
 - [#6768](https://github.com/nautobot/nautobot/issues/6768) - Fixed link to changelog fragment documentation.
-
-### Housekeeping in v2.4.1
-
 - [#6794](https://github.com/nautobot/nautobot/issues/6794) - Fixed Device factory to ensure that it only selects SoftwareImageFiles that are permitted for a given Device.
 
 ## v2.4.0 (2025-01-10)
