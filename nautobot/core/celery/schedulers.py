@@ -128,7 +128,7 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
                 scheduled_job = entry.model
                 job_queue = scheduled_job.job_queue
                 # Distinguish between Celery and Kubernetes job queues
-                if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
+                if job_queue is not None and job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
                     job_result = JobResult.objects.create(
                         name=scheduled_job.job_model.name,
                         job_model=scheduled_job.job_model,

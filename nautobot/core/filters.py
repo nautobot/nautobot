@@ -13,6 +13,7 @@ from django_filters.constants import EMPTY_VALUES
 from django_filters.utils import get_model_field, label_for_filter, resolve_field, verbose_lookup_expr
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
+import timezone_field
 
 from nautobot.core import constants, forms
 from nautobot.core.forms import widgets
@@ -612,8 +613,11 @@ class BaseFilterSet(django_filters.FilterSet):
             models.UUIDField: {"filter_class": MultiValueUUIDFilter},
             core_fields.MACAddressCharField: {"filter_class": MultiValueMACAddressFilter},
             core_fields.TagsField: {"filter_class": TagFilter},
+            timezone_field.TimeZoneField: {"filter_class": MultiValueCharFilter},
         }
     )
+
+    USE_CHAR_FILTER_FOR_LOOKUPS = [django_filters.MultipleChoiceFilter]
 
     @staticmethod
     def _get_filter_lookup_dict(existing_filter):
@@ -678,8 +682,7 @@ class BaseFilterSet(django_filters.FilterSet):
             return magic_filters
 
         # Get properties of the existing filter for later use
-        field_name = filter_field.field_name
-        field = get_model_field(cls._meta.model, field_name)  # pylint: disable=no-member
+        field = get_model_field(cls._meta.model, filter_field.field_name)  # pylint: disable=no-member
 
         # If there isn't a model field, return.
         if field is None:
@@ -696,25 +699,7 @@ class BaseFilterSet(django_filters.FilterSet):
             new_filter_name = f"{filter_name}__{lookup_name}"
 
             try:
-                if filter_name in cls.declared_filters and lookup_expr not in {"isnull"}:  # pylint: disable=no-member
-                    # The filter field has been explicitly defined on the filterset class so we must manually
-                    # create the new filter with the same type because there is no guarantee the defined type
-                    # is the same as the default type for the field. This does not apply if the filter
-                    # should retain the original lookup_expr type, such as `isnull` using a boolean field on a
-                    # char or date object.
-                    resolve_field(field, lookup_expr)  # Will raise FieldLookupError if the lookup is invalid
-                    new_filter = type(filter_field)(
-                        field_name=field_name,
-                        lookup_expr=lookup_expr,
-                        label=filter_field.label,
-                        exclude=filter_field.exclude,
-                        distinct=filter_field.distinct,
-                        **filter_field.extra,
-                    )
-                else:
-                    # The filter field is listed in Meta.fields so we can safely rely on default behavior
-                    # Will raise FieldLookupError if the lookup is invalid
-                    new_filter = cls.filter_for_field(field, field_name, lookup_expr)
+                new_filter = cls._get_new_filter(filter_field, field, filter_name, lookup_expr)
             except django_filters.exceptions.FieldLookupError:
                 # The filter could not be created because the lookup expression is not supported on the field
                 continue
@@ -742,6 +727,45 @@ class BaseFilterSet(django_filters.FilterSet):
             magic_filters[new_filter_name] = new_filter
 
         return magic_filters
+
+    @classmethod
+    def _should_use_char_filter_for_lookups(cls, filter_field):
+        return type(filter_field) in cls.USE_CHAR_FILTER_FOR_LOOKUPS
+
+    @classmethod
+    def _get_new_filter(cls, filter_field, field, filter_name, lookup_expr):
+        if cls._should_use_char_filter_for_lookups(filter_field):
+            # For some cases like `MultiValueChoiceFilter(django_filters.MultipleChoiceFilter)`
+            # we want to have choices field with no lookups and standard char field for lookups filtering.
+            # Using a `choice` field for lookups blocks us from using `__re`, `__iew` or other "partial" filters.
+            resolve_field(field, lookup_expr)  # Will raise FieldLookupError if the lookup is invalid
+            return MultiValueCharFilter(
+                field_name=filter_field.field_name,
+                lookup_expr=lookup_expr,
+                label=filter_field.label,
+                exclude=filter_field.exclude,
+                distinct=filter_field.distinct,
+            )
+
+        if filter_name in cls.declared_filters and lookup_expr not in {"isnull"}:  # pylint: disable=no-member
+            # The filter field has been explicitly defined on the filterset class so we must manually
+            # create the new filter with the same type because there is no guarantee the defined type
+            # is the same as the default type for the field. This does not apply if the filter
+            # should retain the original lookup_expr type, such as `isnull` using a boolean field on a
+            # char or date object.
+            resolve_field(field, lookup_expr)  # Will raise FieldLookupError if the lookup is invalid
+            return type(filter_field)(
+                field_name=filter_field.field_name,
+                lookup_expr=lookup_expr,
+                label=filter_field.label,
+                exclude=filter_field.exclude,
+                distinct=filter_field.distinct,
+                **filter_field.extra,
+            )
+
+        # The filter field is listed in Meta.fields so we can safely rely on default behavior
+        # Will raise FieldLookupError if the lookup is invalid
+        return cls.filter_for_field(field, filter_field.field_name, lookup_expr)
 
     @classmethod
     def add_filter(cls, new_filter_name, new_filter_field):
@@ -850,7 +874,10 @@ class BaseFilterSet(django_filters.FilterSet):
         Note: Any CharField or IntegerField with choices set is a ChoiceField.
         """
         if lookup_type == "exact" and getattr(field, "choices", None):
+            if isinstance(field, timezone_field.TimeZoneField):
+                return django_filters.MultipleChoiceFilter, {"choices": ((str(v), n) for v, n in field.choices)}
             return django_filters.MultipleChoiceFilter, {"choices": field.choices}
+
         return super().filter_for_lookup(field, lookup_type)
 
     def __init__(self, data=None, queryset=None, *, request=None, prefix=None):
