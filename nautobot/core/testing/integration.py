@@ -95,6 +95,13 @@ class BulkOperationsMixin:
         else:
             self.browser.fill(field_name, value)
 
+    def assertBulkDeleteConfirmMessageIsValid(self, expected_count):
+        button_text = self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').text
+        self.assertIn(f"Delete these {expected_count}", button_text)
+
+        message_text = self.browser.find_by_id('confirm-bulk-deletion').find_by_xpath('//div[@class="panel-body"]').text()
+        self.assertIn(f"The following operation will delete {expected_count}", message_text)
+
     def assertIsBulkDeleteJob(self):
         self.verify_job_description("Bulk delete objects.")
 

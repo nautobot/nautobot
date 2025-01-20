@@ -108,7 +108,7 @@ class BulkEditDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperationsM
         self.apply_filter("location", "Test Location 2")
 
         # Select one device and edit it
-        self.select_all_items()
+        self.select_one_item()
         self.click_bulk_edit()
         self.assertIn(self.live_server_url + reverse("dcim:device_bulk_edit"), self.browser.url)
 

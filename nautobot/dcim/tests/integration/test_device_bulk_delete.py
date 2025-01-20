@@ -50,13 +50,13 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperation
         # Select all devices and delete them
         self.select_all_items()
         self.click_bulk_delete()
+
+        self.assertBulkDeleteConfirmMessageIsValid(4)
         self.confirm_bulk_delete_operation()
 
         # Verify job output
         self.assertIsBulkDeleteJob()
-        job_status = self.wait_for_job_result()
-
-        self.assertEqual(job_status, "Completed")
+        self.assertJobStatusIsCompleted()
 
         self._go_to_devices_list()
         self.assertEqual(self.objects_list_visible_items, 0)
@@ -65,16 +65,32 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperation
         # Select one device and delete it
         self.select_one_item()
         self.click_bulk_delete()
-        self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').click()
+
+        self.assertBulkDeleteConfirmMessageIsValid(1)
+        self.confirm_bulk_delete_operation()
 
         # Verify job output
         self.assertIsBulkDeleteJob()
-        job_status = self.wait_for_job_result()
-
-        self.assertEqual(job_status, "Completed")
+        self.assertJobStatusIsCompleted()
 
         self._go_to_devices_list()
         self.assertEqual(self.objects_list_visible_items, 3)
+
+    def test_bulk_delete_all_from_all_pages_devices(self):
+        # Select all from all pages
+        self.set_per_page()
+        self.select_all_items_from_all_pages()
+        self.click_bulk_delete_all()
+
+        self.assertBulkDeleteConfirmMessageIsValid(4)
+        self.confirm_bulk_delete_operation()
+
+        # Verify job output
+        self.assertIsBulkDeleteJob()
+        self.assertJobStatusIsCompleted()
+
+        self._go_to_devices_list()
+        self.assertEqual(self.objects_list_visible_items, 0)
 
     def test_bulk_delete_all_filtered_devices(self):
         # Filter devices
@@ -87,9 +103,7 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperation
 
         # Verify job output
         self.assertIsBulkDeleteJob()
-        job_status = self.wait_for_job_result()
-
-        self.assertEqual(job_status, "Completed")
+        self.assertJobStatusIsCompleted()
 
         self._go_to_devices_list()
         self.assertEqual(self.objects_list_visible_items, 2)
@@ -105,9 +119,28 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperation
 
         # Verify job output
         self.assertIsBulkDeleteJob()
-        job_status = self.wait_for_job_result()
-
-        self.assertEqual(job_status, "Completed")
+        self.assertJobStatusIsCompleted()
 
         self._go_to_devices_list()
         self.assertEqual(self.objects_list_visible_items, 3)
+
+    def test_bulk_delete_all_from_all_pages_filtered_devices(self):
+        # Filter devices
+        self.set_per_page()
+        self.apply_filter("location", "Test Location 2")
+
+        # Select all devices and delete them
+        self.select_all_items_from_all_pages()
+        self.click_bulk_delete_all()
+
+        self.assertBulkDeleteConfirmMessageIsValid(2)
+        self.confirm_bulk_delete_operation()
+
+        # Verify job output
+        self.assertIsBulkDeleteJob()
+        self.assertJobStatusIsCompleted()
+
+        self._go_to_devices_list()
+        self.assertEqual(self.objects_list_visible_items, 2)
+
+
