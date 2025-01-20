@@ -89,6 +89,12 @@ class BulkOperationsMixin:
         job_description = self.browser.find_by_xpath('//td[text()="Job Description"]/following-sibling::td[1]').text
         self.assertEqual(job_description, expected_job_description)
 
+    def update_edit_form_value(self, field_name, value, is_select=False):
+        if is_select:
+            self.fill_select2_field(field_name, value)
+        else:
+            self.browser.fill(field_name, value)
+
     def assertIsBulkDeleteJob(self):
         self.verify_job_description("Bulk delete objects.")
 
