@@ -33,14 +33,27 @@ class ObjectsListMixin:
     def select_one_item(self):
         self.browser.find_by_xpath('//*[@id="object_list_form"]//input[@name="pk"]').click()
 
+    def set_per_page(self, per_page=1):
+        self.browser.visit(f"{self.browser.url}?per_page={per_page}")
+
+    def select_all_items_from_all_pages(self):
+        self.select_all_items()
+        self.browser.find_by_xpath('//*[@id="select_all"]').click()
+
     def click_bulk_delete(self):
         self.browser.find_by_xpath(
             '//*[@id="object_list_form"]//button[@type="submit"]/following-sibling::button[1]'
         ).click()
         self.browser.find_by_xpath('//*[@id="object_list_form"]//button[@name="_delete"]').click()
 
+    def click_bulk_delete_all(self):
+        self.browser.find_by_xpath('//*[@id="select_all_box"]//button[@name="_delete"]').click()
+
     def click_bulk_edit(self):
         self.browser.find_by_xpath('//*[@id="object_list_form"]//button[@type="submit"]').click()
+
+    def click_bulk_edit_all(self):
+        self.browser.find_by_xpath('//*[@id="select_all_box"]//button[@name="_edit"]').click()
 
     @property
     def objects_list_visible_items(self):
