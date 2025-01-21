@@ -86,6 +86,8 @@ class BulkOperationsMixin:
         return self.browser.find_by_id("pending-result-label").text
 
     def verify_job_description(self, expected_job_description):
+        self.browser.is_element_present_by_tag("body", wait_time=30)
+
         job_description = self.browser.find_by_xpath('//td[text()="Job Description"]/following-sibling::td[1]').text
         self.assertEqual(job_description, expected_job_description)
 
@@ -96,6 +98,8 @@ class BulkOperationsMixin:
             self.browser.fill(field_name, value)
 
     def assertBulkDeleteConfirmMessageIsValid(self, expected_count):
+        self.browser.is_element_present_by_tag("body", wait_time=30)
+
         button_text = self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').text
         self.assertIn(f"Delete these {expected_count}", button_text)
 

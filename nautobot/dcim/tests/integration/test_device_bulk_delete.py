@@ -200,6 +200,7 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperation
         self.assertJobStatusIsCompleted()
 
         self._go_to_devices_list()
+        self.set_per_page(25)  # Set page size back to default
         self.assertEqual(self.objects_list_visible_items, 2)
 
         self.apply_filter("location", "Test Location 2")
