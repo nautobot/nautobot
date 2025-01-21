@@ -248,6 +248,8 @@ class BaseModel(models.Model):
         Unlike `get_natural_key_def()`, this doesn't auto-exclude all AutoField and BigAutoField fields,
         but instead explicitly discounts the `id` field (only) as a candidate.
         """
+        if cls != cls._meta.concrete_model:
+            return cls._meta.concrete_model.natural_key_field_lookups
         # First, figure out which local fields comprise the natural key:
         natural_key_field_names = []
         if hasattr(cls, "natural_key_field_names"):
