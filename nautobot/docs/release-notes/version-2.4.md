@@ -150,8 +150,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
-
-## v2.4.1 (2025-01-17)
+## v2.4.1 (2025-01-21)
 
 ### Security in v2.4.1
 
@@ -163,9 +162,12 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6489](https://github.com/nautobot/nautobot/issues/6489) - Fixed partial-match filters (such as `__ic` and `__isw`) on fields that have restricted choices (`Prefix.type`, `Interface.type`, etc.) so that partial values are no longer rejected.
 - [#6763](https://github.com/nautobot/nautobot/issues/6763) - Fixed the issue where the Wireless Network detail view fails to render when any record in the Controller Managed Device Groups table is missing a VLAN.
 - [#6770](https://github.com/nautobot/nautobot/issues/6770) - Fixed JobButtons to now trigger jobs on click
+- [#6771](https://github.com/nautobot/nautobot/issues/6771) - Reverted breaking changes to various generic View base class attributes.
 - [#6773](https://github.com/nautobot/nautobot/issues/6773) - Fixed an exception when trying to render a Job class to a form when no corresponding Job database record exists.
+- [#6776](https://github.com/nautobot/nautobot/issues/6776) - Fixed `FilterTestCase.generic_filter_tests` to again be optional as intended.
 - [#6779](https://github.com/nautobot/nautobot/issues/6779) - Fixed Object Bulk Delete and Object Bulk Edit functionalities.
 - [#6783](https://github.com/nautobot/nautobot/issues/6783) - Fixed `NautobotDataBaseScheduler` unable to run Scheduled Jobs without job queues assigned.
+- [#6786](https://github.com/nautobot/nautobot/issues/6786) - Fixed incorrect marking of `capabilities` field as required on Controller and ControllerManagedDeviceGroup REST APIs.
 - [#6792](https://github.com/nautobot/nautobot/issues/6792) - Fixed `natural_key_field_lookups` for proxy models.
 
 ### Housekeeping in v2.4.1
