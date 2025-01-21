@@ -1158,6 +1158,10 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
                 with self.assertRaises(Exception):
                     with self.repo.clone_to_directory_context(path=specified_path, head="non-existent") as path:
                         pass
+            with self.subTest("Assert a value error is raised when branch and head are both provided"):
+                with self.assertRaises(ValueError):
+                    with self.repo.clone_to_directory_context(branch="main", head="valid-files") as path:
+                        pass
         finally:
             shutil.rmtree(specified_path, ignore_errors=True)
             shutil.rmtree(self.tempdir.name, ignore_errors=True)
@@ -1244,6 +1248,10 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
             with self.subTest("Assert an Exception is raised when an invalid commit hash is provided"):
                 with self.assertRaises(Exception):
                     path = self.repo.clone_to_directory(path=specified_path, head="non-existent")
+
+            with self.subTest("Assert a ValuError is raised when branch and head are both provided"):
+                with self.assertRaises(Exception):
+                    path = self.repo.clone_to_directory(branch="main", head="valid-files")
         finally:
             shutil.rmtree(specified_path, ignore_errors=True)
             shutil.rmtree(self.tempdir.name, ignore_errors=True)
