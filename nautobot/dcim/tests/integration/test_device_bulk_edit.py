@@ -1,10 +1,8 @@
-import uuid
 
 from django.urls import reverse
 
 from nautobot.core.testing.integration import BulkOperationsMixin, ObjectsListMixin, SeleniumTestCase
 from nautobot.dcim.models import Device
-from nautobot.extras.tests.integration import create_test_device
 
 
 class BulkEditDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperationsMixin):
@@ -19,8 +17,62 @@ class BulkEditDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperationsM
         self.user.save()
         self.login(self.user.username, self.password)
 
-        self.run_uuid = str(uuid.uuid4())
+        # Manufacturer
+        self.click_navbar_entry("Devices", "Manufacturers")
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:manufacturer_list"))
+        self.click_list_view_add_button()
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:manufacturer_add"))
+        self.browser.fill("name", "Test Manufacturer 1")
+        self.click_edit_form_create_button()
 
+        # Device Type
+        self.click_navbar_entry("Devices", "Device Types")
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:devicetype_list"))
+        self.click_list_view_add_button()
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:devicetype_add"))
+        self.fill_select2_field("manufacturer", "Test Manufacturer 1")
+        self.browser.fill("model", "Test Device Type 1")
+        self.click_edit_form_create_button()
+
+        # LocationType
+        self.click_navbar_entry("Organization", "Location Types")
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:locationtype_list"))
+        self.click_list_view_add_button()
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:locationtype_add"))
+        self.fill_select2_multiselect_field("content_types", "dcim | device")
+        self.browser.fill("name", "Test Location Type 1")
+        self.click_edit_form_create_button()
+
+        # Location 1
+        self.click_navbar_entry("Organization", "Locations")
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:location_list"))
+        self.click_list_view_add_button()
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:location_add"))
+        self.fill_select2_field("location_type", "Test Location Type 1")
+        self.fill_select2_field("status", "")  # pick first status
+        self.browser.fill("name", "Test Location 1")
+        self.click_edit_form_create_button()
+
+        # Location 2
+        self.click_navbar_entry("Organization", "Locations")
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:location_list"))
+        self.click_list_view_add_button()
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:location_add"))
+        self.fill_select2_field("location_type", "Test Location Type 1")
+        self.fill_select2_field("status", "")  # pick first status
+        self.browser.fill("name", "Test Location 2")
+        self.click_edit_form_create_button()
+
+        # Role
+        self.click_navbar_entry("Organization", "Roles")
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("extras:role_list"))
+        self.click_list_view_add_button()
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("extras:role_add"))
+        self.browser.fill("name", "Test Role 1")
+        self.fill_select2_multiselect_field("content_types", "dcim | device")
+        self.click_edit_form_create_button()
+
+        # Create device for test
         self._create_device("Test Device Integration Test 1")
         self._create_device("Test Device Integration Test 2")
         self._create_device("Test Device Integration Test 3", location="Test Location 2")
@@ -28,8 +80,17 @@ class BulkEditDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperationsM
 
         self._go_to_devices_list()
 
-    def _create_device(self, name, location=None):
-        create_test_device(name=name, location_name=location, test_uuid=self.run_uuid)
+    def _create_device(self, name, location="Test Location 1"):
+        self.click_navbar_entry("Devices", "Devices")
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:device_list"))
+        self.click_list_view_add_button()
+        self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:device_add"))
+        self.browser.fill("name", name)
+        self.fill_select2_field("role", "Test Role 1")
+        self.fill_select2_field("device_type", "Test Device Type 1")
+        self.fill_select2_field("location", location)
+        self.fill_select2_field("status", "")  # pick first status
+        self.click_edit_form_create_button()
 
     def tearDown(self):
         self.logout()
