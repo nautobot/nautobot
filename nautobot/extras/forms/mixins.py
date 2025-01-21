@@ -327,7 +327,7 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
                     field_name,
                     instance,
                 )
-                if field_name in self.nullable_fields and field_name in nullified_fields:
+                if field_name in self.nullable_fields and nullified_fields and field_name in nullified_fields:
                     logger.debug("Deleting existing relationship associations for %s on %s", relationship, instance)
                     relationshipassociation_queryset.delete()
                 elif field_name in self.cleaned_data:

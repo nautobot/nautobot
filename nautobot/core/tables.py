@@ -1,6 +1,7 @@
 import contextlib
 import logging
 
+from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist, FieldError
@@ -557,7 +558,10 @@ class LinkedCountColumn(django_tables2.Column):
                 related_record = related_records[0]
         url = reverse(self.viewname, kwargs=self.view_kwargs)
         if self.url_params:
-            url += "?" + urlencode({k: getattr(record, v) for k, v in self.url_params.items()})
+            url += "?" + urlencode(
+                # Replace None values with `FILTERS_NULL_CHOICE_VALUE` to handle URL parameters correctly
+                {k: (getattr(record, v) or settings.FILTERS_NULL_CHOICE_VALUE) for k, v in self.url_params.items()}
+            )
         if value > 1:
             return format_html('<a href="{}" class="badge">{}</a>', url, value)
         if related_record is not None:
