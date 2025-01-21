@@ -57,7 +57,7 @@ class ObjectsListMixin:
 
     @property
     def objects_list_visible_items(self):
-        objects_table_container = self.browser.find_by_xpath('//*[@id="object_list_form"]/div[1]/div')
+        objects_table_container = self.browser.find_by_xpath('//*[@id="object_list_form"]')
         try:
             objects_table = objects_table_container.find_by_tag("tbody")
             return len(objects_table.find_by_tag("tr"))
