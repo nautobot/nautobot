@@ -2146,6 +2146,12 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
     #     entry = NautobotScheduleEntry(model=sj)
     #     scheduler = NautobotDatabaseScheduler(app=entry.app)
     #     scheduler.apply_async(entry=entry, producer=None, advance=False)
+    #     Check scheduled job runs correctly with no job queue
+    #     sj.job_queue = None
+    #     sj.save()
+    #     entry = NautobotScheduleEntry(model=sj)
+    #     scheduler = NautobotDatabaseScheduler(app=entry.app)
+    #     scheduler.apply_async(entry=entry, producer=None, advance=False)
 
 
 class SecretTest(ModelTestCases.BaseModelTestCase):
