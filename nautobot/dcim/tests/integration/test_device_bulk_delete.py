@@ -142,5 +142,3 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperation
 
         self._go_to_devices_list()
         self.assertEqual(self.objects_list_visible_items, 2)
-
-
