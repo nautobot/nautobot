@@ -1,0 +1,1 @@
+Fixed `FilterTestCase.generic_filter_tests` to again be optional as intended.

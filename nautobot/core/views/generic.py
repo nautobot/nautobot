@@ -78,7 +78,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
     template_name: Name of the template to use
     """
 
-    queryset: ClassVar[QuerySet]
+    queryset: ClassVar[Optional[QuerySet]] = None  # TODO: required, declared Optional only to avoid breaking change
     template_name: ClassVar[Optional[str]] = None
     object_detail_content = None
 
@@ -141,7 +141,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     non_filter_params: List of query parameters that are **not** used for queryset filtering
     """
 
-    queryset: QuerySet
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
     filterset: Optional[type[FilterSet]] = None
     filterset_form: Optional[type[Form]] = None
     table: Optional[type[Table]] = None
@@ -413,8 +413,8 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     template_name: The name of the template
     """
 
-    queryset: QuerySet
-    model_form: type[Form]
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
+    model_form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
     template_name = "generic/object_create.html"
 
     def get_required_permission(self):
@@ -458,7 +458,9 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
 
         initial_data = normalize_querydict(request.GET, form_class=self.model_form)
-        form = self.model_form(instance=obj, initial=initial_data)
+        if self.model_form is None:
+            raise RuntimeError("self.model_form must not be None")
+        form = self.model_form(instance=obj, initial=initial_data)  # pylint: disable=not-callable
         restrict_form_fields(form, request.user)
 
         return render(
@@ -488,7 +490,9 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         logger = logging.getLogger(__name__ + ".ObjectEditView")
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
-        form = self.model_form(
+        if self.model_form is None:
+            raise RuntimeError("self.model_form must not be None")
+        form = self.model_form(  # pylint: disable=not-callable
             data=request.POST,
             files=request.FILES,
             initial=normalize_querydict(request.GET, form_class=self.model_form),
@@ -556,7 +560,7 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     template_name: The name of the template
     """
 
-    queryset: QuerySet
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
     template_name = "generic/object_delete.html"
 
     def get_required_permission(self):
@@ -636,9 +640,9 @@ class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     template_name: The name of the template
     """
 
-    queryset: QuerySet
-    form: type[Form]
-    model_form: type[Form]
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
+    form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
+    model_form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
     pattern_target = ""
     template_name = None
 
@@ -648,12 +652,14 @@ class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def get(self, request):
         # Set initial values for visible form fields from query args
         initial = {}
+        if self.form is None or self.model_form is None:
+            raise RuntimeError("self.form and self.model_form must not be None")
         for field in getattr(self.model_form._meta, "fields", []):
             if request.GET.get(field):
                 initial[field] = request.GET[field]
 
-        form = self.form()
-        model_form = self.model_form(initial=initial)
+        form = self.form()  # pylint: disable=not-callable
+        model_form = self.model_form(initial=initial)  # pylint: disable=not-callable
 
         return render(
             request,
@@ -668,9 +674,11 @@ class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     def post(self, request):
         logger = logging.getLogger(__name__ + ".BulkCreateView")
+        if self.queryset is None or self.form is None or self.model_form is None:
+            raise RuntimeError("self.queryset, self.form, and self.model_form must not be None")
         model = self.queryset.model
-        form = self.form(request.POST)
-        model_form = self.model_form(request.POST)
+        form = self.form(request.POST)  # pylint: disable=not-callable
+        model_form = self.model_form(request.POST)  # pylint: disable=not-callable
 
         if form.is_valid():
             logger.debug("Form validation was successful")
@@ -683,7 +691,7 @@ class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                     for value in pattern:
                         # Reinstantiate the model form each time to avoid overwriting the same instance. Use a mutable
                         # copy of the POST QueryDict so that we can update the target field value.
-                        model_form = self.model_form(request.POST.copy())
+                        model_form = self.model_form(request.POST.copy())  # pylint: disable=not-callable
                         model_form.data[self.pattern_target] = value
 
                         # Validate each new object independently.
@@ -745,8 +753,8 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     template_name: The name of the template
     """
 
-    queryset: QuerySet
-    model_form: type[Form]
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
+    model_form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
     related_object_forms = {}
     template_name = "generic/object_import.html"
 
@@ -770,12 +778,15 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         logger = logging.getLogger(__name__ + ".ObjectImportView")
         form = ImportForm(request.POST)
 
+        if self.model_form is None or self.queryset is None:
+            raise RuntimeError("self.model_form and self.queryset must not be None")
+
         if form.is_valid():
             logger.debug("Import form validation was successful")
 
             # Initialize model form
             data = form.cleaned_data["data"]
-            model_form = self.model_form(data)
+            model_form = self.model_form(data)  # pylint: disable=not-callable
             restrict_form_fields(model_form, request.user)
 
             # Assign default values for any fields which were not specified. We have to do this manually because passing
@@ -890,8 +901,8 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  #
     template_name: The name of the template
     """
 
-    queryset: QuerySet
-    table: type[Table]
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
+    table: Optional[type[Table]] = None  # TODO: required, declared Optional only to avoid a breaking change
     template_name = "generic/object_bulk_import.html"
 
     def __init__(self, *args, **kwargs):
@@ -935,6 +946,9 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  #
         if form.is_valid():
             logger.debug("Form validation was successful")
 
+            if self.queryset is None or self.table is None:
+                raise RuntimeError("self.queryset and self.table must not be None")
+
             try:
                 # Iterate through CSV data and bind each row to a new model form instance.
                 with transaction.atomic():
@@ -945,7 +959,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  #
                         raise ObjectDoesNotExist
 
                 # Compile a table containing the imported objects
-                obj_table = self.table(new_objs)
+                obj_table = self.table(new_objs)  # pylint: disable=not-callable
 
                 if new_objs:
                     msg = f"Imported {len(new_objs)} {new_objs[0]._meta.verbose_name_plural}"
@@ -996,10 +1010,10 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAnd
     template_name: The name of the template
     """
 
-    queryset: QuerySet
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
     filterset: Optional[type[FilterSet]] = None
-    table: type[Table]
-    form: type[Form]
+    table: Optional[type[Table]] = None  # TODO: required, declared Optional only to avoid a breaking change
+    form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
     template_name = "generic/object_bulk_edit.html"
 
     def get_required_permission(self):
@@ -1018,6 +1032,8 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAnd
 
     def post(self, request, **kwargs):
         logger = logging.getLogger(__name__ + ".BulkEditView")
+        if self.queryset is None or self.form is None or self.table is None:
+            raise RuntimeError("self.queryset, self.form, and self.table must not be None")
         model = self.queryset.model
         edit_all = request.POST.get("_all")
 
@@ -1030,7 +1046,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAnd
             queryset = self.queryset.filter(pk__in=pk_list)
 
         if "_apply" in request.POST:
-            form = self.form(model, request.POST, edit_all=edit_all)
+            form = self.form(model, request.POST, edit_all=edit_all)  # pylint: disable=not-callable
             restrict_form_fields(form, request.user)
 
             if form.is_valid():
@@ -1051,13 +1067,13 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAnd
             elif "device_type" in request.GET:
                 initial_data["device_type"] = request.GET.get("device_type")
 
-            form = self.form(model, initial=initial_data, edit_all=edit_all)
+            form = self.form(model, initial=initial_data, edit_all=edit_all)  # pylint: disable=not-callable
             restrict_form_fields(form, request.user)
 
         # Retrieve objects being edited
         table = None
         if not edit_all:
-            table = self.table(queryset, orderable=False)
+            table = self.table(queryset, orderable=False)  # pylint: disable=not-callable
             if not table.rows:
                 messages.warning(request, f"No {model._meta.verbose_name_plural} were selected.")
                 return redirect(self.get_return_url(request))
@@ -1084,7 +1100,7 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     An extendable view for renaming objects in bulk.
     """
 
-    queryset: QuerySet
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
     template_name = "generic/object_bulk_rename.html"
 
     def __init__(self, *args, **kwargs):
@@ -1190,9 +1206,9 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditA
     template_name: The name of the template
     """
 
-    queryset: QuerySet
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
     filterset: Optional[type[FilterSet]] = None
-    table: type[Table]
+    table: Optional[type[Table]] = None  # TODO: required, declared Optional only to avoid a breaking change
     form: Optional[type[Form]] = None
     template_name = "generic/object_bulk_delete.html"
 
@@ -1204,6 +1220,8 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditA
 
     def post(self, request, **kwargs):
         logger = logging.getLogger(f"{__name__}.BulkDeleteView")
+        if self.queryset is None or self.table is None:
+            raise RuntimeError("self.queryset and self.table must not be None")
         model = self.queryset.model
         delete_all = request.POST.get("_all")
 
@@ -1240,7 +1258,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditA
         # Retrieve objects being deleted
         table = None
         if not delete_all:
-            table = self.table(queryset, orderable=False)
+            table = self.table(queryset, orderable=False)  # pylint: disable=not-callable
             if not table.rows:
                 messages.warning(
                     request,
@@ -1293,17 +1311,19 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
     Add one or more components (e.g. interfaces, console ports, etc.) to a Device or VirtualMachine.
     """
 
-    queryset: QuerySet
-    form: type[Form]
-    model_form: type[Form]
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
+    form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
+    model_form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
     template_name = "dcim/device_component_add.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "add")
 
     def get(self, request):
-        form = self.form(initial=normalize_querydict(request.GET, form_class=self.form))
-        model_form = self.model_form(request.GET)
+        if self.form is None or self.model_form is None:
+            raise RuntimeError("self.form and self.model_form must not be None")
+        form = self.form(initial=normalize_querydict(request.GET, form_class=self.form))  # pylint: disable=not-callable
+        model_form = self.model_form(request.GET)  # pylint: disable=not-callable
 
         return render(
             request,
@@ -1318,8 +1338,10 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
 
     def post(self, request):
         logger = logging.getLogger(__name__ + ".ComponentCreateView")
-        form = self.form(request.POST, initial=normalize_querydict(request.GET, form_class=self.form))
-        model_form = self.model_form(request.POST, initial=normalize_querydict(request.GET, form_class=self.model_form))
+        if self.form is None or self.model_form is None or self.queryset is None:
+            raise RuntimeError("self.form, self.model_form, and self.queryset must not be None")
+        form = self.form(request.POST, initial=normalize_querydict(request.GET, form_class=self.form))  # pylint: disable=not-callable
+        model_form = self.model_form(request.POST, initial=normalize_querydict(request.GET, form_class=self.model_form))  # pylint: disable=not-callable
 
         if form.is_valid():
             new_components = []
@@ -1334,7 +1356,7 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
                 data["label"] = label
                 if hasattr(form, "get_iterative_data"):
                     data.update(form.get_iterative_data(i))
-                component_form = self.model_form(
+                component_form = self.model_form(  # pylint: disable=not-callable
                     data, initial=normalize_querydict(request.GET, form_class=self.model_form)
                 )
 
@@ -1395,13 +1417,13 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
     Add one or more components (e.g. interfaces, console ports, etc.) to a set of Devices or VirtualMachines.
     """
 
-    parent_model: type[Model]
+    parent_model: Optional[type[Model]] = None  # TODO: required, declared Optional only to avoid a breaking change
     parent_field = None
-    form: type[Form]
-    queryset: QuerySet
-    model_form: type[Form]
+    form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
+    queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
+    model_form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
     filterset: Optional[type[FilterSet]] = None
-    table: type[Table]
+    table: Optional[type[Table]] = None  # TODO: required, declared Optional only to avoid a breaking change
     template_name = "generic/object_bulk_add_component.html"
 
     def get_required_permission(self):
@@ -1409,6 +1431,16 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
 
     def post(self, request):
         logger = logging.getLogger(__name__ + ".BulkComponentCreateView")
+        if (
+            self.form is None
+            or self.model_form is None
+            or self.parent_model is None
+            or self.queryset is None
+            or self.table is None
+        ):
+            raise RuntimeError(
+                "self.form, self.model_form, self.parent_model, self.queryset, and self.table must not be None"
+            )
         parent_model_name = self.parent_model._meta.verbose_name_plural
         model_name = self.queryset.model._meta.verbose_name_plural
         model = self.queryset.model
@@ -1426,10 +1458,10 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
                 f"No {self.parent_model._meta.verbose_name_plural} were selected.",
             )
             return redirect(self.get_return_url(request))
-        table = self.table(selected_objects)
+        table = self.table(selected_objects)  # pylint: disable=not-callable
 
         if "_create" in request.POST:
-            form = self.form(model, request.POST)
+            form = self.form(model, request.POST)  # pylint: disable=not-callable
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
@@ -1451,7 +1483,7 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
                                     "label": label,
                                 }
                                 component_data.update(data)
-                                component_form = self.model_form(component_data)
+                                component_form = self.model_form(component_data)  # pylint: disable=not-callable
                                 if component_form.is_valid():
                                     instance = component_form.save()
                                     logger.debug(f"Created {instance} on {instance.parent}")
@@ -1493,7 +1525,7 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
                 logger.debug("Form validation failed")
 
         else:
-            form = self.form(model, initial={"pk": pk_list})
+            form = self.form(model, initial={"pk": pk_list})  # pylint: disable=not-callable
 
         return render(
             request,
