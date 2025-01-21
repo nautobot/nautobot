@@ -7,7 +7,9 @@ from django.core.exceptions import (
 )
 from django.db.models import ManyToManyField, ProtectedError
 
+from nautobot.core import exceptions
 from nautobot.core.forms.utils import restrict_form_fields
+from nautobot.core.utils.filtering import get_filterset_field
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.jobs import (
@@ -42,15 +44,33 @@ class BulkEditObjects(Job):
 
     def _update_objects(self, model, form, filter_query_params, edit_all, nullified_fields):
         with deferred_change_logging_for_bulk_operation():
+            base_queryset = model.objects.restrict(self.user, "change")
             updated_objects_pk = []
             filterset_cls = get_filterset_for_model(model)
 
-            if filter_query_params and not filterset_cls:
-                self.logger.error(f"Filterset not found for {model}")
-                raise RunJobTaskFailed(f"Filter query provided but {model} do not have a filterset.")
+            if filter_query_params:
+                if not filterset_cls:
+                    self.logger.error(f"Filterset not found for {model._meta.verbose_name}")
+                    raise RunJobTaskFailed(
+                        f"Filter query provided but {model._meta.verbose_name} does not have a filterset."
+                    )
+
+                # Discarding non-filter query params
+                new_filter_query_params = {}
+
+                for key, value in filter_query_params.items():
+                    try:
+                        get_filterset_field(filterset_cls(), key)
+                        new_filter_query_params[key] = value
+                    except exceptions.FilterSetFieldNotFound:
+                        self.logger.debug(
+                            f"Query parameter `{key}` not found in filterset for `{filterset_cls}`, discarding it"
+                        )
+
+                filter_query_params = new_filter_query_params
 
             if edit_all:
-                if filterset_cls and filter_query_params:
+                if filter_query_params:
                     queryset = filterset_cls(filter_query_params).qs.restrict(self.user, "change")
                 else:
                     queryset = model.objects.restrict(self.user, "change")
@@ -93,7 +113,7 @@ class BulkEditObjects(Job):
 
                 # Update custom fields
                 for field_name in form_custom_fields:
-                    if field_name in form.nullable_fields and field_name in nullified_fields:
+                    if field_name in form.nullable_fields and nullified_fields and field_name in nullified_fields:
                         obj.cf[remove_prefix_from_cf_key(field_name)] = None
                     elif form.cleaned_data.get(field_name) not in (None, "", []):
                         obj.cf[remove_prefix_from_cf_key(field_name)] = form.cleaned_data[field_name]
@@ -111,7 +131,7 @@ class BulkEditObjects(Job):
                     form.save_note(instance=obj, user=self.user)
             total_updated_objs = len(updated_objects_pk)
             # Enforce object-level permissions
-            if queryset.filter(pk__in=updated_objects_pk).count() != total_updated_objs:
+            if base_queryset.filter(pk__in=updated_objects_pk).count() != total_updated_objs:
                 raise ObjectDoesNotExist
             return total_updated_objs
 
@@ -201,33 +221,49 @@ class BulkDeleteObjects(Job):
             )
             raise RunJobTaskFailed("Model not found")
 
-        if pk_list and (delete_all or filter_query_params):
-            self.logger.error(
-                "You can either delete objs within `pk_list` provided or `delete_all` with `filter_query_params` if needed."
-            )
-            raise RunJobTaskFailed("Both `pk_list` and `delete_all` can not both be set.")
-
         filterset_cls = get_filterset_for_model(model)
 
-        if filter_query_params and not filterset_cls:
-            self.logger.error(f"Filterset not found for {model}")
-            raise RunJobTaskFailed(f"Filter query provided but {model} do not have a filterset.")
+        if filter_query_params:
+            if not filterset_cls:
+                self.logger.error(f"Filterset not found for {model._meta.verbose_name}")
+                raise RunJobTaskFailed(
+                    f"Filter query provided but {model._meta.verbose_name} does not have a filterset."
+                )
+
+            # Discarding non-filter query params
+            new_filter_query_params = {}
+
+            for key, value in filter_query_params.items():
+                try:
+                    get_filterset_field(filterset_cls(), key)
+                    new_filter_query_params[key] = value
+                except exceptions.FilterSetFieldNotFound:
+                    self.logger.debug(f"Query parameter `{key}` not found in `{filterset_cls}`, discarding it")
+
+            filter_query_params = new_filter_query_params
 
         if delete_all:
-            if filterset_cls and filter_query_params:
+            # Case for selecting all objects (or all filtered objects) to delete
+            if filter_query_params:
+                # If there is filter query params, we need to apply it to the queryset
                 queryset = filterset_cls(filter_query_params).qs.restrict(self.user, "delete")
                 # We take this approach because filterset.qs has already applied .distinct(),
                 # and performing a .delete directly on a queryset with .distinct applied is not allowed.
                 queryset = model.objects.filter(pk__in=queryset)
             else:
+                # If there is not, we can just restrict the queryset to the user's permissions
                 queryset = model.objects.restrict(self.user, "delete")
-        else:
+        elif pk_list:
+            # Case for selecting specific objects to delete, delete_all overrides this option
             queryset = model.objects.restrict(self.user, "delete").filter(pk__in=pk_list)
             if queryset.count() < len(pk_list):
                 # We do not check ObjectPermission error for `delete_all` case because user is trying to
                 # delete all objs they have permission to which would not raise any issue.
                 self.logger.error("You do not have permissions to delete some of the objects provided in `pk_list`.")
                 raise RunJobTaskFailed("Caught ObjectPermission error while attempting to delete objects")
+        elif not pk_list and not delete_all:
+            self.logger.error("You must select at least one object instance to delete.")
+            raise RunJobTaskFailed("Either `pk_list` or `delete_all` is required.")
 
         verbose_name_plural = model._meta.verbose_name_plural
 
@@ -240,9 +276,10 @@ class BulkDeleteObjects(Job):
         try:
             self.logger.info(f"Deleting {queryset.count()} {verbose_name_plural}...")
             _, deleted_info = bulk_delete_with_bulk_change_logging(queryset)
-            deleted_count = deleted_info[model._meta.label]
+            deleted_count = deleted_info.get(model._meta.label, 0)
         except ProtectedError as err:
-            self.logger.error(f"Caught ProtectedError while attempting to delete objects: {err}")
+            # TODO this error message needs to be cleaner, ideally using a variant of handle_protectederror
+            self.logger.error(f"Caught ProtectedError while attempting to delete objects: `{err}`")
             raise RunJobTaskFailed("Caught ProtectedError while attempting to delete objects")
         msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
         self.logger.info(msg)

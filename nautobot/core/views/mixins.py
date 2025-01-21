@@ -31,6 +31,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
+from nautobot.core import exceptions as core_exceptions
 from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -40,7 +41,7 @@ from nautobot.core.forms import (
     restrict_form_fields,
 )
 from nautobot.core.jobs import BulkDeleteObjects, BulkEditObjects
-from nautobot.core.utils import lookup, permissions
+from nautobot.core.utils import filtering, lookup, permissions
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params, normalize_querydict
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utils import (
@@ -925,6 +926,8 @@ class BulkEditAndBulkDeleteModelMixin:
     UI mixin to bulk destroy and bulk edit all model instances.
     """
 
+    logger = logging.getLogger(__name__)
+
     def _get_bulk_edit_delete_all_queryset(self, request):
         """
         Retrieve the queryset of model instances to be bulk-deleted or bulk-deleted, filtered based on request parameters.
@@ -957,7 +960,19 @@ class BulkEditAndBulkDeleteModelMixin:
         if filterset_class := lookup.get_filterset_for_model(model):
             filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
         else:
-            filter_query_params = None
+            filter_query_params = {}
+
+        # Discarding non-filter query params
+        new_filter_query_params = {}
+
+        for key, value in filter_query_params.items():
+            try:
+                filtering.get_filterset_field(filterset_class(), key)
+                new_filter_query_params[key] = value
+            except core_exceptions.FilterSetFieldNotFound:
+                self.logger.debug(f"Query parameter `{key}` not found in `{filterset_class}`, discarding it")
+
+        filter_query_params = new_filter_query_params
 
         job_form = BulkDeleteObjects.as_form(
             data={
@@ -984,7 +999,20 @@ class BulkEditAndBulkDeleteModelMixin:
         if filterset_class := lookup.get_filterset_for_model(model):
             filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
         else:
-            filter_query_params = None
+            filter_query_params = {}
+
+        # Discarding non-filter query params
+        new_filter_query_params = {}
+
+        for key, value in filter_query_params.items():
+            try:
+                filtering.get_filterset_field(filterset_class(), key)
+                new_filter_query_params[key] = value
+            except core_exceptions.FilterSetFieldNotFound:
+                self.logger.debug(f"Query parameter `{key}` not found in `{filterset_class}`, discarding it")
+
+        filter_query_params = new_filter_query_params
+
         job_form = BulkEditObjects.as_form(
             data={
                 "form_data": form_data,
@@ -1164,7 +1192,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
             for field in form.fields
             if field not in form_custom_fields + form_relationships + ["pk"] + ["object_note"]
         ]
-        nullified_fields = request.POST.getlist("_nullify")
+        nullified_fields = request.POST.getlist("_nullify") or []
         with deferred_change_logging_for_bulk_operation():
             updated_objects = []
             edit_all = self.request.POST.get("_all")
@@ -1183,7 +1211,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
                         # This form field is used to modify a field rather than set its value directly
                         model_field = None
                     # Handle nullification
-                    if name in form.nullable_fields and name in nullified_fields:
+                    if name in form.nullable_fields and nullified_fields and name in nullified_fields:
                         if isinstance(model_field, ManyToManyField):
                             getattr(obj, name).set([])
                         else:
@@ -1197,7 +1225,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
                         setattr(obj, name, form.cleaned_data[name])
                 # Update custom fields
                 for field_name in form_custom_fields:
-                    if field_name in form.nullable_fields and field_name in nullified_fields:
+                    if field_name in form.nullable_fields and nullified_fields and field_name in nullified_fields:
                         obj.cf[remove_prefix_from_cf_key(field_name)] = None
                     elif form.cleaned_data.get(field_name) not in (None, "", []):
                         obj.cf[remove_prefix_from_cf_key(field_name)] = form.cleaned_data[field_name]
