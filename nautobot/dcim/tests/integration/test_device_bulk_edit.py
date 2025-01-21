@@ -1,4 +1,3 @@
-
 from django.urls import reverse
 
 from nautobot.core.testing.integration import BulkOperationsMixin, ObjectsListMixin, SeleniumTestCase
