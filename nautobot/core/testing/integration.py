@@ -6,7 +6,9 @@ from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.functional import classproperty
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.wait import WebDriverWait
 from splinter.browser import Browser
+from splinter.exceptions import ElementDoesNotExist
 
 from nautobot.core import testing
 
@@ -18,6 +20,71 @@ SELENIUM_HOST = os.getenv("NAUTOBOT_SELENIUM_HOST", "host.docker.internal")
 
 # Default login URL
 LOGIN_URL = reverse(settings.LOGIN_URL)
+
+
+class ObjectsListMixin:
+    """
+    Helper class for easier testing and navigating on standard Nautobot objects list page.
+    """
+
+    def select_all_items(self):
+        self.browser.find_by_xpath('//*[@id="object_list_form"]//input[@class="toggle"]').click()
+
+    def select_one_item(self):
+        self.browser.find_by_xpath('//*[@id="object_list_form"]//input[@name="pk"]').click()
+
+    def click_bulk_delete(self):
+        self.browser.find_by_xpath(
+            '//*[@id="object_list_form"]//button[@type="submit"]/following-sibling::button[1]'
+        ).click()
+        self.browser.find_by_xpath('//*[@id="object_list_form"]//button[@name="_delete"]').click()
+
+    def click_bulk_edit(self):
+        self.browser.find_by_xpath('//*[@id="object_list_form"]//button[@type="submit"]').click()
+
+    @property
+    def objects_list_visible_items(self):
+        objects_table_container = self.browser.find_by_xpath('//*[@id="object_list_form"]/div[1]/div')
+        try:
+            objects_table = objects_table_container.find_by_tag("tbody")
+            return len(objects_table.find_by_tag("tr"))
+        except ElementDoesNotExist:
+            return 0
+
+    def apply_filter(self, field, value):
+        self.browser.find_by_xpath('//*[@id="id__filterbtn"]').click()
+        self.fill_filters_select2_field(field, value)
+        self.browser.find_by_xpath('//*[@id="default-filter"]//button[@type="submit"]').click()
+
+
+class BulkOperationsMixin:
+    def confirm_bulk_delete_operation(self):
+        self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').click()
+
+    def submit_bulk_edit_operation(self):
+        self.browser.find_by_xpath("//button[@name='_apply']", wait_time=5).click()
+
+    def wait_for_job_result(self):
+        end_statuses = ["Completed", "Failed"]
+        WebDriverWait(self.browser, 30).until(
+            lambda driver: driver.find_by_id("pending-result-label").text in end_statuses
+        )
+
+        return self.browser.find_by_id("pending-result-label").text
+
+    def verify_job_description(self, expected_job_description):
+        job_description = self.browser.find_by_xpath('//td[text()="Job Description"]/following-sibling::td[1]').text
+        self.assertEqual(job_description, expected_job_description)
+
+    def assertIsBulkDeleteJob(self):
+        self.verify_job_description("Bulk delete objects.")
+
+    def assertIsBulkEditJob(self):
+        self.verify_job_description("Bulk edit objects.")
+
+    def assertJobStatusIsCompleted(self):
+        job_status = self.wait_for_job_result()
+        self.assertEqual(job_status, "Completed")
 
 
 # In CI, sometimes the FQDN of SELENIUM_HOST gets used, other times it seems to be just the hostname?
@@ -112,20 +179,35 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         # Wait for body element to appear
         self.assertTrue(self.browser.is_element_present_by_tag("body", wait_time=5), "Page failed to load")
 
-    def fill_select2_field(self, field_name, value):
+    def _fill_select2_field(self, field_name, value, search_box_class=None):
         """
         Helper function to fill a Select2 single selection field.
         """
+        if search_box_class is None:
+            search_box_class = "select2-search select2-search--dropdown"
+
         self.browser.find_by_xpath(f"//select[@id='id_{field_name}']//following-sibling::span").click()
-        search_box = self.browser.find_by_xpath(
-            "//*[@class='select2-search select2-search--dropdown']//input", wait_time=5
-        )
+        search_box = self.browser.find_by_xpath(f"//*[@class='{search_box_class}']//input", wait_time=5)
         for _ in search_box.first.type(value, slowly=True):
             pass
 
         # wait for "searching" to disappear
         self.browser.is_element_not_present_by_css(".loading-results", wait_time=5)
+        return search_box
+
+    def fill_select2_field(self, field_name, value):
+        """
+        Helper function to fill a Select2 single selection field on add/edit forms.
+        """
+        search_box = self._fill_select2_field(field_name, value)
         search_box.first.type(Keys.ENTER)
+
+    def fill_filters_select2_field(self, field_name, value):
+        """
+        Helper function to fill a Select2 single selection field on filters modals.
+        """
+        self._fill_select2_field(field_name, value, search_box_class="select2-search select2-search--inline")
+        self.browser.find_by_xpath(f"//li[@class='select2-results__option' and text()='{value}']").click()
 
     def fill_select2_multiselect_field(self, field_name, value):
         """
