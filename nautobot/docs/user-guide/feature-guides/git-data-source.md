@@ -310,7 +310,7 @@ For more information for the Golden Configuration specific data sources, navigat
 ## Common Issues and Troubleshooting
 
 - Repository is linked, but data is not properly loaded into Nautobot.
-    - Validate the root directory is set to the proper name.
+    - Validate the path in the repository is correct for each data type:
 
 |Name|Path|
 |:--|:--|
