@@ -117,7 +117,6 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperation
         # Verify job output
         print("".join(self.browser.execute_script("return document.getElementById('main-content').outerHTML;").split()))
         self.assertIsBulkDeleteJob()
-        print("".join(self.browser.execute_script("return document.getElementById('main-content').outerHTML;").split()))
         self.assertJobStatusIsCompleted()
 
         self._go_to_devices_list()
