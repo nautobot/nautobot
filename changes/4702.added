@@ -1,1 +1,1 @@
-Added Graphql as a Git data source provider
+Added support for loading GraphQL queries from a Git repository.
