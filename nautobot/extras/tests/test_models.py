@@ -18,6 +18,7 @@ from django.test import override_settings
 from django.test.utils import isolate_apps
 from django.utils.timezone import get_default_timezone, now
 from django_celery_beat.tzcrontab import TzAwareCrontab
+from git import GitCommandError
 from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
 import time_machine
 
@@ -1080,7 +1081,7 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
         try:
             specified_path = tempfile.mkdtemp()
             self.tempdir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
-            create_and_populate_git_repository(self.tempdir.name)
+            create_and_populate_git_repository(self.tempdir.name, divergent_branch="divergent-branch")
             self.repo_slug = "new_git_repo"
             self.repo = GitRepository(
                 name="New Git Repository",
@@ -1134,6 +1135,16 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
                 # Temp directory is cleaned up after the context manager exits
                 self.assertFalse(os.path.exists(path))
 
+            with self.subTest("Clone a repository with divergent branch provided"):
+                with self.repo.clone_to_directory_context(path=specified_path, branch="divergent-branch") as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema2.json"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
             with self.subTest("Clone a repository with the head argument provided"):
                 with self.repo.clone_to_directory_context(path=specified_path, head="valid-files") as path:
                     # assert that the temporary directory was created in the expected location i.e. /tmp/
@@ -1165,7 +1176,7 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
                 self.assertFalse(os.path.exists(path))
 
             with self.subTest("Clone a shallow repository with depth and invalid head arguments provided"):
-                with self.assertRaises(Exception):
+                with self.assertRaisesRegex(GitCommandError, "malformed object name valid-files"):
                     # Shallow copy a repo should only have the latest commit
                     with self.repo.clone_to_directory_context(path=specified_path, depth=1, head="valid-files") as path:
                         pass
@@ -1180,12 +1191,25 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
                 # Temp directory is cleaned up after the context manager exits
                 self.assertFalse(os.path.exists(path))
 
-            with self.subTest("Assert an Exception is raised when an invalid commit hash is provided"):
-                with self.assertRaises(Exception):
+            with self.subTest("Clone a shallow repository with depth and divergent branch arguments provided"):
+                with self.repo.clone_to_directory_context(
+                    path=specified_path, depth=1, branch="divergent-branch"
+                ) as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                    self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Assert a GitCommandError is raised when an invalid commit hash is provided"):
+                with self.assertRaisesRegex(GitCommandError, "malformed object name non-existent"):
                     with self.repo.clone_to_directory_context(path=specified_path, head="non-existent") as path:
                         pass
+
             with self.subTest("Assert a value error is raised when branch and head are both provided"):
-                with self.assertRaises(ValueError):
+                with self.assertRaisesRegex(ValueError, "Cannot specify both branch and head"):
                     with self.repo.clone_to_directory_context(branch="main", head="valid-files") as path:
                         pass
         finally:
@@ -1197,7 +1221,7 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
         try:
             specified_path = tempfile.mkdtemp()
             self.tempdir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
-            create_and_populate_git_repository(self.tempdir.name)
+            create_and_populate_git_repository(self.tempdir.name, divergent_branch="divergent-branch")
             self.repo_slug = "new_git_repo"
             self.repo = GitRepository(
                 name="New Git Repository",
@@ -1251,6 +1275,16 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
                 self.repo.cleanup_cloned_directory(path)
                 self.assertFalse(os.path.exists(path))
 
+            with self.subTest("Clone a repository with divergent branch provided"):
+                path = self.repo.clone_to_directory(path=specified_path, branch="divergent-branch")
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas"))
+                self.assertTrue(os.path.exists(path + "/config_contexts"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
             with self.subTest("Clone a repository with the head argument provided"):
                 path = self.repo.clone_to_directory(path=specified_path, head="valid-files")
                 # assert that the temporary directory was created in the expected location i.e. /tmp/
@@ -1282,7 +1316,7 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
                 self.assertFalse(os.path.exists(path))
 
             with self.subTest("Clone a shallow repository with depth and invalid head arguments provided"):
-                with self.assertRaises(Exception):
+                with self.assertRaisesRegex(GitCommandError, "malformed object name valid-files"):
                     # Shallow copy a repo should only have the latest commit
                     path = self.repo.clone_to_directory(path=specified_path, depth=1, head="valid-files")
                     self.repo.cleanup_cloned_directory(path)
@@ -1298,12 +1332,22 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
                 self.repo.cleanup_cloned_directory(path)
                 self.assertFalse(os.path.exists(path))
 
-            with self.subTest("Assert an Exception is raised when an invalid commit hash is provided"):
-                with self.assertRaises(Exception):
+            with self.subTest("Clone a shallow repository with depth and divergent branch arguments provided"):
+                path = self.repo.clone_to_directory(path=specified_path, depth=1, branch="divergent-branch")
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Assert a GitCommandError is raised when an invalid commit hash is provided"):
+                with self.assertRaisesRegex(GitCommandError, "malformed object name non-existent"):
                     path = self.repo.clone_to_directory(path=specified_path, head="non-existent")
 
             with self.subTest("Assert a ValuError is raised when branch and head are both provided"):
-                with self.assertRaises(Exception):
+                with self.assertRaisesRegex(ValueError, "Cannot specify both branch and head"):
                     path = self.repo.clone_to_directory(branch="main", head="valid-files")
         finally:
             shutil.rmtree(specified_path, ignore_errors=True)

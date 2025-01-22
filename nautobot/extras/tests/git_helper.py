@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 SOURCE_DIR = os.path.join(os.path.dirname(__file__), "git_data")
 
 
-def create_and_populate_git_repository(target_path):
+def create_and_populate_git_repository(target_path, divergent_branch=None):
     """
     Create a Git repository in `target_path` and populate it with commits and tags based on contents of `SOURCE_DIR`.
 
@@ -68,6 +68,12 @@ def create_and_populate_git_repository(target_path):
         repo.index.commit(dirname)
         # Directory "01-valid-files" --> tag "valid-files" so that we won't break tests if we renumber the directories
         repo.create_tag(dirname[3:], message=f"Tag based on {dirname} files")
+
+    if divergent_branch:
+        repo.create_head(divergent_branch)
+        repo.head.reference = repo.heads[divergent_branch]
+        repo.head.reset(index=True, working_tree=True)
+        repo.create_tag(f"{divergent_branch}", message=f"Tag for divergent branch {divergent_branch}")
 
 
 if __name__ == "__main__":
