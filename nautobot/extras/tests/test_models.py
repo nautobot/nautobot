@@ -1180,14 +1180,6 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
                 # Temp directory is cleaned up after the context manager exits
                 self.assertFalse(os.path.exists(path))
 
-            with self.subTest("Clone a shallow repository with depth and invalid branch arguments provided"):
-                with self.assertRaises(Exception):
-                    # Shallow copy a repo should only have the latest commit
-                    with self.repo.clone_to_directory_context(
-                        path=specified_path, depth=1, branch="empty-repo"
-                    ) as path:
-                        pass
-
             with self.subTest("Assert an Exception is raised when an invalid commit hash is provided"):
                 with self.assertRaises(Exception):
                     with self.repo.clone_to_directory_context(path=specified_path, head="non-existent") as path:
@@ -1292,10 +1284,12 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
             with self.subTest("Clone a shallow repository with depth and invalid head arguments provided"):
                 with self.assertRaises(Exception):
                     # Shallow copy a repo should only have the latest commit
-                    self.repo.clone_to_directory_context(path=specified_path, depth=1, head="valid-files")
+                    path = self.repo.clone_to_directory(path=specified_path, depth=1, head="valid-files")
+                    self.repo.cleanup_cloned_directory(path)
+                    self.assertFalse(os.path.exists(path))
 
             with self.subTest("Clone a shallow repository with depth and valid branch arguments provided"):
-                path = self.repo.clone_to_directory_context(path=specified_path, depth=1, branch="main")
+                path = self.repo.clone_to_directory(path=specified_path, depth=1, branch="main")
                 # assert that the temporary directory was created in the expected location i.e. /tmp/
                 self.assertTrue(path.startswith(specified_path))
                 self.assertTrue(os.path.exists(path))
@@ -1303,11 +1297,6 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
                 self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
                 self.repo.cleanup_cloned_directory(path)
                 self.assertFalse(os.path.exists(path))
-
-            with self.subTest("Clone a shallow repository with depth and invalid branch arguments provided"):
-                with self.assertRaises(Exception):
-                    # Shallow copy a repo should only have the latest commit
-                    self.repo.clone_to_directory_context(path=specified_path, depth=1, branch="empty-repo")
 
             with self.subTest("Assert an Exception is raised when an invalid commit hash is provided"):
                 with self.assertRaises(Exception):
