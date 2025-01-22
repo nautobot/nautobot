@@ -193,6 +193,7 @@ class GitRepository(PrimaryModel):
         if branch and head:
             raise ValueError("Cannot specify both branch and head")
 
+        path_name = None
         try:
             path_name = self.clone_to_directory(path=path, branch=branch, head=head, depth=depth)
             yield path_name
