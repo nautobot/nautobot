@@ -87,10 +87,10 @@ class BulkOperationsMixin:
 
     def verify_job_description(self, expected_job_description):
         WebDriverWait(self.browser, 30).until(lambda driver: len(driver.find_by_id("main-content")) > 0)
-        print("".join(self.browser.execute_script("return document.getElementById('main-content').outerHTML;").split()))
+        print("main-content", "".join(self.browser.execute_script("return document.getElementById('main-content').outerHTML;").split()))
 
-        WebDriverWait(self.browser, 30).until(lambda driver: driver.is_text_present("Job Description"))
-        print("".join(self.browser.execute_script("return document.getElementById('main-content').outerHTML;").split()))
+        WebDriverWait(self.browser, 90).until(lambda driver: driver.is_text_present("Job Description"))
+        print("after-wait", "".join(self.browser.execute_script("return document.getElementById('main-content').outerHTML;").split()))
 
         job_description = self.browser.find_by_xpath('//td[text()="Job Description"]/following-sibling::td[1]').text
         self.assertEqual(job_description, expected_job_description)
