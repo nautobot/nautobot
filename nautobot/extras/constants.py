@@ -11,6 +11,7 @@ EXTRAS_FEATURES = [
     "dynamic_groups",
     "export_template_owners",
     "export_templates",
+    "graphql_query_owners",
     "graphql",
     "job_results",  # No longer used
     "locations",

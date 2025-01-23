@@ -72,6 +72,15 @@ class NaturalKeyTestCase(BaseModelTest):
         dt = DeviceType.objects.first()
         self.assertEqual(dt.natural_key(), [dt.manufacturer.name, dt.model])
 
+    def test_natural_key_with_proxy_model(self):
+        """Test that natural_key_field_lookups function returns the same value as its base class."""
+
+        class ProxyManufacturer(Manufacturer):
+            class Meta:
+                proxy = True
+
+        self.assertEqual(ProxyManufacturer.natural_key_field_lookups, Manufacturer.natural_key_field_lookups)
+
     @skip("Composite keys aren't being supported at this time")
     def test_composite_key(self):
         """Test the composite_key default implementation with some representative models."""

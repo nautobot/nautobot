@@ -680,6 +680,21 @@ class GraphQLQuery(
     SavedViewMixin,
     BaseModel,
 ):
+    # A Graphql Query *may* be owned by another model, such as a GitRepository, or it may be un-owned
+    owner_content_type = models.ForeignKey(
+        to=ContentType,
+        on_delete=models.CASCADE,
+        limit_choices_to=FeatureQuery("graphql_query_owners"),
+        default=None,
+        null=True,
+        blank=True,
+        related_name="graphql_queries",
+    )
+    owner_object_id = models.UUIDField(default=None, null=True, blank=True)
+    owner = GenericForeignKey(
+        ct_field="owner_content_type",
+        fk_field="owner_object_id",
+    )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     query = models.TextField()
     variables = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
