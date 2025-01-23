@@ -227,7 +227,7 @@ class RackViewSet(NautobotModelViewSet):
                 rack_units = serializers.RackUnitSerializer(page, many=True, context={"request": request})
                 return self.get_paginated_response(rack_units.data)
 
-        # Render and return the elevation as an SVG drawing with the correct content type
+        # Render and return the elevation as an SVG drawing or CSV file with the correct content type
         drawing = rack.get_elevation(
             fileformat=data["render"],
             face=data["face"],
