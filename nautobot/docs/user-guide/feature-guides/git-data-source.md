@@ -19,6 +19,7 @@ The feature uses the concept of a `provides` field to identify the provided data
 |[Jobs](../platform-functionality/jobs/index.md)|A way for users to execute custom logic on demand from within the Nautobot UI, to accomplish various Nautobot data creation, modification, and validation tasks.|
 |[Config Contexts](../core-data-model/extras/configcontext.md)|Config contexts can be used to provide additional data that you can't natively store in Nautobot.|
 |[Config Context Schemas](../core-data-model/extras/configcontextschema.md)|Schemas enforce data validation on config contexts.|
+|[GraphQL queries](../feature-guides/graphql.md)|GraphQL reduces the complexity of performing multiple API calls|
 
 ### Examples of Apps Defining Additional Providers
 
@@ -282,6 +283,19 @@ config_context_schemas
 ├── schema_2.json
 ```
 
+### GraphQL Queries
+
+See also the [GraphQL feature guide](../feature-guides/graphql.md).
+
+GraphQL queries can be used to reduce the complexity of performing multiple API calls while also correlating results by empowering the user to create their own query that provides the user exactly what they want and nothing that they don't, in a single API call.
+
+```no-highlight
+▶ tree graphql_queries
+graphql_queries
+├── query1.gql
+├── query2.gql
+```
+
 ## Additional Git Data Sources
 
 As seen in [Fill out Repository Details](#fill-out-repository-details), the standard installation of Nautobot will come natively with export templates, jobs, and config contexts.  Additional data sources can be incorporated using the Nautobot App system.  For example, the [nautobot-golden-config](https://github.com/nautobot/nautobot-app-golden-config) App implements four additional data sources.
@@ -304,6 +318,7 @@ For more information for the Golden Configuration specific data sources, navigat
 |Jobs|`jobs`|
 |Config Contexts|`config_contexts`|
 |Config Context Schemas|`config_context_schemas`|
+|GraphQL Queries|`graphql_queries`|
 
 - Synchronization Status Failures.
     - Validate branch is correct and exists in the remote repository.

@@ -30,6 +30,7 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     ExportTemplate,
     GitRepository,
+    GraphQLQuery,
     Job,
     JobButton,
     JobHook,
@@ -197,6 +198,15 @@ class GitTest(TransactionTestCase):
         )
         self.assertIsNotNone(export_template_vlan)
 
+    def assert_graphql_query_exists(self, name="device_names.gql"):
+        """Helper function to assert Graphql query exists."""
+        graphql_query = GraphQLQuery.objects.get(
+            name=name,
+            owner_object_id=self.repo.pk,
+            owner_content_type=ContentType.objects.get_for_model(GitRepository),
+        )
+        self.assertIsNotNone(graphql_query)
+
     def assert_job_exists(self, name="MyJob", installed=True):
         """Helper function to assert JobModel and registered Job exist."""
         # Is it registered correctly in the database?
@@ -348,6 +358,10 @@ class GitTest(TransactionTestCase):
                 # Case when ContentType.model != ContentType.name, template was added and deleted during sync (#570)
                 self.assert_export_template_vlan_exists("template.j2")
 
+                # Make sure Graphgl queries were loaded
+                self.assert_graphql_query_exists("device_names")
+                self.assert_graphql_query_exists("device_interfaces")
+
                 # Make sure Jobs were successfully loaded from file and registered as JobModels
                 self.assert_job_exists(name="MyJob")
                 self.assert_job_exists(name="MyJobButtonReceiver")
@@ -439,6 +453,7 @@ class GitTest(TransactionTestCase):
                 self.assertFalse(ConfigContextSchema.objects.filter(owner_object_id=self.repo.id).exists())
                 self.assertFalse(ConfigContext.objects.filter(owner_object_id=self.repo.id).exists())
                 self.assertFalse(ExportTemplate.objects.filter(owner_object_id=self.repo.id).exists())
+                self.assertFalse(GraphQLQuery.objects.filter(owner_object_id=self.repo.id).exists())
                 self.assertFalse(Job.objects.filter(module_name__startswith=f"{self.repo.slug}.").exists())
                 device = Device.objects.get(name=self.device.name)
                 self.assertIsNone(device.local_config_context_data)
@@ -505,6 +520,11 @@ class GitTest(TransactionTestCase):
                         grouping="jobs",
                         message__contains="Error in loading Jobs from Git repository: ",
                     )
+                    failure_logs.get(
+                        grouping="graphql queries",
+                        message__contains="Error processing GraphQL query file 'bad_device_names.gql': Syntax Error GraphQL (4:5) Expected Name, found }",
+                    )
+
                 except (AssertionError, JobLogEntry.DoesNotExist):
                     for log in log_entries:
                         print(log.message)
@@ -630,6 +650,8 @@ class GitTest(TransactionTestCase):
                 self.assert_export_template_device("template.j2")
                 self.assert_export_template_html_exist("template2.html")
                 self.assert_export_template_vlan_exists("template.j2")
+                self.assert_graphql_query_exists(name="device_names")
+                self.assert_graphql_query_exists(name="device_interfaces")
                 self.assert_job_exists(name="MyJob")
                 self.assert_job_exists(name="MyJobButtonReceiver")
                 self.assert_job_exists(name="MyJobHookReceiver")
@@ -669,6 +691,8 @@ class GitTest(TransactionTestCase):
                     self.assert_export_template_device("template.j2")
                     self.assert_export_template_html_exist("template2.html")
                     self.assert_export_template_vlan_exists("template.j2")
+                    self.assert_graphql_query_exists("device_names")
+                    self.assert_graphql_query_exists("device_interfaces")
                     self.assert_job_exists(name="MyJob")
                     self.assert_job_exists(name="MyJobButtonReceiver")
                     self.assert_job_exists(name="MyJobHookReceiver")
@@ -711,6 +735,8 @@ class GitTest(TransactionTestCase):
                     log_entries.get(message__contains="Addition - `export_templates/dcim/device/template.j2`")
                     log_entries.get(message__contains="Addition - `export_templates/dcim/device/template2.html`")
                     log_entries.get(message__contains="Addition - `export_templates/ipam/vlan/template.j2`")
+                    log_entries.get(message__contains="Addition - `graphql_queries/device_interfaces.gql`")
+                    log_entries.get(message__contains="Addition - `graphql_queries/device_names.gql`")
                     log_entries.get(message__contains="Addition - `jobs/__init__.py`")
                     log_entries.get(message__contains="Addition - `jobs/my_job.py`")
                 except JobLogEntry.DoesNotExist:
@@ -721,6 +747,7 @@ class GitTest(TransactionTestCase):
                 self.assertFalse(ConfigContextSchema.objects.filter(owner_object_id=self.repo.pk).exists())
                 self.assertFalse(ConfigContext.objects.filter(owner_object_id=self.repo.pk).exists())
                 self.assertFalse(ExportTemplate.objects.filter(owner_object_id=self.repo.pk).exists())
+                self.assertFalse(GraphQLQuery.objects.filter(owner_object_id=self.repo.pk).exists())
                 self.assertFalse(Job.objects.filter(module_name__startswith=self.repo.slug).exists())
 
     # TODO: test dry-run against a branch name

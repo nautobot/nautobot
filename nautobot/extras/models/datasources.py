@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 @extras_features(
     "config_context_owners",
     "export_template_owners",
+    "graphql_query_owners",
     "graphql",
     "job_results",
     "webhooks",
