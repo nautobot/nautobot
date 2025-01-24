@@ -70,6 +70,14 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperation
         self.fill_select2_multiselect_field("content_types", "dcim | device")
         self.click_edit_form_create_button()
 
+        # Create device for test
+        self._create_device("Test Device Integration Test 1")
+        self._create_device("Test Device Integration Test 2")
+        self._create_device("Test Device Integration Test 3", location="Test Location 2")
+        self._create_device("Test Device Integration Test 4", location="Test Location 2")
+
+        self._go_to_devices_list()
+
     def _create_device(self, name, location="Test Location 1"):
         self.click_navbar_entry("Devices", "Devices")
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:device_list"))
@@ -91,8 +99,6 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperation
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:device_list"))
 
     def test_bulk_delete_require_selection(self):
-        self._go_to_devices_list()
-
         # Click "delete selected" without selecting anything
         self.click_bulk_delete()
 
@@ -100,52 +106,52 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperation
         self.assertTrue(self.browser.is_text_present("No devices were selected for deletion.", wait_time=5))
 
     def test_bulk_delete_all_devices(self):
-        # Create device for test
-        self._create_device("Test Device Integration Test 1")
-        self._create_device("Test Device Integration Test 2")
-        self._go_to_devices_list()
-
         # Select all devices and delete them
         self.select_all_items()
         self.click_bulk_delete()
+
+        self.assertBulkDeleteConfirmMessageIsValid(4)
         self.confirm_bulk_delete_operation()
 
         # Verify job output
         self.assertIsBulkDeleteJob()
-        job_status = self.wait_for_job_result()
-
-        self.assertEqual(job_status, "Completed")
+        self.assertJobStatusIsCompleted()
 
         self._go_to_devices_list()
         self.assertEqual(self.objects_list_visible_items, 0)
 
     def test_bulk_delete_one_device(self):
-        # Create device for test
-        self._create_device("Test Device Integration Test 1")
-        self._create_device("Test Device Integration Test 2")
-        self._go_to_devices_list()
-
         # Select one device and delete it
         self.select_one_item()
         self.click_bulk_delete()
-        self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').click()
+
+        self.assertBulkDeleteConfirmMessageIsValid(1)
+        self.confirm_bulk_delete_operation()
 
         # Verify job output
         self.assertIsBulkDeleteJob()
-        job_status = self.wait_for_job_result()
-
-        self.assertEqual(job_status, "Completed")
+        self.assertJobStatusIsCompleted()
 
         self._go_to_devices_list()
-        self.assertEqual(self.objects_list_visible_items, 1)
+        self.assertEqual(self.objects_list_visible_items, 3)
+
+    def test_bulk_delete_all_from_all_pages_devices(self):
+        # Select all from all pages
+        self.set_per_page()
+        self.select_all_items_from_all_pages()
+        self.click_bulk_delete_all()
+
+        self.assertBulkDeleteConfirmMessageIsValid(4)
+        self.confirm_bulk_delete_operation()
+
+        # Verify job output
+        self.assertIsBulkDeleteJob()
+        self.assertJobStatusIsCompleted()
+
+        self._go_to_devices_list()
+        self.assertEqual(self.objects_list_visible_items, 0)
 
     def test_bulk_delete_all_filtered_devices(self):
-        # Create device for test
-        self._create_device("Test Device Integration Test 1")
-        self._create_device("Test Device Integration Test 2")
-        self._create_device("Test Device Integration Test 3", location="Test Location 2")
-        self._go_to_devices_list()
-
         # Filter devices
         self.apply_filter("location", "Test Location 2")
 
@@ -156,21 +162,12 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperation
 
         # Verify job output
         self.assertIsBulkDeleteJob()
-        job_status = self.wait_for_job_result()
-
-        self.assertEqual(job_status, "Completed")
+        self.assertJobStatusIsCompleted()
 
         self._go_to_devices_list()
         self.assertEqual(self.objects_list_visible_items, 2)
 
     def test_bulk_delete_one_filtered_devices(self):
-        # Create device for test
-        self._create_device("Test Device Integration Test 1")
-        self._create_device("Test Device Integration Test 2")
-        self._create_device("Test Device Integration Test 3", location="Test Location 2")
-        self._create_device("Test Device Integration Test 4", location="Test Location 2")
-        self._go_to_devices_list()
-
         # Filter devices
         self.apply_filter("location", "Test Location 2")
 
@@ -181,9 +178,30 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperation
 
         # Verify job output
         self.assertIsBulkDeleteJob()
-        job_status = self.wait_for_job_result()
-
-        self.assertEqual(job_status, "Completed")
+        self.assertJobStatusIsCompleted()
 
         self._go_to_devices_list()
         self.assertEqual(self.objects_list_visible_items, 3)
+
+    def test_bulk_delete_all_from_all_pages_filtered_devices(self):
+        # Filter devices
+        self.set_per_page()
+        self.apply_filter("location", "Test Location 2")
+
+        # Select all devices and delete them
+        self.select_all_items_from_all_pages()
+        self.click_bulk_delete_all()
+
+        self.assertBulkDeleteConfirmMessageIsValid(2)
+        self.confirm_bulk_delete_operation()
+
+        # Verify job output
+        self.assertIsBulkDeleteJob()
+        self.assertJobStatusIsCompleted()
+
+        self._go_to_devices_list()
+        self.set_per_page(25)  # Set page size back to default
+        self.assertEqual(self.objects_list_visible_items, 2)
+
+        self.apply_filter("location", "Test Location 2")
+        self.assertEqual(self.objects_list_visible_items, 0)
