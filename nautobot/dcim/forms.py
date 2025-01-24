@@ -307,6 +307,19 @@ class LocationTypeFilterForm(NautobotFilterForm):
     content_types = MultipleContentTypeField(feature="locations", choices_as_strings=True, required=False)
 
 
+class LocationTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=LocationType.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    nestable = forms.NullBooleanField(
+        required=False, widget=BulkEditNullBooleanSelect, label="Allow parents/children ?"
+    )
+    content_types = MultipleContentTypeField(feature="locations", required=False, label="Content Type(s)")
+    comments = CommentField(label="Comments", required=False)
+
+    class Meta:
+        nullable_fields = []
+
+
 #
 # Locations
 #
