@@ -28,32 +28,35 @@ class ObjectsListMixin:
     """
 
     def select_all_items(self):
-        self.browser.find_by_xpath('//*[@id="object_list_form"]//input[@class="toggle"]').click()
+        self.browser.find_by_css("#object_list_form input.toggle").click()
 
     def select_one_item(self):
-        self.browser.find_by_xpath('//*[@id="object_list_form"]//input[@name="pk"]').click()
+        self.browser.find_by_css('#object_list_form input[name="pk"]').click()
 
     def set_per_page(self, per_page=1):
         self.browser.visit(f"{self.browser.url}?per_page={per_page}")
 
     def select_all_items_from_all_pages(self):
         self.select_all_items()
-        self.browser.find_by_xpath('//*[@id="select_all"]').click()
+        self.browser.find_by_css("#select_all").click()
 
     def click_bulk_delete(self):
+        self.browser.execute_script(
+            "document.querySelector('#object_list_form button[type=\"submit\"]').scrollIntoView()"
+        )
         self.browser.find_by_xpath(
             '//*[@id="object_list_form"]//button[@type="submit"]/following-sibling::button[1]'
         ).click()
-        self.browser.find_by_xpath('//*[@id="object_list_form"]//button[@name="_delete"]').click()
+        self.browser.find_by_css('#object_list_form button[name="_delete"]').click()
 
     def click_bulk_delete_all(self):
-        self.browser.find_by_xpath('//*[@id="select_all_box"]//button[@name="_delete"]').click()
+        self.click_button('#select_all_box button[name="_delete"]')
 
     def click_bulk_edit(self):
-        self.browser.find_by_xpath('//*[@id="object_list_form"]//button[@type="submit"]').click()
+        self.click_button('#object_list_form button[type="submit"]')
 
     def click_bulk_edit_all(self):
-        self.browser.find_by_xpath('//*[@id="select_all_box"]//button[@name="_edit"]').click()
+        self.click_button('#select_all_box button[name="_edit"]')
 
     @property
     def objects_list_visible_items(self):
@@ -67,15 +70,15 @@ class ObjectsListMixin:
     def apply_filter(self, field, value):
         self.browser.find_by_xpath('//*[@id="id__filterbtn"]').click()
         self.fill_filters_select2_field(field, value)
-        self.browser.find_by_xpath('//*[@id="default-filter"]//button[@type="submit"]').click()
+        self.click_button('#default-filter button[type="submit"]')
 
 
 class BulkOperationsMixin:
     def confirm_bulk_delete_operation(self):
-        self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').click()
+        self.click_button('button[name="_confirm"][type="submit"]')
 
     def submit_bulk_edit_operation(self):
-        self.browser.find_by_xpath("//button[@name='_apply']", wait_time=5).click()
+        self.click_button('button[name="_apply"]')
 
     def wait_for_job_result(self):
         end_statuses = ["Completed", "Failed"]
@@ -86,17 +89,7 @@ class BulkOperationsMixin:
         return self.browser.find_by_id("pending-result-label").text
 
     def verify_job_description(self, expected_job_description):
-        WebDriverWait(self.browser, 30).until(lambda driver: len(driver.find_by_id("main-content")) > 0)
-        print(
-            "main-content",
-            "".join(self.browser.execute_script("return document.getElementById('main-content').outerHTML;").split()),
-        )
-
-        WebDriverWait(self.browser, 90).until(lambda driver: driver.is_text_present("Job Description"))
-        print(
-            "after-wait",
-            "".join(self.browser.execute_script("return document.getElementById('main-content').outerHTML;").split()),
-        )
+        WebDriverWait(self.browser, 30).until(lambda driver: driver.is_text_present("Job Description"))
 
         job_description = self.browser.find_by_xpath('//td[text()="Job Description"]/following-sibling::td[1]').text
         self.assertEqual(job_description, expected_job_description)
@@ -260,3 +253,9 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         # wait for "searching" to disappear
         self.browser.is_element_not_present_by_css(".loading-results", wait_time=5)
         search_box.first.type(Keys.ENTER)
+
+    def click_button(self, query_selector):
+        btn = self.browser.find_by_css(query_selector, wait_time=5)
+        # Button might be visible but on the edge and then impossible to click due to vertical/horizontal scrolls
+        self.browser.execute_script(f"document.querySelector('{query_selector}').scrollIntoView()")
+        btn.click()

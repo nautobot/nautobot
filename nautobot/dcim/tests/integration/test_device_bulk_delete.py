@@ -107,7 +107,6 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperation
 
     def test_bulk_delete_all_devices(self):
         # Select all devices and delete them
-        print("".join(self.browser.execute_script("return document.getElementById('main-content').outerHTML;").split()))
         self.select_all_items()
         self.click_bulk_delete()
 
@@ -115,7 +114,6 @@ class BulkDeleteDeviceTestCase(SeleniumTestCase, ObjectsListMixin, BulkOperation
         self.confirm_bulk_delete_operation()
 
         # Verify job output
-        print("".join(self.browser.execute_script("return document.getElementById('main-content').outerHTML;").split()))
         self.assertIsBulkDeleteJob()
         self.assertJobStatusIsCompleted()
 
