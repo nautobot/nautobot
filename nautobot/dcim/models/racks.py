@@ -1,3 +1,5 @@
+from typing import Literal, Union
+
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
@@ -13,9 +15,15 @@ from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import UtilizationData
-from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
+from nautobot.dcim.choices import (
+    DeviceFaceChoices,
+    RackDimensionUnitChoices,
+    RackElevationDetailRenderChoices,
+    RackTypeChoices,
+    RackWidthChoices,
+)
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT
-from nautobot.dcim.elevations import RackElevationSVG
+from nautobot.dcim.elevations import RackElevationGraphicalOutput
 from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
 
@@ -258,7 +266,7 @@ class Rack(PrimaryModel):
         face=DeviceFaceChoices.FACE_FRONT,
         exclude=None,
         expand_devices=True,
-    ):
+    ) -> list[dict[str, Union[None, int, str]]]:
         """
         Return a list of rack units as dictionaries. Example: {'device': None, 'face': 0, 'id': 48, 'name': 'U48'}
         Each key 'device' is either a Device or None. By default, multi-U devices are repeated for each U they occupy.
@@ -363,8 +371,9 @@ class Rack(PrimaryModel):
                 reserved_units[u] = r
         return reserved_units
 
-    def get_elevation_svg(
+    def get_elevation(
         self,
+        fileformat: Literal[RackElevationDetailRenderChoices.RENDER_CSV, RackElevationDetailRenderChoices.RENDER_SVG],
         face=DeviceFaceChoices.FACE_FRONT,
         user=None,
         unit_width=None,
@@ -375,8 +384,9 @@ class Rack(PrimaryModel):
         display_fullname=True,
     ):
         """
-        Return an SVG of the rack elevation
+        Return an SVG or a CSV of the rack elevation
 
+        :param fileformat: Choice between "csv" and "svg"
         :param face: Enum of [front, rear] representing the desired side of the rack elevation to render
         :param user: User instance to be used for evaluating device view permissions. If None, all devices
             will be included.
@@ -393,12 +403,32 @@ class Rack(PrimaryModel):
         if unit_width is None:
             unit_width = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_WIDTH", fallback=230)
         if unit_height is None:
-            unit_height = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", fallback=22)
-        elevation = RackElevationSVG(
+            unit_height = get_settings_or_config("RACK_ELEVATION_DEFAULT_UNIT_HEIGHT")
+        elevation = RackElevationGraphicalOutput(
             self, user=user, include_images=include_images, base_url=base_url, display_fullname=display_fullname
         )
 
-        return elevation.render(face, unit_width, unit_height, legend_width)
+        if fileformat == RackElevationDetailRenderChoices.RENDER_CSV:
+            return elevation.render_csv(face)
+        elif fileformat == RackElevationDetailRenderChoices.RENDER_SVG:
+            return elevation.render_svg(face, unit_width, unit_height, legend_width)
+        else:
+            raise ValueError("fileformat must be either 'csv' or 'svg")
+
+    def get_elevation_svg(
+        self,
+        face=DeviceFaceChoices.FACE_FRONT,
+        user=None,
+        unit_width=None,
+        unit_height=None,
+        legend_width=RACK_ELEVATION_LEGEND_WIDTH_DEFAULT,
+        include_images=True,
+        base_url=None,
+        display_fullname=True,
+    ):
+        return self.get_elevation(
+            face, user, unit_width, unit_height, legend_width, include_images, base_url, display_fullname
+        )
 
     def get_0u_devices(self):
         return self.devices.filter(position=0)
