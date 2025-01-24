@@ -1,8 +1,8 @@
 # Git Repositories
 
-Some text-based content is more conveniently stored in a separate Git repository rather than internally in the Nautobot database. Such a repository may currently include any or all of the following for Nautobot to consume:
+Some text-based content is more conveniently stored in a separate Git repository rather than internally in the Nautobot database. Nautobot offers the [Git as a Data Source](../feature-guides/git-data-source.md) feature for this use case. Such a repository may currently include any or all of the following for Nautobot to consume:
 
-* Job source files and associated data files,
+* Job source files and associated data files
 * Configuration context data
 * Export templates
 * Additional data types as registered by any installed Apps
@@ -351,3 +351,206 @@ Export templates may be provided as files located in `/export_templates/<groupin
 * The name of a discovered export template will be presented in Nautobot as `<repository name>: <filename>`.
 * The MIME type of a file rendered from a discovered export template will try to match the extension to [`IANA's list`](https://www.iana.org/assignments/media-types/media-types.xhtml). If not detected, it will default to `text/plain`.
 * The file extension of a file rendered from a discovered export template will match that of the template itself (so, in the above example, the extension would be `.json`)
+
+## Manage Git Repositories via the Nautobot REST API
+
+Like other Nautobot features, Git repositories can be managed via [Nautobot's REST API](./rest-api/overview.md). The following is a non-exhaustive list of examples.
+
+### Define a Git Repository to Consume
+
+To use the Nautobot REST API to define a Git repository for Nautobot to consume, issue a `POST` request to the model's *list* endpoint with JSON data pertaining to the object being created. Note that a REST API token is required for all operations; see the [authentication documentation](./rest-api/authentication.md) for more information. Also be sure to set the `Content-Type` HTTP header to `application/json`. As always, it's a good practice to also set the `Accept` HTTP header to include the requested REST API version, so all of these examples will do that too:
+
+```no-highlight
+curl -s -X POST \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=2.4" \
+http://nautobot/api/extras/git-repositories/ \
+--data '{"name": "demo-git-datasource", "provided_contents": ["extras.configcontext", "extras.job", "extras.exporttemplate", "extras.configcontextschema"], "remote_url": "https://github.com/nautobot/demo-git-datasource.git"}' | jq '.'
+```
+
+!!! note
+    The GUI automatically guides the user into issuing a sync or dry run automatically when defining a Git repository for Nautobot to consume, but when using the API it is necessary to issue the sync yourself if you wish to, as described [below](#trigger-a-sync-or-resync-of-a-defined-repository).
+
+### List Existing Repositories
+
+Just like other Nautobot apps and models, it is possible to use the Nautobot REST API to list existing configured repositories by issuing a `GET` request to the model's *list* endpoint. As usual, objects are listed under the response object's `results` parameter:
+
+```no-highlight
+curl -s -X GET \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=2.4" \
+http://nautobot/api/extras/git-repositories/ | jq '.'
+```
+
+### Describe a Specific Existing Repository
+
+If you have the `id` of a specific record from a previous `GET` operation or elsewhere, you can return the specific details for the record with a `GET` request referencing the specific `id`:
+
+```no-highlight
+curl -s -X GET \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=2.4" \
+http://nautobot/api/extras/git-repositories/2ecb8556-db58-466d-8278-860b8fd74627/ | jq '.'
+```
+
+Returns, for example:
+
+```json
+{
+  "id": "2ecb8556-db58-466d-8278-860b8fd74627",
+  "object_type": "extras.gitrepository",
+  "display": "demo-git-datasource",
+  "url": "http://nautobot/api/extras/git-repositories/2ecb8556-db58-466d-8278-860b8fd74627/",
+  "natural_slug": "demo-git-datasource_2ecb",
+  "provided_contents": [
+    "extras.configcontext",
+    "extras.job",
+    "extras.exporttemplate",
+    "extras.configcontextschema"
+  ],
+  "name": "demo-git-datasource",
+  "slug": "demo_git_datasource",
+  "remote_url": "https://github.com/nautobot/demo-git-datasource.git",
+  "branch": "main",
+  "current_head": "939ea1ed854e405b600d70f798804eb2da356231",
+  "secrets_group": null,
+  "created": "2025-01-21T12:17:24.945117Z",
+  "last_updated": "2025-01-21T12:17:30.081417Z",
+  "notes_url": "http://nautobot/api/extras/git-repositories/2ecb8556-db58-466d-8278-860b8fd74627/notes/",
+  "custom_fields": {},
+  "tags": []
+}
+```
+
+!!! note
+    By design and like other secrets in Nautobot, the tokens used for a Git repository are never retrievable via a REST API request.
+
+### Trigger a Sync or Resync of a Defined Repository
+
+As noted previously, a newly defined Git repository will not automatically sync immediately, so if you want it to sync or resync you can issue a `POST` request to the specific `id` followed by `/sync/` like this:
+
+```no-highlight
+curl -s -X POST \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=2.4" \
+http://nautobot/api/extras/git-repositories/2ecb8556-db58-466d-8278-860b8fd74627/sync/
+```
+
+Which returns, for example:
+
+```no-highlight
+{
+  "message": "Repository demo-git-datasource sync job added to queue."
+}
+```
+
+### Query the Data Handled by a Defined Repository
+
+It's even possible to query the API to discover resource types that have been created and managed by a specific repository. For example, this `GET` query on the `jobs` model's *list* endpoint is filtered through a `module_name__isw=demo_git_datasource` [query filter](./rest-api/filtering.md#string-fields) to identify those jobs that were created from the `demo-git-datasource` Git repository:
+
+```no-highlight
+curl -s -X GET \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=2.4" \
+http://nautobot/api/extras/jobs/?module_name__isw=demo_git_datasource. | jq .
+```
+
+Here are the first 20 lines of JSON returned:
+
+```json
+{
+  "count": 5,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": "f10b944f-184d-4b54-bb14-57f139f15ece",
+      "object_type": "extras.job",
+      "display": "Verify Circuit Termination",
+      "url": "http://nautobot/api/extras/jobs/f10b944f-184d-4b54-bb14-57f139f15ece/",
+      "natural_slug": "demo-git-datasource-jobs-data-quality_verifycircuittermination_f10b",
+      "task_queues": [
+        "default"
+      ],
+      "task_queues_override": false,
+      "module_name": "demo_git_datasource.jobs.data_quality",
+      "job_class_name": "VerifyCircuitTermination",
+      "grouping": "Data Quality",
+      "name": "Verify Circuit Termination",
+      "description": "Verify a circuit has termination and an IP address",
+```
+
+Another way to approach the same goal would be to `GET` the full list and filter it through `jq` to identify those same jobs. The output is structured slightly differently but the results are broadly similar:
+
+```no-highlight
+curl -s -X GET \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=2.4" \
+http://nautobot/api/extras/jobs/ | jq '.results[] | select(.natural_slug | startswith("demo-git-datasource"))'
+```
+
+Here are the first 20 lines for that one:
+
+```json
+{
+  "id": "f10b944f-184d-4b54-bb14-57f139f15ece",
+  "object_type": "extras.job",
+  "display": "Verify Circuit Termination",
+  "url": "http://nautobot/api/extras/jobs/f10b944f-184d-4b54-bb14-57f139f15ece/",
+  "natural_slug": "demo-git-datasource-jobs-data-quality_verifycircuittermination_f10b",
+  "task_queues": [
+    "default"
+  ],
+  "task_queues_override": false,
+  "module_name": "demo_git_datasource.jobs.data_quality",
+  "job_class_name": "VerifyCircuitTermination",
+  "grouping": "Data Quality",
+  "name": "Verify Circuit Termination",
+  "description": "Verify a circuit has termination and an IP address",
+  "installed": true,
+  "enabled": false,
+  "is_job_hook_receiver": false,
+  "is_job_button_receiver": false,
+  "has_sensitive_variables": true,
+```
+
+As another example, the API call below filters `Config Contexts` using an `owner_object_id=<id>` query filter and the `id` of the Git repository:
+
+```no-highlight
+curl -s -X GET \
+-H "Authorization: Token $TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json; version=2.4" \
+http://nautobot/api/extras/config-contexts/?owner_object_id=2ecb8556-db58-466d-8278-860b8fd74627 | jq .
+```
+
+Here's the first part of the output:
+
+```json
+{
+  "count": 6,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": "26fbde54-e74a-427e-9545-6dbd1ff57855",
+      "object_type": "extras.configcontext",
+      "display": "[demo-git-datasource] data-models",
+      "url": "http://nautobot/api/extras/config-contexts/26fbde54-e74a-427e-9545-6dbd1ff57855/",
+      "natural_slug": "data-models_26fb",
+      "owner_content_type": "extras.gitrepository",
+      "owner": {
+        "id": "2ecb8556-db58-466d-8278-860b8fd74627",
+        "object_type": "extras.gitrepository",
+        "url": "http://nautobot/api/extras/git-repositories/2ecb8556-db58-466d-8278-860b8fd74627/"
+      },
+      "name": "data-models",
+      "owner_object_id": "2ecb8556-db58-466d-8278-860b8fd74627",
+      "weight": 1000,
+```

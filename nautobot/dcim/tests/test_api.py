@@ -3366,7 +3366,6 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
                 "status": statuses[1].pk,
                 "role": roles[1].pk,
                 "location": locations[1].pk,
-                "capabilities": [],
             },
             {
                 "name": "Controller 3",
@@ -3402,7 +3401,6 @@ class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
                 "name": "ControllerManagedDeviceGroup 2",
                 "controller": controllers[1].pk,
                 "weight": 150,
-                "capabilities": [],
             },
             {
                 "name": "ControllerManagedDeviceGroup 3",
