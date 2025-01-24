@@ -40,6 +40,9 @@ def create_and_populate_git_repository(target_path, divergent_branch=None):
     Note that each commit is fully defined by the files in the appropriate subdirectory; if you want a file to exist
     across multiple separate commits, it must exist in multiple subdirectories. Use of symlinks is encouraged in such
     a scenario.
+
+    You can optionally create and check out a divergent branch from the main branch by passing a branch name as the `divergent_branch`.
+    This will write a commit to the divergent branch and tag it with the branch name with the `-tag` suffix.
     """
     os.makedirs(target_path, exist_ok=True)
     repo = Repo.init(target_path, initial_branch="main")
