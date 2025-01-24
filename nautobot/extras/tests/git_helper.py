@@ -71,9 +71,8 @@ def create_and_populate_git_repository(target_path, divergent_branch=None):
 
     if divergent_branch:
         repo.create_head(divergent_branch)
-        repo.head.reference = repo.heads[divergent_branch]
-        repo.head.reset(index=True, working_tree=True)
-        repo.create_tag(f"{divergent_branch}", message=f"Tag for divergent branch {divergent_branch}")
+        repo.index.commit("divergent-branch")
+        repo.create_tag(f"{divergent_branch}-tag", message=f"Tag for divergent branch {divergent_branch}")
 
 
 if __name__ == "__main__":
