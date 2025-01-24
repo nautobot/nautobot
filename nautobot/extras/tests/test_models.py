@@ -1166,7 +1166,9 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
                 self.assertFalse(os.path.exists(path))
 
             with self.subTest("Clone a shallow repository with depth and valid head arguments provided"):
-                with self.repo.clone_to_directory_context(path=specified_path, depth=1, head="divergent-branch-tag") as path:
+                with self.repo.clone_to_directory_context(
+                    path=specified_path, depth=1, head="divergent-branch-tag"
+                ) as path:
                     # assert that the temporary directory was created in the expected location i.e. /tmp/
                     self.assertTrue(path.startswith(specified_path))
                     self.assertTrue(os.path.exists(path))
