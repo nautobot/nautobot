@@ -107,7 +107,7 @@ class RackElevationDetailRenderChoices(ChoiceSet):
     RENDER_SVG = "svg"
     RENDER_CSV = "csv"
 
-    CHOICES = ((RENDER_JSON, "json"), (RENDER_SVG, "svg"), (RENDER_CSV, "csv"))
+    CHOICES = ((RENDER_JSON, "JSON"), (RENDER_SVG, "SVG"), (RENDER_CSV, "CSV"))
 
 
 #
