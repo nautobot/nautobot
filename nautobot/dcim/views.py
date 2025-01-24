@@ -219,6 +219,7 @@ class LocationTypeUIViewSet(
     view_mixins.ObjectEditViewMixin,
     view_mixins.ObjectDestroyViewMixin,
     view_mixins.ObjectBulkDestroyViewMixin,
+    view_mixins.ObjectBulkUpdateViewMixin,
     view_mixins.ObjectBulkCreateViewMixin,  # 3.0 TODO: remove this mixin as it's no longer used
     view_mixins.ObjectChangeLogViewMixin,
     view_mixins.ObjectNotesViewMixin,
@@ -228,6 +229,7 @@ class LocationTypeUIViewSet(
     filterset_form_class = forms.LocationTypeFilterForm
     table_class = tables.LocationTypeTable
     form_class = forms.LocationTypeForm
+    bulk_update_form_class = forms.LocationTypeBulkEditForm
     serializer_class = serializers.LocationSerializer
 
     object_detail_content = object_detail.ObjectDetailContent(
