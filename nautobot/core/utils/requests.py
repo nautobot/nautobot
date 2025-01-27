@@ -178,9 +178,19 @@ def normalize_querydict(querydict, form_class=None, filterset=None):
                 result[key] = value_list
             elif (
                 form_class is not None
+                and hasattr(form_class, "fields")
                 and key in form_class.fields
                 # ModelMultipleChoiceField is *not* itself a subclass of MultipleChoiceField, thanks Django!
                 and isinstance(form_class.fields[key], (forms.MultipleChoiceField, forms.ModelMultipleChoiceField))
+            ):
+                # Even though there's only a single value in the querydict for this key, the form wants it as a list
+                result[key] = value_list
+            elif (
+                form_class is not None
+                and hasattr(form_class, "base_fields")
+                and key in form_class.base_fields
+                # ModelMultipleChoiceField is *not* itself a subclass of MultipleChoiceField, thanks Django!
+                and isinstance(form_class.base_fields[key], (forms.MultipleChoiceField, forms.ModelMultipleChoiceField))
             ):
                 # Even though there's only a single value in the querydict for this key, the form wants it as a list
                 result[key] = value_list
