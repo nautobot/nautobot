@@ -19,7 +19,9 @@ class LocationBulkOperationsTestCase(BulkOperationsTestCases.BulkOperationsTestC
     model_class = Location
     model_plural = Location._meta.verbose_name_plural
 
-    def create_items(self):
+    def setup_items(self):
+        Location.objects.all().delete()
+
         # Create locations for test
         self.create_location("Test Location Integration Test 1")
         self.create_location("Test Location Integration Test 2")

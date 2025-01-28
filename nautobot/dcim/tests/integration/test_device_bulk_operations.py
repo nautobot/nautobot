@@ -19,7 +19,8 @@ class DeviceBulkOperationsTestCase(BulkOperationsTestCases.BulkOperationsTestCas
     model_class = Device
     model_plural = Device._meta.verbose_name_plural
 
-    def create_items(self):
+    def setup_items(self):
+        Device.objects.all().delete()
         test_uuid = str(uuid.uuid4())
 
         # Create device for test

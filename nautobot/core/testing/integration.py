@@ -293,7 +293,7 @@ class BulkOperationsTestCases:
         def setUp(self):
             super().setUp()
 
-            self.create_items()
+            self.setup_items()
             self.login_as_superuser()
             self.go_to_model_list_page()
 
@@ -306,7 +306,7 @@ class BulkOperationsTestCases:
             self.click_navbar_entry(*self.model_menu_path)
             self.assertEqual(self.browser.url, self.live_server_url + reverse(f"{self.model_base_viewname}_list"))
 
-        def create_items(self):
+        def setup_items(self):
             raise NotImplementedError
 
     class BulkEditTestCase(BaseTestCase, ObjectsListMixin, BulkOperationsMixin):

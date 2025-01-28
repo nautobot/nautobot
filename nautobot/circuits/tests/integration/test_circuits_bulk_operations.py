@@ -19,7 +19,9 @@ class CircuitBulkOperationsTestCase(BulkOperationsTestCases.BulkOperationsTestCa
     model_class = Circuit
     model_plural = Circuit._meta.verbose_name_plural
 
-    def create_items(self):
+    def setup_items(self):
+        Circuit.objects.all().delete()
+
         # Create locations for test
         self.create_circuit()
         self.create_circuit()
