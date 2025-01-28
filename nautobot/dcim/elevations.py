@@ -1,3 +1,8 @@
+import csv
+from dataclasses import dataclass
+import io
+from typing import Literal, Optional
+
 from django.conf import settings
 from django.urls import reverse
 from django.utils.http import urlencode
@@ -7,11 +12,12 @@ from nautobot.core.utils.config import get_settings_or_config
 
 from .choices import DeviceFaceChoices
 from .constants import RACK_ELEVATION_BORDER_WIDTH
+from .models import Device
 
 
-class RackElevationSVG:
+class RackElevationGraphicalOutput:
     """
-    Use this class to render a rack elevation as an SVG image.
+    Use this class to render a rack elevation to a graphical representation
 
     :param rack: A Nautobot Rack instance
     :param user: User instance. If specified, only devices viewable by this user will be fully displayed.
@@ -72,7 +78,7 @@ class RackElevationSVG:
         drawing.defs.add(new_filter)
 
     @staticmethod
-    def _setup_drawing(width, height):
+    def _setup_drawing(width, height) -> svgwrite.Drawing:
         drawing = svgwrite.Drawing(size=(width, height))
 
         # add the stylesheet
@@ -80,11 +86,11 @@ class RackElevationSVG:
             drawing.defs.add(drawing.style(css_file.read()))
 
         # add gradients
-        RackElevationSVG._add_gradient(drawing, "reserved", "#c7c7ff")
-        RackElevationSVG._add_gradient(drawing, "occupied", "#d7d7d7")
-        RackElevationSVG._add_gradient(drawing, "blocked", "#ffc0c0")
-        RackElevationSVG._add_gradient(drawing, "blocked_partial", "#a0a0a0", angle=-45)
-        RackElevationSVG._add_filters(drawing)
+        RackElevationGraphicalOutput._add_gradient(drawing, "reserved", "#c7c7ff")
+        RackElevationGraphicalOutput._add_gradient(drawing, "occupied", "#d7d7d7")
+        RackElevationGraphicalOutput._add_gradient(drawing, "blocked", "#ffc0c0")
+        RackElevationGraphicalOutput._add_gradient(drawing, "blocked_partial", "#a0a0a0", angle=-45)
+        RackElevationGraphicalOutput._add_filters(drawing)
 
         return drawing
 
@@ -217,7 +223,77 @@ class RackElevationSVG:
 
         return elevation
 
-    def render(self, face, unit_width, unit_height, legend_width):
+    def render_csv(self, face: Literal["front", "rear"]) -> str:
+        @dataclass
+        class DeviceCSVRepresentation:
+            name: Optional[int]
+            unit: str
+            device: "Device"
+
+        def _get_face_data(face: Literal["front", "rear"]) -> list[DeviceCSVRepresentation]:
+            # Prepare an empty rack representation
+            rack_positions = [None for x in range(0, self.rack.u_height)]
+
+            # Fill with used rack units
+            for unit in self.rack.get_rack_units(face=face, expand_devices=True):
+                if unit["device"] is None:
+                    rack_positions[unit["id"] - 1] = DeviceCSVRepresentation(name="", unit=unit["name"], device=None)
+
+                else:
+                    rack_positions[unit["id"] - 1] = DeviceCSVRepresentation(
+                        name=unit["device"].name,
+                        unit=unit["name"],
+                        device=unit["device"],
+                    )
+
+            return rack_positions
+
+        def _output_face_to_csv(
+            buffer: io.StringIO, rack_positions: list[DeviceCSVRepresentation], ru_prefix: str = ""
+        ):
+            if self.rack.desc_units:
+                position_iterator = range(self.rack.u_height)
+            else:
+                position_iterator = range(self.rack.u_height - 1, 0, -1)
+
+            for position in position_iterator:
+                this_position = rack_positions[position]
+                if this_position.name is not None:
+                    writer.writerow(
+                        {
+                            "unit": ru_prefix + this_position.unit,
+                            "name": this_position.name,
+                        }
+                    )
+                else:
+                    writer.writerow(
+                        {
+                            "unit": ru_prefix + this_position.unit,
+                            "name": "",
+                        }
+                    )
+
+        front_faces = _get_face_data("front")
+        rear_faces = _get_face_data("rear")
+
+        for front, rear in zip(front_faces, rear_faces):
+            if front.device is not None and front.device.face == "rear" and front.device.device_type.is_full_depth:
+                front.name = f"{front.name} (Rear)"
+            elif rear.device is not None and rear.device.face == "front" and rear.device.device_type.is_full_depth:
+                rear.name = f"{rear.name} (Rear)"
+
+        buf = io.StringIO()
+        writer = csv.DictWriter(buf, fieldnames=["unit", "name"])
+        writer.writeheader()
+
+        _output_face_to_csv(buf, front_faces, "Front")
+        _output_face_to_csv(buf, rear_faces, "Rear")
+
+        # Be kind, rewind
+        buf.seek(0)
+        return buf.read()
+
+    def render_svg(self, face, unit_width, unit_height, legend_width):
         """
         Return an SVG document representing a rack elevation.
         """
@@ -310,3 +386,16 @@ class RackElevationSVG:
         drawing.add(frame)
 
         return drawing
+
+
+class RackElevationSVG(RackElevationGraphicalOutput):
+    "Shim for retrocompatibility with old class name"
+
+    def render(
+        self,
+        face: Literal["front", "back"],
+        unit_width: int,
+        unit_height: int,
+        legend_width: int,
+    ) -> svgwrite.Drawing:
+        return self.render_svg(face, unit_width, unit_height, legend_width)
