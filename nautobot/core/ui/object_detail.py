@@ -1560,49 +1560,6 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
             bettertitle(relationship.get_label(side)),
         )
 
-    def render_relationship_value_helper(self, key, value, context: Context):
-        """
-        This logic is extracted from `relationships_table_rows.html` to be used in the render_value method.
-        """
-        # Get all the values we need to render the relationship value
-        obj = get_obj_from_context(context)
-        relationship, side = key
-        has_many = relationship.has_many(side)
-
-        # We can do value.first()/value here because we are already checking if value is not empty in render_value() method
-        if has_many:
-            url = reverse("extras:relationshipassociation_list")  # redirect url
-            content_type = ContentType.objects.get_for_model(value.first())
-            model_class = content_type.model_class()
-            value_count = value.count()
-            # Render the suffix based on the number of related objects
-            if model_class is not None:
-                if value.count() > 1:
-                    suffix = model_class._meta.verbose_name_plural
-                else:
-                    suffix = model_class._meta.verbose_name
-            else:
-                suffix = str(content_type) + "(s)"
-            return format_html(
-                "<a href={}?relationship={}&{}_id={}>{} {}</a>",
-                url,
-                relationship.key,
-                side,
-                obj.id,
-                value_count,
-                suffix,
-            )
-        else:
-            # If we know for certain that there is only one object at this side the relationship
-            # we can redirect to the object detail page instead.
-            url = value.get_absolute_url()
-            return format_html("<a href={}>{}</a>", url, value)
-
-    def render_value(self, key, value, context: Context):
-        if value:
-            return self.render_relationship_value_helper(key, value, context)
-        return super().render_value(key, value, context)
-
     def queryset_list_url_filter(self, key, value, context: Context):
         """Filter the list URL based on the given relationship key and side."""
         relationship, side = key
