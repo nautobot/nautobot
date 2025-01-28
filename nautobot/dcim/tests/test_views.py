@@ -196,7 +196,6 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewT
 
         cls.bulk_edit_data = {
             "description": "A generic description",
-            "comments": "Test LocationType",
             "add_content_types": [
                 ContentType.objects.get_for_model(CircuitTermination).pk,
             ],
