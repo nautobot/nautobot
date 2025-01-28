@@ -261,15 +261,32 @@ class RelationshipModel(models.Model):
                 remote_model = remote_ct.model_class()
                 if remote_model is not None:
                     if not relationship.symmetric:
-                        query_params = {f"{peer_side}_for_associations__relationship": relationship.pk}
-                        resp[side][relationship] = remote_model.objects.filter(**query_params)
+                        # Get all the associations related to this particular object on the given side.
+                        relationship_associations = RelationshipAssociation.objects.filter(
+                            relationship=relationship, **{f"{side}_id": self.pk}
+                        )
+                        # Gather a list of related objects for this relationship on the opposite side.
+                        pk_list = list(relationship_associations.values_list(f"{peer_side}_id", flat=True))
+                        # Get the related objects for this relationship on the opposite side.
+                        resp[side][relationship] = remote_model.objects.filter(pk__in=pk_list)
                         if not relationship.has_many(peer_side):
                             resp[side][relationship] = resp[side][relationship].first()
                     else:
+                        # Get all the associations related to this particular object on both side.
+                        relationship_associations = RelationshipAssociation.objects.filter(
+                            Q(source_id=self.pk) | Q(destination_id=self.pk), relationship=relationship
+                        )
+                        # Gather a list of related object pks excluding the current object pk/self.pk.
+                        pk_list = []
+                        for association in relationship_associations:
+                            if association.source_id == self.pk:
+                                pk_list.append(association.destination_id)
+                            else:
+                                pk_list.append(association.source_id)
+                        # Get the related objects based on the pks we gathered.
                         resp[RelationshipSideChoices.SIDE_PEER][relationship] = remote_model.objects.filter(
-                            Q(source_for_associations__relationship=relationship.pk)
-                            | Q(destination_for_associations__relationship=relationship.pk)
-                        ).exclude(pk=self.pk)
+                            pk__in=pk_list
+                        )
                         if not relationship.has_many(peer_side):
                             resp[side][relationship] = resp[side][relationship].first()
                 else:

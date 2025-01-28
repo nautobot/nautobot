@@ -1560,6 +1560,36 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
             bettertitle(relationship.get_label(side)),
         )
 
+    def render_relationship_value_helper(self, key, value, context: Context):
+        """
+        This logic is extracted from relationships_table_rows.html to be used in the render_value method.
+        """
+        # Get all the values we need to render the relationship value
+        obj = get_obj_from_context(context)
+        relationship, side = key
+        url = reverse("extras:relationshipassociation_list") # redirect url
+        suffix = ""
+        # We can do value.first() here because we are already checking if value is not empty in render_value() method
+        model_class = ContentType.objects.get_for_model(value.first()).model_class()
+
+        # Render the suffix based on the number of related objects
+        if model_class is not None:
+            if value.count() > 1:
+                suffix = model_class._meta.verbose_name_plural
+            else:
+                suffix = model_class._meta.verbose_name
+        else:
+            suffix = str(value.first().content_type) + "(s)"
+
+        return format_html(
+            "<a href={}?relationship={}&{}_id={}>{} {}</a>", url, relationship.key, side, obj.id, value.count(), suffix
+        )
+
+    def render_value(self, key, value, context: Context):
+        if value:
+            return self.render_relationship_value_helper(key, value, context)
+        return super().render_value(key, value, context)
+
     def queryset_list_url_filter(self, key, value, context: Context):
         """Filter the list URL based on the given relationship key and side."""
         relationship, side = key
