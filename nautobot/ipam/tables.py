@@ -79,7 +79,7 @@ IPADDRESS_LINK = """
 {% elif perms.ipam.add_ipaddress %}
     <a href="\
 {% url 'ipam:ipaddress_add' %}\
-?address={{ record.1 }}\
+?address={{ record.1 }}&namespace={{ object.namespace.pk }}\
 {% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}\
 {% if object.tenant %}&tenant={{ object.tenant.pk }}{% endif %}\
 " class="btn btn-xs btn-success">\
@@ -101,7 +101,7 @@ IPADDRESS_COPY_LINK = """
 {% elif perms.ipam.add_ipaddress %}
     <a href="\
 {% url 'ipam:ipaddress_add' %}\
-?address={{ record.1 }}\
+?address={{ record.1 }}&namespace={{ object.namespace.pk }}\
 {% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}\
 {% if object.tenant %}&tenant={{ object.tenant.pk }}{% endif %}\
 " class="btn btn-xs btn-success">\
