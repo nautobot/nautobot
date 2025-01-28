@@ -28,23 +28,39 @@ class ObjectsListMixin:
     """
 
     def select_all_items(self):
-        self.browser.find_by_xpath('//*[@id="object_list_form"]//input[@class="toggle"]').click()
+        self.browser.find_by_css("#object_list_form input.toggle").click()
 
     def select_one_item(self):
-        self.browser.find_by_xpath('//*[@id="object_list_form"]//input[@name="pk"]').click()
+        self.browser.find_by_css('#object_list_form input[name="pk"]').click()
+
+    def set_per_page(self, per_page=1):
+        self.browser.visit(f"{self.browser.url}?per_page={per_page}")
+
+    def select_all_items_from_all_pages(self):
+        self.select_all_items()
+        self.browser.find_by_css("#select_all").click()
 
     def click_bulk_delete(self):
+        self.browser.execute_script(
+            "document.querySelector('#object_list_form button[type=\"submit\"]').scrollIntoView()"
+        )
         self.browser.find_by_xpath(
             '//*[@id="object_list_form"]//button[@type="submit"]/following-sibling::button[1]'
         ).click()
-        self.browser.find_by_xpath('//*[@id="object_list_form"]//button[@name="_delete"]').click()
+        self.browser.find_by_css('#object_list_form button[name="_delete"]').click()
+
+    def click_bulk_delete_all(self):
+        self.click_button('#select_all_box button[name="_delete"]')
 
     def click_bulk_edit(self):
-        self.browser.find_by_xpath('//*[@id="object_list_form"]//button[@type="submit"]').click()
+        self.click_button('#object_list_form button[type="submit"]')
+
+    def click_bulk_edit_all(self):
+        self.click_button('#select_all_box button[name="_edit"]')
 
     @property
     def objects_list_visible_items(self):
-        objects_table_container = self.browser.find_by_xpath('//*[@id="object_list_form"]/div[1]/div')
+        objects_table_container = self.browser.find_by_xpath('//*[@id="object_list_form"]')
         try:
             objects_table = objects_table_container.find_by_tag("tbody")
             return len(objects_table.find_by_tag("tr"))
@@ -54,15 +70,15 @@ class ObjectsListMixin:
     def apply_filter(self, field, value):
         self.browser.find_by_xpath('//*[@id="id__filterbtn"]').click()
         self.fill_filters_select2_field(field, value)
-        self.browser.find_by_xpath('//*[@id="default-filter"]//button[@type="submit"]').click()
+        self.click_button('#default-filter button[type="submit"]')
 
 
 class BulkOperationsMixin:
     def confirm_bulk_delete_operation(self):
-        self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').click()
+        self.click_button('button[name="_confirm"][type="submit"]')
 
     def submit_bulk_edit_operation(self):
-        self.browser.find_by_xpath("//button[@name='_apply']", wait_time=5).click()
+        self.click_button('button[name="_apply"]')
 
     def wait_for_job_result(self):
         end_statuses = ["Completed", "Failed"]
@@ -73,8 +89,25 @@ class BulkOperationsMixin:
         return self.browser.find_by_id("pending-result-label").text
 
     def verify_job_description(self, expected_job_description):
+        WebDriverWait(self.browser, 30).until(lambda driver: driver.is_text_present("Job Description"))
+
         job_description = self.browser.find_by_xpath('//td[text()="Job Description"]/following-sibling::td[1]').text
         self.assertEqual(job_description, expected_job_description)
+
+    def update_edit_form_value(self, field_name, value, is_select=False):
+        if is_select:
+            self.fill_select2_field(field_name, value)
+        else:
+            self.browser.fill(field_name, value)
+
+    def assertBulkDeleteConfirmMessageIsValid(self, expected_count):
+        self.browser.is_element_present_by_tag("body", wait_time=30)
+
+        button_text = self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').text
+        self.assertIn(f"Delete these {expected_count}", button_text)
+
+        message_text = self.browser.find_by_id("confirm-bulk-deletion").find_by_xpath('//div[@class="panel-body"]').text
+        self.assertIn(f"The following operation will delete {expected_count}", message_text)
 
     def assertIsBulkDeleteJob(self):
         self.verify_job_description("Bulk delete objects.")
@@ -207,7 +240,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         Helper function to fill a Select2 single selection field on filters modals.
         """
         self._fill_select2_field(field_name, value, search_box_class="select2-search select2-search--inline")
-        self.browser.find_by_xpath(f"//li[@class='select2-results__option' and text()='{value}']").click()
+        self.browser.find_by_xpath(f"//li[contains(@class, 'select2-results__option') and text()='{value}']").click()
 
     def fill_select2_multiselect_field(self, field_name, value):
         """
@@ -220,3 +253,328 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         # wait for "searching" to disappear
         self.browser.is_element_not_present_by_css(".loading-results", wait_time=5)
         search_box.first.type(Keys.ENTER)
+
+    def click_button(self, query_selector):
+        btn = self.browser.find_by_css(query_selector, wait_time=5)
+        # Button might be visible but on the edge and then impossible to click due to vertical/horizontal scrolls
+        self.browser.execute_script(f"document.querySelector('{query_selector}').scrollIntoView()")
+        btn.click()
+
+    def login_as_superuser(self):
+        self.user.is_superuser = True
+        self.user.save()
+        self.login(self.user.username, self.password)
+
+
+class BulkOperationsTestCases:
+    """
+    Helper classes that runs all the basic bulk-operations test cases like edit/delete with
+    filtered / not filtered items along with select all option.
+
+    To use this class create required items in setUp method:
+    - at least four entities in two different groups,
+    - provide field for filtering to distinguish between above two groups
+    - provide expected counts (if different from default)
+    - set edit field and value
+    """
+
+    class BaseTestCase(SeleniumTestCase):
+        model_menu_path = (None, None)
+        model_base_viewname = ""
+        model_edit_data = {}
+        model_filter_by = {}
+        model_class = None
+        model_plural = None
+        model_expected_counts = {
+            "all": 5,
+            "filtered": 2,
+        }
+
+        def setUp(self):
+            super().setUp()
+
+            self.setup_items()
+            self.login_as_superuser()
+            self.go_to_model_list_page()
+
+        def tearDown(self):
+            # breakpoint()
+            self.logout()
+            super().tearDown()
+
+        def go_to_model_list_page(self):
+            self.click_navbar_entry(*self.model_menu_path)
+            self.assertEqual(self.browser.url, self.live_server_url + reverse(f"{self.model_base_viewname}_list"))
+
+        def setup_items(self):
+            raise NotImplementedError
+
+    class BulkEditTestCase(BaseTestCase, ObjectsListMixin, BulkOperationsMixin):
+        def test_bulk_edit_require_selection(self):
+            # Click "edit selected" without selecting anything
+            self.click_bulk_edit()
+
+            self.assertEqual(self.browser.url, self.live_server_url + reverse(f"{self.model_base_viewname}_list"))
+            self.assertTrue(self.browser.is_text_present(f"No {self.model_plural} were selected", wait_time=5))
+
+        def test_bulk_edit_all_items(self):
+            # Select all items and edit them
+            self.select_all_items()
+            self.click_bulk_edit()
+            self.assertEqual(self.browser.url, self.live_server_url + reverse(f"{self.model_base_viewname}_bulk_edit"))
+
+            # Edit some data and submit the form
+            for field_name, field_value in self.model_edit_data.items():
+                self.update_edit_form_value(field_name, field_value)
+            self.submit_bulk_edit_operation()
+
+            # Verify job output
+            self.assertIsBulkEditJob()
+            self.assertJobStatusIsCompleted()
+
+            # Assert that data was changed
+            found_items = self.model_class.objects.filter(**self.model_edit_data).count()
+            self.assertEqual(found_items, self.model_expected_counts["all"])
+
+        def test_bulk_edit_one_item(self):
+            # Select one filtered item
+            self.select_one_item()
+            self.click_bulk_edit()
+            self.assertEqual(self.browser.url, self.live_server_url + reverse(f"{self.model_base_viewname}_bulk_edit"))
+
+            # Edit some data and submit the form
+            for field_name, field_value in self.model_edit_data.items():
+                self.update_edit_form_value(field_name, field_value)
+            self.submit_bulk_edit_operation()
+
+            # Verify job output
+            self.assertIsBulkEditJob()
+            self.assertJobStatusIsCompleted()
+
+            # Assert that data was changed
+            found_items = self.model_class.objects.filter(**self.model_edit_data).count()
+            self.assertEqual(found_items, 1)
+
+        def test_bulk_edit_all_items_from_all_pages(self):
+            # Select all from all pages
+            self.set_per_page()
+            self.select_all_items_from_all_pages()
+            self.click_bulk_edit_all()
+            self.assertIn(self.live_server_url + reverse(f"{self.model_base_viewname}_bulk_edit"), self.browser.url)
+
+            # Edit some data and submit the form
+            for field_name, field_value in self.model_edit_data.items():
+                self.update_edit_form_value(field_name, field_value)
+            self.submit_bulk_edit_operation()
+
+            # Verify job output
+            self.assertIsBulkEditJob()
+            self.assertJobStatusIsCompleted()
+
+            # Assert that data was changed
+            found_items = self.model_class.objects.filter(**self.model_edit_data).count()
+            self.assertEqual(found_items, self.model_expected_counts["all"])
+
+        def test_bulk_edit_all_filtered_items(self):
+            # Filter items
+            for field, value in self.model_filter_by.items():
+                self.apply_filter(field, value)
+
+            # Select all filtered items
+            self.select_all_items()
+            self.click_bulk_edit()
+            self.assertIn(
+                self.live_server_url + reverse(f"{self.model_base_viewname}_bulk_edit"),
+                self.browser.url,
+            )
+
+            # Edit some data and submit the form
+            for field_name, field_value in self.model_edit_data.items():
+                self.update_edit_form_value(field_name, field_value)
+            self.submit_bulk_edit_operation()
+
+            # Verify job output
+            self.assertIsBulkEditJob()
+            self.assertJobStatusIsCompleted()
+
+            # Assert that data was changed
+            found_items = self.model_class.objects.filter(**self.model_edit_data).count()
+            self.assertEqual(found_items, self.model_expected_counts["filtered"])
+
+        def test_bulk_edit_one_filtered_item(self):
+            # Filter items
+            for field, value in self.model_filter_by.items():
+                self.apply_filter(field, value)
+
+            # Select one item and edit it
+            self.select_one_item()
+            self.click_bulk_edit()
+            self.assertIn(self.live_server_url + reverse(f"{self.model_base_viewname}_bulk_edit"), self.browser.url)
+
+            # Edit some data and submit the form
+            for field_name, field_value in self.model_edit_data.items():
+                self.update_edit_form_value(field_name, field_value)
+            self.submit_bulk_edit_operation()
+
+            # Verify job output
+            self.assertIsBulkEditJob()
+            self.assertJobStatusIsCompleted()
+
+            # Assert that data was changed
+            found_items = self.model_class.objects.filter(**self.model_edit_data).count()
+            self.assertEqual(found_items, 1)
+
+        def test_bulk_edit_all_filtered_items_from_all_pages(self):
+            # Filter items
+            self.set_per_page()
+            for field, value in self.model_filter_by.items():
+                self.apply_filter(field, value)
+
+            # Select all items and delete them
+            self.select_all_items_from_all_pages()
+            self.click_bulk_edit_all()
+            self.assertIn(self.live_server_url + reverse(f"{self.model_base_viewname}_bulk_edit"), self.browser.url)
+
+            # Edit some data and submit the form
+            for field_name, field_value in self.model_edit_data.items():
+                self.update_edit_form_value(field_name, field_value)
+            self.submit_bulk_edit_operation()
+
+            # Verify job output
+            self.assertIsBulkEditJob()
+            self.assertJobStatusIsCompleted()
+
+            # Assert that data was changed
+            found_items = self.model_class.objects.filter(**self.model_edit_data).count()
+            self.assertEqual(found_items, self.model_expected_counts["filtered"])
+
+    class BulkDeleteTestCase(BaseTestCase, ObjectsListMixin, BulkOperationsMixin):
+        def test_bulk_delete_require_selection(self):
+            # Click "delete selected" without selecting anything
+            self.click_bulk_delete()
+
+            self.assertEqual(self.browser.url, self.live_server_url + reverse(f"{self.model_base_viewname}_list"))
+            self.assertTrue(
+                self.browser.is_text_present(f"No {self.model_plural} were selected for deletion.", wait_time=5)
+            )
+
+        def test_bulk_delete_all_items(self):
+            # Select all items and delete them
+            self.select_all_items()
+            self.click_bulk_delete()
+
+            self.assertEqual(
+                self.browser.url, self.live_server_url + reverse(f"{self.model_base_viewname}_bulk_delete")
+            )
+            self.assertBulkDeleteConfirmMessageIsValid(self.model_expected_counts["all"])
+            self.confirm_bulk_delete_operation()
+
+            # Verify job output
+            self.assertIsBulkDeleteJob()
+            self.assertJobStatusIsCompleted()
+
+            self.go_to_model_list_page()
+            self.assertEqual(self.objects_list_visible_items, 0)
+
+        def test_bulk_delete_one_item(self):
+            # Select one item and delete it
+            self.select_one_item()
+            self.click_bulk_delete()
+
+            self.assertEqual(
+                self.browser.url, self.live_server_url + reverse(f"{self.model_base_viewname}_bulk_delete")
+            )
+            self.assertBulkDeleteConfirmMessageIsValid(1)
+            self.confirm_bulk_delete_operation()
+
+            # Verify job output
+            self.assertIsBulkDeleteJob()
+            self.assertJobStatusIsCompleted()
+
+            self.go_to_model_list_page()
+            self.assertEqual(self.objects_list_visible_items, self.model_expected_counts["all"] - 1)
+
+        def test_bulk_delete_all_items_from_all_pages(self):
+            # Select all from all pages
+            self.set_per_page()
+            self.select_all_items_from_all_pages()
+            self.click_bulk_delete_all()
+
+            self.assertIn(self.live_server_url + reverse(f"{self.model_base_viewname}_bulk_delete"), self.browser.url)
+            self.assertBulkDeleteConfirmMessageIsValid(self.model_expected_counts["all"])
+            self.confirm_bulk_delete_operation()
+
+            # Verify job output
+            self.assertIsBulkDeleteJob()
+            self.assertJobStatusIsCompleted()
+
+            self.go_to_model_list_page()
+            self.assertEqual(self.objects_list_visible_items, 0)
+
+        def test_bulk_delete_all_filtered_items(self):
+            # Filter items
+            for field, value in self.model_filter_by.items():
+                self.apply_filter(field, value)
+
+            # Select all items and delete them
+            self.select_all_items()
+            self.click_bulk_delete()
+            self.assertIn(self.live_server_url + reverse(f"{self.model_base_viewname}_bulk_delete"), self.browser.url)
+            self.confirm_bulk_delete_operation()
+
+            # Verify job output
+            self.assertIsBulkDeleteJob()
+            self.assertJobStatusIsCompleted()
+
+            self.go_to_model_list_page()
+            rest_items_count = self.model_expected_counts["all"] - self.model_expected_counts["filtered"]
+            self.assertEqual(self.objects_list_visible_items, rest_items_count)
+
+        def test_bulk_delete_one_filtered_items(self):
+            # Filter items
+            for field, value in self.model_filter_by.items():
+                self.apply_filter(field, value)
+
+            # Select one item and delete it
+            self.select_one_item()
+            self.click_bulk_delete()
+            self.assertIn(self.live_server_url + reverse(f"{self.model_base_viewname}_bulk_delete"), self.browser.url)
+            self.confirm_bulk_delete_operation()
+
+            # Verify job output
+            self.assertIsBulkDeleteJob()
+            self.assertJobStatusIsCompleted()
+
+            self.go_to_model_list_page()
+            self.assertEqual(self.objects_list_visible_items, self.model_expected_counts["all"] - 1)
+
+        def test_bulk_delete_all_filtered_items_from_all_pages(self):
+            # Filter items
+            self.set_per_page()
+            for field, value in self.model_filter_by.items():
+                self.apply_filter(field, value)
+
+            # Select all items and delete them
+            self.select_all_items_from_all_pages()
+            self.click_bulk_delete_all()
+
+            self.assertIn(self.live_server_url + reverse(f"{self.model_base_viewname}_bulk_delete"), self.browser.url)
+            self.assertBulkDeleteConfirmMessageIsValid(self.model_expected_counts["filtered"])
+            self.confirm_bulk_delete_operation()
+
+            # Verify job output
+            self.assertIsBulkDeleteJob()
+            self.assertJobStatusIsCompleted()
+
+            self.go_to_model_list_page()
+            self.set_per_page(50)  # Set page size back to default
+            rest_items_count = self.model_expected_counts["all"] - self.model_expected_counts["filtered"]
+            self.assertEqual(self.objects_list_visible_items, rest_items_count)
+
+            # Filter again and assert that all items were deleted
+            for field, value in self.model_filter_by.items():
+                self.apply_filter(field, value)
+            self.assertEqual(self.objects_list_visible_items, 0)
+
+    class BulkOperationsTestCase(BulkEditTestCase, BulkDeleteTestCase):
+        pass
