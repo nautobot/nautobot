@@ -40,7 +40,7 @@ from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
-from nautobot.core.views import generic, mixins as view_mixins
+from nautobot.core.views import generic
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
     ObjectBulkDestroyViewMixin,
@@ -213,21 +213,13 @@ class BaseDeviceComponentTemplatesBulkRenameView(generic.BulkRenameView):
 #
 
 
-class LocationTypeUIViewSet(
-    view_mixins.ObjectDetailViewMixin,
-    view_mixins.ObjectListViewMixin,
-    view_mixins.ObjectEditViewMixin,
-    view_mixins.ObjectDestroyViewMixin,
-    view_mixins.ObjectBulkDestroyViewMixin,
-    view_mixins.ObjectBulkCreateViewMixin,  # 3.0 TODO: remove this mixin as it's no longer used
-    view_mixins.ObjectChangeLogViewMixin,
-    view_mixins.ObjectNotesViewMixin,
-):
+class LocationTypeUIViewSet(NautobotUIViewSet):
     queryset = LocationType.objects.all()
     filterset_class = filters.LocationTypeFilterSet
     filterset_form_class = forms.LocationTypeFilterForm
     table_class = tables.LocationTypeTable
     form_class = forms.LocationTypeForm
+    bulk_update_form_class = forms.LocationTypeBulkEditForm
     serializer_class = serializers.LocationSerializer
 
     object_detail_content = object_detail.ObjectDetailContent(
