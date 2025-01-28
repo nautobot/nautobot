@@ -272,11 +272,11 @@ class RelationshipModel(models.Model):
                     else:
                         side_query_params = {
                             f"{peer_side}_for_associations__relationship": relationship,
-                            f"{peer_side}_for_associations__{side}_id":  self.pk,
+                            f"{peer_side}_for_associations__{side}_id": self.pk,
                         }
                         peer_side_query_params = {
                             f"{side}_for_associations__relationship": relationship,
-                            f"{side}_for_associations__{peer_side}_id":  self.pk,
+                            f"{side}_for_associations__{peer_side}_id": self.pk,
                         }
                         # Get the related objects based on the pks we gathered.
                         resp[RelationshipSideChoices.SIDE_PEER][relationship] = remote_model.objects.filter(
