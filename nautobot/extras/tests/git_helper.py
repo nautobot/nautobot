@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 SOURCE_DIR = os.path.join(os.path.dirname(__file__), "git_data")
 
 
-def create_and_populate_git_repository(target_path):
+def create_and_populate_git_repository(target_path, divergent_branch=None):
     """
     Create a Git repository in `target_path` and populate it with commits and tags based on contents of `SOURCE_DIR`.
 
@@ -40,6 +40,9 @@ def create_and_populate_git_repository(target_path):
     Note that each commit is fully defined by the files in the appropriate subdirectory; if you want a file to exist
     across multiple separate commits, it must exist in multiple subdirectories. Use of symlinks is encouraged in such
     a scenario.
+
+    You can optionally create and check out a divergent branch from the main branch by passing a branch name as the `divergent_branch`.
+    This will write a commit to the divergent branch and tag it with the branch name with the `-tag` suffix.
     """
     os.makedirs(target_path, exist_ok=True)
     repo = Repo.init(target_path, initial_branch="main")
@@ -68,6 +71,11 @@ def create_and_populate_git_repository(target_path):
         repo.index.commit(dirname)
         # Directory "01-valid-files" --> tag "valid-files" so that we won't break tests if we renumber the directories
         repo.create_tag(dirname[3:], message=f"Tag based on {dirname} files")
+
+    if divergent_branch:
+        repo.create_head(divergent_branch)
+        repo.index.commit("divergent-branch")
+        repo.create_tag(f"{divergent_branch}-tag", message=f"Tag for divergent branch {divergent_branch}")
 
 
 if __name__ == "__main__":

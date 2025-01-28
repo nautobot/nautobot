@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import os
+import shutil
 import tempfile
 from unittest import expectedFailure, mock
 import uuid
@@ -17,6 +18,7 @@ from django.test import override_settings
 from django.test.utils import isolate_apps
 from django.utils.timezone import get_default_timezone, now
 from django_celery_beat.tzcrontab import TzAwareCrontab
+from git import GitCommandError
 from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
 import time_machine
 
@@ -48,6 +50,7 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
+from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
     ComputedField,
@@ -83,6 +86,7 @@ from nautobot.extras.models import (
 from nautobot.extras.models.statuses import StatusModel
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
+from nautobot.extras.tests.git_helper import create_and_populate_git_repository
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import (
@@ -1071,6 +1075,285 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
         """Confirm that a bare hostname (no domain name) can be used for a remote URL."""
         self.repo.remote_url = "http://some-private-host/example.git"
         self.repo.validated_save()
+
+    def test_clone_to_directory_context_manager(self):
+        """Confirm that the clone_to_directory_context() context manager method works as expected."""
+        try:
+            specified_path = tempfile.mkdtemp()
+            self.tempdir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
+            create_and_populate_git_repository(self.tempdir.name, divergent_branch="divergent-branch")
+            self.repo_slug = "new_git_repo"
+            self.repo = GitRepository(
+                name="New Git Repository",
+                slug=self.repo_slug,
+                remote_url="file://"
+                + self.tempdir.name,  # file:// URLs aren't permitted normally, but very useful here!
+                branch="main",
+                # Provide everything we know we can provide
+                provided_contents=[
+                    entry.content_identifier for entry in get_datasource_contents("extras.gitrepository")
+                ],
+            )
+            self.repo.save()
+            with self.subTest("Clone a repository with no path argument provided"):
+                with self.repo.clone_to_directory_context() as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(tempfile.gettempdir()))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema2.json"))
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with a path argument provided"):
+                with self.repo.clone_to_directory_context(path=specified_path) as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema2.json"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with the branch argument provided"):
+                with self.repo.clone_to_directory_context(path=specified_path, branch="main") as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema2.json"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with non-default branch provided"):
+                with self.repo.clone_to_directory_context(path=specified_path, branch="empty-repo") as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    # empty-repo should contain no files
+                    self.assertFalse(os.path.exists(path + "/config_context_schemas"))
+                    self.assertFalse(os.path.exists(path + "/config_contexts"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with divergent branch provided"):
+                with self.repo.clone_to_directory_context(path=specified_path, branch="divergent-branch") as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema2.json"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with the head argument provided"):
+                with self.repo.clone_to_directory_context(path=specified_path, head="valid-files") as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/schema-1.yaml"))
+                    self.assertTrue(os.path.exists(path + "/config_contexts/context.yaml"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with depth argument provided"):
+                with self.repo.clone_to_directory_context(path=specified_path, depth=1) as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                    self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a shallow repository with depth and valid head arguments provided"):
+                with self.repo.clone_to_directory_context(
+                    path=specified_path, depth=1, head="divergent-branch-tag"
+                ) as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                    self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a shallow repository with depth and invalid head arguments provided"):
+                with self.assertRaisesRegex(GitCommandError, "malformed object name valid-files"):
+                    # Shallow copy a repo should only have the latest commit
+                    with self.repo.clone_to_directory_context(path=specified_path, depth=1, head="valid-files") as path:
+                        pass
+
+            with self.subTest("Clone a shallow repository with depth and valid branch arguments provided"):
+                with self.repo.clone_to_directory_context(path=specified_path, depth=1, branch="main") as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                    self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a shallow repository with depth and divergent branch arguments provided"):
+                with self.repo.clone_to_directory_context(
+                    path=specified_path, depth=1, branch="divergent-branch"
+                ) as path:
+                    # assert that the temporary directory was created in the expected location i.e. /tmp/
+                    self.assertTrue(path.startswith(specified_path))
+                    self.assertTrue(os.path.exists(path))
+                    self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                    self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
+                # Temp directory is cleaned up after the context manager exits
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Assert a GitCommandError is raised when an invalid commit hash is provided"):
+                with self.assertRaisesRegex(GitCommandError, "malformed object name non-existent"):
+                    with self.repo.clone_to_directory_context(path=specified_path, head="non-existent") as path:
+                        pass
+
+            with self.subTest("Assert a value error is raised when branch and head are both provided"):
+                with self.assertRaisesRegex(ValueError, "Cannot specify both branch and head"):
+                    with self.repo.clone_to_directory_context(branch="main", head="valid-files") as path:
+                        pass
+        finally:
+            shutil.rmtree(specified_path, ignore_errors=True)
+            shutil.rmtree(self.tempdir.name, ignore_errors=True)
+
+    def test_clone_to_directory_helper_methods(self):
+        """Confirm that the clone_to_directory()/cleanup_cloned_directory() methods work as expected."""
+        try:
+            specified_path = tempfile.mkdtemp()
+            self.tempdir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
+            create_and_populate_git_repository(self.tempdir.name, divergent_branch="divergent-branch")
+            self.repo_slug = "new_git_repo"
+            self.repo = GitRepository(
+                name="New Git Repository",
+                slug=self.repo_slug,
+                remote_url="file://"
+                + self.tempdir.name,  # file:// URLs aren't permitted normally, but very useful here!
+                branch="main",
+                # Provide everything we know we can provide
+                provided_contents=[
+                    entry.content_identifier for entry in get_datasource_contents("extras.gitrepository")
+                ],
+            )
+            self.repo.save()
+            with self.subTest("Clone a repository with no path argument provided"):
+                path = self.repo.clone_to_directory()
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(tempfile.gettempdir()))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema2.json"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with a path argument provided"):
+                path = self.repo.clone_to_directory(path=specified_path)
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema2.json"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with the branch argument provided"):
+                path = self.repo.clone_to_directory(path=specified_path, branch="main")
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema2.json"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with non-default branch provided"):
+                path = self.repo.clone_to_directory(path=specified_path, branch="empty-repo")
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertFalse(os.path.exists(path + "/config_context_schemas"))
+                self.assertFalse(os.path.exists(path + "/config_contexts"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with divergent branch provided"):
+                path = self.repo.clone_to_directory(path=specified_path, branch="divergent-branch")
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas"))
+                self.assertTrue(os.path.exists(path + "/config_contexts"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with the head argument provided"):
+                path = self.repo.clone_to_directory(path=specified_path, head="valid-files")
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/schema-1.yaml"))
+                self.assertTrue(os.path.exists(path + "/config_contexts/context.yaml"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a repository with depth argument provided"):
+                path = self.repo.clone_to_directory(path=specified_path, depth=1)
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a shallow repository with depth and valid head arguments provided"):
+                path = self.repo.clone_to_directory(path=specified_path, depth=1, head="divergent-branch-tag")
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a shallow repository with depth and invalid head arguments provided"):
+                with self.assertRaisesRegex(GitCommandError, "malformed object name valid-files"):
+                    # Shallow copy a repo should only have the latest commit
+                    path = self.repo.clone_to_directory(path=specified_path, depth=1, head="valid-files")
+                    self.repo.cleanup_cloned_directory(path)
+                    self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a shallow repository with depth and valid branch arguments provided"):
+                path = self.repo.clone_to_directory(path=specified_path, depth=1, branch="main")
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Clone a shallow repository with depth and divergent branch arguments provided"):
+                path = self.repo.clone_to_directory(path=specified_path, depth=1, branch="divergent-branch")
+                # assert that the temporary directory was created in the expected location i.e. /tmp/
+                self.assertTrue(path.startswith(specified_path))
+                self.assertTrue(os.path.exists(path))
+                self.assertTrue(os.path.exists(path + "/config_context_schemas/badschema1.json"))
+                self.assertTrue(os.path.exists(path + "/config_contexts/badcontext2.json"))
+                self.repo.cleanup_cloned_directory(path)
+                self.assertFalse(os.path.exists(path))
+
+            with self.subTest("Assert a GitCommandError is raised when an invalid commit hash is provided"):
+                with self.assertRaisesRegex(GitCommandError, "malformed object name non-existent"):
+                    path = self.repo.clone_to_directory(path=specified_path, head="non-existent")
+
+            with self.subTest("Assert a ValuError is raised when branch and head are both provided"):
+                with self.assertRaisesRegex(ValueError, "Cannot specify both branch and head"):
+                    path = self.repo.clone_to_directory(branch="main", head="valid-files")
+        finally:
+            shutil.rmtree(specified_path, ignore_errors=True)
+            shutil.rmtree(self.tempdir.name, ignore_errors=True)
 
 
 class JobModelTest(ModelTestCases.BaseModelTestCase):
