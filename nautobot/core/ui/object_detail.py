@@ -1562,28 +1562,41 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
 
     def render_relationship_value_helper(self, key, value, context: Context):
         """
-        This logic is extracted from relationships_table_rows.html to be used in the render_value method.
+        This logic is extracted from `relationships_table_rows.html` to be used in the render_value method.
         """
         # Get all the values we need to render the relationship value
         obj = get_obj_from_context(context)
         relationship, side = key
-        url = reverse("extras:relationshipassociation_list") # redirect url
-        suffix = ""
-        # We can do value.first() here because we are already checking if value is not empty in render_value() method
-        model_class = ContentType.objects.get_for_model(value.first()).model_class()
+        has_many = relationship.has_many(side)
 
-        # Render the suffix based on the number of related objects
-        if model_class is not None:
-            if value.count() > 1:
-                suffix = model_class._meta.verbose_name_plural
+        # We can do value.first()/value here because we are already checking if value is not empty in render_value() method
+        if has_many:
+            url = reverse("extras:relationshipassociation_list")  # redirect url
+            content_type = ContentType.objects.get_for_model(value.first())
+            model_class = content_type.model_class()
+            value_count = value.count()
+            # Render the suffix based on the number of related objects
+            if model_class is not None:
+                if value.count() > 1:
+                    suffix = model_class._meta.verbose_name_plural
+                else:
+                    suffix = model_class._meta.verbose_name
             else:
-                suffix = model_class._meta.verbose_name
+                suffix = str(content_type) + "(s)"
+            return format_html(
+                "<a href={}?relationship={}&{}_id={}>{} {}</a>",
+                url,
+                relationship.key,
+                side,
+                obj.id,
+                value_count,
+                suffix,
+            )
         else:
-            suffix = str(value.first().content_type) + "(s)"
-
-        return format_html(
-            "<a href={}?relationship={}&{}_id={}>{} {}</a>", url, relationship.key, side, obj.id, value.count(), suffix
-        )
+            # If we know for certain that there is only one object at this side the relationship
+            # we can redirect to the object detail page instead.
+            url = value.get_absolute_url()
+            return format_html("<a href={}>{}</a>", url, value)
 
     def render_value(self, key, value, context: Context):
         if value:
