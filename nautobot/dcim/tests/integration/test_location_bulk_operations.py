@@ -23,8 +23,9 @@ class LocationBulkOperationsTestCase(BulkOperationsTestCases.BulkOperationsTestC
         # Create locations for test
         self.create_location("Test Location Integration Test 1")
         self.create_location("Test Location Integration Test 2")
-        self.create_location("Test Location Integration Test 3", "External")
+        self.create_location("Test Location Integration Test 3")
         self.create_location("Test Location Integration Test 4", "External")
+        self.create_location("Test Location Integration Test 5", "External")
 
     @staticmethod
     def create_location(location_name, location_type="Internal"):

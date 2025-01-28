@@ -286,7 +286,7 @@ class BulkOperationsTestCases:
         model_class = None
         model_plural = None
         model_expected_counts = {
-            "all": 4,
+            "all": 5,
             "filtered": 2,
         }
 
@@ -315,7 +315,7 @@ class BulkOperationsTestCases:
             self.click_bulk_edit()
 
             self.assertEqual(self.browser.url, self.live_server_url + reverse(f"{self.model_base_viewname}_list"))
-            self.assertTrue(self.browser.is_text_present(f"No {self.model_plural} were selected.", wait_time=5))
+            self.assertTrue(self.browser.is_text_present(f"No {self.model_plural} were selected", wait_time=5))
 
         def test_bulk_edit_all_items(self):
             # Select all items and edit them

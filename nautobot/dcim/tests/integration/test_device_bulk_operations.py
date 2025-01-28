@@ -25,5 +25,6 @@ class DeviceBulkOperationsTestCase(BulkOperationsTestCases.BulkOperationsTestCas
         # Create device for test
         create_test_device("Test Device Integration Test 1", test_uuid=test_uuid)
         create_test_device("Test Device Integration Test 2", test_uuid=test_uuid)
-        create_test_device("Test Device Integration Test 3", "Test Location 2", test_uuid=test_uuid)
+        create_test_device("Test Device Integration Test 3", test_uuid=test_uuid)
         create_test_device("Test Device Integration Test 4", "Test Location 2", test_uuid=test_uuid)
+        create_test_device("Test Device Integration Test 5", "Test Location 2", test_uuid=test_uuid)
