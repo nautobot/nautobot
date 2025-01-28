@@ -34,7 +34,7 @@ class LocationBulkOperationsTestCase(BulkOperationsTestCases.BulkOperationsTestC
             location_type.save()
 
         location_status = Status.objects.get_for_model(Location).first()
-        location, _ = Location.objects.get_or_create(
+        Location.objects.get_or_create(
             name=location_name,
             status=location_status,
             location_type=location_type,
