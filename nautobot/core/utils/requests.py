@@ -9,6 +9,7 @@ from django.http import QueryDict
 import django_filters
 
 from nautobot.core import exceptions
+from nautobot.core.forms import BulkEditForm
 from nautobot.core.utils.filtering import get_filterset_field
 
 
@@ -141,7 +142,7 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
     return final_filter_params
 
 
-def normalize_querydict(querydict, form_class=None, filterset=None):
+def normalize_querydict(querydict, form_class=None, filterset=None, model=None):
     """
     Converts a QueryDict into a standard, mutable dictionary while preserving multiple values as lists.
 
@@ -164,12 +165,26 @@ def normalize_querydict(querydict, form_class=None, filterset=None):
 
     Raises:
         AttributeError: If both `form_class` and `filterset` are provided.
+        AttributeError: Provided `form_class` is a subclass of `BulkEditForm` but `model` is not provided.
+        AttributeError: If form_class value provided is a form instance, not a Class object.
     """
     if form_class and filterset:
         raise AttributeError("Either form_class or filterset_class is to be provided not both")
 
-    result = {}
+    if form_class and issubclass(form_class, BulkEditForm) and model is None:
+        raise AttributeError("model must be provided when form_class is a subclass of BulkEditForm")
 
+    form = None
+    if form_class is not None:
+        try:
+            if issubclass(form_class, BulkEditForm):
+                form = form_class(model=model)
+            else:
+                form = form_class()
+        except TypeError:
+            raise AttributeError("form_class must be a form Class object, not an instance")
+
+    result = {}
     if querydict:
         for key, value_list in querydict.lists():
             if len(value_list) > 1:
@@ -177,11 +192,11 @@ def normalize_querydict(querydict, form_class=None, filterset=None):
                 # TODO: we could check here and de-listify value_list if the form_class field is a single-value one?
                 result[key] = value_list
             elif (
-                form_class is not None
-                and hasattr(form_class(), "fields")
-                and key in form_class().fields
+                form is not None
+                and hasattr(form, "fields")
+                and key in form.fields
                 # ModelMultipleChoiceField is *not* itself a subclass of MultipleChoiceField, thanks Django!
-                and isinstance(form_class().fields[key], (forms.MultipleChoiceField, forms.ModelMultipleChoiceField))
+                and isinstance(form.fields[key], (forms.MultipleChoiceField, forms.ModelMultipleChoiceField))
             ):
                 # Even though there's only a single value in the querydict for this key, the form wants it as a list
                 result[key] = value_list
