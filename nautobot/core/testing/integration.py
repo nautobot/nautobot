@@ -359,7 +359,7 @@ class BulkOperationsTestCases:
             # Select all from all pages
             self.set_per_page()
             self.select_all_items_from_all_pages()
-            self.click_bulk_delete_all()
+            self.click_bulk_edit_all()
             self.assertIn(self.live_server_url + reverse(f"{self.model_base_viewname}_bulk_edit"), self.browser.url)
 
             # Edit some data and submit the form
@@ -447,11 +447,6 @@ class BulkOperationsTestCases:
             # Verify job output
             self.assertIsBulkEditJob()
             self.assertJobStatusIsCompleted()
-
-            self.go_to_model_list_page()
-            self.set_per_page(50)  # Set page size back to default
-            rest_items_count = self.model_expected_counts["all"] - self.model_expected_counts["filtered"]
-            self.assertEqual(self.objects_list_visible_items, rest_items_count)
 
             # Assert that data was changed
             found_items = self.model_class.objects.filter(**self.model_edit_data).count()
