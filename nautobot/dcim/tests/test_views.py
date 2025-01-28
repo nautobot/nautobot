@@ -161,7 +161,7 @@ def create_test_device(name):
     return device
 
 
-class LocationTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = LocationType
     sort_on_field = "nestable"
 
@@ -197,7 +197,7 @@ class LocationTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             "description": "A generic description",
             "comments": "Test LocationType",
-            "content_types": [
+            "add_content_types": [
                 ContentType.objects.get_for_model(CircuitTermination).pk,
             ],
         }
