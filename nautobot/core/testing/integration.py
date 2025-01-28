@@ -368,10 +368,6 @@ class BulkOperationsTestCases:
             self.submit_bulk_edit_operation()
 
             # Verify job output
-            self.assertIsBulkDeleteJob()
-            self.assertJobStatusIsCompleted()
-
-            # Verify job output
             self.assertIsBulkEditJob()
             self.assertJobStatusIsCompleted()
 
