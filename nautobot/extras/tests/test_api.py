@@ -1241,6 +1241,8 @@ class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
         },
     ]
 
+    choices_fields = ["owner_content_type"]
+
     @classmethod
     def setUpTestData(cls):
         cls.graphqlqueries = (

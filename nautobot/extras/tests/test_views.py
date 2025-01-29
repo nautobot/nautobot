@@ -2955,8 +2955,9 @@ class JobButtonRenderingTestCase(TestCase):
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        job_queues = self.job.job_queues.all().values_list("name", flat=True)
-        self.assertIn(f'<input type="hidden" name="_job_queue" value="{job_queues[0]}">', content, content)
+        job_queues = self.job.job_queues.all()
+        _job_queue = job_queues[0]
+        self.assertIn(f'<input type="hidden" name="_job_queue" value="{_job_queue.pk}">', content, content)
 
         self.job.job_queues_override = False
         self.job.save()
@@ -2965,7 +2966,7 @@ class JobButtonRenderingTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn(
-            f'<input type="hidden" name="_job_queue" value="{self.job.default_job_queue.name}">', content, content
+            f'<input type="hidden" name="_job_queue" value="{self.job.default_job_queue.pk}">', content, content
         )
 
     def test_view_object_with_unsafe_text(self):

@@ -1,6 +1,6 @@
 import random
 import string
-from typing import ClassVar, Iterable
+from typing import ClassVar, Iterable, Optional
 
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count, Q, QuerySet
@@ -30,7 +30,7 @@ class FilterTestCases:
     class BaseFilterTestCase(views.TestCase):
         """Base class for testing of FilterSets."""
 
-        queryset: ClassVar[QuerySet]
+        queryset: ClassVar[Optional[QuerySet]] = None  # TODO: declared as Optional only to avoid a breaking change
 
         def get_filterset_test_values(self, field_name, queryset=None):
             """Returns a list of distinct values from the requested queryset field to use in filterset tests.
@@ -73,7 +73,7 @@ class FilterTestCases:
     class FilterTestCase(BaseFilterTestCase):
         """Add common tests for all FilterSets."""
 
-        filterset: ClassVar[type[FilterSet]]
+        filterset: ClassVar[Optional[type[FilterSet]]] = None  # TODO: declared Optional only to avoid breaking change
 
         # filter predicate fields that should be excluded from q test case
         exclude_q_filter_predicates = []
@@ -85,7 +85,7 @@ class FilterTestCases:
         #       ["filter1"],
         #       ["filter2", "field2__name"],
         #   ]
-        generic_filter_tests: ClassVar[Iterable]
+        generic_filter_tests: ClassVar[Iterable] = ()
 
         def setUp(self):
             for attr in ["queryset", "filterset", "generic_filter_tests"]:
@@ -95,34 +95,38 @@ class FilterTestCases:
 
         def get_q_filter(self):
             """Helper method to return q filter."""
+            self.assertIsNotNone(self.filterset)
             return self.filterset.declared_filters["q"].filter_predicates
 
         def test_id(self):
             """Verify that the filterset supports filtering by id with only lookup `__n`."""
+            self.assertIsNotNone(self.filterset)
+
             with self.subTest("Assert `id`"):
                 params = {"id": list(self.queryset.values_list("pk", flat=True)[:2])}
                 expected_queryset = self.queryset.filter(id__in=params["id"])
-                filterset = self.filterset(params, self.queryset)
+                filterset = self.filterset(params, self.queryset)  # pylint: disable=not-callable  # see assertion above
                 self.assertTrue(filterset.is_valid())
                 self.assertQuerysetEqualAndNotEmpty(filterset.qs.order_by("id"), expected_queryset.order_by("id"))
 
             with self.subTest("Assert negate lookup"):
                 params = {"id__n": list(self.queryset.values_list("pk", flat=True)[:2])}
                 expected_queryset = self.queryset.exclude(id__in=params["id__n"])
-                filterset = self.filterset(params, self.queryset)
+                filterset = self.filterset(params, self.queryset)  # pylint: disable=not-callable  # see assertion above
                 self.assertTrue(filterset.is_valid())
                 self.assertQuerysetEqualAndNotEmpty(filterset.qs.order_by("id"), expected_queryset.order_by("id"))
 
             with self.subTest("Assert invalid lookup"):
                 params = {"id__in": list(self.queryset.values_list("pk", flat=True)[:2])}
-                filterset = self.filterset(params, self.queryset)
+                filterset = self.filterset(params, self.queryset)  # pylint: disable=not-callable  # see assertion above
                 self.assertFalse(filterset.is_valid())
                 self.assertIn("Unknown filter field", filterset.errors.as_text())
 
         def test_invalid_filter(self):
             """Verify that the filterset reports as invalid when initialized with an unsupported filter parameter."""
             params = {"ice_cream_flavor": ["chocolate"]}
-            self.assertFalse(self.filterset(params, self.queryset).is_valid())
+            self.assertIsNotNone(self.filterset)
+            self.assertFalse(self.filterset(params, self.queryset).is_valid())  # pylint: disable=not-callable
 
         def test_filters_generic(self):
             """Test all multiple choice filters declared in `self.generic_filter_tests`.
@@ -190,13 +194,16 @@ class FilterTestCases:
                         status=Status.objects.get_for_model(ContactAssociation).last(),
                     )
 
+            if self.generic_filter_tests:
+                self.assertIsNotNone(self.filterset)
+
             for test in self.generic_filter_tests:
                 filter_name = test[0]
                 field_name = test[-1]  # default to filter_name if a second list item was not supplied
                 with self.subTest(f"{self.filterset.__name__} filter {filter_name} ({field_name})"):
                     test_data = self.get_filterset_test_values(field_name)
                     params = {filter_name: test_data}
-                    filterset_result = self.filterset(params, self.queryset).qs
+                    filterset_result = self.filterset(params, self.queryset).qs  # pylint: disable=not-callable
                     qs_result = self.queryset.filter(**{f"{field_name}__in": test_data}).distinct()
                     self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result, ordered=False)
 
@@ -207,6 +214,7 @@ class FilterTestCases:
             This test asserts that `filter=True` matches `self.queryset.filter(field__isnull=False)` and
             that `filter=False` matches `self.queryset.filter(field__isnull=True)`.
             """
+            self.assertIsNotNone(self.filterset)
             for filter_name, filter_object in self.filterset.get_filters().items():
                 if not isinstance(filter_object, RelatedMembershipBooleanFilter):
                     continue
@@ -214,11 +222,11 @@ class FilterTestCases:
                     continue
                 field_name = filter_object.field_name
                 with self.subTest(f"{self.filterset.__name__} RelatedMembershipBooleanFilter {filter_name} (True)"):
-                    filterset_result = self.filterset({filter_name: True}, self.queryset).qs
+                    filterset_result = self.filterset({filter_name: True}, self.queryset).qs  # pylint: disable=not-callable
                     qs_result = self.queryset.filter(**{f"{field_name}__isnull": filter_object.exclude}).distinct()
                     self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
                 with self.subTest(f"{self.filterset.__name__} RelatedMembershipBooleanFilter {filter_name} (False)"):
-                    filterset_result = self.filterset({filter_name: False}, self.queryset).qs
+                    filterset_result = self.filterset({filter_name: False}, self.queryset).qs  # pylint: disable=not-callable
                     qs_result = self.queryset.exclude(**{f"{field_name}__isnull": filter_object.exclude}).distinct()
                     self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
@@ -226,6 +234,8 @@ class FilterTestCases:
             """Test the `tags` filter which should be present on all PrimaryModel filtersets."""
             if not issubclass(self.queryset.model, PrimaryModel):
                 self.skipTest("Not a PrimaryModel")
+
+            self.assertIsNotNone(self.filterset)
 
             # Find an instance with at least two tags (should be common given our factory design)
             for instance in list(self.queryset):
@@ -243,7 +253,7 @@ class FilterTestCases:
                 self.queryset.first().tags.add(test_tags_filter_a, test_tags_filter_b)
                 tags = [test_tags_filter_a, test_tags_filter_b]
             params = {"tags": [tags[0].name, tags[1].pk]}
-            filterset_result = self.filterset(params, self.queryset).qs
+            filterset_result = self.filterset(params, self.queryset).qs  # pylint: disable=not-callable
             # Tags is an AND filter not an OR filter
             qs_result = self.queryset.filter(tags=tags[0]).filter(tags=tags[1]).distinct()
             self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
@@ -294,6 +304,8 @@ class FilterTestCases:
             """
             self._assert_valid_filter_predicates(obj, obj_field_name)
 
+            self.assertIsNotNone(self.filterset)
+
             # Generic test only supports CharField or TextFields, skip all other types
             obj_field = obj._meta.get_field(obj_field_name)
             if not isinstance(obj_field, (CharField, TextField)):
@@ -313,7 +325,7 @@ class FilterTestCases:
                 lookup = randomized_attr_value[1:].upper()
                 model_queryset = self.queryset.filter(**{f"{filter_field_name}__icontains": lookup})
             params = {"q": lookup}
-            filterset_result = self.filterset(params, self.queryset)
+            filterset_result = self.filterset(params, self.queryset)  # pylint: disable=not-callable
 
             self.assertTrue(filterset_result.is_valid())
             self.assertQuerysetEqualAndNotEmpty(

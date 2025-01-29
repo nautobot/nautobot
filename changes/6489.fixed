@@ -1,1 +1,0 @@
-Fixed partial-match filters (such as __ic and __isw) on fields that have restricted choices (Prefix.type, Interface.type, etc.) so that partial values are no longer rejected.
