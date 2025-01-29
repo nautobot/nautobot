@@ -750,12 +750,12 @@ class BulkEditTestCase(TransactionTestCase):
             description="Example description for bulk edit",
         )
 
-        # Assert Namespaces withing pk_list updated tags
+        # Assert Namespaces within pk_list get updated tags
         for namespace in namespaces[:3]:
             self.assertTrue(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[:3]]).exists())
             self.assertFalse(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[3:]]).exists())
 
-        # Assert Namespaces not withing pk_list tags did not get updated
+        # Assert Namespaces not within pk_list did not get updated tags
         for namespace in namespaces[3:]:
             self.assertFalse(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[:3]]).exists())
             self.assertTrue(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[3:]]).exists())
@@ -782,12 +782,12 @@ class BulkEditTestCase(TransactionTestCase):
             description="Example description for bulk edit",
         )
 
-        # Assert Namespaces withing pk_list updated tags
+        # Assert Namespaces within pk_list get updated tag
         for namespace in namespaces[:3]:
             self.assertTrue(namespace.tags.filter(pk__in=[self.tags[0].pk]).exists())
             self.assertFalse(namespace.tags.filter(pk__in=[self.tags[-1].pk]).exists())
 
-        # Assert Namespaces not withing pk_list tags did not get updated
+        # Assert Namespaces not within pk_list did not get updated tag
         for namespace in namespaces[3:]:
             self.assertFalse(namespace.tags.filter(pk__in=[self.tags[0].pk]).exists())
             self.assertTrue(namespace.tags.filter(pk__in=[self.tags[-1].pk]).exists())

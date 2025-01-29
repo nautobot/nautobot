@@ -1,1 +1,1 @@
-Fixed Bulk Edit Objects job when adding/removing a single tag to multiple objects.
+Fixed Bulk Edit Objects job failure when passing a single value to add_*/remove_* fields.
