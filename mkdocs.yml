@@ -383,6 +383,7 @@ nav:
               - Request Profiling: "user-guide/administration/guides/request-profiling.md"
               - Django Storages with S3: "user-guide/administration/guides/s3-django-storage.md"
               - Task Queues: "user-guide/administration/guides/celery-queues.md"
+          - Security Notices: "user-guide/administration/security/index.md"
       - Feature Guides:
           - Getting Started:
               - "user-guide/feature-guides/getting-started/index.md"
