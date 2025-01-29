@@ -279,12 +279,12 @@ class BulkOperationsTestCases:
     """
 
     class BaseTestCase(SeleniumTestCase):
-        model_menu_path = (None, None)
-        model_base_viewname = ""
-        model_edit_data = {}
-        model_filter_by = {}
-        model_class = None
-        model_plural = None
+        model_menu_path: tuple[str, str]
+        model_base_viewname: str
+        model_edit_data: dict[str, Any]
+        model_filter_by: dict[str, Any]
+        model_class: type[Model]
+        model_plural: str
         model_expected_counts = {
             "all": 5,
             "filtered": 2,
