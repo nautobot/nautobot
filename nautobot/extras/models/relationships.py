@@ -261,15 +261,27 @@ class RelationshipModel(models.Model):
                 remote_model = remote_ct.model_class()
                 if remote_model is not None:
                     if not relationship.symmetric:
-                        query_params = {f"{peer_side}_for_associations__relationship": relationship.pk}
-                        resp[side][relationship] = remote_model.objects.filter(**query_params)
+                        query_params = {
+                            f"{peer_side}_for_associations__relationship": relationship,
+                            f"{peer_side}_for_associations__{side}_id": self.pk,
+                        }
+                        # Get the related objects for this relationship on the opposite side.
+                        resp[side][relationship] = remote_model.objects.filter(**query_params).distinct()
                         if not relationship.has_many(peer_side):
                             resp[side][relationship] = resp[side][relationship].first()
                     else:
+                        side_query_params = {
+                            f"{peer_side}_for_associations__relationship": relationship,
+                            f"{peer_side}_for_associations__{side}_id": self.pk,
+                        }
+                        peer_side_query_params = {
+                            f"{side}_for_associations__relationship": relationship,
+                            f"{side}_for_associations__{peer_side}_id": self.pk,
+                        }
+                        # Get the related objects based on the pks we gathered.
                         resp[RelationshipSideChoices.SIDE_PEER][relationship] = remote_model.objects.filter(
-                            Q(source_for_associations__relationship=relationship.pk)
-                            | Q(destination_for_associations__relationship=relationship.pk)
-                        ).exclude(pk=self.pk)
+                            Q(**side_query_params) | Q(**peer_side_query_params)
+                        ).distinct()
                         if not relationship.has_many(peer_side):
                             resp[side][relationship] = resp[side][relationship].first()
                 else:
