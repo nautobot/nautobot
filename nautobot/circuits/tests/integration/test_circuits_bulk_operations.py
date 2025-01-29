@@ -17,7 +17,6 @@ class CircuitBulkOperationsTestCase(BulkOperationsTestCases.BulkOperationsTestCa
     model_edit_data = {"commit_rate": "12345"}
     model_filter_by = {"circuit_type": "Copper"}
     model_class = Circuit
-    model_plural = Circuit._meta.verbose_name_plural
 
     def setup_items(self):
         Circuit.objects.all().delete()

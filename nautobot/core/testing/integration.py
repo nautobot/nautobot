@@ -1,7 +1,9 @@
 import os
+from typing import Any, Optional
 
 from django.conf import settings
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+from django.db.models import Model
 from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.functional import classproperty
@@ -345,11 +347,18 @@ class BulkOperationsTestCases:
         model_edit_data: dict[str, Any]
         model_filter_by: dict[str, Any]
         model_class: type[Model]
-        model_plural: str
-        model_expected_counts = {
+        override_model_plural: Optional[str] = None
+        model_expected_counts: dict[str, int] = {
             "all": 5,
             "filtered": 2,
         }
+
+        @property
+        def model_plural(self) -> str:
+            if self.override_model_plural is None:
+                return self.model_class._meta.verbose_name_plural
+
+            return self.override_model_plural
 
         def setUp(self):
             super().setUp()

@@ -17,7 +17,6 @@ class LocationBulkOperationsTestCase(BulkOperationsTestCases.BulkOperationsTestC
     model_edit_data = {"description": "Test description"}
     model_filter_by = {"location_type": "External"}
     model_class = Location
-    model_plural = Location._meta.verbose_name_plural
 
     def setup_items(self):
         Location.objects.all().delete()

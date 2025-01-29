@@ -17,7 +17,6 @@ class DeviceBulkOperationsTestCase(BulkOperationsTestCases.BulkOperationsTestCas
     model_edit_data = {"serial": "Test serial"}
     model_filter_by = {"location": "Test Location 2"}
     model_class = Device
-    model_plural = Device._meta.verbose_name_plural
 
     def setup_items(self):
         Device.objects.all().delete()
