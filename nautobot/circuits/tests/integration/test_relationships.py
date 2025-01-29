@@ -19,7 +19,7 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         self.user.is_superuser = True
         self.user.save()
         self.login(self.user.username, self.password)
-        location_type = LocationType.objects.get(name="Campus")
+        location_type, _ = LocationType.objects.get_or_create(name="Campus")
         location_ct = ContentType.objects.get_for_model(Location)
         circuit_termination_ct = ContentType.objects.get_for_model(CircuitTermination)
         provider_ct = ContentType.objects.get_for_model(Provider)
