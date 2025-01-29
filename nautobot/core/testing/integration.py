@@ -28,19 +28,36 @@ class ObjectsListMixin:
     """
 
     def select_all_items(self):
+        """
+        Click "toggle all" on top of the items table list to select all rows.
+        """
         self.browser.find_by_css("#object_list_form input.toggle").click()
 
     def select_one_item(self):
+        """
+        Click first row checkbox on items table list to select one row.
+        """
         self.browser.find_by_css('#object_list_form input[name="pk"]').click()
 
     def set_per_page(self, per_page=1):
+        """
+        Explicitly set the `per_page` parameter by navigating to the "current" page but with query param.
+        TODO: check if there are other query params and merge them
+        """
         self.browser.visit(f"{self.browser.url}?per_page={per_page}")
 
     def select_all_items_from_all_pages(self):
+        """
+        Selecting all the items from all pages by clicking "select all" on top of the items table list and then
+        select all on prompt that will show up.
+        """
         self.select_all_items()
         self.browser.find_by_css("#select_all").click()
 
     def click_bulk_delete(self):
+        """
+        Click bulk delete from dropdown menu on bottom of the items table list.
+        """
         self.browser.execute_script(
             "document.querySelector('#object_list_form button[type=\"submit\"]').scrollIntoView()"
         )
@@ -50,16 +67,28 @@ class ObjectsListMixin:
         self.browser.find_by_css('#object_list_form button[name="_delete"]').click()
 
     def click_bulk_delete_all(self):
+        """
+        Click bulk delete all on prompt when selecting all items from all pages.
+        """
         self.click_button('#select_all_box button[name="_delete"]')
 
     def click_bulk_edit(self):
+        """
+        Click bulk edit button on bottom of the items table list.
+        """
         self.click_button('#object_list_form button[type="submit"]')
 
     def click_bulk_edit_all(self):
+        """
+        Click bulk edit all on prompt when selecting all items from all pages.
+        """
         self.click_button('#select_all_box button[name="_edit"]')
 
     @property
     def objects_list_visible_items(self):
+        """
+        Calculating the visible items. Return 0 if there is no visible items.
+        """
         objects_table_container = self.browser.find_by_xpath('//*[@id="object_list_form"]')
         try:
             objects_table = objects_table_container.find_by_tag("tbody")
@@ -68,6 +97,10 @@ class ObjectsListMixin:
             return 0
 
     def apply_filter(self, field, value):
+        """
+        Open filter dialog and apply select2 filters.
+        You can apply more values to the same filter, by calling this function with same name but different value.
+        """
         self.browser.find_by_xpath('//*[@id="id__filterbtn"]').click()
         self.fill_filters_select2_field(field, value)
         self.click_button('#default-filter button[type="submit"]')
@@ -75,12 +108,21 @@ class ObjectsListMixin:
 
 class BulkOperationsMixin:
     def confirm_bulk_delete_operation(self):
+        """
+        Confirms bulk delete operation on the "warning" page after clicking bulk delete buttons.
+        """
         self.click_button('button[name="_confirm"][type="submit"]')
 
     def submit_bulk_edit_operation(self):
+        """
+        Submits the bulk edit form.
+        """
         self.click_button('button[name="_apply"]')
 
     def wait_for_job_result(self):
+        """
+        Waits 30s for job to be finished.
+        """
         end_statuses = ["Completed", "Failed"]
         WebDriverWait(self.browser, 30).until(
             lambda driver: driver.find_by_id("pending-result-label").text in end_statuses
@@ -89,18 +131,28 @@ class BulkOperationsMixin:
         return self.browser.find_by_id("pending-result-label").text
 
     def verify_job_description(self, expected_job_description):
+        """
+        Verifies if the job description is correct.
+        Waits 30s on page load in case of large payload being sent from bulk edit form.
+        """
         WebDriverWait(self.browser, 30).until(lambda driver: driver.is_text_present("Job Description"))
 
         job_description = self.browser.find_by_xpath('//td[text()="Job Description"]/following-sibling::td[1]').text
         self.assertEqual(job_description, expected_job_description)
 
     def update_edit_form_value(self, field_name, value, is_select=False):
+        """
+        Updates bulk edit form value.
+        """
         if is_select:
             self.fill_select2_field(field_name, value)
         else:
             self.browser.fill(field_name, value)
 
     def assertBulkDeleteConfirmMessageIsValid(self, expected_count):
+        """
+        Asserts that bulk delete confirmation message is valid and if we're deleting proper number of items.
+        """
         self.browser.is_element_present_by_tag("body", wait_time=30)
 
         button_text = self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').text
@@ -110,12 +162,21 @@ class BulkOperationsMixin:
         self.assertIn(f"The following operation will delete {expected_count}", message_text)
 
     def assertIsBulkDeleteJob(self):
+        """
+        Asserts if currently visible job is bulk delete job.
+        """
         self.verify_job_description("Bulk delete objects.")
 
     def assertIsBulkEditJob(self):
+        """
+        Asserts if currently visible job is bulk edit job.
+        """
         self.verify_job_description("Bulk edit objects.")
 
     def assertJobStatusIsCompleted(self):
+        """
+        Asserts that job was successfully completed.
+        """
         job_status = self.wait_for_job_result()
         self.assertEqual(job_status, "Completed")
 
