@@ -992,10 +992,9 @@ class BulkEditAndBulkDeleteModelMixin:
         )
         return redirect("extras:jobresult", pk=job_result.pk)
 
-    def send_bulk_edit_objects_to_job(self, request, form, model):
+    def send_bulk_edit_objects_to_job(self, request, form_data, model):
         """Prepare and enqueue a bulk edit job."""
         job_model = Job.objects.get_for_class_path(BulkEditObjects.class_path)
-        form_data = normalize_querydict(request.POST, form)
         if filterset_class := lookup.get_filterset_for_model(model):
             filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
         else:
@@ -1288,7 +1287,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
             form = form_class(queryset.model, request.POST, edit_all=edit_all)
             restrict_form_fields(form, request.user)
             if form.is_valid():
-                return self.send_bulk_edit_objects_to_job(self.request, form, queryset.model)
+                return self.send_bulk_edit_objects_to_job(self.request, form.cleaned_data, queryset.model)
             else:
                 return self.form_invalid(form)
         table = None
