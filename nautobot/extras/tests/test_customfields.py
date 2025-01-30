@@ -165,9 +165,12 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        CustomFieldChoice.objects.create(custom_field=cf, value="Option A")
-        CustomFieldChoice.objects.create(custom_field=cf, value="Option B")
-        CustomFieldChoice.objects.create(custom_field=cf, value="Option C")
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option A", weight=100)
+        self.assertEqual(["Option A"], cf.choices)
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option B", weight=200)
+        self.assertEqual(["Option A", "Option B"], cf.choices)
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option C", weight=300)
+        self.assertEqual(["Option A", "Option B", "Option C"], cf.choices)
 
         # Assign a value to the first Location
         location = Location.objects.get(name="Location A")
@@ -199,9 +202,12 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        CustomFieldChoice.objects.create(custom_field=cf, value="Option A")
-        CustomFieldChoice.objects.create(custom_field=cf, value="Option B")
-        CustomFieldChoice.objects.create(custom_field=cf, value="Option C")
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option A", weight=100)
+        self.assertEqual(["Option A"], cf.choices)
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option B", weight=200)
+        self.assertEqual(["Option A", "Option B"], cf.choices)
+        CustomFieldChoice.objects.create(custom_field=cf, value="Option C", weight=300)
+        self.assertEqual(["Option A", "Option B", "Option C"], cf.choices)
 
         # Assign a value to the first Location
         location = Location.objects.get(name="Location A")
@@ -1913,9 +1919,11 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
         )
         self.cf.save()
         self.cf.content_types.set([obj_type])
+        self.assertEqual(self.cf.choices, [])
 
         self.choice = CustomFieldChoice(custom_field=self.cf, value="Foo")
         self.choice.save()
+        self.assertEqual(self.cf.choices, ["Foo"])
 
         location_status = Status.objects.get_for_model(Location).first()
         self.location_type = LocationType.objects.get(name="Campus")
@@ -1943,6 +1951,13 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
     def test_active_choice_cannot_be_deleted(self):
         with self.assertRaises(ProtectedError):
             self.choice.delete()
+
+    def test_inactive_choice_can_be_deleted(self):
+        self.location._custom_field_data.pop("cf1")
+        self.location.validated_save()
+        self.assertEqual(self.cf.choices, ["Foo"])
+        self.choice.delete()
+        self.assertEqual(self.cf.choices, [])
 
     def test_custom_choice_deleted_with_field(self):
         self.cf.delete()
