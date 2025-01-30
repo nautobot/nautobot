@@ -23,7 +23,7 @@ class Command(BaseCommand):
         # Print the urls out in .yml format
         self.stdout.write("---")
         self.stdout.write("endpoints:")
-        for app, urls in self.app_name_to_urls.items():
+        for _, urls in self.app_name_to_urls.items():
             for url in urls:
                 pattern_name, url_pattern = url  # ["dcim:location_list:", "/dcim/locations/"]
                 self.stdout.write(f"  {pattern_name}")  # "dcim:location_list:"
