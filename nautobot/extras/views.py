@@ -2385,14 +2385,29 @@ class RelationshipView(generic.ObjectView):
                 label="Relationship",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
-                fields=["label", "key", "type", "description", "required_on"],
+                fields="__all__",
+                exclude_fields=[
+                    "source_type",
+                    "source_label",
+                    "source_hidden",
+                    "source_filter",
+                    "destination_type",
+                    "destination_label",
+                    "destination_hidden",
+                    "destination_filter",
+                ],
             ),
             ObjectFieldsPanel(
-                label="Relationship Data",
+                label="Source Attributes",
                 section=SectionChoices.RIGHT_HALF,
                 weight=100,
-                fields="__all__",
-                exclude_fields=["label", "key", "type", "description", "required_on"],
+                fields=["source_type", "source_label", "source_hidden", "source_filter"],
+            ),
+            ObjectFieldsPanel(
+                label="Destination Attributes",
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                fields=["destination_type", "destination_label", "destination_hidden", "destination_filter"],
             ),
         )
     )
