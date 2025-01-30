@@ -8,6 +8,7 @@ class Command(BaseCommand):
     """
     Example usage: `nautobot-server generate_performance_test_endpoints > endpoints.yml`
     """
+
     help = "List all relevant performance test url patterns in Nautobot Core"
 
     def handle(self, *args, **options):
