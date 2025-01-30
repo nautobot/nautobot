@@ -53,12 +53,12 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
 
         instance.refresh_from_db()
         instance.key = "custom_field_2"
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Key cannot be changed once created"):
             instance.validated_save()
 
         instance.refresh_from_db()
         instance.type = CustomFieldTypeChoices.TYPE_SELECT
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Type cannot be changed once created"):
             instance.validated_save()
 
     def test_simple_fields(self):
@@ -293,21 +293,18 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         # Assign a disallowed value (list) to the first Location
         location = Location.objects.get(name="Location A")
         location.cf[cf.key] = ["I", "am", "a", "list"]
-        with self.assertRaises(ValidationError) as context:
+        with self.assertRaisesRegex(ValidationError, "Value must be a string"):
             location.validated_save()
-        self.assertIn("Value must be a string", str(context.exception))
 
         # Assign another disallowed value (int) to the first Location
         location.cf[cf.key] = 2
-        with self.assertRaises(ValidationError) as context:
+        with self.assertRaisesRegex(ValidationError, "Value must be a string"):
             location.validated_save()
-        self.assertIn("Value must be a string", str(context.exception))
 
         # Assign another disallowed value (bool) to the first Location
         location.cf[cf.key] = True
-        with self.assertRaises(ValidationError) as context:
+        with self.assertRaisesRegex(ValidationError, "Value must be a string"):
             location.validated_save()
-        self.assertIn("Value must be a string", str(context.exception))
 
         # Delete the stored value
         location.cf.pop(cf.key)
@@ -1294,7 +1291,7 @@ class CustomFieldModelTest(TestCase):
         custom_field.content_types.set([ContentType.objects.get_for_model(Provider)])
 
         provider = Provider.objects.create(name="Test")
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Missing required custom field 'custom_field'"):
             provider.validated_save()
 
     def test_custom_field_required_on_update(self):
@@ -1312,7 +1309,7 @@ class CustomFieldModelTest(TestCase):
         provider = Provider.objects.create(name="Test", _custom_field_data={"custom_field": "Value"})
         provider.validated_save()
         provider._custom_field_data.pop("custom_field")
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Missing required custom field 'custom_field'"):
             provider.validated_save()
 
     def test_update_removed_custom_field(self):
@@ -1373,7 +1370,7 @@ class CustomFieldModelTest(TestCase):
         """
         Check that a ValidationError is raised if any required custom fields are not present.
         """
-        cf3 = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Baz", required=True)
+        cf3 = CustomField(key="baz", type=CustomFieldTypeChoices.TYPE_TEXT, label="Baz", required=True)
         cf3.save()
         cf3.content_types.set([ContentType.objects.get_for_model(Location)])
 
@@ -1381,7 +1378,7 @@ class CustomFieldModelTest(TestCase):
 
         # Set custom field data with a required field omitted
         location.cf["foo"] = "abc"
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "Missing required custom field 'baz'"):
             location.clean()
 
         location.cf["baz"] = "def"
@@ -1427,38 +1424,20 @@ class CustomFieldModelTest(TestCase):
         """
         Check the GraphQL validation method on CustomField Key Attribute.
         """
-        # Check if it catches the cf.key starting with a digit.
-        cf1 = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Test 1", key="12_test_1")
-        with self.assertRaises(ValidationError) as error:
-            cf1.validated_save()
-        self.assertIn(
-            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
-            str(error.exception),
-        )
-        # Check if it catches the cf.key with whitespace.
-        cf1.key = "test 1"
-        with self.assertRaises(ValidationError) as error:
-            cf1.validated_save()
-        self.assertIn(
-            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
-            str(error.exception),
-        )
-        # Check if it catches the cf.key with hyphens.
-        cf1.key = "test-1-custom-field"
-        with self.assertRaises(ValidationError) as error:
-            cf1.validated_save()
-        self.assertIn(
-            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
-            str(error.exception),
-        )
-        # Check if it catches the cf.key with special characters
-        cf1.key = "test_1_custom_f)(&d"
-        with self.assertRaises(ValidationError) as error:
-            cf1.validated_save()
-        self.assertIn(
-            "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
-            str(error.exception),
-        )
+        cf1 = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Test 1")
+        for invalid_key in [
+            "12_test_1",  # Check if it catches the cf.key starting with a digit.
+            "test 1",  # Check if it catches the cf.key with whitespace.
+            "test-1-custom-field",  # Check if it catches the cf.key with hyphens.
+            "test_1_custom_f)(&d",  # Check if it catches the cf.key with special characters
+        ]:
+            with self.assertRaisesRegex(
+                ValidationError,
+                "This key is not Python/GraphQL safe. "
+                "Please do not start the key with a digit and do not use hyphens or whitespace",
+            ):
+                cf1.key = invalid_key
+                cf1.validated_save()
 
 
 class CustomFieldFilterTest(TestCase):
@@ -1952,7 +1931,7 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
 
     def test_default_value_must_be_valid_choice_sad_path(self):
         self.cf.default = "invalid value"
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, 'Invalid default value "invalid value"'):
             self.cf.full_clean()
 
     def test_default_value_must_be_valid_choice_happy_path(self):
