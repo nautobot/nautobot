@@ -425,7 +425,7 @@ class GitRepositoryViewSet(NautobotModelViewSet):
     serializer_class = serializers.GitRepositorySerializer
     filterset_class = filters.GitRepositoryFilterSet
 
-    @extend_schema(methods=["post"], request=serializers.GitRepositorySerializer)
+    @extend_schema(methods=["post"], responses={"200": serializers.GitRepositorySyncResponseSerializer}, request=None)
     # Since we are explicitly checking for `extras:change_gitrepository` in the API sync() method
     # We explicitly set the permission_classes to IsAuthenticated in the @action decorator
     # bypassing the default DRF permission check for `extras:add_gitrepository` and the permission check fall through to the function itself.
@@ -441,8 +441,16 @@ class GitRepositoryViewSet(NautobotModelViewSet):
             raise CeleryWorkerNotRunningException()
 
         repository = get_object_or_404(GitRepository, id=pk)
-        repository.sync(user=request.user)
-        return Response({"message": f"Repository {repository} sync job added to queue."})
+        job_result = repository.sync(user=request.user)
+
+        data = {
+            # Kept message for backward compatibility for now
+            "message": f"Repository {repository} sync job added to queue.",
+            "job_result": job_result,
+        }
+
+        serializer = serializers.GitRepositorySyncResponseSerializer(data, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 #

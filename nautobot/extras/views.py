@@ -31,6 +31,7 @@ from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
+from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
@@ -2378,6 +2379,38 @@ class RelationshipListView(generic.ObjectListView):
 
 class RelationshipView(generic.ObjectView):
     queryset = Relationship.objects.all()
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                label="Relationship",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+                exclude_fields=[
+                    "source_type",
+                    "source_label",
+                    "source_hidden",
+                    "source_filter",
+                    "destination_type",
+                    "destination_label",
+                    "destination_hidden",
+                    "destination_filter",
+                ],
+            ),
+            ObjectFieldsPanel(
+                label="Source Attributes",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                fields=["source_type", "source_label", "source_hidden", "source_filter"],
+            ),
+            ObjectFieldsPanel(
+                label="Destination Attributes",
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                fields=["destination_type", "destination_label", "destination_hidden", "destination_filter"],
+            ),
+        )
+    )
 
 
 class RelationshipEditView(generic.ObjectEditView):
