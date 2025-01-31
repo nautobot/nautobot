@@ -43,6 +43,7 @@ class Command(BaseCommand):
             - Any generic endpoint like `core:home` will have one endpoint which is the URL pattern itself.
         """
         # If the model class is found, then we know we are dealing with a model related endpoint
+        print(model_class)
         if model_class:
             if len(model_class.objects.all()) > 1:
                 # Handle detail view url patterns
@@ -82,7 +83,7 @@ class Command(BaseCommand):
                     )
             else:
                 # TODO handle the case where there is no instances of the model is found
-                self.std.out.write(f"No instances of {model_class} found")
+                self.stdout.write(f"No instances of {model_class} found")
         else:
             # A generic endpoint like `core:home`
             if view_name not in self.app_name_to_urls["endpoints"]:
