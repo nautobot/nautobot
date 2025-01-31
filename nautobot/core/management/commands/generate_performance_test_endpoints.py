@@ -30,6 +30,7 @@ class Command(BaseCommand):
         """
         if view_name.endswith(("_list", "_notes", "_changelog")) or "_" not in view_name:
             return True
+        return False
 
     def append_urls_to_dict(self, url_pattern, model_class, view_name):
         """
