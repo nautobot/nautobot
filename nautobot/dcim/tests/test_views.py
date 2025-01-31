@@ -750,6 +750,7 @@ class DeviceFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.form_data = {
             "name": "New Device Family",
             "description": "A new device family",
+            "tags": [t.pk for t in Tag.objects.get_for_model(DeviceFamily)],
         }
         cls.bulk_edit_data = {
             "description": "A new device family",
