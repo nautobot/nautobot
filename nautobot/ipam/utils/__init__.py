@@ -41,10 +41,17 @@ def get_add_available_prefixes_callback(show_available: bool, parent: Prefix):
 
 def add_available_ipaddresses(prefix: netaddr.IPNetwork, ipaddress_list: Iterable[IPAddress], is_pool: bool = False):
     """
-    Annotate ranges of available IP addresses within a given prefix. If is_pool is True, the first and last IP will be
-    considered usable (regardless of mask length).
-    """
+    Annotate ranges of available IP addresses within a given prefix.
 
+    Args:
+        prefix (netaddr.IPNetwork): The network to calculate available addresses within.
+        ipaddress_list (Iterable[IPAddress]): List or QuerySet of extant IPAddress objects.
+        is_pool (bool): If True, the first/last IPs in the prefix will be considered usable, regardless of mask length.
+
+    Returns:
+        The contents of `ipaddress_list` interleaved with tuples of the form
+        `(number_of_available_addresses, first_such_address)`.
+    """
     output = []
     prev_ip = None
 

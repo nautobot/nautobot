@@ -1,2 +1,2 @@
-Fixed an exception when retrieving available IP addresses within an IPv6 Prefix that includes the `::/96` subnet.
-Fixed incorrect potential inclusion of IPv4 IP addresses from the same Namespace when calling `.get_all_ips()` or `.get_utilization()` on an IPv6 Prefix that includes the `::/96` subnet.
+Fixed an exception when retrieving available IP addresses within a Prefix for certain IPv6 networks.
+Fixed incorrect potential inclusion of IPv4 IP addresses from the same Namespace when calling `.get_all_ips()` or `.get_utilization()` on an IPv6 Prefix.
