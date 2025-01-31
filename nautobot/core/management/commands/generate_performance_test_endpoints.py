@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.urls import get_resolver
+from django.utils.http import urlencode
 import yaml
 
 from nautobot.core.utils.lookup import get_model_for_view_name
@@ -28,11 +29,12 @@ class Command(BaseCommand):
         """
         Check if the view is a GET endpoint
         """
-        if view_name.endswith(("_list", "_notes", "_changelog")) or "_" not in view_name:
+        get_endpoints_suffixes = ("-detail", "_list", "_notes", "_changelog", "-list", "-notes")
+        if view_name.endswith(get_endpoints_suffixes) or "_" not in view_name:
             return True
         return False
 
-    def append_urls_to_dict(self, url_pattern, model_class, view_name):
+    def append_urls_to_dict(self, url_pattern, model_class, view_name, is_api_endpoint=False):
         """
         URL patterns are stored in the dictionary in the following format:
             - Any model detail view URL pattern that contains `<uuid:pk>` or `(?P<pk>[/.]+)` will have two endpoints:
@@ -47,7 +49,7 @@ class Command(BaseCommand):
         if model_class:
             if len(model_class.objects.all()) > 1:
                 # Handle detail view url patterns
-                if "_list" not in view_name:
+                if "_list" not in view_name and "-list" not in view_name:
                     # Identify the placeholder for the uuid
                     replace_string = ""
                     if "<uuid:pk>" in url_pattern:
@@ -72,15 +74,22 @@ class Command(BaseCommand):
                     total_count = len(model_class.objects.all())
                     page_query_parameter = 5
                     per_page_query_parameter = total_count // page_query_parameter
+                    if not is_api_endpoint:
+                        query_params = urlencode(
+                            {
+                                "per_page": per_page_query_parameter,
+                                "page": page_query_parameter,
+                            }
+                        )
+                    else:
+                        query_params = urlencode(
+                            {
+                                "limit": per_page_query_parameter,
+                                "offset": per_page_query_parameter * (page_query_parameter - 1),
+                            }
+                        )
                     # One endpoint with default pagination
-                    self.app_name_to_urls["endpoints"][view_name].append(
-                        url_pattern
-                        + "?per_page="
-                        + str(per_page_query_parameter)
-                        + "&"
-                        + "page="
-                        + str(page_query_parameter)
-                    )
+                    self.app_name_to_urls["endpoints"][view_name].append(url_pattern + f"?{query_params}")
             else:
                 # TODO handle the case where there is no instances of the model is found
                 self.stdout.write(f"No instances of {model_class} found")
@@ -104,6 +113,10 @@ class Command(BaseCommand):
                     "/dcim/devices/cfbd447f-d563-4fac-bb75-bdda70ab4e80/",
                     "/dcim/devices/38471bfe-0aca-4e09-b545-b0f90280fb66/",
                 ],
+                dcim-api:device-detail: [
+                    "/api/dcim/devices/cfbd447f-d563-4fac-bb75-bdda70ab4e80/",
+                    "/api/dcim/devices/38471bfe-0aca-4e09-b545-b0f90280fb66/",
+                ],
                 ...
             },
             ...
@@ -114,31 +127,29 @@ class Command(BaseCommand):
                 self.fetch_urls(pattern.url_patterns)
             else:
                 # TODO need to include Nautobot App endpoints as well at some point
-                if pattern.lookup_str.startswith(
-                    (
-                        "nautobot.circuits.views",
-                        "nautobot.cloud.views",
-                        "nautobot.core.views",
-                        "nautobot.dcim.views",
-                        "nautobot.extras.views",
-                        "nautobot.ipam.views",
-                        "nautobot.tenancy.views",
-                        "nautobot.virtualization.views",
-                        "nautobot.wireless.views",
-                    )
-                ):
+                if pattern.lookup_str.startswith("nautobot."):
                     # Only fetch urls from relevant apps
                     app_name = pattern.lookup_str.split(".")[1]
                     model = pattern.default_args.get("model", None)
                     if model:
                         app_name = model._meta.app_label
 
-                    view_name = f"{app_name}:{pattern.name}"
-                    url_pattern = f"/{app_name}/{pattern.pattern}"
+                    # Determine if the endpoint is an API endpoint
+                    lookup_str_list = pattern.lookup_str.split(".")
+                    is_api_endpoint = False
+                    if len(lookup_str_list) > 2 and lookup_str_list[2] == "api":
+                        url_pattern = f"/api/{app_name}/{pattern.pattern}"  # /api/dcim/devices/
+                        app_name = f"{app_name}-api"  # dcim-api
+                        is_api_endpoint = True
+                    else:
+                        url_pattern = f"/{app_name}/{pattern.pattern}"  # /dcim/devices/
 
-                    if self.is_get_endpoint(view_name):
+                    view_name = f"{app_name}:{pattern.name}"  # dcim:device_list or dcim-api:device-list
+
+                    # We do not need to test the ?format=<json,csv,api> endpoints and non-GET endpoints
+                    if "(?P<format>[a-z0-9]+)" not in url_pattern and self.is_get_endpoint(view_name):
                         # Replace "^" and "$" from the url pattern
                         url_pattern = url_pattern.replace("^", "").replace("$", "")
                         # Retrieve the model class for the view name
                         model_class = get_model_for_view_name(view_name)
-                        self.append_urls_to_dict(url_pattern, model_class, view_name)
+                        self.append_urls_to_dict(url_pattern, model_class, view_name, is_api_endpoint)

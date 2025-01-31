@@ -1,4 +1,52 @@
 endpoints:
+  circuits-api:circuit-detail:
+  - /api/circuits/circuits/43338d90-cadb-4b5e-a93c-c3a4171e020d/
+  - /api/circuits/circuits/b5a7aecb-b712-4973-b702-7264137fdc5e/
+  circuits-api:circuit-list:
+  - /api/circuits/circuits/
+  - /api/circuits/circuits/?limit=8&offset=32
+  circuits-api:circuit-notes:
+  - /api/circuits/circuits/43338d90-cadb-4b5e-a93c-c3a4171e020d/notes/
+  - /api/circuits/circuits/b5a7aecb-b712-4973-b702-7264137fdc5e/notes/
+  circuits-api:circuittermination-detail:
+  - /api/circuits/circuit-terminations/f884c61c-f95d-4e7f-85b6-72ce48a9eadb/
+  - /api/circuits/circuit-terminations/3cceae77-b2df-482b-aa33-88a7ba479dbf/
+  circuits-api:circuittermination-list:
+  - /api/circuits/circuit-terminations/
+  - /api/circuits/circuit-terminations/?limit=4&offset=16
+  circuits-api:circuittermination-notes:
+  - /api/circuits/circuit-terminations/f884c61c-f95d-4e7f-85b6-72ce48a9eadb/notes/
+  - /api/circuits/circuit-terminations/3cceae77-b2df-482b-aa33-88a7ba479dbf/notes/
+  circuits-api:circuittermination-trace:
+  - /api/circuits/circuit-terminations/f884c61c-f95d-4e7f-85b6-72ce48a9eadb/trace/
+  - /api/circuits/circuit-terminations/3cceae77-b2df-482b-aa33-88a7ba479dbf/trace/
+  circuits-api:circuittype-detail:
+  - /api/circuits/circuit-types/089a9c58-579c-4895-b8c7-c32b51c6ce66/
+  - /api/circuits/circuit-types/4f0a653f-2fe1-4444-8c87-3c8b094793c9/
+  circuits-api:circuittype-list:
+  - /api/circuits/circuit-types/
+  - /api/circuits/circuit-types/?limit=8&offset=32
+  circuits-api:circuittype-notes:
+  - /api/circuits/circuit-types/089a9c58-579c-4895-b8c7-c32b51c6ce66/notes/
+  - /api/circuits/circuit-types/4f0a653f-2fe1-4444-8c87-3c8b094793c9/notes/
+  circuits-api:provider-detail:
+  - /api/circuits/providers/b42cfe85-26ae-46ea-8844-ea9190e424fe/
+  - /api/circuits/providers/e50e00b4-a27d-462e-b826-9ce3aec8ea34/
+  circuits-api:provider-list:
+  - /api/circuits/providers/
+  - /api/circuits/providers/?limit=8&offset=32
+  circuits-api:provider-notes:
+  - /api/circuits/providers/b42cfe85-26ae-46ea-8844-ea9190e424fe/notes/
+  - /api/circuits/providers/e50e00b4-a27d-462e-b826-9ce3aec8ea34/notes/
+  circuits-api:providernetwork-detail:
+  - /api/circuits/provider-networks/5723f20d-2963-45ea-93df-2664e05daf6d/
+  - /api/circuits/provider-networks/cd243745-45c4-4800-9212-169002586373/
+  circuits-api:providernetwork-list:
+  - /api/circuits/provider-networks/
+  - /api/circuits/provider-networks/?limit=4&offset=16
+  circuits-api:providernetwork-notes:
+  - /api/circuits/provider-networks/5723f20d-2963-45ea-93df-2664e05daf6d/notes/
+  - /api/circuits/provider-networks/cd243745-45c4-4800-9212-169002586373/notes/
   circuits:circuit:
   - /circuits/circuits/43338d90-cadb-4b5e-a93c-c3a4171e020d/
   - /circuits/circuits/b5a7aecb-b712-4973-b702-7264137fdc5e/
@@ -59,6 +107,60 @@ endpoints:
   circuits:providernetwork_notes:
   - /circuits/provider-networks/5723f20d-2963-45ea-93df-2664e05daf6d/notes/
   - /circuits/provider-networks/cd243745-45c4-4800-9212-169002586373/notes/
+  cloud-api:cloudaccount-detail:
+  - /api/cloud/cloud-accounts/2ca95c97-8805-4ed4-8159-a0a63f176583/
+  - /api/cloud/cloud-accounts/c967f280-d174-40c8-888d-c2a239affad1/
+  cloud-api:cloudaccount-list:
+  - /api/cloud/cloud-accounts/
+  - /api/cloud/cloud-accounts/?limit=2&offset=8
+  cloud-api:cloudaccount-notes:
+  - /api/cloud/cloud-accounts/2ca95c97-8805-4ed4-8159-a0a63f176583/notes/
+  - /api/cloud/cloud-accounts/c967f280-d174-40c8-888d-c2a239affad1/notes/
+  cloud-api:cloudnetwork-detail:
+  - /api/cloud/cloud-networks/48f6ca3e-d9b1-4634-8f5f-3166c62a66ab/
+  - /api/cloud/cloud-networks/f84c058d-9343-4881-96a2-e87057a76954/
+  cloud-api:cloudnetwork-list:
+  - /api/cloud/cloud-networks/
+  - /api/cloud/cloud-networks/?limit=4&offset=16
+  cloud-api:cloudnetwork-notes:
+  - /api/cloud/cloud-networks/48f6ca3e-d9b1-4634-8f5f-3166c62a66ab/notes/
+  - /api/cloud/cloud-networks/f84c058d-9343-4881-96a2-e87057a76954/notes/
+  cloud-api:cloudnetworkprefixassignment-detail:
+  - /api/cloud/cloud-network-prefix-assignments/614ae95a-1208-4c7b-9e83-9fdafce43751/
+  - /api/cloud/cloud-network-prefix-assignments/9b057641-dbd0-4f02-81b8-e473d5ac4f67/
+  cloud-api:cloudnetworkprefixassignment-list:
+  - /api/cloud/cloud-network-prefix-assignments/
+  - /api/cloud/cloud-network-prefix-assignments/?limit=2&offset=8
+  cloud-api:cloudnetworkprefixassignment-notes:
+  - /api/cloud/cloud-network-prefix-assignments/614ae95a-1208-4c7b-9e83-9fdafce43751/notes/
+  - /api/cloud/cloud-network-prefix-assignments/9b057641-dbd0-4f02-81b8-e473d5ac4f67/notes/
+  cloud-api:cloudresourcetype-detail:
+  - /api/cloud/cloud-resource-types/de3a66de-bf98-4f53-89e9-4be79ee0632d/
+  - /api/cloud/cloud-resource-types/17a82f09-4da4-4543-a3be-7a4678bd694a/
+  cloud-api:cloudresourcetype-list:
+  - /api/cloud/cloud-resource-types/
+  - /api/cloud/cloud-resource-types/?limit=4&offset=16
+  cloud-api:cloudresourcetype-notes:
+  - /api/cloud/cloud-resource-types/de3a66de-bf98-4f53-89e9-4be79ee0632d/notes/
+  - /api/cloud/cloud-resource-types/17a82f09-4da4-4543-a3be-7a4678bd694a/notes/
+  cloud-api:cloudservice-detail:
+  - /api/cloud/cloud-services/1a157c39-2e74-4ac4-9c41-b3293fca7ea9/
+  - /api/cloud/cloud-services/9a1d438b-0546-4e0a-888b-6a8d83a89069/
+  cloud-api:cloudservice-list:
+  - /api/cloud/cloud-services/
+  - /api/cloud/cloud-services/?limit=4&offset=16
+  cloud-api:cloudservice-notes:
+  - /api/cloud/cloud-services/1a157c39-2e74-4ac4-9c41-b3293fca7ea9/notes/
+  - /api/cloud/cloud-services/9a1d438b-0546-4e0a-888b-6a8d83a89069/notes/
+  cloud-api:cloudservicenetworkassignment-detail:
+  - /api/cloud/cloud-service-network-assignments/e20db4b5-7e33-4752-889f-0220265a9a85/
+  - /api/cloud/cloud-service-network-assignments/3eb5e1ea-7db4-4156-aba7-c185d0b34f66/
+  cloud-api:cloudservicenetworkassignment-list:
+  - /api/cloud/cloud-service-network-assignments/
+  - /api/cloud/cloud-service-network-assignments/?limit=17&offset=68
+  cloud-api:cloudservicenetworkassignment-notes:
+  - /api/cloud/cloud-service-network-assignments/e20db4b5-7e33-4752-889f-0220265a9a85/notes/
+  - /api/cloud/cloud-service-network-assignments/3eb5e1ea-7db4-4156-aba7-c185d0b34f66/notes/
   cloud:cloudaccount:
   - /cloud/cloud-accounts/2ca95c97-8805-4ed4-8159-a0a63f176583/
   - /cloud/cloud-accounts/c967f280-d174-40c8-888d-c2a239affad1/
@@ -107,6 +209,41 @@ endpoints:
   cloud:cloudservice_notes:
   - /cloud/cloud-services/1a157c39-2e74-4ac4-9c41-b3293fca7ea9/notes/
   - /cloud/cloud-services/9a1d438b-0546-4e0a-888b-6a8d83a89069/notes/
+  core-api:api-root:
+  - /api/core/
+  - /api/core/
+  - /api/core/<drf_format_suffix:format>
+  - /api/core/
+  - /api/core/<drf_format_suffix:format>
+  - /api/core/
+  - /api/core/<drf_format_suffix:format>
+  - /api/core/
+  - /api/core/<drf_format_suffix:format>
+  - /api/core/
+  - /api/core/<drf_format_suffix:format>
+  - /api/core/
+  - /api/core/<drf_format_suffix:format>
+  - /api/core/
+  - /api/core/<drf_format_suffix:format>
+  - /api/core/
+  - /api/core/<drf_format_suffix:format>
+  - /api/core/
+  - /api/core/<drf_format_suffix:format>
+  - /api/core/
+  - /api/core/<drf_format_suffix:format>
+  core-api:api-status:
+  - /api/core/status/
+  core-api:csv-import-fields:
+  - /api/core/csv-import-fields/
+  - /api/core/csv-import-fields/
+  core-api:filtersetfield-list-lookupchoices:
+  - /api/core/filterset-fields/lookup-choices/
+  - /api/core/filterset-fields/lookup-choices/
+  core-api:filtersetfield-retrieve-lookupvaluedomelement:
+  - /api/core/filterset-fields/lookup-value-dom-element/
+  - /api/core/filterset-fields/lookup-value-dom-element/
+  core-api:graphql-api:
+  - /api/core/graphql/
   core:about:
   - /core/about/
   core:graphql:
@@ -117,6 +254,332 @@ endpoints:
   - /core/metrics/
   core:search:
   - /core/search/
+  dcim-api:connected-device-list:
+  - /api/dcim/connected-device/
+  dcim-api:consoleconnections-list:
+  - /api/dcim/console-connections/
+  dcim-api:consoleport-detail:
+  - /api/dcim/console-ports/de080af0-c5ad-41a4-b812-49d8b736c9c9/
+  - /api/dcim/console-ports/2881d503-d25a-4e02-adef-e3a48ccb5d32/
+  dcim-api:consoleport-list:
+  - /api/dcim/console-ports/
+  - /api/dcim/console-ports/?limit=7&offset=28
+  dcim-api:consoleport-notes:
+  - /api/dcim/console-ports/de080af0-c5ad-41a4-b812-49d8b736c9c9/notes/
+  - /api/dcim/console-ports/2881d503-d25a-4e02-adef-e3a48ccb5d32/notes/
+  dcim-api:consoleport-trace:
+  - /api/dcim/console-ports/de080af0-c5ad-41a4-b812-49d8b736c9c9/trace/
+  - /api/dcim/console-ports/2881d503-d25a-4e02-adef-e3a48ccb5d32/trace/
+  dcim-api:consoleporttemplate-detail:
+  - /api/dcim/console-port-templates/269b1a2c-5937-4e8c-8d04-a270b7913783/
+  - /api/dcim/console-port-templates/19de6071-3607-4152-9deb-82cfdd09aa68/
+  dcim-api:consoleporttemplate-list:
+  - /api/dcim/console-port-templates/
+  - /api/dcim/console-port-templates/?limit=6&offset=24
+  dcim-api:consoleporttemplate-notes:
+  - /api/dcim/console-port-templates/269b1a2c-5937-4e8c-8d04-a270b7913783/notes/
+  - /api/dcim/console-port-templates/19de6071-3607-4152-9deb-82cfdd09aa68/notes/
+  dcim-api:consoleserverport-detail:
+  - /api/dcim/console-server-ports/ad3d26db-b550-4f1f-8af7-b70a14032665/
+  - /api/dcim/console-server-ports/1cc1e64b-9a9b-4447-9070-08d6bf909527/
+  dcim-api:consoleserverport-list:
+  - /api/dcim/console-server-ports/
+  - /api/dcim/console-server-ports/?limit=5&offset=20
+  dcim-api:consoleserverport-notes:
+  - /api/dcim/console-server-ports/ad3d26db-b550-4f1f-8af7-b70a14032665/notes/
+  - /api/dcim/console-server-ports/1cc1e64b-9a9b-4447-9070-08d6bf909527/notes/
+  dcim-api:consoleserverport-trace:
+  - /api/dcim/console-server-ports/ad3d26db-b550-4f1f-8af7-b70a14032665/trace/
+  - /api/dcim/console-server-ports/1cc1e64b-9a9b-4447-9070-08d6bf909527/trace/
+  dcim-api:consoleserverporttemplate-detail:
+  - /api/dcim/console-server-port-templates/d0bf23b7-d946-4a97-b7e8-f8b2359ea879/
+  - /api/dcim/console-server-port-templates/44472ad1-2bb4-4616-9b30-d732c36ece56/
+  dcim-api:consoleserverporttemplate-list:
+  - /api/dcim/console-server-port-templates/
+  - /api/dcim/console-server-port-templates/?limit=6&offset=24
+  dcim-api:consoleserverporttemplate-notes:
+  - /api/dcim/console-server-port-templates/d0bf23b7-d946-4a97-b7e8-f8b2359ea879/notes/
+  - /api/dcim/console-server-port-templates/44472ad1-2bb4-4616-9b30-d732c36ece56/notes/
+  dcim-api:controller-detail:
+  - /api/dcim/controllers/b6277a65-9b65-4a99-b0a6-af501505c257/
+  - /api/dcim/controllers/de55bdb4-6959-45d7-b938-5d045909e24c/
+  dcim-api:controller-list:
+  - /api/dcim/controllers/
+  - /api/dcim/controllers/?limit=2&offset=8
+  dcim-api:controller-notes:
+  - /api/dcim/controllers/b6277a65-9b65-4a99-b0a6-af501505c257/notes/
+  - /api/dcim/controllers/de55bdb4-6959-45d7-b938-5d045909e24c/notes/
+  dcim-api:controllermanageddevicegroup-detail:
+  - /api/dcim/controller-managed-device-groups/da49e6fe-17a8-462d-8d66-f9c2a4e743de/
+  - /api/dcim/controller-managed-device-groups/4ce7a5d3-3da1-4008-a2eb-f2fba1c640c8/
+  dcim-api:controllermanageddevicegroup-list:
+  - /api/dcim/controller-managed-device-groups/
+  - /api/dcim/controller-managed-device-groups/?limit=7&offset=28
+  dcim-api:controllermanageddevicegroup-notes:
+  - /api/dcim/controller-managed-device-groups/da49e6fe-17a8-462d-8d66-f9c2a4e743de/notes/
+  - /api/dcim/controller-managed-device-groups/4ce7a5d3-3da1-4008-a2eb-f2fba1c640c8/notes/
+  dcim-api:device-detail:
+  - /api/dcim/devices/cfbd447f-d563-4fac-bb75-bdda70ab4e80/
+  - /api/dcim/devices/38471bfe-0aca-4e09-b545-b0f90280fb66/
+  dcim-api:device-list:
+  - /api/dcim/devices/
+  - /api/dcim/devices/?limit=6&offset=24
+  dcim-api:device-napalm:
+  - /api/dcim/devices/cfbd447f-d563-4fac-bb75-bdda70ab4e80/napalm/
+  - /api/dcim/devices/38471bfe-0aca-4e09-b545-b0f90280fb66/napalm/
+  dcim-api:device-notes:
+  - /api/dcim/devices/cfbd447f-d563-4fac-bb75-bdda70ab4e80/notes/
+  - /api/dcim/devices/38471bfe-0aca-4e09-b545-b0f90280fb66/notes/
+  dcim-api:devicefamily-detail:
+  - /api/dcim/device-families/a2478d6a-c3c6-40eb-95e3-8d0671ba2528/
+  - /api/dcim/device-families/d1b1e800-3586-4d0a-9242-628b652023cd/
+  dcim-api:devicefamily-list:
+  - /api/dcim/device-families/
+  - /api/dcim/device-families/?limit=4&offset=16
+  dcim-api:devicefamily-notes:
+  - /api/dcim/device-families/a2478d6a-c3c6-40eb-95e3-8d0671ba2528/notes/
+  - /api/dcim/device-families/d1b1e800-3586-4d0a-9242-628b652023cd/notes/
+  dcim-api:deviceredundancygroup-detail:
+  - /api/dcim/device-redundancy-groups/abb15517-8129-46fa-8c20-48956fed38e5/
+  - /api/dcim/device-redundancy-groups/7eeda0fd-1c67-4e21-a66c-2bc110ba1514/
+  dcim-api:deviceredundancygroup-list:
+  - /api/dcim/device-redundancy-groups/
+  - /api/dcim/device-redundancy-groups/?limit=4&offset=16
+  dcim-api:deviceredundancygroup-notes:
+  - /api/dcim/device-redundancy-groups/abb15517-8129-46fa-8c20-48956fed38e5/notes/
+  - /api/dcim/device-redundancy-groups/7eeda0fd-1c67-4e21-a66c-2bc110ba1514/notes/
+  dcim-api:devicetype-detail:
+  - /api/dcim/device-types/e7a26f14-ec27-4b71-9ba9-f4199c3116df/
+  - /api/dcim/device-types/28ee21ea-875d-4a52-87c8-4e75008be81b/
+  dcim-api:devicetype-list:
+  - /api/dcim/device-types/
+  - /api/dcim/device-types/?limit=6&offset=24
+  dcim-api:devicetype-notes:
+  - /api/dcim/device-types/e7a26f14-ec27-4b71-9ba9-f4199c3116df/notes/
+  - /api/dcim/device-types/28ee21ea-875d-4a52-87c8-4e75008be81b/notes/
+  dcim-api:devicetypetosoftwareimagefile-detail:
+  - /api/dcim/device-types-to-software-image-files/01db6811-c19d-415d-89e4-1af90a60c549/
+  - /api/dcim/device-types-to-software-image-files/fe1770a1-a409-4da2-af23-b153efbba367/
+  dcim-api:devicetypetosoftwareimagefile-list:
+  - /api/dcim/device-types-to-software-image-files/
+  - /api/dcim/device-types-to-software-image-files/?limit=27&offset=108
+  dcim-api:frontport-detail:
+  - /api/dcim/front-ports/28a78354-b24a-4683-a84e-a7f96198ff1b/
+  - /api/dcim/front-ports/cd179fe9-df24-43c2-a34c-05641357fcd7/
+  dcim-api:frontport-list:
+  - /api/dcim/front-ports/
+  - /api/dcim/front-ports/?limit=5&offset=20
+  dcim-api:frontport-notes:
+  - /api/dcim/front-ports/28a78354-b24a-4683-a84e-a7f96198ff1b/notes/
+  - /api/dcim/front-ports/cd179fe9-df24-43c2-a34c-05641357fcd7/notes/
+  dcim-api:frontport-paths:
+  - /api/dcim/front-ports/28a78354-b24a-4683-a84e-a7f96198ff1b/paths/
+  - /api/dcim/front-ports/cd179fe9-df24-43c2-a34c-05641357fcd7/paths/
+  dcim-api:frontporttemplate-detail:
+  - /api/dcim/front-port-templates/d6b59615-9b41-4953-87a8-6925af768571/
+  - /api/dcim/front-port-templates/3f06581a-7e63-44fd-baae-2666c2b6cf19/
+  dcim-api:frontporttemplate-list:
+  - /api/dcim/front-port-templates/
+  - /api/dcim/front-port-templates/?limit=6&offset=24
+  dcim-api:frontporttemplate-notes:
+  - /api/dcim/front-port-templates/d6b59615-9b41-4953-87a8-6925af768571/notes/
+  - /api/dcim/front-port-templates/3f06581a-7e63-44fd-baae-2666c2b6cf19/notes/
+  dcim-api:interface-detail:
+  - /api/dcim/interfaces/473b1713-b049-466c-a4fa-0a5bfa548024/
+  - /api/dcim/interfaces/a6e9cbbc-691f-4319-a525-661532a3ce25/
+  dcim-api:interface-list:
+  - /api/dcim/interfaces/
+  - /api/dcim/interfaces/?limit=6&offset=24
+  dcim-api:interface-notes:
+  - /api/dcim/interfaces/473b1713-b049-466c-a4fa-0a5bfa548024/notes/
+  - /api/dcim/interfaces/a6e9cbbc-691f-4319-a525-661532a3ce25/notes/
+  dcim-api:interface-trace:
+  - /api/dcim/interfaces/473b1713-b049-466c-a4fa-0a5bfa548024/trace/
+  - /api/dcim/interfaces/a6e9cbbc-691f-4319-a525-661532a3ce25/trace/
+  dcim-api:interfaceconnections-list:
+  - /api/dcim/interface-connections/
+  dcim-api:interfacetemplate-detail:
+  - /api/dcim/interface-templates/c70beb8a-e55a-487e-a2eb-d465b3ea73dc/
+  - /api/dcim/interface-templates/7fbea3db-407f-4a66-a964-0b3b2a11eab6/
+  dcim-api:interfacetemplate-list:
+  - /api/dcim/interface-templates/
+  - /api/dcim/interface-templates/?limit=6&offset=24
+  dcim-api:interfacetemplate-notes:
+  - /api/dcim/interface-templates/c70beb8a-e55a-487e-a2eb-d465b3ea73dc/notes/
+  - /api/dcim/interface-templates/7fbea3db-407f-4a66-a964-0b3b2a11eab6/notes/
+  dcim-api:interfacevdcassignment-detail:
+  - /api/dcim/interface-vdc-assignments/d3a3c8b5-7807-434c-8c58-110cfa41eee0/
+  - /api/dcim/interface-vdc-assignments/1720bc73-fd3b-4691-816e-8d9074b6c3ec/
+  dcim-api:interfacevdcassignment-list:
+  - /api/dcim/interface-vdc-assignments/
+  - /api/dcim/interface-vdc-assignments/?limit=1&offset=4
+  dcim-api:interfacevdcassignment-notes:
+  - /api/dcim/interface-vdc-assignments/d3a3c8b5-7807-434c-8c58-110cfa41eee0/notes/
+  - /api/dcim/interface-vdc-assignments/1720bc73-fd3b-4691-816e-8d9074b6c3ec/notes/
+  dcim-api:location-detail:
+  - /api/dcim/locations/fe7174b0-feff-4fd5-97f4-4efb31ca0116/
+  - /api/dcim/locations/7e0c3b81-cc60-4045-aafb-f0ada9b9f45a/
+  dcim-api:location-list:
+  - /api/dcim/locations/
+  - /api/dcim/locations/?limit=11&offset=44
+  dcim-api:location-notes:
+  - /api/dcim/locations/fe7174b0-feff-4fd5-97f4-4efb31ca0116/notes/
+  - /api/dcim/locations/7e0c3b81-cc60-4045-aafb-f0ada9b9f45a/notes/
+  dcim-api:locationtype-detail:
+  - /api/dcim/location-types/089e845d-ba91-46fb-a803-8a4ec9ea4c92/
+  - /api/dcim/location-types/31902748-3ff3-46e6-b69e-1e768eeb5085/
+  dcim-api:locationtype-list:
+  - /api/dcim/location-types/
+  - /api/dcim/location-types/?limit=1&offset=4
+  dcim-api:locationtype-notes:
+  - /api/dcim/location-types/089e845d-ba91-46fb-a803-8a4ec9ea4c92/notes/
+  - /api/dcim/location-types/31902748-3ff3-46e6-b69e-1e768eeb5085/notes/
+  dcim-api:manufacturer-detail:
+  - /api/dcim/manufacturers/a6793bf7-b14d-4b6a-b30c-6e2ad05bd819/
+  - /api/dcim/manufacturers/52f52aec-fa10-4943-87ba-df6957296daa/
+  dcim-api:manufacturer-list:
+  - /api/dcim/manufacturers/
+  - /api/dcim/manufacturers/?limit=2&offset=8
+  dcim-api:manufacturer-notes:
+  - /api/dcim/manufacturers/a6793bf7-b14d-4b6a-b30c-6e2ad05bd819/notes/
+  - /api/dcim/manufacturers/52f52aec-fa10-4943-87ba-df6957296daa/notes/
+  dcim-api:module-detail:
+  - /api/dcim/modules/15e880ba-0f27-46aa-be08-a311e5bee6d7/
+  - /api/dcim/modules/6392f14b-662c-4168-90a4-da0122d8a968/
+  dcim-api:module-list:
+  - /api/dcim/modules/
+  - /api/dcim/modules/?limit=4&offset=16
+  dcim-api:module-notes:
+  - /api/dcim/modules/15e880ba-0f27-46aa-be08-a311e5bee6d7/notes/
+  - /api/dcim/modules/6392f14b-662c-4168-90a4-da0122d8a968/notes/
+  dcim-api:modulebay-detail:
+  - /api/dcim/module-bays/6f83d2ff-f73a-4ad1-8cfd-dad485206949/
+  - /api/dcim/module-bays/ef9b97a1-f459-4b14-b517-23897e008059/
+  dcim-api:modulebay-list:
+  - /api/dcim/module-bays/
+  - /api/dcim/module-bays/?limit=18&offset=72
+  dcim-api:modulebay-notes:
+  - /api/dcim/module-bays/6f83d2ff-f73a-4ad1-8cfd-dad485206949/notes/
+  - /api/dcim/module-bays/ef9b97a1-f459-4b14-b517-23897e008059/notes/
+  dcim-api:modulebaytemplate-detail:
+  - /api/dcim/module-bay-templates/4d30d747-1c84-4f2f-aabe-f072ce1dca34/
+  - /api/dcim/module-bay-templates/0f2b11ea-db27-49f3-a17b-8669480c308f/
+  dcim-api:modulebaytemplate-list:
+  - /api/dcim/module-bay-templates/
+  - /api/dcim/module-bay-templates/?limit=18&offset=72
+  dcim-api:modulebaytemplate-notes:
+  - /api/dcim/module-bay-templates/4d30d747-1c84-4f2f-aabe-f072ce1dca34/notes/
+  - /api/dcim/module-bay-templates/0f2b11ea-db27-49f3-a17b-8669480c308f/notes/
+  dcim-api:moduletype-detail:
+  - /api/dcim/module-types/94892bc8-d70a-406d-8c56-0ea931b778f9/
+  - /api/dcim/module-types/ad07a4d4-3a7a-49e3-861b-9d2b75231038/
+  dcim-api:moduletype-list:
+  - /api/dcim/module-types/
+  - /api/dcim/module-types/?limit=4&offset=16
+  dcim-api:moduletype-notes:
+  - /api/dcim/module-types/94892bc8-d70a-406d-8c56-0ea931b778f9/notes/
+  - /api/dcim/module-types/ad07a4d4-3a7a-49e3-861b-9d2b75231038/notes/
+  dcim-api:platform-detail:
+  - /api/dcim/platforms/ca2c38ae-e5b2-4f8a-aa70-627301ca8824/
+  - /api/dcim/platforms/a766e9cf-8a39-4e4b-a19e-1296f0fc1c05/
+  dcim-api:platform-list:
+  - /api/dcim/platforms/
+  - /api/dcim/platforms/?limit=5&offset=20
+  dcim-api:platform-notes:
+  - /api/dcim/platforms/ca2c38ae-e5b2-4f8a-aa70-627301ca8824/notes/
+  - /api/dcim/platforms/a766e9cf-8a39-4e4b-a19e-1296f0fc1c05/notes/
+  dcim-api:powerconnections-list:
+  - /api/dcim/power-connections/
+  dcim-api:poweroutlet-detail:
+  - /api/dcim/power-outlets/05469fcc-4765-466d-a428-fc4ec053dd03/
+  - /api/dcim/power-outlets/b23c74e0-f32f-41de-813d-e3ca2e9ed7fd/
+  dcim-api:poweroutlet-list:
+  - /api/dcim/power-outlets/
+  - /api/dcim/power-outlets/?limit=6&offset=24
+  dcim-api:poweroutlet-notes:
+  - /api/dcim/power-outlets/05469fcc-4765-466d-a428-fc4ec053dd03/notes/
+  - /api/dcim/power-outlets/b23c74e0-f32f-41de-813d-e3ca2e9ed7fd/notes/
+  dcim-api:poweroutlet-trace:
+  - /api/dcim/power-outlets/05469fcc-4765-466d-a428-fc4ec053dd03/trace/
+  - /api/dcim/power-outlets/b23c74e0-f32f-41de-813d-e3ca2e9ed7fd/trace/
+  dcim-api:poweroutlettemplate-detail:
+  - /api/dcim/power-outlet-templates/fba6bdb7-ba24-48cb-a753-8d10999195e9/
+  - /api/dcim/power-outlet-templates/fefee25e-43fd-4976-bacb-4c5538d46d61/
+  dcim-api:poweroutlettemplate-list:
+  - /api/dcim/power-outlet-templates/
+  - /api/dcim/power-outlet-templates/?limit=6&offset=24
+  dcim-api:poweroutlettemplate-notes:
+  - /api/dcim/power-outlet-templates/fba6bdb7-ba24-48cb-a753-8d10999195e9/notes/
+  - /api/dcim/power-outlet-templates/fefee25e-43fd-4976-bacb-4c5538d46d61/notes/
+  dcim-api:powerport-detail:
+  - /api/dcim/power-ports/87e4b6f2-3039-4916-901e-43cae161f6de/
+  - /api/dcim/power-ports/9e71dd0c-5ea3-4dff-be17-81ae6b13fd0a/
+  dcim-api:powerport-list:
+  - /api/dcim/power-ports/
+  - /api/dcim/power-ports/?limit=5&offset=20
+  dcim-api:powerport-notes:
+  - /api/dcim/power-ports/87e4b6f2-3039-4916-901e-43cae161f6de/notes/
+  - /api/dcim/power-ports/9e71dd0c-5ea3-4dff-be17-81ae6b13fd0a/notes/
+  dcim-api:powerport-trace:
+  - /api/dcim/power-ports/87e4b6f2-3039-4916-901e-43cae161f6de/trace/
+  - /api/dcim/power-ports/9e71dd0c-5ea3-4dff-be17-81ae6b13fd0a/trace/
+  dcim-api:powerporttemplate-detail:
+  - /api/dcim/power-port-templates/110fb1c4-764f-492c-b9b7-89044587c55b/
+  - /api/dcim/power-port-templates/dbc01b3a-7f90-4cf8-94ba-6719a0ec3d35/
+  dcim-api:powerporttemplate-list:
+  - /api/dcim/power-port-templates/
+  - /api/dcim/power-port-templates/?limit=6&offset=24
+  dcim-api:powerporttemplate-notes:
+  - /api/dcim/power-port-templates/110fb1c4-764f-492c-b9b7-89044587c55b/notes/
+  - /api/dcim/power-port-templates/dbc01b3a-7f90-4cf8-94ba-6719a0ec3d35/notes/
+  dcim-api:rearport-detail:
+  - /api/dcim/rear-ports/3de1bac6-8667-4905-bc65-93277e913cc9/
+  - /api/dcim/rear-ports/db55b049-09e2-4115-b6ee-740b08b4756b/
+  dcim-api:rearport-list:
+  - /api/dcim/rear-ports/
+  - /api/dcim/rear-ports/?limit=5&offset=20
+  dcim-api:rearport-notes:
+  - /api/dcim/rear-ports/3de1bac6-8667-4905-bc65-93277e913cc9/notes/
+  - /api/dcim/rear-ports/db55b049-09e2-4115-b6ee-740b08b4756b/notes/
+  dcim-api:rearport-paths:
+  - /api/dcim/rear-ports/3de1bac6-8667-4905-bc65-93277e913cc9/paths/
+  - /api/dcim/rear-ports/db55b049-09e2-4115-b6ee-740b08b4756b/paths/
+  dcim-api:rearporttemplate-detail:
+  - /api/dcim/rear-port-templates/8065918b-425d-4137-8719-515658f88515/
+  - /api/dcim/rear-port-templates/d5e14b80-e767-4ede-83ac-4f95790ef134/
+  dcim-api:rearporttemplate-list:
+  - /api/dcim/rear-port-templates/
+  - /api/dcim/rear-port-templates/?limit=6&offset=24
+  dcim-api:rearporttemplate-notes:
+  - /api/dcim/rear-port-templates/8065918b-425d-4137-8719-515658f88515/notes/
+  - /api/dcim/rear-port-templates/d5e14b80-e767-4ede-83ac-4f95790ef134/notes/
+  dcim-api:softwareimagefile-detail:
+  - /api/dcim/software-image-files/f644a44c-da07-4698-a8f9-282dbd5d2dff/
+  - /api/dcim/software-image-files/1466cbb0-aa6e-4a93-8a42-9c4ea1ae65e9/
+  dcim-api:softwareimagefile-list:
+  - /api/dcim/software-image-files/
+  - /api/dcim/software-image-files/?limit=6&offset=24
+  dcim-api:softwareimagefile-notes:
+  - /api/dcim/software-image-files/f644a44c-da07-4698-a8f9-282dbd5d2dff/notes/
+  - /api/dcim/software-image-files/1466cbb0-aa6e-4a93-8a42-9c4ea1ae65e9/notes/
+  dcim-api:softwareversion-detail:
+  - /api/dcim/software-versions/27ad245f-4c89-4b1e-943c-8a4b4743f8ef/
+  - /api/dcim/software-versions/f834efbd-a8a3-4035-889b-a53f52a16ea4/
+  dcim-api:softwareversion-list:
+  - /api/dcim/software-versions/
+  - /api/dcim/software-versions/?limit=5&offset=20
+  dcim-api:softwareversion-notes:
+  - /api/dcim/software-versions/27ad245f-4c89-4b1e-943c-8a4b4743f8ef/notes/
+  - /api/dcim/software-versions/f834efbd-a8a3-4035-889b-a53f52a16ea4/notes/
+  dcim-api:virtualdevicecontext-detail:
+  - /api/dcim/virtual-device-contexts/c5c3f8b7-ff58-4e3b-871e-f73825a376e5/
+  - /api/dcim/virtual-device-contexts/211e140c-995d-4640-ba71-41828afb7491/
+  dcim-api:virtualdevicecontext-list:
+  - /api/dcim/virtual-device-contexts/
+  - /api/dcim/virtual-device-contexts/?limit=6&offset=24
+  dcim-api:virtualdevicecontext-notes:
+  - /api/dcim/virtual-device-contexts/c5c3f8b7-ff58-4e3b-871e-f73825a376e5/notes/
+  - /api/dcim/virtual-device-contexts/211e140c-995d-4640-ba71-41828afb7491/notes/
   dcim:console_connections_list:
   - /dcim/console-connections/
   dcim:consoleport:
@@ -400,6 +863,164 @@ endpoints:
   dcim:virtualdevicecontext_notes:
   - /dcim/virtual-device-contexts/c5c3f8b7-ff58-4e3b-871e-f73825a376e5/notes/
   - /dcim/virtual-device-contexts/211e140c-995d-4640-ba71-41828afb7491/notes/
+  extras-api:contact-detail:
+  - /api/extras/contacts/ce36c739-a614-4e92-82e7-3c9274516b34/
+  - /api/extras/contacts/def68347-e6d4-4e6f-bb41-fa699c437b58/
+  extras-api:contact-list:
+  - /api/extras/contacts/
+  - /api/extras/contacts/?limit=4&offset=16
+  extras-api:contact-notes:
+  - /api/extras/contacts/ce36c739-a614-4e92-82e7-3c9274516b34/notes/
+  - /api/extras/contacts/def68347-e6d4-4e6f-bb41-fa699c437b58/notes/
+  extras-api:contenttype-detail:
+  - /api/extras/content-types/(?P<pk>[/.]+)/
+  extras-api:contenttype-list:
+  - /api/extras/content-types/
+  extras-api:dynamicgroup-detail:
+  - /api/extras/dynamic-groups/0b7402b7-9325-4bf8-af42-7aa3cf405631/
+  - /api/extras/dynamic-groups/7c9f96d3-74ed-46de-96a4-eb90f2e0152d/
+  extras-api:dynamicgroup-list:
+  - /api/extras/dynamic-groups/
+  - /api/extras/dynamic-groups/?limit=4&offset=16
+  extras-api:dynamicgroup-members:
+  - /api/extras/dynamic-groups/0b7402b7-9325-4bf8-af42-7aa3cf405631/members/
+  - /api/extras/dynamic-groups/7c9f96d3-74ed-46de-96a4-eb90f2e0152d/members/
+  extras-api:dynamicgroup-notes:
+  - /api/extras/dynamic-groups/0b7402b7-9325-4bf8-af42-7aa3cf405631/notes/
+  - /api/extras/dynamic-groups/7c9f96d3-74ed-46de-96a4-eb90f2e0152d/notes/
+  extras-api:externalintegration-detail:
+  - /api/extras/external-integrations/ec200b20-f1e1-4395-b88f-80d91043daf2/
+  - /api/extras/external-integrations/3bbf6a34-a883-4cf7-8846-a209507461d3/
+  extras-api:externalintegration-list:
+  - /api/extras/external-integrations/
+  - /api/extras/external-integrations/?limit=4&offset=16
+  extras-api:externalintegration-notes:
+  - /api/extras/external-integrations/ec200b20-f1e1-4395-b88f-80d91043daf2/notes/
+  - /api/extras/external-integrations/3bbf6a34-a883-4cf7-8846-a209507461d3/notes/
+  extras-api:job-list:
+  - /api/extras/jobs/
+  - /api/extras/jobs/?limit=3&offset=12
+  extras-api:joblogentry-detail:
+  - /api/extras/job-logs/23159824-1f43-46cb-9d89-7004dd1afdc3/
+  - /api/extras/job-logs/1626dd99-fdd2-4a56-9ea0-5dcfc6723fbc/
+  extras-api:joblogentry-list:
+  - /api/extras/job-logs/
+  - /api/extras/job-logs/?limit=20&offset=80
+  extras-api:jobqueue-detail:
+  - /api/extras/job-queues/68803504-3e79-4066-bc3c-a63ab6bc2584/
+  - /api/extras/job-queues/9ebe441c-5cac-4cf3-970b-3791979d3551/
+  extras-api:jobqueue-list:
+  - /api/extras/job-queues/
+  - /api/extras/job-queues/?limit=8&offset=32
+  extras-api:jobqueue-notes:
+  - /api/extras/job-queues/68803504-3e79-4066-bc3c-a63ab6bc2584/notes/
+  - /api/extras/job-queues/9ebe441c-5cac-4cf3-970b-3791979d3551/notes/
+  extras-api:jobqueueassignment-detail:
+  - /api/extras/job-queue-assignments/59f95b4a-5410-4b61-a31a-568a5a990c9b/
+  - /api/extras/job-queue-assignments/12a45b24-78a1-4527-b8d8-edbd27756575/
+  extras-api:jobqueueassignment-list:
+  - /api/extras/job-queue-assignments/
+  - /api/extras/job-queue-assignments/?limit=28&offset=112
+  extras-api:jobqueueassignment-notes:
+  - /api/extras/job-queue-assignments/59f95b4a-5410-4b61-a31a-568a5a990c9b/notes/
+  - /api/extras/job-queue-assignments/12a45b24-78a1-4527-b8d8-edbd27756575/notes/
+  extras-api:jobresult-detail:
+  - /api/extras/job-results/069b03ad-1624-440b-b436-04508eacfaf8/
+  - /api/extras/job-results/2252eaf5-64a0-45da-bd93-04099605ba3b/
+  extras-api:jobresult-list:
+  - /api/extras/job-results/
+  - /api/extras/job-results/?limit=4&offset=16
+  extras-api:jobresult-logs:
+  - /api/extras/job-results/069b03ad-1624-440b-b436-04508eacfaf8/logs/
+  - /api/extras/job-results/2252eaf5-64a0-45da-bd93-04099605ba3b/logs/
+  extras-api:metadatachoice-detail:
+  - /api/extras/metadata-choices/cb466445-1d0c-4180-8633-6d54f81d9a67/
+  - /api/extras/metadata-choices/d71819ce-741c-41c9-82af-8a552510a97c/
+  extras-api:metadatachoice-list:
+  - /api/extras/metadata-choices/
+  - /api/extras/metadata-choices/?limit=20&offset=80
+  extras-api:metadatatype-detail:
+  - /api/extras/metadata-types/321b1838-f7da-4979-973e-0635ace72540/
+  - /api/extras/metadata-types/d571cceb-e88e-4711-ac0d-dc72acc6296b/
+  extras-api:metadatatype-list:
+  - /api/extras/metadata-types/
+  - /api/extras/metadata-types/?limit=7&offset=28
+  extras-api:metadatatype-notes:
+  - /api/extras/metadata-types/321b1838-f7da-4979-973e-0635ace72540/notes/
+  - /api/extras/metadata-types/d571cceb-e88e-4711-ac0d-dc72acc6296b/notes/
+  extras-api:objectchange-detail:
+  - /api/extras/object-changes/120d3b81-07a3-47a4-be10-280ef02e8a44/
+  - /api/extras/object-changes/2fdaddab-1bf3-43eb-9236-69326c51ba39/
+  extras-api:objectchange-list:
+  - /api/extras/object-changes/
+  - /api/extras/object-changes/?limit=20&offset=80
+  extras-api:objectmetadata-detail:
+  - /api/extras/object-metadata/ee025aa6-2127-479e-8427-a36eab7c6aa7/
+  - /api/extras/object-metadata/00fbdebf-940a-4963-a417-4269f617e859/
+  extras-api:objectmetadata-list:
+  - /api/extras/object-metadata/
+  - /api/extras/object-metadata/?limit=28&offset=112
+  extras-api:objectmetadata-notes:
+  - /api/extras/object-metadata/ee025aa6-2127-479e-8427-a36eab7c6aa7/notes/
+  - /api/extras/object-metadata/00fbdebf-940a-4963-a417-4269f617e859/notes/
+  extras-api:role-detail:
+  - /api/extras/roles/7b834623-9d0f-48b1-a5bf-ed7c162795c0/
+  - /api/extras/roles/72e53e7a-e917-492c-89b4-c91240b08457/
+  extras-api:role-list:
+  - /api/extras/roles/
+  - /api/extras/roles/?limit=6&offset=24
+  extras-api:role-notes:
+  - /api/extras/roles/7b834623-9d0f-48b1-a5bf-ed7c162795c0/notes/
+  - /api/extras/roles/72e53e7a-e917-492c-89b4-c91240b08457/notes/
+  extras-api:savedview-detail:
+  - /api/extras/saved-views/ce40ca6b-8ef8-45c1-8069-11a2a37bca14/
+  - /api/extras/saved-views/8acb6431-4d20-479c-a24e-a6f3c8645164/
+  extras-api:savedview-list:
+  - /api/extras/saved-views/
+  - /api/extras/saved-views/?limit=4&offset=16
+  extras-api:staticgroupassociation-detail:
+  - /api/extras/static-group-associations/3dceb95f-964e-487d-938e-22553dcbed06/
+  - /api/extras/static-group-associations/5a990ad4-38c8-4fe6-9217-5c63e821b119/
+  extras-api:staticgroupassociation-list:
+  - /api/extras/static-group-associations/
+  - /api/extras/static-group-associations/?limit=4&offset=16
+  extras-api:staticgroupassociation-notes:
+  - /api/extras/static-group-associations/3dceb95f-964e-487d-938e-22553dcbed06/notes/
+  - /api/extras/static-group-associations/5a990ad4-38c8-4fe6-9217-5c63e821b119/notes/
+  extras-api:status-detail:
+  - /api/extras/statuses/90ff98d0-26cf-4631-877e-4e1d5feb5872/
+  - /api/extras/statuses/97b8f2a0-510d-4d1d-8846-3a0b71c3fe79/
+  extras-api:status-list:
+  - /api/extras/statuses/
+  - /api/extras/statuses/?limit=6&offset=24
+  extras-api:status-notes:
+  - /api/extras/statuses/90ff98d0-26cf-4631-877e-4e1d5feb5872/notes/
+  - /api/extras/statuses/97b8f2a0-510d-4d1d-8846-3a0b71c3fe79/notes/
+  extras-api:tag-detail:
+  - /api/extras/tags/b73b6607-1697-4490-9fdb-3f60eebd7d80/
+  - /api/extras/tags/08d1c8dc-7278-4e07-94d9-f1fc42c093c1/
+  extras-api:tag-list:
+  - /api/extras/tags/
+  - /api/extras/tags/?limit=4&offset=16
+  extras-api:tag-notes:
+  - /api/extras/tags/b73b6607-1697-4490-9fdb-3f60eebd7d80/notes/
+  - /api/extras/tags/08d1c8dc-7278-4e07-94d9-f1fc42c093c1/notes/
+  extras-api:team-detail:
+  - /api/extras/teams/fa3e1040-f555-4282-baf0-a5151f0f9bc4/
+  - /api/extras/teams/641ada31-f137-439c-b5cb-0b77db85ca6d/
+  extras-api:team-list:
+  - /api/extras/teams/
+  - /api/extras/teams/?limit=4&offset=16
+  extras-api:team-notes:
+  - /api/extras/teams/fa3e1040-f555-4282-baf0-a5151f0f9bc4/notes/
+  - /api/extras/teams/641ada31-f137-439c-b5cb-0b77db85ca6d/notes/
+  extras:api-root:
+  - /extras/
+  - /extras/
+  extras:apps-list:
+  - /extras/installed-apps/
+  extras:apps_list:
+  - /extras/installed-apps/
   extras:contact:
   - /extras/contacts/ce36c739-a614-4e92-82e7-3c9274516b34/
   - /extras/contacts/def68347-e6d4-4e6f-bb41-fa699c437b58/
@@ -487,6 +1108,10 @@ endpoints:
   extras:objectmetadata_list:
   - /extras/object-metadata/
   - /extras/object-metadata/?per_page=28&page=5
+  extras:plugins-list:
+  - /extras/installed-plugins/
+  extras:plugins_list:
+  - /extras/installed-plugins/
   extras:role:
   - /extras/roles/7b834623-9d0f-48b1-a5bf-ed7c162795c0/
   - /extras/roles/72e53e7a-e917-492c-89b4-c91240b08457/
@@ -553,6 +1178,105 @@ endpoints:
   extras:team_notes:
   - /extras/teams/fa3e1040-f555-4282-baf0-a5151f0f9bc4/notes/
   - /extras/teams/641ada31-f137-439c-b5cb-0b77db85ca6d/notes/
+  ipam-api:ipaddress-detail:
+  - /api/ipam/ip-addresses/6c4e71f6-d1d9-4a63-addb-7e8a441368ab/
+  - /api/ipam/ip-addresses/93452b5c-2a76-4535-b87e-cc791b32da91/
+  ipam-api:ipaddress-list:
+  - /api/ipam/ip-addresses/
+  - /api/ipam/ip-addresses/?limit=10&offset=40
+  ipam-api:ipaddress-notes:
+  - /api/ipam/ip-addresses/6c4e71f6-d1d9-4a63-addb-7e8a441368ab/notes/
+  - /api/ipam/ip-addresses/93452b5c-2a76-4535-b87e-cc791b32da91/notes/
+  ipam-api:namespace-detail:
+  - /api/ipam/namespaces/575aae64-0804-40e6-9aa3-5d698dcb1f6a/
+  - /api/ipam/namespaces/c98a5b4f-c186-4fc1-8628-019f0f64ca1a/
+  ipam-api:namespace-list:
+  - /api/ipam/namespaces/
+  - /api/ipam/namespaces/?limit=3&offset=12
+  ipam-api:namespace-notes:
+  - /api/ipam/namespaces/575aae64-0804-40e6-9aa3-5d698dcb1f6a/notes/
+  - /api/ipam/namespaces/c98a5b4f-c186-4fc1-8628-019f0f64ca1a/notes/
+  ipam-api:prefix-available-ips:
+  - /api/ipam/prefixes/4eb07598-b745-4ad8-bd45-7bbc5624bdc7/available-ips/
+  - /api/ipam/prefixes/e212bdd4-0355-4c70-a135-58f9d84cbcf5/available-ips/
+  ipam-api:prefix-available-prefixes:
+  - /api/ipam/prefixes/4eb07598-b745-4ad8-bd45-7bbc5624bdc7/available-prefixes/
+  - /api/ipam/prefixes/e212bdd4-0355-4c70-a135-58f9d84cbcf5/available-prefixes/
+  ipam-api:prefix-detail:
+  - /api/ipam/prefixes/4eb07598-b745-4ad8-bd45-7bbc5624bdc7/
+  - /api/ipam/prefixes/e212bdd4-0355-4c70-a135-58f9d84cbcf5/
+  ipam-api:prefix-list:
+  - /api/ipam/prefixes/
+  - /api/ipam/prefixes/?limit=32&offset=128
+  ipam-api:prefix-notes:
+  - /api/ipam/prefixes/4eb07598-b745-4ad8-bd45-7bbc5624bdc7/notes/
+  - /api/ipam/prefixes/e212bdd4-0355-4c70-a135-58f9d84cbcf5/notes/
+  ipam-api:prefixlocationassignment-detail:
+  - /api/ipam/prefix-location-assignments/645b18fe-066c-4719-8835-9e7fabf9a310/
+  - /api/ipam/prefix-location-assignments/6c1599b1-8e93-401d-911b-c4463172213f/
+  ipam-api:prefixlocationassignment-list:
+  - /api/ipam/prefix-location-assignments/
+  - /api/ipam/prefix-location-assignments/?limit=270&offset=1080
+  ipam-api:prefixlocationassignment-notes:
+  - /api/ipam/prefix-location-assignments/645b18fe-066c-4719-8835-9e7fabf9a310/notes/
+  - /api/ipam/prefix-location-assignments/6c1599b1-8e93-401d-911b-c4463172213f/notes/
+  ipam-api:rir-detail:
+  - /api/ipam/rirs/7725fafe-46e5-4145-8b01-4fe09385bf8d/
+  - /api/ipam/rirs/9ea8693c-9aa3-4174-b774-649544c079d2/
+  ipam-api:rir-list:
+  - /api/ipam/rirs/
+  - /api/ipam/rirs/?limit=1&offset=4
+  ipam-api:rir-notes:
+  - /api/ipam/rirs/7725fafe-46e5-4145-8b01-4fe09385bf8d/notes/
+  - /api/ipam/rirs/9ea8693c-9aa3-4174-b774-649544c079d2/notes/
+  ipam-api:routetarget-detail:
+  - /api/ipam/route-targets/b11157fb-55d1-4932-b17c-707ac6e92e86/
+  - /api/ipam/route-targets/61005e18-8088-4786-b60d-9a13af1786b3/
+  ipam-api:routetarget-list:
+  - /api/ipam/route-targets/
+  - /api/ipam/route-targets/?limit=4&offset=16
+  ipam-api:routetarget-notes:
+  - /api/ipam/route-targets/b11157fb-55d1-4932-b17c-707ac6e92e86/notes/
+  - /api/ipam/route-targets/61005e18-8088-4786-b60d-9a13af1786b3/notes/
+  ipam-api:vlan-detail:
+  - /api/ipam/vlans/f005419b-5f6e-4597-bb01-ab93020bb89e/
+  - /api/ipam/vlans/b3b1bdd7-9203-4751-9076-101c62f73086/
+  ipam-api:vlan-list:
+  - /api/ipam/vlans/
+  - /api/ipam/vlans/?limit=19&offset=76
+  ipam-api:vlan-notes:
+  - /api/ipam/vlans/f005419b-5f6e-4597-bb01-ab93020bb89e/notes/
+  - /api/ipam/vlans/b3b1bdd7-9203-4751-9076-101c62f73086/notes/
+  ipam-api:vlangroup-available-vlans:
+  - /api/ipam/vlan-groups/08bb092a-8a6a-445f-8c53-e38583c02490/available-vlans/
+  - /api/ipam/vlan-groups/4bf9b777-8899-494c-9967-a9422b6d5d7c/available-vlans/
+  ipam-api:vlangroup-detail:
+  - /api/ipam/vlan-groups/08bb092a-8a6a-445f-8c53-e38583c02490/
+  - /api/ipam/vlan-groups/4bf9b777-8899-494c-9967-a9422b6d5d7c/
+  ipam-api:vlangroup-list:
+  - /api/ipam/vlan-groups/
+  - /api/ipam/vlan-groups/?limit=4&offset=16
+  ipam-api:vlangroup-notes:
+  - /api/ipam/vlan-groups/08bb092a-8a6a-445f-8c53-e38583c02490/notes/
+  - /api/ipam/vlan-groups/4bf9b777-8899-494c-9967-a9422b6d5d7c/notes/
+  ipam-api:vlanlocationassignment-detail:
+  - /api/ipam/vlan-location-assignments/ce40bdc5-1411-416b-8222-50dd83bc7f7c/
+  - /api/ipam/vlan-location-assignments/9d2fa656-4930-4827-ab37-6ab3542b7561/
+  ipam-api:vlanlocationassignment-list:
+  - /api/ipam/vlan-location-assignments/
+  - /api/ipam/vlan-location-assignments/?limit=194&offset=776
+  ipam-api:vlanlocationassignment-notes:
+  - /api/ipam/vlan-location-assignments/ce40bdc5-1411-416b-8222-50dd83bc7f7c/notes/
+  - /api/ipam/vlan-location-assignments/9d2fa656-4930-4827-ab37-6ab3542b7561/notes/
+  ipam-api:vrf-detail:
+  - /api/ipam/vrfs/b3b9395d-6bf9-42ff-9474-8f86fccb2d24/
+  - /api/ipam/vrfs/d719f11b-8856-443b-a3ce-c9e6f183de14/
+  ipam-api:vrf-list:
+  - /api/ipam/vrfs/
+  - /api/ipam/vrfs/?limit=4&offset=16
+  ipam-api:vrf-notes:
+  - /api/ipam/vrfs/b3b9395d-6bf9-42ff-9474-8f86fccb2d24/notes/
+  - /api/ipam/vrfs/d719f11b-8856-443b-a3ce-c9e6f183de14/notes/
   ipam:ipaddress:
   - /ipam/ip-addresses/6c4e71f6-d1d9-4a63-addb-7e8a441368ab/
   - /ipam/ip-addresses/93452b5c-2a76-4535-b87e-cc791b32da91/
@@ -649,6 +1373,24 @@ endpoints:
   ipam:vrf_notes:
   - /ipam/vrfs/b3b9395d-6bf9-42ff-9474-8f86fccb2d24/notes/
   - /ipam/vrfs/d719f11b-8856-443b-a3ce-c9e6f183de14/notes/
+  tenancy-api:tenant-detail:
+  - /api/tenancy/tenants/2592b292-0c8d-47e7-a8f6-ae9d62d48e8b/
+  - /api/tenancy/tenants/ab9ddcc0-08a1-4b54-b711-237cb39587ab/
+  tenancy-api:tenant-list:
+  - /api/tenancy/tenants/
+  - /api/tenancy/tenants/?limit=6&offset=24
+  tenancy-api:tenant-notes:
+  - /api/tenancy/tenants/2592b292-0c8d-47e7-a8f6-ae9d62d48e8b/notes/
+  - /api/tenancy/tenants/ab9ddcc0-08a1-4b54-b711-237cb39587ab/notes/
+  tenancy-api:tenantgroup-detail:
+  - /api/tenancy/tenant-groups/67ad8818-9069-481e-b839-00a27a85bdca/
+  - /api/tenancy/tenant-groups/c4be21d0-563b-42e1-9256-830cfd37fc6d/
+  tenancy-api:tenantgroup-list:
+  - /api/tenancy/tenant-groups/
+  - /api/tenancy/tenant-groups/?limit=4&offset=16
+  tenancy-api:tenantgroup-notes:
+  - /api/tenancy/tenant-groups/67ad8818-9069-481e-b839-00a27a85bdca/notes/
+  - /api/tenancy/tenant-groups/c4be21d0-563b-42e1-9256-830cfd37fc6d/notes/
   tenancy:tenant:
   - /tenancy/tenants/2592b292-0c8d-47e7-a8f6-ae9d62d48e8b/
   - /tenancy/tenants/ab9ddcc0-08a1-4b54-b711-237cb39587ab/
@@ -673,6 +1415,73 @@ endpoints:
   tenancy:tenantgroup_notes:
   - /tenancy/tenant-groups/67ad8818-9069-481e-b839-00a27a85bdca/notes/
   - /tenancy/tenant-groups/c4be21d0-563b-42e1-9256-830cfd37fc6d/notes/
+  users-api:group-detail:
+  - /api/users/groups/(?P<pk>[/.]+)/
+  users-api:group-list:
+  - /api/users/groups/
+  users-api:user-detail:
+  - /api/users/users/8d160baa-8505-4fdc-bc40-ef2a7772cbd3/
+  - /api/users/users/f5575d68-13a0-40d2-b8a7-36023da6256a/
+  users-api:user-list:
+  - /api/users/users/
+  - /api/users/users/?limit=1&offset=4
+  users-api:userconfig-list:
+  - /api/users/config/
+  users:login:
+  - /users/login/
+  users:logout:
+  - /users/logout/
+  users:preferences:
+  - /users/preferences/
+  - /users/preferences/
+  users:profile:
+  - /users/profile/
+  - /users/profile/
+  wireless-api:controllermanageddevicegroupradioprofileassignment-detail:
+  - /api/wireless/controller-managed-device-group-radio-profile-assignments/3c3f3c6c-9138-403f-af47-429e9f8f4a72/
+  - /api/wireless/controller-managed-device-group-radio-profile-assignments/57bb1219-d7c5-476c-8e32-28a99a243424/
+  wireless-api:controllermanageddevicegroupradioprofileassignment-list:
+  - /api/wireless/controller-managed-device-group-radio-profile-assignments/
+  - /api/wireless/controller-managed-device-group-radio-profile-assignments/?limit=4&offset=16
+  wireless-api:controllermanageddevicegroupradioprofileassignment-notes:
+  - /api/wireless/controller-managed-device-group-radio-profile-assignments/3c3f3c6c-9138-403f-af47-429e9f8f4a72/notes/
+  - /api/wireless/controller-managed-device-group-radio-profile-assignments/57bb1219-d7c5-476c-8e32-28a99a243424/notes/
+  wireless-api:controllermanageddevicegroupwirelessnetworkassignment-detail:
+  - /api/wireless/controller-managed-device-group-wireless-network-assignments/8e7f2b44-7c5c-4fe8-b12d-6b0b17512324/
+  - /api/wireless/controller-managed-device-group-wireless-network-assignments/7f61bd08-8d91-48f2-af90-87fba7957088/
+  wireless-api:controllermanageddevicegroupwirelessnetworkassignment-list:
+  - /api/wireless/controller-managed-device-group-wireless-network-assignments/
+  - /api/wireless/controller-managed-device-group-wireless-network-assignments/?limit=4&offset=16
+  wireless-api:controllermanageddevicegroupwirelessnetworkassignment-notes:
+  - /api/wireless/controller-managed-device-group-wireless-network-assignments/8e7f2b44-7c5c-4fe8-b12d-6b0b17512324/notes/
+  - /api/wireless/controller-managed-device-group-wireless-network-assignments/7f61bd08-8d91-48f2-af90-87fba7957088/notes/
+  wireless-api:radioprofile-detail:
+  - /api/wireless/radio-profiles/388fee3d-48bc-4e31-a727-1820f8421c6d/
+  - /api/wireless/radio-profiles/94c68f05-1b5a-451a-971d-2bf1f4c34b93/
+  wireless-api:radioprofile-list:
+  - /api/wireless/radio-profiles/
+  - /api/wireless/radio-profiles/?limit=7&offset=28
+  wireless-api:radioprofile-notes:
+  - /api/wireless/radio-profiles/388fee3d-48bc-4e31-a727-1820f8421c6d/notes/
+  - /api/wireless/radio-profiles/94c68f05-1b5a-451a-971d-2bf1f4c34b93/notes/
+  wireless-api:supporteddatarate-detail:
+  - /api/wireless/supported-data-rates/847e12aa-0705-49a4-925a-a77e2f008e6f/
+  - /api/wireless/supported-data-rates/7a0f09d4-b7c4-4bcd-8b58-2e3f78686601/
+  wireless-api:supporteddatarate-list:
+  - /api/wireless/supported-data-rates/
+  - /api/wireless/supported-data-rates/?limit=6&offset=24
+  wireless-api:supporteddatarate-notes:
+  - /api/wireless/supported-data-rates/847e12aa-0705-49a4-925a-a77e2f008e6f/notes/
+  - /api/wireless/supported-data-rates/7a0f09d4-b7c4-4bcd-8b58-2e3f78686601/notes/
+  wireless-api:wirelessnetwork-detail:
+  - /api/wireless/wireless-networks/d27bfda0-cbf2-434f-943c-ca44c00559e4/
+  - /api/wireless/wireless-networks/2cf07440-e824-4eab-b95f-6d7e279d0bf0/
+  wireless-api:wirelessnetwork-list:
+  - /api/wireless/wireless-networks/
+  - /api/wireless/wireless-networks/?limit=7&offset=28
+  wireless-api:wirelessnetwork-notes:
+  - /api/wireless/wireless-networks/d27bfda0-cbf2-434f-943c-ca44c00559e4/notes/
+  - /api/wireless/wireless-networks/2cf07440-e824-4eab-b95f-6d7e279d0bf0/notes/
   wireless:radioprofile:
   - /wireless/radio-profiles/388fee3d-48bc-4e31-a727-1820f8421c6d/
   - /wireless/radio-profiles/94c68f05-1b5a-451a-971d-2bf1f4c34b93/

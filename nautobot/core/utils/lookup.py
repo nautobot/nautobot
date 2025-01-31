@@ -257,7 +257,13 @@ def get_model_for_view_name(view_name):
         _, app_label, model_name = split_view_name  # plugins, app_name, model_list
     else:
         raise ValueError(f"Unexpected View Name: {view_name}")
-    model_name = model_name.split("_")[0]  # device
+
+    delimiter = "_"
+    if app_label.endswith("-api"):
+        app_label = app_label.replace("-api", "")
+        delimiter = "-"
+
+    model_name = model_name.split(delimiter)[0]  # device
 
     try:
         model = apps.get_model(app_label=app_label, model_name=model_name)
