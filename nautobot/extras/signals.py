@@ -28,6 +28,7 @@ from nautobot.extras.models import (
     ComputedField,
     ContactAssociation,
     CustomField,
+    CustomFieldChoice,
     DynamicGroup,
     DynamicGroupMembership,
     GitRepository,
@@ -95,6 +96,19 @@ def invalidate_models_cache(sender, **kwargs):
         cache.delete_pattern(f"{manager.get_for_model.cache_key_prefix}.*")
         if hasattr(manager, "keys_for_model"):
             cache.delete_pattern(f"{manager.keys_for_model.cache_key_prefix}.*")
+
+
+@receiver(post_delete, sender=CustomField)
+@receiver(post_delete, sender=CustomFieldChoice)
+@receiver(post_save, sender=CustomFieldChoice)
+@receiver(post_save, sender=CustomField)
+def invalidate_choices_cache(sender, instance, **kwargs):
+    """Invalidate the choices cache for CustomFields."""
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        if sender is CustomField:
+            cache.delete(instance.choices_cache_key)
+        else:
+            cache.delete(instance.custom_field.choices_cache_key)
 
 
 @receiver(post_save, sender=Relationship)

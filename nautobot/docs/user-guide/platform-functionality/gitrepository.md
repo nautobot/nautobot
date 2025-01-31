@@ -437,14 +437,50 @@ curl -s -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; version=2.4" \
-http://nautobot/api/extras/git-repositories/2ecb8556-db58-466d-8278-860b8fd74627/sync/
+http://nautobot/api/extras/git-repositories/2ecb8556-db58-466d-8278-860b8fd74627/sync/ | jq '.'
 ```
 
 Which returns, for example:
 
 ```no-highlight
 {
-  "message": "Repository demo-git-datasource sync job added to queue."
+  "message": "Repository demo-git-datasource sync job added to queue.",
+  "job_result": {
+    "id": "68500ca5-27c3-488c-a24a-e98858bf52a1",
+    "object_type": "extras.jobresult",
+    "display": "Git Repository: Sync started at 2025-01-30 19:35:14.120625+00:00 (PENDING)",
+    "url": "http://nautobot/api/extras/job-results/68500ca5-27c3-488c-a24a-e98858bf52a1/",
+    "natural_slug": "68500ca5-27c3-488c-a24a-e98858bf52a1_6850",
+    "status": {
+      "value": "PENDING",
+      "label": "PENDING"
+    },
+    "name": "Git Repository: Sync",
+    "task_name": null,
+    "date_created": "2025-01-30T19:35:14.120625Z",
+    "date_done": null,
+    "result": null,
+    "worker": null,
+    "task_args": [],
+    "task_kwargs": {},
+    "celery_kwargs": {},
+    "traceback": null,
+    "meta": null,
+    "job_model": {
+      "id": "ad2b27c8-adf0-4e23-a4d3-a37fe3c42abd",
+      "object_type": "extras.job",
+      "url": "http://nautobot/api/extras/jobs/ad2b27c8-adf0-4e23-a4d3-a37fe3c42abd/"
+    },
+    "user": {
+      "id": "569138fe-f0b9-4abf-9812-c85a7ec73bbd",
+      "object_type": "users.user",
+      "url": "http://nautobot/api/users/users/569138fe-f0b9-4abf-9812-c85a7ec73bbd/"
+    },
+    "scheduled_job": null,
+    "custom_fields": {},
+    "computed_fields": {},
+    "files": []
+  }
 }
 ```
 
@@ -457,7 +493,7 @@ curl -s -X GET \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; version=2.4" \
-http://nautobot/api/extras/jobs/?module_name__isw=demo_git_datasource. | jq .
+http://nautobot/api/extras/jobs/?module_name__isw=demo_git_datasource. | jq '.'
 ```
 
 Here are the first 20 lines of JSON returned:
@@ -527,7 +563,7 @@ curl -s -X GET \
 -H "Authorization: Token $TOKEN" \
 -H "Content-Type: application/json" \
 -H "Accept: application/json; version=2.4" \
-http://nautobot/api/extras/config-contexts/?owner_object_id=2ecb8556-db58-466d-8278-860b8fd74627 | jq .
+http://nautobot/api/extras/config-contexts/?owner_object_id=2ecb8556-db58-466d-8278-860b8fd74627 | jq '.'
 ```
 
 Here's the first part of the output:
