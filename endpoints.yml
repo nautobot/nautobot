@@ -1,2100 +1,711 @@
----
 endpoints:
-  core:home:
-    - /core/
-  core:about:
-    - /core/about/
-  core:search:
-    - /core/search/
-  core:graphql:
-    - /core/graphql/
-  core:media_failure:
-    - /core/media-failure/
-  core:db_file_storage.download_file:
-    - /core/files/download/
-  core:worker_status:
-    - /core/worker-status/
-  core:render_jinja_template:
-    - /core/render-jinja-template/
-  core:theme_preview:
-    - /core/theme-preview/
-  core:metrics:
-    - /core/metrics/
-  circuits:circuit_terminations_swap:
-    - /circuits/circuits/<uuid:pk>/terminations/swap/
-  circuits:circuittermination_add:
-    - /circuits/circuits/<uuid:circuit>/terminations/add/
-  circuits:provider_list:
-    - /circuits/providers/$
-  circuits:provider_add:
-    - /circuits/providers/add/$
-  circuits:provider_import:
-    - /circuits/providers/import/$
-  circuits:provider_bulk_edit:
-    - /circuits/providers/edit/$
-  circuits:provider_bulk_delete:
-    - /circuits/providers/delete/$
-  circuits:provider:
-    - /circuits/providers/(?P<pk>[/.]+)/$
-  circuits:provider_delete:
-    - /circuits/providers/(?P<pk>[/.]+)/delete/$
-  circuits:provider_edit:
-    - /circuits/providers/(?P<pk>[/.]+)/edit/$
-  circuits:provider_changelog:
-    - /circuits/providers/(?P<pk>[/.]+)/changelog/$
-  circuits:provider_notes:
-    - /circuits/providers/(?P<pk>[/.]+)/notes/$
-  circuits:providernetwork_list:
-    - /circuits/provider-networks/$
-  circuits:providernetwork_add:
-    - /circuits/provider-networks/add/$
-  circuits:providernetwork_import:
-    - /circuits/provider-networks/import/$
-  circuits:providernetwork_bulk_edit:
-    - /circuits/provider-networks/edit/$
-  circuits:providernetwork_bulk_delete:
-    - /circuits/provider-networks/delete/$
-  circuits:providernetwork:
-    - /circuits/provider-networks/(?P<pk>[/.]+)/$
-  circuits:providernetwork_delete:
-    - /circuits/provider-networks/(?P<pk>[/.]+)/delete/$
-  circuits:providernetwork_edit:
-    - /circuits/provider-networks/(?P<pk>[/.]+)/edit/$
-  circuits:providernetwork_changelog:
-    - /circuits/provider-networks/(?P<pk>[/.]+)/changelog/$
-  circuits:providernetwork_notes:
-    - /circuits/provider-networks/(?P<pk>[/.]+)/notes/$
-  circuits:circuittype_list:
-    - /circuits/circuit-types/$
-  circuits:circuittype_add:
-    - /circuits/circuit-types/add/$
-  circuits:circuittype_import:
-    - /circuits/circuit-types/import/$
-  circuits:circuittype_bulk_delete:
-    - /circuits/circuit-types/delete/$
-  circuits:circuittype:
-    - /circuits/circuit-types/(?P<pk>[/.]+)/$
-  circuits:circuittype_delete:
-    - /circuits/circuit-types/(?P<pk>[/.]+)/delete/$
-  circuits:circuittype_edit:
-    - /circuits/circuit-types/(?P<pk>[/.]+)/edit/$
-  circuits:circuittype_changelog:
-    - /circuits/circuit-types/(?P<pk>[/.]+)/changelog/$
-  circuits:circuittype_notes:
-    - /circuits/circuit-types/(?P<pk>[/.]+)/notes/$
-  circuits:circuit_list:
-    - /circuits/circuits/$
-  circuits:circuit_add:
-    - /circuits/circuits/add/$
-  circuits:circuit_import:
-    - /circuits/circuits/import/$
-  circuits:circuit_bulk_edit:
-    - /circuits/circuits/edit/$
-  circuits:circuit_bulk_delete:
-    - /circuits/circuits/delete/$
   circuits:circuit:
-    - /circuits/circuits/(?P<pk>[/.]+)/$
-  circuits:circuit_delete:
-    - /circuits/circuits/(?P<pk>[/.]+)/delete/$
-  circuits:circuit_edit:
-    - /circuits/circuits/(?P<pk>[/.]+)/edit/$
+  - /circuits/circuits/43338d90-cadb-4b5e-a93c-c3a4171e020d/
+  - /circuits/circuits/b5a7aecb-b712-4973-b702-7264137fdc5e/
   circuits:circuit_changelog:
-    - /circuits/circuits/(?P<pk>[/.]+)/changelog/$
+  - /circuits/circuits/43338d90-cadb-4b5e-a93c-c3a4171e020d/changelog/
+  - /circuits/circuits/b5a7aecb-b712-4973-b702-7264137fdc5e/changelog/
+  circuits:circuit_list:
+  - /circuits/circuits/
+  - /circuits/circuits/?per_page=8&page=5
   circuits:circuit_notes:
-    - /circuits/circuits/(?P<pk>[/.]+)/notes/$
-  circuits:circuittermination_list:
-    - /circuits/circuit-terminations/$
-  circuits:circuittermination_add:
-    - /circuits/circuit-terminations/add/$
-  circuits:circuittermination_import:
-    - /circuits/circuit-terminations/import/$
-  circuits:circuittermination_bulk_delete:
-    - /circuits/circuit-terminations/delete/$
+  - /circuits/circuits/43338d90-cadb-4b5e-a93c-c3a4171e020d/notes/
+  - /circuits/circuits/b5a7aecb-b712-4973-b702-7264137fdc5e/notes/
   circuits:circuittermination:
-    - /circuits/circuit-terminations/(?P<pk>[/.]+)/$
-  circuits:circuittermination_delete:
-    - /circuits/circuit-terminations/(?P<pk>[/.]+)/delete/$
-  circuits:circuittermination_edit:
-    - /circuits/circuit-terminations/(?P<pk>[/.]+)/edit/$
+  - /circuits/circuit-terminations/f884c61c-f95d-4e7f-85b6-72ce48a9eadb/
+  - /circuits/circuit-terminations/3cceae77-b2df-482b-aa33-88a7ba479dbf/
   circuits:circuittermination_changelog:
-    - /circuits/circuit-terminations/(?P<pk>[/.]+)/changelog/$
+  - /circuits/circuit-terminations/f884c61c-f95d-4e7f-85b6-72ce48a9eadb/changelog/
+  - /circuits/circuit-terminations/3cceae77-b2df-482b-aa33-88a7ba479dbf/changelog/
+  circuits:circuittermination_list:
+  - /circuits/circuit-terminations/
+  - /circuits/circuit-terminations/?per_page=4&page=5
   circuits:circuittermination_notes:
-    - /circuits/circuit-terminations/(?P<pk>[/.]+)/notes/$
-  dcim:circuittermination_connect:
-    - /dcim/circuit-terminations/<uuid:termination_a_id>/connect/<str:termination_b_type>/
-  dcim:circuittermination_trace:
-    - /dcim/circuit-terminations/<uuid:pk>/trace/
-  dcim:location_list:
-    - /dcim/locations/
-  dcim:location_add:
-    - /dcim/locations/add/
-  dcim:location_bulk_edit:
-    - /dcim/locations/edit/
-  dcim:location_import:
-    - /dcim/locations/import/
-  dcim:location_bulk_delete:
-    - /dcim/locations/delete/
-  dcim:location:
-    - /dcim/locations/<uuid:pk>/
-  dcim:location_edit:
-    - /dcim/locations/<uuid:pk>/edit/
-  dcim:location_delete:
-    - /dcim/locations/<uuid:pk>/delete/
-  dcim:location_migrate_data_to_contact:
-    - /dcim/locations/<uuid:pk>/migrate-data-to-contact/
-  dcim:rackgroup_list:
-    - /dcim/rack-groups/
-  dcim:rackgroup_add:
-    - /dcim/rack-groups/add/
-  dcim:rackgroup_import:
-    - /dcim/rack-groups/import/
-  dcim:rackgroup_bulk_delete:
-    - /dcim/rack-groups/delete/
-  dcim:rackgroup:
-    - /dcim/rack-groups/<uuid:pk>/
-  dcim:rackgroup_edit:
-    - /dcim/rack-groups/<uuid:pk>/edit/
-  dcim:rackgroup_delete:
-    - /dcim/rack-groups/<uuid:pk>/delete/
-  dcim:rackreservation_list:
-    - /dcim/rack-reservations/
-  dcim:rackreservation_add:
-    - /dcim/rack-reservations/add/
-  dcim:rackreservation_import:
-    - /dcim/rack-reservations/import/
-  dcim:rackreservation_bulk_edit:
-    - /dcim/rack-reservations/edit/
-  dcim:rackreservation_bulk_delete:
-    - /dcim/rack-reservations/delete/
-  dcim:rackreservation:
-    - /dcim/rack-reservations/<uuid:pk>/
-  dcim:rackreservation_edit:
-    - /dcim/rack-reservations/<uuid:pk>/edit/
-  dcim:rackreservation_delete:
-    - /dcim/rack-reservations/<uuid:pk>/delete/
-  dcim:rack_list:
-    - /dcim/racks/
-  dcim:rack_elevation_list:
-    - /dcim/rack-elevations/
-  dcim:rack_add:
-    - /dcim/racks/add/
-  dcim:rack_import:
-    - /dcim/racks/import/
-  dcim:rack_bulk_edit:
-    - /dcim/racks/edit/
-  dcim:rack_bulk_delete:
-    - /dcim/racks/delete/
-  dcim:rack:
-    - /dcim/racks/<uuid:pk>/
-  dcim:rack_edit:
-    - /dcim/racks/<uuid:pk>/edit/
-  dcim:rack_delete:
-    - /dcim/racks/<uuid:pk>/delete/
-  dcim:manufacturer_list:
-    - /dcim/manufacturers/
-  dcim:manufacturer_add:
-    - /dcim/manufacturers/add/
-  dcim:manufacturer_import:
-    - /dcim/manufacturers/import/
-  dcim:manufacturer_bulk_delete:
-    - /dcim/manufacturers/delete/
-  dcim:manufacturer:
-    - /dcim/manufacturers/<uuid:pk>/
-  dcim:manufacturer_edit:
-    - /dcim/manufacturers/<uuid:pk>/edit/
-  dcim:manufacturer_delete:
-    - /dcim/manufacturers/<uuid:pk>/delete/
-  dcim:devicetype_list:
-    - /dcim/device-types/
-  dcim:devicetype_add:
-    - /dcim/device-types/add/
-  dcim:devicetype_import:
-    - /dcim/device-types/import/
-  dcim:devicetype_bulk_edit:
-    - /dcim/device-types/edit/
-  dcim:devicetype_bulk_delete:
-    - /dcim/device-types/delete/
-  dcim:devicetype:
-    - /dcim/device-types/<uuid:pk>/
-  dcim:devicetype_edit:
-    - /dcim/device-types/<uuid:pk>/edit/
-  dcim:devicetype_delete:
-    - /dcim/device-types/<uuid:pk>/delete/
-  dcim:consoleporttemplate_add:
-    - /dcim/console-port-templates/add/
-  dcim:consoleporttemplate_bulk_edit:
-    - /dcim/console-port-templates/edit/
-  dcim:consoleporttemplate_bulk_rename:
-    - /dcim/console-port-templates/rename/
-  dcim:consoleporttemplate_bulk_delete:
-    - /dcim/console-port-templates/delete/
-  dcim:consoleporttemplate_edit:
-    - /dcim/console-port-templates/<uuid:pk>/edit/
-  dcim:consoleporttemplate_delete:
-    - /dcim/console-port-templates/<uuid:pk>/delete/
-  dcim:consoleserverporttemplate_add:
-    - /dcim/console-server-port-templates/add/
-  dcim:consoleserverporttemplate_bulk_edit:
-    - /dcim/console-server-port-templates/edit/
-  dcim:consoleserverporttemplate_bulk_rename:
-    - /dcim/console-server-port-templates/rename/
-  dcim:consoleserverporttemplate_bulk_delete:
-    - /dcim/console-server-port-templates/delete/
-  dcim:consoleserverporttemplate_edit:
-    - /dcim/console-server-port-templates/<uuid:pk>/edit/
-  dcim:consoleserverporttemplate_delete:
-    - /dcim/console-server-port-templates/<uuid:pk>/delete/
-  dcim:powerporttemplate_add:
-    - /dcim/power-port-templates/add/
-  dcim:powerporttemplate_bulk_edit:
-    - /dcim/power-port-templates/edit/
-  dcim:powerporttemplate_bulk_rename:
-    - /dcim/power-port-templates/rename/
-  dcim:powerporttemplate_bulk_delete:
-    - /dcim/power-port-templates/delete/
-  dcim:powerporttemplate_edit:
-    - /dcim/power-port-templates/<uuid:pk>/edit/
-  dcim:powerporttemplate_delete:
-    - /dcim/power-port-templates/<uuid:pk>/delete/
-  dcim:poweroutlettemplate_add:
-    - /dcim/power-outlet-templates/add/
-  dcim:poweroutlettemplate_bulk_edit:
-    - /dcim/power-outlet-templates/edit/
-  dcim:poweroutlettemplate_bulk_rename:
-    - /dcim/power-outlet-templates/rename/
-  dcim:poweroutlettemplate_bulk_delete:
-    - /dcim/power-outlet-templates/delete/
-  dcim:poweroutlettemplate_edit:
-    - /dcim/power-outlet-templates/<uuid:pk>/edit/
-  dcim:poweroutlettemplate_delete:
-    - /dcim/power-outlet-templates/<uuid:pk>/delete/
-  dcim:interfacetemplate_add:
-    - /dcim/interface-templates/add/
-  dcim:interfacetemplate_bulk_edit:
-    - /dcim/interface-templates/edit/
-  dcim:interfacetemplate_bulk_rename:
-    - /dcim/interface-templates/rename/
-  dcim:interfacetemplate_bulk_delete:
-    - /dcim/interface-templates/delete/
-  dcim:interfacetemplate_edit:
-    - /dcim/interface-templates/<uuid:pk>/edit/
-  dcim:interfacetemplate_delete:
-    - /dcim/interface-templates/<uuid:pk>/delete/
-  dcim:frontporttemplate_add:
-    - /dcim/front-port-templates/add/
-  dcim:frontporttemplate_bulk_edit:
-    - /dcim/front-port-templates/edit/
-  dcim:frontporttemplate_bulk_rename:
-    - /dcim/front-port-templates/rename/
-  dcim:frontporttemplate_bulk_delete:
-    - /dcim/front-port-templates/delete/
-  dcim:frontporttemplate_edit:
-    - /dcim/front-port-templates/<uuid:pk>/edit/
-  dcim:frontporttemplate_delete:
-    - /dcim/front-port-templates/<uuid:pk>/delete/
-  dcim:rearporttemplate_add:
-    - /dcim/rear-port-templates/add/
-  dcim:rearporttemplate_bulk_edit:
-    - /dcim/rear-port-templates/edit/
-  dcim:rearporttemplate_bulk_rename:
-    - /dcim/rear-port-templates/rename/
-  dcim:rearporttemplate_bulk_delete:
-    - /dcim/rear-port-templates/delete/
-  dcim:rearporttemplate_edit:
-    - /dcim/rear-port-templates/<uuid:pk>/edit/
-  dcim:rearporttemplate_delete:
-    - /dcim/rear-port-templates/<uuid:pk>/delete/
-  dcim:devicebaytemplate_add:
-    - /dcim/device-bay-templates/add/
-  dcim:devicebaytemplate_bulk_edit:
-    - /dcim/device-bay-templates/edit/
-  dcim:devicebaytemplate_bulk_rename:
-    - /dcim/device-bay-templates/rename/
-  dcim:devicebaytemplate_bulk_delete:
-    - /dcim/device-bay-templates/delete/
-  dcim:devicebaytemplate_edit:
-    - /dcim/device-bay-templates/<uuid:pk>/edit/
-  dcim:devicebaytemplate_delete:
-    - /dcim/device-bay-templates/<uuid:pk>/delete/
-  dcim:platform_list:
-    - /dcim/platforms/
-  dcim:platform_add:
-    - /dcim/platforms/add/
-  dcim:platform_import:
-    - /dcim/platforms/import/
-  dcim:platform_bulk_delete:
-    - /dcim/platforms/delete/
-  dcim:platform:
-    - /dcim/platforms/<uuid:pk>/
-  dcim:platform_edit:
-    - /dcim/platforms/<uuid:pk>/edit/
-  dcim:platform_delete:
-    - /dcim/platforms/<uuid:pk>/delete/
-  dcim:device_list:
-    - /dcim/devices/
-  dcim:device_add:
-    - /dcim/devices/add/
-  dcim:device_import:
-    - /dcim/devices/import/
-  dcim:device_bulk_edit:
-    - /dcim/devices/edit/
-  dcim:device_bulk_delete:
-    - /dcim/devices/delete/
-  dcim:device:
-    - /dcim/devices/<uuid:pk>/
-  dcim:device_edit:
-    - /dcim/devices/<uuid:pk>/edit/
-  dcim:device_delete:
-    - /dcim/devices/<uuid:pk>/delete/
-  dcim:device_consoleports:
-    - /dcim/devices/<uuid:pk>/console-ports/
-  dcim:device_consoleserverports:
-    - /dcim/devices/<uuid:pk>/console-server-ports/
-  dcim:device_powerports:
-    - /dcim/devices/<uuid:pk>/power-ports/
-  dcim:device_poweroutlets:
-    - /dcim/devices/<uuid:pk>/power-outlets/
-  dcim:device_interfaces:
-    - /dcim/devices/<uuid:pk>/interfaces/
-  dcim:device_frontports:
-    - /dcim/devices/<uuid:pk>/front-ports/
-  dcim:device_rearports:
-    - /dcim/devices/<uuid:pk>/rear-ports/
-  dcim:device_devicebays:
-    - /dcim/devices/<uuid:pk>/device-bays/
-  dcim:device_modulebays:
-    - /dcim/devices/<uuid:pk>/module-bays/
-  dcim:device_inventory:
-    - /dcim/devices/<uuid:pk>/inventory/
-  dcim:device_configcontext:
-    - /dcim/devices/<uuid:pk>/config-context/
-  dcim:device_changelog:
-    - /dcim/devices/<uuid:pk>/changelog/
-  dcim:device_dynamicgroups:
-    - /dcim/devices/<uuid:pk>/dynamic-groups/
-  dcim:device_status:
-    - /dcim/devices/<uuid:pk>/status/
-  dcim:device_lldp_neighbors:
-    - /dcim/devices/<uuid:pk>/lldp-neighbors/
-  dcim:device_config:
-    - /dcim/devices/<uuid:pk>/config/
-  dcim:device_wireless:
-    - /dcim/devices/<uuid:pk>/wireless/
-  dcim:consoleport_list:
-    - /dcim/console-ports/
-  dcim:consoleport_add:
-    - /dcim/console-ports/add/
-  dcim:consoleport_import:
-    - /dcim/console-ports/import/
-  dcim:consoleport_bulk_edit:
-    - /dcim/console-ports/edit/
-  dcim:consoleport_bulk_rename:
-    - /dcim/console-ports/rename/
-  dcim:consoleport_bulk_disconnect:
-    - /dcim/console-ports/disconnect/
-  dcim:consoleport_bulk_delete:
-    - /dcim/console-ports/delete/
-  dcim:consoleport:
-    - /dcim/console-ports/<uuid:pk>/
-  dcim:consoleport_edit:
-    - /dcim/console-ports/<uuid:pk>/edit/
-  dcim:consoleport_delete:
-    - /dcim/console-ports/<uuid:pk>/delete/
-  dcim:consoleport_trace:
-    - /dcim/console-ports/<uuid:pk>/trace/
-  dcim:consoleport_connect:
-    - /dcim/console-ports/<uuid:termination_a_id>/connect/<str:termination_b_type>/
-  dcim:device_bulk_add_consoleport:
-    - /dcim/devices/console-ports/add/
-  dcim:consoleserverport_list:
-    - /dcim/console-server-ports/
-  dcim:consoleserverport_add:
-    - /dcim/console-server-ports/add/
-  dcim:consoleserverport_import:
-    - /dcim/console-server-ports/import/
-  dcim:consoleserverport_bulk_edit:
-    - /dcim/console-server-ports/edit/
-  dcim:consoleserverport_bulk_rename:
-    - /dcim/console-server-ports/rename/
-  dcim:consoleserverport_bulk_disconnect:
-    - /dcim/console-server-ports/disconnect/
-  dcim:consoleserverport_bulk_delete:
-    - /dcim/console-server-ports/delete/
-  dcim:consoleserverport:
-    - /dcim/console-server-ports/<uuid:pk>/
-  dcim:consoleserverport_edit:
-    - /dcim/console-server-ports/<uuid:pk>/edit/
-  dcim:consoleserverport_delete:
-    - /dcim/console-server-ports/<uuid:pk>/delete/
-  dcim:consoleserverport_trace:
-    - /dcim/console-server-ports/<uuid:pk>/trace/
-  dcim:consoleserverport_connect:
-    - /dcim/console-server-ports/<uuid:termination_a_id>/connect/<str:termination_b_type>/
-  dcim:device_bulk_add_consoleserverport:
-    - /dcim/devices/console-server-ports/add/
-  dcim:powerport_list:
-    - /dcim/power-ports/
-  dcim:powerport_add:
-    - /dcim/power-ports/add/
-  dcim:powerport_import:
-    - /dcim/power-ports/import/
-  dcim:powerport_bulk_edit:
-    - /dcim/power-ports/edit/
-  dcim:powerport_bulk_rename:
-    - /dcim/power-ports/rename/
-  dcim:powerport_bulk_disconnect:
-    - /dcim/power-ports/disconnect/
-  dcim:powerport_bulk_delete:
-    - /dcim/power-ports/delete/
-  dcim:powerport:
-    - /dcim/power-ports/<uuid:pk>/
-  dcim:powerport_edit:
-    - /dcim/power-ports/<uuid:pk>/edit/
-  dcim:powerport_delete:
-    - /dcim/power-ports/<uuid:pk>/delete/
-  dcim:powerport_trace:
-    - /dcim/power-ports/<uuid:pk>/trace/
-  dcim:powerport_connect:
-    - /dcim/power-ports/<uuid:termination_a_id>/connect/<str:termination_b_type>/
-  dcim:device_bulk_add_powerport:
-    - /dcim/devices/power-ports/add/
-  dcim:poweroutlet_list:
-    - /dcim/power-outlets/
-  dcim:poweroutlet_add:
-    - /dcim/power-outlets/add/
-  dcim:poweroutlet_import:
-    - /dcim/power-outlets/import/
-  dcim:poweroutlet_bulk_edit:
-    - /dcim/power-outlets/edit/
-  dcim:poweroutlet_bulk_rename:
-    - /dcim/power-outlets/rename/
-  dcim:poweroutlet_bulk_disconnect:
-    - /dcim/power-outlets/disconnect/
-  dcim:poweroutlet_bulk_delete:
-    - /dcim/power-outlets/delete/
-  dcim:poweroutlet:
-    - /dcim/power-outlets/<uuid:pk>/
-  dcim:poweroutlet_edit:
-    - /dcim/power-outlets/<uuid:pk>/edit/
-  dcim:poweroutlet_delete:
-    - /dcim/power-outlets/<uuid:pk>/delete/
-  dcim:poweroutlet_trace:
-    - /dcim/power-outlets/<uuid:pk>/trace/
-  dcim:poweroutlet_connect:
-    - /dcim/power-outlets/<uuid:termination_a_id>/connect/<str:termination_b_type>/
-  dcim:device_bulk_add_poweroutlet:
-    - /dcim/devices/power-outlets/add/
-  dcim:interface_list:
-    - /dcim/interfaces/
-  dcim:interface_add:
-    - /dcim/interfaces/add/
-  dcim:interface_import:
-    - /dcim/interfaces/import/
-  dcim:interface_bulk_edit:
-    - /dcim/interfaces/edit/
-  dcim:interface_bulk_rename:
-    - /dcim/interfaces/rename/
-  dcim:interface_bulk_disconnect:
-    - /dcim/interfaces/disconnect/
-  dcim:interface_bulk_delete:
-    - /dcim/interfaces/delete/
-  dcim:interface:
-    - /dcim/interfaces/<uuid:pk>/
-  dcim:interface_edit:
-    - /dcim/interfaces/<uuid:pk>/edit/
-  dcim:interface_delete:
-    - /dcim/interfaces/<uuid:pk>/delete/
-  dcim:interface_trace:
-    - /dcim/interfaces/<uuid:pk>/trace/
-  dcim:interface_connect:
-    - /dcim/interfaces/<uuid:termination_a_id>/connect/<str:termination_b_type>/
-  dcim:device_bulk_add_interface:
-    - /dcim/devices/interfaces/add/
-  dcim:frontport_list:
-    - /dcim/front-ports/
-  dcim:frontport_add:
-    - /dcim/front-ports/add/
-  dcim:frontport_import:
-    - /dcim/front-ports/import/
-  dcim:frontport_bulk_edit:
-    - /dcim/front-ports/edit/
-  dcim:frontport_bulk_rename:
-    - /dcim/front-ports/rename/
-  dcim:frontport_bulk_disconnect:
-    - /dcim/front-ports/disconnect/
-  dcim:frontport_bulk_delete:
-    - /dcim/front-ports/delete/
-  dcim:frontport:
-    - /dcim/front-ports/<uuid:pk>/
-  dcim:frontport_edit:
-    - /dcim/front-ports/<uuid:pk>/edit/
-  dcim:frontport_delete:
-    - /dcim/front-ports/<uuid:pk>/delete/
-  dcim:frontport_trace:
-    - /dcim/front-ports/<uuid:pk>/trace/
-  dcim:frontport_connect:
-    - /dcim/front-ports/<uuid:termination_a_id>/connect/<str:termination_b_type>/
-  dcim:rearport_list:
-    - /dcim/rear-ports/
-  dcim:rearport_add:
-    - /dcim/rear-ports/add/
-  dcim:rearport_import:
-    - /dcim/rear-ports/import/
-  dcim:rearport_bulk_edit:
-    - /dcim/rear-ports/edit/
-  dcim:rearport_bulk_rename:
-    - /dcim/rear-ports/rename/
-  dcim:rearport_bulk_disconnect:
-    - /dcim/rear-ports/disconnect/
-  dcim:rearport_bulk_delete:
-    - /dcim/rear-ports/delete/
-  dcim:rearport:
-    - /dcim/rear-ports/<uuid:pk>/
-  dcim:rearport_edit:
-    - /dcim/rear-ports/<uuid:pk>/edit/
-  dcim:rearport_delete:
-    - /dcim/rear-ports/<uuid:pk>/delete/
-  dcim:rearport_trace:
-    - /dcim/rear-ports/<uuid:pk>/trace/
-  dcim:rearport_connect:
-    - /dcim/rear-ports/<uuid:termination_a_id>/connect/<str:termination_b_type>/
-  dcim:device_bulk_add_rearport:
-    - /dcim/devices/rear-ports/add/
-  dcim:devicebay_list:
-    - /dcim/device-bays/
-  dcim:devicebay_add:
-    - /dcim/device-bays/add/
-  dcim:devicebay_import:
-    - /dcim/device-bays/import/
-  dcim:devicebay_bulk_edit:
-    - /dcim/device-bays/edit/
-  dcim:devicebay_bulk_rename:
-    - /dcim/device-bays/rename/
-  dcim:devicebay_bulk_delete:
-    - /dcim/device-bays/delete/
-  dcim:devicebay:
-    - /dcim/device-bays/<uuid:pk>/
-  dcim:devicebay_edit:
-    - /dcim/device-bays/<uuid:pk>/edit/
-  dcim:devicebay_delete:
-    - /dcim/device-bays/<uuid:pk>/delete/
-  dcim:devicebay_populate:
-    - /dcim/device-bays/<uuid:pk>/populate/
-  dcim:devicebay_depopulate:
-    - /dcim/device-bays/<uuid:pk>/depopulate/
-  dcim:device_bulk_add_devicebay:
-    - /dcim/devices/device-bays/add/
-  dcim:device_bulk_add_modulebay:
-    - /dcim/devices/module-bays/add/
-  dcim:inventoryitem_list:
-    - /dcim/inventory-items/
-  dcim:inventoryitem_add:
-    - /dcim/inventory-items/add/
-  dcim:inventoryitem_import:
-    - /dcim/inventory-items/import/
-  dcim:inventoryitem_bulk_edit:
-    - /dcim/inventory-items/edit/
-  dcim:inventoryitem_bulk_rename:
-    - /dcim/inventory-items/rename/
-  dcim:inventoryitem_bulk_delete:
-    - /dcim/inventory-items/delete/
-  dcim:inventoryitem:
-    - /dcim/inventory-items/<uuid:pk>/
-  dcim:inventoryitem_edit:
-    - /dcim/inventory-items/<uuid:pk>/edit/
-  dcim:inventoryitem_delete:
-    - /dcim/inventory-items/<uuid:pk>/delete/
-  dcim:device_bulk_add_inventoryitem:
-    - /dcim/devices/inventory-items/add/
-  dcim:cable_list:
-    - /dcim/cables/
-  dcim:cable_import:
-    - /dcim/cables/import/
-  dcim:cable_bulk_edit:
-    - /dcim/cables/edit/
-  dcim:cable_bulk_delete:
-    - /dcim/cables/delete/
-  dcim:cable:
-    - /dcim/cables/<uuid:pk>/
-  dcim:cable_edit:
-    - /dcim/cables/<uuid:pk>/edit/
-  dcim:cable_delete:
-    - /dcim/cables/<uuid:pk>/delete/
-  dcim:console_connections_list:
-    - /dcim/console-connections/
-  dcim:power_connections_list:
-    - /dcim/power-connections/
-  dcim:interface_connections_list:
-    - /dcim/interface-connections/
-  dcim:virtualchassis_list:
-    - /dcim/virtual-chassis/
-  dcim:virtualchassis_add:
-    - /dcim/virtual-chassis/add/
-  dcim:virtualchassis_import:
-    - /dcim/virtual-chassis/import/
-  dcim:virtualchassis_bulk_edit:
-    - /dcim/virtual-chassis/edit/
-  dcim:virtualchassis_bulk_delete:
-    - /dcim/virtual-chassis/delete/
-  dcim:virtualchassis:
-    - /dcim/virtual-chassis/<uuid:pk>/
-  dcim:virtualchassis_edit:
-    - /dcim/virtual-chassis/<uuid:pk>/edit/
-  dcim:virtualchassis_delete:
-    - /dcim/virtual-chassis/<uuid:pk>/delete/
-  dcim:virtualchassis_add_member:
-    - /dcim/virtual-chassis/<uuid:pk>/add-member/
-  dcim:virtualchassis_remove_member:
-    - /dcim/virtual-chassis-members/<uuid:pk>/delete/
-  dcim:powerpanel_list:
-    - /dcim/power-panels/
-  dcim:powerpanel_add:
-    - /dcim/power-panels/add/
-  dcim:powerpanel_import:
-    - /dcim/power-panels/import/
-  dcim:powerpanel_bulk_edit:
-    - /dcim/power-panels/edit/
-  dcim:powerpanel_bulk_delete:
-    - /dcim/power-panels/delete/
-  dcim:powerpanel:
-    - /dcim/power-panels/<uuid:pk>/
-  dcim:powerpanel_edit:
-    - /dcim/power-panels/<uuid:pk>/edit/
-  dcim:powerpanel_delete:
-    - /dcim/power-panels/<uuid:pk>/delete/
-  dcim:powerfeed_list:
-    - /dcim/power-feeds/
-  dcim:powerfeed_add:
-    - /dcim/power-feeds/add/
-  dcim:powerfeed_import:
-    - /dcim/power-feeds/import/
-  dcim:powerfeed_bulk_edit:
-    - /dcim/power-feeds/edit/
-  dcim:powerfeed_bulk_delete:
-    - /dcim/power-feeds/delete/
-  dcim:powerfeed:
-    - /dcim/power-feeds/<uuid:pk>/
-  dcim:powerfeed_edit:
-    - /dcim/power-feeds/<uuid:pk>/edit/
-  dcim:powerfeed_delete:
-    - /dcim/power-feeds/<uuid:pk>/delete/
-  dcim:powerfeed_trace:
-    - /dcim/power-feeds/<uuid:pk>/trace/
-  dcim:powerfeed_connect:
-    - /dcim/power-feeds/<uuid:termination_a_id>/connect/<str:termination_b_type>/
-  dcim:controllermanageddevicegroup_list:
-    - /dcim/controller-managed-device-groups/$
-  dcim:controllermanageddevicegroup_add:
-    - /dcim/controller-managed-device-groups/add/$
-  dcim:controllermanageddevicegroup_import:
-    - /dcim/controller-managed-device-groups/import/$
-  dcim:controllermanageddevicegroup_bulk_edit:
-    - /dcim/controller-managed-device-groups/edit/$
-  dcim:controllermanageddevicegroup_bulk_delete:
-    - /dcim/controller-managed-device-groups/delete/$
-  dcim:controllermanageddevicegroup:
-    - /dcim/controller-managed-device-groups/(?P<pk>[/.]+)/$
-  dcim:controllermanageddevicegroup_delete:
-    - /dcim/controller-managed-device-groups/(?P<pk>[/.]+)/delete/$
-  dcim:controllermanageddevicegroup_edit:
-    - /dcim/controller-managed-device-groups/(?P<pk>[/.]+)/edit/$
-  dcim:controllermanageddevicegroup_changelog:
-    - /dcim/controller-managed-device-groups/(?P<pk>[/.]+)/changelog/$
-  dcim:controllermanageddevicegroup_notes:
-    - /dcim/controller-managed-device-groups/(?P<pk>[/.]+)/notes/$
-  dcim:controller_list:
-    - /dcim/controllers/$
-  dcim:controller_add:
-    - /dcim/controllers/add/$
-  dcim:controller_import:
-    - /dcim/controllers/import/$
-  dcim:controller_bulk_edit:
-    - /dcim/controllers/edit/$
-  dcim:controller_bulk_delete:
-    - /dcim/controllers/delete/$
-  dcim:controller:
-    - /dcim/controllers/(?P<pk>[/.]+)/$
-  dcim:controller_delete:
-    - /dcim/controllers/(?P<pk>[/.]+)/delete/$
-  dcim:controller_edit:
-    - /dcim/controllers/(?P<pk>[/.]+)/edit/$
-  dcim:controller_changelog:
-    - /dcim/controllers/(?P<pk>[/.]+)/changelog/$
-  dcim:controller_notes:
-    - /dcim/controllers/(?P<pk>[/.]+)/notes/$
-  dcim:controller_wirelessnetworks:
-    - /dcim/controllers/(?P<pk>[/.]+)/wireless-networks/$
-  dcim:devicefamily_list:
-    - /dcim/device-families/$
-  dcim:devicefamily_add:
-    - /dcim/device-families/add/$
-  dcim:devicefamily_import:
-    - /dcim/device-families/import/$
-  dcim:devicefamily_bulk_edit:
-    - /dcim/device-families/edit/$
-  dcim:devicefamily_bulk_delete:
-    - /dcim/device-families/delete/$
-  dcim:devicefamily:
-    - /dcim/device-families/(?P<pk>[/.]+)/$
-  dcim:devicefamily_delete:
-    - /dcim/device-families/(?P<pk>[/.]+)/delete/$
-  dcim:devicefamily_edit:
-    - /dcim/device-families/(?P<pk>[/.]+)/edit/$
-  dcim:devicefamily_changelog:
-    - /dcim/device-families/(?P<pk>[/.]+)/changelog/$
-  dcim:devicefamily_notes:
-    - /dcim/device-families/(?P<pk>[/.]+)/notes/$
-  dcim:deviceredundancygroup_list:
-    - /dcim/device-redundancy-groups/$
-  dcim:deviceredundancygroup_add:
-    - /dcim/device-redundancy-groups/add/$
-  dcim:deviceredundancygroup_import:
-    - /dcim/device-redundancy-groups/import/$
-  dcim:deviceredundancygroup_bulk_edit:
-    - /dcim/device-redundancy-groups/edit/$
-  dcim:deviceredundancygroup_bulk_delete:
-    - /dcim/device-redundancy-groups/delete/$
-  dcim:deviceredundancygroup:
-    - /dcim/device-redundancy-groups/(?P<pk>[/.]+)/$
-  dcim:deviceredundancygroup_delete:
-    - /dcim/device-redundancy-groups/(?P<pk>[/.]+)/delete/$
-  dcim:deviceredundancygroup_edit:
-    - /dcim/device-redundancy-groups/(?P<pk>[/.]+)/edit/$
-  dcim:deviceredundancygroup_changelog:
-    - /dcim/device-redundancy-groups/(?P<pk>[/.]+)/changelog/$
-  dcim:deviceredundancygroup_notes:
-    - /dcim/device-redundancy-groups/(?P<pk>[/.]+)/notes/$
-  dcim:interfaceredundancygroup_list:
-    - /dcim/interface-redundancy-groups/$
-  dcim:interfaceredundancygroup_add:
-    - /dcim/interface-redundancy-groups/add/$
-  dcim:interfaceredundancygroup_import:
-    - /dcim/interface-redundancy-groups/import/$
-  dcim:interfaceredundancygroup_bulk_edit:
-    - /dcim/interface-redundancy-groups/edit/$
-  dcim:interfaceredundancygroup_bulk_delete:
-    - /dcim/interface-redundancy-groups/delete/$
-  dcim:interfaceredundancygroup:
-    - /dcim/interface-redundancy-groups/(?P<pk>[/.]+)/$
-  dcim:interfaceredundancygroup_delete:
-    - /dcim/interface-redundancy-groups/(?P<pk>[/.]+)/delete/$
-  dcim:interfaceredundancygroup_edit:
-    - /dcim/interface-redundancy-groups/(?P<pk>[/.]+)/edit/$
-  dcim:interfaceredundancygroup_changelog:
-    - /dcim/interface-redundancy-groups/(?P<pk>[/.]+)/changelog/$
-  dcim:interfaceredundancygroup_notes:
-    - /dcim/interface-redundancy-groups/(?P<pk>[/.]+)/notes/$
-  dcim:interfaceredundancygroupassociation_add:
-    - /dcim/interface-redundancy-groups-associations/add/$
-  dcim:interfaceredundancygroupassociation_delete:
-    - /dcim/interface-redundancy-groups-associations/(?P<pk>[/.]+)/delete/$
-  dcim:interfaceredundancygroupassociation_edit:
-    - /dcim/interface-redundancy-groups-associations/(?P<pk>[/.]+)/edit/$
-  dcim:locationtype_list:
-    - /dcim/location-types/$
-  dcim:locationtype_add:
-    - /dcim/location-types/add/$
-  dcim:locationtype_import:
-    - /dcim/location-types/import/$
-  dcim:locationtype_bulk_delete:
-    - /dcim/location-types/delete/$
-  dcim:locationtype:
-    - /dcim/location-types/(?P<pk>[/.]+)/$
-  dcim:locationtype_delete:
-    - /dcim/location-types/(?P<pk>[/.]+)/delete/$
-  dcim:locationtype_edit:
-    - /dcim/location-types/(?P<pk>[/.]+)/edit/$
-  dcim:locationtype_changelog:
-    - /dcim/location-types/(?P<pk>[/.]+)/changelog/$
-  dcim:locationtype_notes:
-    - /dcim/location-types/(?P<pk>[/.]+)/notes/$
-  dcim:modulebay_list:
-    - /dcim/module-bays/$
-  dcim:modulebay_add:
-    - /dcim/module-bays/add/$
-  dcim:modulebay_import:
-    - /dcim/module-bays/import/$
-  dcim:modulebay_bulk_edit:
-    - /dcim/module-bays/edit/$
-  dcim:modulebay_bulk_delete:
-    - /dcim/module-bays/delete/$
-  dcim:modulebay_bulk_rename:
-    - /dcim/module-bays/rename/$
-  dcim:modulebay:
-    - /dcim/module-bays/(?P<pk>[/.]+)/$
-  dcim:modulebay_delete:
-    - /dcim/module-bays/(?P<pk>[/.]+)/delete/$
-  dcim:modulebay_edit:
-    - /dcim/module-bays/(?P<pk>[/.]+)/edit/$
-  dcim:modulebay_changelog:
-    - /dcim/module-bays/(?P<pk>[/.]+)/changelog/$
-  dcim:modulebay_notes:
-    - /dcim/module-bays/(?P<pk>[/.]+)/notes/$
-  dcim:modulebaytemplate_add:
-    - /dcim/module-bay-templates/add/$
-  dcim:modulebaytemplate_bulk_edit:
-    - /dcim/module-bay-templates/edit/$
-  dcim:modulebaytemplate_bulk_delete:
-    - /dcim/module-bay-templates/delete/$
-  dcim:modulebaytemplate_bulk_rename:
-    - /dcim/module-bay-templates/rename/$
-  dcim:modulebaytemplate_delete:
-    - /dcim/module-bay-templates/(?P<pk>[/.]+)/delete/$
-  dcim:modulebaytemplate_edit:
-    - /dcim/module-bay-templates/(?P<pk>[/.]+)/edit/$
-  dcim:module_list:
-    - /dcim/modules/$
-  dcim:module_add:
-    - /dcim/modules/add/$
-  dcim:module_import:
-    - /dcim/modules/import/$
-  dcim:module_bulk_edit:
-    - /dcim/modules/edit/$
-  dcim:module_bulk_delete:
-    - /dcim/modules/delete/$
-  dcim:module_bulk_add_consoleport:
-    - /dcim/modules/console-ports/add/$
-  dcim:module_bulk_add_consoleserverport:
-    - /dcim/modules/console-server-ports/add/$
-  dcim:module_bulk_add_interface:
-    - /dcim/modules/interfaces/add/$
-  dcim:module_bulk_add_modulebay:
-    - /dcim/modules/module-bays/add/$
-  dcim:module_bulk_add_poweroutlet:
-    - /dcim/modules/power-outlets/add/$
-  dcim:module_bulk_add_powerport:
-    - /dcim/modules/power-ports/add/$
-  dcim:module_bulk_add_rearport:
-    - /dcim/modules/rear-ports/add/$
-  dcim:module:
-    - /dcim/modules/(?P<pk>[/.]+)/$
-  dcim:module_delete:
-    - /dcim/modules/(?P<pk>[/.]+)/delete/$
-  dcim:module_edit:
-    - /dcim/modules/(?P<pk>[/.]+)/edit/$
-  dcim:module_changelog:
-    - /dcim/modules/(?P<pk>[/.]+)/changelog/$
-  dcim:module_consoleports:
-    - /dcim/modules/(?P<pk>[/.]+)/console-ports/$
-  dcim:module_consoleserverports:
-    - /dcim/modules/(?P<pk>[/.]+)/console-server-ports/$
-  dcim:module_frontports:
-    - /dcim/modules/(?P<pk>[/.]+)/front-ports/$
-  dcim:module_interfaces:
-    - /dcim/modules/(?P<pk>[/.]+)/interfaces/$
-  dcim:module_modulebays:
-    - /dcim/modules/(?P<pk>[/.]+)/module-bays/$
-  dcim:module_notes:
-    - /dcim/modules/(?P<pk>[/.]+)/notes/$
-  dcim:module_poweroutlets:
-    - /dcim/modules/(?P<pk>[/.]+)/power-outlets/$
-  dcim:module_powerports:
-    - /dcim/modules/(?P<pk>[/.]+)/power-ports/$
-  dcim:module_rearports:
-    - /dcim/modules/(?P<pk>[/.]+)/rear-ports/$
-  dcim:moduletype_list:
-    - /dcim/module-types/$
-  dcim:moduletype_add:
-    - /dcim/module-types/add/$
-  dcim:moduletype_bulk_edit:
-    - /dcim/module-types/edit/$
-  dcim:moduletype_bulk_delete:
-    - /dcim/module-types/delete/$
-  dcim:moduletype_import:
-    - /dcim/module-types/import/$
-  dcim:moduletype:
-    - /dcim/module-types/(?P<pk>[/.]+)/$
-  dcim:moduletype_delete:
-    - /dcim/module-types/(?P<pk>[/.]+)/delete/$
-  dcim:moduletype_edit:
-    - /dcim/module-types/(?P<pk>[/.]+)/edit/$
-  dcim:moduletype_changelog:
-    - /dcim/module-types/(?P<pk>[/.]+)/changelog/$
-  dcim:moduletype_notes:
-    - /dcim/module-types/(?P<pk>[/.]+)/notes/$
-  dcim:softwareimagefile_list:
-    - /dcim/software-image-files/$
-  dcim:softwareimagefile_add:
-    - /dcim/software-image-files/add/$
-  dcim:softwareimagefile_import:
-    - /dcim/software-image-files/import/$
-  dcim:softwareimagefile_bulk_edit:
-    - /dcim/software-image-files/edit/$
-  dcim:softwareimagefile_bulk_delete:
-    - /dcim/software-image-files/delete/$
-  dcim:softwareimagefile:
-    - /dcim/software-image-files/(?P<pk>[/.]+)/$
-  dcim:softwareimagefile_delete:
-    - /dcim/software-image-files/(?P<pk>[/.]+)/delete/$
-  dcim:softwareimagefile_edit:
-    - /dcim/software-image-files/(?P<pk>[/.]+)/edit/$
-  dcim:softwareimagefile_changelog:
-    - /dcim/software-image-files/(?P<pk>[/.]+)/changelog/$
-  dcim:softwareimagefile_notes:
-    - /dcim/software-image-files/(?P<pk>[/.]+)/notes/$
-  dcim:softwareversion_list:
-    - /dcim/software-versions/$
-  dcim:softwareversion_add:
-    - /dcim/software-versions/add/$
-  dcim:softwareversion_import:
-    - /dcim/software-versions/import/$
-  dcim:softwareversion_bulk_edit:
-    - /dcim/software-versions/edit/$
-  dcim:softwareversion_bulk_delete:
-    - /dcim/software-versions/delete/$
-  dcim:softwareversion:
-    - /dcim/software-versions/(?P<pk>[/.]+)/$
-  dcim:softwareversion_delete:
-    - /dcim/software-versions/(?P<pk>[/.]+)/delete/$
-  dcim:softwareversion_edit:
-    - /dcim/software-versions/(?P<pk>[/.]+)/edit/$
-  dcim:softwareversion_changelog:
-    - /dcim/software-versions/(?P<pk>[/.]+)/changelog/$
-  dcim:softwareversion_notes:
-    - /dcim/software-versions/(?P<pk>[/.]+)/notes/$
-  dcim:virtualdevicecontext_list:
-    - /dcim/virtual-device-contexts/$
-  dcim:virtualdevicecontext_add:
-    - /dcim/virtual-device-contexts/add/$
-  dcim:virtualdevicecontext_import:
-    - /dcim/virtual-device-contexts/import/$
-  dcim:virtualdevicecontext_bulk_edit:
-    - /dcim/virtual-device-contexts/edit/$
-  dcim:virtualdevicecontext_bulk_delete:
-    - /dcim/virtual-device-contexts/delete/$
-  dcim:virtualdevicecontext:
-    - /dcim/virtual-device-contexts/(?P<pk>[/.]+)/$
-  dcim:virtualdevicecontext_delete:
-    - /dcim/virtual-device-contexts/(?P<pk>[/.]+)/delete/$
-  dcim:virtualdevicecontext_edit:
-    - /dcim/virtual-device-contexts/(?P<pk>[/.]+)/edit/$
-  dcim:virtualdevicecontext_changelog:
-    - /dcim/virtual-device-contexts/(?P<pk>[/.]+)/changelog/$
-  dcim:virtualdevicecontext_notes:
-    - /dcim/virtual-device-contexts/(?P<pk>[/.]+)/notes/$
-  cloud:cloudaccount_list:
-    - /cloud/cloud-accounts/$
-  cloud:cloudaccount_add:
-    - /cloud/cloud-accounts/add/$
-  cloud:cloudaccount_import:
-    - /cloud/cloud-accounts/import/$
-  cloud:cloudaccount_bulk_edit:
-    - /cloud/cloud-accounts/edit/$
-  cloud:cloudaccount_bulk_delete:
-    - /cloud/cloud-accounts/delete/$
+  - /circuits/circuit-terminations/f884c61c-f95d-4e7f-85b6-72ce48a9eadb/notes/
+  - /circuits/circuit-terminations/3cceae77-b2df-482b-aa33-88a7ba479dbf/notes/
+  circuits:circuittype:
+  - /circuits/circuit-types/089a9c58-579c-4895-b8c7-c32b51c6ce66/
+  - /circuits/circuit-types/4f0a653f-2fe1-4444-8c87-3c8b094793c9/
+  circuits:circuittype_changelog:
+  - /circuits/circuit-types/089a9c58-579c-4895-b8c7-c32b51c6ce66/changelog/
+  - /circuits/circuit-types/4f0a653f-2fe1-4444-8c87-3c8b094793c9/changelog/
+  circuits:circuittype_list:
+  - /circuits/circuit-types/
+  - /circuits/circuit-types/?per_page=8&page=5
+  circuits:circuittype_notes:
+  - /circuits/circuit-types/089a9c58-579c-4895-b8c7-c32b51c6ce66/notes/
+  - /circuits/circuit-types/4f0a653f-2fe1-4444-8c87-3c8b094793c9/notes/
+  circuits:provider:
+  - /circuits/providers/b42cfe85-26ae-46ea-8844-ea9190e424fe/
+  - /circuits/providers/e50e00b4-a27d-462e-b826-9ce3aec8ea34/
+  circuits:provider_changelog:
+  - /circuits/providers/b42cfe85-26ae-46ea-8844-ea9190e424fe/changelog/
+  - /circuits/providers/e50e00b4-a27d-462e-b826-9ce3aec8ea34/changelog/
+  circuits:provider_list:
+  - /circuits/providers/
+  - /circuits/providers/?per_page=8&page=5
+  circuits:provider_notes:
+  - /circuits/providers/b42cfe85-26ae-46ea-8844-ea9190e424fe/notes/
+  - /circuits/providers/e50e00b4-a27d-462e-b826-9ce3aec8ea34/notes/
+  circuits:providernetwork:
+  - /circuits/provider-networks/5723f20d-2963-45ea-93df-2664e05daf6d/
+  - /circuits/provider-networks/cd243745-45c4-4800-9212-169002586373/
+  circuits:providernetwork_changelog:
+  - /circuits/provider-networks/5723f20d-2963-45ea-93df-2664e05daf6d/changelog/
+  - /circuits/provider-networks/cd243745-45c4-4800-9212-169002586373/changelog/
+  circuits:providernetwork_list:
+  - /circuits/provider-networks/
+  - /circuits/provider-networks/?per_page=4&page=5
+  circuits:providernetwork_notes:
+  - /circuits/provider-networks/5723f20d-2963-45ea-93df-2664e05daf6d/notes/
+  - /circuits/provider-networks/cd243745-45c4-4800-9212-169002586373/notes/
   cloud:cloudaccount:
-    - /cloud/cloud-accounts/(?P<pk>[/.]+)/$
-  cloud:cloudaccount_delete:
-    - /cloud/cloud-accounts/(?P<pk>[/.]+)/delete/$
-  cloud:cloudaccount_edit:
-    - /cloud/cloud-accounts/(?P<pk>[/.]+)/edit/$
+  - /cloud/cloud-accounts/2ca95c97-8805-4ed4-8159-a0a63f176583/
+  - /cloud/cloud-accounts/c967f280-d174-40c8-888d-c2a239affad1/
   cloud:cloudaccount_changelog:
-    - /cloud/cloud-accounts/(?P<pk>[/.]+)/changelog/$
+  - /cloud/cloud-accounts/2ca95c97-8805-4ed4-8159-a0a63f176583/changelog/
+  - /cloud/cloud-accounts/c967f280-d174-40c8-888d-c2a239affad1/changelog/
+  cloud:cloudaccount_list:
+  - /cloud/cloud-accounts/
+  - /cloud/cloud-accounts/?per_page=2&page=5
   cloud:cloudaccount_notes:
-    - /cloud/cloud-accounts/(?P<pk>[/.]+)/notes/$
-  cloud:cloudnetwork_list:
-    - /cloud/cloud-networks/$
-  cloud:cloudnetwork_add:
-    - /cloud/cloud-networks/add/$
-  cloud:cloudnetwork_import:
-    - /cloud/cloud-networks/import/$
-  cloud:cloudnetwork_bulk_edit:
-    - /cloud/cloud-networks/edit/$
-  cloud:cloudnetwork_bulk_delete:
-    - /cloud/cloud-networks/delete/$
+  - /cloud/cloud-accounts/2ca95c97-8805-4ed4-8159-a0a63f176583/notes/
+  - /cloud/cloud-accounts/c967f280-d174-40c8-888d-c2a239affad1/notes/
   cloud:cloudnetwork:
-    - /cloud/cloud-networks/(?P<pk>[/.]+)/$
-  cloud:cloudnetwork_delete:
-    - /cloud/cloud-networks/(?P<pk>[/.]+)/delete/$
-  cloud:cloudnetwork_edit:
-    - /cloud/cloud-networks/(?P<pk>[/.]+)/edit/$
+  - /cloud/cloud-networks/48f6ca3e-d9b1-4634-8f5f-3166c62a66ab/
+  - /cloud/cloud-networks/f84c058d-9343-4881-96a2-e87057a76954/
   cloud:cloudnetwork_changelog:
-    - /cloud/cloud-networks/(?P<pk>[/.]+)/changelog/$
+  - /cloud/cloud-networks/48f6ca3e-d9b1-4634-8f5f-3166c62a66ab/changelog/
+  - /cloud/cloud-networks/f84c058d-9343-4881-96a2-e87057a76954/changelog/
+  cloud:cloudnetwork_list:
+  - /cloud/cloud-networks/
+  - /cloud/cloud-networks/?per_page=4&page=5
   cloud:cloudnetwork_notes:
-    - /cloud/cloud-networks/(?P<pk>[/.]+)/notes/$
-  cloud:cloudresourcetype_list:
-    - /cloud/cloud-resource-types/$
-  cloud:cloudresourcetype_add:
-    - /cloud/cloud-resource-types/add/$
-  cloud:cloudresourcetype_import:
-    - /cloud/cloud-resource-types/import/$
-  cloud:cloudresourcetype_bulk_edit:
-    - /cloud/cloud-resource-types/edit/$
-  cloud:cloudresourcetype_bulk_delete:
-    - /cloud/cloud-resource-types/delete/$
+  - /cloud/cloud-networks/48f6ca3e-d9b1-4634-8f5f-3166c62a66ab/notes/
+  - /cloud/cloud-networks/f84c058d-9343-4881-96a2-e87057a76954/notes/
   cloud:cloudresourcetype:
-    - /cloud/cloud-resource-types/(?P<pk>[/.]+)/$
-  cloud:cloudresourcetype_delete:
-    - /cloud/cloud-resource-types/(?P<pk>[/.]+)/delete/$
-  cloud:cloudresourcetype_edit:
-    - /cloud/cloud-resource-types/(?P<pk>[/.]+)/edit/$
+  - /cloud/cloud-resource-types/de3a66de-bf98-4f53-89e9-4be79ee0632d/
+  - /cloud/cloud-resource-types/17a82f09-4da4-4543-a3be-7a4678bd694a/
   cloud:cloudresourcetype_changelog:
-    - /cloud/cloud-resource-types/(?P<pk>[/.]+)/changelog/$
+  - /cloud/cloud-resource-types/de3a66de-bf98-4f53-89e9-4be79ee0632d/changelog/
+  - /cloud/cloud-resource-types/17a82f09-4da4-4543-a3be-7a4678bd694a/changelog/
+  cloud:cloudresourcetype_list:
+  - /cloud/cloud-resource-types/
+  - /cloud/cloud-resource-types/?per_page=4&page=5
   cloud:cloudresourcetype_notes:
-    - /cloud/cloud-resource-types/(?P<pk>[/.]+)/notes/$
-  cloud:cloudservice_list:
-    - /cloud/cloud-services/$
-  cloud:cloudservice_add:
-    - /cloud/cloud-services/add/$
-  cloud:cloudservice_import:
-    - /cloud/cloud-services/import/$
-  cloud:cloudservice_bulk_edit:
-    - /cloud/cloud-services/edit/$
-  cloud:cloudservice_bulk_delete:
-    - /cloud/cloud-services/delete/$
+  - /cloud/cloud-resource-types/de3a66de-bf98-4f53-89e9-4be79ee0632d/notes/
+  - /cloud/cloud-resource-types/17a82f09-4da4-4543-a3be-7a4678bd694a/notes/
   cloud:cloudservice:
-    - /cloud/cloud-services/(?P<pk>[/.]+)/$
-  cloud:cloudservice_delete:
-    - /cloud/cloud-services/(?P<pk>[/.]+)/delete/$
-  cloud:cloudservice_edit:
-    - /cloud/cloud-services/(?P<pk>[/.]+)/edit/$
+  - /cloud/cloud-services/1a157c39-2e74-4ac4-9c41-b3293fca7ea9/
+  - /cloud/cloud-services/9a1d438b-0546-4e0a-888b-6a8d83a89069/
   cloud:cloudservice_changelog:
-    - /cloud/cloud-services/(?P<pk>[/.]+)/changelog/$
+  - /cloud/cloud-services/1a157c39-2e74-4ac4-9c41-b3293fca7ea9/changelog/
+  - /cloud/cloud-services/9a1d438b-0546-4e0a-888b-6a8d83a89069/changelog/
+  cloud:cloudservice_list:
+  - /cloud/cloud-services/
+  - /cloud/cloud-services/?per_page=4&page=5
   cloud:cloudservice_notes:
-    - /cloud/cloud-services/(?P<pk>[/.]+)/notes/$
-  extras:location_changelog:
-    - /extras/locations/<uuid:pk>/changelog/
-  extras:location_notes:
-    - /extras/locations/<uuid:pk>/notes/
-  extras:location_add_image:
-    - /extras/locations/<uuid:object_id>/images/add/
-  extras:rackgroup_changelog:
-    - /extras/rack-groups/<uuid:pk>/changelog/
-  extras:rackgroup_notes:
-    - /extras/rack-groups/<uuid:pk>/notes/
-  extras:rackreservation_changelog:
-    - /extras/rack-reservations/<uuid:pk>/changelog/
-  extras:rackreservation_notes:
-    - /extras/rack-reservations/<uuid:pk>/notes/
-  extras:rack_changelog:
-    - /extras/racks/<uuid:pk>/changelog/
-  extras:rack_notes:
-    - /extras/racks/<uuid:pk>/notes/
-  extras:rack_dynamicgroups:
-    - /extras/racks/<uuid:pk>/dynamic-groups/
-  extras:rack_add_image:
-    - /extras/racks/<uuid:object_id>/images/add/
-  extras:manufacturer_changelog:
-    - /extras/manufacturers/<uuid:pk>/changelog/
-  extras:manufacturer_notes:
-    - /extras/manufacturers/<uuid:pk>/notes/
-  extras:devicetype_changelog:
-    - /extras/device-types/<uuid:pk>/changelog/
-  extras:devicetype_notes:
-    - /extras/device-types/<uuid:pk>/notes/
-  extras:platform_changelog:
-    - /extras/platforms/<uuid:pk>/changelog/
-  extras:platform_notes:
-    - /extras/platforms/<uuid:pk>/notes/
-  extras:device_notes:
-    - /extras/devices/<uuid:pk>/notes/
-  extras:device_add_image:
-    - /extras/devices/<uuid:object_id>/images/add/
-  extras:consoleport_changelog:
-    - /extras/console-ports/<uuid:pk>/changelog/
-  extras:consoleport_notes:
-    - /extras/console-ports/<uuid:pk>/notes/
-  extras:consoleserverport_changelog:
-    - /extras/console-server-ports/<uuid:pk>/changelog/
-  extras:consoleserverport_notes:
-    - /extras/console-server-ports/<uuid:pk>/notes/
-  extras:powerport_changelog:
-    - /extras/power-ports/<uuid:pk>/changelog/
-  extras:powerport_notes:
-    - /extras/power-ports/<uuid:pk>/notes/
-  extras:poweroutlet_changelog:
-    - /extras/power-outlets/<uuid:pk>/changelog/
-  extras:poweroutlet_notes:
-    - /extras/power-outlets/<uuid:pk>/notes/
-  extras:interface_changelog:
-    - /extras/interfaces/<uuid:pk>/changelog/
-  extras:interface_notes:
-    - /extras/interfaces/<uuid:pk>/notes/
-  extras:frontport_changelog:
-    - /extras/front-ports/<uuid:pk>/changelog/
-  extras:frontport_notes:
-    - /extras/front-ports/<uuid:pk>/notes/
-  extras:rearport_changelog:
-    - /extras/rear-ports/<uuid:pk>/changelog/
-  extras:rearport_notes:
-    - /extras/rear-ports/<uuid:pk>/notes/
-  extras:devicebay_changelog:
-    - /extras/device-bays/<uuid:pk>/changelog/
-  extras:devicebay_notes:
-    - /extras/device-bays/<uuid:pk>/notes/
-  extras:inventoryitem_changelog:
-    - /extras/inventory-items/<uuid:pk>/changelog/
-  extras:inventoryitem_notes:
-    - /extras/inventory-items/<uuid:pk>/notes/
-  extras:cable_changelog:
-    - /extras/cables/<uuid:pk>/changelog/
-  extras:cable_notes:
-    - /extras/cables/<uuid:pk>/notes/
-  extras:virtualchassis_changelog:
-    - /extras/virtual-chassis/<uuid:pk>/changelog/
-  extras:virtualchassis_notes:
-    - /extras/virtual-chassis/<uuid:pk>/notes/
-  extras:powerpanel_changelog:
-    - /extras/power-panels/<uuid:pk>/changelog/
-  extras:powerpanel_notes:
-    - /extras/power-panels/<uuid:pk>/notes/
-  extras:powerfeed_changelog:
-    - /extras/power-feeds/<uuid:pk>/changelog/
-  extras:powerfeed_notes:
-    - /extras/power-feeds/<uuid:pk>/notes/
-  extras:objectchange_list:
-    - /extras/object-changes/
-  extras:objectchange:
-    - /extras/object-changes/<uuid:pk>/
-  extras:computedfield_list:
-    - /extras/computed-fields/
-  extras:computedfield_add:
-    - /extras/computed-fields/add/
-  extras:computedfield_bulk_delete:
-    - /extras/computed-fields/delete/
-  extras:computedfield:
-    - /extras/computed-fields/<uuid:pk>/
-  extras:computedfield_edit:
-    - /extras/computed-fields/<uuid:pk>/edit/
-  extras:computedfield_delete:
-    - /extras/computed-fields/<uuid:pk>/delete/
-  extras:computedfield_changelog:
-    - /extras/computed-fields/<uuid:pk>/changelog/
-  extras:computedfield_notes:
-    - /extras/computed-fields/<uuid:pk>/notes/
-  extras:configcontext_list:
-    - /extras/config-contexts/
-  extras:configcontext_add:
-    - /extras/config-contexts/add/
-  extras:configcontext_bulk_edit:
-    - /extras/config-contexts/edit/
-  extras:configcontext_bulk_delete:
-    - /extras/config-contexts/delete/
-  extras:configcontext:
-    - /extras/config-contexts/<uuid:pk>/
-  extras:configcontext_edit:
-    - /extras/config-contexts/<uuid:pk>/edit/
-  extras:configcontext_delete:
-    - /extras/config-contexts/<uuid:pk>/delete/
-  extras:configcontext_changelog:
-    - /extras/config-contexts/<uuid:pk>/changelog/
-  extras:configcontext_notes:
-    - /extras/config-contexts/<uuid:pk>/notes/
-  extras:configcontextschema_list:
-    - /extras/config-context-schemas/
-  extras:configcontextschema_add:
-    - /extras/config-context-schemas/add/
-  extras:configcontextschema_bulk_edit:
-    - /extras/config-context-schemas/edit/
-  extras:configcontextschema_bulk_delete:
-    - /extras/config-context-schemas/delete/
-  extras:configcontextschema:
-    - /extras/config-context-schemas/<uuid:pk>/
-  extras:configcontextschema_object_validation:
-    - /extras/config-context-schemas/<uuid:pk>/validation/
-  extras:configcontextschema_edit:
-    - /extras/config-context-schemas/<uuid:pk>/edit/
-  extras:configcontextschema_delete:
-    - /extras/config-context-schemas/<uuid:pk>/delete/
-  extras:configcontextschema_changelog:
-    - /extras/config-context-schemas/<uuid:pk>/changelog/
-  extras:configcontextschema_notes:
-    - /extras/config-context-schemas/<uuid:pk>/notes/
-  extras:object_contact_add:
-    - /extras/contact-associations/add-new-contact/
-  extras:object_team_add:
-    - /extras/contact-associations/add-new-team/
-  extras:object_contact_team_assign:
-    - /extras/contact-associations/assign-contact-team/
-  extras:customfield_list:
-    - /extras/custom-fields/
-  extras:customfield_add:
-    - /extras/custom-fields/add/
-  extras:customfield_bulk_delete:
-    - /extras/custom-fields/delete/
-  extras:customfield:
-    - /extras/custom-fields/<uuid:pk>/
-  extras:customfield_edit:
-    - /extras/custom-fields/<uuid:pk>/edit/
-  extras:customfield_delete:
-    - /extras/custom-fields/<uuid:pk>/delete/
-  extras:customfield_changelog:
-    - /extras/custom-fields/<uuid:pk>/changelog/
-  extras:customfield_notes:
-    - /extras/custom-fields/<uuid:pk>/notes/
-  extras:customlink_list:
-    - /extras/custom-links/
-  extras:customlink_add:
-    - /extras/custom-links/add/
-  extras:customlink_bulk_delete:
-    - /extras/custom-links/delete/
-  extras:customlink:
-    - /extras/custom-links/<uuid:pk>/
-  extras:customlink_edit:
-    - /extras/custom-links/<uuid:pk>/edit/
-  extras:customlink_delete:
-    - /extras/custom-links/<uuid:pk>/delete/
-  extras:customlink_changelog:
-    - /extras/custom-links/<uuid:pk>/changelog/
-  extras:customlink_notes:
-    - /extras/custom-links/<uuid:pk>/notes/
-  extras:dynamicgroup_list:
-    - /extras/dynamic-groups/
-  extras:dynamicgroup_add:
-    - /extras/dynamic-groups/add/
-  extras:dynamicgroup_bulk_assign:
-    - /extras/dynamic-groups/assign-members/
-  extras:dynamicgroup_bulk_delete:
-    - /extras/dynamic-groups/delete/
-  extras:dynamicgroup:
-    - /extras/dynamic-groups/<uuid:pk>/
-  extras:dynamicgroup_edit:
-    - /extras/dynamic-groups/<uuid:pk>/edit/
-  extras:dynamicgroup_delete:
-    - /extras/dynamic-groups/<uuid:pk>/delete/
-  extras:dynamicgroup_changelog:
-    - /extras/dynamic-groups/<uuid:pk>/changelog/
-  extras:dynamicgroup_notes:
-    - /extras/dynamic-groups/<uuid:pk>/notes/
-  extras:exporttemplate_list:
-    - /extras/export-templates/
-  extras:exporttemplate_add:
-    - /extras/export-templates/add/
-  extras:exporttemplate_bulk_delete:
-    - /extras/export-templates/delete/
-  extras:exporttemplate:
-    - /extras/export-templates/<uuid:pk>/
-  extras:exporttemplate_edit:
-    - /extras/export-templates/<uuid:pk>/edit/
-  extras:exporttemplate_delete:
-    - /extras/export-templates/<uuid:pk>/delete/
-  extras:exporttemplate_changelog:
-    - /extras/export-templates/<uuid:pk>/changelog/
-  extras:exporttemplate_notes:
-    - /extras/export-templates/<uuid:pk>/notes/
-  extras:gitrepository_list:
-    - /extras/git-repositories/
-  extras:gitrepository_add:
-    - /extras/git-repositories/add/
-  extras:gitrepository_bulk_delete:
-    - /extras/git-repositories/delete/
-  extras:gitrepository_bulk_edit:
-    - /extras/git-repositories/edit/
-  extras:gitrepository_import:
-    - /extras/git-repositories/import/
-  extras:gitrepository:
-    - /extras/git-repositories/<uuid:pk>/
-  extras:gitrepository_edit:
-    - /extras/git-repositories/<uuid:pk>/edit/
-  extras:gitrepository_delete:
-    - /extras/git-repositories/<uuid:pk>/delete/
-  extras:gitrepository_changelog:
-    - /extras/git-repositories/<uuid:pk>/changelog/
-  extras:gitrepository_notes:
-    - /extras/git-repositories/<uuid:pk>/notes/
-  extras:gitrepository_result:
-    - /extras/git-repositories/<uuid:pk>/result/
-  extras:gitrepository_sync:
-    - /extras/git-repositories/<uuid:pk>/sync/
-  extras:gitrepository_dryrun:
-    - /extras/git-repositories/<uuid:pk>/dry-run/
-  extras:graphqlquery_list:
-    - /extras/graphql-queries/
-  extras:graphqlquery_add:
-    - /extras/graphql-queries/add/
-  extras:GraphQLQuery_bulk_delete:
-    - /extras/graphql-queries/delete/
-  extras:graphqlquery:
-    - /extras/graphql-queries/<uuid:pk>/
-  extras:graphqlquery_edit:
-    - /extras/graphql-queries/<uuid:pk>/edit/
-  extras:graphqlquery_delete:
-    - /extras/graphql-queries/<uuid:pk>/delete/
-  extras:graphqlquery_changelog:
-    - /extras/graphql-queries/<uuid:pk>/changelog/
-  extras:graphqlquery_notes:
-    - /extras/graphql-queries/<uuid:pk>/notes/
-  extras:imageattachment_edit:
-    - /extras/image-attachments/<uuid:pk>/edit/
-  extras:imageattachment_delete:
-    - /extras/image-attachments/<uuid:pk>/delete/
-  extras:job_list:
-    - /extras/jobs/
-  extras:scheduledjob_list:
-    - /extras/jobs/scheduled-jobs/
-  extras:scheduledjob:
-    - /extras/jobs/scheduled-jobs/<uuid:pk>/
-  extras:scheduledjob_delete:
-    - /extras/jobs/scheduled-jobs/<uuid:pk>/delete/
-  extras:scheduledjob_bulk_delete:
-    - /extras/jobs/scheduled-jobs/delete/
-  extras:scheduledjob_approval_queue_list:
-    - /extras/jobs/scheduled-jobs/approval-queue/
-  extras:scheduledjob_approval_request_view:
-    - /extras/jobs/scheduled-jobs/approval-queue/<uuid:pk>/
-  extras:job:
-    - /extras/jobs/<uuid:pk>/
-  extras:job_edit:
-    - /extras/jobs/<uuid:pk>/edit/
-  extras:job_delete:
-    - /extras/jobs/<uuid:pk>/delete/
-  extras:job_changelog:
-    - /extras/jobs/<uuid:pk>/changelog/
-  extras:job_notes:
-    - /extras/jobs/<uuid:pk>/notes/
-  extras:job_run:
-    - /extras/jobs/<uuid:pk>/run/
-  extras:job_run_by_class_path:
-    - /extras/jobs/<str:class_path>/run/
-  extras:job_bulk_edit:
-    - /extras/jobs/edit/
-  extras:job_bulk_delete:
-    - /extras/jobs/delete/
-  extras:jobhook_list:
-    - /extras/job-hooks/
-  extras:jobhook_add:
-    - /extras/job-hooks/add/
-  extras:jobhook_bulk_delete:
-    - /extras/job-hooks/delete/
-  extras:jobhook:
-    - /extras/job-hooks/<uuid:pk>/
-  extras:jobhook_edit:
-    - /extras/job-hooks/<uuid:pk>/edit/
-  extras:jobhook_delete:
-    - /extras/job-hooks/<uuid:pk>/delete/
-  extras:jobhook_changelog:
-    - /extras/job-hooks/<uuid:pk>/changelog/
-  extras:jobresult_list:
-    - /extras/job-results/
-  extras:jobresult:
-    - /extras/job-results/<uuid:pk>/
-  extras:jobresult_log-table:
-    - /extras/job-results/<uuid:pk>/log-table/
-  extras:jobresult_bulk_delete:
-    - /extras/job-results/delete/
-  extras:jobresult_delete:
-    - /extras/job-results/<uuid:pk>/delete/
-  extras:note_list:
-    - /extras/notes/
-  extras:note_add:
-    - /extras/notes/add/
-  extras:note:
-    - /extras/notes/<uuid:pk>/
-  extras:note_changelog:
-    - /extras/notes/<uuid:pk>/changelog/
-  extras:note_edit:
-    - /extras/notes/<uuid:pk>/edit/
-  extras:note_delete:
-    - /extras/notes/<uuid:pk>/delete/
-  extras:relationship_list:
-    - /extras/relationships/
-  extras:relationship_add:
-    - /extras/relationships/add/
-  extras:relationship_bulk_delete:
-    - /extras/relationships/delete/
-  extras:relationship:
-    - /extras/relationships/<uuid:pk>/
-  extras:relationship_edit:
-    - /extras/relationships/<uuid:pk>/edit/
-  extras:relationship_delete:
-    - /extras/relationships/<uuid:pk>/delete/
-  extras:relationship_changelog:
-    - /extras/relationships/<uuid:pk>/changelog/
-  extras:relationship_notes:
-    - /extras/relationships/<uuid:pk>/notes/
-  extras:relationshipassociation_list:
-    - /extras/relationship-associations/
-  extras:relationshipassociation_bulk_delete:
-    - /extras/relationship-associations/delete/
-  extras:relationshipassociation_delete:
-    - /extras/relationship-associations/<uuid:pk>/delete/
-  extras:secret_provider_parameters_form:
-    - /extras/secrets/provider/<str:provider_slug>/form/
-  extras:secretsgroup_list:
-    - /extras/secrets-groups/
-  extras:secretsgroup_add:
-    - /extras/secrets-groups/add/
-  extras:secretsgroup_bulk_delete:
-    - /extras/secrets-groups/delete/
-  extras:secretsgroup:
-    - /extras/secrets-groups/<uuid:pk>/
-  extras:secretsgroup_edit:
-    - /extras/secrets-groups/<uuid:pk>/edit/
-  extras:secretsgroup_delete:
-    - /extras/secrets-groups/<uuid:pk>/delete/
-  extras:secretsgroup_changelog:
-    - /extras/secrets-groups/<uuid:pk>/changelog/
-  extras:secretsgroup_notes:
-    - /extras/secrets-groups/<uuid:pk>/notes/
-  extras:status_list:
-    - /extras/statuses/
-  extras:status_add:
-    - /extras/statuses/add/
-  extras:status_bulk_edit:
-    - /extras/statuses/edit/
-  extras:status_bulk_delete:
-    - /extras/statuses/delete/
-  extras:status_import:
-    - /extras/statuses/import/
-  extras:status:
-    - /extras/statuses/<uuid:pk>/
-  extras:status_edit:
-    - /extras/statuses/<uuid:pk>/edit/
-  extras:status_delete:
-    - /extras/statuses/<uuid:pk>/delete/
-  extras:status_changelog:
-    - /extras/statuses/<uuid:pk>/changelog/
-  extras:status_notes:
-    - /extras/statuses/<uuid:pk>/notes/
-  extras:tag_list:
-    - /extras/tags/
-  extras:tag_add:
-    - /extras/tags/add/
-  extras:tag_import:
-    - /extras/tags/import/
-  extras:tag_bulk_edit:
-    - /extras/tags/edit/
-  extras:tag_bulk_delete:
-    - /extras/tags/delete/
-  extras:tag:
-    - /extras/tags/<uuid:pk>/
-  extras:tag_edit:
-    - /extras/tags/<uuid:pk>/edit/
-  extras:tag_delete:
-    - /extras/tags/<uuid:pk>/delete/
-  extras:tag_changelog:
-    - /extras/tags/<uuid:pk>/changelog/
-  extras:tag_notes:
-    - /extras/tags/<uuid:pk>/notes/
-  extras:webhook_list:
-    - /extras/webhooks/
-  extras:webhook_add:
-    - /extras/webhooks/add/
-  extras:webhook_bulk_delete:
-    - /extras/webhooks/delete/
-  extras:webhook:
-    - /extras/webhooks/<uuid:pk>/
-  extras:webhook_edit:
-    - /extras/webhooks/<uuid:pk>/edit/
-  extras:webhook_delete:
-    - /extras/webhooks/<uuid:pk>/delete/
-  extras:webhook_changelog:
-    - /extras/webhooks/<uuid:pk>/changelog/
-  extras:webhook_notes:
-    - /extras/webhooks/<uuid:pk>/notes/
-  extras:contact_list:
-    - /extras/contacts/$
-  extras:contact_add:
-    - /extras/contacts/add/$
-  extras:contact_import:
-    - /extras/contacts/import/$
-  extras:contact_bulk_edit:
-    - /extras/contacts/edit/$
-  extras:contact_bulk_delete:
-    - /extras/contacts/delete/$
+  - /cloud/cloud-services/1a157c39-2e74-4ac4-9c41-b3293fca7ea9/notes/
+  - /cloud/cloud-services/9a1d438b-0546-4e0a-888b-6a8d83a89069/notes/
+  core:about:
+  - /core/about/
+  core:graphql:
+  - /core/graphql/
+  core:home:
+  - /core/
+  core:metrics:
+  - /core/metrics/
+  core:search:
+  - /core/search/
+  dcim:console_connections_list:
+  - /dcim/console-connections/
+  dcim:consoleport:
+  - /dcim/console-ports/de080af0-c5ad-41a4-b812-49d8b736c9c9/
+  - /dcim/console-ports/2881d503-d25a-4e02-adef-e3a48ccb5d32/
+  dcim:consoleport_changelog:
+  - /dcim/console-ports/de080af0-c5ad-41a4-b812-49d8b736c9c9/changelog/
+  - /dcim/console-ports/2881d503-d25a-4e02-adef-e3a48ccb5d32/changelog/
+  dcim:consoleport_list:
+  - /dcim/console-ports/
+  - /dcim/console-ports/?per_page=7&page=5
+  dcim:consoleport_notes:
+  - /dcim/console-ports/de080af0-c5ad-41a4-b812-49d8b736c9c9/notes/
+  - /dcim/console-ports/2881d503-d25a-4e02-adef-e3a48ccb5d32/notes/
+  dcim:consoleserverport:
+  - /dcim/console-server-ports/ad3d26db-b550-4f1f-8af7-b70a14032665/
+  - /dcim/console-server-ports/1cc1e64b-9a9b-4447-9070-08d6bf909527/
+  dcim:consoleserverport_changelog:
+  - /dcim/console-server-ports/ad3d26db-b550-4f1f-8af7-b70a14032665/changelog/
+  - /dcim/console-server-ports/1cc1e64b-9a9b-4447-9070-08d6bf909527/changelog/
+  dcim:consoleserverport_list:
+  - /dcim/console-server-ports/
+  - /dcim/console-server-ports/?per_page=5&page=5
+  dcim:consoleserverport_notes:
+  - /dcim/console-server-ports/ad3d26db-b550-4f1f-8af7-b70a14032665/notes/
+  - /dcim/console-server-ports/1cc1e64b-9a9b-4447-9070-08d6bf909527/notes/
+  dcim:controller:
+  - /dcim/controllers/b6277a65-9b65-4a99-b0a6-af501505c257/
+  - /dcim/controllers/de55bdb4-6959-45d7-b938-5d045909e24c/
+  dcim:controller_changelog:
+  - /dcim/controllers/b6277a65-9b65-4a99-b0a6-af501505c257/changelog/
+  - /dcim/controllers/de55bdb4-6959-45d7-b938-5d045909e24c/changelog/
+  dcim:controller_list:
+  - /dcim/controllers/
+  - /dcim/controllers/?per_page=2&page=5
+  dcim:controller_notes:
+  - /dcim/controllers/b6277a65-9b65-4a99-b0a6-af501505c257/notes/
+  - /dcim/controllers/de55bdb4-6959-45d7-b938-5d045909e24c/notes/
+  dcim:controllermanageddevicegroup:
+  - /dcim/controller-managed-device-groups/da49e6fe-17a8-462d-8d66-f9c2a4e743de/
+  - /dcim/controller-managed-device-groups/4ce7a5d3-3da1-4008-a2eb-f2fba1c640c8/
+  dcim:controllermanageddevicegroup_changelog:
+  - /dcim/controller-managed-device-groups/da49e6fe-17a8-462d-8d66-f9c2a4e743de/changelog/
+  - /dcim/controller-managed-device-groups/4ce7a5d3-3da1-4008-a2eb-f2fba1c640c8/changelog/
+  dcim:controllermanageddevicegroup_list:
+  - /dcim/controller-managed-device-groups/
+  - /dcim/controller-managed-device-groups/?per_page=7&page=5
+  dcim:controllermanageddevicegroup_notes:
+  - /dcim/controller-managed-device-groups/da49e6fe-17a8-462d-8d66-f9c2a4e743de/notes/
+  - /dcim/controller-managed-device-groups/4ce7a5d3-3da1-4008-a2eb-f2fba1c640c8/notes/
+  dcim:device:
+  - /dcim/devices/cfbd447f-d563-4fac-bb75-bdda70ab4e80/
+  - /dcim/devices/38471bfe-0aca-4e09-b545-b0f90280fb66/
+  dcim:device_changelog:
+  - /dcim/devices/cfbd447f-d563-4fac-bb75-bdda70ab4e80/changelog/
+  - /dcim/devices/38471bfe-0aca-4e09-b545-b0f90280fb66/changelog/
+  dcim:device_list:
+  - /dcim/devices/
+  - /dcim/devices/?per_page=6&page=5
+  dcim:device_notes:
+  - /dcim/devices/cfbd447f-d563-4fac-bb75-bdda70ab4e80/notes/
+  - /dcim/devices/38471bfe-0aca-4e09-b545-b0f90280fb66/notes/
+  dcim:devicefamily:
+  - /dcim/device-families/a2478d6a-c3c6-40eb-95e3-8d0671ba2528/
+  - /dcim/device-families/d1b1e800-3586-4d0a-9242-628b652023cd/
+  dcim:devicefamily_changelog:
+  - /dcim/device-families/a2478d6a-c3c6-40eb-95e3-8d0671ba2528/changelog/
+  - /dcim/device-families/d1b1e800-3586-4d0a-9242-628b652023cd/changelog/
+  dcim:devicefamily_list:
+  - /dcim/device-families/
+  - /dcim/device-families/?per_page=4&page=5
+  dcim:devicefamily_notes:
+  - /dcim/device-families/a2478d6a-c3c6-40eb-95e3-8d0671ba2528/notes/
+  - /dcim/device-families/d1b1e800-3586-4d0a-9242-628b652023cd/notes/
+  dcim:deviceredundancygroup:
+  - /dcim/device-redundancy-groups/abb15517-8129-46fa-8c20-48956fed38e5/
+  - /dcim/device-redundancy-groups/7eeda0fd-1c67-4e21-a66c-2bc110ba1514/
+  dcim:deviceredundancygroup_changelog:
+  - /dcim/device-redundancy-groups/abb15517-8129-46fa-8c20-48956fed38e5/changelog/
+  - /dcim/device-redundancy-groups/7eeda0fd-1c67-4e21-a66c-2bc110ba1514/changelog/
+  dcim:deviceredundancygroup_list:
+  - /dcim/device-redundancy-groups/
+  - /dcim/device-redundancy-groups/?per_page=4&page=5
+  dcim:deviceredundancygroup_notes:
+  - /dcim/device-redundancy-groups/abb15517-8129-46fa-8c20-48956fed38e5/notes/
+  - /dcim/device-redundancy-groups/7eeda0fd-1c67-4e21-a66c-2bc110ba1514/notes/
+  dcim:devicetype:
+  - /dcim/device-types/e7a26f14-ec27-4b71-9ba9-f4199c3116df/
+  - /dcim/device-types/28ee21ea-875d-4a52-87c8-4e75008be81b/
+  dcim:devicetype_changelog:
+  - /dcim/device-types/e7a26f14-ec27-4b71-9ba9-f4199c3116df/changelog/
+  - /dcim/device-types/28ee21ea-875d-4a52-87c8-4e75008be81b/changelog/
+  dcim:devicetype_list:
+  - /dcim/device-types/
+  - /dcim/device-types/?per_page=6&page=5
+  dcim:devicetype_notes:
+  - /dcim/device-types/e7a26f14-ec27-4b71-9ba9-f4199c3116df/notes/
+  - /dcim/device-types/28ee21ea-875d-4a52-87c8-4e75008be81b/notes/
+  dcim:frontport:
+  - /dcim/front-ports/28a78354-b24a-4683-a84e-a7f96198ff1b/
+  - /dcim/front-ports/cd179fe9-df24-43c2-a34c-05641357fcd7/
+  dcim:frontport_changelog:
+  - /dcim/front-ports/28a78354-b24a-4683-a84e-a7f96198ff1b/changelog/
+  - /dcim/front-ports/cd179fe9-df24-43c2-a34c-05641357fcd7/changelog/
+  dcim:frontport_list:
+  - /dcim/front-ports/
+  - /dcim/front-ports/?per_page=5&page=5
+  dcim:frontport_notes:
+  - /dcim/front-ports/28a78354-b24a-4683-a84e-a7f96198ff1b/notes/
+  - /dcim/front-ports/cd179fe9-df24-43c2-a34c-05641357fcd7/notes/
+  dcim:interface:
+  - /dcim/interfaces/473b1713-b049-466c-a4fa-0a5bfa548024/
+  - /dcim/interfaces/a6e9cbbc-691f-4319-a525-661532a3ce25/
+  dcim:interface_changelog:
+  - /dcim/interfaces/473b1713-b049-466c-a4fa-0a5bfa548024/changelog/
+  - /dcim/interfaces/a6e9cbbc-691f-4319-a525-661532a3ce25/changelog/
+  dcim:interface_connections_list:
+  - /dcim/interface-connections/
+  - /dcim/interface-connections/?per_page=6&page=5
+  dcim:interface_list:
+  - /dcim/interfaces/
+  - /dcim/interfaces/?per_page=6&page=5
+  dcim:interface_notes:
+  - /dcim/interfaces/473b1713-b049-466c-a4fa-0a5bfa548024/notes/
+  - /dcim/interfaces/a6e9cbbc-691f-4319-a525-661532a3ce25/notes/
+  dcim:location:
+  - /dcim/locations/fe7174b0-feff-4fd5-97f4-4efb31ca0116/
+  - /dcim/locations/7e0c3b81-cc60-4045-aafb-f0ada9b9f45a/
+  dcim:location_changelog:
+  - /dcim/locations/fe7174b0-feff-4fd5-97f4-4efb31ca0116/changelog/
+  - /dcim/locations/7e0c3b81-cc60-4045-aafb-f0ada9b9f45a/changelog/
+  dcim:location_list:
+  - /dcim/locations/
+  - /dcim/locations/?per_page=11&page=5
+  dcim:location_notes:
+  - /dcim/locations/fe7174b0-feff-4fd5-97f4-4efb31ca0116/notes/
+  - /dcim/locations/7e0c3b81-cc60-4045-aafb-f0ada9b9f45a/notes/
+  dcim:locationtype:
+  - /dcim/location-types/089e845d-ba91-46fb-a803-8a4ec9ea4c92/
+  - /dcim/location-types/31902748-3ff3-46e6-b69e-1e768eeb5085/
+  dcim:locationtype_changelog:
+  - /dcim/location-types/089e845d-ba91-46fb-a803-8a4ec9ea4c92/changelog/
+  - /dcim/location-types/31902748-3ff3-46e6-b69e-1e768eeb5085/changelog/
+  dcim:locationtype_list:
+  - /dcim/location-types/
+  - /dcim/location-types/?per_page=1&page=5
+  dcim:locationtype_notes:
+  - /dcim/location-types/089e845d-ba91-46fb-a803-8a4ec9ea4c92/notes/
+  - /dcim/location-types/31902748-3ff3-46e6-b69e-1e768eeb5085/notes/
+  dcim:manufacturer:
+  - /dcim/manufacturers/a6793bf7-b14d-4b6a-b30c-6e2ad05bd819/
+  - /dcim/manufacturers/52f52aec-fa10-4943-87ba-df6957296daa/
+  dcim:manufacturer_changelog:
+  - /dcim/manufacturers/a6793bf7-b14d-4b6a-b30c-6e2ad05bd819/changelog/
+  - /dcim/manufacturers/52f52aec-fa10-4943-87ba-df6957296daa/changelog/
+  dcim:manufacturer_list:
+  - /dcim/manufacturers/
+  - /dcim/manufacturers/?per_page=2&page=5
+  dcim:manufacturer_notes:
+  - /dcim/manufacturers/a6793bf7-b14d-4b6a-b30c-6e2ad05bd819/notes/
+  - /dcim/manufacturers/52f52aec-fa10-4943-87ba-df6957296daa/notes/
+  dcim:module:
+  - /dcim/modules/15e880ba-0f27-46aa-be08-a311e5bee6d7/
+  - /dcim/modules/6392f14b-662c-4168-90a4-da0122d8a968/
+  dcim:module_changelog:
+  - /dcim/modules/15e880ba-0f27-46aa-be08-a311e5bee6d7/changelog/
+  - /dcim/modules/6392f14b-662c-4168-90a4-da0122d8a968/changelog/
+  dcim:module_list:
+  - /dcim/modules/
+  - /dcim/modules/?per_page=4&page=5
+  dcim:module_notes:
+  - /dcim/modules/15e880ba-0f27-46aa-be08-a311e5bee6d7/notes/
+  - /dcim/modules/6392f14b-662c-4168-90a4-da0122d8a968/notes/
+  dcim:modulebay:
+  - /dcim/module-bays/6f83d2ff-f73a-4ad1-8cfd-dad485206949/
+  - /dcim/module-bays/ef9b97a1-f459-4b14-b517-23897e008059/
+  dcim:modulebay_changelog:
+  - /dcim/module-bays/6f83d2ff-f73a-4ad1-8cfd-dad485206949/changelog/
+  - /dcim/module-bays/ef9b97a1-f459-4b14-b517-23897e008059/changelog/
+  dcim:modulebay_list:
+  - /dcim/module-bays/
+  - /dcim/module-bays/?per_page=18&page=5
+  dcim:modulebay_notes:
+  - /dcim/module-bays/6f83d2ff-f73a-4ad1-8cfd-dad485206949/notes/
+  - /dcim/module-bays/ef9b97a1-f459-4b14-b517-23897e008059/notes/
+  dcim:moduletype:
+  - /dcim/module-types/94892bc8-d70a-406d-8c56-0ea931b778f9/
+  - /dcim/module-types/ad07a4d4-3a7a-49e3-861b-9d2b75231038/
+  dcim:moduletype_changelog:
+  - /dcim/module-types/94892bc8-d70a-406d-8c56-0ea931b778f9/changelog/
+  - /dcim/module-types/ad07a4d4-3a7a-49e3-861b-9d2b75231038/changelog/
+  dcim:moduletype_list:
+  - /dcim/module-types/
+  - /dcim/module-types/?per_page=4&page=5
+  dcim:moduletype_notes:
+  - /dcim/module-types/94892bc8-d70a-406d-8c56-0ea931b778f9/notes/
+  - /dcim/module-types/ad07a4d4-3a7a-49e3-861b-9d2b75231038/notes/
+  dcim:platform:
+  - /dcim/platforms/ca2c38ae-e5b2-4f8a-aa70-627301ca8824/
+  - /dcim/platforms/a766e9cf-8a39-4e4b-a19e-1296f0fc1c05/
+  dcim:platform_changelog:
+  - /dcim/platforms/ca2c38ae-e5b2-4f8a-aa70-627301ca8824/changelog/
+  - /dcim/platforms/a766e9cf-8a39-4e4b-a19e-1296f0fc1c05/changelog/
+  dcim:platform_list:
+  - /dcim/platforms/
+  - /dcim/platforms/?per_page=5&page=5
+  dcim:platform_notes:
+  - /dcim/platforms/ca2c38ae-e5b2-4f8a-aa70-627301ca8824/notes/
+  - /dcim/platforms/a766e9cf-8a39-4e4b-a19e-1296f0fc1c05/notes/
+  dcim:power_connections_list:
+  - /dcim/power-connections/
+  dcim:poweroutlet:
+  - /dcim/power-outlets/05469fcc-4765-466d-a428-fc4ec053dd03/
+  - /dcim/power-outlets/b23c74e0-f32f-41de-813d-e3ca2e9ed7fd/
+  dcim:poweroutlet_changelog:
+  - /dcim/power-outlets/05469fcc-4765-466d-a428-fc4ec053dd03/changelog/
+  - /dcim/power-outlets/b23c74e0-f32f-41de-813d-e3ca2e9ed7fd/changelog/
+  dcim:poweroutlet_list:
+  - /dcim/power-outlets/
+  - /dcim/power-outlets/?per_page=6&page=5
+  dcim:poweroutlet_notes:
+  - /dcim/power-outlets/05469fcc-4765-466d-a428-fc4ec053dd03/notes/
+  - /dcim/power-outlets/b23c74e0-f32f-41de-813d-e3ca2e9ed7fd/notes/
+  dcim:powerport:
+  - /dcim/power-ports/87e4b6f2-3039-4916-901e-43cae161f6de/
+  - /dcim/power-ports/9e71dd0c-5ea3-4dff-be17-81ae6b13fd0a/
+  dcim:powerport_changelog:
+  - /dcim/power-ports/87e4b6f2-3039-4916-901e-43cae161f6de/changelog/
+  - /dcim/power-ports/9e71dd0c-5ea3-4dff-be17-81ae6b13fd0a/changelog/
+  dcim:powerport_list:
+  - /dcim/power-ports/
+  - /dcim/power-ports/?per_page=5&page=5
+  dcim:powerport_notes:
+  - /dcim/power-ports/87e4b6f2-3039-4916-901e-43cae161f6de/notes/
+  - /dcim/power-ports/9e71dd0c-5ea3-4dff-be17-81ae6b13fd0a/notes/
+  dcim:rearport:
+  - /dcim/rear-ports/3de1bac6-8667-4905-bc65-93277e913cc9/
+  - /dcim/rear-ports/db55b049-09e2-4115-b6ee-740b08b4756b/
+  dcim:rearport_changelog:
+  - /dcim/rear-ports/3de1bac6-8667-4905-bc65-93277e913cc9/changelog/
+  - /dcim/rear-ports/db55b049-09e2-4115-b6ee-740b08b4756b/changelog/
+  dcim:rearport_list:
+  - /dcim/rear-ports/
+  - /dcim/rear-ports/?per_page=5&page=5
+  dcim:rearport_notes:
+  - /dcim/rear-ports/3de1bac6-8667-4905-bc65-93277e913cc9/notes/
+  - /dcim/rear-ports/db55b049-09e2-4115-b6ee-740b08b4756b/notes/
+  dcim:softwareimagefile:
+  - /dcim/software-image-files/f644a44c-da07-4698-a8f9-282dbd5d2dff/
+  - /dcim/software-image-files/1466cbb0-aa6e-4a93-8a42-9c4ea1ae65e9/
+  dcim:softwareimagefile_changelog:
+  - /dcim/software-image-files/f644a44c-da07-4698-a8f9-282dbd5d2dff/changelog/
+  - /dcim/software-image-files/1466cbb0-aa6e-4a93-8a42-9c4ea1ae65e9/changelog/
+  dcim:softwareimagefile_list:
+  - /dcim/software-image-files/
+  - /dcim/software-image-files/?per_page=6&page=5
+  dcim:softwareimagefile_notes:
+  - /dcim/software-image-files/f644a44c-da07-4698-a8f9-282dbd5d2dff/notes/
+  - /dcim/software-image-files/1466cbb0-aa6e-4a93-8a42-9c4ea1ae65e9/notes/
+  dcim:softwareversion:
+  - /dcim/software-versions/27ad245f-4c89-4b1e-943c-8a4b4743f8ef/
+  - /dcim/software-versions/f834efbd-a8a3-4035-889b-a53f52a16ea4/
+  dcim:softwareversion_changelog:
+  - /dcim/software-versions/27ad245f-4c89-4b1e-943c-8a4b4743f8ef/changelog/
+  - /dcim/software-versions/f834efbd-a8a3-4035-889b-a53f52a16ea4/changelog/
+  dcim:softwareversion_list:
+  - /dcim/software-versions/
+  - /dcim/software-versions/?per_page=5&page=5
+  dcim:softwareversion_notes:
+  - /dcim/software-versions/27ad245f-4c89-4b1e-943c-8a4b4743f8ef/notes/
+  - /dcim/software-versions/f834efbd-a8a3-4035-889b-a53f52a16ea4/notes/
+  dcim:virtualdevicecontext:
+  - /dcim/virtual-device-contexts/c5c3f8b7-ff58-4e3b-871e-f73825a376e5/
+  - /dcim/virtual-device-contexts/211e140c-995d-4640-ba71-41828afb7491/
+  dcim:virtualdevicecontext_changelog:
+  - /dcim/virtual-device-contexts/c5c3f8b7-ff58-4e3b-871e-f73825a376e5/changelog/
+  - /dcim/virtual-device-contexts/211e140c-995d-4640-ba71-41828afb7491/changelog/
+  dcim:virtualdevicecontext_list:
+  - /dcim/virtual-device-contexts/
+  - /dcim/virtual-device-contexts/?per_page=6&page=5
+  dcim:virtualdevicecontext_notes:
+  - /dcim/virtual-device-contexts/c5c3f8b7-ff58-4e3b-871e-f73825a376e5/notes/
+  - /dcim/virtual-device-contexts/211e140c-995d-4640-ba71-41828afb7491/notes/
   extras:contact:
-    - /extras/contacts/(?P<pk>[/.]+)/$
-  extras:contact_delete:
-    - /extras/contacts/(?P<pk>[/.]+)/delete/$
-  extras:contact_edit:
-    - /extras/contacts/(?P<pk>[/.]+)/edit/$
+  - /extras/contacts/ce36c739-a614-4e92-82e7-3c9274516b34/
+  - /extras/contacts/def68347-e6d4-4e6f-bb41-fa699c437b58/
   extras:contact_changelog:
-    - /extras/contacts/(?P<pk>[/.]+)/changelog/$
+  - /extras/contacts/ce36c739-a614-4e92-82e7-3c9274516b34/changelog/
+  - /extras/contacts/def68347-e6d4-4e6f-bb41-fa699c437b58/changelog/
+  extras:contact_list:
+  - /extras/contacts/
+  - /extras/contacts/?per_page=4&page=5
   extras:contact_notes:
-    - /extras/contacts/(?P<pk>[/.]+)/notes/$
-  extras:contactassociation_add:
-    - /extras/contact-associations/add/$
-  extras:contactassociation_bulk_edit:
-    - /extras/contact-associations/edit/$
-  extras:contactassociation_bulk_delete:
-    - /extras/contact-associations/delete/$
-  extras:contactassociation_delete:
-    - /extras/contact-associations/(?P<pk>[/.]+)/delete/$
-  extras:contactassociation_edit:
-    - /extras/contact-associations/(?P<pk>[/.]+)/edit/$
-  extras:externalintegration_list:
-    - /extras/external-integrations/$
-  extras:externalintegration_add:
-    - /extras/external-integrations/add/$
-  extras:externalintegration_import:
-    - /extras/external-integrations/import/$
-  extras:externalintegration_bulk_edit:
-    - /extras/external-integrations/edit/$
-  extras:externalintegration_bulk_delete:
-    - /extras/external-integrations/delete/$
+  - /extras/contacts/ce36c739-a614-4e92-82e7-3c9274516b34/notes/
+  - /extras/contacts/def68347-e6d4-4e6f-bb41-fa699c437b58/notes/
+  extras:dynamicgroup:
+  - /extras/dynamic-groups/0b7402b7-9325-4bf8-af42-7aa3cf405631/
+  - /extras/dynamic-groups/7c9f96d3-74ed-46de-96a4-eb90f2e0152d/
+  extras:dynamicgroup_changelog:
+  - /extras/dynamic-groups/0b7402b7-9325-4bf8-af42-7aa3cf405631/changelog/
+  - /extras/dynamic-groups/7c9f96d3-74ed-46de-96a4-eb90f2e0152d/changelog/
+  extras:dynamicgroup_list:
+  - /extras/dynamic-groups/
+  - /extras/dynamic-groups/?per_page=4&page=5
+  extras:dynamicgroup_notes:
+  - /extras/dynamic-groups/0b7402b7-9325-4bf8-af42-7aa3cf405631/notes/
+  - /extras/dynamic-groups/7c9f96d3-74ed-46de-96a4-eb90f2e0152d/notes/
   extras:externalintegration:
-    - /extras/external-integrations/(?P<pk>[/.]+)/$
-  extras:externalintegration_delete:
-    - /extras/external-integrations/(?P<pk>[/.]+)/delete/$
-  extras:externalintegration_edit:
-    - /extras/external-integrations/(?P<pk>[/.]+)/edit/$
+  - /extras/external-integrations/ec200b20-f1e1-4395-b88f-80d91043daf2/
+  - /extras/external-integrations/3bbf6a34-a883-4cf7-8846-a209507461d3/
   extras:externalintegration_changelog:
-    - /extras/external-integrations/(?P<pk>[/.]+)/changelog/$
+  - /extras/external-integrations/ec200b20-f1e1-4395-b88f-80d91043daf2/changelog/
+  - /extras/external-integrations/3bbf6a34-a883-4cf7-8846-a209507461d3/changelog/
+  extras:externalintegration_list:
+  - /extras/external-integrations/
+  - /extras/external-integrations/?per_page=4&page=5
   extras:externalintegration_notes:
-    - /extras/external-integrations/(?P<pk>[/.]+)/notes/$
-  extras:jobbutton_list:
-    - /extras/job-buttons/$
-  extras:jobbutton_add:
-    - /extras/job-buttons/add/$
-  extras:jobbutton_import:
-    - /extras/job-buttons/import/$
-  extras:jobbutton_bulk_edit:
-    - /extras/job-buttons/edit/$
-  extras:jobbutton_bulk_delete:
-    - /extras/job-buttons/delete/$
-  extras:jobbutton:
-    - /extras/job-buttons/(?P<pk>[/.]+)/$
-  extras:jobbutton_delete:
-    - /extras/job-buttons/(?P<pk>[/.]+)/delete/$
-  extras:jobbutton_edit:
-    - /extras/job-buttons/(?P<pk>[/.]+)/edit/$
-  extras:jobbutton_changelog:
-    - /extras/job-buttons/(?P<pk>[/.]+)/changelog/$
-  extras:jobbutton_notes:
-    - /extras/job-buttons/(?P<pk>[/.]+)/notes/$
-  extras:jobqueue_list:
-    - /extras/job-queues/$
-  extras:jobqueue_add:
-    - /extras/job-queues/add/$
-  extras:jobqueue_import:
-    - /extras/job-queues/import/$
-  extras:jobqueue_bulk_edit:
-    - /extras/job-queues/edit/$
-  extras:jobqueue_bulk_delete:
-    - /extras/job-queues/delete/$
+  - /extras/external-integrations/ec200b20-f1e1-4395-b88f-80d91043daf2/notes/
+  - /extras/external-integrations/3bbf6a34-a883-4cf7-8846-a209507461d3/notes/
+  extras:job:
+  - /extras/jobs/32e376cb-86ce-49ee-a4af-a4fafb2529d2/
+  - /extras/jobs/2fc86250-a6e1-442f-898d-eba0bb6b80cd/
+  extras:job_changelog:
+  - /extras/jobs/32e376cb-86ce-49ee-a4af-a4fafb2529d2/changelog/
+  - /extras/jobs/2fc86250-a6e1-442f-898d-eba0bb6b80cd/changelog/
+  extras:job_list:
+  - /extras/jobs/
+  - /extras/jobs/?per_page=3&page=5
+  extras:job_notes:
+  - /extras/jobs/32e376cb-86ce-49ee-a4af-a4fafb2529d2/notes/
+  - /extras/jobs/2fc86250-a6e1-442f-898d-eba0bb6b80cd/notes/
   extras:jobqueue:
-    - /extras/job-queues/(?P<pk>[/.]+)/$
-  extras:jobqueue_delete:
-    - /extras/job-queues/(?P<pk>[/.]+)/delete/$
-  extras:jobqueue_edit:
-    - /extras/job-queues/(?P<pk>[/.]+)/edit/$
+  - /extras/job-queues/68803504-3e79-4066-bc3c-a63ab6bc2584/
+  - /extras/job-queues/9ebe441c-5cac-4cf3-970b-3791979d3551/
   extras:jobqueue_changelog:
-    - /extras/job-queues/(?P<pk>[/.]+)/changelog/$
+  - /extras/job-queues/68803504-3e79-4066-bc3c-a63ab6bc2584/changelog/
+  - /extras/job-queues/9ebe441c-5cac-4cf3-970b-3791979d3551/changelog/
+  extras:jobqueue_list:
+  - /extras/job-queues/
+  - /extras/job-queues/?per_page=8&page=5
   extras:jobqueue_notes:
-    - /extras/job-queues/(?P<pk>[/.]+)/notes/$
-  extras:metadatatype_list:
-    - /extras/metadata-types/$
-  extras:metadatatype_add:
-    - /extras/metadata-types/add/$
-  extras:metadatatype_import:
-    - /extras/metadata-types/import/$
-  extras:metadatatype_bulk_edit:
-    - /extras/metadata-types/edit/$
-  extras:metadatatype_bulk_delete:
-    - /extras/metadata-types/delete/$
+  - /extras/job-queues/68803504-3e79-4066-bc3c-a63ab6bc2584/notes/
+  - /extras/job-queues/9ebe441c-5cac-4cf3-970b-3791979d3551/notes/
+  extras:jobresult:
+  - /extras/job-results/069b03ad-1624-440b-b436-04508eacfaf8/
+  - /extras/job-results/2252eaf5-64a0-45da-bd93-04099605ba3b/
+  extras:jobresult_list:
+  - /extras/job-results/
+  - /extras/job-results/?per_page=4&page=5
   extras:metadatatype:
-    - /extras/metadata-types/(?P<pk>[/.]+)/$
-  extras:metadatatype_delete:
-    - /extras/metadata-types/(?P<pk>[/.]+)/delete/$
-  extras:metadatatype_edit:
-    - /extras/metadata-types/(?P<pk>[/.]+)/edit/$
+  - /extras/metadata-types/321b1838-f7da-4979-973e-0635ace72540/
+  - /extras/metadata-types/d571cceb-e88e-4711-ac0d-dc72acc6296b/
   extras:metadatatype_changelog:
-    - /extras/metadata-types/(?P<pk>[/.]+)/changelog/$
+  - /extras/metadata-types/321b1838-f7da-4979-973e-0635ace72540/changelog/
+  - /extras/metadata-types/d571cceb-e88e-4711-ac0d-dc72acc6296b/changelog/
+  extras:metadatatype_list:
+  - /extras/metadata-types/
+  - /extras/metadata-types/?per_page=7&page=5
   extras:metadatatype_notes:
-    - /extras/metadata-types/(?P<pk>[/.]+)/notes/$
+  - /extras/metadata-types/321b1838-f7da-4979-973e-0635ace72540/notes/
+  - /extras/metadata-types/d571cceb-e88e-4711-ac0d-dc72acc6296b/notes/
+  extras:objectchange:
+  - /extras/object-changes/120d3b81-07a3-47a4-be10-280ef02e8a44/
+  - /extras/object-changes/2fdaddab-1bf3-43eb-9236-69326c51ba39/
+  extras:objectchange_list:
+  - /extras/object-changes/
+  - /extras/object-changes/?per_page=20&page=5
   extras:objectmetadata_list:
-    - /extras/object-metadata/$
-  extras:role_list:
-    - /extras/roles/$
-  extras:role_add:
-    - /extras/roles/add/$
-  extras:role_import:
-    - /extras/roles/import/$
-  extras:role_bulk_edit:
-    - /extras/roles/edit/$
-  extras:role_bulk_delete:
-    - /extras/roles/delete/$
+  - /extras/object-metadata/
+  - /extras/object-metadata/?per_page=28&page=5
   extras:role:
-    - /extras/roles/(?P<pk>[/.]+)/$
-  extras:role_delete:
-    - /extras/roles/(?P<pk>[/.]+)/delete/$
-  extras:role_edit:
-    - /extras/roles/(?P<pk>[/.]+)/edit/$
+  - /extras/roles/7b834623-9d0f-48b1-a5bf-ed7c162795c0/
+  - /extras/roles/72e53e7a-e917-492c-89b4-c91240b08457/
   extras:role_changelog:
-    - /extras/roles/(?P<pk>[/.]+)/changelog/$
+  - /extras/roles/7b834623-9d0f-48b1-a5bf-ed7c162795c0/changelog/
+  - /extras/roles/72e53e7a-e917-492c-89b4-c91240b08457/changelog/
+  extras:role_list:
+  - /extras/roles/
+  - /extras/roles/?per_page=6&page=5
   extras:role_notes:
-    - /extras/roles/(?P<pk>[/.]+)/notes/$
-  extras:savedview_list:
-    - /extras/saved-views/$
-  extras:savedview_add:
-    - /extras/saved-views/add/$
+  - /extras/roles/7b834623-9d0f-48b1-a5bf-ed7c162795c0/notes/
+  - /extras/roles/72e53e7a-e917-492c-89b4-c91240b08457/notes/
   extras:savedview:
-    - /extras/saved-views/(?P<pk>[/.]+)/$
-  extras:savedview_delete:
-    - /extras/saved-views/(?P<pk>[/.]+)/delete/$
-  extras:savedview_edit:
-    - /extras/saved-views/(?P<pk>[/.]+)/edit/$
+  - /extras/saved-views/ce40ca6b-8ef8-45c1-8069-11a2a37bca14/
+  - /extras/saved-views/8acb6431-4d20-479c-a24e-a6f3c8645164/
   extras:savedview_changelog:
-    - /extras/saved-views/(?P<pk>[/.]+)/changelog/$
-  extras:savedview_set_default:
-    - /extras/saved-views/(?P<pk>[/.]+)/set-default/$
-  extras:savedview_update_config:
-    - /extras/saved-views/(?P<pk>[/.]+)/update-config/$
-  extras:secret_list:
-    - /extras/secrets/$
-  extras:secret_add:
-    - /extras/secrets/add/$
-  extras:secret_import:
-    - /extras/secrets/import/$
-  extras:secret_bulk_delete:
-    - /extras/secrets/delete/$
-  extras:secret:
-    - /extras/secrets/(?P<pk>[/.]+)/$
-  extras:secret_delete:
-    - /extras/secrets/(?P<pk>[/.]+)/delete/$
-  extras:secret_edit:
-    - /extras/secrets/(?P<pk>[/.]+)/edit/$
-  extras:secret_changelog:
-    - /extras/secrets/(?P<pk>[/.]+)/changelog/$
-  extras:secret_notes:
-    - /extras/secrets/(?P<pk>[/.]+)/notes/$
-  extras:staticgroupassociation_list:
-    - /extras/static-group-associations/$
-  extras:staticgroupassociation_bulk_delete:
-    - /extras/static-group-associations/delete/$
+  - /extras/saved-views/ce40ca6b-8ef8-45c1-8069-11a2a37bca14/changelog/
+  - /extras/saved-views/8acb6431-4d20-479c-a24e-a6f3c8645164/changelog/
+  extras:savedview_list:
+  - /extras/saved-views/
+  - /extras/saved-views/?per_page=4&page=5
   extras:staticgroupassociation:
-    - /extras/static-group-associations/(?P<pk>[/.]+)/$
-  extras:staticgroupassociation_delete:
-    - /extras/static-group-associations/(?P<pk>[/.]+)/delete/$
+  - /extras/static-group-associations/3dceb95f-964e-487d-938e-22553dcbed06/
+  - /extras/static-group-associations/5a990ad4-38c8-4fe6-9217-5c63e821b119/
   extras:staticgroupassociation_changelog:
-    - /extras/static-group-associations/(?P<pk>[/.]+)/changelog/$
-  extras:team_list:
-    - /extras/teams/$
-  extras:team_add:
-    - /extras/teams/add/$
-  extras:team_import:
-    - /extras/teams/import/$
-  extras:team_bulk_edit:
-    - /extras/teams/edit/$
-  extras:team_bulk_delete:
-    - /extras/teams/delete/$
+  - /extras/static-group-associations/3dceb95f-964e-487d-938e-22553dcbed06/changelog/
+  - /extras/static-group-associations/5a990ad4-38c8-4fe6-9217-5c63e821b119/changelog/
+  extras:staticgroupassociation_list:
+  - /extras/static-group-associations/
+  - /extras/static-group-associations/?per_page=4&page=5
+  extras:status:
+  - /extras/statuses/90ff98d0-26cf-4631-877e-4e1d5feb5872/
+  - /extras/statuses/97b8f2a0-510d-4d1d-8846-3a0b71c3fe79/
+  extras:status_changelog:
+  - /extras/statuses/90ff98d0-26cf-4631-877e-4e1d5feb5872/changelog/
+  - /extras/statuses/97b8f2a0-510d-4d1d-8846-3a0b71c3fe79/changelog/
+  extras:status_list:
+  - /extras/statuses/
+  - /extras/statuses/?per_page=6&page=5
+  extras:status_notes:
+  - /extras/statuses/90ff98d0-26cf-4631-877e-4e1d5feb5872/notes/
+  - /extras/statuses/97b8f2a0-510d-4d1d-8846-3a0b71c3fe79/notes/
+  extras:tag:
+  - /extras/tags/b73b6607-1697-4490-9fdb-3f60eebd7d80/
+  - /extras/tags/08d1c8dc-7278-4e07-94d9-f1fc42c093c1/
+  extras:tag_changelog:
+  - /extras/tags/b73b6607-1697-4490-9fdb-3f60eebd7d80/changelog/
+  - /extras/tags/08d1c8dc-7278-4e07-94d9-f1fc42c093c1/changelog/
+  extras:tag_list:
+  - /extras/tags/
+  - /extras/tags/?per_page=4&page=5
+  extras:tag_notes:
+  - /extras/tags/b73b6607-1697-4490-9fdb-3f60eebd7d80/notes/
+  - /extras/tags/08d1c8dc-7278-4e07-94d9-f1fc42c093c1/notes/
   extras:team:
-    - /extras/teams/(?P<pk>[/.]+)/$
-  extras:team_delete:
-    - /extras/teams/(?P<pk>[/.]+)/delete/$
-  extras:team_edit:
-    - /extras/teams/(?P<pk>[/.]+)/edit/$
+  - /extras/teams/fa3e1040-f555-4282-baf0-a5151f0f9bc4/
+  - /extras/teams/641ada31-f137-439c-b5cb-0b77db85ca6d/
   extras:team_changelog:
-    - /extras/teams/(?P<pk>[/.]+)/changelog/$
+  - /extras/teams/fa3e1040-f555-4282-baf0-a5151f0f9bc4/changelog/
+  - /extras/teams/641ada31-f137-439c-b5cb-0b77db85ca6d/changelog/
+  extras:team_list:
+  - /extras/teams/
+  - /extras/teams/?per_page=4&page=5
   extras:team_notes:
-    - /extras/teams/(?P<pk>[/.]+)/notes/$
-  extras:rir_changelog:
-    - /extras/rirs/<uuid:pk>/changelog/
-  extras:rir_notes:
-    - /extras/rirs/<uuid:pk>/notes/
-  extras:prefix_changelog:
-    - /extras/prefixes/<uuid:pk>/changelog/
-  extras:prefix_dynamicgroups:
-    - /extras/prefixes/<uuid:pk>/dynamic-groups/
-  extras:prefix_notes:
-    - /extras/prefixes/<uuid:pk>/notes/
-  extras:ipaddress_changelog:
-    - /extras/ip-addresses/<uuid:pk>/changelog/
-  extras:ipaddress_dynamicgroups:
-    - /extras/ip-addresses/<uuid:pk>/dynamic-groups/
-  extras:ipaddress_notes:
-    - /extras/ip-addresses/<uuid:pk>/notes/
-  extras:vlangroup_changelog:
-    - /extras/vlan-groups/<uuid:pk>/changelog/
-  extras:vlangroup_notes:
-    - /extras/vlan-groups/<uuid:pk>/notes/
-  extras:vlan_changelog:
-    - /extras/vlans/<uuid:pk>/changelog/
-  extras:vlan_notes:
-    - /extras/vlans/<uuid:pk>/notes/
-  extras:service_changelog:
-    - /extras/services/<uuid:pk>/changelog/
-  extras:service_notes:
-    - /extras/services/<uuid:pk>/notes/
-  extras:tenantgroup_changelog:
-    - /extras/tenant-groups/<uuid:pk>/changelog/
-  extras:tenantgroup_notes:
-    - /extras/tenant-groups/<uuid:pk>/notes/
-  extras:tenant_changelog:
-    - /extras/tenants/<uuid:pk>/changelog/
-  extras:tenant_notes:
-    - /extras/tenants/<uuid:pk>/notes/
-  extras:clustertype_changelog:
-    - /extras/cluster-types/<uuid:pk>/changelog/
-  extras:clustertype_notes:
-    - /extras/cluster-types/<uuid:pk>/notes/
-  extras:clustergroup_changelog:
-    - /extras/cluster-groups/<uuid:pk>/changelog/
-  extras:clustergroup_notes:
-    - /extras/cluster-groups/<uuid:pk>/notes/
-  extras:cluster_changelog:
-    - /extras/clusters/<uuid:pk>/changelog/
-  extras:cluster_dynamicgroups:
-    - /extras/clusters/<uuid:pk>/dynamic-groups/
-  extras:cluster_notes:
-    - /extras/clusters/<uuid:pk>/notes/
-  extras:virtualmachine_changelog:
-    - /extras/virtual-machines/<uuid:pk>/changelog/
-  extras:virtualmachine_dynamicgroups:
-    - /extras/virtual-machines/<uuid:pk>/dynamic-groups/
-  extras:virtualmachine_notes:
-    - /extras/virtual-machines/<uuid:pk>/notes/
-  extras:vminterface_changelog:
-    - /extras/interfaces/<uuid:pk>/changelog/
-  extras:vminterface_notes:
-    - /extras/interfaces/<uuid:pk>/notes/
-  ipam:device_service_assign:
-    - /ipam/devices/<uuid:device>/services/assign/
-  ipam:rir_list:
-    - /ipam/rirs/
-  ipam:rir_add:
-    - /ipam/rirs/add/
-  ipam:rir_import:
-    - /ipam/rirs/import/
-  ipam:rir_bulk_delete:
-    - /ipam/rirs/delete/
-  ipam:rir:
-    - /ipam/rirs/<uuid:pk>/
-  ipam:rir_edit:
-    - /ipam/rirs/<uuid:pk>/edit/
-  ipam:rir_delete:
-    - /ipam/rirs/<uuid:pk>/delete/
-  ipam:namespace_ipaddresses:
-    - /ipam/namespaces/<uuid:pk>/ip-addresses/
-  ipam:namespace_prefixes:
-    - /ipam/namespaces/<uuid:pk>/prefixes/
-  ipam:namespace_vrfs:
-    - /ipam/namespaces/<uuid:pk>/vrfs/
-  ipam:prefix_list:
-    - /ipam/prefixes/
-  ipam:prefix_add:
-    - /ipam/prefixes/add/
-  ipam:prefix_import:
-    - /ipam/prefixes/import/
-  ipam:prefix_bulk_edit:
-    - /ipam/prefixes/edit/
-  ipam:prefix_bulk_delete:
-    - /ipam/prefixes/delete/
-  ipam:prefix:
-    - /ipam/prefixes/<uuid:pk>/
-  ipam:prefix_edit:
-    - /ipam/prefixes/<uuid:pk>/edit/
-  ipam:prefix_delete:
-    - /ipam/prefixes/<uuid:pk>/delete/
-  ipam:prefix_prefixes:
-    - /ipam/prefixes/<uuid:pk>/prefixes/
-  ipam:prefix_ipaddresses:
-    - /ipam/prefixes/<uuid:pk>/ip-addresses/
-  ipam:ipaddress_list:
-    - /ipam/ip-addresses/
-  ipam:ipaddress_add:
-    - /ipam/ip-addresses/add/
-  ipam:ipaddress_bulk_add:
-    - /ipam/ip-addresses/bulk-add/
-  ipam:ipaddress_import:
-    - /ipam/ip-addresses/import/
-  ipam:ipaddress_bulk_edit:
-    - /ipam/ip-addresses/edit/
-  ipam:ipaddress_merge:
-    - /ipam/ip-addresses/merge/
-  ipam:ipaddress_bulk_delete:
-    - /ipam/ip-addresses/delete/
-  ipam:ipaddress_interfaces:
-    - /ipam/ip-addresses/<uuid:pk>/interfaces/
-  ipam:ipaddress_vm_interfaces:
-    - /ipam/ip-addresses/<uuid:pk>/vm-interfaces/
-  ipam:ipaddress_assign:
-    - /ipam/ip-addresses/assign/
+  - /extras/teams/fa3e1040-f555-4282-baf0-a5151f0f9bc4/notes/
+  - /extras/teams/641ada31-f137-439c-b5cb-0b77db85ca6d/notes/
   ipam:ipaddress:
-    - /ipam/ip-addresses/<uuid:pk>/
-  ipam:ipaddress_edit:
-    - /ipam/ip-addresses/<uuid:pk>/edit/
-  ipam:ipaddress_delete:
-    - /ipam/ip-addresses/<uuid:pk>/delete/
-  ipam:vlangroup_list:
-    - /ipam/vlan-groups/
-  ipam:vlangroup_add:
-    - /ipam/vlan-groups/add/
-  ipam:vlangroup_import:
-    - /ipam/vlan-groups/import/
-  ipam:vlangroup_bulk_delete:
-    - /ipam/vlan-groups/delete/
-  ipam:vlangroup:
-    - /ipam/vlan-groups/<uuid:pk>/
-  ipam:vlangroup_edit:
-    - /ipam/vlan-groups/<uuid:pk>/edit/
-  ipam:vlangroup_delete:
-    - /ipam/vlan-groups/<uuid:pk>/delete/
-  ipam:vlan_list:
-    - /ipam/vlans/
-  ipam:vlan_add:
-    - /ipam/vlans/add/
-  ipam:vlan_import:
-    - /ipam/vlans/import/
-  ipam:vlan_bulk_edit:
-    - /ipam/vlans/edit/
-  ipam:vlan_bulk_delete:
-    - /ipam/vlans/delete/
-  ipam:vlan:
-    - /ipam/vlans/<uuid:pk>/
-  ipam:vlan_interfaces:
-    - /ipam/vlans/<uuid:pk>/interfaces/
-  ipam:vlan_vminterfaces:
-    - /ipam/vlans/<uuid:pk>/vm-interfaces/
-  ipam:vlan_edit:
-    - /ipam/vlans/<uuid:pk>/edit/
-  ipam:vlan_delete:
-    - /ipam/vlans/<uuid:pk>/delete/
-  ipam:service_list:
-    - /ipam/services/
-  ipam:service_add:
-    - /ipam/services/add/
-  ipam:service_import:
-    - /ipam/services/import/
-  ipam:service_bulk_edit:
-    - /ipam/services/edit/
-  ipam:service_bulk_delete:
-    - /ipam/services/delete/
-  ipam:service:
-    - /ipam/services/<uuid:pk>/
-  ipam:service_edit:
-    - /ipam/services/<uuid:pk>/edit/
-  ipam:service_delete:
-    - /ipam/services/<uuid:pk>/delete/
-  ipam:ipaddresstointerface_list:
-    - /ipam/ip-address-to-interface/$
-  ipam:ipaddresstointerface_import:
-    - /ipam/ip-address-to-interface/import/$
-  ipam:namespace_list:
-    - /ipam/namespaces/$
-  ipam:namespace_add:
-    - /ipam/namespaces/add/$
-  ipam:namespace_import:
-    - /ipam/namespaces/import/$
-  ipam:namespace_bulk_edit:
-    - /ipam/namespaces/edit/$
-  ipam:namespace_bulk_delete:
-    - /ipam/namespaces/delete/$
+  - /ipam/ip-addresses/6c4e71f6-d1d9-4a63-addb-7e8a441368ab/
+  - /ipam/ip-addresses/93452b5c-2a76-4535-b87e-cc791b32da91/
+  ipam:ipaddress_changelog:
+  - /ipam/ip-addresses/6c4e71f6-d1d9-4a63-addb-7e8a441368ab/changelog/
+  - /ipam/ip-addresses/93452b5c-2a76-4535-b87e-cc791b32da91/changelog/
+  ipam:ipaddress_list:
+  - /ipam/ip-addresses/
+  - /ipam/ip-addresses/?per_page=10&page=5
+  ipam:ipaddress_notes:
+  - /ipam/ip-addresses/6c4e71f6-d1d9-4a63-addb-7e8a441368ab/notes/
+  - /ipam/ip-addresses/93452b5c-2a76-4535-b87e-cc791b32da91/notes/
   ipam:namespace:
-    - /ipam/namespaces/(?P<pk>[/.]+)/$
-  ipam:namespace_delete:
-    - /ipam/namespaces/(?P<pk>[/.]+)/delete/$
-  ipam:namespace_edit:
-    - /ipam/namespaces/(?P<pk>[/.]+)/edit/$
+  - /ipam/namespaces/575aae64-0804-40e6-9aa3-5d698dcb1f6a/
+  - /ipam/namespaces/c98a5b4f-c186-4fc1-8628-019f0f64ca1a/
   ipam:namespace_changelog:
-    - /ipam/namespaces/(?P<pk>[/.]+)/changelog/$
+  - /ipam/namespaces/575aae64-0804-40e6-9aa3-5d698dcb1f6a/changelog/
+  - /ipam/namespaces/c98a5b4f-c186-4fc1-8628-019f0f64ca1a/changelog/
+  ipam:namespace_list:
+  - /ipam/namespaces/
+  - /ipam/namespaces/?per_page=3&page=5
   ipam:namespace_notes:
-    - /ipam/namespaces/(?P<pk>[/.]+)/notes/$
-  ipam:routetarget_list:
-    - /ipam/route-targets/$
-  ipam:routetarget_add:
-    - /ipam/route-targets/add/$
-  ipam:routetarget_import:
-    - /ipam/route-targets/import/$
-  ipam:routetarget_bulk_edit:
-    - /ipam/route-targets/edit/$
-  ipam:routetarget_bulk_delete:
-    - /ipam/route-targets/delete/$
+  - /ipam/namespaces/575aae64-0804-40e6-9aa3-5d698dcb1f6a/notes/
+  - /ipam/namespaces/c98a5b4f-c186-4fc1-8628-019f0f64ca1a/notes/
+  ipam:prefix:
+  - /ipam/prefixes/4eb07598-b745-4ad8-bd45-7bbc5624bdc7/
+  - /ipam/prefixes/e212bdd4-0355-4c70-a135-58f9d84cbcf5/
+  ipam:prefix_changelog:
+  - /ipam/prefixes/4eb07598-b745-4ad8-bd45-7bbc5624bdc7/changelog/
+  - /ipam/prefixes/e212bdd4-0355-4c70-a135-58f9d84cbcf5/changelog/
+  ipam:prefix_list:
+  - /ipam/prefixes/
+  - /ipam/prefixes/?per_page=32&page=5
+  ipam:prefix_notes:
+  - /ipam/prefixes/4eb07598-b745-4ad8-bd45-7bbc5624bdc7/notes/
+  - /ipam/prefixes/e212bdd4-0355-4c70-a135-58f9d84cbcf5/notes/
+  ipam:rir:
+  - /ipam/rirs/7725fafe-46e5-4145-8b01-4fe09385bf8d/
+  - /ipam/rirs/9ea8693c-9aa3-4174-b774-649544c079d2/
+  ipam:rir_changelog:
+  - /ipam/rirs/7725fafe-46e5-4145-8b01-4fe09385bf8d/changelog/
+  - /ipam/rirs/9ea8693c-9aa3-4174-b774-649544c079d2/changelog/
+  ipam:rir_list:
+  - /ipam/rirs/
+  - /ipam/rirs/?per_page=1&page=5
+  ipam:rir_notes:
+  - /ipam/rirs/7725fafe-46e5-4145-8b01-4fe09385bf8d/notes/
+  - /ipam/rirs/9ea8693c-9aa3-4174-b774-649544c079d2/notes/
   ipam:routetarget:
-    - /ipam/route-targets/(?P<pk>[/.]+)/$
-  ipam:routetarget_delete:
-    - /ipam/route-targets/(?P<pk>[/.]+)/delete/$
-  ipam:routetarget_edit:
-    - /ipam/route-targets/(?P<pk>[/.]+)/edit/$
+  - /ipam/route-targets/b11157fb-55d1-4932-b17c-707ac6e92e86/
+  - /ipam/route-targets/61005e18-8088-4786-b60d-9a13af1786b3/
   ipam:routetarget_changelog:
-    - /ipam/route-targets/(?P<pk>[/.]+)/changelog/$
+  - /ipam/route-targets/b11157fb-55d1-4932-b17c-707ac6e92e86/changelog/
+  - /ipam/route-targets/61005e18-8088-4786-b60d-9a13af1786b3/changelog/
+  ipam:routetarget_list:
+  - /ipam/route-targets/
+  - /ipam/route-targets/?per_page=4&page=5
   ipam:routetarget_notes:
-    - /ipam/route-targets/(?P<pk>[/.]+)/notes/$
-  ipam:vrf_list:
-    - /ipam/vrfs/$
-  ipam:vrf_add:
-    - /ipam/vrfs/add/$
-  ipam:vrf_import:
-    - /ipam/vrfs/import/$
-  ipam:vrf_bulk_edit:
-    - /ipam/vrfs/edit/$
-  ipam:vrf_bulk_delete:
-    - /ipam/vrfs/delete/$
+  - /ipam/route-targets/b11157fb-55d1-4932-b17c-707ac6e92e86/notes/
+  - /ipam/route-targets/61005e18-8088-4786-b60d-9a13af1786b3/notes/
+  ipam:vlan:
+  - /ipam/vlans/f005419b-5f6e-4597-bb01-ab93020bb89e/
+  - /ipam/vlans/b3b1bdd7-9203-4751-9076-101c62f73086/
+  ipam:vlan_changelog:
+  - /ipam/vlans/f005419b-5f6e-4597-bb01-ab93020bb89e/changelog/
+  - /ipam/vlans/b3b1bdd7-9203-4751-9076-101c62f73086/changelog/
+  ipam:vlan_list:
+  - /ipam/vlans/
+  - /ipam/vlans/?per_page=19&page=5
+  ipam:vlan_notes:
+  - /ipam/vlans/f005419b-5f6e-4597-bb01-ab93020bb89e/notes/
+  - /ipam/vlans/b3b1bdd7-9203-4751-9076-101c62f73086/notes/
+  ipam:vlangroup:
+  - /ipam/vlan-groups/08bb092a-8a6a-445f-8c53-e38583c02490/
+  - /ipam/vlan-groups/4bf9b777-8899-494c-9967-a9422b6d5d7c/
+  ipam:vlangroup_changelog:
+  - /ipam/vlan-groups/08bb092a-8a6a-445f-8c53-e38583c02490/changelog/
+  - /ipam/vlan-groups/4bf9b777-8899-494c-9967-a9422b6d5d7c/changelog/
+  ipam:vlangroup_list:
+  - /ipam/vlan-groups/
+  - /ipam/vlan-groups/?per_page=4&page=5
+  ipam:vlangroup_notes:
+  - /ipam/vlan-groups/08bb092a-8a6a-445f-8c53-e38583c02490/notes/
+  - /ipam/vlan-groups/4bf9b777-8899-494c-9967-a9422b6d5d7c/notes/
   ipam:vrf:
-    - /ipam/vrfs/(?P<pk>[/.]+)/$
-  ipam:vrf_delete:
-    - /ipam/vrfs/(?P<pk>[/.]+)/delete/$
-  ipam:vrf_edit:
-    - /ipam/vrfs/(?P<pk>[/.]+)/edit/$
+  - /ipam/vrfs/b3b9395d-6bf9-42ff-9474-8f86fccb2d24/
+  - /ipam/vrfs/d719f11b-8856-443b-a3ce-c9e6f183de14/
   ipam:vrf_changelog:
-    - /ipam/vrfs/(?P<pk>[/.]+)/changelog/$
+  - /ipam/vrfs/b3b9395d-6bf9-42ff-9474-8f86fccb2d24/changelog/
+  - /ipam/vrfs/d719f11b-8856-443b-a3ce-c9e6f183de14/changelog/
+  ipam:vrf_list:
+  - /ipam/vrfs/
+  - /ipam/vrfs/?per_page=4&page=5
   ipam:vrf_notes:
-    - /ipam/vrfs/(?P<pk>[/.]+)/notes/$
-  ipam:virtualmachine_service_assign:
-    - /ipam/virtual-machines/<uuid:virtualmachine>/services/assign/
-  tenancy:tenantgroup_list:
-    - /tenancy/tenant-groups/
-  tenancy:tenantgroup_add:
-    - /tenancy/tenant-groups/add/
-  tenancy:tenantgroup_import:
-    - /tenancy/tenant-groups/import/
-  tenancy:tenantgroup_bulk_delete:
-    - /tenancy/tenant-groups/delete/
-  tenancy:tenantgroup:
-    - /tenancy/tenant-groups/<uuid:pk>/
-  tenancy:tenantgroup_edit:
-    - /tenancy/tenant-groups/<uuid:pk>/edit/
-  tenancy:tenantgroup_delete:
-    - /tenancy/tenant-groups/<uuid:pk>/delete/
-  tenancy:tenant_list:
-    - /tenancy/tenants/
-  tenancy:tenant_add:
-    - /tenancy/tenants/add/
-  tenancy:tenant_import:
-    - /tenancy/tenants/import/
-  tenancy:tenant_bulk_edit:
-    - /tenancy/tenants/edit/
-  tenancy:tenant_bulk_delete:
-    - /tenancy/tenants/delete/
+  - /ipam/vrfs/b3b9395d-6bf9-42ff-9474-8f86fccb2d24/notes/
+  - /ipam/vrfs/d719f11b-8856-443b-a3ce-c9e6f183de14/notes/
   tenancy:tenant:
-    - /tenancy/tenants/<uuid:pk>/
-  tenancy:tenant_edit:
-    - /tenancy/tenants/<uuid:pk>/edit/
-  tenancy:tenant_delete:
-    - /tenancy/tenants/<uuid:pk>/delete/
-  virtualization:clustertype_list:
-    - /virtualization/cluster-types/
-  virtualization:clustertype_add:
-    - /virtualization/cluster-types/add/
-  virtualization:clustertype_import:
-    - /virtualization/cluster-types/import/
-  virtualization:clustertype_bulk_delete:
-    - /virtualization/cluster-types/delete/
-  virtualization:clustertype:
-    - /virtualization/cluster-types/<uuid:pk>/
-  virtualization:clustertype_edit:
-    - /virtualization/cluster-types/<uuid:pk>/edit/
-  virtualization:clustertype_delete:
-    - /virtualization/cluster-types/<uuid:pk>/delete/
-  virtualization:clustergroup_list:
-    - /virtualization/cluster-groups/
-  virtualization:clustergroup_add:
-    - /virtualization/cluster-groups/add/
-  virtualization:clustergroup_import:
-    - /virtualization/cluster-groups/import/
-  virtualization:clustergroup_bulk_delete:
-    - /virtualization/cluster-groups/delete/
-  virtualization:clustergroup:
-    - /virtualization/cluster-groups/<uuid:pk>/
-  virtualization:clustergroup_edit:
-    - /virtualization/cluster-groups/<uuid:pk>/edit/
-  virtualization:clustergroup_delete:
-    - /virtualization/cluster-groups/<uuid:pk>/delete/
-  virtualization:cluster_list:
-    - /virtualization/clusters/
-  virtualization:cluster_add:
-    - /virtualization/clusters/add/
-  virtualization:cluster_import:
-    - /virtualization/clusters/import/
-  virtualization:cluster_bulk_edit:
-    - /virtualization/clusters/edit/
-  virtualization:cluster_bulk_delete:
-    - /virtualization/clusters/delete/
-  virtualization:cluster:
-    - /virtualization/clusters/<uuid:pk>/
-  virtualization:cluster_edit:
-    - /virtualization/clusters/<uuid:pk>/edit/
-  virtualization:cluster_delete:
-    - /virtualization/clusters/<uuid:pk>/delete/
-  virtualization:cluster_add_devices:
-    - /virtualization/clusters/<uuid:pk>/devices/add/
-  virtualization:cluster_remove_devices:
-    - /virtualization/clusters/<uuid:pk>/devices/remove/
-  virtualization:virtualmachine_list:
-    - /virtualization/virtual-machines/
-  virtualization:virtualmachine_add:
-    - /virtualization/virtual-machines/add/
-  virtualization:virtualmachine_import:
-    - /virtualization/virtual-machines/import/
-  virtualization:virtualmachine_bulk_edit:
-    - /virtualization/virtual-machines/edit/
-  virtualization:virtualmachine_bulk_delete:
-    - /virtualization/virtual-machines/delete/
-  virtualization:virtualmachine:
-    - /virtualization/virtual-machines/<uuid:pk>/
-  virtualization:virtualmachine_edit:
-    - /virtualization/virtual-machines/<uuid:pk>/edit/
-  virtualization:virtualmachine_delete:
-    - /virtualization/virtual-machines/<uuid:pk>/delete/
-  virtualization:virtualmachine_configcontext:
-    - /virtualization/virtual-machines/<uuid:pk>/config-context/
-  virtualization:vminterface_list:
-    - /virtualization/interfaces/
-  virtualization:vminterface_add:
-    - /virtualization/interfaces/add/
-  virtualization:vminterface_import:
-    - /virtualization/interfaces/import/
-  virtualization:vminterface_bulk_edit:
-    - /virtualization/interfaces/edit/
-  virtualization:vminterface_bulk_rename:
-    - /virtualization/interfaces/rename/
-  virtualization:vminterface_bulk_delete:
-    - /virtualization/interfaces/delete/
-  virtualization:vminterface:
-    - /virtualization/interfaces/<uuid:pk>/
-  virtualization:vminterface_edit:
-    - /virtualization/interfaces/<uuid:pk>/edit/
-  virtualization:vminterface_delete:
-    - /virtualization/interfaces/<uuid:pk>/delete/
-  virtualization:virtualmachine_bulk_add_vminterface:
-    - /virtualization/virtual-machines/interfaces/add/
-  wireless:radioprofile_list:
-    - /wireless/radio-profiles/$
-  wireless:radioprofile_add:
-    - /wireless/radio-profiles/add/$
-  wireless:radioprofile_import:
-    - /wireless/radio-profiles/import/$
-  wireless:radioprofile_bulk_edit:
-    - /wireless/radio-profiles/edit/$
-  wireless:radioprofile_bulk_delete:
-    - /wireless/radio-profiles/delete/$
+  - /tenancy/tenants/2592b292-0c8d-47e7-a8f6-ae9d62d48e8b/
+  - /tenancy/tenants/ab9ddcc0-08a1-4b54-b711-237cb39587ab/
+  tenancy:tenant_changelog:
+  - /tenancy/tenants/2592b292-0c8d-47e7-a8f6-ae9d62d48e8b/changelog/
+  - /tenancy/tenants/ab9ddcc0-08a1-4b54-b711-237cb39587ab/changelog/
+  tenancy:tenant_list:
+  - /tenancy/tenants/
+  - /tenancy/tenants/?per_page=6&page=5
+  tenancy:tenant_notes:
+  - /tenancy/tenants/2592b292-0c8d-47e7-a8f6-ae9d62d48e8b/notes/
+  - /tenancy/tenants/ab9ddcc0-08a1-4b54-b711-237cb39587ab/notes/
+  tenancy:tenantgroup:
+  - /tenancy/tenant-groups/67ad8818-9069-481e-b839-00a27a85bdca/
+  - /tenancy/tenant-groups/c4be21d0-563b-42e1-9256-830cfd37fc6d/
+  tenancy:tenantgroup_changelog:
+  - /tenancy/tenant-groups/67ad8818-9069-481e-b839-00a27a85bdca/changelog/
+  - /tenancy/tenant-groups/c4be21d0-563b-42e1-9256-830cfd37fc6d/changelog/
+  tenancy:tenantgroup_list:
+  - /tenancy/tenant-groups/
+  - /tenancy/tenant-groups/?per_page=4&page=5
+  tenancy:tenantgroup_notes:
+  - /tenancy/tenant-groups/67ad8818-9069-481e-b839-00a27a85bdca/notes/
+  - /tenancy/tenant-groups/c4be21d0-563b-42e1-9256-830cfd37fc6d/notes/
   wireless:radioprofile:
-    - /wireless/radio-profiles/(?P<pk>[/.]+)/$
-  wireless:radioprofile_delete:
-    - /wireless/radio-profiles/(?P<pk>[/.]+)/delete/$
-  wireless:radioprofile_edit:
-    - /wireless/radio-profiles/(?P<pk>[/.]+)/edit/$
+  - /wireless/radio-profiles/388fee3d-48bc-4e31-a727-1820f8421c6d/
+  - /wireless/radio-profiles/94c68f05-1b5a-451a-971d-2bf1f4c34b93/
   wireless:radioprofile_changelog:
-    - /wireless/radio-profiles/(?P<pk>[/.]+)/changelog/$
+  - /wireless/radio-profiles/388fee3d-48bc-4e31-a727-1820f8421c6d/changelog/
+  - /wireless/radio-profiles/94c68f05-1b5a-451a-971d-2bf1f4c34b93/changelog/
+  wireless:radioprofile_list:
+  - /wireless/radio-profiles/
+  - /wireless/radio-profiles/?per_page=7&page=5
   wireless:radioprofile_notes:
-    - /wireless/radio-profiles/(?P<pk>[/.]+)/notes/$
-  wireless:supporteddatarate_list:
-    - /wireless/supported-data-rates/$
-  wireless:supporteddatarate_add:
-    - /wireless/supported-data-rates/add/$
-  wireless:supporteddatarate_import:
-    - /wireless/supported-data-rates/import/$
-  wireless:supporteddatarate_bulk_edit:
-    - /wireless/supported-data-rates/edit/$
-  wireless:supporteddatarate_bulk_delete:
-    - /wireless/supported-data-rates/delete/$
+  - /wireless/radio-profiles/388fee3d-48bc-4e31-a727-1820f8421c6d/notes/
+  - /wireless/radio-profiles/94c68f05-1b5a-451a-971d-2bf1f4c34b93/notes/
   wireless:supporteddatarate:
-    - /wireless/supported-data-rates/(?P<pk>[/.]+)/$
-  wireless:supporteddatarate_delete:
-    - /wireless/supported-data-rates/(?P<pk>[/.]+)/delete/$
-  wireless:supporteddatarate_edit:
-    - /wireless/supported-data-rates/(?P<pk>[/.]+)/edit/$
+  - /wireless/supported-data-rates/847e12aa-0705-49a4-925a-a77e2f008e6f/
+  - /wireless/supported-data-rates/7a0f09d4-b7c4-4bcd-8b58-2e3f78686601/
   wireless:supporteddatarate_changelog:
-    - /wireless/supported-data-rates/(?P<pk>[/.]+)/changelog/$
+  - /wireless/supported-data-rates/847e12aa-0705-49a4-925a-a77e2f008e6f/changelog/
+  - /wireless/supported-data-rates/7a0f09d4-b7c4-4bcd-8b58-2e3f78686601/changelog/
+  wireless:supporteddatarate_list:
+  - /wireless/supported-data-rates/
+  - /wireless/supported-data-rates/?per_page=6&page=5
   wireless:supporteddatarate_notes:
-    - /wireless/supported-data-rates/(?P<pk>[/.]+)/notes/$
-  wireless:wirelessnetwork_list:
-    - /wireless/wireless-networks/$
-  wireless:wirelessnetwork_add:
-    - /wireless/wireless-networks/add/$
-  wireless:wirelessnetwork_import:
-    - /wireless/wireless-networks/import/$
-  wireless:wirelessnetwork_bulk_edit:
-    - /wireless/wireless-networks/edit/$
-  wireless:wirelessnetwork_bulk_delete:
-    - /wireless/wireless-networks/delete/$
+  - /wireless/supported-data-rates/847e12aa-0705-49a4-925a-a77e2f008e6f/notes/
+  - /wireless/supported-data-rates/7a0f09d4-b7c4-4bcd-8b58-2e3f78686601/notes/
   wireless:wirelessnetwork:
-    - /wireless/wireless-networks/(?P<pk>[/.]+)/$
-  wireless:wirelessnetwork_delete:
-    - /wireless/wireless-networks/(?P<pk>[/.]+)/delete/$
-  wireless:wirelessnetwork_edit:
-    - /wireless/wireless-networks/(?P<pk>[/.]+)/edit/$
+  - /wireless/wireless-networks/d27bfda0-cbf2-434f-943c-ca44c00559e4/
+  - /wireless/wireless-networks/2cf07440-e824-4eab-b95f-6d7e279d0bf0/
   wireless:wirelessnetwork_changelog:
-    - /wireless/wireless-networks/(?P<pk>[/.]+)/changelog/$
+  - /wireless/wireless-networks/d27bfda0-cbf2-434f-943c-ca44c00559e4/changelog/
+  - /wireless/wireless-networks/2cf07440-e824-4eab-b95f-6d7e279d0bf0/changelog/
+  wireless:wirelessnetwork_list:
+  - /wireless/wireless-networks/
+  - /wireless/wireless-networks/?per_page=7&page=5
   wireless:wirelessnetwork_notes:
-    - /wireless/wireless-networks/(?P<pk>[/.]+)/notes/$
+  - /wireless/wireless-networks/d27bfda0-cbf2-434f-943c-ca44c00559e4/notes/
+  - /wireless/wireless-networks/2cf07440-e824-4eab-b95f-6d7e279d0bf0/notes/
