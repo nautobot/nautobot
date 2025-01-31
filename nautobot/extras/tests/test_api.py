@@ -1207,6 +1207,10 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIn("message", response.data)
+        self.assertIn("job_result", response.data)
+        self.assertEqual(response.data["message"], f"Repository {self.repos[0].name} sync job added to queue.")
+        self.assertIsInstance(response.data["job_result"], dict)
 
     def test_create_with_app_provided_contents(self):
         """Test that `provided_contents` published by an App works."""
