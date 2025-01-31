@@ -18,7 +18,7 @@ from nautobot.core import testing
 SELENIUM_URL = os.getenv("NAUTOBOT_SELENIUM_URL", "http://localhost:4444/wd/hub")
 
 # Hostname used by Selenium client to talk to Nautobot
-SELENIUM_HOST = os.getenv("NAUTOBOT_SELENIUM_HOST", "host.docker.internal")
+SELENIUM_HOST = os.getenv("NAUTOBOT_SELENIUM_HOST", "nautobot")
 
 # Default login URL
 LOGIN_URL = reverse(settings.LOGIN_URL)
@@ -368,7 +368,6 @@ class BulkOperationsTestCases:
             self.go_to_model_list_page()
 
         def tearDown(self):
-            # breakpoint()
             self.logout()
             super().tearDown()
 
