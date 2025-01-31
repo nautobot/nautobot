@@ -795,6 +795,7 @@ class DeviceFamilyForm(NautobotModelForm):
         fields = [
             "name",
             "description",
+            "tags",
         ]
 
 
