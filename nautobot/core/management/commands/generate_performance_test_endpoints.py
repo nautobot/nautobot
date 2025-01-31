@@ -44,7 +44,6 @@ class Command(BaseCommand):
             - Any generic endpoint like `core:home` will have one endpoint which is the URL pattern itself.
         """
         # If the model class is found, then we know we are dealing with a model related endpoint
-        print(model_class)
         if model_class:
             if len(model_class.objects.all()) > 1:
                 # Handle detail view url patterns
