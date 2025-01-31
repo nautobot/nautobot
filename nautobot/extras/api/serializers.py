@@ -1169,3 +1169,15 @@ class WebhookSerializer(ValidatedModelSerializer, NotesSerializerMixin):
             raise serializers.ValidationError(conflicts)
 
         return validated_attrs
+
+
+#
+# More Git repositories
+#
+
+
+class GitRepositorySyncResponseSerializer(serializers.Serializer):
+    """Serializer representing responses from the GitRepository.sync() POST endpoint."""
+
+    message = serializers.CharField(read_only=True)
+    job_result = JobResultSerializer(read_only=True)
