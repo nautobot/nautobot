@@ -1747,16 +1747,21 @@ class DeviceListView(generic.ObjectListView):
 
 class DeviceView(generic.ObjectView):
     queryset = Device.objects.select_related(
+        "cluster__cluster_group",
+        "controller_managed_device_group__controller",
+        "device_redundancy_group",
+        "device_type__device_family",
         "location",
-        "rack__rack_group",
-        "tenant__tenant_group",
-        "role",
         "platform",
         "primary_ip4",
         "primary_ip6",
+        "rack__rack_group",
+        "role",
+        "secrets_group",
         "software_version",
         "status",
-    )
+        "tenant__tenant_group",
+    ).prefetch_related("images", "software_image_files")
 
     object_detail_content = object_detail.ObjectDetailContent(
         extra_buttons=(
