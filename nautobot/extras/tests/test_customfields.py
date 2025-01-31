@@ -171,6 +171,8 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         self.assertEqual(["Option A", "Option B"], cf.choices)
         CustomFieldChoice.objects.create(custom_field=cf, value="Option C", weight=300)
         self.assertEqual(["Option A", "Option B", "Option C"], cf.choices)
+        with self.assertNumQueries(0):  # verify caching
+            self.assertEqual(["Option A", "Option B", "Option C"], cf.choices)
 
         # Assign a value to the first Location
         location = Location.objects.get(name="Location A")
@@ -208,6 +210,8 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         self.assertEqual(["Option A", "Option B"], cf.choices)
         CustomFieldChoice.objects.create(custom_field=cf, value="Option C", weight=300)
         self.assertEqual(["Option A", "Option B", "Option C"], cf.choices)
+        with self.assertNumQueries(0):  # verify caching
+            self.assertEqual(["Option A", "Option B", "Option C"], cf.choices)
 
         # Assign a value to the first Location
         location = Location.objects.get(name="Location A")
