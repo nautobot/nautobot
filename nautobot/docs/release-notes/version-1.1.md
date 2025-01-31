@@ -37,7 +37,7 @@ Please see the MySQL setup guides for [Ubuntu](../installation/ubuntu.md#mysql-s
 
 Plugins can now define custom Jinja2 filters to be used when rendering templates defined within computed fields or custom links. To register your own filters, you may add a `jinja_filters.py` to your plugin and any filters defined there will be automatically registered and globally usable.
 
-Please see the [plugin development documentation on including Jinja2 filters](../plugins/development.md#including-jinja2-filters) to get started.
+Please see the [plugin development documentation on including Jinja2 filters](../plugins/development.md#adding-jinja2-filters) to get started.
 
 #### Read Only Jobs ([#200](https://github.com/nautobot/nautobot/issues/200))
 
@@ -49,7 +49,7 @@ Jobs may be optionally marked as read only by setting the `read_only = True` met
 
 Saved queries can easily be imported into the GraphiQL interface by using the new navigation tab located on the right side of the navbar. Inside the new tab are also buttons for editing and saving queries directly into Nautobot's databases.
 
-Additionally, two new [GraphQL utility functions](../plugins/development.md#using-graphql-orm-utility) have been added to allow easy access to the GraphQL system from source code. Both functions can be imported from `nautobot.core.graphql`:
+Additionally, two new [GraphQL utility functions](../plugins/development.md#using-graphql-orm-utilities) have been added to allow easy access to the GraphQL system from source code. Both functions can be imported from `nautobot.core.graphql`:
 
 1. `execute_query()`: Runs string as a query against GraphQL.
 2. `execute_saved_query()`: Execute a saved query from Nautobot database.

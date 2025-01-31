@@ -331,7 +331,7 @@ The number of days to retain logged changes (object creations, updates, and dele
 
 ---
 
-## CONFIG_CONTEXT_DYNAMIC_GROUPS_ENALBED
+## CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED
 
 Default: `False`
 

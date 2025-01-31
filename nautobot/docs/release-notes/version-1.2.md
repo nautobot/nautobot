@@ -92,7 +92,7 @@ Template rendering with Django and/or Jinja2 now supports by default all filters
 
 #### Organizational Branding ([#859](https://github.com/nautobot/nautobot/issues/859))
 
-Organizations may provide custom branding assets to change the logo, icons, and footer URLs to help Nautobot fit within their environments and user communities. Please see the [configuration documenation](../configuration/optional-settings.md#BRANDING_FILEPATHS) for details on how to specify the location and usage of custom branding assets.
+Organizations may provide custom branding assets to change the logo, icons, and footer URLs to help Nautobot fit within their environments and user communities. Please see the [configuration documenation](../configuration/optional-settings.md#branding_filepaths) for details on how to specify the location and usage of custom branding assets.
 
 #### Plugin Banners ([#534](https://github.com/nautobot/nautobot/issues/534))
 
