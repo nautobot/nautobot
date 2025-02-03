@@ -1,1 +1,0 @@
-Added cacheable `CustomField.choices` property for retrieving the list of permissible values for a select/multiselect Custom Field.

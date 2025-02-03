@@ -1,2 +1,0 @@
-Added integration tests for bulk edit/delete operations for Devices and Locations.
-Added `BulkOperationsTestCases` class with built-in standard test cases for testing bulk operations.
