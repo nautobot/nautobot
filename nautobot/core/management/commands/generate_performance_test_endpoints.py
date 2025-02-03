@@ -133,7 +133,6 @@ class Command(BaseCommand):
         if model:
             app_name = model._meta.app_label
 
-
         # Handle the special case where a view exist in the core app
         # but its url pattern and view name does not include the prefix "/core" or "core:"
         # ['nautobot', 'extras', 'plugins', 'views', 'InstalledAppsView']
@@ -144,8 +143,8 @@ class Command(BaseCommand):
                 view_name = f"{pattern.name}"  # api-status
                 return url_pattern, view_name, is_api_endpoint
             elif pattern.name in ["home", "about", "search", "worker-status", "graphql"]:
-                url_pattern = f"/{pattern.pattern}" # /home, /about, /search
-                view_name = f"{pattern.name}" # home, about, search
+                url_pattern = f"/{pattern.pattern}"  # /home, /about, /search
+                view_name = f"{pattern.name}"  # home, about, search
                 return url_pattern, view_name, is_api_endpoint
 
         # Handle the special case first for Installed apps related view is nested under the extras app.
