@@ -975,7 +975,10 @@ class Prefix(PrimaryModel):
         while `<Prefix 10.0.0.0/16>.get_all_ips()` will return *both* 10.0.0.1.24 and 10.0.1.1/24.
         """
         return IPAddress.objects.filter(
-            parent__namespace=self.namespace, host__gte=self.network, host__lte=self.broadcast
+            parent__namespace=self.namespace,
+            ip_version=self.ip_version,
+            host__gte=self.network,
+            host__lte=self.broadcast,
         )
 
     def get_first_available_prefix(self):
@@ -1016,7 +1019,10 @@ class Prefix(PrimaryModel):
         # change this when that is the case, see #3873 for historical context.
         if self.type != choices.PrefixTypeChoices.TYPE_CONTAINER:
             pool_ips = IPAddress.objects.filter(
-                parent__namespace=self.namespace, host__gte=self.network, host__lte=self.broadcast
+                parent__namespace=self.namespace,
+                ip_version=self.ip_version,
+                host__gte=self.network,
+                host__lte=self.broadcast,
             ).values_list("host", flat=True)
             child_ips = netaddr.IPSet(pool_ips)
 

@@ -1051,7 +1051,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, BulkEditAnd
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
-                return self.send_bulk_edit_objects_to_job(request, form, model)
+                return self.send_bulk_edit_objects_to_job(request, form.cleaned_data, model)
             else:
                 logger.debug("Form validation failed")
 

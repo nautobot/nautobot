@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.4.1"
+version = "2.4.2"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -66,14 +66,14 @@ django-prometheus = "~2.3.1"
 # Redis cache for Django used for distributed locking
 django-redis = "~5.4.0"
 # Django silk for request profiling
-django-silk = "~5.3.0"
+django-silk = "~5.3.2"
 # External Storage support (i.e. S3)
 # Pinned temporarily to 1.14.3 due to https://github.com/revsys/django-health-check/issues/434
 django-storages = {version = "1.14.3", optional = true}
 # Structured logging for Django
 django-structlog = {version = "^9.0.0", extras = ["celery"]}
 # Advanced HTML tables
-django-tables2 = "~2.7.4"
+django-tables2 = "~2.7.5"
 # Tags
 django-taggit = "~6.1.0"
 # Represent time zones in Django
@@ -89,7 +89,7 @@ drf-spectacular = {version = "~0.27.2", extras = ["sidecar"]}
 # Emoji terminal output for Python.
 emoji = "~2.12.1"
 # Git integrations for Python
-GitPython = "~3.1.43"
+GitPython = "~3.1.44"
 # GraphQL support
 # NOTE: graphene-django 3.x is available but includes breaking changes. Will address in a future release.
 graphene-django = "~2.16.0"
@@ -108,7 +108,7 @@ kubernetes = "^31.0.0"
 # Rendering of markdown files to HTML
 Markdown = "~3.6"
 # MySQL database adapter
-mysqlclient = {version = "~2.2.6", optional = true}
+mysqlclient = {version = "~2.2.7", optional = true}
 # NAPALM automation library
 napalm = {version = ">=4.1.0,<6.0.0", optional = true}
 # IP prefix and address handling
@@ -167,7 +167,7 @@ example-app-with-view-override = {path = "examples/example_app_with_view_overrid
 # Random data generation
 factory-boy = "~3.3.1"
 # Factory Boy dependency.
-faker = "~33.3.0"
+faker = "~33.3.1"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
@@ -194,7 +194,7 @@ mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see settings.md
 mkdocs-macros-plugin = "~1.3.7"
 # Material for mkdocs theme
-mkdocs-material = "~9.5.49"
+mkdocs-material = "~9.5.50"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
@@ -206,7 +206,7 @@ mkdocstrings-python = "~1.13.0"
 
 [tool.poetry.group.linting.dependencies]
 # Code static analysis
-pylint = "~3.3.3"
+pylint = "~3.3.4"
 # Pylint extensions for Django
 pylint-django = "~2.6.1"
 # Python implementation of markdownlint

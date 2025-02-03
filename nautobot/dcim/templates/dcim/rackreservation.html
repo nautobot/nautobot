@@ -1,4 +1,4 @@
-{% extends 'generic/object_detail.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load helpers %}
 {% load static %}
 
@@ -15,7 +15,7 @@
                 {% with rack=object.rack %}
                     <tr>
                         <td>Location</td>
-                        <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
+                        <td>{% include 'dcim/inc/location_hierarchy.html' with location=rack.location %}</td>
                     </tr>
                     <tr>
                         <td>Group</td>

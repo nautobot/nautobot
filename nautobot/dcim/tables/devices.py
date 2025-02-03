@@ -106,7 +106,8 @@ __all__ = (
 
 class PlatformTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.LinkColumn()
+    name = tables.Column(linkify=True)
+    manufacturer = tables.Column(linkify=True)
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
         url_params={"platform": "pk"},

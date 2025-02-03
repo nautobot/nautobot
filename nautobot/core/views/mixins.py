@@ -992,10 +992,9 @@ class BulkEditAndBulkDeleteModelMixin:
         )
         return redirect("extras:jobresult", pk=job_result.pk)
 
-    def send_bulk_edit_objects_to_job(self, request, form, model):
+    def send_bulk_edit_objects_to_job(self, request, form_data, model):
         """Prepare and enqueue a bulk edit job."""
         job_model = Job.objects.get_for_class_path(BulkEditObjects.class_path)
-        form_data = normalize_querydict(request.POST, form)
         if filterset_class := lookup.get_filterset_for_model(model):
             filter_query_params = normalize_querydict(request.GET, filterset=filterset_class())
         else:
@@ -1288,7 +1287,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
             form = form_class(queryset.model, request.POST, edit_all=edit_all)
             restrict_form_fields(form, request.user)
             if form.is_valid():
-                return self.send_bulk_edit_objects_to_job(self.request, form, queryset.model)
+                return self.send_bulk_edit_objects_to_job(self.request, form.cleaned_data, queryset.model)
             else:
                 return self.form_invalid(form)
         table = None
@@ -1312,10 +1311,14 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
 
 class ObjectChangeLogViewMixin(NautobotViewSetMixin):
     """
-    UI mixin to list a model's changelog queryset
+    UI mixin to list a model's changelog queryset.
+
+    base_template: Specify to explicitly identify the base object detail template to render.
+        If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
+        will be used, as per `get_base_template()`.
     """
 
-    base_template = None
+    base_template: Optional[str] = None
 
     @drf_action(detail=True)
     def changelog(self, request, *args, **kwargs):
@@ -1330,9 +1333,13 @@ class ObjectChangeLogViewMixin(NautobotViewSetMixin):
 class ObjectNotesViewMixin(NautobotViewSetMixin):
     """
     UI Mixin for an Object's Notes.
+
+    base_template: Specify to explicitly identify the base object detail template to render.
+        If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
+        will be used, as per `get_base_template()`.
     """
 
-    base_template = None
+    base_template: Optional[str] = None
 
     @drf_action(detail=True)
     def notes(self, request, *args, **kwargs):
