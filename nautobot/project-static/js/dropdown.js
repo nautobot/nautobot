@@ -15,10 +15,17 @@ $(document).on('show.bs.dropdown', '.table-responsive .dropdown', function() {
         display: 'table', // required, because we're outside any container
     });
 
-    // move dropdown back and hide
-    $dropdown.one('hidden.bs.dropdown', function() {
+    const hideMenu = function () {
         $menu.appendTo($dropdown);
         $menu.removeAttr('style');
+    }
+
+    // move dropdown back and hide
+    $dropdown.one('hidden.bs.dropdown', hideMenu);
+
+    // hide dropdown when scrolling vertically to avoid recalculating position
+    $('.table-responsive').one('scroll', function() {
+        hideMenu();
+        $toggle.trigger("click");
     });
 });
-
