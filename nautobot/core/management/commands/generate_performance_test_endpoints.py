@@ -49,61 +49,63 @@ class Command(BaseCommand):
                 - One with custom pagination (5 pages with <total_object_count//5> instances per page)
             - Any generic endpoint like `core:home` will have one endpoint which is the URL pattern itself.
         """
-        # If the model class is found, then we know we are dealing with a model related endpoint
-        if model_class:
-            if len(model_class.objects.all()) > 1:
-                # Handle detail view url patterns
-                if "_list" not in view_name and "-list" not in view_name:
-                    # Identify the placeholder for the uuid
-                    replace_string = ""
-                    if "<uuid:pk>" in url_pattern:
-                        replace_string = "<uuid:pk>"
-                    elif "(?P<pk>[/.]+)" in url_pattern:
-                        replace_string = "(?P<pk>[/.]+)"
-
-                    if replace_string:
-                        # Replace the uuid with the actual uuid
-                        first_url_pattern = url_pattern.replace(replace_string, str(model_class.objects.first().pk))
-                        second_url_pattern = url_pattern.replace(replace_string, str(model_class.objects.last().pk))
-                        if view_name not in self.app_name_to_urls["endpoints"]:
-                            self.app_name_to_urls["endpoints"][view_name] = []
-                        self.app_name_to_urls["endpoints"][view_name].append(first_url_pattern)
-                        self.app_name_to_urls["endpoints"][view_name].append(second_url_pattern)
-                # Handle list view url patterns
-                else:
-                    if view_name not in self.app_name_to_urls["endpoints"]:
-                        self.app_name_to_urls["endpoints"][view_name] = []
-                    # One endpoint with default pagination
-                    self.app_name_to_urls["endpoints"][view_name].append(url_pattern)
-                    total_count = len(model_class.objects.all())
-                    page_query_parameter = 5
-                    per_page_query_parameter = total_count // page_query_parameter
-                    if not is_api_endpoint:
-                        query_params = urlencode(
-                            {
-                                "per_page": per_page_query_parameter,
-                                "page": page_query_parameter,
-                            }
-                        )
-                    else:
-                        query_params = urlencode(
-                            {
-                                "limit": per_page_query_parameter,
-                                "offset": per_page_query_parameter * (page_query_parameter - 1),
-                            }
-                        )
-                    # One endpoint with default pagination
-                    self.app_name_to_urls["endpoints"][view_name].append(url_pattern + f"?{query_params}")
-            else:
-                # TODO handle the case where there is no instances of the model is found
-                self.stdout.write(f"No instances of {model_class} found")
-        else:
+        if not model_class:
             # A generic endpoint like `core:home`
             if view_name not in self.app_name_to_urls["endpoints"]:
                 self.app_name_to_urls["endpoints"][view_name] = []
             self.app_name_to_urls["endpoints"][view_name].append(url_pattern)
+            return
 
-    def construct_view_name_and_url_pattern(self, pattern):
+        # If the model class is found, then we know we are dealing with a model related endpoint
+        if len(model_class.objects.all()) < 2:
+            # TODO handle the case where there is no instances of the model is found
+            self.stderr.write(f"Not enough instances of {model_class} found, need at least 2")
+            return
+
+        # Handle detail view url patterns
+        if "_list" not in view_name and "-list" not in view_name:
+            # Identify the placeholder for the uuid
+            replace_string = ""
+            if "<uuid:pk>" in url_pattern:
+                replace_string = "<uuid:pk>"
+            elif "(?P<pk>[/.]+)" in url_pattern:
+                replace_string = "(?P<pk>[/.]+)"
+
+            if replace_string:
+                # Replace the uuid with the actual uuid
+                first_url_pattern = url_pattern.replace(replace_string, str(model_class.objects.first().pk))
+                second_url_pattern = url_pattern.replace(replace_string, str(model_class.objects.last().pk))
+                if view_name not in self.app_name_to_urls["endpoints"]:
+                    self.app_name_to_urls["endpoints"][view_name] = []
+                self.app_name_to_urls["endpoints"][view_name].append(first_url_pattern)
+                self.app_name_to_urls["endpoints"][view_name].append(second_url_pattern)
+        # Handle list view url patterns
+        else:
+            if view_name not in self.app_name_to_urls["endpoints"]:
+                self.app_name_to_urls["endpoints"][view_name] = []
+            # One endpoint with default pagination
+            self.app_name_to_urls["endpoints"][view_name].append(url_pattern)
+            total_count = len(model_class.objects.all())
+            page_query_parameter = 5
+            per_page_query_parameter = total_count // page_query_parameter
+            if not is_api_endpoint:
+                query_params = urlencode(
+                    {
+                        "per_page": per_page_query_parameter,
+                        "page": page_query_parameter,
+                    }
+                )
+            else:
+                query_params = urlencode(
+                    {
+                        "limit": per_page_query_parameter,
+                        "offset": per_page_query_parameter * (page_query_parameter - 1),
+                    }
+                )
+            # One endpoint with default pagination
+            self.app_name_to_urls["endpoints"][view_name].append(url_pattern + f"?{query_params}")
+
+    def construct_view_name_and_url_pattern(self, pattern) -> tuple[str, str, bool]:
         """
         Args:
             pattern (django.urls.resolvers.URLPattern): A URL pattern object.
@@ -116,18 +118,13 @@ class Command(BaseCommand):
         lookup_str_list = pattern.lookup_str.split(".")
 
         # Determine if the endpoint belongs to a plugin
-        is_plugin = lookup_str_list[0] != "nautobot"
+        is_app = lookup_str_list[0] != "nautobot"
         is_api_endpoint = False
         # Determine if the endpoint is an API endpoint
-        if "api" in lookup_str_list:
-            is_api_endpoint = True
-
-        if not is_plugin:
-            # One of the nautobot apps: circuits, dcim, and etc.
-            app_name = lookup_str_list[1]
-        else:
-            # One of the plugin apps: example_app, and etc.
-            app_name = lookup_str_list[0]
+        is_api_endpoint = "api" in lookup_str_list
+        # One of the nautobot apps: nautobot.circuits, nautobot.dcim, and etc. if not is_app
+        # One of the plugins: example_app, and etc. if is_app
+        app_name = lookup_str_list[0] if is_app else lookup_str_list[1]
 
         model = pattern.default_args.get("model", None)
         if model:
@@ -135,7 +132,8 @@ class Command(BaseCommand):
 
         # Handle the special case where a view exist in the core app
         # but its url pattern and view name does not include the prefix "/core" or "core:"
-        # ['nautobot', 'extras', 'plugins', 'views', 'InstalledAppsView']
+        # ['nautobot', 'core', "views", "HomeView"]
+        # ['nautobot', 'core', "api", "views", "APIRootView"]
         if app_name == "core":
             if pattern.name in ["api-root", "api-status", "graphql-api"]:
                 is_api_endpoint = True
@@ -166,8 +164,8 @@ class Command(BaseCommand):
             return url_pattern, view_name, is_api_endpoint
 
         if is_api_endpoint:
-            if not is_plugin:
-                # One of the nautobot apps: circuits, dcim, and etc.
+            if not is_app:
+                # One of the nautobot apps: nautobot.circuits, nautobot.dcim, and etc.
                 url_pattern = f"/api/{app_name}/{pattern.pattern}"  # /api/dcim/devices/
                 app_name = f"{app_name}-api"  # dcim-api
                 view_name = f"{app_name}:{pattern.name}"  # dcim-api:device-list
@@ -176,7 +174,7 @@ class Command(BaseCommand):
                 app_name = f"{app_name}-api"  # example_app-api
                 view_name = f"plugins-api:{app_name}:{pattern.name}"  # plugins-api:example_app-api:examplemodel-list
         else:
-            if not is_plugin:
+            if not is_app:
                 url_pattern = f"/{app_name}/{pattern.pattern}"  # /dcim/devices/
                 view_name = f"{app_name}:{pattern.name}"  # dcim:device_list
             else:
