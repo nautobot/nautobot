@@ -50,7 +50,7 @@ def get_base_template(base_template: Optional[str], model: type[Model]) -> str:
     Otherwise, if `"<app>/<model_name>_retrieve.html"` exists (as used in `NautobotUIViewSet`), returns that string.
     If all else fails, returns `"generic/object_retrieve.html"`.
 
-    Note: before Nautobot 2.4.3, this API would default to "base.html" rather than "generic/object_retrieve.html".
+    Note: before Nautobot 2.4.2, this API would default to "base.html" rather than "generic/object_retrieve.html".
     This behavior was changed to the current behavior to address issue #6550 and similar incorrect behavior.
     """
     if base_template is None:
