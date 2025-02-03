@@ -1311,10 +1311,14 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
 
 class ObjectChangeLogViewMixin(NautobotViewSetMixin):
     """
-    UI mixin to list a model's changelog queryset
+    UI mixin to list a model's changelog queryset.
+
+    base_template: Specify to explicitly identify the base object detail template to render.
+        If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
+        will be used, as per `get_base_template()`.
     """
 
-    base_template = None
+    base_template: Optional[str] = None
 
     @drf_action(detail=True)
     def changelog(self, request, *args, **kwargs):
@@ -1329,9 +1333,13 @@ class ObjectChangeLogViewMixin(NautobotViewSetMixin):
 class ObjectNotesViewMixin(NautobotViewSetMixin):
     """
     UI Mixin for an Object's Notes.
+
+    base_template: Specify to explicitly identify the base object detail template to render.
+        If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
+        will be used, as per `get_base_template()`.
     """
 
-    base_template = None
+    base_template: Optional[str] = None
 
     @drf_action(detail=True)
     def notes(self, request, *args, **kwargs):
