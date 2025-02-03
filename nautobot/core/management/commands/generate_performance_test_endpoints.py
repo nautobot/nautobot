@@ -96,8 +96,7 @@ class Command(BaseCommand):
                     self.app_name_to_urls["endpoints"][view_name].append(url_pattern + f"?{query_params}")
             else:
                 # TODO handle the case where there is no instances of the model is found
-                # self.stdout.write(f"No instances of {model_class} found")
-                pass
+                self.stdout.write(f"No instances of {model_class} found")
         else:
             # A generic endpoint like `core:home`
             if view_name not in self.app_name_to_urls["endpoints"]:
@@ -133,6 +132,21 @@ class Command(BaseCommand):
         model = pattern.default_args.get("model", None)
         if model:
             app_name = model._meta.app_label
+
+
+        # Handle the special case where a view exist in the core app
+        # but its url pattern and view name does not include the prefix "/core" or "core:"
+        # ['nautobot', 'extras', 'plugins', 'views', 'InstalledAppsView']
+        if app_name == "core":
+            if pattern.name in ["api-root", "api-status", "graphql-api"]:
+                is_api_endpoint = True
+                url_pattern = f"/api/{pattern.pattern}"  # /api/status
+                view_name = f"{pattern.name}"  # api-status
+                return url_pattern, view_name, is_api_endpoint
+            elif pattern.name in ["home", "about", "search", "worker-status", "graphql"]:
+                url_pattern = f"/{pattern.pattern}" # /home, /about, /search
+                view_name = f"{pattern.name}" # home, about, search
+                return url_pattern, view_name, is_api_endpoint
 
         # Handle the special case first for Installed apps related view is nested under the extras app.
         # ['nautobot', 'extras', 'plugins', 'views', 'InstalledAppsView']
@@ -207,5 +221,9 @@ class Command(BaseCommand):
                         # Replace "^" and "$" from the url pattern
                         url_pattern = url_pattern.replace("^", "").replace("$", "")
                         # Retrieve the model class for the view name
-                        model_class = get_model_for_view_name(view_name)
+                        try:
+                            model_class = get_model_for_view_name(view_name)
+                        except ValueError:
+                            # In case it is a generic view like /home, /about, /search
+                            model_class = None
                         self.append_urls_to_dict(url_pattern, model_class, view_name, is_api_endpoint)

@@ -1,4 +1,11 @@
 endpoints:
+  about:
+  - /about/
+  api-root:
+  - /api/
+  - /api/<drf_format_suffix:format>
+  api-status:
+  - /api/status/
   apps-api:api-root:
   - /api/apps/
   apps-api:apps-list:
@@ -215,29 +222,14 @@ endpoints:
   cloud:cloudservice_notes:
   - /cloud/cloud-services/aca8e710-2405-4709-8aae-d8f767963fda/notes/
   - /cloud/cloud-services/de6f6e66-ba1e-4012-9fdf-3c9e724c3640/notes/
-  core-api:api-root:
-  - /api/core/
-  - /api/core/<drf_format_suffix:format>
-  core-api:api-status:
-  - /api/core/status/
   core-api:csv-import-fields:
   - /api/core/csv-import-fields/
   core-api:filtersetfield-list-lookupchoices:
   - /api/core/filterset-fields/lookup-choices/
   core-api:filtersetfield-retrieve-lookupvaluedomelement:
   - /api/core/filterset-fields/lookup-value-dom-element/
-  core-api:graphql-api:
-  - /api/core/graphql/
-  core:about:
-  - /core/about/
-  core:graphql:
-  - /core/graphql/
-  core:home:
-  - /core/
   core:metrics:
   - /core/metrics/
-  core:search:
-  - /core/search/
   dcim-api:connected-device-list:
   - /api/dcim/connected-device/
   dcim-api:consoleconnections-list:
@@ -1151,6 +1143,12 @@ endpoints:
   extras:team_notes:
   - /extras/teams/0fec8e7f-0052-4450-b342-5931f84bd5e5/notes/
   - /extras/teams/9d39ca17-caa4-42d1-b898-229f20740696/notes/
+  graphql:
+  - /graphql/
+  graphql-api:
+  - /api/graphql/
+  home:
+  - /
   ipam-api:ipaddress-detail:
   - /api/ipam/ip-addresses/0f7ccb75-f5af-4c6c-bb87-b5893a3bafb6/
   - /api/ipam/ip-addresses/8920226c-393f-4121-bd05-5563d8a8e4fc/
@@ -1368,6 +1366,8 @@ endpoints:
   - /plugins/example_app/models/b1d2e5a3-e462-4c9b-bab6-6c4aec39b7b8/notes/
   plugins:plugins_list:
   - /plugins/installed-plugins/
+  search:
+  - /search/
   tenancy-api:tenant-detail:
   - /api/tenancy/tenants/039154a5-0574-45df-8509-9974397b497e/
   - /api/tenancy/tenants/6cd3dff6-0bfb-4674-b9bf-c6a6f965f25b/
