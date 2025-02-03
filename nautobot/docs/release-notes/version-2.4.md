@@ -150,7 +150,6 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
-
 ## v2.4.2 (2025-02-03)
 
 ### Added in v2.4.2
@@ -165,12 +164,15 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 ### Changed in v2.4.2
 
 - [#5781](https://github.com/nautobot/nautobot/issues/5781) - Removed unnecessary `import_jobs()` call during system startup.
+- [#6650](https://github.com/nautobot/nautobot/issues/6650) - Changed the `nautobot.apps.utils.get_base_template()` function's fallback behavior to return `"generic/object_retrieve.html"` instead of `"base.html"` in order to more correctly align with its usage throughout Nautobot core.
+- [#6650](https://github.com/nautobot/nautobot/issues/6650) - Replaced references to `generic/object_detail.html` with `generic/object_retrieve.html` throughout the code and docs, as `generic/object_detail.html` has been a deprecated alias since v1.4.0.
 - [#6808](https://github.com/nautobot/nautobot/issues/6808) - Improved returned data when syncing a Git repository via the REST API.
 
 ### Fixed in v2.4.2
 
 - [#3319](https://github.com/nautobot/nautobot/issues/3319) - Fixed an exception when retrieving available IP addresses within a Prefix for certain IPv6 networks.
 - [#3319](https://github.com/nautobot/nautobot/issues/3319) - Fixed incorrect potential inclusion of IPv4 IP addresses from the same Namespace when calling `.get_all_ips()` or `.get_utilization()` on an IPv6 Prefix.
+- [#6650](https://github.com/nautobot/nautobot/issues/6650) - Fixed rendering of "notes" and "changelog" tabs for object detail views that do not provide a custom HTML template.
 - [#6767](https://github.com/nautobot/nautobot/issues/6767) - Improved performance of object detail views when a large number of select/multiselect Custom Fields and also filtered Relationships are defined on the model class.
 - [#6767](https://github.com/nautobot/nautobot/issues/6767) - Improved performance of Device detail view by adding appropriate `select_related`/`prefetch_related` calls.
 - [#6767](https://github.com/nautobot/nautobot/issues/6767) - Fixed display of Cluster Group in Device detail view.
@@ -199,6 +201,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#6717](https://github.com/nautobot/nautobot/issues/6717) - Updated `pylint` development dependency to `~3.3.4`.
 - [#6779](https://github.com/nautobot/nautobot/issues/6779) - Added integration tests for bulk edit/delete operations for Devices and Locations.
 - [#6779](https://github.com/nautobot/nautobot/issues/6779) - Added `BulkOperationsTestCases` class with built-in standard test cases for testing bulk operations.
+- [#6842](https://github.com/nautobot/nautobot/issues/6842) - Fix `invoke integration-test` to run standalone, without running the `invoke start` first.
 
 ## v2.4.1 (2025-01-21)
 
