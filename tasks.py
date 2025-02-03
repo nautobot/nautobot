@@ -200,7 +200,7 @@ def run_command(context, command, service="nautobot", **kwargs):
         else:
             # Explicitly set the container name to allow network access by calling "nautobot:<port>"
             compose_command = (
-                f"run {'--user=root ' if root else ''}--rm --name 'nautobot' --entrypoint '{command}' {service}"
+                f"run {'--user=root ' if root else ''}--rm --name '{service}' --entrypoint '{command}' {service}"
             )
 
         return docker_compose(context, compose_command, pty=True, **kwargs)
