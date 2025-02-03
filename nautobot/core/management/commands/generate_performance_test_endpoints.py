@@ -24,17 +24,18 @@ class Command(BaseCommand):
         # Fetch and store the urls by app names in the dictionary
         self.fetch_urls(url_patterns)
         for view_name, url_patterns in self.app_name_to_urls["endpoints"].items():
+            # De-duplicate the URL patterns and sort them.
             self.app_name_to_urls["endpoints"][view_name] = sorted(list(set(url_patterns)))
 
         with open("./endpoints.yml", "w") as outfile:
             yaml.dump(self.app_name_to_urls, outfile, sort_keys=True)
 
-    def is_get_endpoint(self, view_name):
+    def is_eligible_get_endpoint(self, view_name):
         """
-        Check if the view is a GET endpoint
+        Check if the view is a GET endpoint and if it is eligible for performance testing.
         """
         get_endpoints_suffixes = ("-detail", "_list", "_notes", "_changelog", "-list", "-notes")
-        if view_name.endswith(get_endpoints_suffixes) or "_" not in view_name:
+        if view_name.endswith(get_endpoints_suffixes) or ("_" not in view_name and view_name not in ["graphql-api", "dcim-api:device-napalm"]):
             return True
         return False
 
@@ -130,20 +131,31 @@ class Command(BaseCommand):
         if model:
             app_name = model._meta.app_label
 
+        # No need to test the login and logout endpoints for performance testing
+        if app_name == "users":
+            if pattern.name in ["login", "logout"]:
+                return None, None, is_api_endpoint
+
         # Handle the special case where a view exist in the core app
         # but its url pattern and view name does not include the prefix "/core" or "core:"
         # ['nautobot', 'core', "views", "HomeView"]
         # ['nautobot', 'core', "api", "views", "APIRootView"]
         if app_name == "core":
-            if pattern.name in ["api-root", "api-status", "graphql-api"]:
+            if pattern.name in ["api-root", "api-status",  "graphql-api"]:
                 is_api_endpoint = True
                 url_pattern = f"/api/{pattern.pattern}"  # /api/status
                 view_name = f"{pattern.name}"  # api-status
                 return url_pattern, view_name, is_api_endpoint
-            elif pattern.name in ["home", "about", "search", "worker-status", "graphql"]:
+            elif pattern.name in ["home", "about", "search", "worker-status", "graphql", "metrics"]:
                 url_pattern = f"/{pattern.pattern}"  # /home, /about, /search
                 view_name = f"{pattern.name}"  # home, about, search
                 return url_pattern, view_name, is_api_endpoint
+            elif pattern.name in [
+                "csv-import-fields",
+                "filtersetfield-list-lookupchoices",
+                "filtersetfield-retrieve-lookupvaluedomelement",
+            ]:
+                return None, None, is_api_endpoint
 
         # Handle the special case first for Installed apps related view is nested under the extras app.
         # ['nautobot', 'extras', 'plugins', 'views', 'InstalledAppsView']
@@ -214,7 +226,12 @@ class Command(BaseCommand):
                 if pattern.lookup_str.startswith(("nautobot.", *settings.PLUGINS)):
                     url_pattern, view_name, is_api_endpoint = self.construct_view_name_and_url_pattern(pattern)
                     # We do not need to test the ?format=<json,csv,api> endpoints and non-GET endpoints
-                    if "(?P<format>[a-z0-9]+)" not in url_pattern and self.is_get_endpoint(view_name):
+                    if (
+                        url_pattern is not None
+                        and "(?P<format>[a-z0-9]+)" not in url_pattern
+                        and "<drf_format_suffix:format>" not in url_pattern
+                        and self.is_eligible_get_endpoint(view_name)
+                    ):
                         # Replace "^" and "$" from the url pattern
                         url_pattern = url_pattern.replace("^", "").replace("$", "")
                         # Retrieve the model class for the view name

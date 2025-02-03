@@ -250,6 +250,11 @@ def get_model_for_view_name(view_name):
     Return the model class associated with the given view_name e.g. "circuits:circuit_detail", "dcim:device_list" and etc.
     If the app_label or model_name contained by the given view_name is invalid, this will return `None`.
     """
+    if view_name == "users-api:group-detail":
+        return Group
+    if view_name == "extras-api:contenttype-detail":
+        return ContentType
+
     split_view_name = view_name.split(":")
     if len(split_view_name) == 2:
         app_label, model_name = split_view_name  # dcim, device_list
