@@ -15,6 +15,8 @@ EXCLUDED_VIEW_NAMES = [
     "graphql",  # "Must provide query string."
     "dcim-api:device-napalm",  # "No platform is configured for this device."
     "dcim-api:connected-device-list",  # "Request must include \\"peer_device\\" and \\"peer_interface\\" filters."
+    "login",
+    "logout",
 ]
 
 GET_ENDPOINT_SUFFIXES = ("-detail", "_list", "_notes", "_changelog", "-list", "-notes")
@@ -156,7 +158,9 @@ class Command(BaseCommand):
         # No need to test the login and logout endpoints for performance testing
         if app_name == "users":
             if pattern.name in ["login", "logout"]:
-                return None, None, is_api_endpoint
+                url_pattern = f"/{pattern.pattern}"  # /login, /logout
+                view_name = f"{pattern.name}"  # login, logout
+                return url_pattern, view_name, is_api_endpoint
 
         # Handle the special case where a view exist in the core app
         # but its url pattern and view name does not include the prefix "/core" or "core:"
