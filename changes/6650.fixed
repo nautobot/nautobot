@@ -1,1 +1,0 @@
-Fixed rendering of "notes" and "changelog" tabs for object detail views that do not provide a custom HTML template.

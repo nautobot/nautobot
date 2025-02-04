@@ -1,4 +1,0 @@
-Updated `GitPython` dependency to `~3.1.44`.
-Updated `django-silk` dependency to `~5.3.2`.
-Updated `django-tables2` dependency to `~2.7.5`.
-Updated `mysqlclient` optional dependency to `~2.2.7`.
