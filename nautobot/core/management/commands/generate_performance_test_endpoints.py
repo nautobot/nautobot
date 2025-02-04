@@ -6,6 +6,19 @@ import yaml
 
 from nautobot.core.utils.lookup import get_model_for_view_name
 
+# List of view names that are excluded for various error responses
+EXCLUDED_VIEW_NAMES = [
+    # "You do not have permission to perform this action." even when logged in as superuser
+    "apps-api:apps-list",
+    "plugins-api:plugins-list",  # same as above
+    "graphql-api",  # "Method \\"GET\\" not allowed."
+    "graphql",  # "Must provide query string."
+    "dcim-api:device-napalm",  # "No platform is configured for this device."
+    "dcim-api:connected-device-list",  # "Request must include \\"peer_device\\" and \\"peer_interface\\" filters."
+]
+
+GET_ENDPOINT_SUFFIXES = ("-detail", "_list", "_notes", "_changelog", "-list", "-notes")
+
 
 class Command(BaseCommand):
     """
@@ -13,6 +26,13 @@ class Command(BaseCommand):
     """
 
     help = "List all relevant performance test url patterns in Nautobot Core"
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--output-file",
+            default=False,
+            help="Flag to whether load the output the endpoints to a `./endpoints.yaml` file",
+        )
 
     def handle(self, *args, **options):
         # Get the URL resolver
@@ -27,15 +47,17 @@ class Command(BaseCommand):
             # De-duplicate the URL patterns and sort them.
             self.app_name_to_urls["endpoints"][view_name] = sorted(list(set(url_patterns)))
 
-        with open("./endpoints.yml", "w") as outfile:
-            yaml.dump(self.app_name_to_urls, outfile, sort_keys=True)
+        self.stdout.write(yaml.dump(self.app_name_to_urls, sort_keys=True))
+
+        if options.get("output_file"):
+            with open("./endpoints.yml", "w") as outfile:
+                yaml.dump(self.app_name_to_urls, outfile, sort_keys=True)
 
     def is_eligible_get_endpoint(self, view_name):
         """
         Check if the view is a GET endpoint and if it is eligible for performance testing.
         """
-        get_endpoints_suffixes = ("-detail", "_list", "_notes", "_changelog", "-list", "-notes")
-        if view_name.endswith(get_endpoints_suffixes) or ("_" not in view_name and view_name not in ["graphql-api", "dcim-api:device-napalm"]):
+        if view_name not in EXCLUDED_VIEW_NAMES and (view_name.endswith(GET_ENDPOINT_SUFFIXES) or "_" not in view_name):
             return True
         return False
 
@@ -141,7 +163,7 @@ class Command(BaseCommand):
         # ['nautobot', 'core', "views", "HomeView"]
         # ['nautobot', 'core', "api", "views", "APIRootView"]
         if app_name == "core":
-            if pattern.name in ["api-root", "api-status",  "graphql-api"]:
+            if pattern.name in ["api-root", "api-status", "graphql-api"]:
                 is_api_endpoint = True
                 url_pattern = f"/api/{pattern.pattern}"  # /api/status
                 view_name = f"{pattern.name}"  # api-status
