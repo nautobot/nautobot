@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 from urllib.parse import parse_qs
 
 from django.contrib import messages
@@ -31,6 +32,7 @@ from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
+from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
@@ -900,10 +902,13 @@ class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
 class ObjectDynamicGroupsView(generic.GenericView):
     """
     Present a list of dynamic groups associated to a particular object.
-    base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
+
+    base_template: Specify to explicitly identify the base object detail template to render.
+        If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
+        will be used, as per `get_base_template()`.
     """
 
-    base_template = None
+    base_template: Optional[str] = None
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -926,7 +931,7 @@ class ObjectDynamicGroupsView(generic.GenericView):
         }
         RequestConfig(request, paginate).configure(dynamicgroups_table)
 
-        self.base_template = get_base_template(self.base_template, model)
+        base_template = get_base_template(self.base_template, model)
 
         return render(
             request,
@@ -936,7 +941,7 @@ class ObjectDynamicGroupsView(generic.GenericView):
                 "verbose_name": obj._meta.verbose_name,
                 "verbose_name_plural": obj._meta.verbose_name_plural,
                 "table": dynamicgroups_table,
-                "base_template": self.base_template,
+                "base_template": base_template,
                 "active_tab": "dynamic-groups",
             },
         )
@@ -2185,10 +2190,13 @@ class ObjectChangeView(generic.ObjectView):
 class ObjectChangeLogView(generic.GenericView):
     """
     Present a history of changes made to a particular object.
-    base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
+
+    base_template: Specify to explicitly identify the base object detail template to render.
+        If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
+        will be used, as per `get_base_template()`.
     """
 
-    base_template = None
+    base_template: Optional[str] = None
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -2216,7 +2224,7 @@ class ObjectChangeLogView(generic.GenericView):
         }
         RequestConfig(request, paginate).configure(objectchanges_table)
 
-        self.base_template = get_base_template(self.base_template, model)
+        base_template = get_base_template(self.base_template, model)
 
         return render(
             request,
@@ -2226,7 +2234,7 @@ class ObjectChangeLogView(generic.GenericView):
                 "verbose_name": obj._meta.verbose_name,
                 "verbose_name_plural": obj._meta.verbose_name_plural,
                 "table": objectchanges_table,
-                "base_template": self.base_template,
+                "base_template": base_template,
                 "active_tab": "changelog",
             },
         )
@@ -2319,10 +2327,13 @@ class NoteDeleteView(generic.ObjectDeleteView):
 class ObjectNotesView(generic.GenericView):
     """
     Present a list of notes associated to a particular object.
-    base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
+
+    base_template: Specify to explicitly identify the base object detail template to render.
+        If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
+        will be used, as per `get_base_template()`.
     """
 
-    base_template = None
+    base_template: Optional[str] = None
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -2346,7 +2357,7 @@ class ObjectNotesView(generic.GenericView):
         }
         RequestConfig(request, paginate).configure(notes_table)
 
-        self.base_template = get_base_template(self.base_template, model)
+        base_template = get_base_template(self.base_template, model)
 
         return render(
             request,
@@ -2356,7 +2367,7 @@ class ObjectNotesView(generic.GenericView):
                 "verbose_name": obj._meta.verbose_name,
                 "verbose_name_plural": obj._meta.verbose_name_plural,
                 "table": notes_table,
-                "base_template": self.base_template,
+                "base_template": base_template,
                 "active_tab": "notes",
                 "form": notes_form,
             },
@@ -2378,6 +2389,38 @@ class RelationshipListView(generic.ObjectListView):
 
 class RelationshipView(generic.ObjectView):
     queryset = Relationship.objects.all()
+    object_detail_content = ObjectDetailContent(
+        panels=(
+            ObjectFieldsPanel(
+                label="Relationship",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+                exclude_fields=[
+                    "source_type",
+                    "source_label",
+                    "source_hidden",
+                    "source_filter",
+                    "destination_type",
+                    "destination_label",
+                    "destination_hidden",
+                    "destination_filter",
+                ],
+            ),
+            ObjectFieldsPanel(
+                label="Source Attributes",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                fields=["source_type", "source_label", "source_hidden", "source_filter"],
+            ),
+            ObjectFieldsPanel(
+                label="Destination Attributes",
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                fields=["destination_type", "destination_label", "destination_hidden", "destination_filter"],
+            ),
+        )
+    )
 
 
 class RelationshipEditView(generic.ObjectEditView):

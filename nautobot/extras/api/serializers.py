@@ -480,10 +480,31 @@ class GitRepositorySerializer(TaggedModelSerializerMixin, NautobotModelSerialize
 
 class GraphQLQuerySerializer(ValidatedModelSerializer, NotesSerializerMixin):
     variables = serializers.DictField(read_only=True)
+    owner_content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("graphql_query_owners").get_query()),
+        required=False,
+        allow_null=True,
+        default=None,
+    )
+    owner = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = GraphQLQuery
         fields = "__all__"
+
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="GraphQLQueryOwner",
+            resource_type_field_name="object_type",
+            serializers=lambda: nested_serializers_for_models(FeatureQuery("graphql_query_owners").list_subclasses()),
+            allow_null=True,
+        )
+    )
+    def get_owner(self, obj):
+        if obj.owner is None:
+            return None
+        depth = get_nested_serializer_depth(self)
+        return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.owner, "owner")
 
 
 class GraphQLQueryInputSerializer(serializers.Serializer):
@@ -1148,3 +1169,15 @@ class WebhookSerializer(ValidatedModelSerializer, NotesSerializerMixin):
             raise serializers.ValidationError(conflicts)
 
         return validated_attrs
+
+
+#
+# More Git repositories
+#
+
+
+class GitRepositorySyncResponseSerializer(serializers.Serializer):
+    """Serializer representing responses from the GitRepository.sync() POST endpoint."""
+
+    message = serializers.CharField(read_only=True)
+    job_result = JobResultSerializer(read_only=True)

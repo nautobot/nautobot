@@ -750,15 +750,47 @@ class BulkEditTestCase(TransactionTestCase):
             description="Example description for bulk edit",
         )
 
-        # Assert Namespaces withing pk_list updated tags
+        # Assert Namespaces within pk_list get updated tags
         for namespace in namespaces[:3]:
             self.assertTrue(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[:3]]).exists())
             self.assertFalse(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[3:]]).exists())
 
-        # Assert Namespaces not withing pk_list tags did not get updated
+        # Assert Namespaces not within pk_list did not get updated tags
         for namespace in namespaces[3:]:
             self.assertFalse(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[:3]]).exists())
             self.assertTrue(namespace.tags.filter(pk__in=[tag.pk for tag in self.tags[3:]]).exists())
+
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=self.namespace_ct.id,
+            edit_all=False,
+            filter_query_params={},
+            form_data={
+                "pk": pk_list,
+                "description": "Example description for bulk edit",
+                "add_tags": [str(self.tags[0].id)],
+                "remove_tags": [str(self.tags[-1].id)],
+            },
+            username=self.user.username,
+        )
+
+        self._common_no_error_test_assertion(
+            Namespace,
+            job_result,
+            3,
+            description="Example description for bulk edit",
+        )
+
+        # Assert Namespaces within pk_list get updated tag
+        for namespace in namespaces[:3]:
+            self.assertTrue(namespace.tags.filter(pk__in=[self.tags[0].pk]).exists())
+            self.assertFalse(namespace.tags.filter(pk__in=[self.tags[-1].pk]).exists())
+
+        # Assert Namespaces not within pk_list did not get updated tag
+        for namespace in namespaces[3:]:
+            self.assertFalse(namespace.tags.filter(pk__in=[self.tags[0].pk]).exists())
+            self.assertTrue(namespace.tags.filter(pk__in=[self.tags[-1].pk]).exists())
 
     def test_bulk_edit_objects_filter_all(self):
         """
