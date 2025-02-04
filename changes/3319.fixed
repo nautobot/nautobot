@@ -1,2 +1,0 @@
-Fixed an exception when retrieving available IP addresses within a Prefix for certain IPv6 networks.
-Fixed incorrect potential inclusion of IPv4 IP addresses from the same Namespace when calling `.get_all_ips()` or `.get_utilization()` on an IPv6 Prefix.
