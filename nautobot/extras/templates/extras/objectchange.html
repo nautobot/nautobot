@@ -137,7 +137,8 @@
                         data-mode="diff"
                         data-original="{{ diff_removed | render_json:False }}"
                         data-modified="{{ diff_added | render_json:False }}"
-                        data-lang="json">
+                        data-lang="json"
+                        style="max-height: 730px; overflow-y: auto;">
                     </div>
                     {% endif %}
                 </div>
@@ -160,3 +161,4 @@
     {{ block.super }}
     <script src="{% static 'js/editor.js' %}"></script>
 {% endblock %}
+
