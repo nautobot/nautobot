@@ -82,15 +82,15 @@ class Command(BaseCommand):
             self.app_name_to_urls["endpoints"][view_name].append(url_pattern)
             return
 
-        # If the model class is found, then we know we are dealing with a model related endpoint
-        total_objs = len(model_class.objects.all())
-        if total_objs == 0:
-            # TODO handle the case where there is no instances of the model is found
-            self.stderr.write(f"Not enough instances of {model_class} found, need at least 1")
-            return
-
         # Handle detail view url patterns
+        total_count = len(model_class.objects.all())
         if "_list" not in view_name and "-list" not in view_name:
+            # If the model class is found, then we know we are dealing with a model related endpoint
+            if total_count == 0:
+                # TODO handle the case where there is no instances of the model is found
+                self.stderr.write(f"Not enough instances of {model_class} found, need at least 1")
+                return
+
             # Identify the placeholder for the uuid
             replace_string = ""
             if "<uuid:pk>" in url_pattern:
@@ -100,7 +100,7 @@ class Command(BaseCommand):
 
             if replace_string:
                 # Replace the uuid with the actual uuid
-                if total_objs == 1:
+                if total_count == 1:
                     # Case where there is only one instance of the model
                     first_url_pattern = url_pattern.replace(replace_string, str(model_class.objects.first().pk))
                     if view_name not in self.app_name_to_urls["endpoints"]:
@@ -120,7 +120,6 @@ class Command(BaseCommand):
                 self.app_name_to_urls["endpoints"][view_name] = []
             # One endpoint with default pagination
             self.app_name_to_urls["endpoints"][view_name].append(url_pattern)
-            total_count = len(model_class.objects.all())
             page_query_parameter = 5
             per_page_query_parameter = total_count // page_query_parameter
             if not is_api_endpoint:
@@ -204,16 +203,20 @@ class Command(BaseCommand):
                 app_name = f"{app_name}-api"  # dcim-api
                 view_name = f"{app_name}:{pattern.name}"  # dcim-api:device-list
             else:
+                api_app_name = f"{app_name}-api"  # example_app-api
+                view_name = (
+                    f"plugins-api:{api_app_name}:{pattern.name}"  # plugins-api:example_app-api:examplemodel-list
+                )
+                app_name = app_name.replace("_", "-")  # example_app -> example-app
                 url_pattern = f"/api/plugins/{app_name}/{pattern.pattern}"  # /api/plugins/example-app/models/
-                app_name = f"{app_name}-api"  # example_app-api
-                view_name = f"plugins-api:{app_name}:{pattern.name}"  # plugins-api:example_app-api:examplemodel-list
         else:
             if not is_app:
                 url_pattern = f"/{app_name}/{pattern.pattern}"  # /dcim/devices/
                 view_name = f"{app_name}:{pattern.name}"  # dcim:device_list
             else:
-                url_pattern = f"/plugins/{app_name}/{pattern.pattern}"  # /plugins/example-app/models/
                 view_name = f"plugins:{app_name}:{pattern.name}"  # plugins:example_app:examplemodel_list
+                app_name = app_name.replace("_", "-")  # example_app -> example-app
+                url_pattern = f"/plugins/{app_name}/{pattern.pattern}"  # /plugins/example-app/models/
 
         return url_pattern, view_name, is_api_endpoint
 
