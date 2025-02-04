@@ -1,3 +1,0 @@
-Improved performance of object detail views when a large number of select/multiselect Custom Fields and also filtered Relationships are defined on the model class.
-Improved performance of Device detail view by adding appropriate `select_related`/`prefetch_related` calls.
-Fixed display of Cluster Group in Device detail view.

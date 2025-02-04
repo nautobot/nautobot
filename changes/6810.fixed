@@ -1,1 +1,0 @@
-Fixed Bulk Edit Objects job failure when passing a single value to add_*/remove_* fields.
