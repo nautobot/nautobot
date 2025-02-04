@@ -1,3 +1,5 @@
+from typing import Optional
+
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.urls import get_resolver
@@ -8,9 +10,6 @@ from nautobot.core.utils.lookup import get_model_for_view_name
 
 # List of view names that are excluded for various error responses
 EXCLUDED_VIEW_NAMES = [
-    # "You do not have permission to perform this action." even when logged in as superuser
-    "apps-api:apps-list",
-    "plugins-api:plugins-list",  # same as above
     "graphql-api",  # "Method \\"GET\\" not allowed."
     "graphql",  # "Must provide query string."
     "dcim-api:device-napalm",  # "No platform is configured for this device."
@@ -19,7 +18,8 @@ EXCLUDED_VIEW_NAMES = [
     "logout",
 ]
 
-GET_ENDPOINT_SUFFIXES = ("-detail", "_list", "_notes", "_changelog", "-list", "-notes")
+# List of reversed url name suffixes that are used to identify GET endpoints UI and API
+GET_ENDPOINT_SUFFIXES = ("_list", "_notes", "_changelog", "-detail", "-list", "-notes")
 
 
 class Command(BaseCommand):
@@ -32,8 +32,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             "--output-file",
-            default=False,
-            help="Flag to whether load the output the endpoints to a `./endpoints.yaml` file",
+            help="A file path string that specifies the output file to write the endpoints to.",
         )
 
     def handle(self, *args, **options):
@@ -49,11 +48,13 @@ class Command(BaseCommand):
             # De-duplicate the URL patterns and sort them.
             self.app_name_to_urls["endpoints"][view_name] = sorted(list(set(url_patterns)))
 
-        self.stdout.write(yaml.dump(self.app_name_to_urls, sort_keys=True))
-
-        if options.get("output_file"):
-            with open("./endpoints.yml", "w") as outfile:
+        if filepath := options.get("output_file"):
+            # Output the endpoints to a yaml file
+            with open(filepath, "w") as outfile:
                 yaml.dump(self.app_name_to_urls, outfile, sort_keys=True)
+        else:
+            # Output the endpoints to the console
+            self.stdout.write(yaml.dump(self.app_name_to_urls, sort_keys=True))
 
     def is_eligible_get_endpoint(self, view_name):
         """
@@ -82,9 +83,10 @@ class Command(BaseCommand):
             return
 
         # If the model class is found, then we know we are dealing with a model related endpoint
-        if len(model_class.objects.all()) < 2:
+        total_objs = len(model_class.objects.all())
+        if total_objs == 0:
             # TODO handle the case where there is no instances of the model is found
-            self.stderr.write(f"Not enough instances of {model_class} found, need at least 2")
+            self.stderr.write(f"Not enough instances of {model_class} found, need at least 1")
             return
 
         # Handle detail view url patterns
@@ -98,12 +100,20 @@ class Command(BaseCommand):
 
             if replace_string:
                 # Replace the uuid with the actual uuid
-                first_url_pattern = url_pattern.replace(replace_string, str(model_class.objects.first().pk))
-                second_url_pattern = url_pattern.replace(replace_string, str(model_class.objects.last().pk))
-                if view_name not in self.app_name_to_urls["endpoints"]:
-                    self.app_name_to_urls["endpoints"][view_name] = []
-                self.app_name_to_urls["endpoints"][view_name].append(first_url_pattern)
-                self.app_name_to_urls["endpoints"][view_name].append(second_url_pattern)
+                if total_objs == 1:
+                    # Case where there is only one instance of the model
+                    first_url_pattern = url_pattern.replace(replace_string, str(model_class.objects.first().pk))
+                    if view_name not in self.app_name_to_urls["endpoints"]:
+                        self.app_name_to_urls["endpoints"][view_name] = []
+                    self.app_name_to_urls["endpoints"][view_name].append(first_url_pattern)
+                else:
+                    # Case where there is more than one instance of the model
+                    first_url_pattern = url_pattern.replace(replace_string, str(model_class.objects.first().pk))
+                    second_url_pattern = url_pattern.replace(replace_string, str(model_class.objects.last().pk))
+                    if view_name not in self.app_name_to_urls["endpoints"]:
+                        self.app_name_to_urls["endpoints"][view_name] = []
+                    self.app_name_to_urls["endpoints"][view_name].append(first_url_pattern)
+                    self.app_name_to_urls["endpoints"][view_name].append(second_url_pattern)
         # Handle list view url patterns
         else:
             if view_name not in self.app_name_to_urls["endpoints"]:
@@ -127,10 +137,10 @@ class Command(BaseCommand):
                         "offset": per_page_query_parameter * (page_query_parameter - 1),
                     }
                 )
-            # One endpoint with default pagination
+            # One endpoint with non-default pagination
             self.app_name_to_urls["endpoints"][view_name].append(url_pattern + f"?{query_params}")
 
-    def construct_view_name_and_url_pattern(self, pattern) -> tuple[str, str, bool]:
+    def construct_view_name_and_url_pattern(self, pattern) -> tuple[Optional[str], Optional[str], bool]:
         """
         Args:
             pattern (django.urls.resolvers.URLPattern): A URL pattern object.
@@ -144,8 +154,6 @@ class Command(BaseCommand):
 
         # Determine if the endpoint belongs to a plugin
         is_app = lookup_str_list[0] != "nautobot"
-        is_api_endpoint = False
-        # Determine if the endpoint is an API endpoint
         is_api_endpoint = "api" in lookup_str_list
         # One of the nautobot apps: nautobot.circuits, nautobot.dcim, and etc. if not is_app
         # One of the plugins: example_app, and etc. if is_app
@@ -155,53 +163,41 @@ class Command(BaseCommand):
         if model:
             app_name = model._meta.app_label
 
-        # No need to test the login and logout endpoints for performance testing
-        if app_name == "users":
-            if pattern.name in ["login", "logout"]:
-                url_pattern = f"/{pattern.pattern}"  # /login, /logout
-                view_name = f"{pattern.name}"  # login, logout
-                return url_pattern, view_name, is_api_endpoint
-
-        # Handle the special case where a view exist in the core app
-        # but its url pattern and view name does not include the prefix "/core" or "core:"
-        # ['nautobot', 'core', "views", "HomeView"]
-        # ['nautobot', 'core', "api", "views", "APIRootView"]
-        if app_name == "core":
+        if app_name == "users" and pattern.name in ["login", "logout"]:
+            # No need to test the login and logout endpoints for performance testing
+            url_pattern = f"/{pattern.pattern}"  # /login, /logout
+            view_name = f"{pattern.name}"  # login, logout
+        elif app_name == "core":
+            # Handle the special case where a view exist in the core app
+            # but its url pattern and view name does not include the prefix "/core" or "core:"
+            # ['nautobot', 'core', "views", "HomeView"]
+            # ['nautobot', 'core', "api", "views", "APIRootView"]
             if pattern.name in ["api-root", "api-status", "graphql-api"]:
                 is_api_endpoint = True
                 url_pattern = f"/api/{pattern.pattern}"  # /api/status
                 view_name = f"{pattern.name}"  # api-status
-                return url_pattern, view_name, is_api_endpoint
             elif pattern.name in ["home", "about", "search", "worker-status", "graphql", "metrics"]:
                 url_pattern = f"/{pattern.pattern}"  # /home, /about, /search
                 view_name = f"{pattern.name}"  # home, about, search
-                return url_pattern, view_name, is_api_endpoint
-            elif pattern.name in [
-                "csv-import-fields",
-                "filtersetfield-list-lookupchoices",
-                "filtersetfield-retrieve-lookupvaluedomelement",
-            ]:
-                return None, None, is_api_endpoint
+            else:
+                url_pattern = None
+                view_name = None
+        elif app_name == "extras" and "plugins" in lookup_str_list:
+            # Handle the special case first for Installed apps related view is nested under the extras app.
+            # ['nautobot', 'extras', 'plugins', 'views', 'InstalledAppsView']
 
-        # Handle the special case first for Installed apps related view is nested under the extras app.
-        # ['nautobot', 'extras', 'plugins', 'views', 'InstalledAppsView']
-        if app_name == "extras" and "plugins" in lookup_str_list:
             # We need special case handling to determine if the endpoint is an api endpoint as well for this view
             view_class_name = lookup_str_list[-1]
             if "API" in view_class_name:
                 is_api_endpoint = True
             apps_or_plugins = "plugins" if "plugins" in pattern.name else "apps"
-
             if is_api_endpoint:
                 url_pattern = f"/api/{apps_or_plugins}/{pattern.pattern}"  # /api/apps/installed-apps
                 view_name = f"{apps_or_plugins}-api:{pattern.name}"  # apps-api:apps-list
             else:
                 url_pattern = f"/{apps_or_plugins}/{pattern.pattern}"  # /apps/installed-apps
                 view_name = f"{apps_or_plugins}:{pattern.name}"  # apps:apps_list
-
-            return url_pattern, view_name, is_api_endpoint
-
-        if is_api_endpoint:
+        elif is_api_endpoint:
             if not is_app:
                 # One of the nautobot apps: nautobot.circuits, nautobot.dcim, and etc.
                 url_pattern = f"/api/{app_name}/{pattern.pattern}"  # /api/dcim/devices/

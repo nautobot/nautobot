@@ -13,6 +13,7 @@ class ManagementCommandTestCase(TestCase):
         """Initialize user and client."""
         super().setUpNautobot()
         self.user.is_superuser = True
+        self.user.is_staff = True
         self.user.save()
         self.client.force_login(self.user)
 

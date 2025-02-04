@@ -7,6 +7,8 @@ endpoints:
   - /api/status/
   apps-api:api-root:
   - /api/apps/
+  apps-api:apps-list:
+  - /api/apps/installed-apps/
   apps:apps_list:
   - /apps/installed-apps/
   circuits-api:circuit-detail:
@@ -804,6 +806,13 @@ endpoints:
   - /api/extras/content-types/166/
   extras-api:contenttype-list:
   - /api/extras/content-types/
+  extras-api:customfield-detail:
+  - /api/extras/custom-fields/a38bdb8b-d599-486c-94e9-b0896a734a4e/
+  extras-api:customfield-list:
+  - /api/extras/custom-fields/
+  - /api/extras/custom-fields/?limit=0&offset=0
+  extras-api:customfield-notes:
+  - /api/extras/custom-fields/a38bdb8b-d599-486c-94e9-b0896a734a4e/notes/
   extras-api:dynamicgroup-detail:
   - /api/extras/dynamic-groups/7fca278e-1eb8-4471-a18e-753347b39b7f/
   - /api/extras/dynamic-groups/91f7a09e-79e0-4b93-b3e6-119ae1ec6d3b/
@@ -948,6 +957,15 @@ endpoints:
   extras:contact_notes:
   - /extras/contacts/62caa022-c33d-40d3-a9aa-df7bdc288e7e/notes/
   - /extras/contacts/97f536b0-1103-40a6-b617-bb6b6eda9695/notes/
+  extras:customfield:
+  - /extras/custom-fields/a38bdb8b-d599-486c-94e9-b0896a734a4e/
+  extras:customfield_changelog:
+  - /extras/custom-fields/a38bdb8b-d599-486c-94e9-b0896a734a4e/changelog/
+  extras:customfield_list:
+  - /extras/custom-fields/
+  - /extras/custom-fields/?per_page=0&page=5
+  extras:customfield_notes:
+  - /extras/custom-fields/a38bdb8b-d599-486c-94e9-b0896a734a4e/notes/
   extras:dynamicgroup:
   - /extras/dynamic-groups/7fca278e-1eb8-4471-a18e-753347b39b7f/
   - /extras/dynamic-groups/91f7a09e-79e0-4b93-b3e6-119ae1ec6d3b/
@@ -1291,6 +1309,8 @@ endpoints:
   plugins-api:example_app-api:examplemodel-notes:
   - /api/plugins/example_app/models/7567e0e0-b3c4-439c-86bb-7bf2c6a0a56e/notes/
   - /api/plugins/example_app/models/b1d2e5a3-e462-4c9b-bab6-6c4aec39b7b8/notes/
+  plugins-api:plugins-list:
+  - /api/plugins/installed-plugins/
   plugins:example_app:examplemodel_changelog:
   - /plugins/example_app/models/7567e0e0-b3c4-439c-86bb-7bf2c6a0a56e/changelog/
   - /plugins/example_app/models/b1d2e5a3-e462-4c9b-bab6-6c4aec39b7b8/changelog/
@@ -1348,6 +1368,11 @@ endpoints:
   - /tenancy/tenant-groups/ffe69ef9-2475-4b8a-b4d8-c81d06717327/notes/
   users-api:group-list:
   - /api/users/groups/
+  users-api:token-detail:
+  - /api/users/tokens/4a6cc614-4177-4f1c-98ea-8f1f69e4b1d7/
+  users-api:token-list:
+  - /api/users/tokens/
+  - /api/users/tokens/?limit=0&offset=0
   users-api:user-detail:
   - /api/users/users/3c3960d8-7c99-413f-8edd-dff658ff4671/
   - /api/users/users/d6f1c611-abc7-436a-bbd0-5198dee775f4/
@@ -1360,6 +1385,9 @@ endpoints:
   - /users/preferences/
   users:profile:
   - /users/profile/
+  users:token_list:
+  - /users/api-tokens/
+  - /users/api-tokens/?per_page=0&page=5
   wireless-api:controllermanageddevicegroupradioprofileassignment-detail:
   - /api/wireless/controller-managed-device-group-radio-profile-assignments/1da7481a-3fdb-4e76-8c12-4f77eb40128e/
   - /api/wireless/controller-managed-device-group-radio-profile-assignments/2b56a35a-b395-46a7-bb06-0f61633f6770/

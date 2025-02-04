@@ -1,0 +1,1 @@
+Fixed Component Template models incorrectly assume `Notes` support in the API.
