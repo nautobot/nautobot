@@ -836,7 +836,7 @@ class JobQueueViewSet(NautobotModelViewSet):
     filterset_class = filters.JobQueueFilterSet
 
 
-class JobQueueAssignmentViewSet(NautobotModelViewSet):
+class JobQueueAssignmentViewSet(ModelViewSet):
     """
     Manage job queue assignments through DELETE, GET, POST, PUT, and PATCH requests.
     """
@@ -1069,7 +1069,7 @@ class MetadataChoiceViewSet(ModelViewSet):
     filterset_class = filters.MetadataChoiceFilterSet
 
 
-class ObjectMetadataViewSet(NautobotModelViewSet):
+class ObjectMetadataViewSet(ModelViewSet):
     queryset = ObjectMetadata.objects.all()
     serializer_class = serializers.ObjectMetadataSerializer
     filterset_class = filters.ObjectMetadataFilterSet

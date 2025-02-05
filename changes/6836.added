@@ -1,0 +1,1 @@
+Added management command `generate_performance_test_endpoints` to generate performance test endpoints.
