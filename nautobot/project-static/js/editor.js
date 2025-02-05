@@ -29,7 +29,7 @@
 ;(function(window, document, undefined) {
   'use strict';
 
-  const MONACO_BASE = '/static/monaco-editor-0.52.2';
+  const MONACO_BASE = window.nautobot_static_url + 'monaco-editor-0.52.2';
 
   class Editor {
       // Base configuration for all editor instances
