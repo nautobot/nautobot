@@ -58,7 +58,6 @@
               renderOverviewRuler: false
           },
           scrollbar: {
-              vertical: 'hidden',
               useShadows: false,
               verticalScrollbarSize: 8,
               horizontalScrollbarSize: 8,
