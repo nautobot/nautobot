@@ -104,7 +104,7 @@
                     <div class="editor-container" 
                          data-lang="json"
                          data-value="{{ object.object_data|render_json:False }}"
-                         style="max-height: 300px; overflow-y: auto;">
+                         style="max-height: 300px">
                     </div>
                 </div>
             </div>
@@ -139,7 +139,7 @@
                         data-original="{{ diff_removed | render_json:False }}"
                         data-modified="{{ diff_added | render_json:False }}"
                         data-lang="json"
-                        style="max-height: 730px; overflow-y: auto;">
+                        style="max-height: 730px">
                     </div>
                     {% endif %}
                 </div>
