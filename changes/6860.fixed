@@ -1,0 +1,1 @@
+Fixed incorrect marking of `channel_width` and `allowed_channel_list` as required fields in the Wireless Radio Profile REST API.
