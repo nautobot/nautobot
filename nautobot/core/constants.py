@@ -64,6 +64,20 @@ HTML_ALLOWED_TAGS = nh3.ALLOWED_TAGS - {
 # at present we just copy nh3.ALLOWED_ATTRIBUTES but we can modify this later as desired and appropriate
 HTML_ALLOWED_ATTRIBUTES = deepcopy(nh3.ALLOWED_ATTRIBUTES)
 
+#
+# Non-filter qurery parameters
+#
+
+NON_FILTER_PARAMS = (
+    "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
+    "page",  # used by django-tables2.RequestConfig
+    "per_page",  # used by get_paginate_count
+    "sort",  # table sorting
+    "saved_view",  # saved_view indicator pk or composite keys
+    "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
+    "all_filters_removed",  # indicator for if all filters have been removed from the saved view
+    "clear_view",  # indicator for if the clear view button is clicked or not
+)
 
 #
 # Reserved Names

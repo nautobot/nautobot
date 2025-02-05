@@ -1543,6 +1543,39 @@ class SavedViewTest(ModelViewTestCase):
         # Assert that Location List View got redirected to Saved View set as user default
         self.assertBodyContains(response, "<strong>User Location Default View</strong>", html=True)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_filtered_view_precedes_global_default(self):
+        view_name = "dcim:location_list"
+        SavedView.objects.create(
+            name="Global Location Default View",
+            owner=self.user,
+            view=view_name,
+            is_global_default=True,
+        )
+        response = self.client.get(reverse(view_name) + "?location_type=Campus", follow=True)
+        # Assert that the user is not redirected to the global default view
+        # But instead redirected to the filtered view
+        self.assertNotIn(
+            "<strong>Global Location Default View</strong>",
+            extract_page_body(response.content.decode(response.charset)),
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_filtered_view_precedes_user_default(self):
+        view_name = "dcim:location_list"
+        sv = SavedView.objects.create(
+            name="User Location Default View",
+            owner=self.user,
+            view=view_name,
+        )
+        UserSavedViewAssociation.objects.create(user=self.user, saved_view=sv, view_name=sv.view)
+        response = self.client.get(reverse(view_name) + "?location_type=Campus", follow=True)
+        # Assert that the user is not redirected to the user default view
+        # But instead redirected to the filtered view
+        self.assertNotIn(
+            "<strong>User Location Default View</strong>", extract_page_body(response.content.decode(response.charset))
+        )
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_is_shared(self):
         view_name = "dcim:location_list"

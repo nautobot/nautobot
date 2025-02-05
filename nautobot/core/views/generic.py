@@ -26,7 +26,7 @@ from django_filters import FilterSet
 from django_tables2 import RequestConfig, Table
 
 from nautobot.core.api.utils import get_serializer_for_model
-from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
+from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT, NON_FILTER_PARAMS
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -163,7 +163,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         params = request.GET.copy()
         filter_params = get_filterable_params_from_filter_params(
             params,
-            self.non_filter_params,
+            NON_FILTER_PARAMS,
             self.filterset(),  # pylint: disable=not-callable  # this fn is only called if filterset is not None
         )
         if params.get("saved_view") and not filter_params and not params.get("all_filters_removed"):
@@ -214,8 +214,14 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         resolved_path = resolve(request.path)
         list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
 
+        skip_user_and_global_default_saved_view = False
+        for key in request.GET.keys():
+            if key not in NON_FILTER_PARAMS:
+                skip_user_and_global_default_saved_view = True
+                break
+
         # If the user clicks on the clear view button, we do not check for global or user defaults
-        if not clear_view and not request.GET.get("saved_view"):
+        if not skip_user_and_global_default_saved_view and not clear_view and not request.GET.get("saved_view"):
             # Check if there is a default for this view for this specific user
             if not isinstance(user, AnonymousUser):
                 try:
