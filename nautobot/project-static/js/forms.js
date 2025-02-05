@@ -375,17 +375,16 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
 
 // Flatpickr selectors
 function initializeDateTimePicker(context){
-    this_context = $(context);
-    this_context.find('.date-picker').flatpickr({
+    flatpickr('.date-picker', {
         allowInput: true
     });
-    this_context.find('.datetime-picker').flatpickr({
+    flatpickr('.datetime-picker', {
         allowInput: true,
         enableSeconds: true,
         enableTime: true,
         time_24hr: true
     });
-    this_context.find('.time-picker').flatpickr({
+    flatpickr('.time-picker', {
         allowInput: true,
         enableSeconds: true,
         enableTime: true,

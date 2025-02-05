@@ -1,0 +1,37 @@
+{
+  "name": "nautobot",
+  "packageManager": "yarn@4.6.0",
+  "private": true,
+  "dependencies": {
+    "@mdi/font": "^7.4.47",
+    "@popperjs/core": "^2.11.8",
+    "bootstrap": "^5.3.3",
+    "clipboard": "2.0.9",
+    "flatpickr": "4.6.9",
+    "graphiql": "1.5.16",
+    "graphql": "^16.10.0",
+    "highlight.js": "11.9.0",
+    "jquery": "^3.7.1",
+    "jquery-ui": "^1.14.1",
+    "punycode": "^2.3.1",
+    "react": "16.14.0",
+    "react-dom": "16.14.0",
+    "select2": "^4.1.0-rc.0",
+    "subscriptions-transport-ws": "0.9.18",
+    "whatwg-fetch": "3.6.2"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "css-loader": "^7.1.2",
+    "mini-css-extract-plugin": "^2.9.2",
+    "postcss": "^8.5.1",
+    "postcss-loader": "^8.1.1",
+    "sass": "^1.84.0",
+    "sass-loader": "^16.0.4",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1"
+  },
+  "scripts": {
+    "build": "webpack build --mode=production"
+  }
+}

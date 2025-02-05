@@ -1,0 +1,69 @@
+/* nautobot.scss */
+
+/* 1. Include functions first (so you can manipulate colors, SVGs, calc, etc) */
+@import "bootstrap/scss/functions";
+
+/* 2. Include any default variable overrides here */
+$blue: #007dff;
+$gray-500: #919396;
+$green: #169f32;
+$orange: #ff8000;
+$red: #e01f1f;
+
+$primary: $blue;
+$success: $green;
+$info: $blue;
+$warning: $orange;
+$danger: $red;
+
+/* 3. Include remainder of required Bootstrap stylesheets (including any separate color mode stylesheets) */
+@import "bootstrap/scss/variables";
+@import "bootstrap/scss/variables-dark";
+
+/* 4. Include any default map overrides here */
+
+/* 5. Include remainder of required parts */
+@import "bootstrap/scss/maps";
+@import "bootstrap/scss/mixins";
+@import "bootstrap/scss/utilities";
+
+/* 6. Optionally include any other parts as needed */
+/* TODO: review the below and trim it down as appropriate */
+@import "bootstrap/scss/root";
+@import "bootstrap/scss/reboot";
+@import "bootstrap/scss/type";
+@import "bootstrap/scss/images";
+@import "bootstrap/scss/containers";
+@import "bootstrap/scss/grid";
+@import "bootstrap/scss/tables";
+@import "bootstrap/scss/forms";
+@import "bootstrap/scss/buttons";
+@import "bootstrap/scss/transitions";
+@import "bootstrap/scss/dropdown";
+@import "bootstrap/scss/button-group";
+@import "bootstrap/scss/nav";
+@import "bootstrap/scss/navbar";
+@import "bootstrap/scss/card";
+@import "bootstrap/scss/accordion";
+@import "bootstrap/scss/breadcrumb";
+@import "bootstrap/scss/pagination";
+@import "bootstrap/scss/badge";
+@import "bootstrap/scss/alert";
+@import "bootstrap/scss/progress";
+@import "bootstrap/scss/list-group";
+@import "bootstrap/scss/close";
+@import "bootstrap/scss/toasts";
+@import "bootstrap/scss/modal";
+@import "bootstrap/scss/tooltip";
+@import "bootstrap/scss/popover";
+/* @import "bootstrap/scss/carousel"; */
+@import "bootstrap/scss/spinners";
+@import "bootstrap/scss/offcanvas";
+@import "bootstrap/scss/placeholders";
+
+@import "bootstrap/scss/helpers";
+
+/* 7. Optionally include utilities API last to generate classes based on the Sass map in `_utilities.scss` */
+@import "bootstrap/scss/utilities/api";
+
+/* 8. Add additional custom code here */
