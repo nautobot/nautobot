@@ -83,9 +83,11 @@
 
       /** Loads Monaco Editor assets and initializes the environment. */
       static async loadMonaco() {
+          // Return immediately if Monaco is already loaded
           if (window.monaco) return;
 
-          await new Promise((resolve, reject) => {
+          // Use existing loader promise or create new one
+          window._monacoLoaderPromise = window._monacoLoaderPromise || new Promise((resolve, reject) => {
               const script = document.createElement('script');
               script.src = `${MONACO_BASE}/vs/loader.js`;
               script.onload = () => {
@@ -98,6 +100,8 @@
               script.onerror = reject;
               document.head.appendChild(script);
           });
+
+          await window._monacoLoaderPromise;
       }
 
       /** Constructs a new Editor instance with configuration from host element. */
