@@ -593,6 +593,7 @@ class BaseFilterSet(django_filters.FilterSet):
     FILTER_DEFAULTS.update(
         {
             models.AutoField: {"filter_class": MultiValueNumberFilter},
+            models.BooleanField: {"filter_class": MultiValueCharFilter},
             models.BigIntegerField: {"filter_class": MultiValueBigNumberFilter},
             models.CharField: {"filter_class": MultiValueCharFilter},
             models.DateField: {"filter_class": MultiValueDateFilter},
