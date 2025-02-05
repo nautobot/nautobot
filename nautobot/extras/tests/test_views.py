@@ -1568,6 +1568,33 @@ class SavedViewTest(ModelViewTestCase):
         self.assertIn(str(sv_shared.pk), response_body, msg=response_body)
         self.assertNotIn(str(sv_not_shared.pk), response_body, msg=response_body)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_saved_views_contain_boolean_filter_params(self):
+        view_name = "extras:job_list"
+        sv = SavedView.objects.create(
+            name="Hidden Jobs",
+            owner=self.user,
+            view=view_name,
+            config={
+                "filter_params": {
+                    "hidden": [True],
+                }
+            },
+        )
+        app_label = view_name.split(":")[0]
+        model_name = view_name.split(":")[1].split("_")[0]
+        self.add_permissions(f"{app_label}.view_{model_name}")
+        response = self.client.get(reverse(view_name) + "?saved_view=" + str(sv.pk), follow=True)
+        # Assert that Job List View rendered with the boolean filter parameter without error
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(str(sv.pk), response_body, msg=response_body)
+        self.assertBodyContains(response, "<strong>Hidden Jobs</strong>", html=True)
+        hidden_job = Job.objects.get(name="Example hidden job")
+        hidden_job.description = "I should not show in the UI!"
+        # This is the description
+        self.assertBodyContains(response, "I should not show in the UI!", html=True)
+
 
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
 class SecretTestCase(
