@@ -86,6 +86,10 @@ class ObjectsListMixin:
         """
         self.click_button('#select_all_box button[name="_edit"]')
 
+    def click_table_link(self, row=1, column=2):
+        """By default, tries to click column next to checkbox to go to the details page."""
+        self.browser.find_by_xpath(f'//*[@id="object_list_form"]//tbody/tr[{row}]/td[{column}]/a').click()
+
     @property
     def objects_list_visible_items(self):
         """
@@ -106,6 +110,22 @@ class ObjectsListMixin:
         self.browser.find_by_xpath('//*[@id="id__filterbtn"]').click()
         self.fill_filters_select2_field(field, value)
         self.click_button('#default-filter button[type="submit"]')
+
+
+class ObjectDetailsMixin:
+    def assertPanelValue(self, panel_label, field_label, expected_value, exact_match=False):
+        """
+        Find the proper panel and asserts if given value match rendered field value.
+        By default, it's not using the exact match, because on the UI we're often adding
+        additional tags, relationships or units.
+        """
+        panel_xpath = f'//*[@id="main"]//div[@class="panel-heading"][contains(normalize-space(), "{panel_label}")]/following-sibling::table'
+        value = self.browser.find_by_xpath(f'{panel_xpath}//td[text()="{field_label}"]/following-sibling::td[1]').text
+
+        if exact_match:
+            self.assertEqual(value, str(expected_value))
+        else:
+            self.assertIn(str(expected_value), value)
 
 
 class BulkOperationsMixin:
@@ -196,6 +216,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
 
     host = "0.0.0.0"  # noqa: S104  # hardcoded-bind-all-interfaces -- false positive
     selenium_host = SELENIUM_HOST  # Docker: `nautobot`; else `host.docker.internal`
+    logged_in = False
 
     @classmethod
     def setUpClass(cls):
@@ -218,6 +239,10 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def live_server_url(cls):  # pylint: disable=no-self-argument
         return f"http://{cls.selenium_host}:{cls.server_thread.port}"
+
+    def tearDown(self):
+        if self.logged_in:
+            self.logout()
 
     @classmethod
     def tearDownClass(cls):
@@ -296,7 +321,12 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         Helper function to fill a Select2 single selection field on add/edit forms.
         """
         search_box = self._fill_select2_field(field_name, value)
-        search_box.first.type(Keys.ENTER)
+        if value:
+            self.browser.find_by_xpath(
+                f"//li[contains(@class, 'select2-results__option') and text()='{value}']"
+            ).click()
+        else:
+            search_box.first.type(Keys.ENTER)
 
     def fill_filters_select2_field(self, field_name, value):
         """
@@ -327,6 +357,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         self.user.is_superuser = True
         self.user.save()
         self.login(self.user.username, self.password)
+        self.logged_in = True
 
 
 class BulkOperationsTestCases:
@@ -366,10 +397,6 @@ class BulkOperationsTestCases:
             self.setup_items()
             self.login_as_superuser()
             self.go_to_model_list_page()
-
-        def tearDown(self):
-            self.logout()
-            super().tearDown()
 
         def go_to_model_list_page(self):
             self.click_navbar_entry(*self.model_menu_path)
