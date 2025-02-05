@@ -1,21 +1,2 @@
-{% extends 'generic/object_create.html' %}
-{% load static %}
-{% load form_helpers %}
-
-{% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Tenant</strong></div>
-        <div class="panel-body">
-            {% render_field form.name %}
-            {% render_field form.tenant_group %}
-            {% render_field form.description %}
-        </div>
-    </div>
-    {% include 'inc/extras_features_edit_form_fields.html' %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Comments</strong></div>
-        <div class="panel-body">
-            {% render_field form.comments %}
-        </div>
-    </div>
-{% endblock %}
+{% extends 'tenancy/tenant_create.html' %}
+{% comment %}2.0 TODO: remove this template, which only exists for backward compatibility with 1.3 and earlier{% endcomment %}
