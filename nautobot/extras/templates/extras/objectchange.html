@@ -134,13 +134,13 @@
                             {% endif %}
                         </span>
                     {% else %}
-                    <div class="editor-container" 
-                        data-mode="diff"
-                        data-original="{{ diff_removed | render_json:False }}"
-                        data-modified="{{ diff_added | render_json:False }}"
-                        data-lang="json"
-                        style="max-height: 730px">
-                    </div>
+                        <div class="editor-container" 
+                            data-mode="diff"
+                            data-original="{{ diff_removed | render_json:False }}"
+                            data-modified="{{ diff_added | render_json:False }}"
+                            data-lang="json"
+                            style="max-height: 730px">
+                        </div>
                     {% endif %}
                 </div>
             </div>
