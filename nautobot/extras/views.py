@@ -71,7 +71,7 @@ from nautobot.dcim.tables import (
     VirtualDeviceContextTable,
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
-from nautobot.extras.utils import format_query_param_dict, get_base_template, get_job_queue, get_worker_count
+from nautobot.extras.utils import fixup_filterset_query_params, get_base_template, get_job_queue, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -1855,7 +1855,7 @@ class SavedViewUIViewSet(
         if is_shared:
             is_shared = True
         params = request.POST.get("params", "")
-        param_dict = format_query_param_dict(parse_qs(params), view_name, self.non_filter_params)
+        param_dict = fixup_filterset_query_params(parse_qs(params), view_name, self.non_filter_params)
 
         single_value_params = ["saved_view", "table_changes_pending", "all_filters_removed", "per_page"]
         for key in param_dict.keys():

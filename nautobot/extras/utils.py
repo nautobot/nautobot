@@ -885,7 +885,7 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
             change_context.reset_deferred_object_changes()
 
 
-def format_query_param_dict(param_dict, view_name, non_filter_params):
+def fixup_filterset_query_params(param_dict, view_name, non_filter_params):
     """
     Called before saving query filter parameters to a SavedView's config. This function will format
     single value query parameters to be saved as a single values instead of lists of singles values.
