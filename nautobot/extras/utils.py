@@ -896,7 +896,11 @@ def format_query_param_dict(param_dict, view_name, non_filter_params):
         non_filter_params (list): List of non-query parameters that should not be formatted.
     """
     model = get_model_for_view_name(view_name)
-    filterset_class = get_filterset_for_model(model)
+    try:
+        filterset_class = get_filterset_for_model(model)
+    except TypeError:
+        return param_dict
+
     filterset = filterset_class()
 
     for filter_field, value in param_dict.items():
