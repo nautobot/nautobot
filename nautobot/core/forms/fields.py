@@ -18,6 +18,7 @@ from netaddr.core import AddrFormatError
 
 from nautobot.core import choices as core_choices, forms
 from nautobot.core.forms import widgets
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.models import validators
 from nautobot.core.utils import data as data_utils, lookup
 
@@ -248,6 +249,26 @@ class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
     def _string_choices_from_queryset(self):
         """Overload choices to return `{app_label}.{model}` instead of PKs."""
         return [(f"{m.app_label}.{m.model}", m.app_labeled_name) for m in self.queryset.all()]
+
+
+class MultiValueBooleanField(django_forms.BooleanField):
+    """
+    Boolean Field that can optionally take both boolean inputs True and False.
+    """
+
+    widget=widgets.StaticSelect2Multiple(choices=BOOLEAN_WITH_BLANK_CHOICES)
+
+    def to_python(self, value):
+        self.field_class = django_forms.BooleanField
+        if value is None:
+            return []
+
+        # enforcing a list type here.
+        if not isinstance(value, list):
+            value = [value]
+
+        result = [self.field_class.to_python(self, v) for v in value]
+        return result
 
 
 class MultiValueCharField(django_forms.CharField):
