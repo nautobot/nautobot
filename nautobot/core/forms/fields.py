@@ -251,26 +251,6 @@ class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
         return [(f"{m.app_label}.{m.model}", m.app_labeled_name) for m in self.queryset.all()]
 
 
-class MultiValueBooleanField(django_forms.BooleanField):
-    """
-    Boolean Field that can optionally take both boolean inputs True and False.
-    """
-
-    widget = widgets.StaticSelect2Multiple(choices=BOOLEAN_WITH_BLANK_CHOICES)
-
-    def to_python(self, value):
-        self.field_class = django_forms.BooleanField
-        if value is None:
-            return []
-
-        # enforcing a list type here.
-        if not isinstance(value, list):
-            value = [value]
-
-        result = [self.field_class.to_python(self, v) for v in value]
-        return result
-
-
 class MultiValueCharField(django_forms.CharField):
     """
     CharField that takes multiple user character inputs and render them as tags in the form field.

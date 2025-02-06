@@ -74,10 +74,6 @@ def multivalue_field_factory(field_class, widget=django_forms.SelectMultiple):
 #
 
 
-class MultiValueBooleanFilter(django_filters.BooleanFilter, django_filters.MultipleChoiceFilter):
-    field_class = forms.MultiValueBooleanField
-
-
 class MultiValueCharFilter(django_filters.CharFilter, django_filters.MultipleChoiceFilter):
     field_class = forms.MultiValueCharField
 
@@ -597,7 +593,6 @@ class BaseFilterSet(django_filters.FilterSet):
     FILTER_DEFAULTS.update(
         {
             models.AutoField: {"filter_class": MultiValueNumberFilter},
-            models.BooleanField: {"filter_class": MultiValueBooleanFilter},
             models.BigIntegerField: {"filter_class": MultiValueBigNumberFilter},
             models.CharField: {"filter_class": MultiValueCharFilter},
             models.DateField: {"filter_class": MultiValueDateFilter},
