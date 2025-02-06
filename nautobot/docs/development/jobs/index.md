@@ -790,7 +790,7 @@ class MyJobTestCase(TransactionTestCase):
             self.assertEqual(log_entry.message, "...")
 ```
 
-The test files should be placed under the `tests` folder in the app's directory or under JOBS_ROOT. The test can be run via `nautobot-server test [path to test in dotted directory format]` or `pytest [path to test in slash directory format]`. 
+The test files should be placed under the `tests` folder in the app's directory or under JOBS_ROOT. The test can be run via `nautobot-server test [path to test in dotted directory format]` or `pytest [path to test in slash directory format]`.
 
 !!! tip
     For running tests directly in the JOBS_ROOT, make sure the `JOBS_ROOT` environment variable is set.
