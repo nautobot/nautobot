@@ -316,24 +316,27 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         self.browser.is_element_not_present_by_css(".loading-results", wait_time=5)
         return search_box
 
+    def _select_select2_result(self):
+        found_results = self.browser.find_by_css(".select2-results li.select2-results__option")
+        # click the first found item if it's not `None`: special value to nullify field
+        if found_results.first.text != "None":
+            found_results.first.click()
+        else:
+            found_results[1].click()
+
     def fill_select2_field(self, field_name, value):
         """
         Helper function to fill a Select2 single selection field on add/edit forms.
         """
-        search_box = self._fill_select2_field(field_name, value)
-        if value:
-            self.browser.find_by_xpath(
-                f"//li[contains(@class, 'select2-results__option') and text()='{value}']"
-            ).click()
-        else:
-            search_box.first.type(Keys.ENTER)
+        self._fill_select2_field(field_name, value)
+        self._select_select2_result()
 
     def fill_filters_select2_field(self, field_name, value):
         """
         Helper function to fill a Select2 single selection field on filters modals.
         """
         self._fill_select2_field(field_name, value, search_box_class="select2-search select2-search--inline")
-        self.browser.find_by_xpath(f"//li[contains(@class, 'select2-results__option') and text()='{value}']").click()
+        self._select_select2_result()
 
     def fill_select2_multiselect_field(self, field_name, value):
         """
