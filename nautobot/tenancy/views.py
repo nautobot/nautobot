@@ -3,7 +3,6 @@ from django_tables2 import RequestConfig
 from nautobot.circuits.models import Circuit
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel, StatsPanel
-from nautobot.core.views import mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, ControllerManagedDeviceGroup, Device, Location, Rack, RackReservation
@@ -20,16 +19,8 @@ from .models import Tenant, TenantGroup
 #
 
 
-class TenantGroupUIViewSet(
-    mixins.ObjectDetailViewMixin,
-    mixins.ObjectListViewMixin,
-    mixins.ObjectEditViewMixin,
-    mixins.ObjectDestroyViewMixin,
-    mixins.ObjectBulkDestroyViewMixin,
-    mixins.ObjectBulkCreateViewMixin,
-    mixins.ObjectChangeLogViewMixin,
-    mixins.ObjectNotesViewMixin,
-):
+class TenantGroupUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.TenantGroupBulkEditForm
     filterset_class = filters.TenantGroupFilterSet
     filterset_form_class = forms.TenantGroupFilterForm
     form_class = forms.TenantGroupForm
