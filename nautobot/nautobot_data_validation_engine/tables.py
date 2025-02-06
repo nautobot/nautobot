@@ -28,7 +28,7 @@ class RegularExpressionValidationRuleTable(BaseTable):
         """Table metadata for the RegularExpressionValidationRule model."""
 
         model = RegularExpressionValidationRule
-        fields = (  # pylint: disable=nb-use-fields-all
+        fields = (
             "pk",
             "name",
             "enabled",
@@ -67,7 +67,7 @@ class MinMaxValidationRuleTable(BaseTable):
         """Table metadata for the MinMaxValidationRuleTable model."""
 
         model = MinMaxValidationRule
-        fields = (  # pylint: disable=nb-use-fields-all
+        fields = (
             "pk",
             "name",
             "enabled",
@@ -106,7 +106,7 @@ class RequiredValidationRuleTable(BaseTable):
         """Table metadata for the RequiredValidationRuleTable model."""
 
         model = RequiredValidationRule
-        fields = (  # pylint: disable=nb-use-fields-all
+        fields = (
             "pk",
             "name",
             "enabled",
@@ -141,7 +141,7 @@ class UniqueValidationRuleTable(BaseTable):
         """Table metadata for the UniqueValidationRuleTable model."""
 
         model = UniqueValidationRule
-        fields = (  # pylint: disable=nb-use-fields-all
+        fields = (
             "pk",
             "name",
             "enabled",
@@ -196,7 +196,7 @@ class DataComplianceTable(BaseTable):
         """Meta class for DataComplianceTable."""
 
         model = DataCompliance
-        fields = [  # pylint: disable=nb-use-fields-all
+        fields = [
             "pk",
             "id",
             "content_type",
@@ -222,7 +222,7 @@ class DataComplianceTable(BaseTable):
         ]
 
 
-class DataComplianceTableTab(BaseTable):  # pylint: disable=nb-sub-class-name
+class DataComplianceTableTab(BaseTable):
     """Base table for viewing the DataCompliance related to a single object."""
 
     validated_attribute = ValidatedAttributeColumn()
@@ -232,7 +232,7 @@ class DataComplianceTableTab(BaseTable):  # pylint: disable=nb-sub-class-name
 
         model = DataCompliance
         order_by = ("compliance_class_name", "validated_attribute")
-        fields = [  # pylint: disable=nb-use-fields-all
+        fields = [
             "content_type",
             "compliance_class_name",
             "last_validation_date",

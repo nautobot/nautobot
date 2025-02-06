@@ -99,7 +99,7 @@ class RunRegisteredDataComplianceRules(Job):
     def report_for_validation_rules():
         """Run built-in data validation rules and add to report."""
         query = (
-            Q(uniquevalidationrule__isnull=False)
+            Q(uniquevalidationrule__isnull=False)  # pylint: disable=unsupported-binary-operation
             | Q(regularexpressionvalidationrule__isnull=False)
             | Q(minmaxvalidationrule__isnull=False)
             | Q(requiredvalidationrule__isnull=False)

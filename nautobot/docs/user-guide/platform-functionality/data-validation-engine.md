@@ -3,6 +3,7 @@
 The data validation engine offers a set of user definable rules which are used to enforce business constraints on the data in Nautobot. These rules are tied to particular models and each rule is meant to enforce one aspect of a business use case.
 
 Supported rule types include:
+
 - Regular expression
 - Min/max value
 - Required fields
@@ -18,13 +19,13 @@ Supported rule types include:
 
 Each rule is defined with these fields:
 
-* name - A unique name for the rule.
-* enabled - A boolean to toggle enforcement of the rule on and off.
-* content type - The Nautobot model to which the rule should apply (e.g. device, location, etc.).
-* field - The name of the numeric based field on the model to which the min/max value is validated.
-* min - The min value to validate value against (greater than or equal).
-* max - The max value to validate value against (less than or equal).
-* error message - An optional error message to display to the user when validation fails. By default, a message indicating validation against the defined min/max value has failed is shown.
+- name - A unique name for the rule.
+- enabled - A boolean to toggle enforcement of the rule on and off.
+- content type - The Nautobot model to which the rule should apply (e.g. device, location, etc.).
+- field - The name of the numeric based field on the model to which the min/max value is validated.
+- min - The min value to validate value against (greater than or equal).
+- max - The max value to validate value against (less than or equal).
+- error message - An optional error message to display to the user when validation fails. By default, a message indicating validation against the defined min/max value has failed is shown.
 
 ![Min/Max Rules Edit](../../media/data-validation-engine/min-max-rules-edit.png)
 
@@ -38,13 +39,13 @@ In this example, a max value for VLAN IDs has been configured, preventing VLANs 
 
 Each rule is defined with these fields:
 
-* name - A unique name for the rule.
-* enabled - A boolean to toggle enforcement of the rule on and off.
-* content type - The Nautobot model to which the rule should apply (e.g. device, location, etc.).
-* field - The name of the character based field on the model to which the regular expression is validated.
-* regular expression - The body of the regular expression used for validation.
-* context processing - A boolean to toggle Jinja2 context processing of the regular expression prior to evaluation
-* error message - An optional error message to display to the use when validation fails. By default, a message indicating validation against the defined regular expression has failed is shown.
+- name - A unique name for the rule.
+- enabled - A boolean to toggle enforcement of the rule on and off.
+- content type - The Nautobot model to which the rule should apply (e.g. device, location, etc.).
+- field - The name of the character based field on the model to which the regular expression is validated.
+- regular expression - The body of the regular expression used for validation.
+- context processing - A boolean to toggle Jinja2 context processing of the regular expression prior to evaluation
+- error message - An optional error message to display to the use when validation fails. By default, a message indicating validation against the defined regular expression has failed is shown.
 
 ![Regex Rules Edit](../../media/data-validation-engine/regex-rules-edit.png)
 
@@ -67,11 +68,11 @@ In this example the name of a device must start with the first three characters 
 
 Each rule is defined with these fields:
 
-* name - A unique name for the rule.
-* enabled - A boolean to toggle enforcement of the rule on and off.
-* content type - The Nautobot model to which the rule should apply (e.g. device, location, etc.).
-* field - The name of the field on the Nautobot model which should always be required.
-* error message - An optional error message to display to the user when validation fails. By default, a message indicating the field may not be left blank is shown.
+- name - A unique name for the rule.
+- enabled - A boolean to toggle enforcement of the rule on and off.
+- content type - The Nautobot model to which the rule should apply (e.g. device, location, etc.).
+- field - The name of the field on the Nautobot model which should always be required.
+- error message - An optional error message to display to the user when validation fails. By default, a message indicating the field may not be left blank is shown.
 
 ![Required Rules Edit](../../media/data-validation-engine/required-rules-edit.png)
 
@@ -85,12 +86,12 @@ In this example, a rule is enforcing that location objects must always have a de
 
 Each rule is defined with these fields:
 
-* name - A unique name for the rule.
-* enabled - A boolean to toggle enforcement of the rule on and off.
-* content type - The Nautobot model to which the rule should apply (e.g. device, location, etc.).
-* field - The name of the field on the Nautobot model which should always be required.
-* max instances - The total number of records that may have the same unique value for the given field. Default of 1.
-* error message - An optional error message to display to the user when validation fails. By default, a message indicating the value already exists on another record or set of records, as determined by max instances.
+- name - A unique name for the rule.
+- enabled - A boolean to toggle enforcement of the rule on and off.
+- content type - The Nautobot model to which the rule should apply (e.g. device, location, etc.).
+- field - The name of the field on the Nautobot model which should always be required.
+- max instances - The total number of records that may have the same unique value for the given field. Default of 1.
+- error message - An optional error message to display to the user when validation fails. By default, a message indicating the value already exists on another record or set of records, as determined by max instances.
 
 ![Unique Rules Edit](../../media/data-validation-engine/unique-rules-edit.png)
 
