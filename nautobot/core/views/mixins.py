@@ -723,8 +723,16 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             if response is not None:
                 return response
 
+        skip_user_and_global_default_saved_view = False
+        if self.filterset_class is not None:
+            skip_user_and_global_default_saved_view = get_filterable_params_from_filter_params(
+                request.GET.copy(),
+                self.non_filter_params,
+                self.filterset_class(),
+            )
+
         # If the user clicks on the clear view button, we do not check for global or user defaults
-        if not clear_view and not request.GET.get("saved_view"):
+        if not skip_user_and_global_default_saved_view and not clear_view and not request.GET.get("saved_view"):
             # Check if there is a default for this view for this specific user
             app_label, model_name = queryset.model._meta.label.split(".")
             view_name = f"{app_label}:{model_name.lower()}_list"
