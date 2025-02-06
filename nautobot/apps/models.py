@@ -56,6 +56,7 @@ from nautobot.extras.plugins import CustomValidator
 from nautobot.extras.utils import extras_features
 from nautobot.ipam.fields import VarbinaryIPField
 from nautobot.ipam.models import get_default_namespace, get_default_namespace_pk
+from nautobot.nautobot_data_validation_engine.custom_validators import ComplianceError, DataComplianceRule
 
 __all__ = (
     "AttributeSetter",
@@ -65,6 +66,7 @@ __all__ = (
     "ChangeLoggedModel",
     "CollateAsChar",
     "ColorField",
+    "ComplianceError",
     "CompositeKeyQuerySetMixin",
     "ConfigContextModel",
     "ConfigContextSchemaValidationMixin",
@@ -72,6 +74,7 @@ __all__ = (
     "ContentTypeRelatedQuerySet",
     "CustomFieldModel",
     "CustomValidator",
+    "DataComplianceRule",
     "DynamicGroupMixin",
     "DynamicGroupsModelMixin",
     "EmptyGroupByJSONBAgg",

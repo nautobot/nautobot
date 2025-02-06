@@ -30,6 +30,12 @@ E005 = Error(
     obj=settings,
 )
 
+E006 = Error(
+    "The Data Validation Engine app has been moved directly into Nautobot Core.  Please remove 'nautobot_data_validation_engine' from PLUGINS and PLUGINS_CONFIG in your nautobot_config.py.  You should also uninstall 'nautobot-data-validation-engine' from the python environment.",
+    id="nautobot.core.E006",
+    obj=settings,
+)
+
 W005 = Warning(
     "STORAGE_CONFIG has been set but STORAGE_BACKEND is not defined. STORAGE_CONFIG will be ignored.",
     id="nautobot.core.W005",
@@ -139,3 +145,10 @@ def check_sanitizer_patterns(app_configs, **kwargs):
             )
 
     return errors
+
+
+@register(Tags.compatibility)
+def check_data_validation_engine_installed(app_configs, **kwargs):
+    if "nautobot_data_validation_engine" in settings.PLUGINS:
+        return [E006]
+    return []

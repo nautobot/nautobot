@@ -51,6 +51,7 @@ urlpatterns = [
     path("users/", include("nautobot.users.api.urls")),
     path("virtualization/", include("nautobot.virtualization.api.urls")),
     path("wireless/", include("nautobot.wireless.api.urls")),
+    path("data-validation-engine/", include("nautobot.nautobot_data_validation_engine.api.urls")),
     path("status/", StatusView.as_view(), name="api-status"),
     path("docs/", NautobotSpectacularSwaggerView.as_view(url_name="schema"), name="api_docs"),
     path("redoc/", NautobotSpectacularRedocView.as_view(url_name="schema"), name="api_redocs"),
