@@ -214,12 +214,11 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         resolved_path = resolve(request.path)
         list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
 
-        filterable_params = get_filterable_params_from_filter_params(
+        skip_user_and_global_default_saved_view = get_filterable_params_from_filter_params(
             request.GET.copy(),
             self.non_filter_params,
             self.filterset(),  # pylint: disable=not-callable  # this fn is only called if filterset is not None
         )
-        skip_user_and_global_default_saved_view = True if filterable_params else False
 
         # If the user clicks on the clear view button, we do not check for global or user defaults
         if not skip_user_and_global_default_saved_view and not clear_view and not request.GET.get("saved_view"):
