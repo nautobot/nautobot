@@ -33,7 +33,6 @@ from rest_framework.viewsets import GenericViewSet
 
 from nautobot.core import exceptions as core_exceptions
 from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
-from nautobot.core.constants import NON_FILTER_PARAMS
 from nautobot.core.forms import (
     BootstrapMixin,
     ConfirmationForm,
@@ -480,7 +479,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         params = request.GET.copy()
         filter_params = get_filterable_params_from_filter_params(
             params,
-            NON_FILTER_PARAMS,
+            self.non_filter_params,
             self.filterset_class(),  # pylint: disable=not-callable  # only called if filterset_class is not None
         )
         if params.get("saved_view") and not filter_params and not params.get("all_filters_removed"):
@@ -724,10 +723,12 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             if response is not None:
                 return response
 
-        skip_user_and_global_default_saved_view = False
-        for key in request.GET.keys():
-            if key not in NON_FILTER_PARAMS:
-                skip_user_and_global_default_saved_view = True
+        filterable_params = get_filterable_params_from_filter_params(
+            request.GET.copy(),
+            self.non_filter_params,
+            self.filterset_class(),  # pylint: disable=not-callable  # this fn is only called if filterset is not None
+        )
+        skip_user_and_global_default_saved_view = True if filterable_params else False
 
         # If the user clicks on the clear view button, we do not check for global or user defaults
         if not skip_user_and_global_default_saved_view and not clear_view and not request.GET.get("saved_view"):
