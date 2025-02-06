@@ -1,4 +1,4 @@
-# Populating Extensibility Feature And Base Data
+# Prepopulating Data
 
 In many cases, an app may wish to make use of Nautobot's various extensibility features, such as [custom fields](../../../../user-guide/platform-functionality/customfield.md) or [relationships](../../../../user-guide/platform-functionality/relationship.md). It can be useful for an app to automatically create a custom field definition or relationship definition as a consequence of being installed and activated, so that everyday usage of the app can rely upon these definitions to be present.
 
@@ -8,7 +8,7 @@ Furthermore, sometimes apps might want to create a baseline of available data. T
 
 +++ 1.2.0
 
-In general, it is recommended to use custom [signal](https://docs.djangoproject.com/en/stable/topics/signals/), `nautobot_database_ready` that apps can register to listen for. This signal is triggered when `nautobot-server migrate` or `nautobot-server post_upgrade` is run after installing an app, and provides an opportunity for the app to make any desired additions to the database at this time.
+In general, it is recommended to use custom [signal](https://docs.djangoproject.com/en/stable/topics/signals/) handlers listening to the `nautobot_database_ready` signal. This signal is triggered when `nautobot-server migrate` or `nautobot-server post_upgrade` is run after installing an app, and provides an opportunity for the app to make any desired additions to the database at this time.
 
 For example, maybe we want our app to make use of a Relationship allowing each Location to be linked to our Animal model. We would define our callback function that makes sure this Relationship exists, by convention in a `signals.py` file:
 
@@ -77,13 +77,15 @@ While the signal handler approach works for most use cases, it does have its dow
 
 The following table details points that are somewhat easily comparable between the different options.
 
-| Option                                       | Startup Impact                       | Execution | Performance | Re-running | Idempotence | Modifications Possible      | Custom App Needed |
-|----------------------------------------------|--------------------------------------|-----------|-------------|------------|-------------|-----------------------------|-------------------|
-| Signal Handlers on `nautobot_database_ready` | Exceptions prevent container startup | Automatic | Average     | Possible   | Enforced    | Overwrite/crash on next run | Yes               |
-| Django Data Migrations                       | Exceptions prevent container startup | Automatic | Average     | Impossible | N/A         | Yes                         | Yes               |
-| Django Fixtures                              | N/A                                  | Manual    | Good        | Possible   | TBD         | Overwrite/Crash on next run | No                |
-| Design Builder Jobs                          | N/A                                  | Manual    | Average     | Possible   | Possible    | Overwrite/Crash on next run | No                |
-| Creating Data In-place Where Needed          | N/A                                  | Automatic | Average     | Possible   | Possible    | Overwrite/crash on next run | No                |
+| Feature           | Signal Handlers on `nautobot_database_ready`                                         | Django Data Migrations               | Django Fixtures                                                                      | Design Builder Jobs                                                                  | Creating Data In-place Where Needed                                                  |
+|-------------------|--------------------------------------------------------------------------------------|--------------------------------------|--------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|
+| Startup Impact    | Exceptions prevent container startup                                                 | Exceptions prevent container startup | N/A                                                                                  | N/A                                                                                  | N/A                                                                                  |
+| Execution         | Automatic                                                                            | Automatic                            | Manual                                                                               | Manual                                                                               | Automatic                                                                            |
+| Performance       | Average                                                                              | Average                              | Good                                                                                 | Average                                                                              | Average                                                                              |
+| Re-running        | Possible, modified data may be overwritten/cause crashes                             | Impossible                           | Possible, modified data may be overwritten/cause crashes                             | Possible, modified data may be overwritten/cause crashes                             | Possible, modified data may be overwritten/cause crashes                             |
+| Idempotence       | Enforced                                                                             | N/A                                  | TBD                                                                                  | Possible                                                                             | Possible                                                                             |
+| Custom App Needed | Yes                                                                                  | Yes                                  | No                                                                                   | No                                                                                   | No                                                                                   |
+| Maintenance       | May require updates over time to remain operational as Nautobot's data model evolves | No maintenance required              | May require updates over time to remain operational as Nautobot's data model evolves | May require updates over time to remain operational as Nautobot's data model evolves | May require updates over time to remain operational as Nautobot's data model evolves |
 
 The following sections detail additional points that weren't possible to fit.
 
