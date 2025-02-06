@@ -1324,10 +1324,10 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
         )
         asn = 1111111
         first_location = dcim_models.Location.objects.first()
-        first_location.asn=1111111
+        first_location.asn = 1111111
         first_location.save()
         last_location = dcim_models.Location.objects.last()
-        last_location.asn=1111111
+        last_location.asn = 1111111
         last_location.save()
         params = {"q": str(asn)}
         self.assertQuerysetEqualAndNotEmpty(
