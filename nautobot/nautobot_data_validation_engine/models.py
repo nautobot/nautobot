@@ -2,7 +2,6 @@
 
 import re
 
-from django import db
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import MinValueValidator, ValidationError
@@ -15,7 +14,7 @@ except ImportError:
     CHARFIELD_MAX_LENGTH = 255
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
-from nautobot.extras.utils import FeatureQuery, extras_features
+from nautobot.extras.utils import extras_features, FeatureQuery
 
 
 def validate_regex(value):

@@ -2,10 +2,10 @@
 
 import uuid
 
-import django.db.models.deletion
-import nautobot.extras.utils
 from django.db import migrations, models
+import django.db.models.deletion
 
+import nautobot.extras.utils
 import nautobot.nautobot_data_validation_engine.models
 
 

@@ -5,10 +5,10 @@ Model test cases
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+
 from nautobot.dcim.models import Location, LocationType, Rack
 from nautobot.extras.models import Status
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
-
 from nautobot.nautobot_data_validation_engine.models import (
     MinMaxValidationRule,
     RegularExpressionValidationRule,

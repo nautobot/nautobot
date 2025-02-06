@@ -2,9 +2,9 @@
 
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
+
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.models import Location, Manufacturer, Platform, PowerFeed
-
 from nautobot.nautobot_data_validation_engine.models import (
     MinMaxValidationRule,
     RegularExpressionValidationRule,

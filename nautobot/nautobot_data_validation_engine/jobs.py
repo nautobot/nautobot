@@ -3,13 +3,16 @@
 from django.apps import apps as global_apps
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+
 from nautobot.core.celery import register_jobs
-from nautobot.extras.jobs import BooleanVar, Job, MultiChoiceVar, get_task_logger
+from nautobot.extras.jobs import BooleanVar, get_task_logger, Job, MultiChoiceVar
 from nautobot.extras.models import GitRepository
 from nautobot.extras.plugins import CustomValidator, ValidationError
 from nautobot.extras.registry import registry
-
-from nautobot.nautobot_data_validation_engine.custom_validators import get_classes_from_git_repo, get_data_compliance_rules_map
+from nautobot.nautobot_data_validation_engine.custom_validators import (
+    get_classes_from_git_repo,
+    get_data_compliance_rules_map,
+)
 from nautobot.nautobot_data_validation_engine.models import DataCompliance
 
 logger = get_task_logger(__name__)
@@ -134,7 +137,7 @@ class RunRegisteredDataComplianceRules(Job):
                             validator,
                             instance=validated_object,
                             message=error.messages[0],
-                            attribute=list(error.message_dict.keys())[0],
+                            attribute=next(list(error.message_dict.keys())),
                             valid=False,
                         )
                         clean_compliance_rules_results_for_instance(instance=validated_object, excluded_pks=[result.pk])

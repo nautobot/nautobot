@@ -3,10 +3,10 @@ Filterset test cases
 """
 
 from django.contrib.contenttypes.models import ContentType
+
 from nautobot.core.testing.filters import FilterTestCases
 from nautobot.dcim.models import Location, Manufacturer, Platform, PowerFeed, Rack
 from nautobot.extras.models import Tag
-
 from nautobot.nautobot_data_validation_engine.filters import (
     MinMaxValidationRuleFilterSet,
     RegularExpressionValidationRuleFilterSet,

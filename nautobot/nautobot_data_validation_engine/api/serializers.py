@@ -1,11 +1,10 @@
 """API serializers for nautobot_data_validation_engine."""
 
 from django.contrib.contenttypes.models import ContentType
+
 from nautobot.apps.api import NautobotModelSerializer, TaggedModelSerializerMixin
 from nautobot.core.api import ContentTypeField
 from nautobot.extras.utils import FeatureQuery
-from rest_framework import serializers
-
 from nautobot.nautobot_data_validation_engine.models import (
     DataCompliance,
     MinMaxValidationRule,

@@ -20,12 +20,12 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.template.defaultfilters import pluralize
 from django.utils import timezone
+
 from nautobot.core.utils.data import render_jinja2
 from nautobot.extras.datasources import ensure_git_repository
 from nautobot.extras.models import GitRepository
 from nautobot.extras.plugins import CustomValidator
 from nautobot.extras.registry import registry
-
 from nautobot.nautobot_data_validation_engine.models import (
     DataCompliance,
     MinMaxValidationRule,
@@ -240,7 +240,7 @@ class DataComplianceRule(CustomValidator):
                 content_type=ContentType.objects.get_for_model(instance),
                 object_id=instance.id,
             )
-            .exclude(validated_attribute__in=["__all__"] + exclude_attributes)
+            .exclude(validated_attribute__in=["__all__", *exclude_attributes])
             .values_list("validated_attribute", flat=True)
         )
         for attribute in attributes:

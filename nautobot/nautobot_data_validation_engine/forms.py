@@ -26,7 +26,6 @@ from nautobot.extras.forms import (
     TagsBulkEditFormMixin,
 )
 from nautobot.extras.utils import FeatureQuery
-
 from nautobot.nautobot_data_validation_engine.models import (
     DataCompliance,
     MinMaxValidationRule,

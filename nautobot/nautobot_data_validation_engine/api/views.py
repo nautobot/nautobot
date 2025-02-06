@@ -1,7 +1,6 @@
 """API views for nautobot_data_validation_engine."""
 
 from nautobot.apps.api import NautobotModelViewSet
-
 from nautobot.nautobot_data_validation_engine import filters, models
 from nautobot.nautobot_data_validation_engine.api import serializers
 

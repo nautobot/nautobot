@@ -1,10 +1,9 @@
 """Django urlpatterns declaration for nautobot_data_validation_engine app."""
 
-from django.templatetags.static import static
 from django.urls import path
+
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras.views import ObjectChangeLogView, ObjectNotesView
-
 from nautobot.nautobot_data_validation_engine import models, views
 
 app_name = "nautobot_data_validation_engine"
@@ -82,4 +81,5 @@ urlpatterns = [
         name="uniquevalidationrule_notes",
         kwargs={"model": models.UniqueValidationRule},
     ),
-] + router.urls
+    *router.urls,
+]

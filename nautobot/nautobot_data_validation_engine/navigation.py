@@ -1,6 +1,6 @@
 """App navigation menu items."""
 
-from nautobot.apps.ui import NavMenuAddButton, NavMenuGroup, NavMenuImportButton, NavMenuItem, NavMenuTab
+from nautobot.apps.ui import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuTab
 
 menu_items = (
     NavMenuTab(

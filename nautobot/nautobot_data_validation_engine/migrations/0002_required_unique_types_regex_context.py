@@ -4,11 +4,12 @@ import uuid
 
 import django.core.serializers.json
 import django.core.validators
+from django.db import migrations, models
 import django.db.models.deletion
+import taggit.managers
+
 import nautobot.extras.models.mixins
 import nautobot.extras.utils
-import taggit.managers
-from django.db import migrations, models
 
 
 class Migration(migrations.Migration):

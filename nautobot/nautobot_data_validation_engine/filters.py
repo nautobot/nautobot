@@ -1,11 +1,11 @@
 """Filtering for nautobot_data_validation_engine."""
 
-import django_filters as filters
 from django.db import models
+import django_filters as filters
+
 from nautobot.apps.filters import NautobotFilterSet
 from nautobot.core.filters import ContentTypeMultipleChoiceFilter, SearchFilter
 from nautobot.extras.utils import FeatureQuery
-
 from nautobot.nautobot_data_validation_engine.models import (
     DataCompliance,
     MinMaxValidationRule,

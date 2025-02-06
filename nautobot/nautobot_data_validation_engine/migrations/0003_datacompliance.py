@@ -3,10 +3,11 @@
 import uuid
 
 import django.core.serializers.json
-import django.db.models.deletion
-import nautobot.extras.models.mixins
-import taggit.managers
 from django.db import migrations, models
+import django.db.models.deletion
+import taggit.managers
+
+import nautobot.extras.models.mixins
 
 
 class Migration(migrations.Migration):

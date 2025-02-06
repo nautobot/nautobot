@@ -1,9 +1,9 @@
 """Tables for nautobot_data_validation_engine."""
 
-import django_tables2 as tables
 from django.utils.html import format_html
-from nautobot.core.tables import BaseTable, TagColumn, ToggleColumn
+import django_tables2 as tables
 
+from nautobot.core.tables import BaseTable, TagColumn, ToggleColumn
 from nautobot.nautobot_data_validation_engine.models import (
     DataCompliance,
     MinMaxValidationRule,
