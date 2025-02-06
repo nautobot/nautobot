@@ -2,6 +2,7 @@ from functools import wraps
 
 from django.apps import apps
 
+from nautobot.nautobot_data_validation_engine.custom_validators import BaseValidator
 from nautobot.extras.plugins import CustomValidator
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import FeatureQuery
@@ -25,6 +26,14 @@ def custom_validator_clean(model_clean_func):
         # Note this registry holds instances of PluginCustomValidator registered from plugins
         # which is different than the `custom_validators` model features registry
         custom_validators = registry["plugin_custom_validators"].get(model_name, [])
+
+        # Add the BaseValidator from data validation engine to the list of custom validators
+        dve_base_validator = type(
+            f"{model_name.split(".")[0].capitalize()}{model_name.split(".")[1].capitalize()}CustomValidator",
+            (BaseValidator,),
+            {"model": model_name},
+        )
+        custom_validators.append(dve_base_validator)
 
         for custom_validator in custom_validators:
             # If the class has not overridden the specified method, we can skip it (because we know it
