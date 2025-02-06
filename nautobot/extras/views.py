@@ -26,6 +26,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.events import publish_event
+from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
@@ -1809,15 +1810,23 @@ class SavedViewUIViewSet(
             sv.config["sort_order"] = sort_order
 
         model = get_model_for_view_name(sv.view)
-        filterset = get_filterset_for_model(model)
+        filterset_class = get_filterset_for_model(model)
+        filterset = filterset_class()
         filter_params = {}
         for key in request.GET:
             if key in self.non_filter_params:
                 continue
-            elif is_single_choice_field(filterset(), key):
-                filter_params[key] = request.GET.getlist(key)[0]
-            else:
-                filter_params[key] = request.GET.getlist(key)
+            try:
+                if is_single_choice_field(filterset, key):
+                    filter_params[key] = request.GET.getlist(key)[0]
+            except FilterSetFieldNotFound:
+                continue
+            try:
+                if not is_single_choice_field(filterset, key):
+                    filter_params[key] = request.GET.getlist(key)
+            except FilterSetFieldNotFound:
+                continue
+
         if filter_params:
             sv.config["filter_params"] = filter_params
         elif all_filters_removed:

@@ -22,6 +22,7 @@ import redis.exceptions
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
 from nautobot.core.utils.data import is_uuid
@@ -895,9 +896,13 @@ def format_query_param_dict(param_dict, view_name, non_filter_params):
         non_filter_params (list): List of non-query parameters that should not be formatted.
     """
     model = get_model_for_view_name(view_name)
-    filterset = get_filterset_for_model(model)
+    filterset_class = get_filterset_for_model(model)
+    filterset = filterset_class()
 
     for filter_field, value in param_dict.items():
-        if filter_field not in non_filter_params and is_single_choice_field(filterset(), filter_field):
-            param_dict[filter_field] = value[0]
+        try:
+            if filter_field not in non_filter_params and is_single_choice_field(filterset, filter_field):
+                param_dict[filter_field] = value[0]
+        except FilterSetFieldNotFound:
+            pass
     return param_dict

@@ -1311,15 +1311,13 @@ class SavedViewTest(ModelViewTestCase):
         Since saved view detail url redirects, we need to manually construct its detail url
         to test the content of its response.
         """
-        if saved_view:
-            view = saved_view.view
-            pk = saved_view.pk
+        url = ""
 
-        if action == "detail":
-            url = reverse(view) + f"?saved_view={pk}"
-        elif action == "edit":
+        if action == "detail" and saved_view:
+            url = reverse(saved_view.view) + f"?saved_view={saved_view.pk}"
+        elif action == "edit" and saved_view:
             url = saved_view.get_absolute_url() + "update-config/"
-        else:
+        elif action == "create":
             url = reverse("extras:savedview_add")
 
         return url
