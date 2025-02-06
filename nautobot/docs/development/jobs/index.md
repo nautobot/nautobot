@@ -780,7 +780,7 @@ from nautobot.extras.models import Job, JobLogEntry
 class MyJobTestCase(TransactionTestCase):
     def test_my_job(self):
         # Testing of Job "MyJob" in file "my_job_file.py" in $JOBS_ROOT
-        job = Job.objects.get(job_class_name="MyJob", module_name="my_job_file", source="local")
+        job = Job.objects.get(job_class_name="MyJob", module_name="my_job_file")
         # or, job = Job.objects.get_for_class_path("local/my_job_file/MyJob")
         job_result = run_job_for_testing(job, var1="abc", var2=123)
 
@@ -789,6 +789,11 @@ class MyJobTestCase(TransactionTestCase):
         for log_entry in log_entries:
             self.assertEqual(log_entry.message, "...")
 ```
+
+The test files should be placed under the `tests` folder in the app's directory or under JOBS_ROOT. The test can be run via `nautobot-server test [path to test in dotted directory format]` or `pytest [path to test in slash directory format]`. 
+
+!!! tip
+    For running tests directly in the JOBS_ROOT, make sure the `JOBS_ROOT` environment variable is set.
 
 !!! tip
     For more advanced examples refer to the Nautobot source code, specifically `nautobot/extras/tests/test_jobs.py`.
