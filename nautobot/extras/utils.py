@@ -25,6 +25,8 @@ from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
 from nautobot.core.utils.data import is_uuid
+from nautobot.core.utils.lookup import get_filterset_for_model, get_model_for_view_name
+from nautobot.core.utils.requests import is_single_choice_field
 from nautobot.extras.choices import DynamicGroupTypeChoices, JobQueueTypeChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import (
     CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL,
@@ -880,3 +882,22 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
         finally:
             change_context.defer_object_changes = False
             change_context.reset_deferred_object_changes()
+
+
+def format_query_param_dict(param_dict, view_name, non_filter_params):
+    """
+    Called before saving query filter parameters to a SavedView's config. This function will format
+    single value query parameters to be saved as a single values instead of lists of singles values.
+
+    Args:
+        param_dict (dict): key-value pairs of query parameters.
+        view_name (str): The name of the view that the saved view is associated with. "dcim:location_list" for example.
+        non_filter_params (list): List of non-query parameters that should not be formatted.
+    """
+    model = get_model_for_view_name(view_name)
+    filterset = get_filterset_for_model(model)
+
+    for filter_field, value in param_dict.items():
+        if filter_field not in non_filter_params and is_single_choice_field(filterset(), filter_field):
+            param_dict[filter_field] = value[0]
+    return param_dict

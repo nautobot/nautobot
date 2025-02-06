@@ -36,12 +36,13 @@ from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPane
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
+    get_model_for_view_name,
     get_route_for_model,
     get_table_class_string_from_view_name,
     get_table_for_model,
 )
 from nautobot.core.utils.permissions import get_permission_for_model
-from nautobot.core.utils.requests import normalize_querydict
+from nautobot.core.utils.requests import is_single_choice_field, normalize_querydict
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
@@ -69,7 +70,7 @@ from nautobot.dcim.tables import (
     VirtualDeviceContextTable,
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
-from nautobot.extras.utils import get_base_template, get_job_queue, get_worker_count
+from nautobot.extras.utils import format_query_param_dict, get_base_template, get_job_queue, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -1807,16 +1808,16 @@ class SavedViewUIViewSet(
         if sort_order:
             sv.config["sort_order"] = sort_order
 
+        model = get_model_for_view_name(sv.view)
+        filterset = get_filterset_for_model(model)
         filter_params = {}
         for key in request.GET:
             if key in self.non_filter_params:
                 continue
-            # TODO: this is fragile, other single-value filters will also be unhappy if given a list
-            if key == "q":
-                filter_params[key] = request.GET.get(key)
+            elif is_single_choice_field(filterset(), key):
+                filter_params[key] = request.GET.getlist(key)[0]
             else:
                 filter_params[key] = request.GET.getlist(key)
-
         if filter_params:
             sv.config["filter_params"] = filter_params
         elif all_filters_removed:
@@ -1840,14 +1841,14 @@ class SavedViewUIViewSet(
         and the name of the new SavedView from request.POST to create a new SavedView.
         """
         name = request.POST.get("name")
+        view_name = request.POST.get("view")
         is_shared = request.POST.get("is_shared", False)
         if is_shared:
             is_shared = True
         params = request.POST.get("params", "")
+        param_dict = format_query_param_dict(parse_qs(params), view_name, self.non_filter_params)
 
-        param_dict = parse_qs(params)
-
-        single_value_params = ["saved_view", "table_changes_pending", "all_filters_removed", "q", "per_page"]
+        single_value_params = ["saved_view", "table_changes_pending", "all_filters_removed", "per_page"]
         for key in param_dict.keys():
             if key in single_value_params:
                 param_dict[key] = param_dict[key][0]
@@ -1856,7 +1857,6 @@ class SavedViewUIViewSet(
         derived_instance = None
         if derived_view_pk:
             derived_instance = self.get_queryset().get(pk=derived_view_pk)
-        view_name = request.POST.get("view")
         try:
             reverse(view_name)
         except NoReverseMatch:

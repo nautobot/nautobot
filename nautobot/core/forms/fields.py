@@ -18,7 +18,6 @@ from netaddr.core import AddrFormatError
 
 from nautobot.core import choices as core_choices, forms
 from nautobot.core.forms import widgets
-from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.models import validators
 from nautobot.core.utils import data as data_utils, lookup
 

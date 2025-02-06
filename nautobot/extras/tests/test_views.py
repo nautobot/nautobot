@@ -1577,7 +1577,7 @@ class SavedViewTest(ModelViewTestCase):
             view=view_name,
             config={
                 "filter_params": {
-                    "hidden": [True],
+                    "hidden": True,
                 }
             },
         )

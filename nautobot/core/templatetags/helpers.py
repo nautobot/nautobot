@@ -870,9 +870,7 @@ def saved_view_modal(
 ):
     from nautobot.extras.forms import SavedViewModalForm
     from nautobot.extras.models import SavedView
-
-    param_dict = {}
-    filters_applied = parse_qs(params)
+    from nautobot.extras.utils import format_query_param_dict
 
     sort_order = []
     per_page = None
@@ -889,6 +887,8 @@ def saved_view_modal(
         "table_changes_pending",
         "clear_view",
     ]
+    param_dict = {}
+    filters_applied = format_query_param_dict(parse_qs(params), view, non_filter_params)
 
     view_class = lookup.get_view_for_model(model, "List")
     table_name = None
