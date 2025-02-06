@@ -35,7 +35,7 @@ class TenantGroupUIViewSet(NautobotUIViewSet):
                 fields="__all__",
             ),
             ObjectsTablePanel(
-                weight=200,
+                weight=100,
                 section=SectionChoices.RIGHT_HALF,
                 table_class=tables.TenantTable,
                 table_filter="tenant_group",
@@ -48,6 +48,9 @@ class TenantGroupUIViewSet(NautobotUIViewSet):
         # Tenants
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
+            # ObjectsTablePanel usually handles the generation of this table, this is an exception here
+            # Because we are filtering on its tenant_group as well as the tenant group's descendants
+            # i.e. `instance.descendants(include_self=True)`
             tenants = Tenant.objects.restrict(request.user, "view").filter(
                 tenant_group__in=instance.descendants(include_self=True)
             )
