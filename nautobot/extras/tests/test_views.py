@@ -1685,56 +1685,56 @@ class SavedViewTest(ModelViewTestCase):
             self.assertIn(str(instance.pk), response_body, msg=response_body)
             self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
 
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-        def test_update_saved_view_contain_boolean_filter_params(self):
-            with self.subTest("Update job Saved View with boolean filter parameters"):
-                view_name = "extras:job_list"
-                sv_name = "Non-hidden jobs"
-                instance = SavedView.objects.create(
-                    name=sv_name,
-                    owner=self.user,
-                    view=view_name,
-                )
-                update_query_strings = ["hidden=False"]
-                update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
-                # Try update the saved view with the same user as the owner of the saved view
-                instance.owner.is_active = True
-                instance.owner.save()
-                self.client.force_login(instance.owner)
-                response = self.client.get(update_url)
-                self.assertHttpStatus(response, 302)
-                instance.refresh_from_db()
-                self.assertEqual(instance.config["filter_params"]["hidden"], "False")
-                response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
-                # Assert that Job List View rendered with the boolean filter parameter without error
-                self.assertHttpStatus(response, 200)
-                response_body = extract_page_body(response.content.decode(response.charset))
-                self.assertNotIn("Example hidden job", response_body, msg=response_body)
-                self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_saved_view_contain_boolean_filter_params(self):
+        with self.subTest("Update job Saved View with boolean filter parameters"):
+            view_name = "extras:job_list"
+            sv_name = "Non-hidden jobs"
+            instance = SavedView.objects.create(
+                name=sv_name,
+                owner=self.user,
+                view=view_name,
+            )
+            update_query_strings = ["hidden=False"]
+            update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
+            # Try update the saved view with the same user as the owner of the saved view
+            instance.owner.is_active = True
+            instance.owner.save()
+            self.client.force_login(instance.owner)
+            response = self.client.get(update_url)
+            self.assertHttpStatus(response, 302)
+            instance.refresh_from_db()
+            self.assertEqual(instance.config["filter_params"]["hidden"], "False")
+            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
+            # Assert that Job List View rendered with the boolean filter parameter without error
+            self.assertHttpStatus(response, 200)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            self.assertNotIn("Example hidden job", response_body, msg=response_body)
+            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
 
-            with self.subTest("Update device Saved View with boolean filter parameters"):
-                view_name = "dcim:device_list"
-                sv_name = "Devices with no primary ips"
-                instance = SavedView.objects.create(
-                    name=sv_name,
-                    owner=self.user,
-                    view=view_name,
-                )
-                update_query_strings = ["has_primary_ip=False"]
-                update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
-                # Try update the saved view with the same user as the owner of the saved view
-                instance.owner.is_active = True
-                instance.owner.save()
-                self.client.force_login(instance.owner)
-                response = self.client.get(update_url)
-                self.assertHttpStatus(response, 302)
-                instance.refresh_from_db()
-                self.assertEqual(instance.config["filter_params"]["has_primary_ip"], "False")
-                response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
-                # Assert that Job List View rendered with the boolean filter parameter without error
-                self.assertHttpStatus(response, 200)
-                response_body = extract_page_body(response.content.decode(response.charset))
-                self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
+        with self.subTest("Update device Saved View with boolean filter parameters"):
+            view_name = "dcim:device_list"
+            sv_name = "Devices with no primary ips"
+            instance = SavedView.objects.create(
+                name=sv_name,
+                owner=self.user,
+                view=view_name,
+            )
+            update_query_strings = ["has_primary_ip=False"]
+            update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
+            # Try update the saved view with the same user as the owner of the saved view
+            instance.owner.is_active = True
+            instance.owner.save()
+            self.client.force_login(instance.owner)
+            response = self.client.get(update_url)
+            self.assertHttpStatus(response, 302)
+            instance.refresh_from_db()
+            self.assertEqual(instance.config["filter_params"]["has_primary_ip"], "False")
+            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
+            # Assert that Job List View rendered with the boolean filter parameter without error
+            self.assertHttpStatus(response, 200)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
 
 
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
