@@ -256,7 +256,7 @@ class MultiValueBooleanField(django_forms.BooleanField):
     Boolean Field that can optionally take both boolean inputs True and False.
     """
 
-    widget=widgets.StaticSelect2Multiple(choices=BOOLEAN_WITH_BLANK_CHOICES)
+    widget = widgets.StaticSelect2Multiple(choices=BOOLEAN_WITH_BLANK_CHOICES)
 
     def to_python(self, value):
         self.field_class = django_forms.BooleanField
